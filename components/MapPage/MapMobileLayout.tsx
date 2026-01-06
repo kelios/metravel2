@@ -2,14 +2,16 @@
  * MapMobileLayout - мобильная версия карты с Bottom Sheet
  */
 
-import React, { useRef, useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
+import { View, StyleSheet, Pressable, Text } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
 import { MapPeekPreview } from './MapPeekPreview';
 import { MapFAB } from './MapFAB';
 import TravelListPanel from './TravelListPanel';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import SegmentedControl from '@/components/MapPage/SegmentedControl';
+import { useMapPanelStore } from '@/stores/mapPanelStore';
 
 interface MapMobileLayoutProps {
   // Map props
@@ -50,7 +52,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
 
   const [activeTab, setActiveTab] = useState<'list' | 'filters'>('list');
-  const [, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
+  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
+
+  const openNonce = useMapPanelStore((s) => s.openNonce);
+  const toggleNonce = useMapPanelStore((s) => s.toggleNonce);
 
   // FAB actions
   const fabActions = useMemo(() => [
@@ -83,31 +88,125 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     setSheetState(state);
   }, []);
 
+  useEffect(() => {
+    if (!openNonce) return;
+    bottomSheetRef.current?.snapToHalf();
+  }, [openNonce]);
+
+  useEffect(() => {
+    if (!toggleNonce) return;
+    if (sheetState === 'collapsed') {
+      bottomSheetRef.current?.snapToHalf();
+      return;
+    }
+    bottomSheetRef.current?.snapToCollapsed();
+  }, [toggleNonce, sheetState]);
+
   const handlePlacePress = useCallback((place: any) => {
     buildRouteTo(place);
     bottomSheetRef.current?.snapToCollapsed();
   }, [buildRouteTo]);
 
+  const filtersMode: 'radius' | 'route' | undefined = filtersPanelProps?.props?.mode;
+  const setFiltersMode: ((m: 'radius' | 'route') => void) | undefined = filtersPanelProps?.props?.setMode;
+
+  const canBuildRoute = useMemo(() => {
+    if (filtersMode !== 'route') return false;
+    const points = filtersPanelProps?.props?.routePoints;
+    return Array.isArray(points) && points.length >= 2;
+  }, [filtersMode, filtersPanelProps?.props?.routePoints]);
+
+  const routingLoading = Boolean(filtersPanelProps?.props?.routingLoading);
+  const routeDistance = filtersPanelProps?.props?.routeDistance as number | null | undefined;
+
+  const routeCtaLabel = useMemo(() => {
+    if (routingLoading) return 'Строим…';
+    if (routeDistance != null) return 'Пересчитать маршрут';
+    return canBuildRoute ? 'Построить маршрут' : 'Добавьте старт и финиш';
+  }, [routingLoading, routeDistance, canBuildRoute]);
+
   // Peek content for collapsed state
   const peekContent = useMemo(() => {
-    if (activeTab !== 'list') return null;
+    if (activeTab === 'list') {
+      return (
+        <MapPeekPreview
+          places={travelsData}
+          userLocation={coordinates}
+          transportMode={transportMode}
+          onPlacePress={handlePlacePress}
+          onExpandPress={() => bottomSheetRef.current?.snapToHalf()}
+        />
+      );
+    }
+
+    if (activeTab !== 'filters') return null;
+    if (!filtersMode || typeof setFiltersMode !== 'function') return null;
+
+    const showRouteCta = filtersMode === 'route' && typeof filtersPanelProps?.props?.onBuildRoute === 'function';
 
     return (
-      <MapPeekPreview
-        places={travelsData}
-        userLocation={coordinates}
-        transportMode={transportMode}
-        onPlacePress={handlePlacePress}
-        onExpandPress={() => bottomSheetRef.current?.snapToHalf()}
-      />
+      <View style={styles.filtersPeek}>
+        <SegmentedControl
+          options={[
+            { key: 'radius', label: 'Радиус', icon: 'my-location' },
+            { key: 'route', label: 'Маршрут', icon: 'alt-route' },
+          ]}
+          value={filtersMode}
+          onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
+          compact={true}
+          accessibilityLabel="Выбор режима поиска"
+        />
+
+        {showRouteCta && (
+          <View style={styles.filtersPeekCtaRow}>
+            <Pressable
+              style={[styles.primaryCta, (!canBuildRoute || routingLoading) && styles.primaryCtaDisabled]}
+              onPress={() => {
+                if (!canBuildRoute || routingLoading) return;
+                filtersPanelProps?.props?.onBuildRoute?.();
+              }}
+              disabled={!canBuildRoute || routingLoading}
+              accessibilityRole="button"
+              accessibilityLabel="Построить маршрут"
+              accessibilityState={{ disabled: !canBuildRoute || routingLoading }}
+            >
+              <Text style={styles.primaryCtaText}>{routeCtaLabel}</Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
     );
-  }, [activeTab, travelsData, coordinates, transportMode, handlePlacePress]);
+  }, [
+    activeTab,
+    travelsData,
+    coordinates,
+    transportMode,
+    handlePlacePress,
+    filtersMode,
+    setFiltersMode,
+    filtersPanelProps,
+    styles.filtersPeek,
+    styles.filtersPeekCtaRow,
+    styles.primaryCta,
+    styles.primaryCtaDisabled,
+    styles.primaryCtaText,
+    canBuildRoute,
+    routingLoading,
+    routeCtaLabel,
+  ]);
 
   // Content based on active tab
   const sheetContent = useMemo(() => {
     if (activeTab === 'filters') {
       const FilterComponent = filtersPanelProps.Component;
-      return <FilterComponent {...filtersPanelProps.props} isMobile={true} />;
+      return (
+        <FilterComponent
+          {...filtersPanelProps.props}
+          isMobile={true}
+          hideTopControls={true}
+          hideFooterCta={true}
+        />
+      );
     }
 
     return (
@@ -168,5 +267,27 @@ const getStyles = (colors: ThemedColors) =>
     },
     mapContainer: {
       flex: 1,
+    },
+    filtersPeek: {
+      gap: 8,
+    },
+    filtersPeekCtaRow: {
+      paddingHorizontal: 12,
+      paddingBottom: 4,
+    },
+    primaryCta: {
+      minHeight: 44,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.primary,
+    },
+    primaryCtaDisabled: {
+      opacity: 0.5,
+    },
+    primaryCtaText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.textOnPrimary,
     },
   });

@@ -32,14 +32,15 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
     return points
       .map((point, index) => {
         try {
-          const coords = CoordinateConverter.fromString(point.coord);
+          const coords = CoordinateConverter.fromLooseString(String(point.coord));
+          if (!coords) return null;
           if (!CoordinateConverter.isValid(coords)) return null;
           return {
             point,
             coords,
             key: point.id 
               ? `travel-${point.id}` 
-              : `travel-${point.coord.replace(/,/g, '-')}-${index}`,
+              : `travel-${String(point.coord).replace(/,/g, '-')}-${index}`,
           };
         } catch {
           return null;

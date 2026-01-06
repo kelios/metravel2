@@ -223,6 +223,51 @@ const tryParseGeoJsonFromResponse = async (res: Response) => {
   return { ok: true as const, data: geojson };
 };
 
+const isFiniteNumber = (value: unknown) =>
+  typeof value === 'number' && Number.isFinite(value);
+
+const geometryHasFiniteCoords = (geometry: any): boolean => {
+  if (!geometry) return false;
+  const { type, coordinates } = geometry;
+  if (!type || coordinates == null) return false;
+
+  const isCoordPair = (coord: any) =>
+    Array.isArray(coord) &&
+    coord.length >= 2 &&
+    isFiniteNumber(coord[0]) &&
+    isFiniteNumber(coord[1]);
+
+  const walk = (coords: any): boolean => {
+    if (isCoordPair(coords)) return true;
+    if (!Array.isArray(coords)) return false;
+    return coords.every((c) => walk(c));
+  };
+
+  switch (type) {
+    case 'Point':
+      return isCoordPair(coordinates);
+    case 'MultiPoint':
+    case 'LineString':
+    case 'MultiLineString':
+    case 'Polygon':
+    case 'MultiPolygon':
+      return walk(coordinates);
+    default:
+      return false;
+  }
+};
+
+const sanitizeGeoJson = (geojson: any) => {
+  if (!geojson || geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
+    return null;
+  }
+  const features = geojson.features.filter((feature: any) =>
+    geometryHasFiniteCoords(feature?.geometry)
+  );
+  if (features.length === 0) return null;
+  return { ...geojson, features };
+};
+
 export const attachLasyZanocujWfsOverlay = (
   L: any,
   map: LeafletMap,
@@ -319,6 +364,9 @@ export const attachLasyZanocujWfsOverlay = (
   const renderGeoJson = (geojson: any) => {
     layerGroup.clearLayers();
 
+    const sanitized = sanitizeGeoJson(geojson);
+    if (!sanitized) return;
+
     const style = {
       color: '#1f7a1f',
       weight: 2,
@@ -327,7 +375,7 @@ export const attachLasyZanocujWfsOverlay = (
       opacity: 0.9,
     };
 
-    const geoLayer = L.geoJSON(geojson, {
+    const geoLayer = L.geoJSON(sanitized, {
       style: () => style,
       onEachFeature: (feature: any, layer: any) => {
         const props = feature?.properties || {};

@@ -75,7 +75,7 @@ describe('map layout header offset', () => {
     expect(styles.container.paddingTop ?? 0).toBe(0);
 
     // Mobile overlay / panel transitions
-    expect(styles.rightPanelMobileClosed.transform?.[0].translateX).toBe(360);
+    expect(styles.rightPanelMobileClosed.transform?.[0].translateY).toBe('100%');
     expect(styles.rightPanelMobileClosed.opacity).toBe(0);
     expect(styles.rightPanelMobileOpen.opacity).toBe(1);
   });

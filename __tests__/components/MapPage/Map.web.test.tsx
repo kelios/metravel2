@@ -135,7 +135,10 @@ jest.mock('@/components/MapPage/Map/useClustering', () => {
 })
 
 jest.mock('@/components/MapPage/Map/useMapCleanup', () => ({
-  useMapCleanup: () => undefined,
+  useMapCleanup: () => ({
+    mapInstanceKeyRef: { current: 'test-map-key' },
+    mapContainerIdRef: { current: 'test-map-container' },
+  }),
 }))
 
 jest.mock('@/components/MapPage/Map/useMapInstance', () => ({

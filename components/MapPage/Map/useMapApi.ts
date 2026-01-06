@@ -122,9 +122,14 @@ export function useMapApi({
       },
       setOverlayEnabled: (id: string, enabled: boolean) => {
         try {
+          console.info('[useMapApi] setOverlayEnabled called:', id, enabled);
           const layer = leafletOverlayLayersRef.current.get(id);
-          if (!layer) return;
+          if (!layer) {
+            console.warn('[useMapApi] Layer not found:', id, 'Available layers:', Array.from(leafletOverlayLayersRef.current.keys()));
+            return;
+          }
 
+          console.info('[useMapApi] Layer found, toggling:', id, enabled);
           if (enabled) {
             layer.addTo(map);
           } else if (map.hasLayer?.(layer)) {
@@ -140,6 +145,7 @@ export function useMapApi({
           const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
           const controller = controllers?.get?.(id);
           if (controller?.layer === layer) {
+            console.info('[useMapApi] Controller found for layer:', id);
             if (enabled) controller.start?.();
             else controller.stop?.();
           }

@@ -3,9 +3,9 @@
  * Заменяет боковую панель на мобильных устройствах
  */
 
-import React, { useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import BottomSheet, { BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
 
@@ -33,6 +33,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
     const bottomSheetRef = useRef<BottomSheet>(null);
+    const [sheetIndex, setSheetIndex] = useState(0);
 
     // 3 состояния: collapsed (10%), half (50%), full (90%)
     const snapPoints = useMemo(() => ['10%', '50%', '90%'], []);
@@ -48,6 +49,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     // Handle snap point changes
     const handleSheetChanges = useCallback(
       (index: number) => {
+        setSheetIndex(index);
         if (!onStateChange) return;
 
         const states: ('collapsed' | 'half' | 'full')[] = ['collapsed', 'half', 'full'];
@@ -106,19 +108,16 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         </View>
 
         {/* Peek content - shown in collapsed state */}
-        {peekContent && (
+        {peekContent && sheetIndex === 0 && (
           <View style={styles.peekContent}>
             {peekContent}
           </View>
         )}
 
-        {/* Main content - scrollable */}
-        <BottomSheetScrollView
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={true}
-        >
+        {/* Main content - let children control their own scrolling (avoids nested scroll + keeps sticky footers working) */}
+        <BottomSheetView style={styles.contentContainer}>
           {children}
-        </BottomSheetScrollView>
+        </BottomSheetView>
       </BottomSheet>
     );
   }
@@ -189,6 +188,7 @@ const getStyles = (colors: ThemedColors) =>
       paddingVertical: 12,
     },
     contentContainer: {
+      flex: 1,
       paddingHorizontal: 20,
       paddingBottom: 40,
     },

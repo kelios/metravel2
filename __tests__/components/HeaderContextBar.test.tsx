@@ -54,7 +54,7 @@ jest.mock('react-native', () => {
 describe('HeaderContextBar', () => {
   const mockPush = jest.fn();
   const mockBack = jest.fn();
-  const mockRequestOpenMapPanel = jest.fn();
+  const mockRequestToggleMapPanel = jest.fn();
 
   const { useBreadcrumbModel } = jest.requireMock('@/hooks/useBreadcrumbModel') as {
     useBreadcrumbModel: jest.Mock;
@@ -76,7 +76,9 @@ describe('HeaderContextBar', () => {
     const { useMapPanelStore } = jest.requireMock('@/stores/mapPanelStore') as {
       useMapPanelStore: jest.Mock;
     };
-    useMapPanelStore.mockImplementation((selector: any) => selector({ openNonce: 0, requestOpen: mockRequestOpenMapPanel }));
+    useMapPanelStore.mockImplementation((selector: any) =>
+      selector({ openNonce: 0, toggleNonce: 0, requestToggle: mockRequestToggleMapPanel, requestOpen: jest.fn() })
+    );
 
     (global as any).__mockResponsive = {
       width: 1400,
@@ -184,7 +186,7 @@ describe('HeaderContextBar', () => {
     expect(queryByTestId('mobile-sections-open')).toBeNull();
 
     fireEvent.press(getByTestId('map-panel-open'));
-    expect(mockRequestOpenMapPanel).toHaveBeenCalled();
+    expect(mockRequestToggleMapPanel).toHaveBeenCalled();
   });
 
   it('should not render sections menu button on mobile non-travel pages', () => {

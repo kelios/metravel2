@@ -21,17 +21,27 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
   let abort: AbortController | null = null;
   let timer: any = null;
   let lastKey: string | null = null;
+  let started = false;
 
-  const makeBBox = (): BBox => {
-    const b = map.getBounds();
-    const sw = b.getSouthWest();
-    const ne = b.getNorthEast();
-    return {
-      south: sw.lat,
-      west: sw.lng,
-      north: ne.lat,
-      east: ne.lng,
-    };
+  const makeBBox = (): BBox | null => {
+    try {
+      const b = map.getBounds?.();
+      if (!b) return null;
+      const sw = b.getSouthWest?.();
+      const ne = b.getNorthEast?.();
+      if (!sw || !ne) return null;
+      if (!Number.isFinite(sw.lat) || !Number.isFinite(sw.lng) || !Number.isFinite(ne.lat) || !Number.isFinite(ne.lng)) {
+        return null;
+      }
+      return {
+        south: sw.lat,
+        west: sw.lng,
+        north: ne.lat,
+        east: ne.lng,
+      };
+    } catch {
+      return null;
+    }
   };
 
   const shrinkBBoxToMaxArea = (bbox: BBox, maxAreaKm2: number): BBox => {
@@ -125,7 +135,10 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
   const load = async () => {
     if (!map || !L) return;
 
-    const bbox = shrinkBBoxToMaxArea(makeBBox(), options.maxAreaKm2);
+    const rawBBox = makeBBox();
+    if (!rawBBox) return;
+
+    const bbox = shrinkBBoxToMaxArea(rawBBox, options.maxAreaKm2);
 
     const key = keyFromBBox(bbox);
     if (key === lastKey) return;
@@ -161,12 +174,38 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
   const onMoveEnd = () => schedule();
 
   const start = () => {
-    map.on('moveend', onMoveEnd);
-    schedule();
+    if (started) return;
+    started = true;
+
+    try {
+      if (typeof map.whenReady === 'function') {
+        map.whenReady(() => {
+          if (!started) return;
+          try {
+            map.on('moveend', onMoveEnd);
+          } catch {
+            // noop
+          }
+          schedule();
+        });
+      } else {
+        map.on('moveend', onMoveEnd);
+        schedule();
+      }
+    } catch {
+      // noop
+    }
   };
 
   const stop = () => {
-    map.off('moveend', onMoveEnd);
+    if (!started) return;
+    started = false;
+
+    try {
+      map.off?.('moveend', onMoveEnd);
+    } catch {
+      // noop
+    }
     abort?.abort();
     abort = null;
     if (timer) clearTimeout(timer);

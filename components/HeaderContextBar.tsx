@@ -26,7 +26,7 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
-  const requestOpenMapPanel = useMapPanelStore((s) => s.requestOpen);
+  const requestToggleMapPanel = useMapPanelStore((s) => s.requestToggle);
 
   const model = useBreadcrumbModel();
 
@@ -63,9 +63,9 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
 
           {isMap ? (
             <Pressable
-              onPress={requestOpenMapPanel}
+              onPress={requestToggleMapPanel}
               accessibilityRole="button"
-              accessibilityLabel="Открыть панель карты"
+              accessibilityLabel="Открыть или закрыть панель карты"
               style={[styles.mobileSectionsButton, globalFocusStyles.focusable]}
               testID="map-panel-open"
             >

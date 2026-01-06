@@ -3,63 +3,71 @@ import { useMemo } from 'react';
 
 export const useLeafletIcons = (L: any) => {
   return useMemo(() => {
-    if (!L || typeof L.Icon !== 'function') return null;
+    if (!L || typeof L.divIcon !== 'function') return null;
+    if (typeof document === 'undefined') return null;
 
-    // Оранжевый маркер для мест путешествий
-    const orangeMarkerIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
-      iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      shadowSize: [41, 41],
-      shadowAnchor: [12, 41],
-      crossOrigin: true,
-    });
+    const makeDivPin = (bg: string, ring: string) => {
+      const safe = (v: string) => String(v).replace(/[^\w\s#(),.%-]/g, '').slice(0, 64);
+      const bgSafe = safe(bg);
+      const ringSafe = safe(ring);
 
-    // Зеленый маркер для старта
-    const greenMarkerIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-      iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [30, 41],
-      iconAnchor: [15, 41],
-      popupAnchor: [0, -41],
-      shadowSize: [41, 41],
-      shadowAnchor: [12, 41],
-    });
+      // Уникальный дизайн маркера metravel в форме капли/пина
+      // Используем CSS для надежной отрисовки
+      const html = `
+        <div style="
+          position: relative;
+          width: 36px;
+          height: 48px;
+        ">
+          <div style="
+            position: absolute;
+            top: 0;
+            left: 3px;
+            width: 30px;
+            height: 30px;
+            background: ${bgSafe};
+            border: 4px solid ${ringSafe};
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+          "></div>
+          <div style="
+            position: absolute;
+            top: 8px;
+            left: 11px;
+            width: 14px;
+            height: 14px;
+            background: ${ringSafe};
+            border-radius: 50%;
+            z-index: 1;
+          "></div>
+          <div style="
+            position: absolute;
+            top: 11px;
+            left: 14px;
+            width: 8px;
+            height: 8px;
+            background: ${bgSafe};
+            border-radius: 50%;
+            z-index: 2;
+          "></div>
+        </div>
+      `;
 
-    // Красный маркер для финиша
-    const redMarkerIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-      iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [30, 41],
-      iconAnchor: [15, 41],
-      popupAnchor: [0, -41],
-      shadowSize: [41, 41],
-      shadowAnchor: [12, 41],
-    });
-
-    // Синий маркер для местоположения пользователя
-    const blueMarkerIcon = new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-      iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [0, -41],
-      shadowSize: [41, 41],
-      shadowAnchor: [12, 41],
-    });
+      return L.divIcon({
+        className: 'metravel-pin-marker',
+        html,
+        iconSize: [36, 48],
+        iconAnchor: [18, 44],
+        popupAnchor: [0, -46],
+      });
+    };
 
     return {
-      meTravel: orangeMarkerIcon,
-      userLocation: blueMarkerIcon,
-      start: greenMarkerIcon,
-      end: redMarkerIcon,
+      meTravel: makeDivPin('#b5a88a', '#FFFFFF'),
+      start: makeDivPin('#7a9d8a', '#FFFFFF'),
+      end: makeDivPin('#a88a8a', '#FFFFFF'),
+      userLocation: makeDivPin('#8a9aa8', '#FFFFFF'),
     };
   }, [L]);
 };
-

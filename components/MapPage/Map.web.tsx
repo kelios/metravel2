@@ -7,9 +7,10 @@ import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/src/types/mapUi';
+import { isValidCoordinate } from '@/utils/coordinateValidator';
 
 // Import modular components and hooks
-import { useMapCleanup } from './Map/useMapCleanup';
+import { useMapCleanup } from '@/components/MapPage/Map/useMapCleanup';
 import { useLeafletIcons } from './Map/useLeafletIcons';
 import { useMapInstance } from './Map/useMapInstance';
 import { useMapApi } from './Map/useMapApi';
@@ -20,8 +21,6 @@ import ClusterLayer from './Map/ClusterLayer';
 import MapControls from './Map/MapControls';
 
 type ReactLeafletNS = typeof import('react-leaflet');
-
-const LEAFLET_MAP_CONTAINER_ID_PREFIX = 'metravel-leaflet-map';
 
 const ORS_API_KEY = process.env.EXPO_PUBLIC_ORS_API_KEY || undefined;
 
@@ -88,29 +87,31 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const isValidCoord = useCallback((lat: number, lng: number) => (
-    Number.isFinite(lat) &&
-    Number.isFinite(lng) &&
-    lat >= -90 &&
-    lat <= 90 &&
-    lng >= -180 &&
-    lng <= 180
-  ), []);
+
+  const safeCoordinates = useMemo(() => {
+    const fallback = { latitude: 53.8828449, longitude: 27.7273595 };
+    const source = coordinates && typeof coordinates === 'object' ? coordinates : fallback;
+    const zoomValue = (source as any)?.zoom;
+
+    return {
+      latitude: Number.isFinite(source.latitude) ? source.latitude : fallback.latitude,
+      longitude: Number.isFinite(source.longitude) ? source.longitude : fallback.longitude,
+      zoom: Number.isFinite(zoomValue) ? zoomValue : 11,
+    };
+  }, [coordinates]);
 
   // Refs
   const mapRef = useRef<any>(null);
   const initialZoomRef = useRef<number>(
-    Number.isFinite((coordinates as any).zoom) ? (coordinates as any).zoom : 11
+    safeCoordinates.zoom
   );
   const hasInitializedRef = useRef(false);
   const lastModeRef = useRef<MapMode | null>(null);
   const savedMapViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const resizeRafRef = useRef<number | null>(null);
   const lastAutoFitKeyRef = useRef<string | null>(null);
-  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
-  const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${Math.random().toString(36).slice(2)}`);
-  const hasPatchedLeafletCircleRef = useRef(false);
-  const hasWarnedInvalidLeafletCircleRef = useRef(false);
+
+  const { mapInstanceKeyRef, mapContainerIdRef } = useMapCleanup();
 
   // Travel data
   const travelData = useMemo(
@@ -134,19 +135,19 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   // Convert coordinates to LatLng format for hooks (with safety checks)
   const coordinatesLatLng = useMemo(() => ({
-    lat: Number.isFinite(coordinates.latitude) ? coordinates.latitude : 53.8828449,
-    lng: Number.isFinite(coordinates.longitude) ? coordinates.longitude : 27.7273595,
-  }), [coordinates.latitude, coordinates.longitude]);
+    lat: safeCoordinates.latitude,
+    lng: safeCoordinates.longitude,
+  }), [safeCoordinates.latitude, safeCoordinates.longitude]);
 
   const userLocationLatLng = useMemo(() => {
     if (!userLocation) return null;
-    if (!isValidCoord(userLocation.latitude, userLocation.longitude)) return null;
+    if (!isValidCoordinate(userLocation.latitude, userLocation.longitude)) return null;
     return { lat: userLocation.latitude, lng: userLocation.longitude };
-  }, [userLocation, isValidCoord]);
+  }, [userLocation]);
 
   const handleMarkerZoom = useCallback((_point: Point, coords: { lat: number; lng: number }) => {
     if (!mapRef.current) return;
-    if (!isValidCoord(coords.lat, coords.lng)) return;
+    if (!isValidCoordinate(coords.lat, coords.lng)) return;
     const map = mapRef.current;
     const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom;
     const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : 18;
@@ -160,10 +161,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
     } catch {
       // noop
     }
-  }, [isValidCoord, mapZoom]);
+  }, [mapZoom]);
 
   // Custom hooks
-  useMapCleanup();
   const customIcons = useLeafletIcons(L);
   const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
     map: mapInstance,
@@ -227,7 +227,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
         const lat = location.coords.latitude;
         const lng = location.coords.longitude;
-        if (isValidCoord(lat, lng)) {
+        if (isValidCoordinate(lat, lng)) {
           setUserLocation({ latitude: lat, longitude: lng });
         } else {
           setErrors((prev) => ({ ...prev, location: true }));
@@ -243,7 +243,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return () => {
       cancelled = true;
     };
-  }, [isValidCoord]);
+  }, []);
 
   // Center user location handler
   const centerOnUserLocation = useCallback(() => {
@@ -357,9 +357,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const circleCenter = useMemo<[number, number] | null>(() => {
     const lat = Number(safeCenter?.[0]);
     const lng = Number(safeCenter?.[1]);
-    if (!isValidCoord(lat, lng)) return null;
+    if (!isValidCoordinate(lat, lng)) return null;
     return [lat, lng];
-  }, [isValidCoord, safeCenter]);
+  }, [safeCenter]);
 
   const hasWarnedInvalidCircleRef = useRef(false);
   useEffect(() => {
@@ -374,54 +374,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
       radius,
     });
   }, [circleCenter, coordinates, mode, radius, safeCenter]);
-
-  // Leaflet safety: prevent third-party layers from crashing the whole map when they create L.Circle with NaN lat/lng.
-  useEffect(() => {
-    if (hasPatchedLeafletCircleRef.current) return;
-    if (!L) return;
-
-    const CircleCtor = (L as any)?.Circle;
-    const proto = CircleCtor?.prototype;
-    const originalProject = proto?._project;
-    if (!proto || typeof originalProject !== 'function') return;
-
-    hasPatchedLeafletCircleRef.current = true;
-
-    proto._project = function patchedProject(this: any) {
-      const ll = this?._latlng;
-      const lat = ll?.lat;
-      const lng = ll?.lng;
-      const valid =
-        Number.isFinite(lat) &&
-        Number.isFinite(lng) &&
-        lat >= -90 &&
-        lat <= 90 &&
-        lng >= -180 &&
-        lng <= 180;
-
-      if (!valid) {
-        if (!hasWarnedInvalidLeafletCircleRef.current) {
-          hasWarnedInvalidLeafletCircleRef.current = true;
-          console.warn('[Map] Leaflet Circle has invalid latlng; skipping projection to avoid crash.', {
-            lat,
-            lng,
-            layerId: this?._leaflet_id,
-            stack: new Error().stack,
-          });
-        }
-
-        // Try to remove the bad layer if it was added.
-        try {
-          this?._map?.removeLayer?.(this);
-        } catch {
-          // noop
-        }
-        return;
-      }
-
-      return originalProject.apply(this, arguments as any);
-    };
-  }, [L]);
 
   // Popup component
   const PopupWithClose = useMemo(() => {
@@ -548,7 +500,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
         {routePoints.length >= 1 &&
          customIcons?.start &&
          Number.isFinite(routePoints[0][0]) &&
-         Number.isFinite(routePoints[0][1]) && (
+         Number.isFinite(routePoints[0][1]) &&
+         isValidCoordinate(routePoints[0][1], routePoints[0][0]) && (
           <Marker
             position={[routePoints[0][1], routePoints[0][0]]}
             icon={customIcons.start}
@@ -565,7 +518,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
         {routePoints.length === 2 &&
          customIcons?.end &&
          Number.isFinite(routePoints[1][0]) &&
-         Number.isFinite(routePoints[1][1]) && (
+         Number.isFinite(routePoints[1][1]) &&
+         isValidCoordinate(routePoints[1][1], routePoints[1][0]) && (
           <Marker
             position={[routePoints[1][1], routePoints[1][0]]}
             icon={customIcons.end}
@@ -584,7 +538,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
          routePoints.length >= 2 &&
          rl &&
          RoutingMachineWithMapInner &&
-         routePoints.every(p => Number.isFinite(p[0]) && Number.isFinite(p[1])) && (
+         routePoints.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0])) && (
           <RoutingMachineWithMapInner
             routePoints={routePoints}
             transportMode={transportMode}

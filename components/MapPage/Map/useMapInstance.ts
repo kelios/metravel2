@@ -23,6 +23,9 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
     if (!map || !L) return;
     if (typeof map.addLayer !== 'function') return;
 
+    const overlayLayersSnapshot = leafletOverlayLayersRef.current;
+    const baseLayerSnapshot = leafletBaseLayerRef.current;
+
     // Check if map is properly initialized with valid center
     try {
       const center = map.getCenter?.();
@@ -38,20 +41,45 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
     const overpassControllerRef: any = leafletControlRef;
     const overlayControllersRef: any = leafletControlRef;
 
-    const controllers: Map<string, any> = (overlayControllersRef as any).overlayControllers || new Map<string, any>();
-    controllers.clear();
+    const prevControllers: Map<string, any> | undefined = (overlayControllersRef as any).overlayControllers;
+    if (prevControllers && typeof prevControllers.forEach === 'function') {
+      try {
+        prevControllers.forEach((c) => {
+          try {
+            c?.stop?.();
+          } catch {
+            // noop
+          }
+        });
+      } catch {
+        // noop
+      }
+    }
+
+    const controllers: Map<string, any> = new Map<string, any>();
     (overlayControllersRef as any).overlayControllers = controllers;
 
     // Clean existing overlay layers
     try {
-      leafletOverlayLayersRef.current.forEach((layer) => {
+      overlayLayersSnapshot.forEach((layer) => {
         try {
           if (map.hasLayer?.(layer)) map.removeLayer(layer);
         } catch {
           // noop
         }
       });
-      leafletOverlayLayersRef.current.clear();
+      overlayLayersSnapshot.clear();
+    } catch {
+      // noop
+    }
+
+    // Clean existing base layer
+    try {
+      const baseLayer = baseLayerSnapshot;
+      if (baseLayer && map.hasLayer?.(baseLayer)) {
+        map.removeLayer(baseLayer);
+      }
+      leafletBaseLayerRef.current = null;
     } catch {
       // noop
     }
@@ -179,24 +207,63 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
 
     return () => {
       try {
-        overpassController?.stop();
-        if (overpassController?.layer && map.hasLayer?.(overpassController.layer)) {
-          map.removeLayer(overpassController.layer);
+        overpassController?.stop?.();
+        poiController?.stop?.();
+        routesController?.stop?.();
+        wfsController?.stop?.();
+
+        try {
+          const controllers: Map<string, any> | undefined = (overlayControllersRef as any).overlayControllers;
+          controllers?.forEach?.((c) => {
+            try {
+              c?.stop?.();
+            } catch {
+              // noop
+            }
+          });
+          controllers?.clear?.();
+        } catch {
+          // noop
         }
 
-        poiController?.stop();
-        if (poiController?.layer && map.hasLayer?.(poiController.layer)) {
-          map.removeLayer(poiController.layer);
+        try {
+          overlayLayersSnapshot.forEach((layer) => {
+            try {
+              if (map.hasLayer?.(layer)) map.removeLayer(layer);
+            } catch {
+              // noop
+            }
+          });
+          overlayLayersSnapshot.clear();
+        } catch {
+          // noop
         }
 
-        routesController?.stop();
-        if (routesController?.layer && map.hasLayer?.(routesController.layer)) {
-          map.removeLayer(routesController.layer);
+        try {
+          const baseLayer = leafletBaseLayerRef.current;
+          if (baseLayer && map.hasLayer?.(baseLayer)) {
+            map.removeLayer(baseLayer);
+          }
+          leafletBaseLayerRef.current = null;
+        } catch {
+          // noop
         }
 
-        wfsController?.stop();
-        if (wfsController?.layer && map.hasLayer?.(wfsController.layer)) {
-          map.removeLayer(wfsController.layer);
+        try {
+          if ((overpassController as any)?.layer && map.hasLayer?.((overpassController as any).layer)) {
+            map.removeLayer((overpassController as any).layer);
+          }
+          if ((poiController as any)?.layer && map.hasLayer?.((poiController as any).layer)) {
+            map.removeLayer((poiController as any).layer);
+          }
+          if ((routesController as any)?.layer && map.hasLayer?.((routesController as any).layer)) {
+            map.removeLayer((routesController as any).layer);
+          }
+          if ((wfsController as any)?.layer && map.hasLayer?.((wfsController as any).layer)) {
+            map.removeLayer((wfsController as any).layer);
+          }
+        } catch {
+          // noop
         }
       } catch {
         // noop

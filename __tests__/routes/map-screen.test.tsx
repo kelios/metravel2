@@ -204,22 +204,22 @@ describe('MapScreen (map tab)', () => {
   })
 
   const openPanelAndGoToListTab = async (utils: ReturnType<typeof renderWithClient>) => {
-    const { getByText } = utils
+    const { getByTestId } = utils
 
     act(() => {
       useMapPanelStore.getState().requestOpen()
     })
 
     await waitFor(() => {
-      expect(getByText('Список')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
     })
 
-    const listTab = getByText('Список')
+    const listTab = getByTestId('map-panel-tab-travels')
     fireEvent.press(listTab)
   }
 
   it('toggles right panel visibility using close and open buttons', async () => {
-    const { getByText, queryByText, getByLabelText } = renderWithClient()
+    const { getByTestId, queryByTestId, getByLabelText } = renderWithClient()
 
     // На mobile панель закрыта по умолчанию — открываем
     act(() => {
@@ -227,8 +227,8 @@ describe('MapScreen (map tab)', () => {
     })
 
     await waitFor(() => {
-      expect(getByText('Фильтры')).toBeTruthy()
-      expect(getByText('Список')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
     })
 
     // Закрываем панель кнопкой "Скрыть панель"
@@ -240,8 +240,8 @@ describe('MapScreen (map tab)', () => {
     // Панель закрылась: кнопка закрытия и вкладки больше не отображаются
     await waitFor(() => {
       expect(() => getByLabelText('Скрыть панель')).toThrow()
-      expect(queryByText('Фильтры')).toBeNull()
-      expect(queryByText('Список')).toBeNull()
+      expect(queryByTestId('map-panel-tab-filters')).toBeNull()
+      expect(queryByTestId('map-panel-tab-travels')).toBeNull()
     })
 
     // Открываем панель снова через глобальный запрос (кнопка в хлебных крошках)
@@ -250,8 +250,8 @@ describe('MapScreen (map tab)', () => {
     })
 
     await waitFor(() => {
-      expect(getByText('Фильтры')).toBeTruthy()
-      expect(getByText('Список')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
+      expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
     })
   })
 
@@ -266,7 +266,7 @@ describe('MapScreen (map tab)', () => {
 
     // Desktop: панель открыта по умолчанию
     await waitFor(() => {
-      expect(utils.getByText('Фильтры')).toBeTruthy()
+      expect(utils.getByTestId('map-panel-tab-filters')).toBeTruthy()
     })
 
     // Симулируем смену брейкпоинта на mobile после первого рендера
@@ -279,8 +279,8 @@ describe('MapScreen (map tab)', () => {
 
     // Mobile: панель должна закрыться по умолчанию
     await waitFor(() => {
-      expect(utils.queryByText('Фильтры')).toBeNull()
-      expect(utils.queryByText('Список')).toBeNull()
+      expect(utils.queryByTestId('map-panel-tab-filters')).toBeNull()
+      expect(utils.queryByTestId('map-panel-tab-travels')).toBeNull()
     })
   })
 
@@ -313,7 +313,7 @@ describe('MapScreen (map tab)', () => {
 
   it('shows correct travels count in list tab after data is loaded', async () => {
     const utils = renderWithClient();
-    const { getByText, getByTestId } = utils;
+    const { getByTestId } = utils;
 
     // Запрос на данные карты начинается только после получения геолокации
     await waitFor(() => {
@@ -328,9 +328,7 @@ describe('MapScreen (map tab)', () => {
       expect(getByTestId('list-count').props.children).toBe(2);
     });
 
-    // В тексте вкладки также отображается количество мест
-    const travelsCountLabel = getByText('2 мест');
-    expect(travelsCountLabel).toBeTruthy();
+    // Количество отображается в панели списка
   });
 
   it('shows error display when map data loading fails', async () => {

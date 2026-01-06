@@ -27,6 +27,7 @@ import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import RouteBuilder from '@/components/MapPage/RouteBuilder';
 import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { LAYOUT } from '@/constants/layout';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
@@ -102,6 +103,8 @@ interface FiltersPanelProps {
   userLocation?: { latitude: number; longitude: number } | null;
   onPlaceSelect?: (place: any) => void;
   onOpenList?: () => void;
+  hideTopControls?: boolean;
+  hideFooterCta?: boolean;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -133,6 +136,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      userLocation,
                                                      onPlaceSelect,
                                                      onOpenList,
+                                                     hideTopControls = false,
+                                                     hideFooterCta = false,
 }) => {
   const windowWidth = Dimensions.get('window').width;
   const colors = useThemedColors();
@@ -145,6 +150,33 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   const canCenterOnUser = Boolean(mapUiApi?.capabilities?.canCenterOnUser);
   const canFitToResults = Boolean(mapUiApi?.capabilities?.canFitToResults);
   const canExportRoute = Boolean(mapUiApi?.capabilities?.canExportRoute);
+
+  const safeOnFilterChange = useCallback(
+    (field: string, value: any) => {
+      if (typeof onFilterChange !== 'function') return;
+      onFilterChange(field, value);
+    },
+    [onFilterChange]
+  );
+
+  const safeResetFilters = useCallback(() => {
+    if (typeof resetFilters !== 'function') return;
+    resetFilters();
+  }, [resetFilters]);
+
+  const safeCloseMenu = useCallback(() => {
+    if (typeof closeMenu !== 'function') return;
+    closeMenu();
+  }, [closeMenu]);
+
+  const safeMapUiCall = useCallback((fn?: () => void) => {
+    if (typeof fn !== 'function') return;
+    try {
+      fn();
+    } catch {
+      // noop
+    }
+  }, []);
 
   const [selectedBaseLayerId, setSelectedBaseLayerId] = useState<string>(
     WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled)?.id || WEB_MAP_BASE_LAYERS[0]?.id || 'osm'
@@ -195,7 +227,8 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   // ——— Aggregations
   const travelCategoriesCount = useMemo(() => {
     const count: Record<string, number> = {};
-    for (const t of travelsData) {
+    const dataset = Array.isArray(travelsData) ? travelsData : [];
+    for (const t of dataset) {
       if (!t.categoryName) continue;
       t.categoryName
         .split(',')
@@ -241,8 +274,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   // ——— Handlers
   const handleSetMode = useCallback((m: 'radius' | 'route') => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    
+    // При переключении на режим радиуса очищаем маршрут
+    if (m === 'radius' && onClearRoute) {
+      onClearRoute();
+    }
+    
     setMode(m);
-  }, [setMode]);
+  }, [setMode, onClearRoute]);
 
   const handleCategoryRemove = useCallback(
     (cat: CategoryOption) => {
@@ -251,7 +290,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         ? cat 
         : (cat && typeof cat === 'object' && 'value' in cat ? cat.value : (cat && typeof cat === 'object' && 'name' in cat ? cat.name : String(cat || '')));
       
-      onFilterChange('categories', filterValue.categories.filter((c) => {
+      safeOnFilterChange('categories', filterValue.categories.filter((c) => {
         if (typeof c === 'string') {
           return c !== catValue;
         } else if (c && typeof c === 'object') {
@@ -261,7 +300,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         return true;
       }));
     },
-    [filterValue.categories, onFilterChange]
+    [filterValue.categories, safeOnFilterChange]
   );
 
   const _hasActiveFilters = useMemo(
@@ -302,50 +341,51 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
   return (
     <View style={styles.card} testID="filters-panel">
       {/* ✅ УЛУЧШЕНИЕ: Компактный header */}
-      <View style={styles.stickyTop} testID="filters-panel-header">
-        <View style={styles.compactHeader}>
-          <View style={styles.compactTitleRow}>
-            <MapIcon name="map" size={18} color={colors.primary} />
-            <Text style={styles.compactTitle}>
-              {totalPoints} {mode === 'radius' ? `мест • ${filterValue.radius || '60'} км` : 'мест'}
-            </Text>
-          </View>
-          {isMobile && (
-            <Pressable
-              testID="filters-panel-close-button"
-              style={styles.closeButton}
-              onPress={closeMenu}
-              accessibilityRole="button"
-              accessibilityLabel="Закрыть панель"
-            >
-              <MapIcon name="close" size={20} color={colors.text} />
-            </Pressable>
+      {!hideTopControls && (
+        <View style={styles.stickyTop} testID="filters-panel-header">
+          {isMobile && totalPoints > 0 && (
+            <View style={styles.compactHeader}>
+              <View style={styles.compactTitleRow}>
+                <MapIcon name="map" size={18} color={colors.primary} />
+                <Text style={styles.compactTitle}>
+                  {totalPoints} {mode === 'radius' ? `мест • ${filterValue.radius || '60'} км` : 'мест'}
+                </Text>
+              </View>
+              <Pressable
+                style={styles.closeButton}
+                onPress={safeCloseMenu}
+                accessibilityRole="button"
+                accessibilityLabel="Закрыть"
+              >
+                <MapIcon name="close" size={20} color={colors.textMuted} />
+              </Pressable>
+            </View>
+          )}
+          {/* ✅ УЛУЧШЕНИЕ: Компактный SegmentedControl вместо больших табов */}
+          <SegmentedControl
+            options={[
+              { key: 'radius', label: 'Радиус', icon: 'my-location' },
+              { key: 'route', label: 'Маршрут', icon: 'alt-route' },
+            ]}
+            value={mode}
+            onChange={(key) => handleSetMode(key as 'radius' | 'route')}
+            compact={isMobile}
+            accessibilityLabel="Выбор режима поиска"
+          />
+
+          {/* ✅ УЛУЧШЕНИЕ: RoutingStatus только в режиме маршрута и более компактный */}
+          {mode === 'route' && (!!routingLoading || !!routingError || (routeDistance != null && routeDistance > 0)) && (
+            <View style={styles.statusCard} testID="routing-status">
+              <RoutingStatus
+                isLoading={!!routingLoading}
+                error={routingError || null}
+                distance={routeDistance}
+                transportMode={transportMode}
+              />
+            </View>
           )}
         </View>
-
-        {/* ✅ УЛУЧШЕНИЕ: Компактный SegmentedControl вместо больших табов */}
-        <SegmentedControl
-          options={[
-            { key: 'radius', label: 'Радиус', icon: 'my-location' },
-            { key: 'route', label: 'Маршрут', icon: 'alt-route' },
-          ]}
-          value={mode}
-          onChange={(key) => handleSetMode(key as 'radius' | 'route')}
-          accessibilityLabel="Выбор режима поиска"
-        />
-
-        {/* ✅ УЛУЧШЕНИЕ: RoutingStatus только в режиме маршрута и более компактный */}
-        {mode === 'route' && (!!routingLoading || !!routingError || (routeDistance != null && routeDistance > 0)) && (
-          <View style={styles.statusCard} testID="routing-status">
-            <RoutingStatus
-              isLoading={!!routingLoading}
-              error={routingError || null}
-              distance={routeDistance}
-              transportMode={transportMode}
-            />
-          </View>
-        )}
-      </View>
+      )}
 
       {/* Контент */}
       <ScrollView
@@ -378,7 +418,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                         })
                         .filter((v): v is string => v !== null && v !== undefined)
                     : []) as string[]}
-                  onChange={(v) => onFilterChange('categories', v)}
+                  onChange={(v) => safeOnFilterChange('categories', v)}
                   labelField="label"
                   valueField="value"
                   placeholder="Выберите..."
@@ -444,7 +484,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       <Pressable
                         key={opt.id}
                         testID={`radius-option-${String(opt.id)}`}
-                        onPress={() => onFilterChange('radius', opt.id)}
+                        onPress={() => safeOnFilterChange('radius', opt.id)}
                         style={[
                           styles.radiusChip,
                           selected && styles.radiusChipActive,
@@ -546,24 +586,24 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           </>
         )}
 
-        {/* ✅ Аккордеон легенды */}
-        <Pressable
-          style={[styles.accordionHeader, globalFocusStyles.focusable]}
-          onPress={() => setLegendOpen((v) => !v)}
-          accessibilityRole="button"
-          accessibilityLabel="Легенда карты"
-          accessibilityState={{ expanded: legendOpen }}
-        >
-          <Text style={styles.accordionTitle}>Легенда карты</Text>
-          <MapIcon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
-        </Pressable>
-        {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
+        <CollapsibleSection title="Настройки карты" icon="tune" defaultOpen={!isMobile}>
+          {/* ✅ Аккордеон легенды */}
+          <Pressable
+            style={[styles.accordionHeader, globalFocusStyles.focusable]}
+            onPress={() => setLegendOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel="Легенда карты"
+            accessibilityState={{ expanded: legendOpen }}
+          >
+            <Text style={styles.accordionTitle}>Легенда карты</Text>
+            <MapIcon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
+          </Pressable>
+          {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
 
-        <CollapsibleSection title="Карта" icon="layers" defaultOpen={false}>
           <View style={styles.mapControlsRow}>
             <Pressable
               style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
-              onPress={() => mapUiApi?.zoomIn()}
+              onPress={() => safeMapUiCall(mapUiApi?.zoomIn)}
               disabled={!mapUiApi}
               accessibilityRole="button"
               accessibilityLabel="Увеличить масштаб"
@@ -574,7 +614,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
             </Pressable>
             <Pressable
               style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
-              onPress={() => mapUiApi?.zoomOut()}
+              onPress={() => safeMapUiCall(mapUiApi?.zoomOut)}
               disabled={!mapUiApi}
               accessibilityRole="button"
               accessibilityLabel="Уменьшить масштаб"
@@ -591,7 +631,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               ]}
               onPress={() => {
                 if (!mapUiApi || !canCenterOnUser) return;
-                mapUiApi.centerOnUser();
+                safeMapUiCall(mapUiApi?.centerOnUser);
               }}
               disabled={!mapUiApi || !canCenterOnUser}
               accessibilityRole="button"
@@ -607,7 +647,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 globalFocusStyles.focusable,
                 (!mapUiApi || !canFitToResults) && styles.mapControlDisabled,
               ]}
-              onPress={() => mapUiApi?.fitToResults()}
+              onPress={() => safeMapUiCall(mapUiApi?.fitToResults)}
               disabled={!mapUiApi || !canFitToResults}
               accessibilityRole="button"
               accessibilityLabel="Показать все результаты на карте"
@@ -626,7 +666,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   globalFocusStyles.focusable,
                   (!mapUiApi || !canBuildRoute || !canExportRoute) && styles.mapControlDisabled,
                 ]}
-                onPress={() => mapUiApi?.exportGpx()}
+                onPress={() => safeMapUiCall(mapUiApi?.exportGpx)}
                 disabled={!mapUiApi || !canBuildRoute || !canExportRoute}
                 accessibilityRole="button"
                 accessibilityLabel="Скачать маршрут в формате GPX"
@@ -641,7 +681,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   globalFocusStyles.focusable,
                   (!mapUiApi || !canBuildRoute || !canExportRoute) && styles.mapControlDisabled,
                 ]}
-                onPress={() => mapUiApi?.exportKml()}
+                onPress={() => safeMapUiCall(mapUiApi?.exportKml)}
                 disabled={!mapUiApi || !canBuildRoute || !canExportRoute}
                 accessibilityRole="button"
                 accessibilityLabel="Скачать маршрут в формате KML"
@@ -669,7 +709,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     ]}
                     onPress={() => {
                       setSelectedBaseLayerId(l.id);
-                      mapUiApi?.setBaseLayer(l.id);
+                      safeMapUiCall(() => mapUiApi?.setBaseLayer?.(l.id));
                     }}
                     accessibilityRole="button"
                     accessibilityLabel={`Выбрать базовый слой: ${l.title}`}
@@ -697,9 +737,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       !mapUiApi && styles.mapControlDisabled,
                     ]}
                     onPress={() => {
+                      if (!mapUiApi) {
+                        console.warn('[FiltersPanel] mapUiApi not available');
+                        return;
+                      }
                       const next = !enabled;
+                      console.info('[FiltersPanel] Toggle overlay:', o.id, 'to', next);
                       setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
-                      mapUiApi?.setOverlayEnabled(o.id, next);
+                      safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(o.id, next));
                     }}
                     accessibilityRole="button"
                     accessibilityLabel={`${enabled ? 'Выключить' : 'Включить'} оверлей: ${o.title}`}
@@ -733,7 +778,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           const next = prev.includes(cat)
                             ? prev.filter((x) => x !== cat)
                             : [...prev, cat];
-                          mapUiApi?.setOsmPoiCategories?.(next);
+                          safeMapUiCall(() => mapUiApi?.setOsmPoiCategories?.(next));
                           return next;
                         });
                       }}
@@ -748,22 +793,22 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               </View>
             </View>
           )}
-        </CollapsibleSection>
 
-        {/* ✅ УЛУЧШЕНИЕ: QuickActions для быстрого доступа */}
-        <QuickActions
-          onReset={mode === 'radius' && _hasActiveFilters ? resetFilters : undefined}
-          onFitBounds={
-            totalPoints > 0 && mapUiApi
-              ? () => {
-                  mapUiApi.fitToResults();
-                  onOpenList?.();
-                }
-              : undefined
-          }
-          totalPoints={totalPoints}
-          hasFilters={_hasActiveFilters}
-        />
+          {/* ✅ УЛУЧШЕНИЕ: QuickActions для быстрого доступа */}
+          <QuickActions
+            onReset={mode === 'radius' && _hasActiveFilters ? safeResetFilters : undefined}
+            onFitBounds={
+              totalPoints > 0 && mapUiApi
+                ? () => {
+                    safeMapUiCall(mapUiApi?.fitToResults);
+                    onOpenList?.();
+                  }
+                : undefined
+            }
+            totalPoints={totalPoints}
+            hasFilters={_hasActiveFilters}
+          />
+        </CollapsibleSection>
 
         {/* ✅ НОВИНКА: Популярное рядом */}
         {Platform.OS !== 'web' && mode === 'radius' && userLocation && onPlaceSelect && (
@@ -778,54 +823,56 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       </ScrollView>
 
       {/* Sticky footer CTA */}
-      <View style={styles.stickyFooter} testID="filters-panel-footer">
-        {!canBuildRoute && mode === 'route' && (
-          <Text style={styles.helperText}>
-            Добавьте старт и финиш — кнопка «Построить маршрут» станет активной
-          </Text>
-        )}
-        <View style={styles.footerButtons}>
-          <Pressable
-            testID="filters-reset-button"
-            style={[
-              styles.ctaButton,
-              styles.ctaOutline,
-              mode === 'route' && !routePoints.length && styles.ctaDisabled,
-            ]}
-            onPress={() => {
-              if (mode === 'route' && !routePoints.length) return;
-              resetFilters();
-            }}
-            disabled={mode === 'route' && !routePoints.length}
-            accessibilityRole="button"
-            accessibilityLabel="Сбросить"
-            accessibilityState={{ disabled: mode === 'route' && !routePoints.length }}
-          >
-            <Text style={styles.ctaOutlineText}>Сбросить</Text>
-          </Pressable>
-
-          {onBuildRoute && mode === 'route' && (
+      {!hideFooterCta && (
+        <View style={styles.stickyFooter} testID="filters-panel-footer">
+          {!canBuildRoute && mode === 'route' && (
+            <Text style={styles.helperText}>
+              Добавьте старт и финиш — кнопка «Построить маршрут» станет активной
+            </Text>
+          )}
+          <View style={styles.footerButtons}>
             <Pressable
-              testID="filters-build-route-button"
+              testID="filters-reset-button"
               style={[
                 styles.ctaButton,
-                styles.ctaPrimary,
-                (!canBuildRoute || routingLoading) && styles.ctaDisabled,
+                styles.ctaOutline,
+                mode === 'route' && !routePoints.length && styles.ctaDisabled,
               ]}
               onPress={() => {
-                if (!canBuildRoute || routingLoading) return;
-                onBuildRoute();
+                if (mode === 'route' && !routePoints.length) return;
+                safeResetFilters();
               }}
-              disabled={!canBuildRoute || routingLoading}
+              disabled={mode === 'route' && !routePoints.length}
               accessibilityRole="button"
-              accessibilityLabel="Построить маршрут"
-              accessibilityState={{ disabled: !canBuildRoute || routingLoading }}
+              accessibilityLabel="Сбросить"
+              accessibilityState={{ disabled: mode === 'route' && !routePoints.length }}
             >
-              <Text style={styles.ctaPrimaryText}>{ctaLabel}</Text>
+              <Text style={styles.ctaOutlineText}>Сбросить</Text>
             </Pressable>
-          )}
+
+            {onBuildRoute && mode === 'route' && (
+              <Pressable
+                testID="filters-build-route-button"
+                style={[
+                  styles.ctaButton,
+                  styles.ctaPrimary,
+                  (!canBuildRoute || routingLoading) && styles.ctaDisabled,
+                ]}
+                onPress={() => {
+                  if (!canBuildRoute || routingLoading) return;
+                  onBuildRoute();
+                }}
+                disabled={!canBuildRoute || routingLoading}
+                accessibilityRole="button"
+                accessibilityLabel="Построить маршрут"
+                accessibilityState={{ disabled: !canBuildRoute || routingLoading }}
+              >
+                <Text style={styles.ctaPrimaryText}>{ctaLabel}</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 };
@@ -834,6 +881,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
 const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number) => {
   const panelWidth = isMobile ? '100%' : Math.max(Math.min(windowWidth - 24, 480), 280);
   const windowHeight = Dimensions.get('window').height;
+  const bottomDockReserve = Platform.OS === 'web' && isMobile ? LAYOUT.tabBarHeight : 0;
 
   return (StyleSheet.create({
     card: {
@@ -1021,7 +1069,7 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       flexGrow: 1,
     },
     contentContainer: {
-      paddingBottom: 100, // ✅ ИСПРАВЛЕНИЕ: Увеличен отступ снизу для прокрутки до конца
+      paddingBottom: 100 + bottomDockReserve, // ✅ ИСПРАВЛЕНИЕ: Увеличен отступ снизу для прокрутки до конца
       flexGrow: 1,
     },
     section: {
@@ -1563,7 +1611,7 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       ...(Platform.OS === 'web'
         ? ({
             position: 'sticky',
-            bottom: 0,
+            bottom: bottomDockReserve,
             backgroundColor: colors.surface,
             paddingTop: 8,
             paddingBottom: 4,

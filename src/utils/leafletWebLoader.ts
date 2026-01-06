@@ -12,6 +12,112 @@ const isTestEnv = () =>
   (process as any).env &&
   (process as any).env.NODE_ENV === 'test';
 
+ const patchLeafletLatLngGuards = (L: any) => {
+   if (!L) return;
+   if ((L as any).__metravelCirclePatched) return;
+
+   const patchCtor = (Ctor: any) => {
+     const proto = Ctor?.prototype;
+     const originalProject = proto?._project;
+     if (!proto || typeof originalProject !== 'function') return;
+
+     const originalUpdatePath = proto?._updatePath;
+     const originalUpdateCircle = proto?._updateCircle;
+     const originalUpdateBounds = proto?._updateBounds;
+
+     proto._project = function patchedProject(this: any) {
+       const ll = this?._latlng;
+       const lat = ll?.lat;
+       const lng = ll?.lng;
+       const map = this?._map;
+       const zoom =
+         typeof map?.getZoom === 'function'
+           ? map.getZoom()
+           : map?._zoom;
+       const valid =
+         Number.isFinite(lat) &&
+         Number.isFinite(lng) &&
+         lat >= -90 &&
+         lat <= 90 &&
+         lng >= -180 &&
+         lng <= 180;
+
+       const mRadius = this?._mRadius;
+       const pxRadius = this?._radius;
+       const hasInvalidRadius =
+         (mRadius != null && !Number.isFinite(mRadius)) ||
+         (pxRadius != null && !Number.isFinite(pxRadius));
+
+       if (!valid || hasInvalidRadius) {
+         try {
+           this?._map?.removeLayer?.(this);
+         } catch {
+           // noop
+         }
+         return;
+       }
+
+       if (!map || map?._loaded === false || !Number.isFinite(zoom)) {
+         return;
+       }
+
+       try {
+         return originalProject.apply(this, arguments as any);
+       } catch {
+         try {
+           this?._map?.removeLayer?.(this);
+         } catch {
+           // noop
+         }
+         return;
+       }
+     };
+
+     if (typeof originalUpdatePath === 'function') {
+       proto._updatePath = function patchedUpdatePath(this: any) {
+         if (!this?._point) return;
+         try {
+           return originalUpdatePath.apply(this, arguments as any);
+         } catch {
+           return;
+         }
+       };
+     }
+
+     if (typeof originalUpdateCircle === 'function') {
+       proto._updateCircle = function patchedUpdateCircle(this: any) {
+         if (!this?._point) return;
+         try {
+           return originalUpdateCircle.apply(this, arguments as any);
+         } catch {
+           return;
+         }
+       };
+     }
+
+     if (typeof originalUpdateBounds === 'function') {
+       proto._updateBounds = function patchedUpdateBounds(this: any) {
+         const pt = this?._point;
+         if (!pt || !Number.isFinite(pt.x) || !Number.isFinite(pt.y)) return;
+         try {
+           return originalUpdateBounds.apply(this, arguments as any);
+         } catch {
+           return;
+         }
+       };
+     }
+   };
+
+   try {
+     patchCtor((L as any).Circle);
+     patchCtor((L as any).CircleMarker);
+   } catch {
+     // noop
+   }
+
+   (L as any).__metravelCirclePatched = true;
+ };
+
 export const ensureLeafletCSS = () => {
   if (typeof document === 'undefined') return;
 
@@ -56,7 +162,10 @@ export const ensureLeaflet = async (): Promise<LeafletNS> => {
   if (typeof window === 'undefined') return null;
 
   const w = window as any;
-  if (w.L) return w.L;
+  if (w.L) {
+    patchLeafletLatLngGuards(w.L);
+    return w.L;
+  }
 
   // In tests we mock/alias Leaflet; avoid waiting for CDN.
   if (isTestEnv()) {
@@ -98,6 +207,7 @@ export const ensureLeaflet = async (): Promise<LeafletNS> => {
     }).then(() => {
       const L = (window as any).L;
       w.L = L;
+      patchLeafletLatLngGuards(L);
       return L;
     });
   }

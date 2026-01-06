@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { ThemeProvider } from '@/hooks/useTheme';
 import type { RoutePoint } from '@/types/route';
@@ -115,7 +115,7 @@ describe('FiltersPanel', () => {
         expect(defaultProps.onFilterChange).toHaveBeenCalled();
     });
 
-    it('displays counter with radius wording when filters active', () => {
+    it('shows categories section when data is available', () => {
       const propsWithData = {
         ...defaultProps,
         filterValue: {
@@ -129,7 +129,7 @@ describe('FiltersPanel', () => {
         ],
       };
       const { getByText } = renderWithTheme(<FiltersPanel {...propsWithData} />);
-      expect(getByText(/3\s+мест\s+•\s+60\s*км/i)).toBeTruthy();
+      expect(getByText('Категории')).toBeTruthy();
   });
 
   it('keeps build button disabled until start and finish are set', () => {
@@ -233,7 +233,7 @@ describe('FiltersPanel', () => {
     expect(carTabEnabledPressable?.props.accessibilityState?.disabled).toBe(false);
   });
 
-  it('calls mapUiApi.zoomIn when Zoom + pressed', () => {
+  it('calls mapUiApi.zoomIn when Zoom + pressed', async () => {
     const mapUiApi = {
       zoomIn: jest.fn(),
       zoomOut: jest.fn(),
@@ -250,14 +250,21 @@ describe('FiltersPanel', () => {
       <FiltersPanel {...defaultProps} mapUiApi={mapUiApi as any} />
     );
 
-    // Open "Карта" section
-    fireEvent.press(getByTestId('collapsible-Карта'));
+    // Open section if needed (defaultOpen may not work in tests)
+    const collapsible = getByTestId('collapsible-Настройки карты');
+    if (collapsible.props.accessibilityState?.expanded === false) {
+      fireEvent.press(collapsible);
+    }
+
+    await waitFor(() => {
+      expect(getByLabelText('Увеличить масштаб')).toBeTruthy();
+    });
 
     fireEvent.press(getByLabelText('Увеличить масштаб'));
     expect(mapUiApi.zoomIn).toHaveBeenCalled();
   });
 
-  it('disables center on user button when user location is unavailable', () => {
+  it('disables center on user button when user location is unavailable', async () => {
     const mapUiApi = {
       zoomIn: jest.fn(),
       zoomOut: jest.fn(),
@@ -274,13 +281,21 @@ describe('FiltersPanel', () => {
       <FiltersPanel {...defaultProps} mapUiApi={mapUiApi as any} />
     );
 
-    fireEvent.press(getByTestId('collapsible-Карта'));
+    // Open section if needed (defaultOpen may not work in tests)
+    const collapsible = getByTestId('collapsible-Настройки карты');
+    if (collapsible.props.accessibilityState?.expanded === false) {
+      fireEvent.press(collapsible);
+    }
+
+    await waitFor(() => {
+      expect(getByLabelText('Моё местоположение')).toBeTruthy();
+    });
 
     const btn = getByLabelText('Моё местоположение');
     expect(btn.props.accessibilityState?.disabled).toBe(true);
   });
 
-  it('calls centerOnUser when user location is available', () => {
+  it('calls centerOnUser when user location is available', async () => {
     const mapUiApi = {
       zoomIn: jest.fn(),
       zoomOut: jest.fn(),
@@ -297,7 +312,15 @@ describe('FiltersPanel', () => {
       <FiltersPanel {...defaultProps} mapUiApi={mapUiApi as any} />
     );
 
-    fireEvent.press(getByTestId('collapsible-Карта'));
+    // Open section if needed (defaultOpen may not work in tests)
+    const collapsible = getByTestId('collapsible-Настройки карты');
+    if (collapsible.props.accessibilityState?.expanded === false) {
+      fireEvent.press(collapsible);
+    }
+
+    await waitFor(() => {
+      expect(getByLabelText('Моё местоположение')).toBeTruthy();
+    });
 
     const btn = getByLabelText('Моё местоположение');
     expect(btn.props.accessibilityState?.disabled).not.toBe(true);

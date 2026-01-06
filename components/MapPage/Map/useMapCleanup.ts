@@ -17,26 +17,18 @@ export const useMapCleanup = () => {
       allLeafletContainers.forEach((el: any) => {
         if (el.id === mapContainerIdRef.current) return;
 
+        // Only touch containers that are truly orphaned (not connected to DOM).
+        // Avoid mutating Leaflet internal/private fields (_leaflet_id, _leaflet_events, L.Util._stamps).
+        if (el && typeof el.isConnected === 'boolean' && el.isConnected) return;
+
         try {
-          const leafletId = el._leaflet_id;
-
-          if ((window as any).L?.Util?._stamps && leafletId) {
-            delete (window as any).L.Util._stamps[leafletId];
-          }
-
           if (el._leaflet_map) {
             try {
               el._leaflet_map.remove();
             } catch {
               // Ignore
             }
-            delete el._leaflet_map;
           }
-
-          delete el._leaflet_id;
-          delete el._leaflet;
-          delete el._leaflet_pos;
-          delete el._leaflet_events;
         } catch {
           // Ignore
         }
@@ -57,25 +49,13 @@ export const useMapCleanup = () => {
         const container = document.getElementById(containerId) as any;
         if (!container) return;
 
-        const leafletId = container._leaflet_id;
-
-        if ((window as any).L?.Util?._stamps && leafletId) {
-          delete (window as any).L.Util._stamps[leafletId];
-        }
-
         if (container._leaflet_map) {
           try {
             container._leaflet_map.remove();
           } catch {
             // Ignore
           }
-          delete container._leaflet_map;
         }
-
-        delete container._leaflet_id;
-        delete container._leaflet;
-        delete container._leaflet_pos;
-        delete container._leaflet_events;
       } catch (e) {
         console.warn('[Map] Failed to clean container on unmount:', e);
       }

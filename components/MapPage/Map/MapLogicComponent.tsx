@@ -91,26 +91,33 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   // Keep map ref and call onMapReady
   useEffect(() => {
     mapRef.current = map;
-    if (map && !hasCalledOnMapReadyRef.current) {
-      // Check if map has valid center before declaring it ready
-      try {
-        const center = map.getCenter?.();
-        if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
-          hasCalledOnMapReadyRef.current = true;
-          onMapReady(map);
-        }
-      } catch {
-        // Map not fully initialized yet
-      }
-    }
+    if (!map) return;
+
+    let cancelled = false;
+    const markReady = () => {
+      if (cancelled || hasCalledOnMapReadyRef.current) return;
+      hasCalledOnMapReadyRef.current = true;
+      onMapReady(map);
+    };
+
     try {
-      if (map) {
-        setMapZoom(map.getZoom());
+      if (typeof map.whenReady === 'function') {
+        map.whenReady(markReady);
+      } else {
+        markReady();
       }
     } catch {
       // noop
     }
+
+    try {
+      setMapZoom(map.getZoom());
+    } catch {
+      // noop
+    }
+
     return () => {
+      cancelled = true;
       hasCalledOnMapReadyRef.current = false;
     };
   }, [map, mapRef, onMapReady, setMapZoom]);
@@ -226,4 +233,3 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
   return null;
 };
-

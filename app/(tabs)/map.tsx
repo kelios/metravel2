@@ -131,6 +131,10 @@ export default function MapScreen() {
     // Функция рендеринга содержимого панели
     const panelHeader = (
         <View style={styles.tabsContainer}>
+            {/* Drag handle для мобильных */}
+            {isMobile && (
+                <View style={styles.dragHandle} />
+            )}
             <View style={styles.tabsSegment}>
                 <Pressable
                     ref={filtersTabRef}
@@ -147,21 +151,21 @@ export default function MapScreen() {
                     accessibilityState={{ selected: rightPanelTab === 'filters' }}
                     accessibilityLabel="Фильтры"
                 >
-                    <View style={[styles.tabIconBubble, rightPanelTab === 'filters' && styles.tabIconBubbleActive]}>
-                        <MaterialIcons
-                            name="filter-list"
-                            size={18}
-                            color={rightPanelTab === 'filters' ? themedColors.textOnPrimary : themedColors.primary}
-                        />
-                    </View>
-                    <View style={styles.tabLabelColumn}>
-                        <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
-                            Фильтры
-                        </Text>
-                        <Text style={[styles.tabHint, rightPanelTab === 'filters' && styles.tabHintActive]}>
-                            Настрой параметров
-                        </Text>
-                    </View>
+                    <MaterialIcons
+                        name="filter-list"
+                        size={isMobile ? 22 : 18}
+                        color={rightPanelTab === 'filters' ? themedColors.textInverse : themedColors.text}
+                    />
+                    {!isMobile && (
+                        <View style={styles.tabLabelColumn}>
+                            <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
+                                Фильтры
+                            </Text>
+                            <Text style={[styles.tabHint, rightPanelTab === 'filters' && styles.tabHintActive]}>
+                                Настрой параметров
+                            </Text>
+                        </View>
+                    )}
                 </Pressable>
 
                 <Pressable
@@ -178,21 +182,21 @@ export default function MapScreen() {
                     accessibilityState={{ selected: rightPanelTab === 'travels' }}
                     accessibilityLabel="Список"
                 >
-                    <View style={[styles.tabIconBubble, rightPanelTab === 'travels' && styles.tabIconBubbleActive]}>
-                        <MaterialIcons
-                            name="list"
-                            size={18}
-                            color={rightPanelTab === 'travels' ? themedColors.textOnPrimary : themedColors.primary}
-                        />
-                    </View>
-                    <View style={styles.tabLabelColumn}>
-                        <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
-                            Список
-                        </Text>
-                        <Text style={[styles.tabHint, rightPanelTab === 'travels' && styles.tabHintActive]}>
-                            {travelsData.length} мест
-                        </Text>
-                    </View>
+                    <MaterialIcons
+                        name="list"
+                        size={isMobile ? 22 : 18}
+                        color={rightPanelTab === 'travels' ? themedColors.textInverse : themedColors.text}
+                    />
+                    {!isMobile && (
+                        <View style={styles.tabLabelColumn}>
+                            <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
+                                Список
+                            </Text>
+                            <Text style={[styles.tabHint, rightPanelTab === 'travels' && styles.tabHintActive]}>
+                                {travelsData.length} мест
+                            </Text>
+                        </View>
+                    )}
                 </Pressable>
             </View>
 

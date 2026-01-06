@@ -1,5 +1,5 @@
 import { Platform, StyleSheet } from 'react-native';
-import { METRICS } from '@/constants/layout';
+import { LAYOUT, METRICS } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
@@ -7,23 +7,18 @@ const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 48; // 384px
 const PANEL_WIDTH_TABLET = METRICS.baseUnit * 42; // 336px
 const PANEL_GAP = METRICS.spacing.m; // 16px
 const TRANSITION_MS = 180;
-const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = 0;
+const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT.tabBarHeight;
 
 export const getStyles = (
   isMobile: boolean,
   insetTop: number,
   _headerOffset: number, // Префикс _ для неиспользуемого параметра
-  windowWidth: number = METRICS.breakpoints.tablet,
+  _windowWidth: number = METRICS.breakpoints.tablet,
   themedColors: ThemedColors,
 ) => {
-  const panelSlideDistance = Math.max(windowWidth, PANEL_WIDTH_TABLET);
   const shadowLight = themedColors.shadows.light;
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
-  const mobilePanelWidth =
-    Platform.OS === 'web' && isMobile
-      ? Math.min(windowWidth * 0.9, PANEL_WIDTH_TABLET)
-      : '100%';
 
   return StyleSheet.create({
     container: {
@@ -94,16 +89,19 @@ export const getStyles = (
       },
       rightPanel: {
         position: isMobile ? 'absolute' : 'relative',
+        left: isMobile ? 0 : undefined,
         right: isMobile ? 0 : undefined,
-        // ✅ ИСПРАВЛЕНИЕ: Убран effectiveHeaderOffset, так как хедер уже в потоке
-        top: 0,
         bottom: isMobile ? (Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 0) : undefined,
-        width: isMobile ? mobilePanelWidth : PANEL_WIDTH_DESKTOP,
-        maxWidth: isMobile ? mobilePanelWidth : PANEL_WIDTH_DESKTOP + 40,
+        top: isMobile ? undefined : 0,
+        width: isMobile ? '100%' : PANEL_WIDTH_DESKTOP,
+        maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
+        maxHeight: isMobile ? '75vh' : undefined,
         backgroundColor: themedColors.surface,
         ...(Platform.OS === 'web'
           ? ({
-              boxShadow: themedColors.boxShadows.modal,
+              boxShadow: themedColors.boxShadows.heavy,
+              borderTopLeftRadius: isMobile ? 20 : 0,
+              borderTopRightRadius: isMobile ? 20 : 0,
             } as any)
           : Platform.OS === 'ios'
           ? shadowHeavy
@@ -117,17 +115,17 @@ export const getStyles = (
           : null),
         ...(Platform.OS === 'web' && isMobile
           ? ({
-              transition: `transform ${TRANSITION_MS}ms ease, opacity ${TRANSITION_MS}ms ease`,
+              transition: `transform ${TRANSITION_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
             } as any)
           : null),
       },
       rightPanelMobileOpen: {
-        transform: [{ translateX: 0 }],
+        transform: [{ translateY: 0 }],
         opacity: 1,
         pointerEvents: 'auto',
       },
       rightPanelMobileClosed: {
-        transform: [{ translateX: panelSlideDistance }],
+        transform: [{ translateY: '100%' }],
         opacity: 0,
         pointerEvents: 'none',
       },
@@ -162,42 +160,58 @@ export const getStyles = (
         opacity: 1,
         pointerEvents: 'auto',
       },
+      dragHandle: {
+        position: 'absolute',
+        top: 8,
+        left: '50%',
+        marginLeft: -20,
+        width: 40,
+        height: 4,
+        backgroundColor: themedColors.border,
+        borderRadius: 2,
+        opacity: 0.6,
+      },
       tabsContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        // ✅ ИСПРАВЛЕНИЕ: Убран effectiveHeaderOffset из paddingTop
-        paddingTop: isMobile ? insetTop + 6 : 8,
-        paddingBottom: 10,
-        paddingHorizontal: isMobile ? 12 : 8,
+        paddingTop: isMobile ? Math.max(16, insetTop + 6) : 8,
+        paddingBottom: isMobile ? 8 : 10,
+        paddingHorizontal: isMobile ? 16 : 8,
         backgroundColor: themedColors.surface,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: themedColors.border,
-        columnGap: 8,
+        columnGap: isMobile ? 6 : 8,
+        minHeight: isMobile ? 56 : undefined,
         ...(Platform.OS === 'web'
           ? ({
-              boxShadow: isMobile ? themedColors.boxShadows.medium : themedColors.boxShadows.light,
+              boxShadow: isMobile ? themedColors.boxShadows.light : themedColors.boxShadows.light,
             } as any)
           : Platform.OS === 'ios'
-          ? (isMobile ? shadowMedium : shadowLight)
-          : { elevation: isMobile ? shadowMedium.elevation : shadowLight.elevation }),
+          ? shadowLight
+          : { elevation: shadowLight.elevation }),
         zIndex: 1001,
       },
       tabsSegment: {
-        flex: 1,
         flexDirection: 'row',
         backgroundColor: themedColors.surfaceLight,
-        borderRadius: 16,
+        borderRadius: isMobile ? 12 : 16,
         padding: 4,
-        columnGap: 6,
+        columnGap: isMobile ? 4 : 6,
+        alignSelf: isMobile ? 'flex-start' : 'stretch',
+        flex: isMobile ? 0 : 1,
+        marginLeft: isMobile ? 0 : undefined,
       },
       tab: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 10,
+        justifyContent: 'center',
+        paddingVertical: isMobile ? 10 : 10,
+        paddingHorizontal: isMobile ? 12 : 10,
         borderRadius: 12,
-        gap: 10,
+        gap: isMobile ? 0 : 10,
+        minWidth: isMobile ? 52 : undefined,
+        minHeight: isMobile ? 44 : undefined,
       },
       tabActive: {
         backgroundColor: themedColors.primary,
