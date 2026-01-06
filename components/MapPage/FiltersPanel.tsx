@@ -105,6 +105,7 @@ interface FiltersPanelProps {
   onOpenList?: () => void;
   hideTopControls?: boolean;
   hideFooterCta?: boolean;
+  hideFooterReset?: boolean;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
@@ -138,6 +139,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      onOpenList,
                                                      hideTopControls = false,
                                                      hideFooterCta = false,
+                                                     hideFooterReset = false,
 }) => {
   const windowWidth = Dimensions.get('window').width;
   const colors = useThemedColors();
@@ -797,6 +799,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           {/* ✅ УЛУЧШЕНИЕ: QuickActions для быстрого доступа */}
           <QuickActions
             onReset={mode === 'radius' && _hasActiveFilters ? safeResetFilters : undefined}
+            hideReset={isMobile}
             onFitBounds={
               totalPoints > 0 && mapUiApi
                 ? () => {
@@ -831,24 +834,26 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
             </Text>
           )}
           <View style={styles.footerButtons}>
-            <Pressable
-              testID="filters-reset-button"
-              style={[
-                styles.ctaButton,
-                styles.ctaOutline,
-                mode === 'route' && !routePoints.length && styles.ctaDisabled,
-              ]}
-              onPress={() => {
-                if (mode === 'route' && !routePoints.length) return;
-                safeResetFilters();
-              }}
-              disabled={mode === 'route' && !routePoints.length}
-              accessibilityRole="button"
-              accessibilityLabel="Сбросить"
-              accessibilityState={{ disabled: mode === 'route' && !routePoints.length }}
-            >
-              <Text style={styles.ctaOutlineText}>Сбросить</Text>
-            </Pressable>
+            {!hideFooterReset && (
+              <Pressable
+                testID="filters-reset-button"
+                style={[
+                  styles.ctaButton,
+                  styles.ctaOutline,
+                  mode === 'route' && !routePoints.length && styles.ctaDisabled,
+                ]}
+                onPress={() => {
+                  if (mode === 'route' && !routePoints.length) return;
+                  safeResetFilters();
+                }}
+                disabled={mode === 'route' && !routePoints.length}
+                accessibilityRole="button"
+                accessibilityLabel="Сбросить"
+                accessibilityState={{ disabled: mode === 'route' && !routePoints.length }}
+              >
+                <Text style={styles.ctaOutlineText}>Сбросить</Text>
+              </Pressable>
+            )}
 
             {onBuildRoute && mode === 'route' && (
               <Pressable

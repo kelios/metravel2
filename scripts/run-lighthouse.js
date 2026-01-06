@@ -3,6 +3,7 @@
 const http = require('http')
 const fs = require('fs')
 const path = require('path')
+const zlib = require('zlib')
 const { spawn } = require('child_process')
 
 const buildDir = process.env.LIGHTHOUSE_BUILD_DIR
@@ -44,6 +45,88 @@ const contentTypes = {
   '.map': 'application/json; charset=utf-8',
 }
 
+const compressibleTypes = new Set([
+  'text/html',
+  'application/javascript',
+  'text/css',
+  'application/json',
+  'image/svg+xml',
+])
+
+const longCacheExtensions = new Set([
+  '.js',
+  '.css',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.avif',
+  '.svg',
+  '.ico',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.map',
+])
+
+const shouldCacheForever = (pathname, ext) => {
+  if (pathname.startsWith('/_expo/static/') || pathname.startsWith('/assets/')) return true
+  return longCacheExtensions.has(ext)
+}
+
+const applyCaching = (res, pathname, ext) => {
+  if (ext === '.html' || pathname === '/' || pathname.endsWith('/index.html')) {
+    res.setHeader('Cache-Control', 'no-cache')
+    return
+  }
+
+  if (shouldCacheForever(pathname, ext)) {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    return
+  }
+
+  res.setHeader('Cache-Control', 'no-cache')
+}
+
+const compressResponse = (req, res, data, contentType) => {
+  const acceptEncoding = (req.headers['accept-encoding'] || '').toLowerCase()
+  const baseType = String(contentType).split(';')[0].trim()
+  const isCompressible = compressibleTypes.has(baseType)
+
+  if (!isCompressible) {
+    res.end(data)
+    return
+  }
+
+  res.setHeader('Vary', 'Accept-Encoding')
+
+  if (acceptEncoding.includes('br')) {
+    zlib.brotliCompress(data, (err, compressed) => {
+      if (err) {
+        res.end(data)
+        return
+      }
+      res.setHeader('Content-Encoding', 'br')
+      res.end(compressed)
+    })
+    return
+  }
+
+  if (acceptEncoding.includes('gzip')) {
+    zlib.gzip(data, (err, compressed) => {
+      if (err) {
+        res.end(data)
+        return
+      }
+      res.setHeader('Content-Encoding', 'gzip')
+      res.end(compressed)
+    })
+    return
+  }
+
+  res.end(data)
+}
+
 const server = http.createServer((req, res) => {
   try {
     const url = new URL(req.url || '/', `http://${host}:${port}`)
@@ -67,8 +150,10 @@ const server = http.createServer((req, res) => {
             res.end('Not found')
             return
           }
-          res.setHeader('Content-Type', 'text/html; charset=utf-8')
-          res.end(fallbackData)
+          const contentType = 'text/html; charset=utf-8'
+          res.setHeader('Content-Type', contentType)
+          applyCaching(res, pathname, '.html')
+          compressResponse(req, res, fallbackData, contentType)
         })
         return
       }
@@ -76,7 +161,8 @@ const server = http.createServer((req, res) => {
       const ext = path.extname(resolvedPath).toLowerCase()
       const contentType = contentTypes[ext] || 'application/octet-stream'
       res.setHeader('Content-Type', contentType)
-      res.end(data)
+      applyCaching(res, pathname, ext)
+      compressResponse(req, res, data, contentType)
     })
   } catch {
     res.statusCode = 500

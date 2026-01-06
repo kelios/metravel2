@@ -197,30 +197,87 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   // Content based on active tab
   const sheetContent = useMemo(() => {
-    if (activeTab === 'filters') {
-      const FilterComponent = filtersPanelProps.Component;
-      return (
-        <FilterComponent
-          {...filtersPanelProps.props}
+    const showModeToggle =
+      activeTab === 'filters' &&
+      (filtersMode === 'radius' || filtersMode === 'route') &&
+      typeof setFiltersMode === 'function';
+
+    const body =
+      activeTab === 'filters' ? (
+        (() => {
+          const FilterComponent = filtersPanelProps.Component;
+          return (
+            <FilterComponent
+              {...filtersPanelProps.props}
+              isMobile={true}
+              hideTopControls={true}
+              hideFooterCta={filtersMode === 'route'}
+            />
+          );
+        })()
+      ) : (
+        <TravelListPanel
+          travelsData={travelsData}
+          buildRouteTo={buildRouteTo}
           isMobile={true}
-          hideTopControls={true}
-          hideFooterCta={true}
+          userLocation={coordinates}
+          transportMode={transportMode}
+          onToggleFavorite={onToggleFavorite}
+          favorites={favorites}
         />
       );
-    }
 
     return (
-      <TravelListPanel
-        travelsData={travelsData}
-        buildRouteTo={buildRouteTo}
-        isMobile={true}
-        userLocation={coordinates}
-        transportMode={transportMode}
-        onToggleFavorite={onToggleFavorite}
-        favorites={favorites}
-      />
+      <View style={styles.sheetRoot}>
+        <View style={styles.sheetTopControls}>
+          <SegmentedControl
+            options={[
+              { key: 'list', label: 'Список', icon: 'list' },
+              { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
+            ]}
+            value={activeTab}
+            onChange={(key) => {
+              const next = key === 'filters' ? 'filters' : 'list';
+              setActiveTab(next);
+              bottomSheetRef.current?.snapToHalf();
+            }}
+            compact={true}
+            accessibilityLabel="Переключение между фильтрами и списком"
+          />
+
+          {showModeToggle && (
+            <SegmentedControl
+              options={[
+                { key: 'radius', label: 'Радиус', icon: 'my-location' },
+                { key: 'route', label: 'Маршрут', icon: 'alt-route' },
+              ]}
+              value={filtersMode}
+              onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
+              compact={true}
+              accessibilityLabel="Выбор режима поиска"
+            />
+          )}
+        </View>
+
+        <View style={styles.sheetBody}>{body}</View>
+      </View>
     );
-  }, [activeTab, filtersPanelProps, travelsData, buildRouteTo, coordinates, transportMode, onToggleFavorite, favorites]);
+  }, [
+    activeTab,
+    bottomSheetRef,
+    buildRouteTo,
+    coordinates,
+    favorites,
+    filtersMode,
+    filtersPanelProps,
+    onToggleFavorite,
+    setFiltersMode,
+    styles.sheetBody,
+    styles.sheetRoot,
+    styles.sheetTopControls,
+    transportMode,
+    travelsData,
+  ]);
 
   const sheetTitle = activeTab === 'filters' ? 'Фильтры' : 'Места рядом';
   const sheetSubtitle = activeTab === 'list' ? `${travelsData.length} мест` : undefined;
@@ -266,6 +323,19 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.background,
     },
     mapContainer: {
+      flex: 1,
+    },
+    sheetRoot: {
+      flex: 1,
+    },
+    sheetTopControls: {
+      gap: 8,
+      paddingTop: 8,
+      paddingBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sheetBody: {
       flex: 1,
     },
     filtersPeek: {

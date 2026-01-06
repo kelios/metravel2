@@ -77,7 +77,7 @@ test.describe('Map Page (/map) - smoke e2e', () => {
 
     // Footer всегда должен быть на странице
     await expect(page.getByTestId('filters-panel-footer')).toBeVisible();
-    await expect(page.getByTestId('filters-reset-button')).toBeVisible();
+    await expect(page.getByTestId('map-reset-filters-button')).toBeVisible();
   });
 
   test('mobile: menu button opens filters panel', async ({ page }) => {

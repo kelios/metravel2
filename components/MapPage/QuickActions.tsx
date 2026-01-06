@@ -18,6 +18,7 @@ interface QuickActionsProps {
   onSaveFilters?: () => void;
   totalPoints: number;
   hasFilters: boolean;
+  hideReset?: boolean;
 }
 
 const QuickActions: React.FC<QuickActionsProps> = ({
@@ -26,6 +27,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   onSaveFilters,
   totalPoints,
   hasFilters,
+  hideReset = false,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -33,7 +35,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   const actions: QuickAction[] = useMemo(() => {
     const result: QuickAction[] = [];
 
-    if (onReset && hasFilters) {
+    if (!hideReset && onReset && hasFilters) {
       result.push({
         icon: 'refresh',
         label: 'Сбросить',
@@ -64,7 +66,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
     }
 
     return result.filter(a => a.show);
-  }, [onReset, onFitBounds, onSaveFilters, totalPoints, hasFilters]);
+  }, [hideReset, onReset, onFitBounds, onSaveFilters, totalPoints, hasFilters]);
 
   if (actions.length === 0) {
     return null;

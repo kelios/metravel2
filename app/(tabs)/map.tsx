@@ -200,16 +200,33 @@ export default function MapScreen() {
                 </Pressable>
             </View>
 
-            <Pressable
-                testID="map-close-panel-button"
-                style={({ pressed }) => [styles.closePanelButton, pressed && { opacity: 0.7 }]}
-                onPress={closeRightPanel}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel="Скрыть панель"
-            >
-                <MaterialIcons name="chevron-right" size={22} color={themedColors.textMuted} />
-            </Pressable>
+            {Platform.OS === 'web' && !isMobile ? (
+                <Pressable
+                    testID="map-reset-filters-button"
+                    style={({ pressed }) => [styles.closePanelButton, pressed && { opacity: 0.7 }]}
+                    onPress={() => {
+                        selectFiltersTab();
+                        const reset = (filtersPanelProps as any)?.props?.resetFilters;
+                        if (typeof reset === 'function') reset();
+                    }}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Сбросить фильтры"
+                >
+                    <MaterialIcons name="refresh" size={20} color={themedColors.textMuted} />
+                </Pressable>
+            ) : (
+                <Pressable
+                    testID="map-close-panel-button"
+                    style={({ pressed }) => [styles.closePanelButton, pressed && { opacity: 0.7 }]}
+                    onPress={closeRightPanel}
+                    hitSlop={10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Скрыть панель"
+                >
+                    <MaterialIcons name="chevron-right" size={22} color={themedColors.textMuted} />
+                </Pressable>
+            )}
         </View>
     );
 
@@ -262,7 +279,10 @@ export default function MapScreen() {
                                 {panelHeader}
                                 <View style={styles.panelContent}>
                                     {rightPanelTab === 'filters' ? (
-                                        <FiltersPanelComponent {...filtersPanelProps.props} />
+                                        <FiltersPanelComponent
+                                            {...filtersPanelProps.props}
+                                            hideFooterReset={Platform.OS === 'web' && !isMobile}
+                                        />
                                     ) : (
                                         <View style={styles.travelsListContainer} testID="map-travels-tab">
                                             {loading && !isPlaceholderData ? (

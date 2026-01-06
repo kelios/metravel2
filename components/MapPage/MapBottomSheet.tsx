@@ -58,15 +58,24 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       [onStateChange]
     );
 
-    // Render backdrop for full state
+    // Render backdrop for half/full states
     const renderBackdrop = useCallback(
       (props: any) => (
-        <BottomSheetBackdrop
-          {...props}
-          disappearsOnIndex={1}
-          appearsOnIndex={2}
-          opacity={0.5}
-        />
+        <View testID="map-panel-overlay" style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <BottomSheetBackdrop
+            {...props}
+            disappearsOnIndex={0}
+            appearsOnIndex={1}
+            opacity={0.5}
+            pressBehavior="none"
+          />
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => bottomSheetRef.current?.snapToIndex(0)}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть панель карты"
+          />
+        </View>
       ),
       []
     );
