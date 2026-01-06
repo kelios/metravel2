@@ -3,7 +3,7 @@
  */
 
 import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Text } from 'react-native';
+import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
 import { MapPeekPreview } from './MapPeekPreview';
@@ -50,6 +50,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
+  const lastPanelOpenTsRef = useRef<number>(0);
 
   const [activeTab, setActiveTab] = useState<'list' | 'filters'>('list');
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
@@ -69,6 +70,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       label: 'Фильтры',
       onPress: () => {
         setActiveTab('filters');
+        lastPanelOpenTsRef.current = Date.now();
         bottomSheetRef.current?.snapToHalf();
       },
     },
@@ -77,6 +79,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       label: 'Построить маршрут',
       onPress: () => {
         setActiveTab('filters');
+        lastPanelOpenTsRef.current = Date.now();
         bottomSheetRef.current?.snapToFull();
         // Trigger mode change in filters
         filtersPanelProps?.props?.setMode?.('route');
@@ -90,12 +93,16 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   useEffect(() => {
     if (!openNonce) return;
+    setActiveTab('filters');
+    lastPanelOpenTsRef.current = Date.now();
     bottomSheetRef.current?.snapToHalf();
   }, [openNonce]);
 
   useEffect(() => {
     if (!toggleNonce) return;
     if (sheetState === 'collapsed') {
+      setActiveTab('filters');
+      lastPanelOpenTsRef.current = Date.now();
       bottomSheetRef.current?.snapToHalf();
       return;
     }
@@ -289,6 +296,22 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         {mapComponent}
       </View>
 
+      {/* Web/mobile overlay to close sheet by tapping outside (e2e + UX parity) */}
+      {Platform.OS === 'web' && sheetState !== 'collapsed' && (
+        <Pressable
+          testID="map-panel-overlay"
+          style={styles.webOverlay}
+          onPress={() => {
+            // Prevent immediate close on the same click/tap that opened the panel (RN-web event timing).
+            const dt = Date.now() - lastPanelOpenTsRef.current;
+            if (dt < 250) return;
+            bottomSheetRef.current?.snapToCollapsed();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Закрыть панель карты"
+        />
+      )}
+
       {/* FAB */}
       <MapFAB
         mainAction={{
@@ -324,6 +347,11 @@ const getStyles = (colors: ThemedColors) =>
     },
     mapContainer: {
       flex: 1,
+    },
+    webOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      zIndex: 10,
     },
     sheetRoot: {
       flex: 1,

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePathname } from 'expo-router';
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export default function PrivacyScreen() {

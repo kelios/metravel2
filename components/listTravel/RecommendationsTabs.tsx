@@ -18,7 +18,8 @@ import {
   Animated,
   FlatList,
 } from 'react-native';
-import { MaterialIcons, Feather } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import { SkeletonLoader } from '@/components/SkeletonLoader';

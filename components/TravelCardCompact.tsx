@@ -3,7 +3,7 @@
 
 import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import type { Travel } from '@/src/types/types';
 import FavoriteButton from '@/components/FavoriteButton';

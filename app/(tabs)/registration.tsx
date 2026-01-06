@@ -13,12 +13,12 @@ import {
     Image,
 } from 'react-native';
 import { Button, Card } from 'react-native-paper';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { Formik, FormikHelpers } from 'formik';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { registration } from '@/src/api/auth';
 import type { FormValues } from '@/src/types/types';
 import { registrationSchema } from '@/utils/validation';
@@ -150,8 +150,8 @@ export default function RegisterForm() {
                                                     styles.inputWrap,
                                                     touched.username && errors.username && styles.inputWrapError,
                                                 ]}>
-                                                    <MaterialCommunityIcons 
-                                                        name="account" 
+                                                    <Feather 
+                                                        name="user" 
                                                         size={20} 
                                                         color={touched.username && errors.username 
                                                             ? colors.danger
@@ -184,8 +184,8 @@ export default function RegisterForm() {
                                                     styles.inputWrap,
                                                     touched.email && errors.email && styles.inputWrapError,
                                                 ]}>
-                                                    <MaterialCommunityIcons 
-                                                        name="email" 
+                                                    <Feather 
+                                                        name="mail" 
                                                         size={20} 
                                                         color={touched.email && errors.email 
                                                             ? colors.danger
@@ -219,7 +219,7 @@ export default function RegisterForm() {
                                                     styles.inputWrap,
                                                     touched.password && errors.password && styles.inputWrapError,
                                                 ]}>
-                                                    <MaterialCommunityIcons 
+                                                    <Feather 
                                                         name="lock" 
                                                         size={20} 
                                                         color={touched.password && errors.password 
@@ -245,7 +245,7 @@ export default function RegisterForm() {
                                                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                                         style={styles.eyeButton}
                                                     >
-                                                        <MaterialCommunityIcons
+                                                        <Feather
                                                             name={showPass ? 'eye-off' : 'eye'}
                                                             size={20}
                                                             color={colors.textMuted}
@@ -264,8 +264,8 @@ export default function RegisterForm() {
                                                     styles.inputWrap,
                                                     touched.confirmPassword && errors.confirmPassword && styles.inputWrapError,
                                                 ]}>
-                                                    <MaterialCommunityIcons 
-                                                        name="lock-check" 
+                                                    <Feather 
+                                                        name="check-circle" 
                                                         size={20} 
                                                         color={touched.confirmPassword && errors.confirmPassword 
                                                             ? colors.danger

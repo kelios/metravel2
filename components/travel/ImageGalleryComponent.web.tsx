@@ -7,7 +7,7 @@ import {
     ActivityIndicator,
     Platform,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useDropzone } from 'react-dropzone';
 import ConfirmDialog from '@/components/ConfirmDialog';

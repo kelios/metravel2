@@ -8,7 +8,7 @@ import {
   Platform,
   Modal,
 } from "react-native"
-import { MaterialIcons } from "@expo/vector-icons"
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'

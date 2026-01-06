@@ -20,7 +20,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native'
-import { MaterialIcons } from '@expo/vector-icons'
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import NavigationArrows from '@/components/travel/NavigationArrows'

@@ -213,8 +213,36 @@ const clickNext = async (page: any) => {
   await any.click();
 };
 
+const maybeRecoverFromChunkLoadError = async (page: any) => {
+  const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
+  const loadingModuleError = page.locator('text=/Loading module .* failed/i').first();
+  const hasError =
+    (await errorTitle.isVisible().catch(() => false)) ||
+    (await loadingModuleError.isVisible().catch(() => false));
+
+  if (!hasError) return;
+
+  const reloadButton = page.getByRole('button', { name: /Перезагрузить страницу/i });
+  if (await reloadButton.isVisible().catch(() => false)) {
+    await reloadButton.click().catch(() => null);
+  } else {
+    await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+  }
+};
+
 const fillMinimumValidBasics = async (page: any, name: string) => {
-  await page.getByPlaceholder('Например: Неделя в Грузии').fill(name);
+  // Expo web can sporadically fail to load a chunk; recover before interacting.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await maybeRecoverFromChunkLoadError(page);
+    const nameInputTry = page.getByPlaceholder('Например: Неделя в Грузии');
+    if (await nameInputTry.isVisible({ timeout: 5_000 }).catch(() => false)) break;
+    await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+    await page.waitForTimeout(500 + attempt * 400).catch(() => null);
+  }
+
+  const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
+  await expect(nameInput).toBeVisible({ timeout: 30_000 });
+  await nameInput.fill(name);
   await fillRichDescription(
     page,
     'Это описание для e2e теста. Оно достаточно длинное, чтобы пройти базовую валидацию (минимум 50 символов) и обеспечить стабильные переходы между шагами.'

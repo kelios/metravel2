@@ -10,8 +10,8 @@ import {
     Text,
     ActivityIndicator,
 } from 'react-native';
-import { Feather } from "@expo/vector-icons";
-import { MaterialIcons } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import IconButton from '@/components/ui/IconButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import SearchAutocomplete from '@/components/SearchAutocomplete';

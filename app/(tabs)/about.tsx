@@ -2,7 +2,7 @@
 import React, { useCallback, useMemo, useRef, useState, memo } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { AboutHeader } from '@/components/about/AboutHeader';
 import { AboutIntroCard } from '@/components/about/AboutIntroCard';
 import { VideoCard } from '@/components/about/VideoCard';

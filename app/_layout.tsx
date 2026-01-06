@@ -4,7 +4,6 @@ import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox, useColorS
 import { MD3DarkTheme, MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
-import Toast from "react-native-toast-message";
 import { FiltersProvider } from "@/providers/FiltersProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
@@ -12,10 +11,13 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SkipLinks from "@/components/SkipLinks";
 import { NetworkStatus } from "@/components/NetworkStatus";
-import ConsentBanner from "@/components/ConsentBanner";
-import Footer from "@/components/Footer";
+const FooterLazy = React.lazy(() => import('@/components/Footer'));
+const ConsentBannerLazy = React.lazy(() => import('@/components/ConsentBanner'));
+const ToastLazy = React.lazy(() =>
+  import('react-native-toast-message').then((mod) => ({ default: mod.default ?? mod }))
+);
 import { useFonts } from "expo-font";
-import { Feather, FontAwesome5 } from "@expo/vector-icons";
+import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
@@ -201,7 +203,6 @@ function RootLayoutNav() {
             "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
             "Roboto-Medium": require("../assets/fonts/Roboto-Medium.ttf"),
             ...(Feather as any).font,
-            ...(FontAwesome5 as any).font,
           }
     );
 
@@ -376,14 +377,18 @@ function ThemedContent({
                               </View>
 
                               {/* Баннер согласия с компактным интерфейсом (web only) */}
-                              <ConsentBanner />
+                              <React.Suspense fallback={null}>
+                                <ConsentBannerLazy />
+                              </React.Suspense>
 
                               {showFooter && (!isWeb || isMounted) && (
                                 <View style={[styles.footerWrapper, isWeb && isMobile ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>
-                                  <Footer
-                                    /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
-                                    onDockHeight={(h) => setDockHeight(h)}
-                                  />
+                                  <React.Suspense fallback={null}>
+                                    <FooterLazy
+                                      /** Получаем высоту док-строки (мобайл). На десктопе придёт 0. */
+                                      onDockHeight={(h) => setDockHeight(h)}
+                                    />
+                                  </React.Suspense>
                                 </View>
                               )}
                         </View>
@@ -392,7 +397,11 @@ function ThemedContent({
             </FavoritesProvider>
             </AuthProvider>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
-            {isMounted && <Toast />}
+            {isMounted && (
+              <React.Suspense fallback={null}>
+                <ToastLazy />
+              </React.Suspense>
+            )}
         </ThemedPaperProvider>
   );
 }

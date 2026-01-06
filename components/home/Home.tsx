@@ -8,10 +8,13 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
-import HomeTrustBlock from './HomeTrustBlock';
-import HomeHowItWorks from './HomeHowItWorks';
-import HomeFAQSection from './HomeFAQSection';
 
+const isWeb = Platform.OS === 'web';
+const isClient = typeof window !== 'undefined';
+
+const HomeTrustBlock = isWeb && isClient ? lazy(() => import('./HomeTrustBlock')) : require('./HomeTrustBlock').default;
+const HomeHowItWorks = isWeb && isClient ? lazy(() => import('./HomeHowItWorks')) : require('./HomeHowItWorks').default;
+const HomeFAQSection = isWeb && isClient ? lazy(() => import('./HomeFAQSection')) : require('./HomeFAQSection').default;
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
 const HomeFavoritesHistorySection = lazy(() => import('./HomeFavoritesHistorySection'));
 const HomeFinalCTA = lazy(() => import('./HomeFinalCTA'));
@@ -63,10 +66,17 @@ function Home() {
 
   useEffect(() => {
     if (!isFocused) return;
-    sendAnalyticsEvent('HomeViewed', {
+    const payload = {
       authState: isAuthenticated ? 'authenticated' : 'guest',
       travelsCountBucket: travelsCount === 0 ? '0' : travelsCount <= 3 ? '1-3' : '4+',
-    });
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => sendAnalyticsEvent('HomeViewed', payload));
+      return;
+    }
+
+    setTimeout(() => sendAnalyticsEvent('HomeViewed', payload), 0);
   }, [isFocused, isAuthenticated, travelsCount]);
 
   const sections = useMemo(() => (
@@ -88,9 +98,17 @@ function Home() {
       case 'hero':
         return <HomeHero travelsCount={travelsCount} />;
       case 'trust':
-        return <HomeTrustBlock />;
+        return (
+          <Suspense fallback={<View style={{ minHeight: 220 }} />}>
+            <HomeTrustBlock />
+          </Suspense>
+        );
       case 'howItWorks':
-        return <HomeHowItWorks />;
+        return (
+          <Suspense fallback={<View style={{ minHeight: 320 }} />}>
+            <HomeHowItWorks />
+          </Suspense>
+        );
       case 'favoritesHistory':
         return showHeavyContent ? (
           <Animated.View style={{ opacity: fadeAnim }}>
@@ -112,7 +130,11 @@ function Home() {
           <SectionSkeleton />
         );
       case 'faq':
-        return <HomeFAQSection />;
+        return (
+          <Suspense fallback={<View style={{ minHeight: 260 }} />}>
+            <HomeFAQSection />
+          </Suspense>
+        );
       case 'finalCta':
         return showHeavyContent ? (
           <Animated.View style={{ opacity: fadeAnim }}>
@@ -144,8 +166,8 @@ function Home() {
   }), [colors]);
 
   const isTestEnv = process.env.NODE_ENV === 'test';
-  const initialNumToRender = isTestEnv ? sectionCount : (Platform.OS === 'web' ? 2 : 3);
-  const maxToRenderPerBatch = isTestEnv ? sectionCount : (Platform.OS === 'web' ? 2 : 3);
+  const initialNumToRender = isTestEnv ? sectionCount : (Platform.OS === 'web' ? 1 : 3);
+  const maxToRenderPerBatch = isTestEnv ? sectionCount : (Platform.OS === 'web' ? 1 : 3);
 
   return (
     <FlatList
@@ -175,4 +197,3 @@ function Home() {
 }
 
 export default memo(Home);
-

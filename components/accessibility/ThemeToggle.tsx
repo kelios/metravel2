@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 
 interface ThemeToggleProps {

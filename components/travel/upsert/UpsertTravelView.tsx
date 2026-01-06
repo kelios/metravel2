@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Animated, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import NetInfo from '@react-native-community/netinfo';
 
 import TravelWizardStepBasic from '@/components/travel/TravelWizardStepBasic';

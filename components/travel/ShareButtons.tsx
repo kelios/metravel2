@@ -6,7 +6,7 @@
 
 import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Alert } from 'react-native';
-import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import type { Travel } from '@/src/types/types';
@@ -218,7 +218,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
       ? [{
           key: 'export' as const,
           label: isGenerating ? `Создание книги... ${progress}%` : 'Книга / PDF',
-          icon: 'file-pdf-box' as const,
+          icon: 'picture-as-pdf' as const,
           onPress: () => setShowExportModal(true),
           color: palette.export,
           disabled: isGenerating,
@@ -354,11 +354,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                   accessibilityLabel={button.label}
                   android_ripple={{ color: colors.overlayLight }}
                 >
-                  {button.key === 'export' ? (
-                    <MaterialCommunityIcons name={button.icon as any} size={20} color={button.color} />
-                  ) : (
-                    <MaterialIcons name={button.icon as any} size={20} color={button.color} />
-                  )}
+                  <MaterialIcons name={button.icon as any} size={20} color={button.color} />
                   {!isMobile && !isSticky && <Text style={[styles.buttonText, { color: colors.text }]}>{button.label}</Text>}
                   {button.key === 'copy' && copied && (
                     <Text style={styles.copiedText}>✓</Text>

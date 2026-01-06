@@ -2,7 +2,7 @@ import React, { memo, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Linking, Platform } from "react-native";
 import { ResponsiveContainer } from "@/components/layout";
 import { useRouter, type Href } from "expo-router";
-import { Feather, FontAwesome5 } from "@expo/vector-icons";
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from "@/hooks/useTheme";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { PRIMARY_HEADER_NAV_ITEMS } from "@/constants/headerNavigation";
@@ -293,7 +293,7 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
 
   const InstagramBelarusIcon = (
     <View style={styles.igByIcon}>
-      <FontAwesome5 name="instagram" size={16} color={iconColor} />
+      <Feather name="instagram" size={16} color={iconColor} />
       <View style={styles.byBadge}>
         <Text style={styles.byBadgeText}>BY</Text>
       </View>
@@ -363,19 +363,19 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
       key: "tt",
       label: "TikTok",
       externalUrl: "https://www.tiktok.com/@metravel.by",
-      icon: <FontAwesome5 name="tiktok" size={14} color={iconColor} />,
+      icon: <Feather name="music" size={14} color={iconColor} />,
     },
     {
       key: "ig",
       label: "Instagram",
       externalUrl: "https://www.instagram.com/metravelby/",
-      icon: <FontAwesome5 name="instagram" size={14} color={iconColor} />,
+      icon: <Feather name="instagram" size={14} color={iconColor} />,
     },
     {
       key: "yt",
       label: "YouTube",
       externalUrl: "https://www.youtube.com/@metravelby",
-      icon: <FontAwesome5 name="youtube" size={14} color={iconColor} />,
+      icon: <Feather name="youtube" size={14} color={iconColor} />,
     },
   ];
 

@@ -9,7 +9,7 @@ import {
     Pressable,
     Image as RNImage,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Asset } from 'expo-asset';
 import { ALL_QUESTS_META, getQuestById, QuestMeta } from '@/components/quests/registry';
 import { useThemedColors } from '@/hooks/useTheme';

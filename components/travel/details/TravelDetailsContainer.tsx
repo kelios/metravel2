@@ -31,7 +31,7 @@ import { useTravelDetailsMenu } from "@/hooks/useTravelDetailsMenu";
 import { useTravelDetailsNavigation } from "@/hooks/useTravelDetailsNavigation";
 import { useTravelDetailsPerformance } from "@/hooks/useTravelDetailsPerformance";
 import { useTravelDetailsScrollState } from "@/hooks/useTravelDetailsScrollState";
-import InstantSEO from "@/components/seo/InstantSEO";
+import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { createSafeJsonLd, stripHtml, createSafeImageUrl, getSafeOrigin } from "@/utils/travelDetailsSecure";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import ReadingProgressBar from "@/components/ReadingProgressBar";

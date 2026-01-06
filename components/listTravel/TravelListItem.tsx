@@ -1,7 +1,7 @@
 // ✅ УЛУЧШЕНИЕ: src/components/listTravel/TravelListItem.tsx - мигрирован на DESIGN_TOKENS и useThemedColors
 import React, { memo, useCallback, useMemo, useRef, useEffect } from "react";
 import { View, Pressable, Text, StyleSheet, Platform } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import Feather from '@expo/vector-icons/Feather';
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";

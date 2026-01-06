@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Menu } from 'react-native-paper';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -280,7 +280,7 @@ function AccountMenu() {
                 onError={() => setAvatarLoadError(true)}
               />
             ) : (
-              <Icon name="account-circle" size={24} color={colors.text} />
+              <MaterialIcons name="account-circle" size={24} color={colors.text} />
             )}
           </View>
 
@@ -289,8 +289,8 @@ function AccountMenu() {
           </Text>
 
           <View style={styles.chevronSlot}>
-            <Icon
-              name={visible ? 'chevron-up' : 'chevron-down'}
+            <MaterialIcons
+              name={visible ? 'expand-less' : 'expand-more'}
               size={18}
               color={
                 visible || hovered
@@ -307,14 +307,14 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/login')}
             title="Войти"
-            leadingIcon={({ size }) => <Icon name="login" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="login" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/registration')}
             title="Зарегистрироваться"
-            leadingIcon={({ size }) => <Icon name="account-plus" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="person-add" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
@@ -346,14 +346,14 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/privacy')}
             title="Политика конфиденциальности"
-            leadingIcon={({ size }) => <Icon name="shield" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="security" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/cookies')}
             title="Настройки cookies"
-            leadingIcon={({ size }) => <Icon name="cookie" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="cookie" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
@@ -363,7 +363,7 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/profile')}
             title={`Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`}
-            leadingIcon={({ size }) => <Icon name="account-circle" size={size} color={styles.iconPrimary.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="account-circle" size={size} color={styles.iconPrimary.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitleStrong}
           />
@@ -393,14 +393,14 @@ function AccountMenu() {
               })
             }
             title="Мои путешествия"
-            leadingIcon={({ size }) => <Icon name="earth" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="public" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/travel/new')}
             title="Поделиться путешествием"
-            leadingIcon={({ size }) => <Icon name="share-variant" size={size} color={styles.iconPrimary.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="share" size={size} color={styles.iconPrimary.color} />}
             style={styles.menuItemPrimary}
             titleStyle={styles.menuItemTitlePrimary}
           />
@@ -411,21 +411,21 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/export')}
             title="Экспорт в PDF"
-            leadingIcon={({ size }) => <Icon name="file-pdf-box" size={size} color={colors.danger} />}
+            leadingIcon={({ size }) => <MaterialIcons name="picture-as-pdf" size={size} color={colors.danger} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={handleOpenPublicProfile}
             title="Публичный профиль"
-            leadingIcon={({ size }) => <Icon name="account" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="person" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={handleLogout}
             title="Выход"
-            leadingIcon={({ size }) => <Icon name="logout" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="logout" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
@@ -443,14 +443,14 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/privacy')}
             title="Политика конфиденциальности"
-            leadingIcon={({ size }) => <Icon name="shield" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="security" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/cookies')}
             title="Настройки cookies"
-            leadingIcon={({ size }) => <Icon name="cookie" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <MaterialIcons name="cookie" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />

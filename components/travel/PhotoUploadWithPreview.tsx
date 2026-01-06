@@ -3,7 +3,7 @@ import { Platform, ActivityIndicator, Pressable, View, Text } from 'react-native
 import * as ImagePicker from 'react-native-image-picker';
 import { useDropzone } from 'react-dropzone';
 import { uploadImage } from '@/src/api/misc';
-import { Feather, FontAwesome } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -594,7 +594,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                         </View>
                     ) : (
                         <View style={styles.placeholderContainer as any}>
-                            <FontAwesome name="cloud-upload" size={40} color={colors.primary} />
+                            <Feather name="upload-cloud" size={40} color={colors.primary} />
                             <Text style={styles.placeholderText as any}>{placeholder}</Text>
                             <Text style={styles.placeholderSubtext as any}>или нажмите для выбора файла</Text>
                             <Text style={styles.placeholderHint as any}>
@@ -633,7 +633,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                     <ActivityIndicator color={colors.textOnPrimary} />
                 ) : (
                     <>
-                        <FontAwesome name="cloud-upload" size={16} color={colors.textOnPrimary} />
+                        <Feather name="upload-cloud" size={16} color={colors.textOnPrimary} />
                         <Text style={styles.uploadButtonText}>
                             {currentDisplayUrl ? 'Заменить фото' : 'Загрузить фото'}
                         </Text>

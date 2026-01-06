@@ -12,7 +12,7 @@ const Ion = React.lazy(() =>
     import('@expo/vector-icons/Ionicons').then((m: any) => ({ default: m.Ionicons || m.default }))
 );
 
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';

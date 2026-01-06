@@ -1,4 +1,4 @@
-// src/components/seo/InstantSEO.tsx
+// src/components/seo/LazyInstantSEO.tsx
 import React from 'react';
 import Head from 'expo-router/head';
 

@@ -1,7 +1,7 @@
 // Кнопка "Наверх" с анимацией и прогресс-баром
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Pressable, StyleSheet, Animated, Platform } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, memo } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

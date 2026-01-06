@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Paragraph } from 'react-native-paper';
-import { FontAwesome5 } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { useAboutStyles } from './aboutStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -82,7 +82,7 @@ export const AboutIntroCard: React.FC<Props> = ({
               globalFocusStyles.focusable,
             ]}
           >
-            <FontAwesome5 name="tiktok" size={18} color={colors.primary} />
+            <Feather name="music" size={18} color={colors.primary} />
           </Pressable>
           <Pressable
             onPress={() => onOpenUrl(socialLinks.instagram)}
@@ -95,7 +95,7 @@ export const AboutIntroCard: React.FC<Props> = ({
               globalFocusStyles.focusable,
             ]}
           >
-            <FontAwesome5 name="instagram" size={18} color={colors.primary} />
+            <Feather name="instagram" size={18} color={colors.primary} />
           </Pressable>
           <Pressable
             onPress={() => onOpenUrl(socialLinks.youtube)}
@@ -108,7 +108,7 @@ export const AboutIntroCard: React.FC<Props> = ({
               globalFocusStyles.focusable,
             ]}
           >
-            <FontAwesome5 name="youtube" size={18} color={colors.primary} />
+            <Feather name="youtube" size={18} color={colors.primary} />
           </Pressable>
         </View>
 

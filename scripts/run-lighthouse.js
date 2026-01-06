@@ -133,7 +133,7 @@ const server = http.createServer((req, res) => {
     let pathname = decodeURIComponent(url.pathname)
     if (pathname.endsWith('/')) pathname += 'index.html'
 
-    const resolvedPath = path.join(buildDir, pathname)
+    const resolvedPath = path.resolve(buildDir, `.${pathname}`)
 
     if (!resolvedPath.startsWith(buildDir)) {
       res.statusCode = 403

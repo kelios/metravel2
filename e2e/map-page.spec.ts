@@ -88,12 +88,9 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('map-panel-open').click();
 
-    // Должен появиться overlay для закрытия панели тапом вне
-    await expect(page.getByTestId('map-panel-overlay')).toBeVisible({ timeout: 20_000 });
-
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 20_000 });
 
-    // Закрытие через крестик (если доступен) либо через overlay
+    // Закрытие через крестик (если доступен) либо повторный toggle кнопкой меню
     const closeButton = page.getByTestId('filters-panel-close-button');
     const panelCloseButton = page.getByTestId('map-close-panel-button');
     const hasCloseButton = await closeButton.isVisible({ timeout: 2_000 }).catch(() => false);
@@ -104,7 +101,7 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     } else if (hasPanelCloseButton) {
       await panelCloseButton.click({ force: true });
     } else {
-      await page.getByTestId('map-panel-overlay').click({ position: { x: 5, y: 5 }, force: true });
+      await page.getByTestId('map-panel-open').click({ force: true });
     }
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
   });
@@ -116,10 +113,9 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('map-panel-open').click();
 
-    const overlay = page.getByTestId('map-panel-overlay');
-    await expect(overlay).toBeVisible({ timeout: 20_000 });
-    // Click in a safe spot that is not covered by the right panel.
-    await overlay.click({ position: { x: 5, y: 5 } });
+    // Закрываем панель повторным нажатием на кнопку меню (toggle).
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId('map-panel-open').click({ force: true });
 
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
   });

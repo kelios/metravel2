@@ -5,7 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { usePathname, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ListTravel from '@/components/listTravel/ListTravel';
 import EmptyState from '@/components/EmptyState';
 import { useAuth } from '@/context/AuthContext';

@@ -16,7 +16,7 @@ import { Button, Card } from 'react-native-paper';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
 import { loginSchema } from '@/utils/validation';
 import { Formik, FormikHelpers } from 'formik';

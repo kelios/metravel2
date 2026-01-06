@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import type { Theme } from '@/hooks/useTheme';
 
@@ -77,9 +77,9 @@ export default function ThemeToggle({
   );
 
   const themeOptions: Array<{ value: Theme; icon: string; label: string }> = [
-    { value: 'light', icon: 'white-balance-sunny', label: 'Светлая' },
-    { value: 'dark', icon: 'moon-waning-crescent', label: 'Темная' },
-    { value: 'auto', icon: 'theme-light-dark', label: 'Авто' },
+    { value: 'light', icon: 'wb-sunny', label: 'Светлая' },
+    { value: 'dark', icon: 'dark-mode', label: 'Темная' },
+    { value: 'auto', icon: 'brightness-auto', label: 'Авто' },
   ];
 
   return (
@@ -110,7 +110,7 @@ export default function ThemeToggle({
               : {})}
           >
             <View style={styles.iconWrapper}>
-              <Icon
+              <MaterialIcons
                 name={option.icon}
                 size={20}
                 color={isActive ? colors.textOnPrimary : colors.text}
@@ -127,4 +127,3 @@ export default function ThemeToggle({
     </View>
   );
 }
-

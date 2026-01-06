@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
-import { MaterialIcons } from "@expo/vector-icons"
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Темная тема
 import { DESIGN_TOKENS } from "@/constants/designSystem"

@@ -11,7 +11,7 @@ const QuestWizardLazy = React.lazy<React.ComponentType<any>>(() =>
     import('@/components/quests/QuestWizard').then((m: any) => ({ default: m.QuestWizard || m.default }))
 );
 
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 // ⚡️ реестр квестов подгружаем по месту (иначе все квесты уедут в entry)
 type QuestBundle = {
     title: string;

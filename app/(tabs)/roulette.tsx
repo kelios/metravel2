@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, Platform, Text, View, Pressable, FlatList, Image } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ModernFilters from '@/components/listTravel/ModernFilters';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';

@@ -35,7 +35,7 @@ import Animated, {
 } from "react-native-reanimated";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl, getPreferredImageFormat } from "@/utils/imageOptimization";
-import { Feather } from "@expo/vector-icons";
+import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';

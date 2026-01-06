@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, Modal, ScrollView } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import AccountMenu from './AccountMenu';
 import HeaderContextBar from './HeaderContextBar';
 import Logo from './Logo';
@@ -9,7 +9,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -543,7 +543,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                                                   onError={() => setAvatarLoadError(true)}
                                               />
                                           ) : (
-                                              <Icon name="account-circle" size={24} color={colors.text} />
+                                              <MaterialIcons name="account-circle" size={24} color={colors.text} />
                                           )}
                                       </View>
                                       <Text style={styles.mobileUserName} numberOfLines={1}>
@@ -553,7 +553,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                               ) : (
                                   <View style={[styles.mobileUserPillPlaceholder, { pointerEvents: 'none' } as any]}>
                                       <View style={styles.mobileUserAvatarContainer}>
-                                          <Icon name="account-circle" size={24} color={colors.text} />
+                                          <MaterialIcons name="account-circle" size={24} color={colors.text} />
                                       </View>
                                       <Text style={styles.mobileUserName} numberOfLines={1}>
                                           {' '}
@@ -786,4 +786,3 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
       </View>
     );
 }
-

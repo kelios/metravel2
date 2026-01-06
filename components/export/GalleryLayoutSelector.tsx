@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 import { useThemedColors } from '@/hooks/useTheme';
 

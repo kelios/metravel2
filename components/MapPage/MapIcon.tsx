@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, type TextStyle } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 type MapIconProps = {
   name: string;

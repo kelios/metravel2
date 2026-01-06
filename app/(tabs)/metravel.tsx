@@ -2,7 +2,7 @@
 import React, { Suspense, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import ListTravel from '@/components/listTravel/ListTravel';
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import {useIsFocused} from "@react-navigation/native";
 import { useThemedColors } from '@/hooks/useTheme';
 

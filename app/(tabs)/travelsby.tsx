@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import ListTravel from '@/components/listTravel/ListTravel';
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import {useIsFocused} from "@react-navigation/native";
 import { useThemedColors } from '@/hooks/useTheme';
 

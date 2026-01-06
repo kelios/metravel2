@@ -9,11 +9,11 @@ import {
     Pressable,
     Animated,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 import TravelListPanel from '@/components/MapPage/TravelListPanel';
 import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout';
-import InstantSEO from '@/components/seo/InstantSEO';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { useMapScreenController } from '@/hooks/useMapScreenController';
@@ -97,8 +97,8 @@ export default function MapScreen() {
         [mapReady, mapPanelProps, mapPanelPlaceholder, styles.mapArea]
     );
 
-    // Use mobile layout for native platforms (iOS/Android) when on mobile
-    const useMobileLayout = isMobile && Platform.OS !== 'web';
+    // Use mobile layout on small screens (including web), desktop keeps right panel
+    const useMobileLayout = isMobile;
 
     if (useMobileLayout) {
         return (

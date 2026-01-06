@@ -9,7 +9,8 @@ import {
   Platform,
   Animated,
 } from 'react-native';
-import { Feather, MaterialIcons } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
 import { BlurView } from 'expo-blur';
 

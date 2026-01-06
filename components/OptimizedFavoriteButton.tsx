@@ -1,7 +1,7 @@
 // Оптимизированный FavoriteButton для списков
 import React, { memo, useMemo } from 'react';
 import { StyleSheet, Platform, Pressable, View } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
