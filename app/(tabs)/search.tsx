@@ -1,15 +1,20 @@
 // ✅ УЛУЧШЕНИЕ: Страница поиска с DESIGN_TOKENS и useThemedColors
-import React, { memo, useMemo } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import React, { Suspense, lazy, memo, useMemo } from 'react';
+import { StyleSheet, View, Platform, Text } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorDisplay from '@/components/ErrorDisplay';
-import ListTravel from '@/components/listTravel/ListTravel';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+
+const isWeb = Platform.OS === 'web';
+const isClient = typeof window !== 'undefined';
+const ListTravel = isWeb && isClient
+  ? lazy(() => import('@/components/listTravel/ListTravel'))
+  : require('@/components/listTravel/ListTravel').default;
 
 function SearchScreen() {
     const pathname = usePathname();
@@ -34,6 +39,12 @@ function SearchScreen() {
             justifyContent: 'center',
             alignItems: 'center',
             padding: DESIGN_TOKENS.spacing.lg,
+        },
+        loading: {
+            padding: DESIGN_TOKENS.spacing.lg,
+        },
+        loadingText: {
+            color: colors.text,
         },
     }), [colors]);
 
@@ -65,7 +76,15 @@ function SearchScreen() {
                         </View>
                     }
                 >
-                    <ListTravel />
+                    <Suspense
+                        fallback={
+                            <View style={styles.loading}>
+                                <Text style={styles.loadingText}>Загрузка…</Text>
+                            </View>
+                        }
+                    >
+                        <ListTravel />
+                    </Suspense>
                 </ErrorBoundary>
             </View>
         </>

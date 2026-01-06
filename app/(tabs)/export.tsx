@@ -1,16 +1,21 @@
 // app/export.tsx (или соответствующий путь)
-import React, { Suspense, useEffect, useMemo } from 'react';
-import { Text, View } from 'react-native';
+import React, { Suspense, lazy, useEffect, useMemo } from 'react';
+import { Platform, Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { usePathname, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import ListTravel from '@/components/listTravel/ListTravel';
 import EmptyState from '@/components/EmptyState';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMyTravels } from '@/src/api/travelsApi';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
+
+const isWeb = Platform.OS === 'web';
+const isClient = typeof window !== 'undefined';
+const ListTravel = isWeb && isClient
+  ? lazy(() => import('@/components/listTravel/ListTravel'))
+  : require('@/components/listTravel/ListTravel').default;
 
 export default function ExportScreen() {
     const isFocused = useIsFocused();

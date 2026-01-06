@@ -1,15 +1,15 @@
 import { Platform } from 'react-native';
 import type { Travel } from '@/src/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import { TravelDataTransformer } from '@/src/services/pdf-export/TravelDataTransformer';
-import { EnhancedPdfGenerator } from '@/src/services/pdf-export/generators/EnhancedPdfGenerator';
 import type { TravelForBook } from '@/src/types/pdf-export';
+import type { TravelDataTransformer } from '@/src/services/pdf-export/TravelDataTransformer';
+import type { EnhancedPdfGenerator } from '@/src/services/pdf-export/generators/EnhancedPdfGenerator';
 
 export class BookHtmlExportService {
-  private dataTransformer: TravelDataTransformer;
+  private dataTransformer: TravelDataTransformer | null = null;
 
   constructor() {
-    this.dataTransformer = new TravelDataTransformer();
+    this.dataTransformer = null;
   }
 
   async generateTravelsHtml(
@@ -20,8 +20,9 @@ export class BookHtmlExportService {
       throw new Error('Book HTML preview is only available on web');
     }
 
-    this.dataTransformer.validate(travels);
-    const travelsForBook = this.dataTransformer.transform(travels);
+    const transformer = await this.getTransformer();
+    transformer.validate(travels);
+    const travelsForBook = transformer.transform(travels);
 
     const html = await this.generateHtmlFromTravelsForBook(travelsForBook, settings);
 
@@ -42,8 +43,20 @@ export class BookHtmlExportService {
     travelsForBook: TravelForBook[],
     settings: BookSettings
   ): Promise<string> {
-    const generator = new EnhancedPdfGenerator(settings.template);
+    const generator = await this.getGenerator(settings.template);
     return await generator.generate(travelsForBook, settings);
+  }
+
+  private async getTransformer(): Promise<TravelDataTransformer> {
+    if (this.dataTransformer) return this.dataTransformer;
+    const mod = await import('@/src/services/pdf-export/TravelDataTransformer');
+    this.dataTransformer = new mod.TravelDataTransformer();
+    return this.dataTransformer;
+  }
+
+  private async getGenerator(template?: BookSettings['template']): Promise<EnhancedPdfGenerator> {
+    const mod = await import('@/src/services/pdf-export/generators/EnhancedPdfGenerator');
+    return new mod.EnhancedPdfGenerator(template);
   }
 
   private enhanceHtmlForPrintPreview(html: string): string {

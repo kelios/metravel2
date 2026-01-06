@@ -1,11 +1,16 @@
 // app/travelsby/index.tsx
-import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { Suspense, lazy, useMemo } from 'react';
+import { Platform, StyleSheet, View, Text } from 'react-native';
 import { usePathname } from 'expo-router';
-import ListTravel from '@/components/listTravel/ListTravel';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import {useIsFocused} from "@react-navigation/native";
 import { useThemedColors } from '@/hooks/useTheme';
+
+const isWeb = Platform.OS === 'web';
+const isClient = typeof window !== 'undefined';
+const ListTravel = isWeb && isClient
+  ? lazy(() => import('@/components/listTravel/ListTravel'))
+  : require('@/components/listTravel/ListTravel').default;
 
 export default function TravelsByScreen() {
     const pathname = usePathname();
@@ -36,7 +41,15 @@ export default function TravelsByScreen() {
             />
             )}
             <View style={styles.container}>
-                <ListTravel />
+                <Suspense
+                    fallback={
+                        <View style={styles.loading}>
+                            <Text style={styles.loadingText}>Загрузка…</Text>
+                        </View>
+                    }
+                >
+                    <ListTravel />
+                </Suspense>
             </View>
         </>
     );
@@ -46,5 +59,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     container: {
         flex: 1,
         backgroundColor: colors.background,
+    },
+    loading: {
+        padding: 16,
+    },
+    loadingText: {
+        color: colors.text,
     },
 });

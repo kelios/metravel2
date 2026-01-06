@@ -138,6 +138,12 @@ config.resolver = {
 if (process.env.NODE_ENV === 'production') {
   config.transformer = {
     ...config.transformer,
+    getTransformOptions: async () => ({
+      transform: {
+        experimentalImportSupport: false,
+        inlineRequires: true,
+      },
+    }),
     minifierConfig: {
       ...config.transformer.minifierConfig,
       keep_classnames: false,

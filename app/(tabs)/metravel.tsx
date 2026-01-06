@@ -1,10 +1,15 @@
 // app/metravel/index.tsx
-import React, { Suspense, useMemo } from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import ListTravel from '@/components/listTravel/ListTravel';
+import React, { Suspense, lazy, useMemo } from 'react';
+import { Platform, View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import {useIsFocused} from "@react-navigation/native";
 import { useThemedColors } from '@/hooks/useTheme';
+
+const isWeb = Platform.OS === 'web';
+const isClient = typeof window !== 'undefined';
+const ListTravel = isWeb && isClient
+  ? lazy(() => import('@/components/listTravel/ListTravel'))
+  : require('@/components/listTravel/ListTravel').default;
 
 export default function MeTravelScreen() {
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';

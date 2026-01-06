@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
@@ -33,6 +33,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
     const bottomSheetRef = useRef<BottomSheet>(null);
+    const lastProgrammaticOpenTsRef = useRef(0);
     const [sheetIndex, setSheetIndex] = useState(0);
 
     // 3 состояния: collapsed (10%), half (50%), full (90%)
@@ -41,8 +42,14 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
       snapToCollapsed: () => bottomSheetRef.current?.snapToIndex(0),
-      snapToHalf: () => bottomSheetRef.current?.snapToIndex(1),
-      snapToFull: () => bottomSheetRef.current?.snapToIndex(2),
+      snapToHalf: () => {
+        lastProgrammaticOpenTsRef.current = Date.now();
+        bottomSheetRef.current?.snapToIndex(1);
+      },
+      snapToFull: () => {
+        lastProgrammaticOpenTsRef.current = Date.now();
+        bottomSheetRef.current?.snapToIndex(2);
+      },
       close: () => bottomSheetRef.current?.close(),
     }));
 
@@ -60,23 +67,43 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
 
     // Render backdrop for half/full states
     const renderBackdrop = useCallback(
-      (props: any) => (
-        <View testID="map-panel-overlay" style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          <BottomSheetBackdrop
-            {...props}
-            disappearsOnIndex={0}
-            appearsOnIndex={1}
-            opacity={0.5}
-            pressBehavior="none"
-          />
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => bottomSheetRef.current?.snapToIndex(0)}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть панель карты"
-          />
-        </View>
-      ),
+      (props: any) => {
+        // On web, MapMobileLayout renders its own overlay for e2e + UX parity.
+        // Keeping a second Pressable backdrop here can cause immediate close on the same click.
+        if (Platform.OS === 'web') {
+          return (
+            <BottomSheetBackdrop
+              {...props}
+              disappearsOnIndex={0}
+              appearsOnIndex={1}
+              opacity={0.5}
+              pressBehavior="none"
+            />
+          );
+        }
+
+        return (
+          <View testID="map-panel-overlay" style={StyleSheet.absoluteFill} pointerEvents="box-none">
+            <BottomSheetBackdrop
+              {...props}
+              disappearsOnIndex={0}
+              appearsOnIndex={1}
+              opacity={0.5}
+              pressBehavior="none"
+            />
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => {
+                const dt = Date.now() - lastProgrammaticOpenTsRef.current;
+                if (dt < 250) return;
+                bottomSheetRef.current?.snapToIndex(0);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть панель карты"
+            />
+          </View>
+        );
+      },
       []
     );
 

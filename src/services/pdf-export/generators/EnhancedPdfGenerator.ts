@@ -1,15 +1,13 @@
 // src/services/pdf-export/generators/EnhancedPdfGenerator.ts
 // ✅ АРХИТЕКТУРА: Улучшенный генератор PDF с новой системой тем и парсером
 
-import QRCode from 'qrcode';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { TravelForBook } from '@/src/types/pdf-export';
-import { generateLeafletRouteSnapshot } from '@/src/utils/mapImageGenerator';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 import { calculateOptimalColumns } from '@/src/types/pdf-gallery';
 import { getThemeConfig, type PdfThemeName } from '../themes/PdfThemeConfig';
-import { ContentParser } from '../parsers/ContentParser';
-import { BlockRenderer } from '../renderers/BlockRenderer';
+import type { ContentParser, ParsedContentBlock } from '../parsers/ContentParser';
+import type { BlockRenderer } from '../renderers/BlockRenderer';
 import type { TravelQuote } from '../quotes/travelQuotes';
 import { pickRandomGalleryQuote, pickRandomQuote } from '../quotes/travelQuotes';
 
@@ -33,7 +31,7 @@ const CHECKLIST_LABELS: Record<BookSettings['checklistSections'][number], string
  * Генератор улучшенного PDF
  */
 export class EnhancedPdfGenerator {
-  private parser: ContentParser;
+  private parser: ContentParser | null = null;
   private blockRenderer: BlockRenderer | null = null;
   private theme: ReturnType<typeof getThemeConfig>;
   private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
@@ -152,11 +150,6 @@ export class EnhancedPdfGenerator {
 
   constructor(themeName: PdfThemeName | string) {
     this.theme = getThemeConfig(themeName);
-    this.parser = new ContentParser();
-    // Инициализируем blockRenderer только если доступен DOM
-    if (typeof document !== 'undefined') {
-      this.blockRenderer = new BlockRenderer(this.theme);
-    }
   }
 
   /**
@@ -166,6 +159,8 @@ export class EnhancedPdfGenerator {
     travels: TravelForBook[],
     settings: BookSettings
   ): Promise<string> {
+    await this.ensureParser();
+    await this.ensureBlockRenderer();
     this.currentSettings = settings;
 
     const sortedTravels = this.sortTravels(travels, settings.sortOrder);
@@ -859,16 +854,17 @@ export class EnhancedPdfGenerator {
     pageNumber: number
   ): string {
     const { colors, typography, spacing } = this.theme;
+    const parser = this.getParserSync();
     
     // Парсим контент
     const descriptionBlocks = travel.description
-      ? this.parser.parse(travel.description)
+      ? parser.parse(travel.description)
       : [];
     const recommendationBlocks = travel.recommendation
-      ? this.parser.parse(travel.recommendation)
+      ? parser.parse(travel.recommendation)
       : [];
-    const plusBlocks = travel.plus ? this.parser.parse(travel.plus) : [];
-    const minusBlocks = travel.minus ? this.parser.parse(travel.minus) : [];
+    const plusBlocks = travel.plus ? parser.parse(travel.plus) : [];
+    const minusBlocks = travel.minus ? parser.parse(travel.minus) : [];
 
     const url = travel.slug
       ? `https://metravel.by/travels/${travel.slug}`
@@ -1308,6 +1304,7 @@ export class EnhancedPdfGenerator {
     let snapshotDataUrl: string | null = null;
     if (pointsWithCoords.length) {
       try {
+        const generateLeafletRouteSnapshot = await this.getLeafletRouteSnapshot();
         snapshotDataUrl = await generateLeafletRouteSnapshot(
           pointsWithCoords.map((location) => ({
             lat: location.lat as number,
@@ -1741,6 +1738,7 @@ export class EnhancedPdfGenerator {
   }
 
   private async generateQRCodes(travels: TravelForBook[]): Promise<string[]> {
+    const QRCode = await this.getQRCode();
     return Promise.all(
       travels.map((travel) => {
         const url = travel.slug
@@ -2137,7 +2135,7 @@ export class EnhancedPdfGenerator {
   /**
    * Рендерит блоки контента
    */
-  private renderBlocks(blocks: ReturnType<typeof this.parser.parse>): string {
+  private renderBlocks(blocks: ParsedContentBlock[]): string {
     if (this.blockRenderer) {
       return this.blockRenderer.renderBlocks(blocks);
     }
@@ -2167,6 +2165,39 @@ export class EnhancedPdfGenerator {
         }
       })
       .join('\n');
+  }
+
+  private getParserSync(): ContentParser {
+    if (!this.parser) {
+      throw new Error('ContentParser is not initialized');
+    }
+    return this.parser;
+  }
+
+  private async ensureParser(): Promise<ContentParser> {
+    if (this.parser) return this.parser;
+    const mod = await import('../parsers/ContentParser');
+    this.parser = new mod.ContentParser();
+    return this.parser;
+  }
+
+  private async ensureBlockRenderer(): Promise<BlockRenderer | null> {
+    if (typeof document === 'undefined') return null;
+    if (this.blockRenderer) return this.blockRenderer;
+    const mod = await import('../renderers/BlockRenderer');
+    this.blockRenderer = new mod.BlockRenderer(this.theme);
+    return this.blockRenderer;
+  }
+
+  private async getQRCode(): Promise<{ toDataURL: (text: string, options: Record<string, unknown>) => Promise<string> }> {
+    const mod = await import('qrcode');
+    const QRCode = (mod as any).default ?? mod;
+    return QRCode as any;
+  }
+
+  private async getLeafletRouteSnapshot(): Promise<typeof import('@/src/utils/mapImageGenerator').generateLeafletRouteSnapshot> {
+    const mod = await import('@/src/utils/mapImageGenerator');
+    return mod.generateLeafletRouteSnapshot;
   }
 }
 

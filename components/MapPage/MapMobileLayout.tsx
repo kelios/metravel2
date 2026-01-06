@@ -54,6 +54,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const [activeTab, setActiveTab] = useState<'list' | 'filters'>('list');
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
+  const [webOverlayInteractive, setWebOverlayInteractive] = useState(false);
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce);
@@ -90,6 +91,19 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'half' | 'full') => {
     setSheetState(state);
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (sheetState === 'collapsed') {
+      setWebOverlayInteractive(false);
+      return;
+    }
+
+    // Prevent the opening click/tap from immediately hitting the overlay and closing the panel.
+    setWebOverlayInteractive(false);
+    const t = setTimeout(() => setWebOverlayInteractive(true), 250);
+    return () => clearTimeout(t);
+  }, [sheetState]);
 
   useEffect(() => {
     if (!openNonce) return;
@@ -301,6 +315,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         <Pressable
           testID="map-panel-overlay"
           style={styles.webOverlay}
+          pointerEvents={webOverlayInteractive ? 'auto' : 'none'}
           onPress={() => {
             // Prevent immediate close on the same click/tap that opened the panel (RN-web event timing).
             const dt = Date.now() - lastPanelOpenTsRef.current;
