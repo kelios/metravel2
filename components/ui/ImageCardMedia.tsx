@@ -1,9 +1,7 @@
 import React, { memo, useEffect, useMemo } from 'react';
-import { Platform, StyleSheet, View, Text } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
-
-import { MaterialIcons } from '@expo/vector-icons';
 
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -137,14 +135,11 @@ function ImageCardMedia({
           )}
         </>
       ) : (
-        <View style={[styles.placeholder, { borderRadius }]}>
-          <View style={styles.placeholderContent}>
-            <MaterialIcons name="image" size={26} color={colors.textMuted} style={{ opacity: 0.55 }} />
-            <View style={styles.placeholderTextWrap}>
-              <Text style={styles.placeholderText}>Нет фото</Text>
-            </View>
-          </View>
-        </View>
+        <View
+          style={[styles.placeholder, { borderRadius }]}
+          accessibilityElementsHidden={true}
+          aria-hidden={true}
+        />
       )}
     </View>
   );
@@ -159,22 +154,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.backgroundSecondary,
-  },
-  placeholderContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  placeholderTextWrap: {
-    paddingHorizontal: 8,
-  },
-  placeholderText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: -0.1,
-    opacity: 0.8,
-    textAlign: 'center',
   },
 });
 

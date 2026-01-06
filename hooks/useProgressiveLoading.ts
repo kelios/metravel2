@@ -194,6 +194,7 @@ export function preloadCriticalResources(resources: Array<{
   }
 
   resources.forEach(resource => {
+    if (!resource.as) return;
     // Check if already preloaded
     const existing = document.querySelector(
       `link[rel="preload"][href="${resource.href}"]`

@@ -152,7 +152,10 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       await page.waitForTimeout(350);
       const clear = page.getByLabel('Очистить поиск');
       if (await clear.isVisible().catch(() => false)) {
-        await clear.click();
+        await clear.click({ force: true });
+        if ((await search.inputValue().catch(() => '')) !== '') {
+          await search.fill('');
+        }
         await expect(search).toHaveValue('');
       }
     });

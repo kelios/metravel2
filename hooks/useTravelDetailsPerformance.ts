@@ -73,6 +73,7 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
+    if (!lcpLoaded) return
     rIC(() => {
       Promise.allSettled([
         import('@/components/travel/TravelDescription'),
@@ -80,11 +81,9 @@ export function useTravelDetailsPerformance({
         import('@/components/travel/NearTravelList'),
         import('@/components/travel/PopularTravelList'),
         import('@/components/travel/ToggleableMapSection'),
-        import('@/components/Map'),
-        import('@expo/vector-icons/MaterialIcons'),
       ])
-    }, 800)
-  }, [])
+    }, 1200)
+  }, [lcpLoaded])
 
   return {
     lcpLoaded,

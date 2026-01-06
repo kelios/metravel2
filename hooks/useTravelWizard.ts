@@ -205,14 +205,14 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     return () => {
       cancelled = true;
     };
-  }, [getStoredStep, stepStorageKey]);
+  }, [enableStepPersistenceInTests, getStoredStep, stepStorageKey]);
 
   // Persist current step.
   useEffect(() => {
     if (!stepStorageKey) return;
     if (!enableStepPersistenceInTests) return;
     void setStoredStep(currentStep);
-  }, [currentStep, setStoredStep, stepStorageKey]);
+  }, [currentStep, enableStepPersistenceInTests, setStoredStep, stepStorageKey]);
 
   const handleStepSelect = useCallback(
     (step: number) => {

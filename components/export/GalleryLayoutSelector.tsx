@@ -58,6 +58,8 @@ interface GalleryLayoutSelectorProps {
   onLayoutSelect: (layout: GalleryLayout) => void;
   columns?: number;
   onColumnsChange?: (columns: number) => void;
+  photosPerPage?: number;
+  onPhotosPerPageChange?: (count: number) => void;
   showCaptions?: boolean;
   onShowCaptionsChange?: (show: boolean) => void;
   captionPosition?: CaptionPosition;
@@ -71,6 +73,8 @@ export default function GalleryLayoutSelector({
   onLayoutSelect,
   columns = 3,
   onColumnsChange,
+  photosPerPage = 2,
+  onPhotosPerPageChange,
   showCaptions = true,
   onShowCaptionsChange,
   captionPosition = 'bottom',
@@ -176,6 +180,51 @@ export default function GalleryLayoutSelector({
             </View>
           </View>
         )}
+
+        {/* Фото на странице */}
+        {selectedLayout !== 'slideshow' &&
+          onPhotosPerPageChange && (
+            <View style={styles.settingRow}>
+              <Text style={styles.settingLabel}>Фото на странице:</Text>
+              <View style={styles.columnsButtons}>
+                {[2, 3, 4].map((count) => (
+                  <Pressable
+                    key={count}
+                    style={[
+                      styles.columnButton,
+                      photosPerPage === count && styles.columnButtonActive,
+                    ]}
+                    onPress={() => onPhotosPerPageChange(count)}
+                  >
+                    <Text
+                      style={[
+                        styles.columnButtonText,
+                        photosPerPage === count && styles.columnButtonTextActive,
+                      ]}
+                    >
+                      {count}
+                    </Text>
+                  </Pressable>
+                ))}
+                <Pressable
+                  style={[
+                    styles.columnButton,
+                    (!photosPerPage || photosPerPage <= 0) && styles.columnButtonActive,
+                  ]}
+                  onPress={() => onPhotosPerPageChange(0)}
+                >
+                  <Text
+                    style={[
+                      styles.columnButtonText,
+                      (!photosPerPage || photosPerPage <= 0) && styles.columnButtonTextActive,
+                    ]}
+                  >
+                    Все
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
         {/* Подписи */}
         {onShowCaptionsChange && (

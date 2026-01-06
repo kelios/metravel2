@@ -367,8 +367,9 @@ function StickySearchBar({
               onPress={() => onSearchChange('')}
               style={styles.clearButton}
               accessibilityLabel="Очистить поиск"
+              pointerEvents="box-only"
             >
-              <Feather name="x" size={16} color={colors.textMuted} />
+              <Feather name="x" size={16} color={colors.textMuted} pointerEvents="none" />
             </Pressable>
           )}
           {!isMobile && Platform.OS === 'web' && (
@@ -480,4 +481,3 @@ function StickySearchBar({
 
 // ✅ ОПТИМИЗАЦИЯ: Мемоизация компонента
 export default memo(StickySearchBar);
-

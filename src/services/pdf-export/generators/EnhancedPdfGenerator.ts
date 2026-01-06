@@ -63,6 +63,20 @@ export class EnhancedPdfGenerator {
     };
   }
 
+  private getGalleryPhotosPerPage(
+    layout: GalleryLayout,
+    totalPhotos: number,
+    settings: BookSettings | undefined = this.currentSettings
+  ): number {
+    if (layout === 'slideshow') return 1;
+    const configured = settings?.galleryPhotosPerPage;
+    if (configured === 0) return totalPhotos;
+    if (typeof configured === 'number' && configured > 0) {
+      return Math.min(totalPhotos, Math.max(1, configured));
+    }
+    return totalPhotos;
+  }
+
   private getGalleryGapMm(spacing: NonNullable<BookSettings['gallerySpacing']>): number {
     switch (spacing) {
       case 'compact':
@@ -188,8 +202,9 @@ export class EnhancedPdfGenerator {
 
       // Отдельная страница галереи (все фото), если включено в настройках
       if (item.hasGallery) {
-        pages.push(this.renderGalleryPage(travel, currentPage));
-        currentPage++;
+        const galleryPages = this.renderGalleryPages(travel, currentPage);
+        pages.push(...galleryPages);
+        currentPage += galleryPages.length;
       }
 
       // Карта (DOM-скриншот Leaflet, только в браузере)
@@ -554,7 +569,7 @@ export class EnhancedPdfGenerator {
               ${layout === 'polaroid' ? `transform: rotate(${index % 2 === 0 ? '-1.2deg' : '1.1deg'});` : ''}
             ">
               ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
+              <img src="${this.escapeHtml(photo)}" alt="Фото ${globalIndex + 1}"
                 style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
                 crossorigin="anonymous"
                 onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
@@ -1093,9 +1108,9 @@ export class EnhancedPdfGenerator {
   }
 
   /**
-   * Рендерит страницу галереи
+   * Рендерит страницы галереи
    */
-  private renderGalleryPage(travel: TravelForBook, pageNumber: number): string {
+  private renderGalleryPages(travel: TravelForBook, startPageNumber: number): string[] {
     const { colors, typography, spacing } = this.theme;
     const photos = (travel.gallery || [])
       .map((item) => {
@@ -1104,31 +1119,43 @@ export class EnhancedPdfGenerator {
       })
       .filter((url): url is string => !!url && url.trim().length > 0);
 
-    if (!photos.length) return '';
+    if (!photos.length) return [];
 
     const { layout, columns: configuredColumns, showCaptions, captionPosition, spacing: gallerySpacing } =
       this.getGalleryOptions();
 
     const gapMm = this.getGalleryGapMm(gallerySpacing);
 
-    const defaultColumns = calculateOptimalColumns(photos.length, layout);
-    const columns = Math.max(1, Math.min(4, configuredColumns ?? defaultColumns));
+    const photosPerPage = this.getGalleryPhotosPerPage(layout, photos.length);
+    const chunks: string[][] = [];
+    for (let start = 0; start < photos.length; start += photosPerPage) {
+      chunks.push(photos.slice(start, start + photosPerPage));
+    }
 
-    const imageHeight =
-      layout === 'slideshow'
-        ? '170mm'
-        : photos.length <= 4
-          ? '80mm'
-          : photos.length <= 6
-            ? '65mm'
-            : '55mm';
+    return chunks.map((pagePhotos, pageIndex) => {
+      const defaultColumns = calculateOptimalColumns(pagePhotos.length, layout);
+      const columns = Math.max(1, Math.min(4, configuredColumns ?? defaultColumns));
 
-    const gridContainerStyle =
-      layout === 'masonry'
-        ? `column-count: ${columns}; column-gap: ${gapMm}mm;`
-        : `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gapMm}mm;`;
+      const imageHeight =
+        layout === 'slideshow'
+          ? '170mm'
+          : pagePhotos.length <= 4
+            ? '80mm'
+            : pagePhotos.length <= 6
+              ? '65mm'
+              : '55mm';
 
-    return `
+      const gridContainerStyle =
+        layout === 'masonry'
+          ? `column-count: ${columns}; column-gap: ${gapMm}mm;`
+          : `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gapMm}mm;`;
+
+      const pageNumber = startPageNumber + pageIndex;
+      const pageStartIndex = pageIndex * photosPerPage;
+      const title = pageIndex === 0 ? 'Фотогалерея' : this.escapeHtml(travel.name);
+      const subtitle = pageIndex === 0 ? this.escapeHtml(travel.name) : '';
+
+      return `
       <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding};">
         <div style="text-align: center; margin-bottom: 18mm;">
           <h2 style="
@@ -1138,18 +1165,20 @@ export class EnhancedPdfGenerator {
             color: ${colors.text};
             letter-spacing: 0.02em;
             font-family: ${typography.headingFont};
-          ">Фотогалерея</h2>
+          ">${title}</h2>
+          ${subtitle ? `
           <p style="
             color: ${colors.textMuted};
             font-size: ${typography.body.size};
             font-weight: 500;
             font-family: ${typography.bodyFont};
-          ">${this.escapeHtml(travel.name)}</p>
+          ">${subtitle}</p>` : ''}
         </div>
         <div style="${gridContainerStyle}">
-          ${photos
+          ${pagePhotos
             .map((photo, index) => {
-              const caption = showCaptions ? this.buildGalleryCaption(index, captionPosition, typography) : null;
+              const globalIndex = pageStartIndex + index;
+              const caption = showCaptions ? this.buildGalleryCaption(globalIndex, captionPosition, typography) : null;
 
               const wrapperStyle =
                 layout === 'masonry'
@@ -1205,7 +1234,7 @@ export class EnhancedPdfGenerator {
                 font-weight: 700;
                 box-shadow: ${this.theme.blocks.shadow};
                 z-index: 3;
-              ">${index + 1}</div>
+              ">${globalIndex + 1}</div>
             </div>
           `;
             })
@@ -1230,6 +1259,7 @@ export class EnhancedPdfGenerator {
         ">${pageNumber}</div>
       </section>
     `;
+    });
   }
 
   /**
@@ -1707,9 +1737,20 @@ export class EnhancedPdfGenerator {
 
     travels.forEach((travel) => {
       const locations = this.normalizeLocations(travel);
-      const hasGallery = Boolean(
-        settings.includeGallery && travel.gallery && travel.gallery.length
-      );
+      const galleryPhotos = (travel.gallery || [])
+        .map((item) => {
+          const raw = typeof item === 'string' ? item : item?.url;
+          return this.buildSafeImageUrl(raw);
+        })
+        .filter((url): url is string => !!url && url.trim().length > 0);
+      const hasGallery = Boolean(settings.includeGallery && galleryPhotos.length);
+      const galleryPageCount = hasGallery
+        ? Math.max(1, Math.ceil(galleryPhotos.length / this.getGalleryPhotosPerPage(
+          (settings.galleryLayout || 'grid') as GalleryLayout,
+          galleryPhotos.length,
+          settings
+        )))
+        : 0;
       const hasMap = Boolean(settings.includeMap && locations.length);
 
       meta.push({
@@ -1721,7 +1762,7 @@ export class EnhancedPdfGenerator {
       });
 
       currentPage += 2; // photo + text
-      if (hasGallery) currentPage += 1;
+      if (hasGallery) currentPage += galleryPageCount;
       if (hasMap) currentPage += 1;
     });
 

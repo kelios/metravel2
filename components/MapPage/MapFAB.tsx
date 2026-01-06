@@ -21,12 +21,18 @@ interface MapFABProps {
   actions?: FABAction[];
   /** Позиция на экране */
   position?: 'bottom-right' | 'bottom-left' | 'bottom-center';
+  /** Открывать меню по нажатию на главную кнопку */
+  expandOnMainPress?: boolean;
+  /** testID для главной кнопки */
+  mainActionTestID?: string;
 }
 
 export const MapFAB: React.FC<MapFABProps> = ({
   mainAction,
   actions = [],
   position = 'bottom-right',
+  expandOnMainPress = true,
+  mainActionTestID,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors, position), [colors, position]);
@@ -48,7 +54,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
   };
 
   const handleMainPress = () => {
-    if (actions.length > 0) {
+    if (actions.length > 0 && expandOnMainPress) {
       toggleExpand();
     } else {
       mainAction.onPress();
@@ -128,8 +134,10 @@ export const MapFAB: React.FC<MapFABProps> = ({
           mainAction.color && { backgroundColor: mainAction.color },
         ]}
         onPress={handleMainPress}
+        onLongPress={actions.length > 0 && !expandOnMainPress ? toggleExpand : undefined}
         accessibilityLabel={mainAction.label}
         accessibilityRole="button"
+        testID={mainActionTestID}
       >
         <Animated.View
           style={{
@@ -218,4 +226,3 @@ const getStyles = (
     },
   });
 };
-

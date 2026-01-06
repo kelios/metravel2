@@ -38,6 +38,14 @@ export const QuickRecommendations: React.FC<Props> = ({
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const renderIcon = useCallback(
+    (name: string, size: number, color: string) => (
+      <Text style={styles.iconWrapper} pointerEvents="none">
+        <MaterialIcons name={name as any} size={size} color={color} />
+      </Text>
+    ),
+    [styles.iconWrapper]
+  );
 
   const scrollRef = useRef<ScrollView | null>(null);
   const [scrollX, setScrollX] = useState(0);
@@ -116,7 +124,7 @@ export const QuickRecommendations: React.FC<Props> = ({
       {...(Platform.OS === 'web' ? ({ onWheelCapture: onWheel } as any) : ({} as any))}
     >
       <View style={styles.header}>
-        <MaterialIcons name="star" size={20} color={colors.primary} />
+        {renderIcon('star', 20, colors.primary)}
         <Text style={styles.title}>Популярное рядом</Text>
       </View>
       <ScrollView
@@ -142,28 +150,26 @@ export const QuickRecommendations: React.FC<Props> = ({
               <Text style={styles.placeName} numberOfLines={2}>{place.address}</Text>
               {place.rating > 0 && (
                 <View style={styles.ratingBadge}>
-                  <MaterialIcons name="star" size={14} color={colors.warning} />
+                  {renderIcon('star', 14, colors.warning)}
                   <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
                 </View>
               )}
             </View>
             <View style={styles.infoRow}>
               <View style={styles.infoBadge}>
-                <MaterialIcons name="place" size={14} color={colors.primary} />
+                {renderIcon('place', 14, colors.primary)}
                 <Text style={styles.infoText}>{place.distanceText}</Text>
               </View>
               <View style={styles.infoBadge}>
-                <MaterialIcons
-                  name={
-                    transportMode === 'car'
-                      ? 'directions-car'
-                      : transportMode === 'bike'
-                      ? 'directions-bike'
-                      : 'directions-walk'
-                  }
-                  size={14}
-                  color={colors.accent}
-                />
+                {renderIcon(
+                  transportMode === 'car'
+                    ? 'directions-car'
+                    : transportMode === 'bike'
+                    ? 'directions-bike'
+                    : 'directions-walk',
+                  14,
+                  colors.accent
+                )}
                 <Text style={styles.infoText}>{place.travelTimeText}</Text>
               </View>
             </View>
@@ -192,6 +198,9 @@ const getStyles = (colors: ThemedColors) =>
       gap: 8,
       marginBottom: 12,
       paddingHorizontal: 8,
+    },
+    iconWrapper: {
+      lineHeight: 0,
     },
     title: {
       fontSize: 18,
@@ -274,4 +283,3 @@ const getStyles = (colors: ThemedColors) =>
       letterSpacing: 0.2,
     },
   });
-

@@ -59,23 +59,13 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
       typeof window !== 'undefined'
         ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
         : 1200
-    const optimizedHref =
+    const _optimizedHref =
       optimizeImageUrl(versionedHref, {
         width: targetWidth,
         format: getPreferredImageFormat(),
         quality: isMobile ? 75 : 85,
         fit: 'contain',
       }) || versionedHref
-
-    if (!document.querySelector(`link[rel="preload"][as="image"][href="${optimizedHref}"]`)) {
-      const link = document.createElement('link')
-      link.rel = 'preload'
-      link.as = 'image'
-      link.href = optimizedHref
-      link.setAttribute('fetchpriority', 'high')
-      link.setAttribute('referrerpolicy', 'no-referrer')
-      document.head.appendChild(link)
-    }
 
     const domains = [
       getOrigin(imageUrl),

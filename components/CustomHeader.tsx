@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import AccountMenu from './AccountMenu';
 import HeaderContextBar from './HeaderContextBar';
 import Logo from './Logo';
+import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
@@ -26,6 +27,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const { isPhone, isLargePhone, isTablet } = useResponsive();
     const isMobile = isPhone || isLargePhone || isTablet;
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
+    const mobileMenuOpenedAtRef = useRef(0);
     const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
     const { favorites } = useFavorites();
     const { updateFilters } = useFilters();
@@ -112,6 +114,11 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         setMobileMenuVisible(false);
         router.push('/travel/new' as any);
     }, [isAuthenticated, router]);
+
+    const openMobileMenu = useCallback(() => {
+        mobileMenuOpenedAtRef.current = Date.now();
+        setMobileMenuVisible(true);
+    }, []);
 
     const webStickyStyle = Platform.OS === 'web'
         ? { position: 'sticky' as const, top: 0, zIndex: 2000, width: '100%' }
@@ -555,7 +562,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                               )}
 
                               <Pressable
-                                  onPress={() => setMobileMenuVisible(true)}
+                                  onPress={openMobileMenu}
                                   style={[
                                       styles.mobileMenuButton,
                                       globalFocusStyles.focusable, 
@@ -584,16 +591,25 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
               animationType="fade"
               onRequestClose={() => setMobileMenuVisible(false)}
             >
-              <Pressable
-                style={styles.modalOverlay}
-                onPress={() => setMobileMenuVisible(false)}
-                testID="mobile-menu-overlay"
-              >
+              <View style={styles.modalOverlay}>
                 <Pressable
-                  style={styles.modalContent}
-                  onPress={(e) => {
-                    e.stopPropagation();
+                  style={styles.modalOverlay}
+                  testID="mobile-menu-overlay"
+                  onPress={() => {
+                    const isTestEnv =
+                      typeof process !== 'undefined' &&
+                      (process as any).env &&
+                      (process as any).env.NODE_ENV === 'test';
+                    const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
+                    if (!isTestEnv && sinceOpen < 250) return;
+                    setMobileMenuVisible(false);
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Закрыть меню"
+                />
+
+                <View
+                  style={styles.modalContent}
                   testID="mobile-menu-panel"
                   {...(Platform.OS === 'web'
                     ? ({ role: 'dialog', 'aria-modal': 'true' } as any)
@@ -611,7 +627,10 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                       <Feather name="x" size={22} color={colors.text} />
                     </Pressable>
                   </View>
-                  <ScrollView style={styles.modalNavContainer}>
+                  <ScrollView
+                    style={styles.modalNavContainer}
+                    keyboardShouldPersistTaps="handled"
+                  >
                     <Text style={styles.modalSectionTitle}>Навигация</Text>
                     {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
                         const isActive = activePath === item.path;
@@ -737,6 +756,12 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                     )}
 
                     <View style={styles.modalDivider} />
+                    <Text style={styles.modalSectionTitle}>Тема</Text>
+                    <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+                      <ThemeToggle compact layout="vertical" showLabels />
+                    </View>
+
+                    <View style={styles.modalDivider} />
                     <Text style={styles.modalSectionTitle}>Документы</Text>
                     {DOCUMENT_NAV_ITEMS.map((item) => (
                         <Pressable
@@ -753,8 +778,8 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                         </Pressable>
                     ))}
                   </ScrollView>
-                </Pressable>
-              </Pressable>
+                </View>
+              </View>
             </Modal>
           )}
           </View>

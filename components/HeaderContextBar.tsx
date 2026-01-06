@@ -6,13 +6,14 @@
 import React, { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 import { globalFocusStyles } from '@/styles/globalFocus';
-
+import { useTravelSectionsStore } from '@/stores/travelSectionsStore';
+import { useMapPanelStore } from '@/stores/mapPanelStore';
 
 type HeaderContextBarProps = {
   testID?: string;
@@ -20,9 +21,12 @@ type HeaderContextBarProps = {
 
 export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
+  const requestOpen = useTravelSectionsStore((s) => s.requestOpen);
+  const requestOpenMapPanel = useMapPanelStore((s) => s.requestOpen);
 
   const model = useBreadcrumbModel();
 
@@ -33,6 +37,8 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
   }, [isMobile, styles]);
 
   if (isMobile) {
+    const isMap = pathname === '/map';
+    const canOpenSections = typeof pathname === 'string' && pathname.startsWith('/travels/');
     return (
       <View testID={testID ?? 'header-context-bar'} style={containerStyle}>
         <View style={styles.mobileRow}>
@@ -55,7 +61,29 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
             {model.currentTitle}
           </Text>
 
-          <View style={styles.mobileRightSpacer} />
+          {isMap ? (
+            <Pressable
+              onPress={requestOpenMapPanel}
+              accessibilityRole="button"
+              accessibilityLabel="Открыть панель карты"
+              style={[styles.mobileSectionsButton, globalFocusStyles.focusable]}
+              testID="map-panel-open"
+            >
+              <Feather name="menu" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : canOpenSections ? (
+            <Pressable
+              onPress={requestOpen}
+              accessibilityRole="button"
+              accessibilityLabel="Открыть секции"
+              style={[styles.mobileSectionsButton, globalFocusStyles.focusable]}
+              testID="mobile-sections-open"
+            >
+              <Feather name="list" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : (
+            <View style={styles.mobileRightSpacer} />
+          )}
         </View>
       </View>
     );
@@ -169,8 +197,8 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.sm,
   },
   backButton: {
-    minWidth: DESIGN_TOKENS.minTouchTarget,
-    minHeight: DESIGN_TOKENS.minTouchTarget,
+    minWidth: DESIGN_TOKENS.touchTarget.minWidth,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -181,7 +209,14 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.text,
   },
   mobileRightSpacer: {
-    width: DESIGN_TOKENS.minTouchTarget,
-    height: DESIGN_TOKENS.minTouchTarget,
+    width: DESIGN_TOKENS.touchTarget.minWidth,
+    height: DESIGN_TOKENS.touchTarget.minHeight,
+  },
+  mobileSectionsButton: {
+    minWidth: DESIGN_TOKENS.touchTarget.minWidth,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.72,
   },
 });

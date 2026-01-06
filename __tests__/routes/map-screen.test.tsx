@@ -1,7 +1,8 @@
-import { render, waitFor, fireEvent } from '@testing-library/react-native'
+import { render, waitFor, fireEvent, act } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Platform } from 'react-native'
 import MapScreen from '@/app/(tabs)/map'
+import { useMapPanelStore } from '@/stores/mapPanelStore'
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
 
@@ -11,13 +12,9 @@ jest.mock('@/hooks/usePanelController', () => {
   const React = require('react')
   return {
     __esModule: true,
-    usePanelController: () => ({
+    usePanelController: (isMobile: boolean) => ({
       ...(function usePanelControllerMock() {
-        const [isPanelVisible, setIsPanelVisible] = React.useState(!mockResponsiveState.isPhone)
-
-        React.useEffect(() => {
-          setIsPanelVisible(!mockResponsiveState.isPhone)
-        }, [])
+        const [isPanelVisible, setIsPanelVisible] = React.useState(!isMobile)
 
         return {
           isPanelVisible,
@@ -180,6 +177,7 @@ const renderWithClient = () => {
 describe('MapScreen (map tab)', () => {
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
+    useMapPanelStore.setState({ openNonce: 0 })
     mockFetchTravelsForMap.mockReset();
     mockFetchTravelsForMap.mockResolvedValue(defaultTravelsForMapResponse);
   });
@@ -189,14 +187,15 @@ describe('MapScreen (map tab)', () => {
   })
 
   it('renders map placeholder and filters panel', async () => {
-    const { getByText, getByTestId, getByLabelText } = renderWithClient()
+    const { getByText, getByTestId } = renderWithClient()
 
     // Сначала отображается плейсхолдер карты
     expect(getByText('Загружаем карту…')).toBeTruthy()
 
     // На mobile панель закрыта по умолчанию — открываем, чтобы увидеть фильтры
-    const openButton = getByLabelText('Показать панель')
-    fireEvent.press(openButton)
+    act(() => {
+      useMapPanelStore.getState().requestOpen()
+    })
 
     // Ждём, пока смонтируется правая панель с фильтрами
     await waitFor(() => {
@@ -205,10 +204,11 @@ describe('MapScreen (map tab)', () => {
   })
 
   const openPanelAndGoToListTab = async (utils: ReturnType<typeof renderWithClient>) => {
-    const { getByLabelText, getByText } = utils
+    const { getByText } = utils
 
-    const openButton = getByLabelText('Показать панель')
-    fireEvent.press(openButton)
+    act(() => {
+      useMapPanelStore.getState().requestOpen()
+    })
 
     await waitFor(() => {
       expect(getByText('Список')).toBeTruthy()
@@ -222,8 +222,9 @@ describe('MapScreen (map tab)', () => {
     const { getByText, queryByText, getByLabelText } = renderWithClient()
 
     // На mobile панель закрыта по умолчанию — открываем
-    const openButton = getByLabelText('Показать панель')
-    fireEvent.press(openButton)
+    act(() => {
+      useMapPanelStore.getState().requestOpen()
+    })
 
     await waitFor(() => {
       expect(getByText('Фильтры')).toBeTruthy()
@@ -232,17 +233,21 @@ describe('MapScreen (map tab)', () => {
 
     // Закрываем панель кнопкой "Скрыть панель"
     const closeButton = getByLabelText('Скрыть панель')
-    fireEvent.press(closeButton)
+    act(() => {
+      fireEvent.press(closeButton)
+    })
 
-    // Текст вкладок больше не отображается
+    // Панель закрылась: кнопка закрытия и вкладки больше не отображаются
     await waitFor(() => {
+      expect(() => getByLabelText('Скрыть панель')).toThrow()
       expect(queryByText('Фильтры')).toBeNull()
       expect(queryByText('Список')).toBeNull()
     })
 
-    // Открываем панель снова кнопкой-гамбургером
-    const openButtonAgain = getByLabelText('Показать панель')
-    fireEvent.press(openButtonAgain)
+    // Открываем панель снова через глобальный запрос (кнопка в хлебных крошках)
+    act(() => {
+      useMapPanelStore.getState().requestOpen()
+    })
 
     await waitFor(() => {
       expect(getByText('Фильтры')).toBeTruthy()
@@ -259,8 +264,10 @@ describe('MapScreen (map tab)', () => {
       </QueryClientProvider>
     )
 
-    // Desktop: панель открыта по умолчанию, кнопки "Показать панель" нет
-    expect(utils.queryByLabelText('Показать панель')).toBeNull()
+    // Desktop: панель открыта по умолчанию
+    await waitFor(() => {
+      expect(utils.getByText('Фильтры')).toBeTruthy()
+    })
 
     // Симулируем смену брейкпоинта на mobile после первого рендера
     mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
@@ -270,9 +277,10 @@ describe('MapScreen (map tab)', () => {
       </QueryClientProvider>
     )
 
-    // Mobile: панель должна закрыться по умолчанию, кнопка появляется
+    // Mobile: панель должна закрыться по умолчанию
     await waitFor(() => {
-      expect(utils.getByLabelText('Показать панель')).toBeTruthy()
+      expect(utils.queryByText('Фильтры')).toBeNull()
+      expect(utils.queryByText('Список')).toBeNull()
     })
   })
 

@@ -4,6 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
 import HeaderContextBar from '@/components/HeaderContextBar';
 
+jest.mock('@/stores/mapPanelStore', () => {
+  const actual = jest.requireActual('@/stores/mapPanelStore');
+  return {
+    ...actual,
+    useMapPanelStore: jest.fn(),
+  };
+});
+
 jest.mock('@/hooks/useBreadcrumbModel', () => ({
   useBreadcrumbModel: jest.fn(),
 }));
@@ -46,6 +54,7 @@ jest.mock('react-native', () => {
 describe('HeaderContextBar', () => {
   const mockPush = jest.fn();
   const mockBack = jest.fn();
+  const mockRequestOpenMapPanel = jest.fn();
 
   const { useBreadcrumbModel } = jest.requireMock('@/hooks/useBreadcrumbModel') as {
     useBreadcrumbModel: jest.Mock;
@@ -63,6 +72,11 @@ describe('HeaderContextBar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useRouter as jest.Mock).mockReturnValue({ push: mockPush, back: mockBack });
+
+    const { useMapPanelStore } = jest.requireMock('@/stores/mapPanelStore') as {
+      useMapPanelStore: jest.Mock;
+    };
+    useMapPanelStore.mockImplementation((selector: any) => selector({ openNonce: 0, requestOpen: mockRequestOpenMapPanel }));
 
     (global as any).__mockResponsive = {
       width: 1400,
@@ -134,5 +148,109 @@ describe('HeaderContextBar', () => {
 
     fireEvent.press(homeCrumb);
     expect(mockPush).toHaveBeenCalledWith('/');
+  });
+
+  it('should show map panel open button on mobile /map', () => {
+    (usePathname as jest.Mock).mockReturnValue('/map');
+    (global as any).__mockResponsive = {
+      width: 390,
+      height: 844,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
+
+    useBreadcrumbModel.mockReturnValue({
+      showBreadcrumbs: false,
+      pageContextTitle: 'Карта',
+      currentTitle: 'Карта',
+      backToPath: null,
+      items: [],
+    });
+
+    const { getByTestId, queryByTestId } = renderWithClient(<HeaderContextBar />);
+    expect(getByTestId('map-panel-open')).toBeTruthy();
+    expect(queryByTestId('mobile-sections-open')).toBeNull();
+
+    fireEvent.press(getByTestId('map-panel-open'));
+    expect(mockRequestOpenMapPanel).toHaveBeenCalled();
+  });
+
+  it('should not render sections menu button on mobile non-travel pages', () => {
+    (usePathname as jest.Mock).mockReturnValue('/');
+    (global as any).__mockResponsive = {
+      width: 390,
+      height: 844,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
+
+    useBreadcrumbModel.mockReturnValue({
+      showBreadcrumbs: false,
+      pageContextTitle: 'Путешествия',
+      currentTitle: 'Путешествия',
+      backToPath: null,
+      items: [],
+    });
+
+    const { queryByTestId } = renderWithClient(<HeaderContextBar />);
+    expect(queryByTestId('map-panel-open')).toBeNull();
+    expect(queryByTestId('mobile-sections-open')).toBeNull();
+  });
+
+  it('should render sections menu button on mobile travel details pages', () => {
+    (usePathname as jest.Mock).mockReturnValue('/travels/test-slug');
+    (global as any).__mockResponsive = {
+      width: 390,
+      height: 844,
+      isSmallPhone: false,
+      isPhone: true,
+      isLargePhone: false,
+      isTablet: false,
+      isLargeTablet: false,
+      isDesktop: false,
+      isMobile: true,
+      isPortrait: true,
+      isLandscape: false,
+      orientation: 'portrait',
+      breakpoints: {},
+      isAtLeast: () => false,
+      isAtMost: () => true,
+      isBetween: () => false,
+    };
+
+    useBreadcrumbModel.mockReturnValue({
+      showBreadcrumbs: false,
+      pageContextTitle: 'Mock Travel',
+      currentTitle: 'Mock Travel',
+      backToPath: null,
+      items: [],
+    });
+
+    const { getByTestId } = renderWithClient(<HeaderContextBar />);
+    expect(getByTestId('mobile-sections-open')).toBeTruthy();
   });
 });

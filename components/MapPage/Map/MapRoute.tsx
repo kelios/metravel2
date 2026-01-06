@@ -32,11 +32,22 @@ const MapRoute: React.FC<MapRouteProps> = ({
       polylineRef.current = null;
     }
 
-    // Draw new polyline if we have coordinates
-    if (routeCoordinates.length >= 2) {
-      const latlngs = routeCoordinates.map(coord =>
-        L.latLng(coord.lat, coord.lng)
+    const validCoords = (routeCoordinates || []).filter((c) => {
+      const lat = (c as any)?.lat;
+      const lng = (c as any)?.lng;
+      return (
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180
       );
+    });
+
+    // Draw new polyline if we have coordinates
+    if (validCoords.length >= 2) {
+      const latlngs = validCoords.map((coord) => L.latLng(coord.lat, coord.lng));
 
       // Determine line style based on route status
       const color = isOptimal ? info : warning;

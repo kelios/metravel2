@@ -22,7 +22,6 @@ import { useIsFocused } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
-import FloatingActionButton from '@/components/ui/FloatingActionButton';
 
 import type { Travel } from "@/src/types/types";
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
@@ -150,7 +149,7 @@ export default function TravelDetailsContainer() {
     isMobile,
     isLoading,
   });
-  const { closeMenu, toggleMenu, isMenuOpen, animatedX, menuWidth, menuWidthNum } = useTravelDetailsMenu(isMobile, deferAllowed);
+  const { closeMenu, animatedX, menuWidth, menuWidthNum } = useTravelDetailsMenu(isMobile, deferAllowed);
   const {
     scrollY,
     contentHeight,
@@ -171,7 +170,7 @@ export default function TravelDetailsContainer() {
     readyDesc,
     canonicalUrl,
     readyImage,
-    lcpPreloadImage,
+    lcpPreloadImage: _lcpPreloadImage,
     firstImgOrigin,
     firstImg,
     jsonLd,
@@ -320,7 +319,6 @@ export default function TravelDetailsContainer() {
             <>
               {firstImg?.url && (
                 <>
-                  <link rel="preload" as="image" href={lcpPreloadImage} fetchPriority="high" />
                   {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
                 </>
               )}
@@ -390,23 +388,6 @@ export default function TravelDetailsContainer() {
                 </Suspense>
               </Animated.View>
             </Defer>
-          )}
-
-          {/* ✅ НОВОЕ: FAB кнопка для открытия меню на мобильном */}
-          {isMobile && !isMenuOpen && (
-            <FloatingActionButton
-              label="Меню"
-              icon="☰"
-              onPress={toggleMenu}
-              position="bottom-left"
-              accessibilityLabel="Открыть навигационное меню"
-              testID="mobile-menu-fab"
-              style={{
-                bottom: 80,
-                left: 16,
-                zIndex: 999,
-              }}
-            />
           )}
 
           {/* Прогресс-бар чтения */}

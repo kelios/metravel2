@@ -50,11 +50,15 @@ config.resolver = {
     const isWeb = platform === 'web' || (context && context.platform === 'web');
     if (isWeb) {
       const normalizedModuleName = moduleName.replace(/\\/g, '/');
+      const normalizedModuleNameNoDotSlash = normalizedModuleName.replace(/^\.\//, '');
       const isLeaflet =
         moduleName === 'leaflet' ||
         normalizedModuleName === 'leaflet' ||
         moduleName.startsWith('leaflet/') ||
-        normalizedModuleName.startsWith('leaflet/');
+        normalizedModuleName.startsWith('leaflet/') ||
+        // Some bundles (or accidental imports) may reference the CDN path without a host,
+        // e.g. "./leaflet@1.9.4/dist/leaflet". Treat it as Leaflet too.
+        normalizedModuleNameNoDotSlash.startsWith('leaflet@');
 
       if (isLeaflet) {
         return {

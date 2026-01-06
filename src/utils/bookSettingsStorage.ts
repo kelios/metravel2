@@ -30,9 +30,38 @@ const CHECKLIST_OPTIONS: BookSettings['checklistSections'][number][] = [
   'documents',
   'medicine',
 ];
+const GALLERY_LAYOUTS: NonNullable<BookSettings['galleryLayout']>[] = [
+  'grid',
+  'masonry',
+  'collage',
+  'polaroid',
+  'slideshow',
+];
+const GALLERY_COLUMNS = [2, 3, 4];
+const GALLERY_PHOTOS_PER_PAGE = [0, 2, 3, 4];
+const CAPTION_POSITIONS: NonNullable<BookSettings['captionPosition']>[] = [
+  'top',
+  'bottom',
+  'overlay',
+  'none',
+];
+const GALLERY_SPACINGS: NonNullable<BookSettings['gallerySpacing']>[] = [
+  'compact',
+  'normal',
+  'spacious',
+];
 
 function ensureValue<T>(allowed: readonly T[], value: unknown, fallback: T): T {
   return allowed.includes(value as T) ? (value as T) : fallback;
+}
+
+function ensureNumber(
+  allowed: number[],
+  value: unknown,
+  fallback: number | undefined
+): number | undefined {
+  if (typeof value !== 'number') return fallback;
+  return allowed.includes(value) ? value : fallback;
 }
 
 function sanitizeChecklistSections(
@@ -68,6 +97,16 @@ function normalizeBookSettings(
     includeChecklists:
       typeof stored.includeChecklists === 'boolean' ? stored.includeChecklists : base.includeChecklists,
     checklistSections: sanitizeChecklistSections(stored.checklistSections, base.checklistSections),
+    galleryLayout: ensureValue(GALLERY_LAYOUTS, stored.galleryLayout, base.galleryLayout),
+    galleryColumns: ensureNumber(GALLERY_COLUMNS, stored.galleryColumns, base.galleryColumns),
+    galleryPhotosPerPage: ensureNumber(
+      GALLERY_PHOTOS_PER_PAGE,
+      stored.galleryPhotosPerPage,
+      base.galleryPhotosPerPage
+    ),
+    showCaptions: typeof stored.showCaptions === 'boolean' ? stored.showCaptions : base.showCaptions,
+    captionPosition: ensureValue(CAPTION_POSITIONS, stored.captionPosition, base.captionPosition),
+    gallerySpacing: ensureValue(GALLERY_SPACINGS, stored.gallerySpacing, base.gallerySpacing),
   };
 }
 

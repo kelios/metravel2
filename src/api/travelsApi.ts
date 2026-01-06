@@ -324,9 +324,16 @@ export const fetchTravels = async (
         }
 
         if (items.length === 0 && result && typeof result === 'object' && !Array.isArray(result)) {
-            if (__DEV__) {
+            const hasKnownListShape =
+                Array.isArray((result as any).results) ||
+                Array.isArray((result as any).data) ||
+                Array.isArray((result as any).items);
+
+            // Empty list is a valid response; warn only if the structure is truly unknown.
+            if (!hasKnownListShape && __DEV__) {
                 devWarn('API returned unexpected structure:', result);
             }
+
             return { data: [], total: coerceTotal((result as any).total, 0) };
         }
 
@@ -425,9 +432,16 @@ export const fetchRandomTravels = async (
         }
 
         if (items.length === 0 && result && typeof result === 'object' && !Array.isArray(result)) {
-            if (__DEV__) {
+            const hasKnownListShape =
+                Array.isArray((result as any).results) ||
+                Array.isArray((result as any).data) ||
+                Array.isArray((result as any).items);
+
+            // Empty list is a valid response; warn only if the structure is truly unknown.
+            if (!hasKnownListShape && __DEV__) {
                 console.warn('API returned unexpected random structure:', result);
             }
+
             return { data: [], total: coerceTotal((result as any).total, 0) };
         }
 

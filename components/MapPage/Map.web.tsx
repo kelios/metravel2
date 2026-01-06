@@ -88,6 +88,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const isValidCoord = useCallback((lat: number, lng: number) => (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  ), []);
 
   // Refs
   const mapRef = useRef<any>(null);
@@ -128,10 +136,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
     lng: Number.isFinite(coordinates.longitude) ? coordinates.longitude : 27.7273595,
   }), [coordinates.latitude, coordinates.longitude]);
 
-  const userLocationLatLng = useMemo(() =>
-    userLocation ? { lat: userLocation.latitude, lng: userLocation.longitude } : null,
-    [userLocation]
-  );
+  const userLocationLatLng = useMemo(() => {
+    if (!userLocation) return null;
+    if (!isValidCoord(userLocation.latitude, userLocation.longitude)) return null;
+    return { lat: userLocation.latitude, lng: userLocation.longitude };
+  }, [userLocation, isValidCoord]);
 
   // Custom hooks
   useMapCleanup();
@@ -196,10 +205,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
         const location = await Location.getCurrentPositionAsync({});
         if (cancelled) return;
 
-        setUserLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
+        const lat = location.coords.latitude;
+        const lng = location.coords.longitude;
+        if (isValidCoord(lat, lng)) {
+          setUserLocation({ latitude: lat, longitude: lng });
+        } else {
+          setErrors((prev) => ({ ...prev, location: true }));
+        }
       } catch (err) {
         console.error('[Map] Location error:', err);
         if (!cancelled) {
@@ -489,8 +501,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
         )}
 
         {/* User location marker */}
-        {userLocation && customIcons?.userLocation && (
-          <Marker position={[userLocation.latitude, userLocation.longitude]} icon={customIcons.userLocation}>
+        {userLocationLatLng && customIcons?.userLocation && (
+          <Marker position={[userLocationLatLng.lat, userLocationLatLng.lng]} icon={customIcons.userLocation}>
             <Popup>Your location</Popup>
           </Marker>
         )}
@@ -565,4 +577,3 @@ const getStyles = (colors: ThemedColors) =>
   });
 
 export default React.memo(MapPageComponent);
-

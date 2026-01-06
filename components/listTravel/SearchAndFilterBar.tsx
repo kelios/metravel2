@@ -484,8 +484,16 @@ function SearchAndFilterBar({
             if (Platform.OS === 'web') {
                 // Добавляем aria-hidden для веб-версии через обертку
                 return {
-                    search: <View {...({ 'aria-hidden': true } as any)}>{searchIcon}</View>,
-                    clear: <View {...({ 'aria-hidden': true } as any)}>{clearIcon}</View>,
+                    search: (
+                        <View pointerEvents="none" {...({ 'aria-hidden': true } as any)}>
+                            {searchIcon}
+                        </View>
+                    ),
+                    clear: (
+                        <View pointerEvents="none" {...({ 'aria-hidden': true } as any)}>
+                            {clearIcon}
+                        </View>
+                    ),
                     recommendations: recommendationsIcon,
                 };
             }
@@ -698,4 +706,3 @@ export default memo(
         prev.hasFilters === next.hasFilters &&
         prev.activeFiltersCount === next.activeFiltersCount
 );
-

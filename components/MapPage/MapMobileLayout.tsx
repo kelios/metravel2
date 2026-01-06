@@ -141,6 +141,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           onPress: () => bottomSheetRef.current?.snapToHalf(),
         }}
         actions={fabActions}
+        expandOnMainPress={false}
+        mainActionTestID="map-open-panel-button"
         position="bottom-right"
       />
 
@@ -168,4 +170,3 @@ const getStyles = (colors: ThemedColors) =>
       flex: 1,
     },
   });
-

@@ -84,7 +84,17 @@ export function useMapLogic({
         try {
           if (point.coord) {
             const coords = CoordinateConverter.fromString(point.coord);
-            points.push(coords);
+            if (
+              coords &&
+              Number.isFinite((coords as any).lat) &&
+              Number.isFinite((coords as any).lng) &&
+              (coords as any).lat >= -90 &&
+              (coords as any).lat <= 90 &&
+              (coords as any).lng >= -180 &&
+              (coords as any).lng <= 180
+            ) {
+              points.push(coords);
+            }
           }
         } catch {
           // Skip invalid coordinates
@@ -98,7 +108,18 @@ export function useMapLogic({
     }
 
     if (points.length > 0) {
-      const leafletPoints = points.map(p => L.latLng(p.lat, p.lng));
+      const leafletPoints = points
+        .filter((p) =>
+          Number.isFinite((p as any).lat) &&
+          Number.isFinite((p as any).lng) &&
+          (p as any).lat >= -90 &&
+          (p as any).lat <= 90 &&
+          (p as any).lng >= -180 &&
+          (p as any).lng <= 180
+        )
+        .map((p) => L.latLng(p.lat, p.lng));
+
+      if (leafletPoints.length < 1) return;
       const bounds = L.latLngBounds(leafletPoints);
       map.fitBounds(bounds.pad(0.2), { animate: !hasCenteredOnData });
       setHasCenteredOnData(true);

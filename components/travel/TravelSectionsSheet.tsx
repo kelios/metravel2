@@ -4,6 +4,7 @@ import { MaterialIcons } from "@expo/vector-icons"
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Темная тема
 import { DESIGN_TOKENS } from "@/constants/designSystem"
+import { useTravelSectionsStore } from "@/stores/travelSectionsStore"
 
 type Props = {
   links: TravelSectionLink[]
@@ -37,9 +38,15 @@ const getGroupKey = (key: string): GroupKey => {
 const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate, testID }) => {
   const colors = useThemedColors() // ✅ РЕДИЗАЙН: Темная тема
   const [open, setOpen] = useState(false)
+  const openNonce = useTravelSectionsStore((s) => s.openNonce)
   const triggerRef = useRef<any>(null)
   const closeRef = useRef<any>(null)
   const wasOpenRef = useRef(false)
+
+  useEffect(() => {
+    if (openNonce <= 0) return
+    setOpen(true)
+  }, [openNonce])
 
   const grouped = useMemo(() => {
     const items = links.map((l, idx) => {

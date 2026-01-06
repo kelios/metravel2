@@ -39,6 +39,7 @@ export interface BookSettings {
   // Настройки галереи
   galleryLayout?: GalleryLayout;
   galleryColumns?: number;
+  galleryPhotosPerPage?: number;
   showCaptions?: boolean;
   captionPosition?: CaptionPosition;
   gallerySpacing?: 'compact' | 'normal' | 'spacious';
@@ -87,6 +88,7 @@ const defaultBookSettings: BookSettings = {
   // Настройки галереи по умолчанию
   galleryLayout: 'grid',
   galleryColumns: 3,
+  galleryPhotosPerPage: 2,
   showCaptions: true,
   captionPosition: 'bottom',
   gallerySpacing: 'normal',
@@ -578,6 +580,8 @@ export default function BookSettingsModal({
                   onLayoutSelect={(layout) => handleSettingsChange({ galleryLayout: layout })}
                   columns={settings.galleryColumns}
                   onColumnsChange={(cols) => handleSettingsChange({ galleryColumns: cols })}
+                  photosPerPage={settings.galleryPhotosPerPage}
+                  onPhotosPerPageChange={(count) => handleSettingsChange({ galleryPhotosPerPage: count })}
                   showCaptions={settings.showCaptions}
                   onShowCaptionsChange={(show) => handleSettingsChange({ showCaptions: show })}
                   captionPosition={settings.captionPosition}

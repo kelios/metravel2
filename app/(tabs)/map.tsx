@@ -1,5 +1,5 @@
 // app/map/index.tsx
-import React, { Suspense, lazy, useMemo } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef } from 'react';
 import {
     SafeAreaView,
     View,
@@ -17,6 +17,7 @@ import InstantSEO from '@/components/seo/InstantSEO';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { useMapScreenController } from '@/hooks/useMapScreenController';
+import { useMapPanelStore } from '@/stores/mapPanelStore';
 
 // Ensure RouteHint is bundled (used inside FiltersPanel)
 import '@/components/MapPage/RouteHint';
@@ -55,6 +56,18 @@ export default function MapScreen() {
         coordinates,
         transportMode,
     } = useMapScreenController();
+
+    const openNonce = useMapPanelStore((s) => s.openNonce);
+
+    const openRightPanelRef = useRef(openRightPanel);
+    useEffect(() => {
+        openRightPanelRef.current = openRightPanel;
+    }, [openRightPanel]);
+
+    useEffect(() => {
+        if (!openNonce) return;
+        openRightPanelRef.current();
+    }, [openNonce]);
 
     const FiltersPanelComponent = filtersPanelProps.Component;
 
@@ -208,30 +221,17 @@ export default function MapScreen() {
             )}
             <SafeAreaView style={styles.container}>
                 <View style={styles.content}>
-                    <View style={styles.mapArea}>
-                        {mapReady ? (
-                            <Suspense fallback={mapPanelPlaceholder}>
-                                <LazyMapPanel {...mapPanelProps} />
-                            </Suspense>
-                        ) : (
-                            mapPanelPlaceholder
-                        )}
-                    </View>
-
-                    {/* ✅ ИСПРАВЛЕНИЕ: RouteHint и RouteStats перенесены в боковую панель */}
-
-                    {/* Кнопка для показа/скрытия панели */}
-                    {!rightPanelVisible && (
-                        <Pressable
-                            testID="map-open-panel-button"
-                            style={styles.togglePanelButton}
-                            onPress={openRightPanel}
-                            accessibilityRole="button"
-                            accessibilityLabel="Показать панель"
-                        >
-                            <MaterialIcons name="menu" size={24} color={themedColors.textOnPrimary} />
-                        </Pressable>
+                <View style={styles.mapArea}>
+                    {mapReady ? (
+                        <Suspense fallback={mapPanelPlaceholder}>
+                            <LazyMapPanel {...mapPanelProps} />
+                        </Suspense>
+                    ) : (
+                        mapPanelPlaceholder
                     )}
+                </View>
+
+                {/* ✅ ИСПРАВЛЕНИЕ: RouteHint и RouteStats перенесены в боковую панель */}
 
                     {/* Overlay для мобильных устройств */}
                     {isMobile && rightPanelVisible && (

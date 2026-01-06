@@ -53,13 +53,13 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await page.goto('/map', { waitUntil: 'networkidle', timeout: 120_000 });
 
     // На мобильном панель закрыта по умолчанию, должна быть видна кнопка меню
-    await expect(page.getByTestId('map-open-panel-button')).toBeVisible({ timeout: 20_000 });
-    await page.getByTestId('map-open-panel-button').click();
+    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId('map-panel-open').click();
 
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 20_000 });
 
     // Закрытие через крестик
     await page.getByTestId('filters-panel-close-button').click();
-    await expect(page.getByTestId('map-open-panel-button')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
   });
 });
