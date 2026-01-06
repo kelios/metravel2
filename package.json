@@ -15,7 +15,7 @@
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
     "test": "jest --watchAll",
-    "test:run": "jest --passWithNoTests",
+    "test:run": "jest --passWithNoTests --runInBand",
     "test:watch": "jest --watch",
     "test:ci": "npm run check:image-architecture && jest --ci --runInBand --reporters=default --testLocationInResults --json --outputFile=jest-results.json | tee jest-full.log",
     "test:coverage": "jest --coverage",

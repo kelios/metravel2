@@ -1,4 +1,10 @@
-export type WebMapLayerKind = 'tile' | 'wms' | 'osm-overpass-camping';
+export type WebMapLayerKind =
+  | 'tile'
+  | 'wms'
+  | 'osm-overpass-camping'
+  | 'osm-overpass-poi'
+  | 'osm-overpass-routes'
+  | 'wfs-geojson';
 
 export interface WebMapLayerDefinition {
   id: string;
@@ -14,6 +20,12 @@ export interface WebMapLayerDefinition {
     transparent?: boolean;
     version?: string;
     styles?: string;
+  };
+  wfsParams?: {
+    typeName: string;
+    version?: string;
+    outputFormat?: string;
+    srsName?: string;
   };
   opacity?: number;
   minZoom?: number;
@@ -40,18 +52,42 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
     defaultEnabled: false,
   },
   {
-    id: 'lasy-camping',
-    title: 'Польша: места палаток (Lasy Państwowe)',
-    kind: 'wms',
-    url: process.env.EXPO_PUBLIC_LASY_WMS_URL || '',
+    id: 'osm-poi',
+    title: 'Достопримечательности (OSM)',
+    kind: 'osm-overpass-poi',
+    url: '',
+    attribution: '© OpenStreetMap contributors (ODbL)',
+    opacity: 1,
+    zIndex: 480,
+    defaultEnabled: false,
+  },
+  {
+    id: 'osm-routes',
+    title: 'Маршруты (OSM: hiking/bicycle)',
+    kind: 'osm-overpass-routes',
+    url: '',
+    attribution: '© OpenStreetMap contributors (ODbL)',
+    opacity: 1,
+    zIndex: 470,
+    defaultEnabled: false,
+  },
+  {
+    id: 'lasy-zanocuj-wfs',
+    title: 'Польша: места палаток (Zanocuj w lesie)',
+    kind: 'wfs-geojson',
+    url:
+      process.env.EXPO_PUBLIC_LASY_WFS_URL ||
+      'https://mapserver.bdl.lasy.gov.pl/arcgis/services/WFS_BDL_mapa_turystyczna/MapServer/WFSServer',
     attribution:
       process.env.EXPO_PUBLIC_LASY_ATTRIBUTION ||
-      'Źródło: Lasy Państwowe – „Zanocuj w lesie”',
-    wmsParams: {
-      layers: process.env.EXPO_PUBLIC_LASY_WMS_LAYERS || 'miejsca_biwakowe',
-      format: 'image/png',
-      transparent: true,
-      version: '1.3.0',
+      'Źródło: Bank Danych o Lasach (BDL) – Program „Zanocuj w lesie”',
+    wfsParams: {
+      typeName:
+        process.env.EXPO_PUBLIC_LASY_WFS_TYPENAME ||
+        'WFS_BDL_mapa_turystyczna:Program_Zanocuj_w_lesie',
+      version: process.env.EXPO_PUBLIC_LASY_WFS_VERSION || '2.0.0',
+      outputFormat: process.env.EXPO_PUBLIC_LASY_WFS_OUTPUT || 'GEOJSON',
+      srsName: process.env.EXPO_PUBLIC_LASY_WFS_SRS || 'urn:ogc:def:crs:OGC:1.3:CRS84',
     },
     opacity: 0.8,
     zIndex: 450,

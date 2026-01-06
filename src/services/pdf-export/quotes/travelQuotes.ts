@@ -59,6 +59,25 @@ export const TRAVEL_QUOTES: TravelQuote[] = [
   { text: 'Приключение того стоит', author: 'Аристотель' },
 ];
 
+export const GALLERY_QUOTES: TravelQuote[] = [
+  { text: 'Каждое путешествие — это новая глава личной истории.', author: 'MeTravel.by' },
+  { text: 'Приключения начинаются там, где заканчивается привычное.', author: 'MeTravel.by' },
+  { text: 'Память держится на деталях, а фото возвращают нас туда снова.', author: 'MeTravel.by' },
+  { text: 'Истории пути живут в мгновениях, а не в километрах.', author: 'MeTravel.by' },
+  { text: 'Лучшие маршруты — те, где есть место неожиданности.', author: 'MeTravel.by' },
+  { text: 'Путешествие — это диалог с местом и собой.', author: 'MeTravel.by' },
+  { text: 'Мы запоминаем не места, а ощущения, которые они нам дарят.', author: 'MeTravel.by' },
+  { text: 'В каждом кадре — часть дороги и немного свободы.', author: 'MeTravel.by' },
+  { text: 'Путешествие — это смелость идти без гарантий.', author: 'MeTravel.by' },
+  { text: 'Каждая остановка — новая перспектива.', author: 'MeTravel.by' },
+  { text: 'Снимки — это следы, которые хочется оставить себе.', author: 'MeTravel.by' },
+  { text: 'Приключение складывается из простых шагов.', author: 'MeTravel.by' },
+  { text: 'Иногда достаточно одного поворота, чтобы началась история.', author: 'MeTravel.by' },
+  { text: 'Путешествия учат видеть красоту в мелочах.', author: 'MeTravel.by' },
+  { text: 'Путь становится значимым, когда в нём есть смысл.', author: 'MeTravel.by' },
+  { text: 'Открывая мир, мы открываем себя.', author: 'MeTravel.by' },
+];
+
 export function pickRandomQuote(exclude?: TravelQuote): TravelQuote {
   const pool = exclude
     ? TRAVEL_QUOTES.filter((q) => q.text !== exclude.text || q.author !== exclude.author)
@@ -68,6 +87,12 @@ export function pickRandomQuote(exclude?: TravelQuote): TravelQuote {
     return TRAVEL_QUOTES[0];
   }
 
+  const index = Math.floor(Math.random() * pool.length);
+  return pool[index];
+}
+
+export function pickRandomGalleryQuote(): TravelQuote {
+  const pool = GALLERY_QUOTES.length ? GALLERY_QUOTES : TRAVEL_QUOTES;
   const index = Math.floor(Math.random() * pool.length);
   return pool[index];
 }

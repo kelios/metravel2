@@ -4,8 +4,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, StyleSheet, Pressable, Animated, Platform } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import MapIcon from './MapIcon';
 
 interface FABAction {
   icon: string;
@@ -114,7 +114,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
                   accessibilityLabel={action.label}
                   accessibilityRole="button"
                 >
-                  <Icon
+                  <MapIcon
                     name={action.icon}
                     size={24}
                     color={colors.textOnPrimary}
@@ -151,7 +151,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
             ],
           }}
         >
-          <Icon
+          <MapIcon
             name={isExpanded && actions.length > 0 ? 'close' : mainAction.icon}
             size={28}
             color={colors.textOnPrimary}

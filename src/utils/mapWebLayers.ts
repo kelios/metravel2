@@ -4,9 +4,17 @@ import { clampOpacity } from '@/src/utils/routeExport/normalize';
 export const createLeafletLayer = (L: any, def: WebMapLayerDefinition) => {
   if (!L) return null;
 
-  if (def.kind === 'osm-overpass-camping') {
+  if (
+    def.kind === 'osm-overpass-camping' ||
+    def.kind === 'osm-overpass-poi' ||
+    def.kind === 'osm-overpass-routes'
+  ) {
     // Этот слой создаётся/управляется отдельно через attachOsmCampingOverlay,
     // потому что ему нужен доступ к map events и async загрузка.
+    return null;
+  }
+
+  if (def.kind === 'wfs-geojson') {
     return null;
   }
 

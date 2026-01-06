@@ -66,13 +66,27 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
     layerGroup.clearLayers();
 
     for (const p of points) {
-      const marker = L.circleMarker([p.lat, p.lng], {
-        radius: 6,
-        color: '#1f7a1f',
-        weight: 2,
-        fillColor: '#34c759',
-        fillOpacity: 0.7,
-      });
+      if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
+
+      let marker: any = null;
+      try {
+        marker = L.circleMarker([p.lat, p.lng], {
+          radius: 6,
+          color: '#1f7a1f',
+          weight: 2,
+          fillColor: '#34c759',
+          fillOpacity: 0.7,
+        });
+      } catch (e: any) {
+        console.warn('[OSM Camping Overlay] Invalid marker coordinates, skipping:', {
+          id: p.id,
+          lat: p.lat,
+          lng: p.lng,
+          title: p.title,
+          error: e?.message || e,
+        });
+        continue;
+      }
 
       const typeLabel = kindLabelRu(p.tags);
       const operator = p.tags.operator || p.tags['operator:ru'] || p.tags['operator:en'] || '';
@@ -93,8 +107,18 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
         </div>
       `;
 
-      marker.bindPopup(html);
-      marker.addTo(layerGroup);
+      try {
+        marker.bindPopup(html);
+        marker.addTo(layerGroup);
+      } catch (e: any) {
+        console.warn('[OSM Camping Overlay] Failed to add marker, skipping:', {
+          id: p.id,
+          lat: p.lat,
+          lng: p.lng,
+          title: p.title,
+          error: e?.message || e,
+        });
+      }
     }
   };
 

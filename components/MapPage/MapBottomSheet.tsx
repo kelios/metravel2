@@ -6,8 +6,8 @@
 import React, { useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import BottomSheet, { BottomSheetScrollView, BottomSheetBackdrop } from '@gorhom/bottom-sheet';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import MapIcon from './MapIcon';
 
 interface MapBottomSheetProps {
   children: React.ReactNode;
@@ -100,7 +100,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
               hitSlop={8}
               accessibilityLabel="Развернуть панель"
             >
-              <Icon name="expand-less" size={24} color={colors.textMuted} />
+              <MapIcon name="expand-less" size={24} color={colors.textMuted} />
             </Pressable>
           </View>
         </View>
@@ -193,4 +193,3 @@ const getStyles = (colors: ThemedColors) =>
       paddingBottom: 40,
     },
   });
-

@@ -17,7 +17,7 @@ import {
   Dimensions,
 } from 'react-native';
 import MultiSelectField from '../MultiSelectField';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MapIcon from './MapIcon';
 import MapLegend from '@/components/MapPage/MapLegend';
 import ValidationMessage from '@/components/MapPage/ValidationMessage';
 import RoutingStatus from '@/components/MapPage/RoutingStatus';
@@ -34,6 +34,21 @@ import { RouteValidator } from '@/utils/routeValidator';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/src/types/mapUi';
 import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/src/config/mapWebLayers';
+
+const OSM_POI_CATEGORIES = [
+  'Достопримечательности',
+  'Культура',
+  'Видовые места',
+  'Развлечения',
+  'Религия',
+  'История',
+] as const;
+
+const OSM_POI_DEFAULT_CATEGORIES = [
+  'Достопримечательности',
+  'Видовые места',
+  'Культура',
+] as const;
 
 // SEARCH_MODES теперь определены inline в SegmentedControl
 
@@ -142,6 +157,12 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     return initial;
   });
 
+  const [osmPoiCategories, setOsmPoiCategories] = useState<string[]>(() => [...OSM_POI_DEFAULT_CATEGORIES]);
+
+  const availableOverlays = useMemo(() => {
+    return WEB_MAP_OVERLAY_LAYERS.filter((o) => o.kind.startsWith('osm-overpass-') || Boolean(o.url));
+  }, []);
+
   useEffect(() => {
     if (!mapUiApi) return;
     try {
@@ -153,6 +174,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       // noop
     }
   }, [mapUiApi, selectedBaseLayerId, enabledOverlays]);
+
+  const osmPoiEnabled = Boolean(enabledOverlays['osm-poi']);
+
+  useEffect(() => {
+    if (!mapUiApi?.setOsmPoiCategories) return;
+    if (!osmPoiEnabled) return;
+    mapUiApi.setOsmPoiCategories(osmPoiCategories);
+  }, [mapUiApi, osmPoiCategories, osmPoiEnabled]);
   
   // ✅ NEW: Validate route points
   const validation = useMemo(() => {
@@ -276,7 +305,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       <View style={styles.stickyTop} testID="filters-panel-header">
         <View style={styles.compactHeader}>
           <View style={styles.compactTitleRow}>
-            <Icon name="map" size={18} color={colors.primary} />
+            <MapIcon name="map" size={18} color={colors.primary} />
             <Text style={styles.compactTitle}>
               {totalPoints} {mode === 'radius' ? `мест • ${filterValue.radius || '60'} км` : 'мест'}
             </Text>
@@ -289,7 +318,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Закрыть панель"
             >
-              <Icon name="close" size={20} color={colors.text} />
+              <MapIcon name="close" size={20} color={colors.text} />
             </Pressable>
           )}
         </View>
@@ -383,7 +412,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                             accessibilityRole="button"
                             accessibilityLabel="Удалить категорию"
                           >
-                            <Icon name="close" size={16} color={colors.primary} />
+                            <MapIcon name="close" size={16} color={colors.primary} />
                           </Pressable>
                         </View>
                       );
@@ -414,6 +443,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                     return (
                       <Pressable
                         key={opt.id}
+                        testID={`radius-option-${String(opt.id)}`}
                         onPress={() => onFilterChange('radius', opt.id)}
                         style={[
                           styles.radiusChip,
@@ -472,7 +502,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                           accessibilityRole="button"
                           accessibilityState={{ disabled: disabledTransport }}
                         >
-                          <Icon
+                          <MapIcon
                             name={icon}
                             size={18}
                             color={
@@ -525,7 +555,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           accessibilityState={{ expanded: legendOpen }}
         >
           <Text style={styles.accordionTitle}>Легенда карты</Text>
-          <Icon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
+          <MapIcon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
         </Pressable>
         {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
 
@@ -539,7 +569,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               accessibilityLabel="Увеличить масштаб"
               accessibilityState={{ disabled: !mapUiApi }}
             >
-              <Icon name="add" size={18} color={colors.text} />
+              <MapIcon name="add" size={18} color={colors.text} />
               <Text style={styles.mapControlText}>Zoom +</Text>
             </Pressable>
             <Pressable
@@ -550,7 +580,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               accessibilityLabel="Уменьшить масштаб"
               accessibilityState={{ disabled: !mapUiApi }}
             >
-              <Icon name="remove" size={18} color={colors.text} />
+              <MapIcon name="remove" size={18} color={colors.text} />
               <Text style={styles.mapControlText}>Zoom -</Text>
             </Pressable>
             <Pressable
@@ -568,7 +598,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               accessibilityLabel="Моё местоположение"
               accessibilityState={{ disabled: !mapUiApi || !canCenterOnUser }}
             >
-              <Icon name="my-location" size={18} color={colors.text} />
+              <MapIcon name="my-location" size={18} color={colors.text} />
               <Text style={styles.mapControlText}>Я</Text>
             </Pressable>
             <Pressable
@@ -583,7 +613,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               accessibilityLabel="Показать все результаты на карте"
               accessibilityState={{ disabled: !mapUiApi || !canFitToResults }}
             >
-              <Icon name="zoom-out-map" size={18} color={colors.text} />
+              <MapIcon name="zoom-out-map" size={18} color={colors.text} />
               <Text style={styles.mapControlText}>Все</Text>
             </Pressable>
           </View>
@@ -602,7 +632,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 accessibilityLabel="Скачать маршрут в формате GPX"
                 accessibilityState={{ disabled: !mapUiApi || !canBuildRoute || !canExportRoute }}
               >
-                <Icon name="download" size={18} color={colors.text} />
+                <MapIcon name="download" size={18} color={colors.text} />
                 <Text style={styles.mapControlText}>GPX</Text>
               </Pressable>
               <Pressable
@@ -617,7 +647,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                 accessibilityLabel="Скачать маршрут в формате KML"
                 accessibilityState={{ disabled: !mapUiApi || !canBuildRoute || !canExportRoute }}
               >
-                <Icon name="download" size={18} color={colors.text} />
+                <MapIcon name="download" size={18} color={colors.text} />
                 <Text style={styles.mapControlText}>KML</Text>
               </Pressable>
             </View>
@@ -641,10 +671,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       setSelectedBaseLayerId(l.id);
                       mapUiApi?.setBaseLayer(l.id);
                     }}
-                    disabled={!mapUiApi}
                     accessibilityRole="button"
                     accessibilityLabel={`Выбрать базовый слой: ${l.title}`}
-                    accessibilityState={{ selected: active, disabled: !mapUiApi }}
+                    accessibilityState={{ selected: active }}
                   >
                     <Text style={[styles.layerChipText, active && styles.layerChipTextActive]}>{l.title}</Text>
                   </Pressable>
@@ -656,7 +685,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           <View style={styles.mapLayersSection}>
             <Text style={styles.sectionLabel}>Оверлеи</Text>
             <View style={styles.mapLayersRow}>
-              {WEB_MAP_OVERLAY_LAYERS.map((o) => {
+              {availableOverlays.map((o) => {
                 const enabled = Boolean(enabledOverlays[o.id]);
                 return (
                   <Pressable
@@ -672,10 +701,9 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                       setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
                       mapUiApi?.setOverlayEnabled(o.id, next);
                     }}
-                    disabled={!mapUiApi}
                     accessibilityRole="button"
                     accessibilityLabel={`${enabled ? 'Выключить' : 'Включить'} оверлей: ${o.title}`}
-                    accessibilityState={{ selected: enabled, disabled: !mapUiApi }}
+                    accessibilityState={{ selected: enabled }}
                   >
                     <Text style={[styles.layerChipText, enabled && styles.layerChipTextActive]}>
                       {o.title}
@@ -685,6 +713,41 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
               })}
             </View>
           </View>
+
+          {osmPoiEnabled && typeof mapUiApi?.setOsmPoiCategories === 'function' && (
+            <View style={styles.mapLayersSection}>
+              <Text style={styles.sectionLabel}>OSM: категории</Text>
+              <View style={styles.mapLayersRow}>
+                {OSM_POI_CATEGORIES.map((cat) => {
+                  const enabled = osmPoiCategories.includes(cat);
+                  return (
+                    <Pressable
+                      key={cat}
+                      style={[
+                        styles.layerChip,
+                        enabled && styles.layerChipActive,
+                        globalFocusStyles.focusable,
+                      ]}
+                      onPress={() => {
+                        setOsmPoiCategories((prev) => {
+                          const next = prev.includes(cat)
+                            ? prev.filter((x) => x !== cat)
+                            : [...prev, cat];
+                          mapUiApi?.setOsmPoiCategories?.(next);
+                          return next;
+                        });
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${enabled ? 'Скрыть' : 'Показывать'}: ${cat}`}
+                      accessibilityState={{ selected: enabled }}
+                    >
+                      <Text style={[styles.layerChipText, enabled && styles.layerChipTextActive]}>{cat}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          )}
         </CollapsibleSection>
 
         {/* ✅ УЛУЧШЕНИЕ: QuickActions для быстрого доступа */}
@@ -703,7 +766,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         />
 
         {/* ✅ НОВИНКА: Популярное рядом */}
-        {mode === 'radius' && userLocation && onPlaceSelect && (
+        {Platform.OS !== 'web' && mode === 'radius' && userLocation && onPlaceSelect && (
           <QuickRecommendations
             places={travelsData}
             userLocation={userLocation}

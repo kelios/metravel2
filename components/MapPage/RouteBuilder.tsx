@@ -1,10 +1,23 @@
 // components/MapPage/RouteBuilder.tsx
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
 import AddressSearch from '@/components/MapPage/AddressSearch';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';
+import MapIcon from './MapIcon';
+
+const SafeView: React.FC<React.ComponentProps<typeof View>> = ({ children, ...props }) => {
+  return (
+    <View {...props}>
+      {React.Children.map(children, (child, index) => {
+        if (typeof child === 'string' || typeof child === 'number') {
+          return <Text key={index}>{child}</Text>;
+        }
+        return child;
+      })}
+    </View>
+  );
+};
 
 interface RouteBuilderProps {
   startAddress: string;
@@ -37,13 +50,13 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
   const hasAnyAddress = Boolean(startAddress || endAddress);
 
   return (
-    <View style={styles.routeBuilder} testID="route-builder">
+    <SafeView style={styles.routeBuilder} testID="route-builder">
       {/* Progress header */}
-      <View style={styles.progressHeader}>
-        <View style={styles.progressInfo}>
-          <Icon name="alt-route" size={18} color={colors.text} />
+      <SafeView style={styles.progressHeader}>
+        <SafeView style={styles.progressInfo}>
+          <MapIcon name="alt-route" size={18} color={colors.text} />
           <Text style={styles.progressText}>Маршрут {progress}</Text>
-        </View>
+        </SafeView>
         {onClear && hasAnyAddress && (
           <Pressable
             testID="route-clear"
@@ -52,31 +65,31 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Очистить маршрут"
           >
-            <Icon name="refresh" size={18} color={colors.text} />
+            <MapIcon name="refresh" size={18} color={colors.text} />
           </Pressable>
         )}
-      </View>
+      </SafeView>
 
       {/* Address inputs */}
-      <View style={styles.addressContainer}>
+      <SafeView style={styles.addressContainer}>
         {/* Start address */}
-        <View style={styles.addressRow}>
-          <View style={styles.addressIcon}>
-            <Icon name="trip-origin" size={20} color={colors.success} />
-          </View>
-          <View style={styles.addressInputWrapper}>
+        <SafeView style={styles.addressRow}>
+          <SafeView style={styles.addressIcon}>
+            <MapIcon name="trip-origin" size={20} color={colors.success} />
+          </SafeView>
+          <SafeView style={styles.addressInputWrapper}>
             <AddressSearch
               placeholder="Старт"
               value={startAddress}
               onAddressSelect={(addr, coords) => onAddressSelect(addr, coords, true)}
               enableCoordinateInput
             />
-          </View>
-        </View>
+          </SafeView>
+        </SafeView>
 
         {/* Swap button */}
         {onSwap && hasRoute && (
-          <View style={styles.swapContainer}>
+          <SafeView style={styles.swapContainer}>
             <Pressable
               testID="route-swap"
               onPress={onSwap}
@@ -84,26 +97,26 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               accessibilityRole="button"
               accessibilityLabel="Поменять старт и финиш местами"
             >
-              <Icon name="swap-vert" size={20} color={colors.primary} />
+              <MapIcon name="swap-vert" size={20} color={colors.primary} />
             </Pressable>
-          </View>
+          </SafeView>
         )}
 
         {/* End address */}
-        <View style={styles.addressRow}>
-          <View style={styles.addressIcon}>
-            <Icon name="location-on" size={20} color={colors.danger} />
-          </View>
-          <View style={styles.addressInputWrapper}>
+        <SafeView style={styles.addressRow}>
+          <SafeView style={styles.addressIcon}>
+            <MapIcon name="location-on" size={20} color={colors.danger} />
+          </SafeView>
+          <SafeView style={styles.addressInputWrapper}>
             <AddressSearch
               placeholder="Финиш"
               value={endAddress}
               onAddressSelect={(addr, coords) => onAddressSelect(addr, coords, false)}
               enableCoordinateInput
             />
-          </View>
-        </View>
-      </View>
+          </SafeView>
+        </SafeView>
+      </SafeView>
 
       {/* Hints */}
       {!startAddress && (
@@ -116,7 +129,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           Теперь выберите точку финиша
         </Text>
       )}
-    </View>
+    </SafeView>
   );
 };
 
@@ -196,4 +209,3 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
 });
 
 export default RouteBuilder;
-

@@ -20,6 +20,10 @@ export const getStyles = (
   const shadowLight = themedColors.shadows.light;
   const shadowMedium = themedColors.shadows.medium;
   const shadowHeavy = themedColors.shadows.heavy;
+  const mobilePanelWidth =
+    Platform.OS === 'web' && isMobile
+      ? Math.min(windowWidth * 0.9, PANEL_WIDTH_TABLET)
+      : '100%';
 
   return StyleSheet.create({
     container: {
@@ -94,8 +98,8 @@ export const getStyles = (
         // ✅ ИСПРАВЛЕНИЕ: Убран effectiveHeaderOffset, так как хедер уже в потоке
         top: 0,
         bottom: isMobile ? (Platform.OS === 'web' ? WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 0) : undefined,
-        width: isMobile ? '100%' : PANEL_WIDTH_DESKTOP,
-        maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
+        width: isMobile ? mobilePanelWidth : PANEL_WIDTH_DESKTOP,
+        maxWidth: isMobile ? mobilePanelWidth : PANEL_WIDTH_DESKTOP + 40,
         backgroundColor: themedColors.surface,
         ...(Platform.OS === 'web'
           ? ({

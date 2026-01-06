@@ -60,6 +60,8 @@ interface GalleryLayoutSelectorProps {
   onColumnsChange?: (columns: number) => void;
   photosPerPage?: number;
   onPhotosPerPageChange?: (count: number) => void;
+  twoPerPageLayout?: 'vertical' | 'horizontal';
+  onTwoPerPageLayoutChange?: (layout: 'vertical' | 'horizontal') => void;
   showCaptions?: boolean;
   onShowCaptionsChange?: (show: boolean) => void;
   captionPosition?: CaptionPosition;
@@ -71,10 +73,12 @@ interface GalleryLayoutSelectorProps {
 export default function GalleryLayoutSelector({
   selectedLayout,
   onLayoutSelect,
-  columns = 3,
+  columns = 1,
   onColumnsChange,
   photosPerPage = 2,
   onPhotosPerPageChange,
+  twoPerPageLayout = 'vertical',
+  onTwoPerPageLayoutChange,
   showCaptions = true,
   onShowCaptionsChange,
   captionPosition = 'bottom',
@@ -158,7 +162,7 @@ export default function GalleryLayoutSelector({
           <View style={styles.settingRow}>
             <Text style={styles.settingLabel}>Колонок:</Text>
             <View style={styles.columnsButtons}>
-              {[2, 3, 4].map((num) => (
+              {[1, 2, 3, 4].map((num) => (
                 <Pressable
                   key={num}
                   style={[
@@ -182,12 +186,12 @@ export default function GalleryLayoutSelector({
         )}
 
         {/* Фото на странице */}
-        {selectedLayout !== 'slideshow' &&
+        {(selectedLayout === 'grid' || selectedLayout === 'polaroid') &&
           onPhotosPerPageChange && (
             <View style={styles.settingRow}>
               <Text style={styles.settingLabel}>Фото на странице:</Text>
               <View style={styles.columnsButtons}>
-                {[2, 3, 4].map((count) => (
+                {[1, 2, 3, 4].map((count) => (
                   <Pressable
                     key={count}
                     style={[
@@ -222,6 +226,38 @@ export default function GalleryLayoutSelector({
                     Все
                   </Text>
                 </Pressable>
+              </View>
+            </View>
+          )}
+
+        {photosPerPage === 2 &&
+          (selectedLayout === 'grid' || selectedLayout === 'polaroid') &&
+          onTwoPerPageLayoutChange && (
+            <View style={styles.settingRow}>
+              <Text style={styles.settingLabel}>2 фото:</Text>
+              <View style={styles.positionButtons}>
+                {[
+                  { value: 'vertical', label: 'Вертикально' },
+                  { value: 'horizontal', label: 'Горизонтально' },
+                ].map((opt) => (
+                  <Pressable
+                    key={opt.value}
+                    style={[
+                      styles.positionButton,
+                      twoPerPageLayout === opt.value && styles.positionButtonActive,
+                    ]}
+                    onPress={() => onTwoPerPageLayoutChange(opt.value as 'vertical' | 'horizontal')}
+                  >
+                    <Text
+                      style={[
+                        styles.positionButtonText,
+                        twoPerPageLayout === opt.value && styles.positionButtonTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                ))}
               </View>
             </View>
           )}

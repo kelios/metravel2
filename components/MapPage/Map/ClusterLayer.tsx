@@ -10,6 +10,7 @@ interface ClusterLayerProps {
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
+  onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
   onClusterZoom: (payload: {
     center: [number, number];
     bounds: [[number, number], [number, number]];
@@ -29,6 +30,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   Marker,
   Popup,
   PopupContent,
+  onMarkerClick,
   onClusterZoom,
   expandedClusterKey,
   expandedClusterItems,
@@ -70,6 +72,18 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
       const count = cell.items.length;
       const centerLat = (cell.minLat + cell.maxLat) / 2;
       const centerLng = (cell.minLng + cell.maxLng) / 2;
+      if (!Number.isFinite(centerLat) || !Number.isFinite(centerLng)) {
+        return {
+          key: `invalid|${String(count)}`,
+          count: 0,
+          center: [0, 0],
+          bounds: [
+            [0, 0],
+            [0, 0],
+          ],
+          items: [],
+        };
+      }
       const key = buildClusterKey([centerLat, centerLng], count);
       return {
         key,
@@ -144,9 +158,32 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     [colors, clusterIconsCache]
   );
 
+  const handleMarkerClick = useCallback(
+    (e: any, point: Point, coords: { lat: number; lng: number }) => {
+      // Prevent marker click from being treated as a map click (important in route mode).
+      // Leaflet passes the DOM event via `originalEvent`.
+      e?.originalEvent?.preventDefault?.();
+      e?.originalEvent?.stopPropagation?.();
+
+      onMarkerClick?.(point, coords);
+      if (e?.target?.openPopup) {
+        setTimeout(() => {
+          try {
+            e.target.openPopup();
+          } catch {
+            // noop
+          }
+        }, 360);
+      }
+    },
+    [onMarkerClick]
+  );
+
   return (
     <>
       {clusters.map((cluster, idx) => {
+        if (!Number.isFinite(cluster.center[0]) || !Number.isFinite(cluster.center[1])) return null;
+
         // Expanded cluster: render individual markers
         if (expandedClusterKey && cluster.key === expandedClusterKey) {
           const items = expandedClusterItems ?? cluster.items;
@@ -155,6 +192,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
               {items.map((item, itemIdx) => {
                 const ll = strToLatLng(item.coord);
                 if (!ll) return null;
+                if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null;
                 const markerKey = item.id
                   ? `cluster-expanded-${cluster.key}-${item.id}`
                   : `cluster-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`;
@@ -163,6 +201,9 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                   position: [ll[1], ll[0]],
                   icon: markerIcon,
                   opacity: markerOpacity,
+                  eventHandlers: {
+                    click: (e: any) => handleMarkerClick(e, item, { lat: ll[1], lng: ll[0] }),
+                  },
                 };
                 if (renderer) markerProps.renderer = renderer;
 
@@ -183,11 +224,15 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           const item = cluster.items[0];
           const ll = strToLatLng(item.coord);
           if (!ll) return null;
+          if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null;
 
           const singleMarkerProps: any = {
             position: [ll[1], ll[0]],
             icon: markerIcon,
             opacity: markerOpacity,
+            eventHandlers: {
+              click: (e: any) => handleMarkerClick(e, item, { lat: ll[1], lng: ll[0] }),
+            },
           };
           if (renderer) singleMarkerProps.renderer = renderer;
 
@@ -209,6 +254,14 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
               click: (e: any) => {
                 e?.originalEvent?.preventDefault?.();
                 e?.originalEvent?.stopPropagation?.();
+                if (
+                  !Number.isFinite(cluster.bounds?.[0]?.[0]) ||
+                  !Number.isFinite(cluster.bounds?.[0]?.[1]) ||
+                  !Number.isFinite(cluster.bounds?.[1]?.[0]) ||
+                  !Number.isFinite(cluster.bounds?.[1]?.[1])
+                ) {
+                  return;
+                }
                 onClusterZoom({
                   center: [cluster.center[0], cluster.center[1]],
                   bounds: [
@@ -247,4 +300,3 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 };
 
 export default ClusterLayer;
-

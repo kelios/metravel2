@@ -67,6 +67,17 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
         fit: 'contain',
       }) || versionedHref
 
+    if (versionedHref && !document.querySelector(`link[rel="preload"][href="${versionedHref}"]`)) {
+      const preload = document.createElement('link')
+      preload.rel = 'preload'
+      preload.as = 'image'
+      preload.href = versionedHref
+      preload.fetchPriority = 'high'
+      preload.setAttribute('fetchpriority', 'high')
+      preload.crossOrigin = 'anonymous'
+      document.head.appendChild(preload)
+    }
+
     const domains = [
       getOrigin(imageUrl),
       'https://maps.googleapis.com',

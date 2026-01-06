@@ -24,6 +24,7 @@ jest.mock('@/src/services/pdf-export/renderers/BlockRenderer', () => ({
 
 jest.mock('@/src/services/pdf-export/quotes/travelQuotes', () => ({
   pickRandomQuote: jest.fn(() => ({ text: 'quote', author: 'author' })),
+  pickRandomGalleryQuote: jest.fn(() => ({ text: 'gallery-quote' })),
 }))
 
 const baseSettings: BookSettings = {

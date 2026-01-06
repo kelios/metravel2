@@ -24,6 +24,7 @@ const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/travels/search_travels_for_map/`; // Ð
 const GET_FILTER_FOR_MAP = `${URLAPI}/filterformap/`;
 const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_TRAVELS_OF_MONTH = `${URLAPI}/travels/of-month/`;
+const GET_TRAVELS_RANDOM = `${URLAPI}/travels/random/`;
 const SEARCH_TRAVELS_NEAR_ROUTE = `${URLAPI}/travels/near-route/`;
 
 export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) => {
@@ -70,6 +71,17 @@ export const fetchTravelsOfMonth = async (): Promise<TravelsMap> => {
   } catch (e) {
     devWarn('Error fetching fetchTravelsOfMonth:', e);
     return {} as TravelsMap;
+  }
+};
+
+export const fetchTravelsRandom = async (): Promise<any[]> => {
+  try {
+    const urlTravel = GET_TRAVELS_RANDOM;
+    const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
+    return await safeJsonParse<any[]>(res, []);
+  } catch (e) {
+    devWarn('Error fetching fetchTravelsRandom:', e);
+    return [];
   }
 };
 

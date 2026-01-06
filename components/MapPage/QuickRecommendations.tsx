@@ -2,11 +2,11 @@
  * QuickRecommendations - быстрые рекомендации популярных мест рядом
  */
 
-import React, { useMemo, useRef, useCallback, useState } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
+import MapIcon from './MapIcon';
 
 
 interface Props {
@@ -38,34 +38,7 @@ export const QuickRecommendations: React.FC<Props> = ({
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const renderIcon = useCallback(
-    (name: string, size: number, color: string) => (
-      <Text style={styles.iconWrapper} pointerEvents="none">
-        <MaterialIcons name={name as any} size={size} color={color} />
-      </Text>
-    ),
-    [styles.iconWrapper]
-  );
-
   const scrollRef = useRef<ScrollView | null>(null);
-  const [scrollX, setScrollX] = useState(0);
-
-  const onWheel = useCallback(
-    (e: any) => {
-      if (Platform.OS !== 'web') return;
-      const dx = e?.nativeEvent?.deltaX;
-      const dy = e?.nativeEvent?.deltaY;
-      const deltaX = typeof dx === 'number' ? dx : 0;
-      const deltaY = typeof dy === 'number' ? dy : 0;
-      const delta = deltaX !== 0 ? deltaX : deltaY;
-      if (delta === 0) return;
-
-      e?.preventDefault?.();
-      e?.stopPropagation?.();
-      scrollRef.current?.scrollTo({ x: Math.max(0, scrollX + delta), animated: false });
-    },
-    [scrollX]
-  );
 
   // Фильтруем и сортируем места
   const topPlaces = useMemo(() => {
@@ -114,26 +87,26 @@ export const QuickRecommendations: React.FC<Props> = ({
       .slice(0, maxItems);
   }, [places, userLocation, transportMode, maxItems]);
 
+  if (Platform.OS === 'web') {
+    return null;
+  }
+
   if (!topPlaces.length) {
     return null;
   }
 
   return (
-    <View
-      style={styles.container}
-      {...(Platform.OS === 'web' ? ({ onWheelCapture: onWheel } as any) : ({} as any))}
-    >
+    <View style={styles.container}>
       <View style={styles.header}>
-        {renderIcon('star', 20, colors.primary)}
+        <MapIcon name="star" size={20} color={colors.primary} />
         <Text style={styles.title}>Популярное рядом</Text>
       </View>
       <ScrollView
         ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
-        scrollEventThrottle={16}
       >
         {topPlaces.map((place, index) => (
           <Pressable
@@ -150,26 +123,28 @@ export const QuickRecommendations: React.FC<Props> = ({
               <Text style={styles.placeName} numberOfLines={2}>{place.address}</Text>
               {place.rating > 0 && (
                 <View style={styles.ratingBadge}>
-                  {renderIcon('star', 14, colors.warning)}
+                  <MapIcon name="star" size={14} color={colors.warning} />
                   <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
                 </View>
               )}
             </View>
             <View style={styles.infoRow}>
               <View style={styles.infoBadge}>
-                {renderIcon('place', 14, colors.primary)}
+                <MapIcon name="place" size={14} color={colors.primary} />
                 <Text style={styles.infoText}>{place.distanceText}</Text>
               </View>
               <View style={styles.infoBadge}>
-                {renderIcon(
-                  transportMode === 'car'
-                    ? 'directions-car'
-                    : transportMode === 'bike'
-                    ? 'directions-bike'
-                    : 'directions-walk',
-                  14,
-                  colors.accent
-                )}
+                <MapIcon
+                  name={
+                    transportMode === 'car'
+                      ? 'directions-car'
+                      : transportMode === 'bike'
+                      ? 'directions-bike'
+                      : 'directions-walk'
+                  }
+                  size={14}
+                  color={colors.accent}
+                />
                 <Text style={styles.infoText}>{place.travelTimeText}</Text>
               </View>
             </View>
@@ -199,9 +174,6 @@ const getStyles = (colors: ThemedColors) =>
       marginBottom: 12,
       paddingHorizontal: 8,
     },
-    iconWrapper: {
-      lineHeight: 0,
-    },
     title: {
       fontSize: 18,
       fontWeight: '700',
@@ -211,6 +183,10 @@ const getStyles = (colors: ThemedColors) =>
     scrollContent: {
       paddingHorizontal: 8,
       gap: 12,
+      flexDirection: 'row',
+      flexWrap: 'nowrap',
+    },
+    scroll: {
     },
     card: {
       width: 220,

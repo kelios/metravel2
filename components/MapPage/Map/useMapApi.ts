@@ -6,6 +6,7 @@ import type { LatLng } from '@/types/coordinates';
 import { buildGpx, buildKml, downloadTextFileWeb } from '@/src/utils/routeExport';
 import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
 import { createLeafletLayer } from '@/src/utils/mapWebLayers';
+import type { OsmPoiCategory } from '@/src/utils/overpass';
 
 interface Point {
   id?: number;
@@ -135,6 +136,22 @@ export function useMapApi({
             if (enabled) overpassController.start?.();
             else overpassController.stop?.();
           }
+
+          const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
+          const controller = controllers?.get?.(id);
+          if (controller?.layer === layer) {
+            if (enabled) controller.start?.();
+            else controller.stop?.();
+          }
+        } catch {
+          // noop
+        }
+      },
+      setOsmPoiCategories: (categories: string[]) => {
+        try {
+          const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
+          const controller = controllers?.get?.('osm-poi');
+          controller?.setCategories?.(categories as unknown as OsmPoiCategory[]);
         } catch {
           // noop
         }

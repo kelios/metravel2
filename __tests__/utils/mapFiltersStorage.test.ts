@@ -36,6 +36,42 @@ describe('mapFiltersStorage', () => {
     expect(result).toEqual({ categories: ['A'], radius: '100', address: ' Minsk ', transportMode: 'car', lastMode: 'radius' });
   });
 
+  it('sanitizeMapFilterValues accepts valid transportMode and lastMode', () => {
+    const result = sanitizeMapFilterValues({
+      categories: ['A'],
+      radius: '60',
+      address: 'X',
+      transportMode: 'bike',
+      lastMode: 'route',
+    });
+
+    expect(result).toEqual({
+      categories: ['A'],
+      radius: '60',
+      address: 'X',
+      transportMode: 'bike',
+      lastMode: 'route',
+    });
+  });
+
+  it('sanitizeMapFilterValues falls back for invalid transportMode and lastMode', () => {
+    const result = sanitizeMapFilterValues({
+      categories: ['A'],
+      radius: '60',
+      address: 'X',
+      transportMode: 'plane',
+      lastMode: 'foo',
+    });
+
+    expect(result).toEqual({
+      categories: ['A'],
+      radius: '60',
+      address: 'X',
+      transportMode: 'car',
+      lastMode: 'radius',
+    });
+  });
+
   it('loadMapFilterValues reads and sanitizes storage data', () => {
     const storage = createStorage({
       'map-filters': JSON.stringify({ categories: ['Food'], radius: '200', address: 'X' }),
@@ -58,9 +94,11 @@ describe('mapFiltersStorage', () => {
       categories: ['  A  ', ''],
       radius: '60',
       address: '',
+      transportMode: 'foot',
+      lastMode: 'route',
     });
 
     const loaded = loadMapFilterValues(storage);
-    expect(loaded).toEqual({ categories: ['A'], radius: '60', address: '', transportMode: 'car', lastMode: 'radius' });
+    expect(loaded).toEqual({ categories: ['A'], radius: '60', address: '', transportMode: 'foot', lastMode: 'route' });
   });
 });

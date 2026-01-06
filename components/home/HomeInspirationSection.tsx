@@ -8,7 +8,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive, useResponsiveColumns } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
-import { fetchTravelsPopular, fetchTravelsOfMonth } from '@/src/api/map';
+import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/src/api/map';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
@@ -262,7 +262,13 @@ function HomeInspirationSection({
             <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} />
           </View>
         )}
-        keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+        keyExtractor={(item, index) => {
+          const id = (item as any)?.id;
+          if (id !== undefined && id !== null && String(id).length > 0) return String(id);
+          const url = (item as any)?.url;
+          if (url) return String(url);
+          return `${queryKey}-${index}`;
+        }}
         scrollEnabled={false}
         numColumns={numColumns}
         ItemSeparatorComponent={numColumns === 1 ? Separator : undefined}
@@ -328,6 +334,14 @@ function HomeInspirationSections() {
             subtitle="Маршруты, которые выбирают чаще всего"
             queryKey="home-popular-travels"
             fetchFn={() => fetchTravelsPopular()}
+            hideAuthor
+          />
+
+          <HomeInspirationSection
+            title="Случайный маршрут"
+            subtitle="Идея для поездки, если не знаешь, куда поехать"
+            queryKey="home-random-travels"
+            fetchFn={() => fetchTravelsRandom()}
             hideAuthor
           />
         </View>

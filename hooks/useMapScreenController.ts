@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,12 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { TravelCoords } from '@/src/types/types';
 import { logMessage } from '@/src/utils/logger';
+
+import {
+  loadMapFilterValues,
+  saveMapFilterValues,
+  type StorageLike,
+} from '@/src/utils/mapFiltersStorage';
 
 // Модульные хуки для карты
 import {
@@ -33,6 +39,12 @@ export function useMapScreenController() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const themedColors = useThemedColors();
+
+  const webStorage = useMemo<StorageLike | null>(() => {
+    if (Platform.OS !== 'web') return null;
+    if (typeof localStorage === 'undefined') return null;
+    return localStorage;
+  }, []);
 
   // Responsive
   const { isMobile, width } = useMapResponsive();
@@ -88,6 +100,28 @@ export function useMapScreenController() {
     isBuilding: routingLoading,
     error: routingError,
   } = routeStore;
+
+  const didRestorePersistedUiStateRef = useMemo(() => ({ current: false }), []);
+
+  useEffect(() => {
+    if (!webStorage) return;
+    if (didRestorePersistedUiStateRef.current) return;
+
+    didRestorePersistedUiStateRef.current = true;
+
+    const persisted = loadMapFilterValues(webStorage);
+    if (persisted.lastMode) setMode(persisted.lastMode);
+    if (persisted.transportMode) setTransportMode(persisted.transportMode);
+  }, [setMode, setTransportMode, webStorage, didRestorePersistedUiStateRef]);
+
+  useEffect(() => {
+    if (!webStorage) return;
+    saveMapFilterValues(webStorage, {
+      ...filterValues,
+      lastMode: mode,
+      transportMode,
+    });
+  }, [filterValues, mode, transportMode, webStorage]);
 
   // Route hint state
   const [routeHintDismissed, setRouteHintDismissed] = useState(false);

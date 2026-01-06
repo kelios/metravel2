@@ -8,6 +8,18 @@ console.warn = (message, ...args) => {
   if (/(ProgressBarAndroid|Clipboard|PushNotificationIOS) has been extracted/.test(text)) {
     return;
   }
+  if (text.includes('Tried to use the icon') && text.includes('react-native-paper')) {
+    return
+  }
+  if (text.includes('GA4: Missing MEASUREMENT_ID or API_SECRET')) {
+    return
+  }
+  if (text.includes('GA4: gtag is not available')) {
+    return
+  }
+  if (text.includes('[setRoutePoints]')) {
+    return
+  }
   originalWarn(message, ...args);
 };
 
@@ -21,6 +33,13 @@ console.info = (message, ...args) => {
   if (joined.includes('Address parts:')) return
   if (joined.includes('[PopupContent] Image URLs:')) return
   if (joined.includes('[PopupContent] No travelImageThumbUrl provided')) return
+  if (joined.includes('PhotoUploadWithPreview:')) return
+  if (joined.includes('File selected:')) return
+  if (joined.includes('Created blob URL:')) return
+  if (joined.includes('Upload response:')) return
+  if (joined.includes('[setRoutePoints]')) return
+  if (joined.includes('Nominatim geocode response')) return
+  if (joined.includes('BigDataCloud geocode response')) return
   originalInfo(message, ...args)
 }
 
@@ -144,11 +163,74 @@ console.error = (message, ...args) => {
   if (/\bMAP_SNAPSHOT_DOM\b/.test(joined)) {
     return;
   }
+  if (text.includes('API request error:')) {
+    return
+  }
+  if (text.includes('Error fetching Travel by slug:')) {
+    return
+  }
+  if (text.includes('fetch is not defined')) {
+    return
+  }
+  if (text.includes('Image load error:')) {
+    return
+  }
+  if (text.includes('Location search error:')) {
+    return
+  }
+  if (text.includes('Ошибка загрузки путешествия:')) {
+    return
+  }
+  if (text.includes('Error copying link:')) {
+    return
+  }
+  if (text.includes('Upload error:')) {
+    return
+  }
+  if (text.includes('Failed to load Leaflet')) {
+    return
+  }
+  if (text.includes('Validation error:')) {
+    return
+  }
+  if (text.includes('is using incorrect casing')) {
+    return
+  }
+  if (text.includes('The tag <View> is unrecognized in this browser')) {
+    return
+  }
+  if (text.includes('does not recognize the `testID` prop on a DOM element')) {
+    return
+  }
+  if (joined.includes('The tag <View> is unrecognized in this browser')) {
+    return
+  }
+  if (joined.includes('does not recognize the `testID` prop on a DOM element')) {
+    return
+  }
+  if (joined.includes('The tag <') && joined.includes('is unrecognized in this browser')) {
+    return
+  }
+  if (joined.includes('does not recognize the') && joined.includes('testID')) {
+    return
+  }
   originalError(message, ...args);
 };
 
 // Ensure critical Expo env vars exist for API clients referenced in tests
 process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api'
+process.env.EXPO_PUBLIC_GOOGLE_GA4 = process.env.EXPO_PUBLIC_GOOGLE_GA4 || 'test-ga4'
+process.env.EXPO_PUBLIC_GOOGLE_API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET || 'test-secret'
+
+if (typeof (global as any).fetch !== 'function') {
+  ;(global as any).fetch = jest.fn(async () => ({
+    ok: false,
+    status: 0,
+    statusText: 'Network request failed',
+    json: async () => ({}),
+    text: async () => '',
+  }))
+}
 
 // JSDOM has window.scrollBy/scrollTo but they may throw "Not implemented".
 // Override to stable mocks so scroll-related unit tests can assert calls.

@@ -5,6 +5,7 @@ import { CLUSTER_GRID } from './constants';
 export const strToLatLng = (s: string): [number, number] | null => {
   const parsed = CoordinateConverter.fromLooseString(s);
   if (!parsed) return null;
+  if (!CoordinateConverter.isValid(parsed)) return null;
   return [parsed.lng, parsed.lat];
 };
 

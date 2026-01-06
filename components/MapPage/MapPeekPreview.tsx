@@ -2,11 +2,11 @@
  * MapPeekPreview - превью топ-3 мест в collapsed состоянии Bottom Sheet
  */
 
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
+import MapIcon from './MapIcon';
 
 interface MapPeekPreviewProps {
   places: any[];
@@ -37,6 +37,25 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const scrollRef = useRef<ScrollView | null>(null);
+  const [scrollX, setScrollX] = useState(0);
+
+  const onWheel = useCallback(
+    (e: any) => {
+      if (Platform.OS !== 'web') return;
+      const dx = e?.nativeEvent?.deltaX;
+      const dy = e?.nativeEvent?.deltaY;
+      const deltaX = typeof dx === 'number' ? dx : 0;
+      const deltaY = typeof dy === 'number' ? dy : 0;
+      const delta = deltaX !== 0 ? deltaX : deltaY;
+      if (delta === 0) return;
+
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      scrollRef.current?.scrollTo({ x: Math.max(0, scrollX + delta), animated: false });
+    },
+    [scrollX]
+  );
 
   // Топ-3 места
   const topPlaces = useMemo(() => {
@@ -49,18 +68,25 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
         <Text style={styles.emptyText}>Мест не найдено</Text>
         <Pressable style={styles.expandButton} onPress={onExpandPress}>
           <Text style={styles.expandText}>Изменить фильтры</Text>
-          <Icon name="expand-less" size={20} color={colors.primary} />
+          <MapIcon name="expand-less" size={20} color={colors.primary} />
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      {...(Platform.OS === 'web' ? ({ onWheelCapture: onWheel } as any) : ({} as any))}
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        ref={scrollRef}
+        onScroll={(e) => setScrollX(e.nativeEvent.contentOffset.x)}
+        scrollEventThrottle={16}
+        style={styles.scroll}
       >
         {topPlaces.map((place, index) => {
           const coords = parseCoord(place.coord);
@@ -89,11 +115,11 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
               {distanceInfo && (
                 <View style={styles.distanceRow}>
                   <View style={styles.distanceBadge}>
-                    <Icon name="place" size={12} color={colors.primary} />
+                    <MapIcon name="place" size={12} color={colors.primary} />
                     <Text style={styles.distanceText}>{distanceInfo.distanceText}</Text>
                   </View>
                   <View style={styles.timeBadge}>
-                    <Icon
+                    <MapIcon
                       name={
                         transportMode === 'car'
                           ? 'directions-car'
@@ -116,7 +142,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
       {places.length > 3 && (
         <Pressable style={styles.moreButton} onPress={onExpandPress}>
           <Text style={styles.moreText}>Ещё {places.length - 3}</Text>
-          <Icon name="expand-less" size={20} color={colors.primary} />
+          <MapIcon name="expand-less" size={20} color={colors.primary} />
         </Pressable>
       )}
     </View>
@@ -131,6 +157,14 @@ const getStyles = (colors: ThemedColors) =>
     scrollContent: {
       paddingRight: 16,
       gap: 12,
+    },
+    scroll: {
+      ...(Platform.OS === 'web'
+        ? ({
+            overflowX: 'auto',
+            overflowY: 'hidden',
+          } as any)
+        : null),
     },
     emptyText: {
       fontSize: 14,
@@ -227,4 +261,3 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.primary,
     },
   });
-

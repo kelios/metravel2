@@ -109,6 +109,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const lastAutoFitKeyRef = useRef<string | null>(null);
   const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
   const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${Math.random().toString(36).slice(2)}`);
+  const hasPatchedLeafletCircleRef = useRef(false);
+  const hasWarnedInvalidLeafletCircleRef = useRef(false);
 
   // Travel data
   const travelData = useMemo(
@@ -141,6 +143,24 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!isValidCoord(userLocation.latitude, userLocation.longitude)) return null;
     return { lat: userLocation.latitude, lng: userLocation.longitude };
   }, [userLocation, isValidCoord]);
+
+  const handleMarkerZoom = useCallback((_point: Point, coords: { lat: number; lng: number }) => {
+    if (!mapRef.current) return;
+    if (!isValidCoord(coords.lat, coords.lng)) return;
+    const map = mapRef.current;
+    const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : mapZoom;
+    const maxZoom = typeof map.getMaxZoom === 'function' ? map.getMaxZoom() : 18;
+    const targetZoom = Math.min(Math.max(currentZoom + 2, 14), maxZoom || 18);
+    try {
+      if (typeof map.flyTo === 'function') {
+        map.flyTo([coords.lat, coords.lng], targetZoom, { animate: true, duration: 0.35 } as any);
+      } else if (typeof map.setView === 'function') {
+        map.setView([coords.lat, coords.lng], targetZoom, { animate: true } as any);
+      }
+    } catch {
+      // noop
+    }
+  }, [isValidCoord, mapZoom]);
 
   // Custom hooks
   useMapCleanup();
@@ -223,7 +243,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isValidCoord]);
 
   // Center user location handler
   const centerOnUserLocation = useCallback(() => {
@@ -334,6 +354,75 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return [lat, lng];
   }, [coordinates]);
 
+  const circleCenter = useMemo<[number, number] | null>(() => {
+    const lat = Number(safeCenter?.[0]);
+    const lng = Number(safeCenter?.[1]);
+    if (!isValidCoord(lat, lng)) return null;
+    return [lat, lng];
+  }, [isValidCoord, safeCenter]);
+
+  const hasWarnedInvalidCircleRef = useRef(false);
+  useEffect(() => {
+    if (hasWarnedInvalidCircleRef.current) return;
+    if (mode !== 'radius') return;
+    if (circleCenter) return;
+
+    hasWarnedInvalidCircleRef.current = true;
+    console.warn('[Map] Skipping radius circle due to invalid center:', {
+      rawCoordinates: coordinates,
+      safeCenter,
+      radius,
+    });
+  }, [circleCenter, coordinates, mode, radius, safeCenter]);
+
+  // Leaflet safety: prevent third-party layers from crashing the whole map when they create L.Circle with NaN lat/lng.
+  useEffect(() => {
+    if (hasPatchedLeafletCircleRef.current) return;
+    if (!L) return;
+
+    const CircleCtor = (L as any)?.Circle;
+    const proto = CircleCtor?.prototype;
+    const originalProject = proto?._project;
+    if (!proto || typeof originalProject !== 'function') return;
+
+    hasPatchedLeafletCircleRef.current = true;
+
+    proto._project = function patchedProject(this: any) {
+      const ll = this?._latlng;
+      const lat = ll?.lat;
+      const lng = ll?.lng;
+      const valid =
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180;
+
+      if (!valid) {
+        if (!hasWarnedInvalidLeafletCircleRef.current) {
+          hasWarnedInvalidLeafletCircleRef.current = true;
+          console.warn('[Map] Leaflet Circle has invalid latlng; skipping projection to avoid crash.', {
+            lat,
+            lng,
+            layerId: this?._leaflet_id,
+            stack: new Error().stack,
+          });
+        }
+
+        // Try to remove the bad layer if it was added.
+        try {
+          this?._map?.removeLayer?.(this);
+        } catch {
+          // noop
+        }
+        return;
+      }
+
+      return originalProject.apply(this, arguments as any);
+    };
+  }, [L]);
+
   // Popup component
   const PopupWithClose = useMemo(() => {
     if (!rl) return null;
@@ -370,7 +459,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const { MapContainer, Marker, Popup, Circle, useMap, useMapEvents } = rlSafe;
 
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} testID="map-leaflet-wrapper">
       {noPointsAlongRoute && (
         <View
           testID="no-points-message"
@@ -384,6 +473,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
       <MapContainer
         style={styles.map as any}
+        data-testid="map-leaflet-container"
         id={mapContainerIdRef.current}
         center={safeCenter}
         zoom={initialZoomRef.current}
@@ -417,25 +507,31 @@ const MapPageComponent: React.FC<Props> = (props) => {
           // Don't render Circle until map is ready
           if (!mapInstance) return null;
 
+          const centerLat = circleCenter?.[0];
+          const centerLng = circleCenter?.[1];
+          const hasValidCenter =
+            centerLat != null &&
+            centerLng != null &&
+            Number.isFinite(centerLat) &&
+            Number.isFinite(centerLng) &&
+            centerLat >= -90 &&
+            centerLat <= 90 &&
+            centerLng >= -180 &&
+            centerLng <= 180;
+
           const canRenderCircle =
             mode === 'radius' &&
             radiusInMeters != null &&
             Number.isFinite(radiusInMeters) &&
             radiusInMeters > 0 &&
-            safeCenter != null &&
-            Array.isArray(safeCenter) &&
-            safeCenter.length === 2 &&
-            Number.isFinite(safeCenter[0]) &&
-            Number.isFinite(safeCenter[1]) &&
-            safeCenter[0] !== 0 &&
-            safeCenter[1] !== 0;
+            hasValidCenter;
 
           if (!canRenderCircle) return null;
 
           return (
             <Circle
-              key={`circle-${safeCenter[0]}-${safeCenter[1]}-${radiusInMeters}`}
-              center={safeCenter}
+              key={`circle-${centerLat}-${centerLng}-${radiusInMeters}`}
+              center={[centerLat, centerLng]}
               radius={radiusInMeters}
               pathOptions={{
                 color: colors.primary,
@@ -515,6 +611,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
             Marker={Marker}
             Popup={Popup}
             PopupContent={PopupWithClose}
+            onMarkerClick={handleMarkerZoom}
           />
         )}
 
@@ -531,6 +628,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
             expandedClusterKey={expandedCluster?.key}
             expandedClusterItems={expandedCluster?.items}
             renderer={canvasRenderer}
+            onMarkerClick={handleMarkerZoom}
             onClusterZoom={({ bounds, key, items }) => {
               if (!mapRef.current) return;
               try {

@@ -16,19 +16,20 @@ export default defineConfig({
   webServer: USE_EXISTING_SERVER
     ? undefined
     : {
-        command: `CI=1 npx expo start -c --web --port ${E2E_WEB_PORT}`,
+        command: 'npm run build:web && node scripts/serve-web-build.js',
         url: baseURL,
         reuseExistingServer: false,
-        timeout: 240_000,
+        timeout: 600_000,
         env: {
           ...process.env,
+          E2E_WEB_PORT: String(E2E_WEB_PORT),
           ...(E2E_API_URL
             ? {
                 EXPO_PUBLIC_API_URL: E2E_API_URL,
                 EXPO_PUBLIC_IS_LOCAL_API: 'false',
               }
             : null),
-          NODE_OPTIONS: process.env.NODE_OPTIONS || '--max-old-space-size=6144',
+          NODE_OPTIONS: process.env.NODE_OPTIONS || '--max-old-space-size=8192',
         },
       },
   expect: {

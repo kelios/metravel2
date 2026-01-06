@@ -1,8 +1,8 @@
 // components/MapPage/SegmentedControl.tsx
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import MapIcon from './MapIcon';
 
 interface SegmentedControlOption {
   key: string;
@@ -49,7 +49,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             accessibilityLabel={label}
           >
             {icon && (
-              <Icon
+              <MapIcon
                 name={icon}
                 size={16}
                 color={active ? colors.textOnPrimary : colors.text}

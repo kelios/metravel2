@@ -1,8 +1,8 @@
 // components/MapPage/QuickActions.tsx
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import MapIcon from './MapIcon';
 
 interface QuickAction {
   icon: string;
@@ -84,7 +84,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({
           accessibilityRole="button"
           accessibilityLabel={action.accessibilityLabel || action.label}
         >
-          <Icon name={action.icon} size={18} color={colors.text} />
+          <MapIcon name={action.icon} size={18} color={colors.text} />
           <Text style={styles.quickActionText}>{action.label}</Text>
         </Pressable>
       ))}

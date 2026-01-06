@@ -35,6 +35,10 @@ export const elementToPoint = (el: OverpassElement): OSMPointFeature | null => {
 
   if (!loc) return null;
 
+  const lat = Number(loc.lat);
+  const lon = Number(loc.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
   const name =
     tags['name:ru'] ||
     tags.name ||
@@ -49,8 +53,8 @@ export const elementToPoint = (el: OverpassElement): OSMPointFeature | null => {
 
   return {
     id: `${el.type}/${el.id}`,
-    lat: loc.lat,
-    lng: loc.lon,
+    lat,
+    lng: lon,
     title,
     tags,
     osmUrl,
@@ -60,13 +64,24 @@ export const elementToPoint = (el: OverpassElement): OSMPointFeature | null => {
 const kindToRu = (tags: Record<string, string>) => {
   const tourism = tags.tourism;
   const amenity = tags.amenity;
+  const historic = tags.historic;
 
   if (tourism === 'camp_site') return 'Кемпинг';
   if (tourism === 'camp_pitch') return 'Место под палатку';
   if (tourism === 'wilderness_hut') return 'Лесной домик';
   if (amenity === 'shelter') return 'Укрытие';
+  if (tourism === 'museum') return 'Музей';
+  if (tourism === 'viewpoint') return 'Смотровая площадка';
+  if (tourism === 'attraction') return 'Достопримечательность';
+  if (amenity === 'place_of_worship') return 'Храм';
+  if (historic === 'castle') return 'Замок';
+  if (historic === 'manor') return 'Усадьба';
+  if (historic === 'fort') return 'Форт';
+  if (historic === 'memorial') return 'Мемориал';
+  if (historic === 'monument') return 'Памятник';
+  if (historic === 'ruins') return 'Руины';
 
-  return tourism || amenity || 'Ночёвка';
+  return tourism || historic || amenity || 'Точка на карте';
 };
 
 export const overpassToPoints = (data: unknown): OSMPointFeature[] => {

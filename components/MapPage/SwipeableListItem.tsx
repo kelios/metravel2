@@ -7,8 +7,8 @@
 import React, { useRef } from 'react';
 import { StyleSheet, Animated, Pressable, Text, Platform } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useThemedColors } from '@/hooks/useTheme';
+import MapIcon from './MapIcon';
 
 interface SwipeableListItemProps {
   children: React.ReactNode;
@@ -73,7 +73,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
           onPress={handleFavorite}
           accessibilityLabel={isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'}
         >
-          <Icon
+          <MapIcon
             name={isFavorite ? 'star' : 'star-border'}
             size={24}
             color={colors.textOnPrimary}
@@ -106,7 +106,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
           onPress={handleBuildRoute}
           accessibilityLabel="Построить маршрут сюда"
         >
-          <Icon name="directions" size={24} color={colors.textOnPrimary} />
+          <MapIcon name="directions" size={24} color={colors.textOnPrimary} />
           <Text style={[styles.actionText, { color: colors.textOnPrimary }]}>
             Маршрут
           </Text>
@@ -158,4 +158,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 });
-

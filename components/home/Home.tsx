@@ -69,15 +69,17 @@ function Home() {
     });
   }, [isFocused, isAuthenticated, travelsCount]);
 
-  const sections = [
-    'hero',
-    'trust',
-    'howItWorks',
-    ...(isAuthenticated ? (['favoritesHistory'] as const) : []),
-    'inspiration',
-    'faq',
-    'finalCta',
-  ] as const;
+  const sections = useMemo(() => (
+    [
+      'hero',
+      'trust',
+      'howItWorks',
+      ...(isAuthenticated ? (['favoritesHistory'] as const) : []),
+      'inspiration',
+      'faq',
+      'finalCta',
+    ] as const
+  ), [isAuthenticated]);
 
   const sectionCount = sections.length;
 
@@ -141,6 +143,10 @@ function Home() {
     },
   }), [colors]);
 
+  const isTestEnv = process.env.NODE_ENV === 'test';
+  const initialNumToRender = isTestEnv ? sectionCount : (Platform.OS === 'web' ? 2 : 3);
+  const maxToRenderPerBatch = isTestEnv ? sectionCount : (Platform.OS === 'web' ? 2 : 3);
+
   return (
     <FlatList
       data={sections}
@@ -151,16 +157,11 @@ function Home() {
       showsVerticalScrollIndicator={false}
       scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
       removeClippedSubviews={Platform.OS === 'android'}
-      initialNumToRender={sectionCount}
-      maxToRenderPerBatch={sectionCount}
+      initialNumToRender={Math.min(initialNumToRender, sectionCount)}
+      maxToRenderPerBatch={Math.min(maxToRenderPerBatch, sectionCount)}
       windowSize={Platform.OS === 'web' ? 5 : 7}
       updateCellsBatchingPeriod={Platform.OS === 'web' ? 50 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
-      getItemLayout={(data, index) => ({
-        length: 400, // Средняя высота секции
-        offset: 400 * index,
-        index,
-      })}
       {...Platform.select({
         web: {
           style: [

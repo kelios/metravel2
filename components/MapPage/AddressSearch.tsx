@@ -9,9 +9,9 @@ import {
   FlatList,
   Platform,
 } from 'react-native';
-import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';
+import MapIcon from './MapIcon';
 
 interface AddressSearchProps {
   placeholder?: string;
@@ -174,7 +174,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       {label ? <Text style={styles.label}>{label}</Text> : null}
 
       <View style={styles.inputContainer}>
-        <Icon name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
+        <MapIcon name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
 
         <TextInput
           style={styles.input}
@@ -196,7 +196,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
 
         {query.length > 0 && !loading && (
           <Pressable onPress={handleClear} hitSlop={8} style={styles.clearButton}>
-            <Icon name="close" size={20} color={colors.textMuted} />
+            <MapIcon name="close" size={20} color={colors.textMuted} />
           </Pressable>
         )}
       </View>
@@ -214,7 +214,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
                 ]}
                 onPress={() => handleSelectResult(item)}
               >
-                <Icon name="place" size={18} color={colors.primary} />
+                <MapIcon name="place" size={18} color={colors.primary} />
                 <Text style={styles.resultText} numberOfLines={2}>
                   {item.display_name}
                 </Text>

@@ -11,7 +11,7 @@ import { getThemeConfig, type PdfThemeName } from '../themes/PdfThemeConfig';
 import { ContentParser } from '../parsers/ContentParser';
 import { BlockRenderer } from '../renderers/BlockRenderer';
 import type { TravelQuote } from '../quotes/travelQuotes';
-import { pickRandomQuote } from '../quotes/travelQuotes';
+import { pickRandomGalleryQuote, pickRandomQuote } from '../quotes/travelQuotes';
 
 const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
   clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
@@ -37,6 +37,7 @@ export class EnhancedPdfGenerator {
   private blockRenderer: BlockRenderer | null = null;
   private theme: ReturnType<typeof getThemeConfig>;
   private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
+  private galleryQuotesByTravel = new Map<string | number, TravelQuote>();
   private currentSettings?: BookSettings;
 
   private getGalleryOptions(): {
@@ -135,6 +136,18 @@ export class EnhancedPdfGenerator {
         ">${this.escapeHtml(text)}`, 
       wrapperEnd: `</div>`,
     };
+  }
+
+  private getGalleryQuote(travel: TravelForBook): TravelQuote {
+    const key = travel.id ?? travel.name ?? 'default';
+    if (!this.galleryQuotesByTravel.has(key)) {
+      const quote = pickRandomGalleryQuote();
+      this.galleryQuotesByTravel.set(key, {
+        text: quote.text,
+        author: quote.author || 'MeTravel.by',
+      });
+    }
+    return this.galleryQuotesByTravel.get(key)!;
   }
 
   constructor(themeName: PdfThemeName | string) {
@@ -359,20 +372,18 @@ export class EnhancedPdfGenerator {
               hyphens: auto;
             ">
               «${this.escapeHtml(coverQuote.text)}»
-              ${coverQuote.author ? `
-                <div style="
-                  margin-top: 3mm;
-                  font-size: 9pt;
-                  letter-spacing: 0.08em;
-                  text-transform: uppercase;
-                  opacity: 0.9;
-                  overflow-wrap: anywhere;
-                  word-break: break-word;
-                  hyphens: auto;
-                ">
-                  ${this.escapeHtml(coverQuote.author)}
-                </div>
-              ` : ''}
+              <div style="
+                margin-top: 3mm;
+                font-size: 9pt;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                opacity: 0.9;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                hyphens: auto;
+              ">
+                ${this.escapeHtml(coverQuote.author || 'MeTravel.by')}
+              </div>
             </div>
           ` : ''}
         </div>
@@ -569,7 +580,7 @@ export class EnhancedPdfGenerator {
               ${layout === 'polaroid' ? `transform: rotate(${index % 2 === 0 ? '-1.2deg' : '1.1deg'});` : ''}
             ">
               ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              <img src="${this.escapeHtml(photo)}" alt="Фото ${globalIndex + 1}"
+              <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
                 style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
                 crossorigin="anonymous"
                 onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
@@ -1110,6 +1121,10 @@ export class EnhancedPdfGenerator {
   /**
    * Рендерит страницы галереи
    */
+  renderGalleryPage(travel: TravelForBook, pageNumber: number): string {
+    return this.renderGalleryPages(travel, pageNumber)[0] || '';
+  }
+
   private renderGalleryPages(travel: TravelForBook, startPageNumber: number): string[] {
     const { colors, typography, spacing } = this.theme;
     const photos = (travel.gallery || [])
@@ -1121,8 +1136,9 @@ export class EnhancedPdfGenerator {
 
     if (!photos.length) return [];
 
-    const { layout, columns: configuredColumns, showCaptions, captionPosition, spacing: gallerySpacing } =
+    const { layout, columns: configuredColumns, spacing: gallerySpacing } =
       this.getGalleryOptions();
+    const twoPerPageLayout = this.currentSettings?.galleryTwoPerPageLayout || 'vertical';
 
     const gapMm = this.getGalleryGapMm(gallerySpacing);
 
@@ -1134,33 +1150,43 @@ export class EnhancedPdfGenerator {
 
     return chunks.map((pagePhotos, pageIndex) => {
       const defaultColumns = calculateOptimalColumns(pagePhotos.length, layout);
-      const columns = Math.max(1, Math.min(4, configuredColumns ?? defaultColumns));
+      const isTwoPerPage = photosPerPage === 2 && pagePhotos.length === 2;
+      const columns = pagePhotos.length === 1
+        ? 1
+        : isTwoPerPage && twoPerPageLayout === 'vertical'
+          ? 1
+          : Math.max(1, Math.min(4, configuredColumns ?? defaultColumns));
 
       const imageHeight =
         layout === 'slideshow'
-          ? '170mm'
-          : pagePhotos.length <= 4
-            ? '80mm'
-            : pagePhotos.length <= 6
-              ? '65mm'
-              : '55mm';
+          ? '200mm'
+          : pagePhotos.length === 1
+            ? '210mm'
+            : pagePhotos.length === 2
+              ? (isTwoPerPage && twoPerPageLayout === 'vertical' ? '120mm' : '175mm')
+              : pagePhotos.length <= 4
+                ? '130mm'
+                : pagePhotos.length <= 6
+                  ? '95mm'
+                  : '80mm';
 
       const gridContainerStyle =
         layout === 'masonry'
           ? `column-count: ${columns}; column-gap: ${gapMm}mm;`
-          : `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gapMm}mm;`;
+          : `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gapMm}mm; align-items: stretch;`;
 
       const pageNumber = startPageNumber + pageIndex;
-      const pageStartIndex = pageIndex * photosPerPage;
+      const _pageStartIndex = pageIndex * photosPerPage;
       const title = pageIndex === 0 ? 'Фотогалерея' : this.escapeHtml(travel.name);
       const subtitle = pageIndex === 0 ? this.escapeHtml(travel.name) : '';
+      const quote = pageIndex === 0 ? this.getGalleryQuote(travel) : null;
 
       return `
-      <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding};">
-        <div style="text-align: center; margin-bottom: 18mm;">
+      <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding}; display: flex; flex-direction: column;">
+        <div style="text-align: center; margin-bottom: 8mm;">
           <h2 style="
             font-size: ${typography.h2.size};
-            margin-bottom: 6mm;
+            margin-bottom: 3mm;
             font-weight: ${typography.h2.weight};
             color: ${colors.text};
             letter-spacing: 0.02em;
@@ -1173,13 +1199,28 @@ export class EnhancedPdfGenerator {
             font-weight: 500;
             font-family: ${typography.bodyFont};
           ">${subtitle}</p>` : ''}
+          ${quote ? `
+          <p style="
+            margin-top: 6mm;
+            color: ${colors.text};
+            font-size: ${typography.body.size};
+            font-weight: 600;
+            font-family: ${typography.bodyFont};
+            line-height: ${typography.body.lineHeight};
+          ">${this.escapeHtml(quote.text)}</p>` : ''}
+          ${quote ? `
+          <p style="
+            margin-top: 2mm;
+            color: ${colors.textMuted};
+            font-size: ${typography.caption.size};
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-family: ${typography.bodyFont};
+          ">${this.escapeHtml(quote.author || 'MeTravel.by')}</p>` : ''}
         </div>
-        <div style="${gridContainerStyle}">
+        <div style="${gridContainerStyle} flex: 1; min-height: 170mm;">
           ${pagePhotos
             .map((photo, index) => {
-              const globalIndex = pageStartIndex + index;
-              const caption = showCaptions ? this.buildGalleryCaption(globalIndex, captionPosition, typography) : null;
-
               const wrapperStyle =
                 layout === 'masonry'
                   ? `break-inside: avoid; margin-bottom: ${gapMm}mm;`
@@ -1187,12 +1228,22 @@ export class EnhancedPdfGenerator {
 
               const polaroidStyle =
                 layout === 'polaroid'
-                  ? `padding: 6mm 6mm 10mm 6mm; background: #fff; transform: rotate(${index % 2 === 0 ? '-1.4deg' : '1.3deg'});`
+                  ? `padding: 1.5mm; background: #fff; transform: rotate(${index % 2 === 0 ? '-1.4deg' : '1.3deg'});`
                   : '';
 
               const collageHero = layout === 'collage' && index === 0;
               const collageSpan = collageHero ? 'grid-column: span 2; grid-row: span 2;' : '';
-              const resolvedHeight = collageHero ? '120mm' : imageHeight;
+              const resolvedHeight = collageHero ? '160mm' : imageHeight;
+              const isSingle = pagePhotos.length === 1;
+              const forceCover = pagePhotos.length <= 2;
+              const imgHeightStyle =
+                layout === 'polaroid'
+                  ? (forceCover ? `height: ${isSingle ? '210mm' : '190mm'};` : `height: auto; max-height: ${isSingle ? '210mm' : '190mm'};`)
+                  : (forceCover ? `height: ${isSingle ? '210mm' : resolvedHeight};` : `height: auto; max-height: ${resolvedHeight};`);
+              const wrapperMinHeight =
+                layout === 'polaroid'
+                  ? (isSingle ? 'min-height: 210mm;' : '')
+                  : `min-height: ${isSingle ? '210mm' : resolvedHeight};`;
 
               return `
             <div style="
@@ -1202,52 +1253,28 @@ export class EnhancedPdfGenerator {
               overflow: hidden;
               position: relative;
               box-shadow: ${this.theme.blocks.shadow};
-              background: ${colors.surfaceAlt};
+              background: ${layout === 'polaroid' ? '#fff' : 'transparent'};
               ${polaroidStyle}
+              ${wrapperMinHeight}
+              display: flex;
+              align-items: center;
+              justify-content: center;
             ">
-              ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
               <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
                 style="
                   width: 100%;
-                  height: ${resolvedHeight};
-                  object-fit: cover;
+                  ${imgHeightStyle}
+                  object-fit: ${forceCover ? 'cover' : 'contain'};
                   display: block;
                   ${this.getImageFilterStyle()}
                 "
                 crossorigin="anonymous"
                 onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
-              ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              ${caption && captionPosition === 'bottom' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              <div style="
-                position: absolute;
-                top: 8px;
-                right: 8px;
-                background: rgba(0,0,0,0.7);
-                color: #fff;
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 11pt;
-                font-weight: 700;
-                box-shadow: ${this.theme.blocks.shadow};
-                z-index: 3;
-              ">${globalIndex + 1}</div>
             </div>
           `;
             })
             .join('')}
         </div>
-        <div style="
-          margin-top: 14mm;
-          text-align: center;
-          color: ${colors.textMuted};
-          font-size: ${typography.body.size};
-          font-weight: 500;
-          font-family: ${typography.bodyFont};
-        ">${photos.length} ${this.getPhotoLabel(photos.length)}</div>
         <div style="
           position: absolute;
           bottom: 15mm;
@@ -1377,8 +1404,9 @@ export class EnhancedPdfGenerator {
         ">
           <div style="
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
             margin-bottom: ${spacing.elementSpacing};
           ">
             <h3 style="
@@ -1387,14 +1415,15 @@ export class EnhancedPdfGenerator {
               font-weight: ${typography.h4.weight};
               color: ${colors.text};
               font-family: ${typography.headingFont};
+              max-width: 100%;
+              word-break: break-word;
+              line-height: 1.2;
             ">${section.label}</h3>
             <span style="
               font-size: ${typography.caption.size};
               color: ${colors.textMuted};
               font-weight: 600;
               font-family: ${typography.bodyFont};
-              white-space: nowrap;
-              flex-shrink: 0;
               line-height: 1.2;
             ">${section.items.length} пунктов</span>
           </div>
@@ -1405,6 +1434,7 @@ export class EnhancedPdfGenerator {
             font-size: ${typography.body.size};
             line-height: ${typography.body.lineHeight};
             font-family: ${typography.bodyFont};
+            word-break: break-word;
           ">
             ${section.items.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('')}
           </ul>
@@ -1432,7 +1462,7 @@ export class EnhancedPdfGenerator {
         </div>
         <div style="
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: ${spacing.elementSpacing};
         ">
           ${cards}
@@ -1497,20 +1527,18 @@ export class EnhancedPdfGenerator {
           ">
             «${this.escapeHtml(finalQuote.text)}»
           </p>
-          ${finalQuote.author ? `
-            <p style="
-              max-width: 120mm;
-              margin: 0 auto;
-              font-size: 8.5pt;
-              line-height: 1.4;
-              color: ${colors.textMuted};
-              letter-spacing: 0.06em;
-              text-transform: uppercase;
-              font-family: ${typography.bodyFont};
-            ">
-              ${this.escapeHtml(finalQuote.author)}
-            </p>
-          ` : ''}
+          <p style="
+            max-width: 120mm;
+            margin: 0 auto;
+            font-size: 8.5pt;
+            line-height: 1.4;
+            color: ${colors.textMuted};
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-family: ${typography.bodyFont};
+          ">
+            ${this.escapeHtml(finalQuote.author || 'MeTravel.by')}
+          </p>
         ` : ''}
         <div style="
           position: absolute;
