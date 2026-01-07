@@ -46,8 +46,29 @@ export function optimizeImageUrl(
       return optimizedUrlCache.get(cacheKey);
     }
 
-    // Force HTTPS for security and performance
-    const secureUrl = originalUrl.replace(/^http:\/\//i, 'https://');
+    const isPrivateOrLocalHost = (host: string): boolean => {
+      const h = String(host || '').trim().toLowerCase();
+      if (!h) return false;
+      if (h === 'localhost' || h === '127.0.0.1') return true;
+      // Private IPv4 ranges
+      if (/^10\./.test(h)) return true;
+      if (/^192\.168\./.test(h)) return true;
+      if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
+      return false;
+    };
+
+    // Force HTTPS for security and performance (but keep HTTP for local/private dev hosts)
+    let secureUrl = originalUrl;
+    if (/^http:\/\//i.test(originalUrl)) {
+      try {
+        const parsed = new URL(originalUrl);
+        if (!isPrivateOrLocalHost(parsed.hostname)) {
+          secureUrl = originalUrl.replace(/^http:\/\//i, 'https://');
+        }
+      } catch {
+        secureUrl = originalUrl.replace(/^http:\/\//i, 'https://');
+      }
+    }
     
     // Handle both absolute and relative URLs
     let url: URL;

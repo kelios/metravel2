@@ -2,9 +2,10 @@
  * MapMobileLayout - мобильная версия карты с Bottom Sheet
  */
 
-import React, { useRef, useState, useCallback, useMemo, useEffect } from 'react';
-import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
+import React, { useCallback, useMemo, useRef, useState, useEffect, useTransition } from 'react';
+import { View, StyleSheet, Pressable, Text, Platform, InteractionManager } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
 import { MapPeekPreview } from './MapPeekPreview';
 import TravelListPanel from './TravelListPanel';
@@ -52,47 +53,55 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
   const lastPanelOpenTsRef = useRef<number>(0);
 
-  const [activeTab, setActiveTab] = useState<'list' | 'filters'>('list');
-  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
-  const [webOverlayInteractive, setWebOverlayInteractive] = useState(false);
+  const [uiTab, setUiTab] = useState<'list' | 'filters'>('list');
+  const [contentTab, setContentTab] = useState<'list' | 'filters'>('list');
+  const [, startTransition] = useTransition();
+  const sheetStateRef = useRef<'collapsed' | 'half' | 'full'>('collapsed');
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce);
 
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'half' | 'full') => {
-    setSheetState(state);
+    sheetStateRef.current = state;
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (sheetState === 'collapsed') {
-      setWebOverlayInteractive(false);
-      return;
-    }
-
-    // Prevent the opening click/tap from immediately hitting the overlay and closing the panel.
-    setWebOverlayInteractive(false);
-    const t = setTimeout(() => setWebOverlayInteractive(true), 250);
-    return () => clearTimeout(t);
-  }, [sheetState]);
-
-  useEffect(() => {
     if (!openNonce) return;
-    setActiveTab('filters');
+    setUiTab('filters');
+    setContentTab('filters');
     lastPanelOpenTsRef.current = Date.now();
     bottomSheetRef.current?.snapToHalf();
   }, [openNonce]);
 
   useEffect(() => {
     if (!toggleNonce) return;
-    if (sheetState === 'collapsed') {
-      setActiveTab('filters');
+    if (sheetStateRef.current === 'collapsed') {
+      setUiTab('filters');
+      setContentTab('filters');
       lastPanelOpenTsRef.current = Date.now();
       bottomSheetRef.current?.snapToHalf();
       return;
     }
     bottomSheetRef.current?.snapToCollapsed();
-  }, [toggleNonce, sheetState]);
+  }, [toggleNonce]);
+
+  const setTabDeferred = useCallback(
+    (next: 'list' | 'filters') => {
+      setUiTab(next);
+      // Defer the heavy rerender (list/filters content) so the button highlight is instant.
+      if (Platform.OS === 'web') {
+        startTransition(() => {
+          setContentTab(next);
+        });
+        return;
+      }
+
+      InteractionManager.runAfterInteractions(() => {
+        setContentTab(next);
+      });
+    },
+    [startTransition]
+  );
 
   const handlePlacePress = useCallback((place: any) => {
     buildRouteTo(place);
@@ -119,7 +128,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   // Peek content for collapsed state
   const peekContent = useMemo(() => {
-    if (activeTab === 'list') {
+    if (contentTab === 'list') {
       return (
         <MapPeekPreview
           places={travelsData}
@@ -131,7 +140,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       );
     }
 
-    if (activeTab !== 'filters') return null;
+    if (contentTab !== 'filters') return null;
     if (!filtersMode || typeof setFiltersMode !== 'function') return null;
 
     const showRouteCta = filtersMode === 'route' && typeof filtersPanelProps?.props?.onBuildRoute === 'function';
@@ -169,7 +178,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       </View>
     );
   }, [
-    activeTab,
+    contentTab,
     travelsData,
     coordinates,
     transportMode,
@@ -190,12 +199,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // Content based on active tab
   const sheetContent = useMemo(() => {
     const showModeToggle =
-      activeTab === 'filters' &&
+      uiTab === 'filters' &&
       (filtersMode === 'radius' || filtersMode === 'route') &&
       typeof setFiltersMode === 'function';
 
     const body =
-      activeTab === 'filters' ? (
+      contentTab === 'filters' ? (
         (() => {
           const FilterComponent = filtersPanelProps.Component;
           return (
@@ -204,6 +213,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               isMobile={true}
               hideTopControls={true}
               hideFooterCta={filtersMode === 'route'}
+              hideFooterReset={true}
             />
           );
         })()
@@ -222,20 +232,52 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     return (
       <View style={styles.sheetRoot}>
         <View style={styles.sheetTopControls}>
-          <SegmentedControl
-            options={[
-              { key: 'list', label: 'Список', icon: 'list' },
-              { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
-            ]}
-            value={activeTab}
-            onChange={(key) => {
-              const next = key === 'filters' ? 'filters' : 'list';
-              setActiveTab(next);
-              bottomSheetRef.current?.snapToHalf();
-            }}
-            compact={true}
-            accessibilityLabel="Переключение между фильтрами и списком"
-          />
+          <View style={styles.sheetTopRow}>
+            <View style={styles.sheetTopPrimary}>
+              <SegmentedControl
+                options={[
+                  { key: 'list', label: 'Список', icon: 'list' },
+                  { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
+                ]}
+                value={uiTab}
+                onChange={(key) => {
+                  const next = key === 'filters' ? 'filters' : 'list';
+                  setTabDeferred(next);
+                  bottomSheetRef.current?.snapToHalf();
+                }}
+                compact={true}
+                accessibilityLabel="Переключение между фильтрами и списком"
+              />
+            </View>
+
+            {uiTab === 'filters' && typeof filtersPanelProps?.props?.resetFilters === 'function' && (
+              <Pressable
+                testID="map-panel-reset"
+                style={styles.sheetIconButton}
+                onPress={() => {
+                  filtersPanelProps?.props?.resetFilters?.();
+                }}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Сбросить фильтры"
+              >
+                <MaterialIcons name="refresh" size={20} color={colors.textMuted} />
+              </Pressable>
+            )}
+
+            <Pressable
+              testID="map-panel-close"
+              style={styles.sheetIconButton}
+              onPress={() => {
+                bottomSheetRef.current?.snapToCollapsed();
+              }}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="Закрыть панель"
+            >
+              <MaterialIcons name="close" size={20} color={colors.textMuted} />
+            </Pressable>
+          </View>
 
           {showModeToggle && (
             <SegmentedControl
@@ -255,15 +297,21 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       </View>
     );
   }, [
-    activeTab,
+    uiTab,
+    contentTab,
     bottomSheetRef,
+    colors.textMuted,
     buildRouteTo,
     coordinates,
     favorites,
     filtersMode,
     filtersPanelProps,
     onToggleFavorite,
+    setTabDeferred,
     setFiltersMode,
+    styles.sheetIconButton,
+    styles.sheetTopPrimary,
+    styles.sheetTopRow,
     styles.sheetBody,
     styles.sheetRoot,
     styles.sheetTopControls,
@@ -271,8 +319,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     travelsData,
   ]);
 
-  const sheetTitle = activeTab === 'filters' ? 'Фильтры' : 'Места рядом';
-  const sheetSubtitle = activeTab === 'list' ? `${travelsData.length} мест` : undefined;
+  const sheetTitle = uiTab === 'filters' ? 'Фильтры' : 'Места рядом';
+  const sheetSubtitle = uiTab === 'list' ? `${travelsData.length} мест` : undefined;
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -280,23 +328,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       <View style={styles.mapContainer}>
         {mapComponent}
       </View>
-
-      {/* Web/mobile overlay to close sheet by tapping outside (e2e + UX parity) */}
-      {Platform.OS === 'web' && sheetState !== 'collapsed' && (
-        <Pressable
-          testID="map-panel-overlay"
-          style={styles.webOverlay}
-          pointerEvents={webOverlayInteractive ? 'auto' : 'none'}
-          onPress={() => {
-            // Prevent immediate close on the same click/tap that opened the panel (RN-web event timing).
-            const dt = Date.now() - lastPanelOpenTsRef.current;
-            if (dt < 250) return;
-            bottomSheetRef.current?.snapToCollapsed();
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Закрыть панель карты"
-        />
-      )}
 
       {/* Bottom Sheet */}
       <MapBottomSheet
@@ -322,11 +353,6 @@ const getStyles = (colors: ThemedColors) =>
     mapContainer: {
       flex: 1,
     },
-    webOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.45)',
-      zIndex: 10,
-    },
     sheetRoot: {
       flex: 1,
     },
@@ -336,6 +362,26 @@ const getStyles = (colors: ThemedColors) =>
       paddingBottom: 8,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+    },
+    sheetTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    sheetTopPrimary: {
+      flex: 1,
+      minWidth: 0,
+    },
+    sheetIconButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      flexShrink: 0,
     },
     sheetBody: {
       flex: 1,

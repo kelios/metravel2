@@ -6,6 +6,7 @@
 import React, { useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
 
@@ -36,21 +37,23 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const styles = useMemo(() => getStyles(colors), [colors]);
     const bottomSheetRef = useRef<BottomSheet>(null);
     const lastProgrammaticOpenTsRef = useRef(0);
-    const [sheetIndex, setSheetIndex] = useState(0);
+    const [sheetIndex, setSheetIndex] = useState(-1);
 
-    // 3 состояния: collapsed (10%), half (50%), full (90%)
-    const snapPoints = useMemo(() => ['10%', '50%', '90%'], []);
+    const snapPoints = useMemo(
+      () => (Platform.OS === 'web' ? ['85%', '95%'] : ['50%', '90%']),
+      []
+    );
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
-      snapToCollapsed: () => bottomSheetRef.current?.snapToIndex(0),
+      snapToCollapsed: () => bottomSheetRef.current?.close(),
       snapToHalf: () => {
         lastProgrammaticOpenTsRef.current = Date.now();
-        bottomSheetRef.current?.snapToIndex(1);
+        bottomSheetRef.current?.snapToIndex(0);
       },
       snapToFull: () => {
         lastProgrammaticOpenTsRef.current = Date.now();
-        bottomSheetRef.current?.snapToIndex(2);
+        bottomSheetRef.current?.snapToIndex(1);
       },
       close: () => bottomSheetRef.current?.close(),
     }));
@@ -61,7 +64,12 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         setSheetIndex(index);
         if (!onStateChange) return;
 
-        const states: ('collapsed' | 'half' | 'full')[] = ['collapsed', 'half', 'full'];
+        if (index < 0) {
+          onStateChange('collapsed');
+          return;
+        }
+
+        const states: ('half' | 'full')[] = ['half', 'full'];
         onStateChange(states[index] || 'collapsed');
       },
       [onStateChange]
@@ -70,18 +78,8 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     // Render backdrop for half/full states
     const renderBackdrop = useCallback(
       (props: any) => {
-        // On web, MapMobileLayout renders its own overlay for e2e + UX parity.
-        // Keeping a second Pressable backdrop here can cause immediate close on the same click.
         if (Platform.OS === 'web') {
-          return (
-            <BottomSheetBackdrop
-              {...props}
-              disappearsOnIndex={0}
-              appearsOnIndex={1}
-              opacity={0.5}
-              pressBehavior="none"
-            />
-          );
+          return null;
         }
 
         return (
@@ -112,7 +110,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     return (
       <BottomSheet
         ref={bottomSheetRef}
-        index={0} // Start at collapsed
+        index={-1}
         snapPoints={snapPoints}
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
@@ -137,24 +135,33 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           <View style={styles.headerActions}>
             <Pressable
               style={styles.headerButton}
-              onPress={() => bottomSheetRef.current?.snapToIndex(2)}
+              onPress={() => bottomSheetRef.current?.snapToIndex(1)}
               hitSlop={8}
               accessibilityLabel="Развернуть панель"
             >
               <MapIcon name="expand-less" size={24} color={colors.textMuted} />
             </Pressable>
+
+            <Pressable
+              style={styles.headerButton}
+              onPress={() => bottomSheetRef.current?.close()}
+              hitSlop={8}
+              accessibilityLabel="Закрыть панель"
+            >
+              <MaterialIcons name="close" size={20} color={colors.textMuted} />
+            </Pressable>
           </View>
         </View>
 
         {/* Peek content - shown in collapsed state */}
-        {peekContent && sheetIndex === 0 && (
+        {peekContent && sheetIndex < 0 && (
           <View style={styles.peekContent}>
             {peekContent}
           </View>
         )}
 
         {/* Main content - let children control their own scrolling (avoids nested scroll + keeps sticky footers working) */}
-        <BottomSheetView style={styles.contentContainer}>
+        <BottomSheetView style={[styles.contentContainer, { paddingBottom: 40 + bottomInset }]}>
           {children}
         </BottomSheetView>
       </BottomSheet>
@@ -170,6 +177,11 @@ const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     sheet: {
       ...colors.shadows.heavy,
+      ...Platform.select({
+        web: {
+          zIndex: 20,
+        },
+      }),
     },
     background: {
       backgroundColor: colors.surface,

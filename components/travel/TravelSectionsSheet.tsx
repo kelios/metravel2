@@ -38,15 +38,30 @@ const getGroupKey = (key: string): GroupKey => {
 const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate, testID }) => {
   const colors = useThemedColors() // ✅ РЕДИЗАЙН: Темная тема
   const [open, setOpen] = useState(false)
+  const [webOverlayInteractive, setWebOverlayInteractive] = useState(false)
   const openNonce = useTravelSectionsStore((s) => s.openNonce)
   const triggerRef = useRef<any>(null)
   const closeRef = useRef<any>(null)
   const wasOpenRef = useRef(false)
+  const openedAtRef = useRef(0)
 
   useEffect(() => {
     if (openNonce <= 0) return
+    openedAtRef.current = Date.now()
     setOpen(true)
   }, [openNonce])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!open) {
+      setWebOverlayInteractive(false)
+      return
+    }
+
+    setWebOverlayInteractive(false)
+    const t = setTimeout(() => setWebOverlayInteractive(true), 250)
+    return () => clearTimeout(t)
+  }, [open])
 
   const grouped = useMemo(() => {
     const items = links.map((l, idx) => {
@@ -223,7 +238,10 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
       <View testID={testID} style={styles.wrapper}>
         <Pressable
           testID="travel-sections-trigger"
-          onPress={() => setOpen(true)}
+          onPress={() => {
+            openedAtRef.current = Date.now()
+            setOpen(true)
+          }}
           accessibilityRole="button"
           accessibilityLabel="Открыть список секций"
           ref={triggerRef}
@@ -245,7 +263,14 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
         <Pressable
           testID="travel-sections-overlay"
           style={styles.overlay}
-          onPress={() => setOpen(false)}
+          pointerEvents={Platform.OS === 'web' ? (webOverlayInteractive ? 'auto' : 'none') : 'auto'}
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              const dt = Date.now() - openedAtRef.current
+              if (dt < 250) return
+            }
+            setOpen(false)
+          }}
         >
           <Pressable
             testID="travel-sections-sheet"
