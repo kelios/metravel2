@@ -6,6 +6,11 @@ import { getQuestById } from '@/components/quests/registry';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
 
+const useGlobalSearchParamsSafe: typeof useGlobalSearchParams =
+  typeof useGlobalSearchParams === 'function'
+    ? useGlobalSearchParams
+    : (((_opts?: any) => ({}) as any) as any);
+
 export type BreadcrumbModelItem = {
   label: string;
   path: string;
@@ -94,7 +99,7 @@ function getRootTitle(pathname: string) {
 export function useBreadcrumbModel(): BreadcrumbModel {
   const pathname = usePathname();
   const resolvedPathname = getResolvedPathname(pathname);
-  const { returnTo } = useGlobalSearchParams<{ returnTo?: string | string[] }>();
+  const { returnTo } = useGlobalSearchParamsSafe<{ returnTo?: string | string[] }>();
 
   const normalizedReturnToParam = useMemo(() => {
     if (typeof returnTo === 'string') return returnTo;

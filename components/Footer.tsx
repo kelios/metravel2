@@ -1,8 +1,16 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import { View, Platform } from "react-native";
 import { useResponsive } from "@/hooks/useResponsive";
-import BottomDock from "@/components/BottomDock";
-import FooterDesktop from "@/components/FooterDesktop";
+
+const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
+
+const BottomDockLazy = isTestEnv
+  ? (require('@/components/BottomDock').default as React.ComponentType<any>)
+  : lazy(() => import('@/components/BottomDock'));
+
+const FooterDesktopLazy = isTestEnv
+  ? (require('@/components/FooterDesktop').default as React.ComponentType<any>)
+  : lazy(() => import('@/components/FooterDesktop'));
 
 /** ========= Prop для передачи высоты дока ========= */
 type FooterProps = {
@@ -15,12 +23,24 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
 
   if (isMobile) {
-    return <BottomDock onDockHeight={onDockHeight} />;
+    return isTestEnv ? (
+      <BottomDockLazy onDockHeight={onDockHeight} />
+    ) : (
+      <Suspense fallback={null}>
+        <BottomDockLazy onDockHeight={onDockHeight} />
+      </Suspense>
+    );
   }
 
   return (
     <View style={{ paddingVertical: 0 }}>
-      <FooterDesktop />
+      {isTestEnv ? (
+        <FooterDesktopLazy />
+      ) : (
+        <Suspense fallback={null}>
+          <FooterDesktopLazy />
+        </Suspense>
+      )}
     </View>
   );
 };
