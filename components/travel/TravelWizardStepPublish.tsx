@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from 'react-native-paper';
 import Feather from '@expo/vector-icons/Feather';
-import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
@@ -24,6 +23,22 @@ import { getQualityScore } from '@/utils/travelWizardValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+
+let toastModulePromise: Promise<any> | null = null;
+async function showToastMessage(payload: any) {
+    try {
+        if (!toastModulePromise) {
+            toastModulePromise = import('react-native-toast-message');
+        }
+        const mod = await toastModulePromise;
+        const Toast = (mod as any)?.default ?? mod;
+        if (Toast && typeof Toast.show === 'function') {
+            Toast.show(payload);
+        }
+    } catch {
+        // ignore
+    }
+}
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -301,7 +316,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             router.replace('/(tabs)/metravel');
         } catch (error) {
             // ✅ FIX: Обработка ошибок сохранения
-            Toast.show({
+            void showToastMessage({
                 type: 'error',
                 text1: 'Ошибка сохранения',
                 text2: error instanceof Error ? error.message : 'Попробуйте ещё раз',
@@ -357,7 +372,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 total_checklist_count: checklist.length,
             });
 
-            Toast.show({
+            void showToastMessage({
                 type: 'success',
                 text1: 'Маршрут отправлен на модерацию',
                 text2: 'После одобрения он появится в разделе "Мои путешествия".',
@@ -387,7 +402,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 travel_id: formData.id ?? null,
             });
 
-            Toast.show({
+            void showToastMessage({
                 type: 'success',
                 text1: 'Модерация одобрена',
                 text2: 'Маршрут опубликован и доступен всем пользователям.',
@@ -415,7 +430,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 travel_id: formData.id ?? null,
             });
 
-            Toast.show({
+            void showToastMessage({
                 type: 'info',
                 text1: 'Модерация отклонена',
                 text2: 'Маршрут возвращен в черновики.',

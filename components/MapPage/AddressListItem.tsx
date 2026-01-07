@@ -11,7 +11,6 @@ import {
 import { Text, IconButton } from 'react-native-paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import * as Clipboard from 'expo-clipboard';
-import Toast from 'react-native-toast-message';
 import { TravelCoords } from '@/src/types/types';
 import { METRICS } from '@/constants/layout';
 import PopupContentComponent from './PopupContentComponent';
@@ -20,6 +19,22 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
+
+let toastModulePromise: Promise<any> | null = null;
+async function showToast(payload: any) {
+    try {
+        if (!toastModulePromise) {
+            toastModulePromise = import('react-native-toast-message');
+        }
+        const mod = await toastModulePromise;
+        const Toast = (mod as any)?.default ?? mod;
+        if (Toast && typeof Toast.show === 'function') {
+            Toast.show(payload);
+        }
+    } catch {
+        // ignore
+    }
+}
 
 type Props = {
     travel: TravelCoords;
@@ -56,9 +71,9 @@ const openExternal = async (url?: string) => {
     try {
         const can = await Linking.canOpenURL(safeUrl);
         if (can) await Linking.openURL(safeUrl);
-        else Toast.show({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
+        else await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
     } catch {
-        Toast.show({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
+        await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
     }
 };
 
@@ -103,8 +118,8 @@ const AddressListItem: React.FC<Props> = ({
       [categoryName]
     );
 
-    const showToast = useCallback((msg: string) => {
-        Toast.show({ type: 'info', text1: msg, position: 'bottom' });
+    const showToastInfo = useCallback((msg: string) => {
+        void showToast({ type: 'info', text1: msg, position: 'bottom' });
     }, []);
 
     const copyCoords = useCallback(async () => {
@@ -115,11 +130,11 @@ const AddressListItem: React.FC<Props> = ({
             } else {
                 await Clipboard.setStringAsync(coord);
             }
-            showToast('Координаты скопированы');
+            showToastInfo('Координаты скопированы');
         } catch {
-            showToast('Не удалось скопировать');
+            showToastInfo('Не удалось скопировать');
         }
-    }, [coord, showToast]);
+    }, [coord, showToastInfo]);
 
     const openTelegram = useCallback(async () => {
         if (!coord) return;

@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from 'react-native-paper';
-import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
@@ -16,6 +15,22 @@ import { useStepTransition } from '@/hooks/useStepTransition';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+
+let toastModulePromise: Promise<any> | null = null;
+async function showToastMessage(payload: any) {
+    try {
+        if (!toastModulePromise) {
+            toastModulePromise = import('react-native-toast-message');
+        }
+        const mod = await toastModulePromise;
+        const Toast = (mod as any)?.default ?? mod;
+        if (Toast && typeof Toast.show === 'function') {
+            Toast.show(payload);
+        }
+    } catch {
+        // ignore
+    }
+}
 
 const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 const isMobileDefault = windowWidth <= METRICS.breakpoints.tablet;
@@ -125,7 +140,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
         const hasName = formData.name && formData.name.trim().length >= 3;
 
         if (!hasName) {
-            Toast.show({
+            void showToastMessage({
                 type: 'error',
                 text1: 'Заполните название',
                 text2: 'Минимум 3 символа для сохранения черновика',
@@ -137,7 +152,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
             // Сохраняем черновик
             await onManualSave();
 
-            Toast.show({
+            void showToastMessage({
                 type: 'success',
                 text1: 'Черновик сохранен',
                 text2: 'Вы можете вернуться к нему позже',
@@ -148,7 +163,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                 router.push('/metravel');
             }, redirectDelayMs);
         } catch (_error) {
-            Toast.show({
+            void showToastMessage({
                 type: 'error',
                 text1: 'Ошибка сохранения',
                 text2: 'Попробуйте еще раз',

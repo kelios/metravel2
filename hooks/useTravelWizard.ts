@@ -2,9 +2,24 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Platform, Alert, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation } from 'expo-router';
-import Toast from 'react-native-toast-message';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
+
+let toastModulePromise: Promise<any> | null = null;
+async function showToastMessage(payload: any) {
+  try {
+    if (!toastModulePromise) {
+      toastModulePromise = import('react-native-toast-message');
+    }
+    const mod = await toastModulePromise;
+    const Toast = (mod as any)?.default ?? mod;
+    if (Toast && typeof Toast.show === 'function') {
+      Toast.show(payload);
+    }
+  } catch {
+    // ignore
+  }
+}
 
 export interface StepMeta {
   id: number;
@@ -315,7 +330,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
                       onSavedAndLeave?.();
                     } catch (e: any) {
                       reset();
-                      Toast.show({
+                      await showToastMessage({
                         type: 'error',
                         text1: 'Не удалось сохранить',
                         text2: e?.message || 'Попробуйте ещё раз',

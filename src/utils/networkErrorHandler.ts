@@ -1,15 +1,30 @@
 // src/utils/networkErrorHandler.ts
-// ✅ УЛУЧШЕНИЕ: Глобальный обработчик сетевых ошибок
+// УЛУЧШЕНИЕ: Глобальный обработчик сетевых ошибок
 
 import { Platform } from 'react-native';
-import Toast from 'react-native-toast-message';
 import { ApiError } from '@/src/api/client';
+
+let toastModulePromise: Promise<any> | null = null;
+const showToastMessage = async (payload: any) => {
+    try {
+        if (!toastModulePromise) {
+            toastModulePromise = import('react-native-toast-message');
+        }
+        const mod = await toastModulePromise;
+        const Toast = (mod as any)?.default ?? mod;
+        if (Toast && typeof Toast.show === 'function') {
+            Toast.show(payload);
+        }
+    } catch {
+        // ignore
+    }
+};
 
 /**
  * Проверяет, является ли ошибка сетевой
  */
 const getGlobalNavigator = () =>
-  (globalThis as typeof globalThis & { navigator?: { onLine?: boolean } }).navigator;
+    (globalThis as typeof globalThis & { navigator?: { onLine?: boolean } }).navigator;
 
 export const isNetworkError = (error: any): boolean => {
     if (!error) return false;
@@ -162,7 +177,7 @@ export const handleNetworkError = (
 
     // Показываем Toast уведомление
     if (showToast && Platform.OS === 'web') {
-        Toast.show({
+        void showToastMessage({
             type: toastType,
             text1: isNetworkError(error) ? 'Нет подключения' : 'Ошибка',
             text2: message,

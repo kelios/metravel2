@@ -1,7 +1,6 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { TouchableOpacity, StyleSheet, Platform, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
@@ -9,6 +8,22 @@ import { devLog } from '@/src/utils/logger';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
+
+let toastModulePromise: Promise<any> | null = null;
+async function showToast(payload: any) {
+    try {
+        if (!toastModulePromise) {
+            toastModulePromise = import('react-native-toast-message');
+        }
+        const mod = await toastModulePromise;
+        const Toast = (mod as any)?.default ?? mod;
+        if (Toast && typeof Toast.show === 'function') {
+            Toast.show(payload);
+        }
+    } catch {
+        // ignore
+    }
+}
 
 type FavoriteButtonProps = {
     id: string | number;
@@ -101,7 +116,7 @@ export default function FavoriteButton({
                     country,
                     city,
                 });
-                Toast.show({
+                await showToast({
                     type: 'success',
                     text1: 'Добавлено в избранное',
                     position: 'bottom',
@@ -109,7 +124,7 @@ export default function FavoriteButton({
                 });
             } else {
                 await removeFavorite(id, type);
-                Toast.show({
+                await showToast({
                     type: 'info',
                     text1: 'Удалено из избранного',
                     position: 'bottom',
@@ -132,7 +147,7 @@ export default function FavoriteButton({
                     : error.message)
                 : 'Не удалось обновить избранное';
             
-            Toast.show({
+            await showToast({
                 type: 'error',
                 text1: 'Ошибка',
                 text2: errorMessage,

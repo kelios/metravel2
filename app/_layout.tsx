@@ -13,9 +13,7 @@ import SkipLinks from "@/components/SkipLinks";
 import { NetworkStatus } from "@/components/NetworkStatus";
 const FooterLazy = React.lazy(() => import('@/components/Footer'));
 const ConsentBannerLazy = React.lazy(() => import('@/components/ConsentBanner'));
-const ToastLazy = React.lazy(() =>
-  import('react-native-toast-message').then((mod) => ({ default: mod.default ?? mod }))
-);
+const ToastLazy = React.lazy(() => import('@/components/ToastHost'));
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 

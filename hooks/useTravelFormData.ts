@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import Toast from 'react-native-toast-message';
 import { fetchTravel } from '@/src/api/travelsApi';
 import { saveFormData } from '@/src/api/misc';
 import { TravelFormData, Travel, MarkerData } from '@/src/types/types';
@@ -14,6 +13,22 @@ import {
   normalizeTravelId,
   checkTravelEditAccess,
 } from '@/utils/travelFormUtils';
+
+let toastModulePromise: Promise<any> | null = null;
+async function showToastMessage(payload: any) {
+  try {
+    if (!toastModulePromise) {
+      toastModulePromise = import('react-native-toast-message');
+    }
+    const mod = await toastModulePromise;
+    const Toast = (mod as any)?.default ?? mod;
+    if (Toast && typeof Toast.show === 'function') {
+      Toast.show(payload);
+    }
+  } catch {
+    // ignore
+  }
+}
 
 interface UseTravelFormDataOptions {
   travelId: string | null;
@@ -111,7 +126,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   }, [formState.data]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-    Toast.show({
+    void showToastMessage({
       type,
       text1: message,
     });
@@ -620,7 +635,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         const travelData = await fetchTravel(Number(id));
 
         if (!travelData) {
-          Toast.show({
+          void showToastMessage({
             type: 'error',
             text1: 'Путешествие не найдено',
             text2: 'Возможно, оно было удалено или недоступно',
@@ -634,7 +649,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           const canEdit = checkTravelEditAccess(travelData, userId, isSuperAdmin);
 
           if (!canEdit) {
-            Toast.show({
+            void showToastMessage({
               type: 'error',
               text1: 'Нет доступа',
               text2: 'Вы можете редактировать только свои путешествия',
@@ -667,7 +682,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         updateBaselineRef.current?.(finalData);
       } catch (error) {
         console.error('Ошибка загрузки путешествия:', error);
-        Toast.show({
+        void showToastMessage({
           type: 'error',
           text1: 'Ошибка загрузки',
           text2: 'Не удалось загрузить путешествие',

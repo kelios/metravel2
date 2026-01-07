@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Toast from 'react-native-toast-message';
 import { useAuth } from '@/context/AuthContext';
 import {
     clearUserFavorites,
@@ -62,6 +61,22 @@ interface FavoritesContextType {
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 const AUTH_REQUIRED_ERROR = 'AUTH_REQUIRED';
+
+let toastModulePromise: Promise<any> | null = null;
+async function showToast(payload: any) {
+    try {
+        if (!toastModulePromise) {
+            toastModulePromise = import('react-native-toast-message');
+        }
+        const mod = await toastModulePromise;
+        const Toast = (mod as any)?.default ?? mod;
+        if (Toast && typeof Toast.show === 'function') {
+            Toast.show(payload);
+        }
+    } catch {
+        // ignore
+    }
+}
 
 export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
     const { isAuthenticated, userId } = useAuth();
@@ -416,7 +431,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
             await saveFavorites(newFavorites);
 
             if (Platform.OS === 'web') {
-                Toast.show({
+                await showToast({
                     type: 'success',
                     text1: 'Добавлено в избранное',
                     text2: 'Сохранено на этом устройстве',
@@ -425,7 +440,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         } catch (error) {
             console.error('Ошибка добавления в избранное:', error);
             if (Platform.OS === 'web') {
-                Toast.show({
+                await showToast({
                     type: 'error',
                     text1: 'Ошибка',
                     text2: 'Не удалось добавить в избранное',
@@ -482,7 +497,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
             
             // Показываем уведомление об успешном удалении
             if (Platform.OS === 'web') {
-                Toast.show({
+                await showToast({
                     type: 'info',
                     text1: 'Удалено из избранного',
                     text2: 'Удалено с этого устройства',

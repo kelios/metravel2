@@ -2,7 +2,6 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, TextInput, Platform, findNodeHandle, UIManager } from 'react-native';
 import { Button } from 'react-native-paper';
-import Toast from 'react-native-toast-message';
 import { useRouter } from 'expo-router';
 
 import LocationSearchInput from '@/components/travel/LocationSearchInput';
@@ -16,6 +15,22 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelFilters } from '@/hooks/useTravelFilters';
+
+let toastModulePromise: Promise<any> | null = null;
+async function showToastMessage(payload: any) {
+    try {
+        if (!toastModulePromise) {
+            toastModulePromise = import('react-native-toast-message');
+        }
+        const mod = await toastModulePromise;
+        const Toast = (mod as any)?.default ?? mod;
+        if (Toast && typeof Toast.show === 'function') {
+            Toast.show(payload);
+        }
+    } catch {
+        // ignore
+    }
+}
 
 const WebMapComponent = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/WebMapComponent'))
@@ -119,7 +134,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
         try {
             await onManualSave();
-            Toast.show({
+            void showToastMessage({
                 type: 'success',
                 text1: 'Черновик сохранен',
                 text2: 'Вы можете вернуться к нему позже',
@@ -129,7 +144,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                 router.push('/metravel');
             }, 400);
         } catch {
-            Toast.show({
+            void showToastMessage({
                 type: 'error',
                 text1: 'Ошибка сохранения',
                 text2: 'Попробуйте еще раз',
