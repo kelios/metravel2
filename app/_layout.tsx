@@ -16,7 +16,6 @@ const ConsentBannerLazy = React.lazy(() => import('@/components/ConsentBanner'))
 const ToastLazy = React.lazy(() =>
   import('react-native-toast-message').then((mod) => ({ default: mod.default ?? mod }))
 );
-import { useFonts } from "expo-font";
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
@@ -50,6 +49,10 @@ LogBox.ignoreLogs([
 
 /** ===== Helpers ===== */
 const isWeb = Platform.OS === "web";
+
+const useAppFonts: any = isWeb
+  ? () => [true, null]
+  : require('expo-font').useFonts;
 
 /** Тема */
 // ✅ ИСПРАВЛЕНИЕ: Унифицирована цветовая палитра - используется DESIGN_TOKENS
@@ -195,7 +198,7 @@ function RootLayoutNav() {
     // - On native we must load app fonts before rendering.
     // - On web we do not load fonts via expo-font here. @expo/vector-icons manages its own
     //   web font injection; attempting to load via expo-font can cause timeouts and missing glyphs.
-    const [fontsLoaded, fontError] = useFonts(
+    const [fontsLoaded, fontError] = useAppFonts(
       isWeb
         ? {}
         : {

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
-import { useGlobalSearchParams, usePathname } from 'expo-router';
+import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { getQuestById } from '@/components/quests/registry';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
@@ -9,6 +9,11 @@ import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
 const useGlobalSearchParamsSafe: typeof useGlobalSearchParams =
   typeof useGlobalSearchParams === 'function'
     ? useGlobalSearchParams
+    : (((_opts?: any) => ({}) as any) as any);
+
+const useLocalSearchParamsSafe: typeof useLocalSearchParams =
+  typeof useLocalSearchParams === 'function'
+    ? useLocalSearchParams
     : (((_opts?: any) => ({}) as any) as any);
 
 export type BreadcrumbModelItem = {
@@ -99,7 +104,11 @@ function getRootTitle(pathname: string) {
 export function useBreadcrumbModel(): BreadcrumbModel {
   const pathname = usePathname();
   const resolvedPathname = getResolvedPathname(pathname);
-  const { returnTo } = useGlobalSearchParamsSafe<{ returnTo?: string | string[] }>();
+  // expo-router mocks in unit tests often provide only useLocalSearchParams.
+  // Prefer global search params when available; otherwise fall back to local params.
+  const globalParams = useGlobalSearchParamsSafe<{ returnTo?: string | string[] }>();
+  const localParams = useLocalSearchParamsSafe<{ returnTo?: string | string[] }>();
+  const returnTo = (globalParams as any)?.returnTo ?? (localParams as any)?.returnTo;
 
   const normalizedReturnToParam = useMemo(() => {
     if (typeof returnTo === 'string') return returnTo;
@@ -154,6 +163,17 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         : `/${normalizedReturnToParam}`;
       const rootContext = HEADER_NAV_ITEMS.find((i) => i.path === normalizedReturnTo);
       const returnLabel = rootContext?.label || toTitleFromSegment(normalizedReturnTo.replace(/^\//, ''));
+
+      if (travelSlug && !travelData?.name) {
+        return {
+          items: [],
+          depth: 1,
+          currentTitle: returnLabel,
+          pageContextTitle: returnLabel,
+          backToPath: normalizedReturnTo,
+          showBreadcrumbs: false,
+        };
+      }
       const travelTitle = truncateLabel(String(travelData?.name || toTitleFromSegment(parts[parts.length - 1] || '')));
 
       const items: BreadcrumbModelItem[] = [
@@ -251,5 +271,5 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData?.name]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData?.name, travelSlug]);
 }

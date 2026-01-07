@@ -51,10 +51,10 @@ function sanitizeHtml(html: string): string {
     return result;
 }
 
-// Важно: грузим ТОЛЬКО default-экспорт — это гарантирует отдельный чанк
+// Важно: грузим в отдельном модуле, чтобы Quill не попадал в initial chunk
 const QuillEditor =
     isWeb && win
-        ? (React.lazy(async () => ({ default: (await import('react-quill')).default })) as any)
+        ? (React.lazy(() => import('@/components/QuillEditor.web')) as any)
         : undefined;
 
 // CSS темы подключаем один раз и только на web
