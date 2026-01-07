@@ -68,6 +68,15 @@ jest.mock('@gorhom/bottom-sheet', () => {
   }
 })
 
+// Mock expo-router/head (SEO helpers). Unit tests don't need actual head rendering.
+jest.mock('expo-router/head', () => {
+  const React = require('react')
+  return {
+    __esModule: true,
+    default: ({ children }: any) => React.createElement(React.Fragment, null, children ?? null),
+  }
+})
+
 jest.mock('@react-native-community/netinfo', () => {
   const api = {
     addEventListener: jest.fn(() => jest.fn()),
@@ -518,17 +527,85 @@ jest.mock('react-native-vector-icons/MaterialIcons', () => {
 // Mock expo-vector-icons
 jest.mock('@expo/vector-icons', () => {
   const React = require('react')
-  const { View } = require('react-native')
-  return {
-    Feather: ({ name, ...props }: any) =>
-      React.createElement(View, { testID: `feather-${name}`, ...props }),
-    FontAwesome5: ({ name, ...props }: any) =>
-      React.createElement(View, { testID: `fa5-${name}`, ...props }),
-    MaterialIcons: ({ name, ...props }: any) =>
-      React.createElement(View, { testID: `material-${name}`, ...props }),
-    MaterialCommunityIcons: ({ name, ...props }: any) =>
-      React.createElement(View, { testID: `mci-${name}`, ...props }),
+  const { Text } = require('react-native')
+
+  const makeIcon = (prefix: string) => {
+    const Comp = ({ name, ...props }: any) =>
+      React.createElement(Text, { testID: `${prefix}-${name}`, ...props }, String(name ?? ''))
+    return Comp
   }
+
+  const globalAny = global as any
+  if (!globalAny.__expoVectorIconsMock) {
+    globalAny.__expoVectorIconsMock = {
+      Feather: makeIcon('feather'),
+      FontAwesome5: makeIcon('fa5'),
+      MaterialIcons: makeIcon('material'),
+      MaterialCommunityIcons: makeIcon('mci'),
+    }
+  }
+
+  return {
+    ...globalAny.__expoVectorIconsMock,
+  }
+})
+
+// Some components import icon sets via path imports (e.g. '@expo/vector-icons/Feather'),
+// which bypass the top-level '@expo/vector-icons' mock. Mock these explicitly.
+jest.mock('@expo/vector-icons/Feather', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  const globalAny = global as any
+  if (!globalAny.__expoVectorIconsMock?.Feather) {
+    globalAny.__expoVectorIconsMock = {
+      ...(globalAny.__expoVectorIconsMock ?? {}),
+      Feather: ({ name, ...props }: any) =>
+        React.createElement(Text, { testID: `feather-${name}`, ...props }, String(name ?? '')),
+    }
+  }
+  return globalAny.__expoVectorIconsMock.Feather
+})
+
+jest.mock('@expo/vector-icons/MaterialIcons', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  const globalAny = global as any
+  if (!globalAny.__expoVectorIconsMock?.MaterialIcons) {
+    globalAny.__expoVectorIconsMock = {
+      ...(globalAny.__expoVectorIconsMock ?? {}),
+      MaterialIcons: ({ name, ...props }: any) =>
+        React.createElement(Text, { testID: `material-${name}`, ...props }, String(name ?? '')),
+    }
+  }
+  return globalAny.__expoVectorIconsMock.MaterialIcons
+})
+
+jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  const globalAny = global as any
+  if (!globalAny.__expoVectorIconsMock?.MaterialCommunityIcons) {
+    globalAny.__expoVectorIconsMock = {
+      ...(globalAny.__expoVectorIconsMock ?? {}),
+      MaterialCommunityIcons: ({ name, ...props }: any) =>
+        React.createElement(Text, { testID: `mci-${name}`, ...props }, String(name ?? '')),
+    }
+  }
+  return globalAny.__expoVectorIconsMock.MaterialCommunityIcons
+})
+
+jest.mock('@expo/vector-icons/FontAwesome5', () => {
+  const React = require('react')
+  const { Text } = require('react-native')
+  const globalAny = global as any
+  if (!globalAny.__expoVectorIconsMock?.FontAwesome5) {
+    globalAny.__expoVectorIconsMock = {
+      ...(globalAny.__expoVectorIconsMock ?? {}),
+      FontAwesome5: ({ name, ...props }: any) =>
+        React.createElement(Text, { testID: `fa5-${name}`, ...props }, String(name ?? '')),
+    }
+  }
+  return globalAny.__expoVectorIconsMock.FontAwesome5
 })
 
 // Mock react-native-paper Portal
@@ -596,6 +673,8 @@ jest.mock('expo-web-browser', () => ({
 // Mock expo font loader used by vector icons
 jest.mock('expo-font', () => ({
   loadAsync: jest.fn(() => Promise.resolve()),
+  isLoaded: jest.fn(() => true),
+  isLoading: jest.fn(() => false),
 }))
 
 // Mock expo-image to avoid native dependencies

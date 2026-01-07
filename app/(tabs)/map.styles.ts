@@ -66,6 +66,14 @@ export const getStyles = (
         right: 16,
         ...(isMobile
           ? ({
+              // On mobile we control the panel via HeaderContextBar + bottom sheet.
+              // This legacy floating toggle button overlaps the sheet.
+              display: 'none',
+              pointerEvents: 'none',
+            } as any)
+          : null),
+        ...(isMobile
+          ? ({
               bottom: Platform.OS === 'web' ? 16 + WEB_MOBILE_FOOTER_RESERVE_HEIGHT : 16,
             } as any)
           : ({

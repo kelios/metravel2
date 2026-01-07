@@ -177,6 +177,7 @@ const renderWithClient = () => {
 describe('MapScreen (map tab)', () => {
   beforeEach(() => {
     ;(Platform as any).OS = 'web'
+    mockResponsiveState = { isPhone: false, isLargePhone: false, width: 1024 }
     useMapPanelStore.setState({ openNonce: 0 })
     mockFetchTravelsForMap.mockReset();
     mockFetchTravelsForMap.mockResolvedValue(defaultTravelsForMapResponse);
@@ -231,28 +232,20 @@ describe('MapScreen (map tab)', () => {
       expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
     })
 
-    // Закрываем панель кнопкой "Скрыть панель"
-    const closeButton = getByLabelText('Скрыть панель')
+    // На web+desktop вместо "Скрыть панель" показываем кнопку "Сбросить фильтры"
+    const resetButton = getByLabelText('Сбросить фильтры')
+    expect(resetButton).toBeTruthy()
+
+    // Панель на desktop не должна скрываться, вкладки остаются доступны
+    expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
+    expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
+
+    // Нажатие на reset не должно ломать наличие вкладок
     act(() => {
-      fireEvent.press(closeButton)
+      fireEvent.press(resetButton)
     })
-
-    // Панель закрылась: кнопка закрытия и вкладки больше не отображаются
-    await waitFor(() => {
-      expect(() => getByLabelText('Скрыть панель')).toThrow()
-      expect(queryByTestId('map-panel-tab-filters')).toBeNull()
-      expect(queryByTestId('map-panel-tab-travels')).toBeNull()
-    })
-
-    // Открываем панель снова через глобальный запрос (кнопка в хлебных крошках)
-    act(() => {
-      useMapPanelStore.getState().requestOpen()
-    })
-
-    await waitFor(() => {
-      expect(getByTestId('map-panel-tab-filters')).toBeTruthy()
-      expect(getByTestId('map-panel-tab-travels')).toBeTruthy()
-    })
+    expect(queryByTestId('map-panel-tab-filters')).toBeTruthy()
+    expect(queryByTestId('map-panel-tab-travels')).toBeTruthy()
   })
 
   it('shows open panel button after isMobile changes from desktop to mobile (SSR-safe)', async () => {

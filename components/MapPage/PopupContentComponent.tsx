@@ -34,11 +34,11 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
   const [expanded, setExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const mounted = useRef(false);
+  const loggedImageErrorsRef = useRef<Set<string>>(new Set());
 
   // Optimize and version the image URL
   const optimizedImageUrl = useMemo(() => {
     if (!travelImageThumbUrl) {
-      console.info('[PopupContent] No travelImageThumbUrl provided');
       return undefined;
     }
     
@@ -55,14 +55,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
       quality: 82,
       fit: 'contain',
     }) || versionedUrl;
-    
-    console.info('[PopupContent] Image URLs:', {
-      original: travelImageThumbUrl,
-      versioned: versionedUrl,
-      optimized,
-      updated_at
-    });
-    
+
     return optimized;
   }, [travelImageThumbUrl, updated_at]);
 
@@ -156,10 +149,20 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
                 priority="low"
                 style={{ position: 'absolute', inset: 0 } as any}
                 onLoad={() => {
-                  console.info('[PopupContent] Image loaded successfully:', optimizedImageUrl);
+                  setImageError(false);
                 }}
                 onError={() => {
-                  console.error('[PopupContent] Image failed to load:', { src: optimizedImageUrl });
+                  const src = String(optimizedImageUrl || '');
+                  if (src) {
+                    const isDev =
+                      typeof process !== 'undefined' &&
+                      Boolean((process as any).env?.NODE_ENV) &&
+                      (process as any).env.NODE_ENV !== 'production';
+                    if (isDev && !loggedImageErrorsRef.current.has(src)) {
+                      loggedImageErrorsRef.current.add(src);
+                      console.warn('[PopupContent] Image failed to load:', { src });
+                    }
+                  }
                   setImageError(true);
                 }}
               />

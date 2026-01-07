@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Pressable, Animated, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Animated, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
 
@@ -25,6 +25,8 @@ interface MapFABProps {
   expandOnMainPress?: boolean;
   /** testID для главной кнопки */
   mainActionTestID?: string;
+  /** Доп. стили для контейнера (например, поднять над BottomDock на web) */
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export const MapFAB: React.FC<MapFABProps> = ({
@@ -33,6 +35,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
   position = 'bottom-right',
   expandOnMainPress = true,
   mainActionTestID,
+  containerStyle,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors, position), [colors, position]);
@@ -67,7 +70,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {/* Backdrop overlay */}
       {isExpanded && (
         <Pressable

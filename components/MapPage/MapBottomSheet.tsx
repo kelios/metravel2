@@ -17,6 +17,8 @@ interface MapBottomSheetProps {
   subtitle?: string;
   /** Контент для peek preview (collapsed состояние) */
   peekContent?: React.ReactNode;
+  /** Нижний отступ (например, высота нижнего dock на web) */
+  bottomInset?: number;
   /** Callback при изменении состояния */
   onStateChange?: (state: 'collapsed' | 'half' | 'full') => void;
 }
@@ -29,7 +31,7 @@ export interface MapBottomSheetRef {
 }
 
 const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
-  ({ children, title, subtitle, peekContent, onStateChange }, ref) => {
+  ({ children, title, subtitle, peekContent, bottomInset = 0, onStateChange }, ref) => {
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
     const bottomSheetRef = useRef<BottomSheet>(null);
@@ -112,6 +114,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         ref={bottomSheetRef}
         index={0} // Start at collapsed
         snapPoints={snapPoints}
+        bottomInset={bottomInset}
         onChange={handleSheetChanges}
         backdropComponent={renderBackdrop}
         enablePanDownToClose={false}

@@ -7,11 +7,11 @@ import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
 import { MapPeekPreview } from './MapPeekPreview';
-import { MapFAB } from './MapFAB';
 import TravelListPanel from './TravelListPanel';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
+import { LAYOUT } from '@/constants/layout';
 
 interface MapMobileLayoutProps {
   // Map props
@@ -41,7 +41,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   coordinates,
   transportMode,
   buildRouteTo,
-  onCenterOnUser,
+  onCenterOnUser: _onCenterOnUser,
   onOpenFilters: _onOpenFilters,
   filtersPanelProps,
   onToggleFavorite,
@@ -58,35 +58,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce);
-
-  // FAB actions
-  const fabActions = useMemo(() => [
-    {
-      icon: 'my-location',
-      label: 'Моё местоположение',
-      onPress: onCenterOnUser,
-    },
-    {
-      icon: 'filter-list',
-      label: 'Фильтры',
-      onPress: () => {
-        setActiveTab('filters');
-        lastPanelOpenTsRef.current = Date.now();
-        bottomSheetRef.current?.snapToHalf();
-      },
-    },
-    {
-      icon: 'route',
-      label: 'Построить маршрут',
-      onPress: () => {
-        setActiveTab('filters');
-        lastPanelOpenTsRef.current = Date.now();
-        bottomSheetRef.current?.snapToFull();
-        // Trigger mode change in filters
-        filtersPanelProps?.props?.setMode?.('route');
-      },
-    },
-  ], [onCenterOnUser, filtersPanelProps]);
 
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'half' | 'full') => {
     setSheetState(state);
@@ -327,19 +298,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         />
       )}
 
-      {/* FAB */}
-      <MapFAB
-        mainAction={{
-          icon: 'menu',
-          label: 'Показать панель',
-          onPress: () => bottomSheetRef.current?.snapToHalf(),
-        }}
-        actions={fabActions}
-        expandOnMainPress={false}
-        mainActionTestID="map-open-panel-button"
-        position="bottom-right"
-      />
-
       {/* Bottom Sheet */}
       <MapBottomSheet
         ref={bottomSheetRef}
@@ -347,6 +305,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         subtitle={sheetSubtitle}
         peekContent={peekContent}
         onStateChange={handleSheetStateChange}
+        bottomInset={Platform.OS === 'web' ? LAYOUT.tabBarHeight : 0}
       >
         {sheetContent}
       </MapBottomSheet>

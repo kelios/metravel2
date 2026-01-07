@@ -14,8 +14,15 @@ import { sendAnalyticsEvent } from '@/src/utils/analytics';
 const isWeb = Platform.OS === 'web';
 const isClient = typeof window !== 'undefined';
 const ListTravel = isWeb && isClient
-  ? lazy(() => import('@/components/listTravel/ListTravel'))
-  : require('@/components/listTravel/ListTravel').default;
+  ? lazy(async () => {
+      const mod: any = await import('@/components/listTravel/ListTravel');
+      const Comp = mod?.default ?? mod;
+      return { default: Comp };
+    })
+  : (() => {
+      const mod: any = require('@/components/listTravel/ListTravel');
+      return mod?.default ?? mod;
+    })();
 
 export default function ExportScreen() {
     const isFocused = useIsFocused();

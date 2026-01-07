@@ -156,7 +156,7 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   containerMobile: {
-    minHeight: 36,
+    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
   },
   crumbRow: {
