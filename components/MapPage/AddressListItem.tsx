@@ -19,22 +19,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
-
-let toastModulePromise: Promise<any> | null = null;
-async function showToast(payload: any) {
-    try {
-        if (!toastModulePromise) {
-            toastModulePromise = import('react-native-toast-message');
-        }
-        const mod = await toastModulePromise;
-        const Toast = (mod as any)?.default ?? mod;
-        if (Toast && typeof Toast.show === 'function') {
-            Toast.show(payload);
-        }
-    } catch {
-        // ignore
-    }
-}
+import { showToast } from '@/src/utils/toast';
 
 type Props = {
     travel: TravelCoords;

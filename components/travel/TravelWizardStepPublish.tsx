@@ -23,21 +23,10 @@ import { getQualityScore } from '@/utils/travelWizardValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { showToast } from '@/src/utils/toast';
 
-let toastModulePromise: Promise<any> | null = null;
 async function showToastMessage(payload: any) {
-    try {
-        if (!toastModulePromise) {
-            toastModulePromise = import('react-native-toast-message');
-        }
-        const mod = await toastModulePromise;
-        const Toast = (mod as any)?.default ?? mod;
-        if (Toast && typeof Toast.show === 'function') {
-            Toast.show(payload);
-        }
-    } catch {
-        // ignore
-    }
+    await showToast(payload);
 }
 
 type UnknownRecord = Record<string, unknown>;

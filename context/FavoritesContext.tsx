@@ -14,6 +14,7 @@ import { devError } from '@/src/utils/logger';
 import { getStorageBatch } from '@/src/utils/storageBatch';
 import { safeJsonParseString } from '@/src/utils/safeJsonParse';
 import { cleanupInvalidFavorites, isValidFavoriteId } from '@/src/utils/favoritesCleanup';
+import { showToast } from '@/src/utils/toast';
 
 const FAVORITES_KEY = 'metravel_favorites';
 const VIEW_HISTORY_KEY = 'metravel_view_history';
@@ -61,22 +62,6 @@ interface FavoritesContextType {
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
 const AUTH_REQUIRED_ERROR = 'AUTH_REQUIRED';
-
-let toastModulePromise: Promise<any> | null = null;
-async function showToast(payload: any) {
-    try {
-        if (!toastModulePromise) {
-            toastModulePromise = import('react-native-toast-message');
-        }
-        const mod = await toastModulePromise;
-        const Toast = (mod as any)?.default ?? mod;
-        if (Toast && typeof Toast.show === 'function') {
-            Toast.show(payload);
-        }
-    } catch {
-        // ignore
-    }
-}
 
 export const FavoritesProvider = ({ children }: { children: React.ReactNode }) => {
     const { isAuthenticated, userId } = useAuth();

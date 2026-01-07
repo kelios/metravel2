@@ -3,21 +3,10 @@
 
 import { Platform } from 'react-native';
 import { ApiError } from '@/src/api/client';
+import { showToast } from '@/src/utils/toast';
 
-let toastModulePromise: Promise<any> | null = null;
 const showToastMessage = async (payload: any) => {
-    try {
-        if (!toastModulePromise) {
-            toastModulePromise = import('react-native-toast-message');
-        }
-        const mod = await toastModulePromise;
-        const Toast = (mod as any)?.default ?? mod;
-        if (Toast && typeof Toast.show === 'function') {
-            Toast.show(payload);
-        }
-    } catch {
-        // ignore
-    }
+    await showToast(payload);
 };
 
 /**

@@ -8,22 +8,7 @@ import { devLog } from '@/src/utils/logger';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
-
-let toastModulePromise: Promise<any> | null = null;
-async function showToast(payload: any) {
-    try {
-        if (!toastModulePromise) {
-            toastModulePromise = import('react-native-toast-message');
-        }
-        const mod = await toastModulePromise;
-        const Toast = (mod as any)?.default ?? mod;
-        if (Toast && typeof Toast.show === 'function') {
-            Toast.show(payload);
-        }
-    } catch {
-        // ignore
-    }
-}
+import { showToast } from '@/src/utils/toast';
 
 type FavoriteButtonProps = {
     id: string | number;

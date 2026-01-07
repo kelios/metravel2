@@ -13,21 +13,10 @@ import {
   normalizeTravelId,
   checkTravelEditAccess,
 } from '@/utils/travelFormUtils';
+import { showToast } from '@/src/utils/toast';
 
-let toastModulePromise: Promise<any> | null = null;
 async function showToastMessage(payload: any) {
-  try {
-    if (!toastModulePromise) {
-      toastModulePromise = import('react-native-toast-message');
-    }
-    const mod = await toastModulePromise;
-    const Toast = (mod as any)?.default ?? mod;
-    if (Toast && typeof Toast.show === 'function') {
-      Toast.show(payload);
-    }
-  } catch {
-    // ignore
-  }
+  await showToast(payload);
 }
 
 interface UseTravelFormDataOptions {

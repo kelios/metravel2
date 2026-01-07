@@ -48,8 +48,8 @@
     "build:all:preview": "eas build --platform all --profile preview",
     "build:all:prod": "eas build --platform all --profile production",
     "lint": "eslint .",
-    "audit:high": "npm audit --audit-level=high",
-    "release:check": "npm run lint && ./verify-security-fixes.sh && npm run audit:high && npm run test:run && npm run build:web"
+    "audit:high": "node scripts/yarn-audit-high.js",
+    "release:check": "yarn run lint && ./verify-security-fixes.sh && yarn run audit:high && yarn run test:run && yarn run build:web"
   },
   "dependencies": {
     "@babel/runtime": "^7.25.0",
@@ -101,9 +101,7 @@
     "expo-web-browser": "~14.0.2",
     "formik": "^2.4.5",
     "html2canvas": "^1.4.1",
-    "html2pdf.js": "^0.10.3",
     "json5": "^2.2.3",
-    "jspdf": "^3.0.4",
     "leaflet": "^1.9.4",
     "lightningcss": "^1.30.2",
     "lucide-react": "^0.487.0",
@@ -192,7 +190,14 @@
     "react-native": "0.76.9",
     "metro": "0.81.5",
     "metro-config": "0.81.5",
-    "metro-cache": "0.81.5"
+    "metro-cache": "0.81.5",
+    "glob": "^10.4.5",
+    "minimist": "^1.2.8",
+    "semver": "^7.6.3",
+    "tar": "^6.2.1",
+    "yaml": "^2.5.1",
+    "follow-redirects": "^1.15.6",
+    "cookie": "^0.6.0"
   },
   "prettier": {
     "jsxBracketSameLine": true,
@@ -234,5 +239,5 @@
     "follow-redirects": "^1.15.6",
     "cookie": "^0.6.0"
   },
-  "packageManager": "npm@10.8.2"
+  "packageManager": "yarn@1.22.19"
 }

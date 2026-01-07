@@ -1,6 +1,6 @@
 // __tests__/utils/networkErrorHandler.test.ts
 import { Platform } from 'react-native';
-import Toast from 'react-native-toast-message';
+import { showToast } from '@/src/utils/toast';
 import { 
   handleNetworkError, 
   isNetworkError,
@@ -11,11 +11,9 @@ import {
 } from '@/src/utils/networkErrorHandler';
 import { ApiError } from '@/src/api/client';
 
-jest.mock('react-native-toast-message', () => ({
+jest.mock('@/src/utils/toast', () => ({
   __esModule: true,
-  default: {
-    show: jest.fn(),
-  },
+  showToast: jest.fn(),
 }));
 
 describe('networkErrorHandler', () => {
@@ -193,7 +191,7 @@ describe('networkErrorHandler', () => {
     it('should respect silent option', () => {
       const error = new Error('Network failed');
       expect(() => handleNetworkError(error, { silent: true })).not.toThrow();
-      expect((Toast as any).show).not.toHaveBeenCalled();
+      expect(showToast).not.toHaveBeenCalled();
     });
 
     it('should call onRetry for network errors', () => {
@@ -208,7 +206,7 @@ describe('networkErrorHandler', () => {
       const error = new Error('Network request failed');
       handleNetworkError(error);
 
-      expect((Toast as any).show).toHaveBeenCalledWith(
+      expect(showToast).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'error',
           text1: 'Нет подключения',
@@ -219,7 +217,7 @@ describe('networkErrorHandler', () => {
     it('does not show toast when showToast is false', () => {
       const error = new Error('Network request failed');
       handleNetworkError(error, { showToast: false });
-      expect((Toast as any).show).not.toHaveBeenCalled();
+      expect(showToast).not.toHaveBeenCalled();
     });
 
     it('registers online listener and calls onRetry when online event fires', () => {
