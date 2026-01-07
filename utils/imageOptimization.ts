@@ -86,6 +86,27 @@ export function optimizeImageUrl(
       return secureUrl;
     }
 
+    const shouldApplyTransformParams = (() => {
+      const host = String(url.hostname || '').trim().toLowerCase();
+      if (!host) return false;
+      if (isPrivateOrLocalHost(host)) return false;
+      if (host === 'metravel.by') return true;
+      if (host === 'cdn.metravel.by') return true;
+      if (host === 'api.metravel.by') return true;
+      if (host === 'images.weserv.nl') return true;
+      return false;
+    })();
+
+    if (!shouldApplyTransformParams) {
+      const passthrough = url.toString();
+      if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
+        const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 100);
+        keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
+      }
+      optimizedUrlCache.set(cacheKey, passthrough);
+      return passthrough;
+    }
+
     // Если URL уже содержит параметры оптимизации, обновляем их
     // Иначе добавляем новые
 

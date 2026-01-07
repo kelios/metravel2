@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Platform } from 'react-native';
-import { usePathname } from 'expo-router';
+import { useGlobalSearchParams, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { getQuestById } from '@/components/quests/registry';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
@@ -94,6 +94,13 @@ function getRootTitle(pathname: string) {
 export function useBreadcrumbModel(): BreadcrumbModel {
   const pathname = usePathname();
   const resolvedPathname = getResolvedPathname(pathname);
+  const { returnTo } = useGlobalSearchParams<{ returnTo?: string | string[] }>();
+
+  const normalizedReturnToParam = useMemo(() => {
+    if (typeof returnTo === 'string') return returnTo;
+    if (Array.isArray(returnTo)) return String(returnTo[0] ?? '');
+    return '';
+  }, [returnTo]);
 
   const travelSlug = useMemo(() => {
     const p = resolvedPathname;
@@ -133,6 +140,31 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     }
 
     const parts = p.split('/').filter(Boolean);
+
+    const isTravelDetailsWithReturn =
+      p.startsWith('/travels/') && typeof normalizedReturnToParam === 'string' && !!normalizedReturnToParam.trim();
+    if (isTravelDetailsWithReturn) {
+      const normalizedReturnTo = normalizedReturnToParam.startsWith('/')
+        ? normalizedReturnToParam
+        : `/${normalizedReturnToParam}`;
+      const rootContext = HEADER_NAV_ITEMS.find((i) => i.path === normalizedReturnTo);
+      const returnLabel = rootContext?.label || toTitleFromSegment(normalizedReturnTo.replace(/^\//, ''));
+      const travelTitle = truncateLabel(String(travelData?.name || toTitleFromSegment(parts[parts.length - 1] || '')));
+
+      const items: BreadcrumbModelItem[] = [
+        { label: returnLabel, path: normalizedReturnTo },
+        { label: travelTitle, path: p },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: travelTitle,
+        pageContextTitle: returnLabel,
+        backToPath: normalizedReturnTo,
+        showBreadcrumbs: true,
+      };
+    }
 
     if (parts.length === 1) {
       const pageContextTitle = getRootTitle(p);
@@ -214,5 +246,5 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, travelData?.name]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData?.name]);
 }

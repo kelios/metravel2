@@ -126,11 +126,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <meta name="twitter:card" content="summary_large_image" />
 
       {/* Perf hints - DNS prefetch и preconnect для внешних ресурсов */}
-      <link rel="dns-prefetch" href="//www.googletagmanager.com" />
-      <link rel="dns-prefetch" href="//mc.yandex.ru" />
       <link rel="dns-prefetch" href="//metravelprod.s3.eu-north-1.amazonaws.com" />
-      <link rel="preconnect" href="https://www.googletagmanager.com" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://mc.yandex.ru" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://metravelprod.s3.eu-north-1.amazonaws.com" crossOrigin="anonymous" />
 
       {/* Icons */}

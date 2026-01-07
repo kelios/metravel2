@@ -18,8 +18,6 @@ import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/tr
 import WeatherWidget from "@/components/WeatherWidget";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
-import type { BookSettings } from "@/components/export/BookSettingsModal";
-import { useSingleTravelExport } from "@/components/travel/hooks/useSingleTravelExport";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, useTheme } from '@/hooks/useTheme';
@@ -40,7 +38,7 @@ const Fallback = () => {
   );
 };
 
-const BookSettingsModalLazy = lazy(() => import("@/components/export/BookSettingsModal"));
+const TravelPdfExportControlLazy = lazy(() => import('@/components/travel/TravelPdfExportControl'));
 
 const openUrl = (url: string) => {
   if (Platform.OS === "web") {
@@ -106,14 +104,8 @@ function CompactSideBarTravel({
   const travelId = travel.id;
   const navLinksSource = Array.isArray(links) && links.length ? links : null;
   const [active, setActive] = useState<string>("");
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const placeholderIconSize = isWeb ? 44 : 60;
-  const {
-    pdfExport,
-    lastSettings,
-    handleOpenPrintBookWithSettings,
-  } = useSingleTravelExport(travel);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
@@ -314,32 +306,6 @@ function CompactSideBarTravel({
   };
   const handleEdit = () => canEdit && openUrl(`/travel/${travel.id}/`);
 
-  const handleOpenExport = useCallback(() => {
-    if (Platform.OS !== 'web') {
-      Alert.alert?.('Недоступно', 'Экспорт PDF доступен только в веб-версии');
-      return;
-    }
-    setShowSettingsModal(true);
-  }, []);
-
-  const handleSaveSettings = useCallback(
-    async (settings: BookSettings) => {
-      // "Сохранить PDF" переводим на новый HTML-поток печати (книга в новой вкладке + печать браузера)
-      await handleOpenPrintBookWithSettings(settings);
-      setShowSettingsModal(false);
-    },
-    [handleOpenPrintBookWithSettings]
-  );
-
-  const handlePreviewSettings = useCallback(
-    async (settings: BookSettings) => {
-      // Превью так же идёт через HTML-книгу
-      await handleOpenPrintBookWithSettings(settings);
-      setShowSettingsModal(false);
-    },
-    [handleOpenPrintBookWithSettings]
-  );
-
   const menuItems = [
     isMobile ? (
       <View key="close-top" style={styles.closeTopBar}>
@@ -429,29 +395,15 @@ function CompactSideBarTravel({
               )}
 
               {Platform.OS === 'web' && (
-                <Pressable
-                  onPress={handleOpenExport}
-                  disabled={pdfExport.isGenerating}
-                  accessibilityRole="button"
-                  accessibilityLabel="Экспорт в PDF"
-                  style={({ pressed }) => [
-                    styles.actionBtn,
-                    pressed && !pdfExport.isGenerating ? styles.actionBtnPressed : null,
-                    pdfExport.isGenerating ? styles.actionBtnDisabled : null,
-                  ]}
-                  {...(Platform.OS === 'web' ? {
-                    'data-action-btn': true,
-                    'data-disabled': pdfExport.isGenerating ? 'true' : 'false',
-                    role: 'button',
-                    'aria-label': 'Экспорт в PDF',
-                  } : {})}
-                >
-                  {pdfExport.isGenerating ? (
-                    <ActivityIndicator size="small" color={mutedText} />
-                  ) : (
-                    <MaterialIcons name="picture-as-pdf" size={18} color={mutedText} />
-                  )}
-                </Pressable>
+                <Suspense fallback={null}>
+                  <TravelPdfExportControlLazy
+                    travel={travel}
+                    mutedText={mutedText}
+                    actionBtnStyle={styles.actionBtn}
+                    actionBtnPressedStyle={styles.actionBtnPressed}
+                    actionBtnDisabledStyle={styles.actionBtnDisabled}
+                  />
+                </Suspense>
               )}
             </View>
           </View>
@@ -705,21 +657,6 @@ function CompactSideBarTravel({
         >
           {menuItems}
         </ScrollView>
-      )}
-
-      {Platform.OS === "web" && (
-        <Suspense fallback={<Fallback />}>
-          <BookSettingsModalLazy
-            visible={showSettingsModal}
-            onClose={() => setShowSettingsModal(false)}
-            onSave={handleSaveSettings}
-            onPreview={handlePreviewSettings}
-            defaultSettings={lastSettings}
-            travelCount={1}
-            userName={travel.userName || undefined}
-            mode="preview"
-          />
-        </Suspense>
       )}
 
       {isMobile && (

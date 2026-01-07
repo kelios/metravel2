@@ -2,7 +2,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
-import CustomHeader from '@/components/CustomHeader';
+const CustomHeaderLazy = React.lazy(() => import('@/components/CustomHeader'));
 
 const Header = React.memo(function Header() {
     const [mounted, setMounted] = useState(Platform.OS !== 'web');
@@ -21,12 +21,20 @@ const Header = React.memo(function Header() {
     if (Platform.OS === 'web') {
         return (
             <View style={{ height: measuredHeight > 0 ? measuredHeight : reservedHeight }}>
-                {mounted ? <CustomHeader onHeightChange={handleHeaderHeight} /> : null}
+                {mounted ? (
+                  <React.Suspense fallback={null}>
+                    <CustomHeaderLazy onHeightChange={handleHeaderHeight} />
+                  </React.Suspense>
+                ) : null}
             </View>
         );
     }
 
-    return <CustomHeader />;
+    return (
+      <React.Suspense fallback={null}>
+        <CustomHeaderLazy />
+      </React.Suspense>
+    );
 });
 
 // Поведение href:

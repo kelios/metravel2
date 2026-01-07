@@ -42,6 +42,22 @@ const getOrigin = getSafeOrigin
 const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
   createSafeImageUrl(url, updated_at, id)
 
+const buildApiPrefixedUrl = (value: string): string | null => {
+  try {
+    const baseRaw =
+      process.env.EXPO_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!/\/api\/?$/i.test(baseRaw)) return null
+
+    const apiOrigin = baseRaw.replace(/\/api\/?$/, '')
+    const parsed = new URL(value, apiOrigin)
+    if (parsed.pathname.startsWith('/api/')) return null
+
+    return `${apiOrigin}/api${parsed.pathname}${parsed.search}`
+  } catch {
+    return null
+  }
+}
+
 export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -67,22 +83,30 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
         fit: 'contain',
       }) || versionedHref
 
-    if (versionedHref && !document.querySelector(`link[rel="preload"][href="${versionedHref}"]`)) {
+    if (_optimizedHref && !document.querySelector(`link[rel="preload"][href="${_optimizedHref}"]`)) {
       const preload = document.createElement('link')
       preload.rel = 'preload'
       preload.as = 'image'
-      preload.href = versionedHref
+      preload.href = _optimizedHref
       preload.fetchPriority = 'high'
       preload.setAttribute('fetchpriority', 'high')
       preload.crossOrigin = 'anonymous'
       document.head.appendChild(preload)
     }
 
+    const apiOrigin = (() => {
+      try {
+        const base = String(process.env.EXPO_PUBLIC_API_URL || '').trim()
+        if (!base) return null
+        return new URL(base).origin
+      } catch {
+        return null
+      }
+    })()
+
     const domains = [
       getOrigin(imageUrl),
-      'https://maps.googleapis.com',
-      'https://img.youtube.com',
-      'https://api.metravel.by',
+      apiOrigin,
     ].filter((d): d is string => isSafePreconnectDomain(d))
 
     domains.forEach((d) => {
@@ -149,6 +173,8 @@ export const OptimizedLCPHero: React.FC<{
   isMobile?: boolean
 }> = ({ img, alt, onLoad, height, isMobile }) => {
   const [loadError, setLoadError] = useState(false)
+  const [overrideSrc, setOverrideSrc] = useState<string | null>(null)
+  const [didTryApiPrefix, setDidTryApiPrefix] = useState(false)
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const baseSrc = buildVersionedImageUrl(
     buildVersioned(img.url, img.updated_at ?? null, img.id),
@@ -168,7 +194,7 @@ export const OptimizedLCPHero: React.FC<{
     fit: 'contain',
   })
 
-  const srcWithRetry = responsive.src || baseSrc
+  const srcWithRetry = overrideSrc || responsive.src || baseSrc
 
   if (Platform.OS !== 'web') {
     return (
@@ -261,7 +287,18 @@ export const OptimizedLCPHero: React.FC<{
             referrerPolicy="no-referrer"
             data-lcp
             onLoad={onLoad as any}
-            onError={() => setLoadError(true)}
+            onError={() => {
+              if (!didTryApiPrefix) {
+                const fallback = buildApiPrefixedUrl(srcWithRetry)
+                if (fallback) {
+                  setDidTryApiPrefix(true)
+                  setOverrideSrc(fallback)
+                  return
+                }
+                setDidTryApiPrefix(true)
+              }
+              setLoadError(true)
+            }}
           />
         </div>
       )}

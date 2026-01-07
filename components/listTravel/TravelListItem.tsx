@@ -164,6 +164,11 @@ function TravelListItem({
         return `/travels/${key}`;
     }, [id, slug]);
 
+    const navigationUrl = useMemo(() => {
+        if (!_isMetravel) return travelUrl;
+        return `${travelUrl}?returnTo=${encodeURIComponent('/metravel')}`;
+    }, [_isMetravel, travelUrl]);
+
     const cardTestId = useMemo(() => {
         return selectable ? `travel-card-selectable-${id}` : `travel-card-${id}`;
     }, [selectable, id]);
@@ -374,9 +379,9 @@ function TravelListItem({
             }
             
             // На всякий: если слуг нет — откроем по ID
-            router.push(`/travels/${travelId}`);
+            router.push(navigationUrl as any);
         }
-    }, [selectable, onToggle, slug, id, queryClient]);
+    }, [selectable, onToggle, slug, id, queryClient, navigationUrl]);
 
     const handleEdit = useCallback((e?: any) => {
         // Предотвращаем всплытие и стандартное поведение на веб-платформе
@@ -713,7 +718,7 @@ return (
                       if (hasModifier) {
                         e.preventDefault();
                         if (typeof window !== 'undefined') {
-                          window.open(travelUrl, '_blank', 'noopener,noreferrer');
+                          window.open(navigationUrl, '_blank', 'noopener,noreferrer');
                         }
                         return;
                       }

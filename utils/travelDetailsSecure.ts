@@ -215,11 +215,19 @@ export function createSafeImageUrl(
   }
 
   try {
-    // Ensure HTTPS
-    let urlString = baseUrl.replace(/^http:\/\//i, "https://");
-
     // Create URL object to validate format
-    const url = new URL(urlString);
+    const url = new URL(baseUrl);
+    try {
+      const isLocalhost =
+        typeof window !== 'undefined' &&
+        /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+      const isPrivateIp = /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(url.hostname);
+      if (isLocalhost && isPrivateIp && url.protocol === 'https:') {
+        url.protocol = 'http:';
+      }
+    } catch {
+      // ignore
+    }
 
     // Only allow http and https protocols
     if (!['http:', 'https:'].includes(url.protocol)) {

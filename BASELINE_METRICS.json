@@ -1,16 +1,16 @@
 {
-  "timestamp": "2025-12-30T11:50:34.134Z",
+  "timestamp": "2026-01-07T10:31:08.279Z",
   "phase": 4,
   "week": 1,
   "dependencies": {
-    "total": 127,
-    "production": 88,
-    "dev": 39,
+    "total": 131,
+    "production": 91,
+    "dev": 40,
     "heavyDependencies": [
       {
-        "name": "react-native-maps",
-        "weight": 250,
-        "category": "Mapping"
+        "name": "react-leaflet",
+        "weight": 200,
+        "category": "Mapping (OSM)"
       },
       {
         "name": "react-native-reanimated",
@@ -60,7 +60,7 @@
     ]
   },
   "estimatedBundleSize": {
-    "heavyDependenciesTotal": "1550KB",
+    "heavyDependenciesTotal": "1500KB",
     "estimatedMinified": "~800-1000KB",
     "estimatedGzipped": "~250-350KB",
     "target": {

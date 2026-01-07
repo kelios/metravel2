@@ -1,20 +1,21 @@
-import React, { useMemo, useRef, useState, useCallback } from 'react';
-import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, Modal, ScrollView } from 'react-native';
+import React, { Suspense, useMemo, useRef, useState, useCallback, lazy } from 'react';
+import { View, StyleSheet, Platform, StatusBar, Pressable, Text, Image, ScrollView } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
-import AccountMenu from './AccountMenu';
-import HeaderContextBar from './HeaderContextBar';
 import Logo from './Logo';
-import ThemeToggle from '@/components/ThemeToggle';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { useFilters } from '@/providers/FiltersProvider';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive'; 
-import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+
+const AccountMenuLazy = lazy(() => import('./AccountMenu'));
+const HeaderContextBarLazy = lazy(() => import('./HeaderContextBar'));
+const ThemeToggleLazy = lazy(() => import('@/components/ThemeToggle'));
+const CustomHeaderMobileMenuLazy = lazy(() => import('./CustomHeaderMobileMenu'));
 
 type CustomHeaderProps = {
     onHeightChange?: (height: number) => void;
@@ -28,9 +29,8 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const isMobile = isPhone || isLargePhone || isTablet;
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
     const mobileMenuOpenedAtRef = useRef(0);
-    const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
+    const { isAuthenticated, username, logout, userAvatar, profileRefreshToken } = useAuth();
     const { favorites } = useFavorites();
-    const { updateFilters } = useFilters();
     const [avatarLoadError, setAvatarLoadError] = useState(false);
     const lastHeightRef = useRef(0);
 
@@ -577,210 +577,48 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                               </Pressable>
                           </>
                       ) : (
-                          <AccountMenu />
+                          <Suspense fallback={null}>
+                            <AccountMenuLazy />
+                          </Suspense>
                       )}
                   </View>
               </View>
           
-          <HeaderContextBar />
+          <Suspense fallback={null}>
+            <HeaderContextBarLazy />
+          </Suspense>
 
-          {isMobile && (
-            <Modal
-              visible={mobileMenuVisible}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setMobileMenuVisible(false)}
-            >
-              <View style={styles.modalOverlay}>
-                <Pressable
-                  style={styles.modalOverlay}
-                  testID="mobile-menu-overlay"
-                  onPress={() => {
-                    const isTestEnv =
-                      typeof process !== 'undefined' &&
-                      (process as any).env &&
-                      (process as any).env.NODE_ENV === 'test';
-                    const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
-                    if (!isTestEnv && sinceOpen < 250) return;
-                    setMobileMenuVisible(false);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Закрыть меню"
-                />
-
-                <View
-                  style={styles.modalContent}
-                  testID="mobile-menu-panel"
-                  {...(Platform.OS === 'web'
-                    ? ({ role: 'dialog', 'aria-modal': 'true' } as any)
-                    : {})}
-                >
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Меню</Text>
-                    <Pressable
-                      onPress={() => setMobileMenuVisible(false)}
-                      style={styles.modalCloseButton}
-                      accessibilityRole="button"
-                      accessibilityLabel="Закрыть меню"
-                      testID="mobile-menu-close"
-                    >
-                      <Feather name="x" size={22} color={colors.text} />
-                    </Pressable>
-                  </View>
-                  <ScrollView
-                    style={styles.modalNavContainer}
-                    keyboardShouldPersistTaps="handled"
-                  >
-                    <Text style={styles.modalSectionTitle}>Навигация</Text>
-                    {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
-                        const isActive = activePath === item.path;
-                        return (
-                            <Pressable
-                                key={item.path}
-                                onPress={() => handleNavPress(item.path)}
-                                style={({ hovered, pressed }) => [
-                                    styles.modalNavItem,
-                                    (hovered || pressed) && styles.modalNavItemHover,
-                                    isActive && styles.modalNavItemActive,
-                                ]}
-                                accessibilityRole="button"
-                                accessibilityLabel={item.label}
-                                accessibilityState={{ selected: isActive }}
-                            >
-                                <View style={styles.iconSlot20}>
-                                    <Feather
-                                        name={item.icon as any}
-                                        size={20}
-                                        color={isActive ? colors.primary : colors.textMuted}
-                                    />
-                                </View>
-                                <Text style={[styles.modalNavLabel, isActive && styles.modalNavLabelActive]}>
-                                    {item.label}
-                                </Text>
-                            </Pressable>
-                        );
-                    })}
-
-                    <View style={styles.modalDivider} />
-                    <Text style={styles.modalSectionTitle}>Аккаунт</Text>
-                    {!isAuthenticated ? (
-                        <>
-                            <Pressable
-                                onPress={() => handleUserAction('/login')}
-                                style={styles.modalNavItem}
-                                accessibilityRole="button"
-                                accessibilityLabel="Войти"
-                            >
-                                <View style={styles.iconSlot20}>
-                                    <Feather name="log-in" size={20} color={colors.textMuted} />
-                                </View>
-                                <Text style={styles.modalNavLabel}>Войти</Text>
-                            </Pressable>
-                            <Pressable
-                                onPress={() => handleUserAction('/registration')}
-                                style={styles.modalNavItem}
-                                accessibilityRole="button"
-                                accessibilityLabel="Зарегистрироваться"
-                            >
-                                <View style={styles.iconSlot20}>
-                                    <Feather name="user-plus" size={20} color={colors.textMuted} />
-                                </View>
-                                <Text style={styles.modalNavLabel}>Зарегистрироваться</Text>
-                            </Pressable>
-                        </>
-                    ) : (
-                        <>
-                            <Pressable
-                                onPress={() => handleUserAction('/profile')}
-                                style={styles.modalNavItem}
-                                accessibilityRole="button"
-                                accessibilityLabel="Личный кабинет"
-                            >
-                                <View style={styles.iconSlot20}>
-                                    <Feather name="user" size={20} color={colors.textMuted} />
-                                </View>
-                                <Text style={styles.modalNavLabel}>
-                                    {`Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`}
-                                </Text>
-                            </Pressable>
-                            <Pressable
-                                onPress={() =>
-                                    handleUserAction('/metravel', () => {
-                                        const numericUserId = userId ? Number(userId) : undefined;
-                                        updateFilters({ user_id: numericUserId });
-                                    })
-                                }
-                                style={styles.modalNavItem}
-                                accessibilityRole="button"
-                                accessibilityLabel="Мои путешествия"
-                            >
-                                <View style={styles.iconSlot20}>
-                                    <Feather name="map" size={20} color={colors.textMuted} />
-                                </View>
-                                <Text style={styles.modalNavLabel}>Мои путешествия</Text>
-                            </Pressable>
-                            <Pressable
-                                onPress={handleCreate}
-                                style={styles.modalNavItem}
-                                accessibilityRole="button"
-                                accessibilityLabel="Поделиться маршрутом и историей"
-                            >
-                                <View style={styles.iconSlot20}>
-                                    <Feather name="share-2" size={20} color={colors.textMuted} />
-                                </View>
-                                <Text style={styles.modalNavLabel}>Поделиться путешествием</Text>
-                            </Pressable>
-                            <Pressable
-                                onPress={() => handleUserAction('/export')}
-                                style={styles.modalNavItem}
-                                accessibilityRole="button"
-                                accessibilityLabel="Экспорт в PDF"
-                            >
-                                <View style={styles.iconSlot20}>
-                                    <Feather name="file-text" size={20} color={colors.textMuted} />
-                                </View>
-                                <Text style={styles.modalNavLabel}>Экспорт в PDF</Text>
-                            </Pressable>
-                            <Pressable
-                                onPress={handleLogout}
-                                style={styles.modalNavItem}
-                                accessibilityRole="button"
-                                accessibilityLabel="Выход"
-                            >
-                                <View style={styles.iconSlot20}>
-                                    <Feather name="log-out" size={20} color={colors.textMuted} />
-                                </View>
-                                <Text style={styles.modalNavLabel}>Выход</Text>
-                            </Pressable>
-                        </>
-                    )}
-
-                    <View style={styles.modalDivider} />
-                    <Text style={styles.modalSectionTitle}>Тема</Text>
-                    <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-                      <ThemeToggle compact layout="vertical" showLabels />
-                    </View>
-
-                    <View style={styles.modalDivider} />
-                    <Text style={styles.modalSectionTitle}>Документы</Text>
-                    {DOCUMENT_NAV_ITEMS.map((item) => (
-                        <Pressable
-                            key={item.path}
-                            onPress={() => handleUserAction(item.path)}
-                            style={styles.modalNavItem}
-                            accessibilityRole="button"
-                            accessibilityLabel={item.label}
-                        >
-                            <View style={styles.iconSlot20}>
-                                <Feather name={item.icon as any} size={20} color={colors.textMuted} />
-                            </View>
-                            <Text style={styles.modalNavLabel}>{item.label}</Text>
-                        </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              </View>
-            </Modal>
+          {isMobile && Platform.OS === 'web' && mobileMenuVisible && (
+            <Suspense fallback={null}>
+              <CustomHeaderMobileMenuLazy
+                visible={mobileMenuVisible}
+                onRequestClose={() => setMobileMenuVisible(false)}
+                onOverlayPress={() => {
+                  const isTestEnv =
+                    typeof process !== 'undefined' &&
+                    (process as any).env &&
+                    (process as any).env.NODE_ENV === 'test';
+                  const sinceOpen = Date.now() - mobileMenuOpenedAtRef.current;
+                  if (!isTestEnv && sinceOpen < 250) return;
+                  setMobileMenuVisible(false);
+                }}
+                onNavPress={handleNavPress}
+                onUserAction={handleUserAction}
+                onCreate={handleCreate}
+                onLogout={handleLogout}
+                colors={colors as any}
+                styles={styles}
+                activePath={activePath}
+                isAuthenticated={isAuthenticated}
+                username={username}
+                favoritesCount={favorites.length}
+                themeToggleNode={
+                  <Suspense fallback={null}>
+                    <ThemeToggleLazy compact layout="vertical" showLabels />
+                  </Suspense>
+                }
+              />
+            </Suspense>
           )}
           </View>
       </View>

@@ -8,7 +8,6 @@ import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import MapIcon from './MapIcon';
 
 interface MapBottomSheetProps {
   children: React.ReactNode;
@@ -39,23 +38,49 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const lastProgrammaticOpenTsRef = useRef(0);
     const [sheetIndex, setSheetIndex] = useState(-1);
 
+    const contentBottomPadding = (Platform.OS === 'web' ? 12 : 40) + bottomInset;
+
     const snapPoints = useMemo(
-      () => (Platform.OS === 'web' ? ['85%', '95%'] : ['50%', '90%']),
+      () => (Platform.OS === 'web' ? ['70%', '80%'] : ['55%', '80%']),
       []
     );
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
-      snapToCollapsed: () => bottomSheetRef.current?.close(),
+      snapToCollapsed: () => {
+        if (Platform.OS === 'web') {
+          setSheetIndex(-1);
+          onStateChange?.('collapsed');
+          return;
+        }
+        bottomSheetRef.current?.close();
+      },
       snapToHalf: () => {
         lastProgrammaticOpenTsRef.current = Date.now();
+        if (Platform.OS === 'web') {
+          setSheetIndex(0);
+          onStateChange?.('half');
+          return;
+        }
         bottomSheetRef.current?.snapToIndex(0);
       },
       snapToFull: () => {
         lastProgrammaticOpenTsRef.current = Date.now();
+        if (Platform.OS === 'web') {
+          setSheetIndex(1);
+          onStateChange?.('full');
+          return;
+        }
         bottomSheetRef.current?.snapToIndex(1);
       },
-      close: () => bottomSheetRef.current?.close(),
+      close: () => {
+        if (Platform.OS === 'web') {
+          setSheetIndex(-1);
+          onStateChange?.('collapsed');
+          return;
+        }
+        bottomSheetRef.current?.close();
+      },
     }));
 
     // Handle snap point changes
@@ -107,6 +132,58 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       []
     );
 
+    if (Platform.OS === 'web') {
+      const sheetMaxHeight = sheetIndex < 0 ? 0 : sheetIndex === 0 ? '70vh' : '80vh';
+
+      return (
+        <View
+          style={[
+            styles.webRoot,
+            {
+              // @ts-ignore: web-only style
+              height: (sheetIndex < 0 ? 0 : 'auto') as any,
+              // @ts-ignore: web-only style
+              maxHeight: sheetMaxHeight as any,
+              bottom: bottomInset,
+            },
+          ]}
+          accessibilityLabel="Панель карты"
+        >
+          {sheetIndex >= 0 && (
+            <View style={styles.header}>
+              <View style={styles.headerContent}>
+                {title && (
+                  <View style={styles.titleContainer}>
+                    <Text style={styles.title}>{title}</Text>
+                    {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.headerActions}>
+                <Pressable
+                  style={styles.headerButton}
+                  onPress={() => {
+                    setSheetIndex(-1);
+                    onStateChange?.('collapsed');
+                  }}
+                  hitSlop={8}
+                  testID="map-panel-close"
+                  accessibilityLabel="Закрыть панель"
+                >
+                  <MaterialIcons name="close" size={20} color={colors.textMuted} />
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          <View style={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}>
+            {sheetIndex < 0 ? peekContent : children}
+          </View>
+        </View>
+      );
+    }
+
     return (
       <BottomSheet
         ref={bottomSheetRef}
@@ -135,17 +212,9 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           <View style={styles.headerActions}>
             <Pressable
               style={styles.headerButton}
-              onPress={() => bottomSheetRef.current?.snapToIndex(1)}
-              hitSlop={8}
-              accessibilityLabel="Развернуть панель"
-            >
-              <MapIcon name="expand-less" size={24} color={colors.textMuted} />
-            </Pressable>
-
-            <Pressable
-              style={styles.headerButton}
               onPress={() => bottomSheetRef.current?.close()}
               hitSlop={8}
+              testID="map-panel-close"
               accessibilityLabel="Закрыть панель"
             >
               <MaterialIcons name="close" size={20} color={colors.textMuted} />
@@ -161,7 +230,12 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         )}
 
         {/* Main content - let children control their own scrolling (avoids nested scroll + keeps sticky footers working) */}
-        <BottomSheetView style={[styles.contentContainer, { paddingBottom: 40 + bottomInset }]}>
+        <BottomSheetView
+          style={[
+            styles.contentContainer,
+            { paddingBottom: (bottomInset > 0 ? 12 : 40) + bottomInset },
+          ]}
+        >
           {children}
         </BottomSheetView>
       </BottomSheet>
@@ -182,6 +256,22 @@ const getStyles = (colors: ThemedColors) =>
           zIndex: 20,
         },
       }),
+    },
+    webRoot: {
+      // @ts-ignore: web-only style
+      position: 'fixed',
+      left: 0,
+      right: 0,
+      zIndex: 20,
+      flexDirection: 'column',
+      backgroundColor: colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      // @ts-ignore: web-only style
+      boxShadow: (colors as any).boxShadows?.heavy ?? undefined,
+      // @ts-ignore: web-only style
+      transition: 'max-height 180ms cubic-bezier(0.4, 0, 0.2, 1)',
+      overflow: 'hidden',
     },
     background: {
       backgroundColor: colors.surface,
@@ -239,8 +329,19 @@ const getStyles = (colors: ThemedColors) =>
       paddingVertical: 12,
     },
     contentContainer: {
-      flex: 1,
       paddingHorizontal: 20,
       paddingBottom: 40,
+      ...Platform.select({
+        web: {
+          flexShrink: 1,
+          // @ts-ignore: web-only style
+          overflowY: 'auto',
+          // @ts-ignore: web-only style
+          WebkitOverflowScrolling: 'touch',
+        },
+        default: {
+          flex: 1,
+        },
+      }),
     },
   });

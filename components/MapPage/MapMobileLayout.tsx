@@ -56,6 +56,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const [uiTab, setUiTab] = useState<'list' | 'filters'>('list');
   const [contentTab, setContentTab] = useState<'list' | 'filters'>('list');
   const [, startTransition] = useTransition();
+  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
   const sheetStateRef = useRef<'collapsed' | 'half' | 'full'>('collapsed');
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
@@ -63,6 +64,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'half' | 'full') => {
     sheetStateRef.current = state;
+    setSheetState(state);
   }, []);
 
   useEffect(() => {
@@ -264,19 +266,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                 <MaterialIcons name="refresh" size={20} color={colors.textMuted} />
               </Pressable>
             )}
-
-            <Pressable
-              testID="map-panel-close"
-              style={styles.sheetIconButton}
-              onPress={() => {
-                bottomSheetRef.current?.snapToCollapsed();
-              }}
-              hitSlop={10}
-              accessibilityRole="button"
-              accessibilityLabel="Закрыть панель"
-            >
-              <MaterialIcons name="close" size={20} color={colors.textMuted} />
-            </Pressable>
           </View>
 
           {showModeToggle && (
@@ -336,7 +325,9 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         subtitle={sheetSubtitle}
         peekContent={peekContent}
         onStateChange={handleSheetStateChange}
-        bottomInset={Platform.OS === 'web' ? LAYOUT.tabBarHeight : 0}
+        bottomInset={
+          Platform.OS === 'web' && sheetState !== 'collapsed' ? LAYOUT.tabBarHeight : 0
+        }
       >
         {sheetContent}
       </MapBottomSheet>

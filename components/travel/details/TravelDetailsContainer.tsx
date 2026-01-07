@@ -149,7 +149,7 @@ export default function TravelDetailsContainer() {
     isMobile,
     isLoading,
   });
-  const { closeMenu, animatedX, menuWidth, menuWidthNum } = useTravelDetailsMenu(isMobile, deferAllowed);
+  const { closeMenu, animatedX, menuWidth: _menuWidth, menuWidthNum } = useTravelDetailsMenu(isMobile, deferAllowed);
   const {
     scrollY,
     contentHeight,
@@ -353,41 +353,39 @@ export default function TravelDetailsContainer() {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
-          {/* ✅ РЕДИЗАЙН: Адаптивный spacer под меню */}
-          {!isMobile && Platform.OS !== 'web' && responsiveWidth >= METRICS.breakpoints.tablet && <View style={{ width: menuWidthNum }} />}
-
-          {/* ✅ РЕДИЗАЙН: Адаптивное боковое меню */}
           {!isMobile && responsiveWidth >= METRICS.breakpoints.tablet && (
-            <Defer when={deferAllowed}>
-              <Animated.View
-                testID="travel-details-side-menu"
-                style={[
-                  styles.sideMenuBase,
-                  sideMenuPlatformStyles,
-                  {
-                    transform: [{ translateX: animatedX }],
-                    width: menuWidth as any,
-                    zIndex: 1000,
-                    backgroundColor: themedColors.surface,
-                    borderRightColor: themedColors.border,
-                  },
-                ]}
-              >
-                <Suspense fallback={<SectionSkeleton lines={8} />}>
-                  <CompactSideBarTravel
-                    travel={travel}
-                    isSuperuser={isSuperuser}
-                    storedUserId={userId}
-                    isMobile={isMobile}
-                    refs={anchors}
-                    links={sectionLinks}
-                    closeMenu={closeMenu}
-                    onNavigate={scrollToWithMenuClose}
-                    activeSection={activeSection}
-                  />
-                </Suspense>
-              </Animated.View>
-            </Defer>
+            <View style={{ width: menuWidthNum }}>
+              <Defer when={deferAllowed}>
+                <Animated.View
+                  testID="travel-details-side-menu"
+                  style={[
+                    styles.sideMenuBase,
+                    sideMenuPlatformStyles,
+                    {
+                      transform: [{ translateX: animatedX }],
+                      width: '100%' as any,
+                      zIndex: 1000,
+                      backgroundColor: themedColors.surface,
+                      borderRightColor: themedColors.border,
+                    },
+                  ]}
+                >
+                  <Suspense fallback={<SectionSkeleton lines={8} />}>
+                    <CompactSideBarTravel
+                      travel={travel}
+                      isSuperuser={isSuperuser}
+                      storedUserId={userId}
+                      isMobile={isMobile}
+                      refs={anchors}
+                      links={sectionLinks}
+                      closeMenu={closeMenu}
+                      onNavigate={scrollToWithMenuClose}
+                      activeSection={activeSection}
+                    />
+                  </Suspense>
+                </Animated.View>
+              </Defer>
+            </View>
           )}
 
           {/* Прогресс-бар чтения */}
