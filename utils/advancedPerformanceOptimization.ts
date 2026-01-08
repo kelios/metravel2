@@ -13,11 +13,18 @@ export function preloadCriticalResources() {
   const lcpImage = document.querySelector('img[data-lcp]') || document.querySelector('img[src*="travel"]');
   if (lcpImage) {
     const href = (lcpImage as HTMLImageElement).currentSrc || (lcpImage as HTMLImageElement).src;
-    if (href && !document.querySelector(`link[rel="prefetch"][as="image"][href="${href}"]`)) {
+    if (href && !document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
       const preloadLink = document.createElement('link');
-      preloadLink.rel = 'prefetch';
+      preloadLink.rel = 'preload';
       preloadLink.as = 'image';
       preloadLink.href = href;
+      preloadLink.setAttribute('fetchpriority', 'high');
+      try {
+        ;(preloadLink as any).fetchPriority = 'high';
+      } catch {
+        // noop
+      }
+      preloadLink.crossOrigin = 'anonymous';
       document.head.appendChild(preloadLink);
     }
   }
@@ -201,30 +208,4 @@ export function optimizeCriticalPath() {
 
   // 3. Add resource hints
   addResourceHints();
-
-  // 4. Optimize only the actual LCP image to avoid forced re-fetches
-  const lcpImg = document.querySelector('img[data-lcp]') as HTMLImageElement | null;
-  if (lcpImg) {
-    const src = lcpImg.currentSrc || lcpImg.src;
-    if (src) {
-      const optimized = optimizeLCPImage(src);
-      if (optimized && optimized !== src) {
-        lcpImg.src = optimized;
-      }
-      lcpImg.loading = 'eager';
-      lcpImg.fetchPriority = 'high';
-    }
-  }
-
-  // 5. Prevent layout shift
-  preventLayoutShift();
-  
-  // 6. Optimize JavaScript loading
-  optimizeJavaScriptLoading();
-  
-  // 7. Optimize Speed Index
-  optimizeSpeedIndex();
-  
-  // 8. Reduce blocking time
-  reduceBlockingTime();
 }

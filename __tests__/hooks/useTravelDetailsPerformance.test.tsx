@@ -74,6 +74,10 @@ describe('useTravelDetailsPerformance', () => {
       useTravelDetailsPerformance({ travel: undefined, isMobile: false, isLoading: true })
     )
 
+    act(() => {
+      jest.advanceTimersByTime(800)
+    })
+
     expect(useLCPPreload).toHaveBeenCalled()
     expect(injectCriticalStyles).toHaveBeenCalled()
     expect(initPerformanceMonitoring).toHaveBeenCalled()

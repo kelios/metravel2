@@ -255,6 +255,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 height={400}
                 borderRadius={DESIGN_TOKENS.radii.lg}
                 alt="Пример книги путешествий"
+                loadingStrategy={Platform.OS === 'web' ? 'eager' : 'lazy'}
                 style={styles.bookImage}
               />
             </Pressable>

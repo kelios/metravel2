@@ -48,16 +48,35 @@ function Home() {
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Уменьшаем задержку с 100ms до 50ms для быстрой загрузки
-    const timer = setTimeout(() => {
+    let cancelled = false;
+
+    const show = () => {
+      if (cancelled) return;
       setShowHeavyContent(true);
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
         useNativeDriver: true,
       }).start();
-    }, 50);
-    return () => clearTimeout(timer);
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = (window as any).requestIdleCallback(show, { timeout: 2000 });
+      return () => {
+        cancelled = true;
+        try {
+          ;(window as any).cancelIdleCallback?.(id);
+        } catch {
+          // noop
+        }
+      };
+    }
+
+    const timer = setTimeout(show, Platform.OS === 'web' ? 800 : 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [fadeAnim]);
 
   // Lightweight: avoid fetching full list of user travels on home screen.

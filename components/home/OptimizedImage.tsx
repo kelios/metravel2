@@ -8,6 +8,7 @@ interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
   height: number;
   borderRadius?: number;
   alt?: string;
+  loadingStrategy?: 'lazy' | 'eager';
 }
 
 function OptimizedImage({
@@ -16,6 +17,7 @@ function OptimizedImage({
   height,
   borderRadius = 0,
   alt,
+  loadingStrategy = 'lazy',
   style,
   ...props
 }: OptimizedImageProps) {
@@ -89,7 +91,7 @@ function OptimizedImage({
           onError={() => setHasError(true)}
           resizeMode="cover"
           {...(Platform.OS === 'web' ? {
-            loading: 'lazy' as any,
+            loading: loadingStrategy as any,
             alt: alt || '',
             decoding: 'async' as any,
           } : {})}

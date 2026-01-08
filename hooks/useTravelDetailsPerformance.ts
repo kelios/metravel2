@@ -65,9 +65,11 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      injectCriticalStyles()
-      initPerformanceMonitoring()
-      optimizeCriticalPath()
+      rIC(() => {
+        injectCriticalStyles()
+        initPerformanceMonitoring()
+        optimizeCriticalPath()
+      }, 800)
     }
   }, [])
 
