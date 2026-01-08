@@ -1,10 +1,9 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform, Text } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
 const hasValidUriSource = (source: { uri: string } | number): boolean => {
   if (!source) return false;
@@ -276,12 +275,12 @@ function OptimizedImage({
 
       {/* Заглушка при ошибке / отсутствии uri */}
       {showFallback && (
-        <View style={[styles.errorContainer, { borderRadius }]} testID="optimized-image-error">
-          <View style={styles.placeholderContent}>
-            <MaterialIcons name="image" size={26} color={colors.textMuted} style={{ opacity: 0.55 }} />
-            <Text style={styles.placeholderText}>Нет фото</Text>
-          </View>
-        </View>
+        <View
+          style={[styles.errorContainer, { borderRadius }]}
+          testID="optimized-image-error"
+          accessibilityElementsHidden={true}
+          aria-hidden={true}
+        />
       )}
     </View>
   );
@@ -308,19 +307,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.mutedBackground,
-  },
-  placeholderContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  placeholderText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: -0.1,
-    opacity: 0.8,
-    textAlign: 'center',
   },
 });
 

@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, Platform, View, Text } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
@@ -9,7 +9,7 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { createTabCardTemplate, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
 export type TabTravelCardBadge = {
-  icon: keyof typeof MaterialIcons.glyphMap;
+  icon: keyof typeof Feather.glyphMap;
   backgroundColor: string;
   iconColor: string;
 };
@@ -61,7 +61,7 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
         </Text>
 
         <View style={styles.locationRow}>
-          <MaterialIcons name="place" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
+          <Feather name="map-pin" size={12} color={colors.textMuted} style={{ marginRight: 4 } as any} />
           <Text style={[styles.locationText, { color: colors.textMuted }]} numberOfLines={1}>
             {location || ' '}
           </Text>

@@ -92,6 +92,7 @@ function OptimizedImage({
           resizeMode="cover"
           {...(Platform.OS === 'web' ? {
             loading: loadingStrategy as any,
+            fetchpriority: (loadingStrategy === 'eager' ? 'high' : 'auto') as any,
             alt: alt || '',
             decoding: 'async' as any,
           } : {})}

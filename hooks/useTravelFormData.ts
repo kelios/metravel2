@@ -98,6 +98,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const [hasAccess, setHasAccess] = useState(false);
   const [_dataVersion, setDataVersion] = useState(0);
   const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const manualSaveInFlightRef = useRef(false);
   const manualSavePromiseRef = useRef<Promise<TravelFormData | void> | null>(null);
   const suppressAutosaveErrorToastRef = useRef(false);
@@ -429,7 +430,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         : currentMarkers;
       const syncedCountries = syncCountriesFromMarkers(effectiveMarkers, normalizedSavedData.countries || []);
 
-      formState.updateFields({
+      formState.reset({
         ...normalizedSavedData,
         countries: syncedCountries,
         coordsMeTravel: effectiveMarkers,
@@ -664,7 +665,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         };
 
         setTravelDataOld(travelData);
-        formState.updateFields(finalData);
+        formState.reset(finalData);
         setMarkers(markersFromData);
 
         // ✅ FIX: Используем ref для updateBaseline чтобы избежать stale closure и race condition
@@ -717,6 +718,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const handleCountrySelect = useCallback(
     (countryId: string) => {
+      setHasUserInteracted(true);
       const id = String(countryId);
       const current = (formState.data.countries || []).map(String);
       if (id && !current.includes(id)) {
@@ -728,6 +730,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const handleCountryDeselect = useCallback(
     (countryId: string) => {
+      setHasUserInteracted(true);
       const id = String(countryId);
       const current = (formState.data.countries || []).map(String);
       formState.updateField('countries', current.filter(c => c !== id));
@@ -737,6 +740,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const setFormData = useCallback<React.Dispatch<React.SetStateAction<TravelFormData>>>(
     updater => {
+      setHasUserInteracted(true);
       if (typeof updater === 'function') {
         const next = updater(formDataRef.current);
         formDataRef.current = next as TravelFormData;
@@ -751,6 +755,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   const handleMarkersUpdate = useCallback(
     (updatedMarkers: MarkerData[]) => {
+      setHasUserInteracted(true);
       setMarkers(updatedMarkers);
       formState.updateField('coordsMeTravel', updatedMarkers as any);
     },
@@ -769,6 +774,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     handleManualSave,
     handleCountrySelect,
     handleCountryDeselect,
+    hasUserInteracted,
     formState,
   };
 }

@@ -41,6 +41,8 @@ const allowedAttributes: sanitizeHtml.IOptions['allowedAttributes'] = {
   '*': Array.from(
     new Set([
       ...(sanitizeHtml.defaults.allowedAttributes?.['*'] ?? []),
+      'id',
+      'name',
       'class',
       'style',
       'role',
@@ -197,13 +199,40 @@ function removeReactNativeComponents(html: string): string {
   return cleaned;
 }
 
+function injectAutoHeadingAnchors(html: string): string {
+  if (!html) return html
+  const decode = (value: string) =>
+    value
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/&#x27;/gi, "'")
+
+  return html.replace(/<h([1-3])([^>]*)>([\s\S]*?)<\/h\1>/gi, (full, level, rawAttrs, inner) => {
+    const attrs = String(rawAttrs || '')
+    if (/\bid\s*=\s*"[^"]+"/i.test(attrs)) return full
+
+    const innerText = decode(String(inner || '').replace(/<[^>]+>/g, '').trim())
+    const m = innerText.match(/^(\d{1,3})\)\s+/)
+    if (!m) return full
+    const id = `part${m[1]}`
+
+    const nextAttrs = attrs ? `${attrs} id="${id}"` : ` id="${id}"`
+    return `<h${level}${nextAttrs}>${inner}</h${level}>`
+  })
+}
+
 export function sanitizeRichText(html?: string | null): string {
   if (!html) return ''
 
   // ✅ КРИТИЧНО: Удаляем React Native компоненты перед санитизацией
   const withoutReactComponents = removeReactNativeComponents(html);
+  const withAutoAnchors = injectAutoHeadingAnchors(withoutReactComponents)
 
-  const sanitized = sanitizeHtml(withoutReactComponents, {
+  const sanitized = sanitizeHtml(withAutoAnchors, {
     allowedTags,
     allowedAttributes,
     allowedStyles: {
@@ -231,12 +260,14 @@ export function sanitizeRichText(html?: string | null): string {
     allowProtocolRelative: false,
     transformTags: {
       a: (_tag: string, attribs: Attributes) => {
-        const href = normalizeUrl(attribs.href)
+        const rawHref = typeof attribs.href === 'string' ? attribs.href.trim() : undefined
+        const isHashLink = !!rawHref && rawHref.startsWith('#')
+        const href = isHashLink ? rawHref : normalizeUrl(rawHref)
         const result: Record<string, string> = {}
         if (href) {
           result.href = href
           result.rel = attribs.rel || 'noopener noreferrer'
-          if (attribs.target === '_blank') {
+          if (!isHashLink && attribs.target === '_blank') {
             result.target = '_blank'
           }
         }

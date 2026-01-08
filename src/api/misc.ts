@@ -6,9 +6,15 @@ import { validateAIMessage, validateImageFile } from '@/src/utils/validation';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { getSecureItem } from '@/src/utils/secureStorage';
 import { apiClient } from '@/src/api/client';
+import { Platform } from 'react-native';
+
+const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 
 const rawApiUrl: string =
-  process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
+  (Platform.OS === 'web' && !isLocalApi && typeof window !== 'undefined' && window.location?.origin
+    ? `${window.location.origin}/api`
+    : process.env.EXPO_PUBLIC_API_URL) ||
+  (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
 if (!rawApiUrl) {
   throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
@@ -75,14 +81,6 @@ export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): 
       }
     }
 
-    // ✅ FIX: Валидация описания
-    if (data.description) {
-      const trimmedDesc = data.description.trim();
-      if (trimmedDesc.length > 10000) {
-        throw new Error('Описание слишком длинное (максимум 10000 символов)');
-      }
-    }
-
     // ✅ FIX: Валидация массивов (предотвращение отправки невалидных данных)
     const arrayFields = ['countries', 'categories', 'transports', 'companions',
                          'complexity', 'month', 'over_nights_stay'];
@@ -103,7 +101,7 @@ export const saveFormData = async (data: TravelFormData, signal?: AbortSignal): 
     const sanitizedData = {
       ...data,
       name: sanitizeStringField(data.name, 200),
-      description: sanitizeStringField(data.description, 10000),
+      description: typeof data.description === 'string' ? (sanitizeInput(data.description) as any) : data.description,
       minus: sanitizeStringField(data.minus, 5000),
       plus: sanitizeStringField(data.plus, 5000),
       recommendation: sanitizeStringField(data.recommendation, 5000),

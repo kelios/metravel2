@@ -1,6 +1,6 @@
 // components/ArticleEditor.ios.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as ImagePicker from 'expo-image-picker';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -43,9 +43,21 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const [html, setHtml] = useState(() => sanitizeForEditor(content));
   const [isReady, setIsReady] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [anchorModalVisible, setAnchorModalVisible] = useState(false);
+  const [anchorValue, setAnchorValue] = useState('');
   const webViewRef = useRef<WebView>(null);
   const autosaveTimer = useRef<NodeJS.Timeout>();
   const { isAuthenticated } = useAuth();
+
+  const normalizeAnchorId = useCallback((value: string) => {
+    const raw = String(value ?? '').trim().toLowerCase();
+    const collapsed = raw
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9\-_]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    return collapsed;
+  }, []);
 
   const safeJsonString = useCallback((value: string) => {
     // Avoid breaking out of <script> tag and avoid template-literal interpolation issues.
@@ -148,6 +160,26 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     var INITIAL_PLACEHOLDER = ${safePlaceholder};
     var INITIAL_CONTENT = ${safeInitialContent};
 
+    function normalizeAnchorId(value) {
+      try {
+        var raw = String(value || '').trim().toLowerCase();
+        return raw
+          .replace(/\\s+/g, '-')
+          .replace(/[^a-z0-9_-]+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+      } catch (e) {
+        return '';
+      }
+    }
+
+    try {
+      var Parchment = Quill.import('parchment');
+      var IdAttribute = new Parchment.Attributor.Attribute('id', 'id');
+      Quill.register(IdAttribute, true);
+    } catch (e) {
+    }
+
     var quill = new Quill('#editor', {
       theme: 'snow',
       modules: {
@@ -194,6 +226,14 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
 
         if (data.type === 'redo') {
           quill.history.redo();
+        }
+
+        if (data.type === 'insert-anchor') {
+          var id = normalizeAnchorId(data.id);
+          if (!id) return;
+          var range = quill.getSelection() || { index: quill.getLength(), length: 0 };
+          quill.clipboard.dangerouslyPasteHTML(range.index, '<span id="' + id + '"></span>', 'user');
+          quill.setSelection(range.index + 1, 0);
         }
       } catch (err) {
         console.error('Error processing message:', err);
@@ -324,6 +364,11 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     webViewRef.current?.postMessage(JSON.stringify({ type: 'redo' }));
   };
 
+  const handleInsertAnchor = () => {
+    setAnchorValue('');
+    setAnchorModalVisible(true);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {/* Заголовок и дополнительные кнопки */}
@@ -363,6 +408,16 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
               )}
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            onPress={handleInsertAnchor}
+            style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            disabled={!isReady}
+            accessibilityRole="button"
+            accessibilityLabel="Вставить якорь"
+          >
+            <MaterialIcons name="bookmark" size={20} color={isReady ? colors.text : colors.textMuted} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -388,6 +443,68 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           )}
         />
       </View>
+
+      <Modal
+        visible={anchorModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAnchorModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: DESIGN_TOKENS.spacing.lg }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: DESIGN_TOKENS.radii.md, borderWidth: 1, borderColor: colors.border, padding: DESIGN_TOKENS.spacing.lg }}>
+            <Text style={{ color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '600', marginBottom: DESIGN_TOKENS.spacing.sm }}>
+              Вставить якорь
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm, marginBottom: DESIGN_TOKENS.spacing.md }}>
+              Идентификатор (например: day-3)
+            </Text>
+            <TextInput
+              value={anchorValue}
+              onChangeText={setAnchorValue}
+              placeholder="day-3"
+              placeholderTextColor={colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: DESIGN_TOKENS.radii.sm,
+                paddingHorizontal: DESIGN_TOKENS.spacing.md,
+                paddingVertical: DESIGN_TOKENS.spacing.sm,
+                color: colors.text,
+                backgroundColor: colors.surface,
+                marginBottom: DESIGN_TOKENS.spacing.md,
+              }}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <TouchableOpacity
+                onPress={() => setAnchorModalVisible(false)}
+                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
+                accessibilityRole="button"
+                accessibilityLabel="Отмена"
+              >
+                <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm }}>Отмена</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  const id = normalizeAnchorId(anchorValue);
+                  if (!id) {
+                    Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
+                    return;
+                  }
+                  setAnchorModalVisible(false);
+                  webViewRef.current?.postMessage(JSON.stringify({ type: 'insert-anchor', id }));
+                }}
+                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
+                accessibilityRole="button"
+                accessibilityLabel="Вставить"
+              >
+                <Text style={{ color: colors.primary, fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600' }}>Вставить</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

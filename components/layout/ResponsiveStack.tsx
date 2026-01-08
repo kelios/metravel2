@@ -3,7 +3,7 @@
  * Автоматически меняет направление и gap в зависимости от размера экрана
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { useResponsive, useResponsiveValue } from '@/hooks/useResponsive';
 import { METRICS } from '@/constants/layout';
@@ -45,16 +45,14 @@ export default function ResponsiveStack({
   const responsiveGap = useResponsiveValue(gapConfig);
   const stackGap = typeof gap === 'number' ? gap : responsiveGap;
 
-  // Определяем направление
-  const getDirection = () => {
+  const resolvedDirection = useMemo(() => {
     if (direction === 'responsive') {
-      return isTablet || isDesktop ? 'row' : 'column';
+      return (isTablet || isDesktop) ? 'row' : 'column';
     }
     return direction === 'horizontal' ? 'row' : 'column';
-  };
+  }, [direction, isTablet, isDesktop]);
 
-  // Преобразуем align в flexbox свойства
-  const getAlignItems = () => {
+  const resolvedAlignItems = useMemo(() => {
     const map = {
       start: 'flex-start',
       center: 'center',
@@ -62,10 +60,9 @@ export default function ResponsiveStack({
       stretch: 'stretch',
     };
     return map[align];
-  };
+  }, [align]);
 
-  // Преобразуем justify в flexbox свойства
-  const getJustifyContent = () => {
+  const resolvedJustifyContent = useMemo(() => {
     const map = {
       start: 'flex-start',
       center: 'center',
@@ -74,17 +71,17 @@ export default function ResponsiveStack({
       'space-around': 'space-around',
     };
     return map[justify];
-  };
+  }, [justify]);
 
   return (
     <View
       style={[
         styles.container,
         {
-          flexDirection: getDirection() as 'row' | 'column',
+          flexDirection: resolvedDirection as 'row' | 'column',
           gap: stackGap,
-          alignItems: getAlignItems() as any,
-          justifyContent: getJustifyContent() as any,
+          alignItems: resolvedAlignItems as any,
+          justifyContent: resolvedJustifyContent as any,
           flexWrap: wrap ? 'wrap' : 'nowrap',
         },
         style,

@@ -1,7 +1,7 @@
 // components/WelcomeBanner.tsx
 // ✅ РЕДИЗАЙН: Блок приветствия для главной страницы
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -19,19 +19,15 @@ const radii = DESIGN_TOKENS.radii;
 export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
   const router = useRouter();
   const colors = useThemedColors();
+  const isWeb = Platform.OS === 'web';
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
       borderRadius: radii.lg,
       overflow: 'hidden',
-      ...Platform.select({
-        web: {
-          boxShadow: colors.boxShadows.medium,
-        },
-        default: {
-          ...colors.shadows.medium,
-        },
-      }),
+      ...(isWeb
+        ? ({ boxShadow: colors.boxShadows.medium } as any)
+        : { ...colors.shadows.medium }),
     },
     gradient: {
       padding: spacing.lg,
@@ -46,11 +42,7 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       fontSize: 24,
       fontWeight: '700',
       color: colors.textOnPrimary,
-      ...Platform.select({
-        web: {
-          fontFamily: 'Georgia, serif',
-        },
-      }),
+      ...(isWeb ? ({ fontFamily: 'Georgia, serif' } as any) : null),
     },
     subtitle: {
       fontSize: 15,
@@ -72,15 +64,15 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       paddingVertical: spacing.md,
       borderRadius: radii.md,
       minHeight: 44,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-          transition: 'transform 0.2s ease',
-          ':hover': {
-            transform: 'translateY(-2px)',
-          },
-        } as any,
-      }),
+      ...(isWeb
+        ? ({
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease',
+            ':hover': {
+              transform: 'translateY(-2px)',
+            },
+          } as any)
+        : null),
     },
     primaryButtonText: {
       fontSize: 15,
@@ -98,15 +90,15 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       borderWidth: 1,
       borderColor: colors.primaryLight,
       minHeight: 44,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer',
-          transition: 'background-color 0.2s ease',
-          ':hover': {
-            backgroundColor: colors.primaryLight,
-          },
-        } as any,
-      }),
+      ...(isWeb
+        ? ({
+            cursor: 'pointer',
+            transition: 'background-color 0.2s ease',
+            ':hover': {
+              backgroundColor: colors.primaryLight,
+            },
+          } as any)
+        : null),
     },
     secondaryButtonText: {
       fontSize: 15,
@@ -123,7 +115,7 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
       fontWeight: '600',
       color: colors.primary,
     },
-  }), [colors]);
+  }), [colors, isWeb]);
 
   if (compact) {
     return (
@@ -154,11 +146,6 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
               style={styles.primaryButton}
               onPress={() => router.push('/travel/new')}
               accessibilityLabel="Создать путешествие"
-              {...Platform.select({
-                web: {
-                  cursor: 'pointer',
-                },
-              })}
             >
               <Feather name="plus" size={18} color={colors.primary} />
               <Text style={styles.primaryButtonText}>Создать путешествие</Text>
@@ -168,11 +155,6 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
               style={styles.secondaryButton}
               onPress={() => router.push('/map')}
               accessibilityLabel="Открыть карту"
-              {...Platform.select({
-                web: {
-                  cursor: 'pointer',
-                },
-              })}
             >
               <Feather name="map" size={18} color={colors.primary} />
               <Text style={styles.secondaryButtonText}>На карте</Text>

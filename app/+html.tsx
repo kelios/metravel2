@@ -119,18 +119,18 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <meta charSet="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
 
-      {/* Perf hints - DNS prefetch и preconnect для внешних ресурсов */}
-      <link rel="dns-prefetch" href="//metravelprod.s3.eu-north-1.amazonaws.com" />
-      <link rel="preconnect" href="https://metravelprod.s3.eu-north-1.amazonaws.com" crossOrigin="anonymous" />
-
       {/* Icons */}
       <link rel="icon" href="/favicon.ico" sizes="any" />
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-      {/* Preload Feather icon font to prevent CLS */}
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
+      <link
+        rel="preload"
+        as="font"
+        type="font/ttf"
+        crossOrigin="anonymous"
+        href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.a76d309774d33d9856f650bed4292a23.ttf"
+      />
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />

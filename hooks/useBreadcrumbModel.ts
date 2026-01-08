@@ -59,6 +59,11 @@ function normalizePathname(pathname: string | null | undefined) {
   return pathname;
 }
 
+ function normalizeSlugPart(value: string | null) {
+   if (!value) return null;
+   return String(value).trim().split('#')[0].split('%23')[0] || null;
+ }
+
 function getResolvedPathname(pathname: string | null | undefined) {
   const normalized = normalizePathname(pathname);
   // Предпочитаем значение из роутера; к window обращаемся только если pathname пуст
@@ -121,7 +126,8 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     if (!p || !p.startsWith('/travels/')) return null;
     const parts = p.split('/').filter(Boolean);
     const idx = parts.indexOf('travels');
-    return idx >= 0 && parts[idx + 1] ? String(parts[idx + 1]) : null;
+    const raw = idx >= 0 && parts[idx + 1] ? String(parts[idx + 1]) : null;
+    return normalizeSlugPart(raw);
   }, [resolvedPathname]);
 
   const { data: travelData } = useQuery({

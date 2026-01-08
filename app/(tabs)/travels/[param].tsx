@@ -1,6 +1,5 @@
 import React from 'react'
-import { Platform } from 'react-native'
-import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer'
+import { Platform, View } from 'react-native'
 
 export default function TravelDetailsScreen() {
   if (Platform.OS !== 'web') {
@@ -8,5 +7,10 @@ export default function TravelDetailsScreen() {
     return <TravelDetailsNative />
   }
 
-  return <TravelDetailsContainer />
+  const TravelDetailsLazy = React.lazy(() => import('@/components/travel/details/TravelDetailsContainer'))
+  return (
+    <React.Suspense fallback={<View />}>
+      <TravelDetailsLazy />
+    </React.Suspense>
+  )
 }

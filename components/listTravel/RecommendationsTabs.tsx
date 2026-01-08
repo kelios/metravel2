@@ -18,7 +18,6 @@ import {
   Animated,
   FlatList,
 } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
@@ -66,14 +65,14 @@ const AuthGate = ({
   <View style={styles.gateContainer}>
     <View style={styles.gateCard}>
       <View style={styles.gateIcon}>
-        <MaterialIcons name="lock" size={24} color={colors.primary} />
+        <Feather name="lock" size={24} color={colors.primary} />
       </View>
       <View style={styles.gateCopy}>
         <Text style={styles.gateText}>{message}</Text>
       </View>
       <Pressable style={styles.gateButton} onPress={onLogin} accessibilityRole="button">
         <Text style={styles.gateButtonText}>Войти</Text>
-        <MaterialIcons name="arrow-forward" size={18} color={colors.primary} style={{ marginLeft: 6 }} />
+        <Feather name="arrow-right" size={18} color={colors.primary} style={{ marginLeft: 6 } as any} />
       </Pressable>
     </View>
   </View>
@@ -216,10 +215,10 @@ const RecommendationsTabs = memo(
     // Табы с бейджами
     const tabs = useMemo(
       () => [
-        { id: 'highlights' as const, label: 'Подборка месяца', icon: 'auto-awesome' },
+        { id: 'highlights' as const, label: 'Подборка месяца', icon: 'zap' },
         { id: 'recommendations' as const, label: 'Рекомендации', icon: 'star' },
-        { id: 'favorites' as const, label: 'Избранное', icon: 'favorite', count: isAuthenticated ? favorites.length : 0 },
-        { id: 'history' as const, label: 'История', icon: 'history', count: isAuthenticated ? viewHistory.length : 0 },
+        { id: 'favorites' as const, label: 'Избранное', icon: 'heart', count: isAuthenticated ? favorites.length : 0 },
+        { id: 'history' as const, label: 'История', icon: 'clock', count: isAuthenticated ? viewHistory.length : 0 },
       ],
       [favorites.length, isAuthenticated, viewHistory.length]
     );
@@ -302,7 +301,7 @@ const RecommendationsTabs = memo(
           }
           return renderTabPane(
             favorites.length === 0 ? (
-              <EmptyState message="Избранное пусто" icon="favorite-border" styles={styles} colors={colors} />
+              <EmptyState message="Избранное пусто" icon="heart" styles={styles} colors={colors} />
             ) : (
               <View>
                 <View style={styles.favoritesHeaderRow}>
@@ -397,7 +396,7 @@ const RecommendationsTabs = memo(
           }
           return renderTabPane(
             viewHistory.length === 0 ? (
-              <EmptyState message="История просмотров пуста" icon="history" styles={styles} colors={colors} />
+              <EmptyState message="История просмотров пуста" icon="clock" styles={styles} colors={colors} />
             ) : (
               <View>
                 <View style={styles.favoritesHeaderRow}>
@@ -451,7 +450,7 @@ const RecommendationsTabs = memo(
                           country: item.country ?? (item as any).countryName ?? null,
                         }}
                         badge={{
-                          icon: 'history',
+                          icon: 'clock',
                           backgroundColor: colors.overlay,
                           iconColor: colors.textOnDark,
                         }}
@@ -473,7 +472,7 @@ const RecommendationsTabs = memo(
                           country: item.country ?? (item as any).countryName ?? null,
                         }}
                         badge={{
-                          icon: 'history',
+                          icon: 'clock',
                           backgroundColor: colors.overlay,
                           iconColor: colors.textOnDark,
                         }}
@@ -512,7 +511,7 @@ const RecommendationsTabs = memo(
                 onLayout={(e) => handleTabLayout(tab.id, e)}
                 style={[styles.tab, activeTab === tab.id && styles.activeTab]}
               >
-                <MaterialIcons
+                <Feather
                   name={tab.icon as any}
                   size={18}
                   color={activeTab === tab.id ? colors.primary : colors.textMuted}
@@ -579,7 +578,7 @@ const EmptyState = ({
   colors: ReturnType<typeof useThemedColors>;
 }) => (
   <View style={styles.emptyState}>
-    <MaterialIcons name={icon} size={48} color={colors.textTertiary} />
+    <Feather name={icon} size={48} color={colors.textTertiary} />
     <Text style={styles.emptyText}>{message}</Text>
   </View>
 );

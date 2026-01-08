@@ -108,8 +108,8 @@ describe('ArticleEditor.ios Component', () => {
     const TouchableOpacity = require('react-native').TouchableOpacity;
     const buttons = UNSAFE_queryAllByType(TouchableOpacity);
     
-    // Should have Undo, Redo, and Image buttons
-    expect(buttons.length).toBe(3);
+    // Should have Undo, Redo, Image, and Anchor buttons
+    expect(buttons.length).toBe(4);
   });
 
   it('should not render image picker button for compact variant', () => {
@@ -124,8 +124,8 @@ describe('ArticleEditor.ios Component', () => {
     const TouchableOpacity = require('react-native').TouchableOpacity;
     const buttons = UNSAFE_queryAllByType(TouchableOpacity);
     
-    // Should have only Undo and Redo buttons
-    expect(buttons.length).toBe(2);
+    // Should have Undo, Redo, and Anchor buttons
+    expect(buttons.length).toBe(3);
   });
 
   it('should handle content changes from WebView', async () => {

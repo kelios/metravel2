@@ -2,7 +2,6 @@ import React, { useEffect, Suspense, lazy, useState, useCallback, memo, useMemo 
 import { View, StyleSheet, FlatList, Platform, Animated } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -10,6 +9,23 @@ import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
 
 const isWeb = Platform.OS === 'web';
+
+const queueAnalyticsEvent = (eventName: string, eventParams: Record<string, unknown> = {}) => {
+  const run = () => {
+    import('@/src/utils/analytics')
+      .then((m) => m.sendAnalyticsEvent(eventName, eventParams))
+      .catch(() => {
+        // noop
+      });
+  };
+
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(run, { timeout: 2000 });
+    return;
+  }
+
+  setTimeout(run, 0);
+};
 
 const HomeTrustBlock = lazy(() => import('./HomeTrustBlock'));
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));
@@ -95,12 +111,7 @@ function Home() {
       travelsCountBucket: travelsCount === 0 ? '0' : travelsCount <= 3 ? '1-3' : '4+',
     };
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(() => sendAnalyticsEvent('HomeViewed', payload));
-      return;
-    }
-
-    setTimeout(() => sendAnalyticsEvent('HomeViewed', payload), 0);
+    queueAnalyticsEvent('HomeViewed', payload);
   }, [isFocused, isAuthenticated, travelsCount]);
 
   const sections = useMemo(() => (

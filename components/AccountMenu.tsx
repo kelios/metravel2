@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Menu } from 'react-native-paper';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -280,7 +279,7 @@ function AccountMenu() {
                 onError={() => setAvatarLoadError(true)}
               />
             ) : (
-              <MaterialIcons name="account-circle" size={24} color={colors.text} />
+              <Feather name="user" size={24} color={colors.text} />
             )}
           </View>
 
@@ -289,14 +288,10 @@ function AccountMenu() {
           </Text>
 
           <View style={styles.chevronSlot}>
-            <MaterialIcons
-              name={visible ? 'expand-less' : 'expand-more'}
+            <Feather
+              name={visible ? 'chevron-up' : 'chevron-down'}
               size={18}
-              color={
-                visible || hovered
-                  ? colors.primary
-                  : colors.textMuted
-              }
+              color={visible || hovered ? colors.primary : colors.textMuted}
             />
           </View>
         </Pressable>
@@ -307,14 +302,14 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/login')}
             title="Войти"
-            leadingIcon={({ size }) => <MaterialIcons name="login" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="log-in" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/registration')}
             title="Зарегистрироваться"
-            leadingIcon={({ size }) => <MaterialIcons name="person-add" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="user-plus" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
@@ -346,14 +341,14 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/privacy')}
             title="Политика конфиденциальности"
-            leadingIcon={({ size }) => <MaterialIcons name="security" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="shield" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/cookies')}
             title="Настройки cookies"
-            leadingIcon={({ size }) => <MaterialIcons name="cookie" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="settings" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
@@ -363,7 +358,7 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/profile')}
             title={`Личный кабинет${favorites.length > 0 ? ` (${favorites.length})` : ''}`}
-            leadingIcon={({ size }) => <MaterialIcons name="account-circle" size={size} color={styles.iconPrimary.color} />}
+            leadingIcon={({ size }) => <Feather name="user" size={size} color={styles.iconPrimary.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitleStrong}
           />
@@ -393,14 +388,14 @@ function AccountMenu() {
               })
             }
             title="Мои путешествия"
-            leadingIcon={({ size }) => <MaterialIcons name="public" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="map" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/travel/new')}
             title="Поделиться путешествием"
-            leadingIcon={({ size }) => <MaterialIcons name="share" size={size} color={styles.iconPrimary.color} />}
+            leadingIcon={({ size }) => <Feather name="share-2" size={size} color={styles.iconPrimary.color} />}
             style={styles.menuItemPrimary}
             titleStyle={styles.menuItemTitlePrimary}
           />
@@ -411,21 +406,21 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/export')}
             title="Экспорт в PDF"
-            leadingIcon={({ size }) => <MaterialIcons name="picture-as-pdf" size={size} color={colors.danger} />}
+            leadingIcon={({ size }) => <Feather name="file-text" size={size} color={colors.danger} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={handleOpenPublicProfile}
             title="Публичный профиль"
-            leadingIcon={({ size }) => <MaterialIcons name="person" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="users" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={handleLogout}
             title="Выход"
-            leadingIcon={({ size }) => <MaterialIcons name="logout" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="log-out" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
@@ -443,14 +438,14 @@ function AccountMenu() {
           <Menu.Item
             onPress={() => handleNavigate('/privacy')}
             title="Политика конфиденциальности"
-            leadingIcon={({ size }) => <MaterialIcons name="security" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="shield" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
             onPress={() => handleNavigate('/cookies')}
             title="Настройки cookies"
-            leadingIcon={({ size }) => <MaterialIcons name="cookie" size={size} color={styles.iconMuted.color} />}
+            leadingIcon={({ size }) => <Feather name="settings" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}
             titleStyle={styles.menuItemTitle}
           />

@@ -72,7 +72,7 @@ export function optimizeImageUrl(
     
     // Handle both absolute and relative URLs
     let url: URL;
-    if (secureUrl.startsWith('https://')) {
+    if (secureUrl.startsWith('https://') || secureUrl.startsWith('http://')) {
       url = new URL(secureUrl);
     } else if (secureUrl.startsWith('/')) {
       // Relative URL starting with /

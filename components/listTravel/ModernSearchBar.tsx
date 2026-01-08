@@ -10,7 +10,6 @@ import {
   Animated,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
 import { BlurView } from 'expo-blur';
 
@@ -185,10 +184,10 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
                 showRecommendations && styles.recommendButtonActive,
               ]}
             >
-              <MaterialIcons 
-                name="auto-awesome" 
-                size={18} 
-                color={showRecommendations ? colors.accent.amber : colors.neutral[400]} 
+              <Feather
+                name="zap"
+                size={18}
+                color={showRecommendations ? colors.accent.amber : colors.neutral[400]}
               />
             </Pressable>
           )}

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
@@ -701,7 +701,6 @@ test.describe('Милестоны (Навигация по шагам)', () => {
     await clickNext(page);
 
     // Проверяем галочку на шаге 1
-    const _step1 = page.locator('[aria-label="Перейти к шагу 1"]');
     // await expect(step1.locator('text=✓')).toBeVisible();
   });
 });

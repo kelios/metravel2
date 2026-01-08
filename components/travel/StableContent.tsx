@@ -358,6 +358,25 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
   const [iframeModel, setIframeModel] = useState<IframeModelType | null>(null);
   const prepared = useMemo(() => prepareHtml(html), [html]);
 
+  const scrollToHashTarget = (hash: string) => {
+    try {
+      if (Platform.OS !== "web") return false;
+      if (typeof document === "undefined") return false;
+      const raw = String(hash || "");
+      if (!raw.startsWith("#")) return false;
+      const id = decodeURIComponent(raw.slice(1));
+      if (!id) return false;
+      const el =
+        document.getElementById(id) ||
+        (document.querySelector(`[name="${CSS?.escape ? CSS.escape(id) : id}"]`) as HTMLElement | null);
+      if (!el) return false;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   // базовая типографика — ПИКСЕЛИ, не коэффициент!
   const BASE_FONT_SIZE = Platform.select({ ios: 16, android: 16, default: 17 })!;
   const BASE_LINE_HEIGHT = Math.round(BASE_FONT_SIZE * 1.55); // ~1.55em
@@ -397,33 +416,76 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
   useEffect(() => {
     if (Platform.OS !== "web") return;
     const onClick = (e: any) => {
-      const root = (e.target as HTMLElement)?.closest?.(".yt-lite") as HTMLElement | null;
-      if (!root) return;
-      const vid = root.getAttribute("data-yt");
-      if (!vid) return;
-      const iframe = document.createElement("iframe");
-      iframe.width = "560";
-      iframe.height = "315";
-      iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
-      iframe.title = "YouTube video";
-      iframe.allow =
-        "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-      // @ts-ignore
-      iframe.allowFullscreen = true;
-      Object.assign(iframe.style, {
-        position: "absolute",
-        inset: "0",
-        width: "100%",
-        height: "100%",
-        border: "0",
-      });
-      // ✅ ИСПРАВЛЕНИЕ: Используем replaceChildren() вместо innerHTML = "" - более безопасно
-      root.replaceChildren();
-      root.appendChild(iframe);
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      const ytRoot = target.closest?.(".yt-lite") as HTMLElement | null;
+      if (ytRoot) {
+        const vid = ytRoot.getAttribute("data-yt");
+        if (!vid) return;
+        const iframe = document.createElement("iframe");
+        iframe.width = "560";
+        iframe.height = "315";
+        iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
+        iframe.title = "YouTube video";
+        iframe.allow =
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+        // @ts-ignore
+        iframe.allowFullscreen = true;
+        Object.assign(iframe.style, {
+          position: "absolute",
+          inset: "0",
+          width: "100%",
+          height: "100%",
+          border: "0",
+        });
+        ytRoot.replaceChildren();
+        ytRoot.appendChild(iframe);
+        return;
+      }
+
+      const anchor = target.closest?.(`.${WEB_RICH_TEXT_CLASS} a[href^="#"]`) as HTMLAnchorElement | null;
+      if (!anchor) return;
+      const href = anchor.getAttribute("href") || "";
+      if (!href.startsWith("#")) return;
+      const didScroll = scrollToHashTarget(href);
+      if (didScroll) {
+        e.preventDefault?.();
+        try {
+          window.history.pushState(null, "", href);
+        } catch {
+          window.location.hash = href;
+        }
+      }
     };
-    document.addEventListener("click", onClick, { passive: true });
+    document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick as any);
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (!hash) return;
+    let cancelled = false;
+    let tries = 0;
+    const maxTries = 20;
+    const intervalMs = 150;
+    const tick = () => {
+      if (cancelled) return;
+      tries += 1;
+      const done = scrollToHashTarget(hash);
+      if (done || tries >= maxTries) {
+        cancelled = true;
+      }
+    };
+    const id = window.setInterval(tick, intervalMs);
+    window.setTimeout(tick, 0);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [prepared]);
 
   const renderers = useMemo(() => {
     return {

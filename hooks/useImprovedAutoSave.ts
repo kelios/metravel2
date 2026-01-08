@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import _isEqual from 'lodash/isEqual';
+import isEqual from 'fast-deep-equal';
 
 interface UseImprovedAutoSaveOptions<T> {
   debounce?: number;
@@ -112,7 +112,7 @@ export function useImprovedAutoSave<T>(
 
   // Check if data has changed - inline function, not in dependencies
   const hasDataChanged = (): boolean => {
-    return !_isEqual(data, lastSavedDataRef.current);
+    return !isEqual(data, lastSavedDataRef.current);
   };
 
   // Save function with retry logic
@@ -220,9 +220,9 @@ export function useImprovedAutoSave<T>(
     }
 
     // Нет изменений относительно последнего успешного сохранения — ничего не планируем.
-    const isEqual = _isEqual(data, lastSavedDataRef.current);
+    const isEqualResult = isEqual(data, lastSavedDataRef.current);
 
-    if (isEqual) {
+    if (isEqualResult) {
       return;
     }
 
@@ -256,7 +256,7 @@ export function useImprovedAutoSave<T>(
       // Если к моменту срабатывания таймера данные уже совпадают с последним сохранённым,
       // то сохранять нечего.
       const current = latestDataRef.current;
-      if (_isEqual(current, lastSavedDataRef.current)) {
+      if (isEqual(current, lastSavedDataRef.current)) {
         return;
       }
 

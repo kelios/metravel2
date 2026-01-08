@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
-import _isEqual from 'lodash/isEqual';
+import isEqual from 'fast-deep-equal';
 
 interface UseOptimizedFormStateOptions<T> {
   debounce?: number;
@@ -85,7 +85,7 @@ export function useOptimizedFormState<T extends Record<string, any>>(
   ) => {
     setState(prevState => {
       const newData = { ...prevState.data, [field]: value };
-      const isDirty = !_isEqual(newData, originalDataRef.current);
+      const isDirty = !isEqual(newData, originalDataRef.current);
       
       return {
         ...prevState,
@@ -113,7 +113,7 @@ export function useOptimizedFormState<T extends Record<string, any>>(
   const updateFields = useCallback((updates: Partial<T>) => {
     setState(prevState => {
       const newData = { ...prevState.data, ...updates };
-      const isDirty = !_isEqual(newData, originalDataRef.current);
+      const isDirty = !isEqual(newData, originalDataRef.current);
       const newTouched = new Set(prevState.touched);
       
       Object.keys(updates).forEach(key => newTouched.add(key));

@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 import type { Theme } from '@/hooks/useTheme';
 
@@ -77,9 +77,9 @@ export default function ThemeToggle({
   );
 
   const themeOptions: Array<{ value: Theme; icon: string; label: string }> = [
-    { value: 'light', icon: 'wb-sunny', label: 'Светлая' },
-    { value: 'dark', icon: 'dark-mode', label: 'Темная' },
-    { value: 'auto', icon: 'brightness-auto', label: 'Авто' },
+    { value: 'light', icon: 'sun', label: 'Светлая' },
+    { value: 'dark', icon: 'moon', label: 'Темная' },
+    { value: 'auto', icon: 'monitor', label: 'Авто' },
   ];
 
   return (
@@ -110,11 +110,7 @@ export default function ThemeToggle({
               : {})}
           >
             <View style={styles.iconWrapper}>
-              <MaterialIcons
-                name={option.icon}
-                size={20}
-                color={isActive ? colors.textOnPrimary : colors.text}
-              />
+              <Feather name={option.icon as any} size={20} color={isActive ? colors.textOnPrimary : colors.text} />
             </View>
             {showLabels && (
               <Text style={[styles.label, isActive && styles.labelActive]}>

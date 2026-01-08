@@ -66,6 +66,17 @@ config.resolver = {
           type: 'sourceFile',
         };
       }
+      if (
+        moduleName === '@expo/vector-icons/MaterialCommunityIcons' ||
+        normalizedModuleName === '@expo/vector-icons/MaterialCommunityIcons' ||
+        moduleName === 'react-native-vector-icons/MaterialCommunityIcons' ||
+        normalizedModuleName === 'react-native-vector-icons/MaterialCommunityIcons'
+      ) {
+        return {
+          filePath: path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
+          type: 'sourceFile',
+        };
+      }
     }
     // На веб заменяем react-native-maps на пустой stub
     // Проверяем platform напрямую и через context
@@ -130,6 +141,8 @@ config.resolver = {
     ...(config.resolver.extraNodeModules || {}),
     'html2canvas': path.resolve(__dirname, 'metro-stubs/html2canvas.js'),
     'leaflet': path.resolve(__dirname, 'metro-stubs/leaflet.js'),
+    '@expo/vector-icons/MaterialCommunityIcons': path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
+    'react-native-vector-icons/MaterialCommunityIcons': path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
   },
 }
 

@@ -1,6 +1,6 @@
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { fetchTravelsOfMonth } from '@/src/api/map';
@@ -149,7 +149,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <MaterialIcons name="expand-more" size={20} color={colors.primary} />
+                        <Feather name="chevron-down" size={20} color={colors.primary} />
                         <Text style={[styles.expandButtonText, { color: colors.primary }]}>Подборка месяца</Text>
                     </Pressable>
                 </View>
@@ -162,12 +162,12 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
             {showHeader && (
                 <>
                     <View style={styles.header}>
-                        <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
-                            <MaterialIcons name="auto-awesome" size={20} color={colors.primary} />
+                        <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}> 
+                            <Feather name="star" size={20} color={colors.primary} />
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={[styles.title, { color: colors.text }]}>Подборка месяца</Text>
-                            <View style={[styles.badgeContainer, { backgroundColor: colors.primarySoft }]}>
+                            <View style={[styles.badgeContainer, { backgroundColor: colors.primarySoft }]}> 
                                 <Text style={[styles.badgeText, { color: colors.primary }]}>Выбор месяца</Text>
                             </View>
                         </View>

@@ -347,7 +347,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       if (anchor?.current && scrollRef.current) {
         anchor.current.measureLayout(
           scrollRef.current as any,
-          (x, y) => {
+          (_x, y) => {
             scrollRef.current?.scrollTo({ y, animated: true });
           },
           () => {

@@ -24,6 +24,18 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toBe('<div></div>')
   })
 
+  it('preserves anchor ids and hash links', () => {
+    const html = [
+      '<p><a href="#day-3">Go</a></p>',
+      '<p><span id="day-3"></span>Target</p>',
+    ].join('')
+
+    const sanitized = sanitizeRichText(html)
+
+    expect(sanitized).toContain('href="#day-3"')
+    expect(sanitized).toContain('id="day-3"')
+  })
+
   it('sanitizeRichTextForPdf preserves formatting and images', () => {
     const html = [
       '<h2>Маршрут</h2>',

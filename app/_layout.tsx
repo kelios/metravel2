@@ -351,13 +351,6 @@ function ThemedContent({
                                   <title key="fallback-title">{defaultTitle}</title>
                                   <meta key="fallback-description" name="description" content={defaultDescription} />
                                   <link key="fallback-canonical" rel="canonical" href={canonical} />
-                                  {/* Оптимизация шрифтов - font-display: swap уже в +html.tsx */}
-                                  {Platform.OS === 'web' && (
-                                      <>
-                                          <link rel="preconnect" href="https://fonts.googleapis.com" crossOrigin="anonymous" />
-                                          <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
-                                      </>
-                                  )}
                               </Head>
 
                               {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
@@ -431,7 +424,19 @@ function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
         };
     }, [colors, isDark]);
 
-    return <PaperProvider theme={paperTheme}>{children}</PaperProvider>;
+    return (
+      <PaperProvider
+        theme={paperTheme}
+        settings={{
+          icon: (props: any) => {
+            const name = props?.name;
+            return <Feather {...props} name={name} />;
+          },
+        }}
+      >
+        {children}
+      </PaperProvider>
+    );
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({

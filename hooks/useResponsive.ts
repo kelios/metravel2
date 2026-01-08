@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Dimensions } from 'react-native';
 import { METRICS } from '@/constants/layout';
 
@@ -33,6 +33,50 @@ interface ResponsiveState {
   isBetween: (min: Breakpoint, max: Breakpoint) => boolean;
 }
 
+type DimensionsSnapshot = {
+  width: number;
+  height: number;
+};
+
+let currentSnapshot: DimensionsSnapshot = (() => {
+  const { width, height } = Dimensions.get('window');
+  return { width, height };
+})();
+
+const subscribers = new Set<() => void>();
+let subscription: { remove: () => void } | null = null;
+
+const ensureSubscription = () => {
+  if (subscription) return;
+  subscription = Dimensions.addEventListener('change', ({ window }) => {
+    currentSnapshot = { width: window.width, height: window.height };
+    subscribers.forEach((cb) => {
+      try {
+        cb();
+      } catch {
+        // noop
+      }
+    });
+  }) as any;
+};
+
+const subscribe = (onStoreChange: () => void) => {
+  subscribers.add(onStoreChange);
+  ensureSubscription();
+  return () => {
+    subscribers.delete(onStoreChange);
+    if (subscribers.size === 0 && subscription) {
+      try {
+        subscription.remove();
+      } finally {
+        subscription = null;
+      }
+    }
+  };
+};
+
+const getSnapshot = () => currentSnapshot;
+
 /**
  * Enhanced responsive hook that provides screen size and orientation information
  * with TypeScript support and performance optimizations
@@ -53,20 +97,7 @@ interface ResponsiveState {
  * }
  */
 export function useResponsive(): ResponsiveState {
-  const [dimensions, setDimensions] = useState(() => {
-    const { width, height } = Dimensions.get('window');
-    return { width, height };
-  });
-
-  useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setDimensions(window);
-    });
-
-    return () => subscription?.remove();
-  }, []);
-
-  const { width, height } = dimensions;
+  const { width, height } = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   const isPortrait = height > width;
   const orientation: Orientation = isPortrait ? 'portrait' : 'landscape';
 
@@ -79,46 +110,63 @@ export function useResponsive(): ResponsiveState {
   const isDesktop = width >= METRICS.breakpoints.desktop;
   const isMobile = width < METRICS.breakpoints.tablet;
 
-  // Helper functions
-  const isAtLeast = (breakpoint: Breakpoint): boolean => {
+  const isAtLeast = useCallback((breakpoint: Breakpoint): boolean => {
     return width >= METRICS.breakpoints[breakpoint];
-  };
+  }, [width]);
 
-  const isAtMost = (breakpoint: Breakpoint): boolean => {
+  const isAtMost = useCallback((breakpoint: Breakpoint): boolean => {
     return width <= METRICS.breakpoints[breakpoint];
-  };
+  }, [width]);
 
-  const isBetween = (min: Breakpoint, max: Breakpoint): boolean => {
+  const isBetween = useCallback((min: Breakpoint, max: Breakpoint): boolean => {
     return width >= METRICS.breakpoints[min] && width <= METRICS.breakpoints[max];
-  };
+  }, [width]);
 
-  return {
-    // Screen size flags
-    isSmallPhone,
-    isPhone,
-    isLargePhone,
-    isTablet,
-    isLargeTablet,
-    isDesktop,
-    isMobile,
-    
-    // Screen dimensions
-    width,
-    height,
-    
-    // Orientation
-    isPortrait,
-    isLandscape: !isPortrait,
-    orientation,
-    
-    // Breakpoints
-    breakpoints: METRICS.breakpoints,
-    
-    // Helper methods
-    isAtLeast,
-    isAtMost,
-    isBetween,
-  };
+  return useMemo(
+    () => ({
+      // Screen size flags
+      isSmallPhone,
+      isPhone,
+      isLargePhone,
+      isTablet,
+      isLargeTablet,
+      isDesktop,
+      isMobile,
+
+      // Screen dimensions
+      width,
+      height,
+
+      // Orientation
+      isPortrait,
+      isLandscape: !isPortrait,
+      orientation,
+
+      // Breakpoints
+      breakpoints: METRICS.breakpoints,
+
+      // Helper methods
+      isAtLeast,
+      isAtMost,
+      isBetween,
+    }),
+    [
+      height,
+      isAtLeast,
+      isAtMost,
+      isBetween,
+      isDesktop,
+      isLargePhone,
+      isLargeTablet,
+      isMobile,
+      isPhone,
+      isPortrait,
+      isSmallPhone,
+      isTablet,
+      orientation,
+      width,
+    ],
+  );
 }
 
 /**

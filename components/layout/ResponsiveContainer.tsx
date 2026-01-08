@@ -3,7 +3,7 @@
  * Обеспечивает единообразное поведение на всех устройствах
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { METRICS } from '@/constants/layout';
@@ -33,8 +33,12 @@ export default function ResponsiveContainer({
 }: ResponsiveContainerProps) {
   const { isSmallPhone, isPhone, isLargePhone, isTablet } = useResponsive();
 
-  // Определяем padding на основе размера экрана
-  const getPadding = () => {
+  const resolvedMaxWidth = useMemo(() => {
+    if (typeof maxWidth === 'number') return maxWidth;
+    return METRICS.containers[maxWidth];
+  }, [maxWidth]);
+
+  const resolvedPadding = useMemo(() => {
     if (!padding && !paddingHorizontal && !paddingVertical) return {};
 
     const horizontal = padding || paddingHorizontal;
@@ -61,26 +65,19 @@ export default function ResponsiveContainer({
       };
     }
 
-    // Desktop
     return {
       paddingHorizontal: horizontal ? METRICS.spacing.xxl : 0,
       paddingVertical: vertical ? METRICS.spacing.xl : 0,
     };
-  };
-
-  // Определяем максимальную ширину
-  const getMaxWidth = () => {
-    if (typeof maxWidth === 'number') return maxWidth;
-    return METRICS.containers[maxWidth];
-  };
+  }, [isSmallPhone, isPhone, isLargePhone, isTablet, padding, paddingHorizontal, paddingVertical]);
 
   return (
     <View
       style={[
         styles.container,
         {
-          maxWidth: getMaxWidth(),
-          ...getPadding(),
+          maxWidth: resolvedMaxWidth,
+          ...resolvedPadding,
         },
         center && styles.center,
         style,

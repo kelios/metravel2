@@ -67,11 +67,33 @@ export function useUpsertTravelController(): UpsertTravelController {
     authReady,
   });
 
+  // Draft recovery for unsaved changes
+  const draftRecoveryHook = useDraftRecovery({
+    travelId: id as string | null,
+    isNew,
+    currentData: form.formData,
+    enabled: isAuthenticated && !form.isInitialLoading,
+  });
+
+  const saveDraft = draftRecoveryHook.saveDraft;
+  const clearDraft = draftRecoveryHook.clearDraft;
+
+  const handleManualSaveWithDraftClear = useCallback(
+    async (...args: any[]) => {
+      const result = await (form.handleManualSave as any)(...args);
+      if (clearDraft) {
+        await clearDraft();
+      }
+      return result;
+    },
+    [form.handleManualSave, clearDraft]
+  );
+
   const wizard = useTravelWizard({
     totalSteps: 6,
     hasUnsavedChanges: form.autosave.hasUnsavedChanges,
     canSave: form.autosave.canSave,
-    onSave: form.handleManualSave,
+    onSave: handleManualSaveWithDraftClear,
     stepStorageKey,
   });
 
@@ -80,22 +102,14 @@ export function useUpsertTravelController(): UpsertTravelController {
     currentStep: wizard.currentStep,
   });
 
-  // Draft recovery for unsaved changes
-  const draftRecoveryHook = useDraftRecovery({
-    travelId: id as string | null,
-    isNew,
-    enabled: isAuthenticated,
-  });
-
-  const saveDraft = draftRecoveryHook.saveDraft;
-  const clearDraft = draftRecoveryHook.clearDraft;
-
   // Auto-save draft on form changes
   useEffect(() => {
     if (!form.formData) return;
     if (!saveDraft) return;
+    if (!form.formState?.isDirty) return;
+    if (!form.hasUserInteracted) return;
     saveDraft(form.formData);
-  }, [form.formData, saveDraft]);
+  }, [form.formData, form.formState?.isDirty, form.hasUserInteracted, saveDraft]);
 
   // Clear draft after successful save
   useEffect(() => {
@@ -168,7 +182,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     filters,
     isFiltersLoading,
 
-    handleManualSave: form.handleManualSave,
+    handleManualSave: handleManualSaveWithDraftClear,
     handleCountrySelect: form.handleCountrySelect,
     handleCountryDeselect: form.handleCountryDeselect,
 

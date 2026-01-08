@@ -1,7 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import isEqual from 'fast-deep-equal';
 import type { TravelFormData } from '@/src/types/types';
+
+function stripUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(v => stripUndefinedDeep(v)) as T;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, stripUndefinedDeep(v)]);
+    return Object.fromEntries(entries) as T;
+  }
+
+  return value;
+}
 
 const DRAFT_STORAGE_KEY = 'metravel_travel_draft';
 const DRAFT_DEBOUNCE_MS = 2000;
@@ -15,6 +31,7 @@ interface DraftRecoveryState {
 interface UseDraftRecoveryOptions {
   travelId: string | null;
   isNew: boolean;
+  currentData?: TravelFormData | null;
   enabled?: boolean;
 }
 
@@ -40,7 +57,7 @@ interface UseDraftRecoveryReturn {
  * Automatically saves form data to storage and provides recovery options.
  */
 export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftRecoveryReturn {
-  const { travelId, isNew, enabled = true } = options;
+  const { travelId, isNew, currentData, enabled = true } = options;
 
   const [state, setState] = useState<DraftRecoveryState>({
     hasPendingDraft: false,
@@ -49,11 +66,14 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   });
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const checkedDraftKeyRef = useRef<string | null>(null);
   const draftKey = `${DRAFT_STORAGE_KEY}_${isNew ? 'new' : travelId}`;
 
   // Check for existing draft on mount
   useEffect(() => {
     if (!enabled) return;
+    if (checkedDraftKeyRef.current === draftKey) return;
+    checkedDraftKeyRef.current = draftKey;
 
     const checkForDraft = async () => {
       try {
@@ -65,6 +85,20 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
             const maxAge = 24 * 60 * 60 * 1000;
             const age = Date.now() - parsed.timestamp;
             if (age < maxAge) {
+              // If the stored draft is identical to current data, it isn't a recoverable draft.
+              // This can happen when we saved drafts during initial load in older versions.
+              if (
+                currentData &&
+                isEqual(stripUndefinedDeep(parsed.data), stripUndefinedDeep(currentData))
+              ) {
+                await removeStorageItem(draftKey);
+                setState({
+                  hasPendingDraft: false,
+                  draftTimestamp: null,
+                  isRecovering: false,
+                });
+                return;
+              }
               setState({
                 hasPendingDraft: true,
                 draftTimestamp: parsed.timestamp,
@@ -82,7 +116,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     };
 
     checkForDraft();
-  }, [draftKey, enabled]);
+  }, [draftKey, enabled, currentData]);
 
   // Save draft with debouncing
   const saveDraft = useCallback((data: TravelFormData) => {
@@ -96,7 +130,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     debounceTimerRef.current = setTimeout(async () => {
       try {
         const draftData = {
-          data,
+          data: stripUndefinedDeep(data),
           timestamp: Date.now(),
         };
         await setStorageItem(draftKey, JSON.stringify(draftData));

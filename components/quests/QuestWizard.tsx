@@ -21,6 +21,7 @@ import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native
 import BelkrajWidget from "@/components/belkraj/BelkrajWidget";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 
 const QuestFullMap = lazy(() => import("@/components/quests/QuestFullMap"));
@@ -324,6 +325,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
+    const { width: screenW, height: screenH } = useResponsive();
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [unlockedIndex, setUnlockedIndex] = useState(0);
     const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -333,17 +336,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
     const suppressSave = useRef(false);
 
-    // адаптация к ширине/высоте
-    const [screenW, setScreenW] = useState(Dimensions.get('window').width);
-    const [screenH, setScreenH] = useState(Dimensions.get('window').height);
     const compactNav = screenW < 600;
     const wideDesktop = screenW >= 900;
-    useEffect(() => {
-        const sub = Dimensions.addEventListener('change', ({ window }) => {
-            setScreenW(window.width); setScreenH(window.height);
-        });
-        return () => (sub as any)?.remove?.();
-    }, []);
 
     // Загрузка прогресса
     useEffect(() => {

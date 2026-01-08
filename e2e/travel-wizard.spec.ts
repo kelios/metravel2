@@ -1,4 +1,5 @@
-import { test, expect, request } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { request } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 
@@ -1009,14 +1010,6 @@ test.describe('Создание путешествия - Полный flow', () 
     const readJson: any = await readResp.json().catch(() => null);
     expect(readJson?.name).toBe('Тест автосохранения');
     await api.dispose();
-  });
-});
-
-test.describe('Редактирование путешествия', () => {
-  test.beforeEach(async ({ page }) => {
-    if (!travelId) return;
-    await maybeLogin(page);
-    await page.goto('/');
   });
 
   test('должен открыть существующее путешествие для редактирования', async ({ page }) => {

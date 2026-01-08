@@ -11,7 +11,6 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import IconButton from '@/components/ui/IconButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import SearchAutocomplete from '@/components/SearchAutocomplete';
@@ -463,8 +462,8 @@ function SearchAndFilterBar({
                     justifyContent: 'center',
                     gap: spacing.xxs,
                 }}>
-                    <MaterialIcons
-                        name="lightbulb-outline"
+                    <Feather
+                        name="zap"
                         size={isMobile ? 18 : 20}
                         color={isRecommendationsVisible ? colors.primary : colors.textMuted}
                     />

@@ -7,11 +7,16 @@ import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { retry, isRetryableError } from '@/src/utils/retry';
 import { getSecureItem } from '@/src/utils/secureStorage';
 import { apiClient } from '@/src/api/client';
+import { Platform } from 'react-native';
+
+const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 
 const rawApiUrl: string =
     process.env.NODE_ENV === 'test'
         ? 'http://example.test/api'
-        : (process.env.EXPO_PUBLIC_API_URL || '');
+        : (Platform.OS === 'web' && !isLocalApi && typeof window !== 'undefined' && window.location?.origin
+            ? `${window.location.origin}/api`
+            : (process.env.EXPO_PUBLIC_API_URL || ''));
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
@@ -349,7 +354,7 @@ export const fetchTravels = async (
 
 export const fetchRandomTravels = async (
     page: number,
-    itemsPerPage: number,
+    _itemsPerPage: number,
     search: string,
     urlParams: Record<string, any>,
     options?: { signal?: AbortSignal }

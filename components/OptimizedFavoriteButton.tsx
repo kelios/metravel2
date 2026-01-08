@@ -1,7 +1,7 @@
 // Оптимизированный FavoriteButton для списков
 import React, { memo, useMemo } from 'react';
 import { StyleSheet, Platform, Pressable, View } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
@@ -84,10 +84,11 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                 style={[styles.favoriteButton, style, { cursor: 'pointer' } as any]}
                 data-testid="favorite-button"
             >
-                <MaterialIcons
-                    name={serverIsFav ? 'favorite' : 'favorite-border'}
+                <Feather
+                    name="heart"
                     size={size}
                     color={serverIsFav ? colors.danger : colors.textMuted}
+                    {...(!serverIsFav ? ({ style: { opacity: 0.55 } } as any) : null)}
                 />
             </WebView>
         );
@@ -100,10 +101,11 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             hitSlop={10}
             testID="favorite-button"
         >
-            <MaterialIcons
-                name={serverIsFav ? 'favorite' : 'favorite-border'}
+            <Feather
+                name="heart"
                 size={size}
                 color={serverIsFav ? colors.danger : colors.textMuted}
+                {...(!serverIsFav ? ({ style: { opacity: 0.55 } } as any) : null)}
             />
         </Pressable>
     );

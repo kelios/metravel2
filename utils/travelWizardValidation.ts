@@ -181,7 +181,7 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
  * Валидация конкретного поля
  */
 export function validateField(
-  fieldName: string,
+  _fieldName: string,
   value: unknown,
   rules: FieldRule | undefined
 ): FieldValidationResult {

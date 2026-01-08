@@ -12,8 +12,13 @@ import {
     removeSecureItems 
 } from '@/src/utils/secureStorage';
 
+const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
+
 const rawApiUrl: string =
-    process.env.EXPO_PUBLIC_API_URL || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
+    (Platform.OS === 'web' && !isLocalApi && typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/api`
+        : process.env.EXPO_PUBLIC_API_URL) ||
+    (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }

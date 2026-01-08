@@ -1,8 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useOptimizedFormState } from '@/hooks/useOptimizedFormState';
 
-// Mock lodash isEqual
-jest.mock('lodash/isEqual', () => ({
+jest.mock('fast-deep-equal', () => ({
   __esModule: true,
   default: jest.fn((a: any, b: any) => JSON.stringify(a) === JSON.stringify(b)),
 }));

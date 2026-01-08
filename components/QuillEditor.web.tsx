@@ -1,3 +1,14 @@
 import ReactQuill from 'react-quill'
 
+try {
+  const Quill = (ReactQuill as any).Quill
+  if (Quill && !Quill.__METRAVEL_ID_ATTR_REGISTERED__) {
+    const Parchment = Quill.import('parchment')
+    const IdAttribute = new Parchment.Attributor.Attribute('id', 'id')
+    Quill.register(IdAttribute, true)
+    Quill.__METRAVEL_ID_ATTR_REGISTERED__ = true
+  }
+} catch {
+}
+
 export default ReactQuill

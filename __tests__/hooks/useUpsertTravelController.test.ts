@@ -26,6 +26,10 @@ jest.mock('@/hooks/useTravelFilters', () => ({
   useTravelFilters: jest.fn(),
 }));
 
+jest.mock('@/hooks/useDraftRecovery', () => ({
+  useDraftRecovery: jest.fn(),
+}));
+
 describe('useUpsertTravelController', () => {
   const mockUseLocalSearchParams = require('expo-router').useLocalSearchParams as jest.Mock;
   const mockUseAuth = require('@/context/AuthContext').useAuth as jest.Mock;
@@ -33,6 +37,7 @@ describe('useUpsertTravelController', () => {
   const mockUseTravelFormData = require('@/hooks/useTravelFormData').useTravelFormData as jest.Mock;
   const mockUseTravelWizard = require('@/hooks/useTravelWizard').useTravelWizard as jest.Mock;
   const mockUseTravelFilters = require('@/hooks/useTravelFilters').useTravelFilters as jest.Mock;
+  const mockUseDraftRecovery = require('@/hooks/useDraftRecovery').useDraftRecovery as jest.Mock;
 
   const baseWizard = {
     currentStep: 1,
@@ -54,11 +59,13 @@ describe('useUpsertTravelController', () => {
   const baseForm = {
     isInitialLoading: false,
     hasAccess: true,
+    hasUserInteracted: false,
     formData: { id: null, countries: [], categories: [] },
     setFormData: jest.fn(),
     markers: [],
     setMarkers: jest.fn(),
     travelDataOld: null,
+    formState: { isDirty: false },
     autosave: {
       status: 'idle',
       hasUnsavedChanges: false,
@@ -103,6 +110,16 @@ describe('useUpsertTravelController', () => {
     mockUseTravelFilters.mockReturnValue({
       filters: baseFilters,
       isLoading: false,
+    });
+
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft: jest.fn(),
+      clearDraft: jest.fn(async () => undefined),
     });
   });
 
@@ -165,5 +182,84 @@ describe('useUpsertTravelController', () => {
       loadOnMount: true,
       currentStep: 4,
     });
+  });
+
+  it('does not save local draft when form is dirty but user did not interact', () => {
+    const saveDraft = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft,
+      clearDraft: jest.fn(async () => undefined),
+    });
+
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formState: { isDirty: true },
+      hasUserInteracted: false,
+      formData: { id: 1, countries: [], categories: [] },
+    });
+
+    renderHook(() => useUpsertTravelController());
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it('saves local draft when form is dirty and user interacted', () => {
+    const saveDraft = jest.fn();
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft,
+      clearDraft: jest.fn(async () => undefined),
+    });
+
+    const formData = { id: 1, countries: [], categories: [] };
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      formState: { isDirty: true },
+      hasUserInteracted: true,
+      formData,
+    });
+
+    renderHook(() => useUpsertTravelController());
+    expect(saveDraft).toHaveBeenCalledTimes(1);
+    expect(saveDraft).toHaveBeenCalledWith(formData);
+  });
+
+  it('clears local draft after manual save to prevent draft popup after reload', async () => {
+    const clearDraft = jest.fn(async () => undefined);
+    const saveDraft = jest.fn();
+
+    mockUseDraftRecovery.mockReturnValue({
+      hasPendingDraft: false,
+      draftTimestamp: null,
+      isRecovering: false,
+      recoverDraft: jest.fn(async () => null),
+      dismissDraft: jest.fn(async () => undefined),
+      saveDraft,
+      clearDraft,
+    });
+
+    const handleManualSave = jest.fn(async () => ({ id: 1 } as any));
+    mockUseTravelFormData.mockReturnValue({
+      ...baseForm,
+      hasUserInteracted: true,
+      formState: { isDirty: true },
+      formData: { id: 1, countries: [], categories: [] },
+      handleManualSave,
+    });
+
+    const { result } = renderHook(() => useUpsertTravelController());
+
+    await result.current.handleManualSave();
+
+    expect(handleManualSave).toHaveBeenCalledTimes(1);
+    expect(clearDraft).toHaveBeenCalledTimes(1);
   });
 });

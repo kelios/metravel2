@@ -1,7 +1,7 @@
 // ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
 import React, { useMemo, memo, useCallback, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -149,7 +149,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                         style={styles.expandButton}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <MaterialIcons name="expand-more" size={20} color={colors.primary} />
+                        <Feather name="chevron-down" size={20} color={colors.primary} />
                         <Text style={styles.expandButtonText}>Персонализация</Text>
                     </Pressable>
                 </View>
@@ -164,7 +164,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <>
                         <View style={styles.header}>
                             <View style={[styles.iconContainer, { backgroundColor: colors.backgroundSecondary }]}>
-                                <MaterialIcons name="star" size={24} color={colors.primary} />
+                                <Feather name="star" size={24} color={colors.primary} />
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
@@ -180,7 +180,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <View style={[styles.promptCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                         <View style={styles.promptLead}>
                             <View style={styles.promptIcon}>
-                                <MaterialIcons name="login" size={28} color={colors.primary} />
+                                <Feather name="log-in" size={28} color={colors.primary} />
                             </View>
                             <View style={styles.promptCopy}>
                                 <Text style={[styles.promptText, !isMobile && styles.promptTextDesktop]}>
@@ -194,12 +194,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                             android_ripple={{ color: colors.primarySoft }}
                         >
                             <Text style={styles.loginButtonText}>Войти или зарегистрироваться</Text>
-                            <MaterialIcons
-                              name="arrow-forward"
-                              size={18}
-                              color={colors.primary}
-                              style={{ marginLeft: 6 }}
-                            />
+                            <Feather name="arrow-right" size={18} color={colors.primary} style={{ marginLeft: 6 } as any} />
                         </Pressable>
                     </View>
                 </View>
@@ -216,7 +211,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                     <>
                         <View style={styles.header}>
                             <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
-                                <MaterialIcons name="star" size={24} color={colors.primary} />
+                                <Feather name="star" size={24} color={colors.primary} />
                             </View>
                             <View style={styles.titleContainer}>
                                 <Text style={styles.title}>Рекомендации для вас</Text>
@@ -232,7 +227,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 <View style={[styles.emptyCard, isMobile ? styles.promptCardMobile : styles.promptCardDesktop]}>
                     <View style={styles.promptLead}>
                         <View style={styles.promptIcon}>
-                            <MaterialIcons name="explore" size={28} color={colors.textMuted} />
+                            <Feather name="compass" size={28} color={colors.textMuted} />
                         </View>
                         <View style={styles.promptCopy}>
                             <Text style={[styles.emptyText, !isMobile && styles.promptTextDesktop]}>
@@ -251,7 +246,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                 <>
                     <View style={styles.header}>
                         <View style={[styles.iconContainer, { backgroundColor: colors.primarySoft }]}>
-                            <MaterialIcons name="star" size={24} color={colors.primary} />
+                            <Feather name="star" size={24} color={colors.primary} />
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={styles.title}>Рекомендации для вас</Text>

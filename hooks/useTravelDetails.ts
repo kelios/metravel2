@@ -24,7 +24,10 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const slug = Array.isArray(param) ? param[0] : (param ?? '');
   const idNum = Number(slug);
   const isId = !Number.isNaN(idNum);
-  const normalizedSlug = String(slug ?? '').trim();
+  const normalizedSlug = String(slug ?? '')
+    .trim()
+    .split('#')[0]
+    .split('%23')[0];
   const isMissingParam = normalizedSlug.length === 0;
 
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({

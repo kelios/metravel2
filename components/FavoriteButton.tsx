@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { TouchableOpacity, StyleSheet, Platform, View } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
@@ -182,10 +182,11 @@ export default function FavoriteButton({
                       accessibilityState: { selected: isFav },
                   })}
         >
-            <MaterialIcons
-                name={isFav ? 'favorite' : 'favorite-border'}
+            <Feather
+                name={isFav ? 'heart' : 'heart'}
                 size={size}
                 color={color || (isFav ? colors.danger : colors.textMuted)}
+                {...(!isFav ? ({ style: { opacity: 0.55 } } as any) : null)}
             />
         </ButtonComponent>
     );

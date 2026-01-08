@@ -3,14 +3,14 @@ import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export type UnifiedTravelCardBadge = {
-  icon: keyof typeof MaterialIcons.glyphMap;
+  icon: keyof typeof Feather.glyphMap;
   backgroundColor: string;
   iconColor: string;
 };
@@ -99,18 +99,6 @@ function UnifiedTravelCard({
           justifyContent: 'center',
           alignItems: 'center',
           backgroundColor: colors.backgroundSecondary,
-        },
-        placeholderContent: {
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-        },
-        placeholderText: {
-          fontSize: 12,
-          fontWeight: '600',
-          color: colors.textMuted,
-          letterSpacing: -0.1,
-          opacity: 0.8,
         },
         imageTitleOverlay: {
           position: 'absolute',
@@ -264,12 +252,12 @@ function UnifiedTravelCard({
               prefetch={mediaProps?.prefetch ?? false}
             />
           ) : (
-            <View style={styles.imagePlaceholder} testID="image-stub">
-              <View style={styles.placeholderContent}>
-                <MaterialIcons name="image" size={26} color={colors.textMuted} style={{ opacity: 0.55 }} />
-                <Text style={styles.placeholderText}>Нет фото</Text>
-              </View>
-            </View>
+            <View
+              style={styles.imagePlaceholder}
+              testID="image-stub"
+              accessibilityElementsHidden={true}
+              aria-hidden={true}
+            />
           )}
 
           {heroTitleOverlay ? (
@@ -298,7 +286,7 @@ function UnifiedTravelCard({
           {rightTopSlot ? <View style={styles.rightTopSlot}>{rightTopSlot}</View> : null}
           {badge ? (
             <View style={[styles.badge, { backgroundColor: badge.backgroundColor }]}>
-              <MaterialIcons name={badge.icon as any} size={14} color={badge.iconColor} />
+              <Feather name={badge.icon as any} size={14} color={badge.iconColor} />
             </View>
           ) : null}
           {bottomLeftSlot ? <View style={styles.bottomLeftSlot}>{bottomLeftSlot}</View> : null}
@@ -315,7 +303,7 @@ function UnifiedTravelCard({
               </Text>
             )}
             <View style={styles.metaRow}>
-              <MaterialIcons name="place" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
+              <Feather name="map-pin" size={12} color={colors.textMuted} style={{ marginRight: 4 } as any} />
               <Text style={styles.metaText} numberOfLines={1}>
                 {metaText || ' '}
               </Text>

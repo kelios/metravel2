@@ -118,6 +118,8 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
     const [html, setHtml] = useState(content);
     const [fullscreen, setFullscreen] = useState(false);
     const [showHtml, setShowHtml] = useState(false);
+    const [anchorModalVisible, setAnchorModalVisible] = useState(false);
+    const [anchorValue, setAnchorValue] = useState('');
 
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
@@ -311,6 +313,43 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         );
     });
 
+    const normalizeAnchorId = useCallback((value: string) => {
+        const raw = String(value ?? '').trim().toLowerCase();
+        const collapsed = raw
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9\-_]+/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+        return collapsed;
+    }, []);
+
+    const insertAnchor = useCallback((idRaw: string) => {
+        if (!quillRef.current) return;
+        const editor = quillRef.current.getEditor();
+        const id = normalizeAnchorId(idRaw);
+        if (!id) {
+            Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
+            return;
+        }
+
+        const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
+        const htmlSnippet = `<span id="${id}"></span>`;
+        try {
+            editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
+            editor.setSelection(range.index + 1, 0, 'silent');
+            fireChange(editor.root.innerHTML);
+        } catch (e) {
+            try {
+                editor.insertText(range.index, `#${id} `, 'user');
+                fireChange(editor.root.innerHTML);
+            } catch (inner) {
+                if (__DEV__) {
+                    console.warn('Failed to insert anchor into editor', { e, inner });
+                }
+            }
+        }
+    }, [fireChange, normalizeAnchorId]);
+
     const Toolbar = () => (
         <View style={dynamicStyles.bar}>
             <Text style={dynamicStyles.label}>{label}</Text>
@@ -367,6 +406,16 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                     }}
                     label="Вставить изображение"
                 />
+
+                <IconButton
+                    name="bookmark"
+                    onPress={() => {
+                        tmpStoredRange.current = quillRef.current?.getEditor().getSelection() ?? null;
+                        setAnchorValue('');
+                        setAnchorModalVisible(true);
+                    }}
+                    label="Вставить якорь"
+                />
             </View>
         </View>
     );
@@ -414,6 +463,65 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         <>
             <Toolbar />
             <View style={dynamicStyles.editorArea}>{editorArea}</View>
+            <Modal
+                visible={anchorModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setAnchorModalVisible(false)}
+            >
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: DESIGN_TOKENS.spacing.lg }}>
+                    <View style={{ backgroundColor: colors.surface, borderRadius: DESIGN_TOKENS.radii.md, borderWidth: 1, borderColor: colors.border, padding: DESIGN_TOKENS.spacing.lg }}>
+                        <Text style={{ color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '600' as const, marginBottom: DESIGN_TOKENS.spacing.sm }}>
+                            Вставить якорь
+                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm, marginBottom: DESIGN_TOKENS.spacing.md }}>
+                            Идентификатор (например: day-3)
+                        </Text>
+                        <TextInput
+                            value={anchorValue}
+                            onChangeText={setAnchorValue}
+                            placeholder="day-3"
+                            placeholderTextColor={colors.textSecondary}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            style={{
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                                borderRadius: DESIGN_TOKENS.radii.sm,
+                                paddingHorizontal: DESIGN_TOKENS.spacing.md,
+                                paddingVertical: DESIGN_TOKENS.spacing.sm,
+                                color: colors.text,
+                                backgroundColor: colors.surface,
+                                marginBottom: DESIGN_TOKENS.spacing.md,
+                            }}
+                        />
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                            <TouchableOpacity
+                                onPress={() => setAnchorModalVisible(false)}
+                                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
+                                accessibilityRole="button"
+                                accessibilityLabel="Отмена"
+                            >
+                                <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm }}>Отмена</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setAnchorModalVisible(false);
+                                    if (tmpStoredRange.current && quillRef.current) {
+                                        quillRef.current.getEditor().setSelection(tmpStoredRange.current, 'silent');
+                                    }
+                                    insertAnchor(anchorValue);
+                                }}
+                                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
+                                accessibilityRole="button"
+                                accessibilityLabel="Вставить"
+                            >
+                                <Text style={{ color: colors.primary, fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600' as const }}>Вставить</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </>
     );
 

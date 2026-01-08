@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState, memo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Linking, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
@@ -26,13 +25,30 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const isWeb = Platform.OS === 'web';
   const [hydrated, setHydrated] = useState(!isWeb);
 
+  const queueAnalyticsEvent = (eventName: string, eventParams: Record<string, unknown> = {}) => {
+    const run = () => {
+      import('@/src/utils/analytics')
+        .then((m) => m.sendAnalyticsEvent(eventName, eventParams))
+        .catch(() => {
+          // noop
+        });
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(run, { timeout: 2000 });
+      return;
+    }
+
+    setTimeout(run, 0);
+  };
+
   useEffect(() => {
     if (!isWeb) return;
     setHydrated(true);
   }, [isWeb]);
 
   const handleCreateBook = () => {
-    sendAnalyticsEvent('HomeClick_CreateBook');
+    queueAnalyticsEvent('HomeClick_CreateBook');
     if (!isAuthenticated) {
       router.push('/login?redirect=%2F&intent=create-book' as any);
     } else if (travelsCount === 0) {
@@ -43,12 +59,12 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   };
 
   const handleOpenSearch = () => {
-    sendAnalyticsEvent('HomeClick_OpenSearch');
+    queueAnalyticsEvent('HomeClick_OpenSearch');
     router.push('/search' as any);
   };
 
   const handleOpenArticle = () => {
-    sendAnalyticsEvent('HomeClick_TrainArticle');
+    queueAnalyticsEvent('HomeClick_TrainArticle');
     Linking.openURL(articleUrl);
   };
 
@@ -60,6 +76,34 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const isMobile = isSmallPhone || isPhone;
   const showImage = hydrated && (isTablet || isDesktop);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!showImage) return;
+    if (typeof document === 'undefined') return;
+
+    const asset = Image.resolveAssetSource(require('../../assets/images/pdf.webp'));
+    const href = typeof asset?.uri === 'string' ? asset.uri : '';
+    if (!href) return;
+
+    const id = 'preload-home-hero-pdf';
+    if (document.getElementById(id)) return;
+
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = href;
+    document.head.appendChild(link);
+
+    return () => {
+      try {
+        link.parentNode?.removeChild(link);
+      } catch {
+        // noop
+      }
+    };
+  }, [showImage]);
 
   const styles = useMemo(() => StyleSheet.create({
     band: {
