@@ -7,6 +7,18 @@ if (typeof globalThis !== 'undefined' && typeof globalThis._WORKLET === 'undefin
   globalThis._WORKLET = false;
 }
 
+if (
+  typeof globalThis !== 'undefined' &&
+  typeof globalThis._getAnimationTimestamp !== 'function'
+) {
+  globalThis._getAnimationTimestamp = () => {
+    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+      return performance.now();
+    }
+    return Date.now();
+  };
+}
+
 // Suppress noisy React Native Web AppRegistry startup banner.
 // This banner is printed by react-native-web when NODE_ENV is not production/test.
 // We filter only that specific message to keep other logs intact.

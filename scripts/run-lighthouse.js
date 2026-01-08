@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const http = require('http')
+const https = require('https')
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
@@ -131,6 +132,71 @@ const server = http.createServer((req, res) => {
   try {
     const url = new URL(req.url || '/', `http://${host}:${port}`)
     let pathname = decodeURIComponent(url.pathname)
+
+    if (pathname.startsWith('/api/')) {
+      const apiOrigin = process.env.LIGHTHOUSE_API_ORIGIN || 'https://metravel.by'
+      const targetUrl = new URL(`${apiOrigin}${pathname}${url.search}`)
+
+      const proxyModule = targetUrl.protocol === 'http:' ? http : https
+
+      const insecureTls = process.env.LIGHTHOUSE_API_INSECURE === '1'
+      const agent =
+        targetUrl.protocol === 'https:'
+          ? new https.Agent({ rejectUnauthorized: !insecureTls })
+          : undefined
+
+      // Forward only a minimal, safe subset of headers.
+      // Headless Chrome sends many `sec-*` and fetch metadata headers that can
+      // trigger different behavior server-side and break proxying.
+      const rawHeaders = {
+        accept: req.headers.accept,
+        'accept-language': req.headers['accept-language'],
+        'user-agent': req.headers['user-agent'],
+        // Keep compression to avoid large payloads.
+        'accept-encoding': req.headers['accept-encoding'] || 'gzip, br',
+        // If API uses cookies (unlikely), keep them.
+        cookie: req.headers.cookie,
+        connection: 'close',
+      }
+
+      const headers = Object.fromEntries(
+        Object.entries(rawHeaders).filter(([, v]) => v !== undefined && v !== null)
+      )
+
+      const proxyReq = proxyModule.request(
+        {
+          protocol: targetUrl.protocol,
+          hostname: targetUrl.hostname,
+          port:
+            Number(targetUrl.port) || (targetUrl.protocol === 'http:' ? 80 : 443),
+          agent,
+          method: req.method,
+          path: `${targetUrl.pathname}${targetUrl.search}`,
+          headers: {
+            ...headers,
+            host: targetUrl.hostname,
+          },
+        },
+        (proxyRes) => {
+          res.writeHead(proxyRes.statusCode || 502, proxyRes.headers)
+          proxyRes.pipe(res)
+        }
+      )
+
+      proxyReq.setTimeout(10_000, () => {
+        proxyReq.destroy(new Error('Proxy timeout'))
+      })
+
+      proxyReq.on('error', (error) => {
+        console.error('❌ API proxy error:', error && error.message ? error.message : error)
+        res.statusCode = 502
+        res.end('Bad gateway')
+      })
+
+      req.pipe(proxyReq)
+      return
+    }
+
     if (pathname.endsWith('/')) pathname += 'index.html'
 
     const resolvedPath = path.resolve(buildDir, `.${pathname}`)
@@ -177,6 +243,11 @@ server.on('error', (error) => {
 
 server.listen(port, host, () => {
   console.log(`✅ Lighthouse server running at ${targetUrl}`)
+
+  if (process.env.LIGHTHOUSE_NO_RUN === '1') {
+    console.log('ℹ️ LIGHTHOUSE_NO_RUN=1 set; server started without running Lighthouse')
+    return
+  }
 
   const args = [
     lighthousePackage,
