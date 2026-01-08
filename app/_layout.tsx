@@ -149,14 +149,12 @@ function RootLayoutNav() {
       return () => window.removeEventListener('resize', update);
     }, []);
 
-    // ✅ ИСПРАВЛЕНИЕ: Используем единый breakpoint из DESIGN_TOKENS
-    // На web useResponsive() обрабатывает SSR и возвращает корректную ширину.
-    const effectiveWidth =
-      Platform.OS === 'web'
-        ? width === 0
-          ? (clientWidth ?? 0)
-          : width
-        : width;
+    // ✅ ИСПРАВЛЕНИЕ: Детерминированная ширина на SSR и первом клиентском рендере.
+    // На web `useResponsive()` может сразу вернуть реальную ширину на клиенте,
+    // но на SSR она всегда 0, что приводит к разному дереву и hydration mismatch.
+    // Поэтому до маунта используем только `clientWidth` (null/0), а после эффекта
+    // она обновится и UI адаптируется уже после гидрации.
+    const effectiveWidth = Platform.OS === 'web' ? (clientWidth ?? 0) : width;
     // Важно: на SSR/первом клиентском рендере effectiveWidth может быть 0.
     // Делаем детерминированное значение (не читаем window в рендере), чтобы избежать hydration mismatch.
     const isMobile =
@@ -366,7 +364,7 @@ function ThemedContent({
                               {Platform.OS === 'web' && <SkipLinks />}
 
                               {/* ✅ FIX-005: Индикатор статуса сети */}
-                              <NetworkStatus position="top" />
+                              {(!isWeb || isMounted) && <NetworkStatus position="top" />}
 
                               <View style={[styles.content]}>
                                   <Stack screenOptions={{ headerShown: false }}>
@@ -378,9 +376,11 @@ function ThemedContent({
                               </View>
 
                               {/* Баннер согласия с компактным интерфейсом (web only) */}
-                              <React.Suspense fallback={null}>
-                                <ConsentBannerLazy />
-                              </React.Suspense>
+                              {(!isWeb || isMounted) && (
+                                <React.Suspense fallback={null}>
+                                  <ConsentBannerLazy />
+                                </React.Suspense>
+                              )}
 
                               {showFooter && (!isWeb || isMounted) && (
                                 <View style={[styles.footerWrapper, isWeb && isMobile ? ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 100 } as any) : null]}>

@@ -1,7 +1,6 @@
-import React, { memo, useMemo } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import React, { useMemo } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -11,13 +10,16 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 function HomeScreen() {
     const pathname = usePathname();
-    const isFocused = useIsFocused();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
 
-    const canonical = useMemo(() => `${SITE}${pathname || ''}`, [SITE, pathname]);
+    const canonical = useMemo(() => {
+        const raw = String(pathname ?? '').trim();
+        const normalized = raw === '' || raw === '/' ? '/' : raw.startsWith('/') ? raw : `/${raw}`;
+        return `${SITE}${normalized}`;
+    }, [SITE, pathname]);
 
     if (Platform.OS === 'web' && pathname && pathname !== '/' && pathname !== '') {
         return <View style={styles.container} />;
@@ -28,7 +30,7 @@ function HomeScreen() {
 
     return (
         <>
-            {isFocused && Platform.OS === 'web' && (
+            {Platform.OS === 'web' && (
                 <InstantSEO
                     headKey="home"
                     title={title}
@@ -74,4 +76,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
 });
 
-export default memo(HomeScreen);
+export default React.memo(HomeScreen);

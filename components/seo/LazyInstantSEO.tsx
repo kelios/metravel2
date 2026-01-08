@@ -13,8 +13,6 @@ type Props = {
   children?: React.ReactNode;
 };
 
-const InstantSEOLazy = React.lazy(() => import('./InstantSEO'));
-
 function StaticHead({
   headKey,
   title,
@@ -51,18 +49,8 @@ function StaticHead({
 
 export default function LazyInstantSEO(props: Props) {
   const isWeb = Platform.OS === 'web';
-  const isClient = typeof window !== 'undefined';
 
   if (!isWeb) return null;
 
-  return (
-    <>
-      {!isClient && <StaticHead {...props} />}
-      {isClient && (
-        <React.Suspense fallback={null}>
-          <InstantSEOLazy {...props} />
-        </React.Suspense>
-      )}
-    </>
-  );
+  return <StaticHead {...props} />;
 }

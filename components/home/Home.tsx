@@ -10,18 +10,17 @@ import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
 
 const isWeb = Platform.OS === 'web';
-const isClient = typeof window !== 'undefined';
 
-const HomeTrustBlock = isWeb && isClient ? lazy(() => import('./HomeTrustBlock')) : require('./HomeTrustBlock').default;
-const HomeHowItWorks = isWeb && isClient ? lazy(() => import('./HomeHowItWorks')) : require('./HomeHowItWorks').default;
-const HomeFAQSection = isWeb && isClient ? lazy(() => import('./HomeFAQSection')) : require('./HomeFAQSection').default;
+const HomeTrustBlock = lazy(() => import('./HomeTrustBlock'));
+const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));
+const HomeFAQSection = lazy(() => import('./HomeFAQSection'));
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
 const HomeFavoritesHistorySection = lazy(() => import('./HomeFavoritesHistorySection'));
 const HomeFinalCTA = lazy(() => import('./HomeFinalCTA'));
 
-const SectionSkeleton = memo(() => {
+const SectionSkeleton = memo(({ hydrated }: { hydrated: boolean }) => {
   const { isSmallPhone, isPhone } = useResponsive();
-  const isMobile = isSmallPhone || isPhone;
+  const isMobile = hydrated ? isSmallPhone || isPhone : false;
 
   return (
     <ResponsiveContainer padding>
@@ -45,7 +44,13 @@ function Home() {
   const colors = useThemedColors();
 
   const [showHeavyContent, setShowHeavyContent] = useState(false);
+  const [hydrated, setHydrated] = useState(!isWeb);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isWeb) return;
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,12 +122,14 @@ function Home() {
       case 'hero':
         return <HomeHero travelsCount={travelsCount} />;
       case 'trust':
+        if (!hydrated) return <View style={{ minHeight: 220 }} />;
         return (
           <Suspense fallback={<View style={{ minHeight: 220 }} />}>
             <HomeTrustBlock />
           </Suspense>
         );
       case 'howItWorks':
+        if (!hydrated) return <View style={{ minHeight: 320 }} />;
         return (
           <Suspense fallback={<View style={{ minHeight: 320 }} />}>
             <HomeHowItWorks />
@@ -141,14 +148,15 @@ function Home() {
       case 'inspiration':
         return showHeavyContent ? (
           <Animated.View style={{ opacity: fadeAnim }}>
-            <Suspense fallback={<SectionSkeleton />}>
+            <Suspense fallback={<SectionSkeleton hydrated={hydrated} />}>
               <HomeInspirationSections />
             </Suspense>
           </Animated.View>
         ) : (
-          <SectionSkeleton />
+          <SectionSkeleton hydrated={hydrated} />
         );
       case 'faq':
+        if (!hydrated) return <View style={{ minHeight: 260 }} />;
         return (
           <Suspense fallback={<View style={{ minHeight: 260 }} />}>
             <HomeFAQSection />
@@ -167,7 +175,7 @@ function Home() {
       default:
         return null;
     }
-  }, [travelsCount, showHeavyContent, fadeAnim]);
+  }, [travelsCount, showHeavyContent, hydrated, fadeAnim]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {

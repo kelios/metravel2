@@ -1,4 +1,4 @@
-import React, { useMemo, memo } from 'react';
+import React, { useEffect, useMemo, useState, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -22,6 +22,14 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
   const articleUrl =
     'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
+
+  const isWeb = Platform.OS === 'web';
+  const [hydrated, setHydrated] = useState(!isWeb);
+
+  useEffect(() => {
+    if (!isWeb) return;
+    setHydrated(true);
+  }, [isWeb]);
 
   const handleCreateBook = () => {
     sendAnalyticsEvent('HomeClick_CreateBook');
@@ -51,7 +59,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
-  const showImage = isTablet || isDesktop;
+  const showImage = hydrated && (isTablet || isDesktop);
 
   const styles = useMemo(() => StyleSheet.create({
     band: {

@@ -114,16 +114,10 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
 
 export default function Root({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" data-theme="light">
+    <html lang="ru" data-theme="light" suppressHydrationWarning>
     <head>
       <meta charSet="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
-
-      {/* Critical Meta */}
-      <meta property="og:type" content="website" />
-      <meta property="og:url" content="https://metravel.by" />
-      <meta property="og:image" content="https://metravel.by/og-preview.jpg" />
-      <meta name="twitter:card" content="summary_large_image" />
 
       {/* Perf hints - DNS prefetch и preconnect для внешних ресурсов */}
       <link rel="dns-prefetch" href="//metravelprod.s3.eu-north-1.amazonaws.com" />
@@ -146,26 +140,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Выключаем Expo Router Inspector */}
       <script
         dangerouslySetInnerHTML={{ __html: `window.__EXPO_ROUTER_INSPECTOR=false;` }}
-      />
-
-      {/* Синхронизация темы из localStorage перед первым рендером */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-(function() {
-  try {
-    var theme = localStorage.getItem('theme');
-    if (theme === 'dark' || theme === 'light') {
-      document.documentElement.setAttribute('data-theme', theme);
-    } else if (theme === 'auto') {
-      // Для auto режима используем системную тему
-      var isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    }
-  } catch (e) {}
-})();
-`,
-        }}
       />
 
       {/* Suppress known react-native-svg console errors */}
@@ -216,21 +190,36 @@ export default function Root({ children }: { children: React.ReactNode }) {
       dangerouslySetInnerHTML={{
         __html: `
 (function () {
+  // IMPORTANT: do not mutate DOM before React hydration.
   function optimizeLCP() {
-    const lcpImg = document.querySelector('[data-lcp]');
-    if (!lcpImg) return;
-    lcpImg.fetchpriority = 'high';
-    if (lcpImg.decode && lcpImg.complete) {
-      lcpImg.decode().catch((error) => {
-        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки декодирования изображения
-        if (typeof console !== 'undefined') {
-          console.warn('[LCP Optimization] Ошибка декодирования изображения:', error);
-        }
-      });
+    try {
+      const lcpImg = document.querySelector('[data-lcp]');
+      if (!lcpImg) return;
+      if (!lcpImg.getAttribute('fetchpriority')) {
+        lcpImg.setAttribute('fetchpriority', 'high');
+      }
+      if (lcpImg.decode && lcpImg.complete) {
+        lcpImg.decode().catch(() => undefined);
+      }
+    } catch (_) {
+      // noop
     }
   }
-  if (document.readyState !== 'loading') optimizeLCP();
-  else document.addEventListener('DOMContentLoaded', optimizeLCP);
+
+  function scheduleOptimize() {
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(optimizeLCP, { timeout: 2000 });
+    } else {
+      setTimeout(optimizeLCP, 1500);
+    }
+  }
+
+  // Run after full load to avoid hydration mismatch.
+  if (document.readyState === 'complete') {
+    scheduleOptimize();
+  } else {
+    window.addEventListener('load', scheduleOptimize, { once: true });
+  }
 })();
 `,
       }}
