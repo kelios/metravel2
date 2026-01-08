@@ -46,6 +46,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const [anchorModalVisible, setAnchorModalVisible] = useState(false);
   const [anchorValue, setAnchorValue] = useState('');
   const webViewRef = useRef<WebView>(null);
+  const lastWebViewHtmlRef = useRef<string>('');
+  const lastPropCleanedRef = useRef<string>('');
   const autosaveTimer = useRef<NodeJS.Timeout>();
   const { isAuthenticated } = useAuth();
 
@@ -72,7 +74,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const safeInitialContent = useMemo(() => safeJsonString(initialSanitizedContent), [initialSanitizedContent, safeJsonString]);
 
   // Quill HTML template with dynamic theme colors
-  const quillHTML = `
+  const quillHTML = useMemo(() => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -232,7 +234,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
           var id = normalizeAnchorId(data.id);
           if (!id) return;
           var range = quill.getSelection() || { index: quill.getLength(), length: 0 };
-          quill.clipboard.dangerouslyPasteHTML(range.index, '<span id="' + id + '"></span>', 'user');
+          quill.clipboard.dangerouslyPasteHTML(range.index, '<span id="' + id + '">&#8203;</span>', 'user');
           quill.setSelection(range.index + 1, 0);
         }
       } catch (err) {
@@ -247,7 +249,18 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   </script>
 </body>
 </html>
-  `;
+  `, [
+    colors.border,
+    colors.surface,
+    colors.surfaceElevated,
+    colors.text,
+    colors.textSecondary,
+    safeInitialContent,
+    safePlaceholder,
+    variant,
+  ]);
+
+  const webViewSource = useMemo(() => ({ html: quillHTML }), [quillHTML]);
 
   // Обработка сообщений от WebView
   const handleMessage = useCallback((event: any) => {
@@ -261,6 +274,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       if (data.type === 'content-change') {
         const newHtml = typeof data.html === 'string' ? data.html : '';
         const cleaned = sanitizeForEditor(newHtml);
+        lastWebViewHtmlRef.current = cleaned;
         setHtml(cleaned);
         onChange(cleaned);
         
@@ -282,7 +296,14 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   // Обновление контента при изменении prop
   useEffect(() => {
     const cleaned = sanitizeForEditor(content);
-    if (isReady && cleaned !== html) {
+    if (!isReady) return;
+    if (cleaned === lastWebViewHtmlRef.current) {
+      lastPropCleanedRef.current = cleaned;
+      return;
+    }
+    if (cleaned === lastPropCleanedRef.current) return;
+    lastPropCleanedRef.current = cleaned;
+    if (cleaned !== html) {
       webViewRef.current?.postMessage(JSON.stringify({
         type: 'set-content',
         html: cleaned
@@ -425,7 +446,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       <View style={styles.editorContainer}>
         <WebView
           ref={webViewRef}
-          source={{ html: quillHTML }}
+          source={webViewSource}
           onMessage={handleMessage}
           style={[styles.webView, { backgroundColor: colors.surface }]}
           scrollEnabled={true}

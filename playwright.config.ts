@@ -2,8 +2,9 @@ import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
 
 // Используем отдельный порт для e2e, чтобы не конфликтовать с локальной разработкой.
+// NOTE: prefer 127.0.0.1 over localhost to avoid IPv6 (::1) vs IPv4 binding mismatches on some systems.
 const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8085');
-const baseURL = process.env.BASE_URL || `http://localhost:${E2E_WEB_PORT}`;
+const baseURL = process.env.BASE_URL || `http://127.0.0.1:${E2E_WEB_PORT}`;
 const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.env.BASE_URL;
 
  const E2E_API_URL = process.env.E2E_API_URL;

@@ -424,6 +424,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     title={stepMeta?.title ?? 'Маршрут путешествия'}
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
+                    warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'К медиа'}
@@ -438,7 +439,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     onPreview={onPreview}
                 />
 
-                {validation.errors.length > 0 && (
+                {!isMobile && validation.errors.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>
                         <ValidationSummary
                             errorCount={validation.errors.length}

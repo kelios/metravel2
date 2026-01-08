@@ -25,6 +25,7 @@ const PDF_IMAGE_DEFAULT_PARAMS = 'w=1600&fit=inside'
 const allowedTags = Array.from(
   new Set([
     ...sanitizeHtml.defaults.allowedTags,
+    'span',
     'img',
     'figure',
     'figcaption',
@@ -264,6 +265,7 @@ export function sanitizeRichText(html?: string | null): string {
         const isHashLink = !!rawHref && rawHref.startsWith('#')
         const href = isHashLink ? rawHref : normalizeUrl(rawHref)
         const result: Record<string, string> = {}
+        if (attribs.id) result.id = attribs.id
         if (href) {
           result.href = href
           result.rel = attribs.rel || 'noopener noreferrer'

@@ -366,6 +366,56 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
   });
 });
 
+test.describe('ArticleEditor (Якоря в описании)', () => {
+  test('должен вставить якорь и показать его в HTML-режиме', async ({ page }) => {
+    await maybeMockNominatimSearch(page);
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    if (!(await ensureCanCreateTravel(page))) return;
+
+    await fillMinimumValidBasics(page, 'Тест якоря');
+
+    const anchorButton = page
+      .getByRole('button', { name: 'Вставить якорь' })
+      .or(page.locator('button[aria-label="Вставить якорь"]'));
+    await expect(anchorButton.first()).toBeVisible({ timeout: 30_000 });
+    await anchorButton.first().click({ force: true });
+
+    await expect(page.getByText('Вставить якорь', { exact: true })).toBeVisible({ timeout: 15_000 });
+
+    const anchorInput = page.getByPlaceholder('day-3').first();
+    await expect(anchorInput).toBeVisible({ timeout: 10_000 });
+    await anchorInput.fill('day-3');
+
+    const anchorDialog = page.getByRole('dialog').first();
+    await expect(anchorDialog).toBeVisible({ timeout: 10_000 });
+
+    const insertButton = anchorDialog.getByRole('button', { name: 'Вставить' }).first();
+    await expect(insertButton).toBeVisible({ timeout: 10_000 });
+    await insertButton.click({ force: true });
+
+    try {
+      await expect(anchorDialog).toBeHidden({ timeout: 15_000 });
+    } catch {
+      // Fallback: some overlays can intercept the click; close the dialog explicitly.
+      await page.keyboard.press('Escape').catch(() => null);
+      await expect(anchorDialog).toBeHidden({ timeout: 15_000 });
+    }
+
+    const codeButton = page
+      .getByRole('button', { name: /показать html-код/i })
+      .or(page.locator('button[aria-label*="HTML" i]'));
+    await expect(codeButton.first()).toBeVisible({ timeout: 30_000 });
+    await codeButton.first().click({ force: true });
+
+    const htmlTextarea = page.locator('textarea').first();
+    await expect(htmlTextarea).toBeVisible({ timeout: 15_000 });
+
+    await expect
+      .poll(async () => await htmlTextarea.inputValue().catch(() => ''), { timeout: 15_000 })
+      .toContain('<span id="day-3"');
+  });
+});
+
 test.describe('Поиск мест на карте (Location Search)', () => {
   test('должен найти место и добавить точку на карту', async ({ page }) => {
     await maybeMockNominatimSearch(page);

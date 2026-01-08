@@ -146,6 +146,9 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
             borderBottomWidth: 1,
             borderBottomColor: colors.border,
             backgroundColor: colors.surfaceElevated,
+            position: isWeb ? 'sticky' : 'relative',
+            top: isWeb ? 0 : undefined,
+            zIndex: isWeb ? 20 : undefined,
         },
         label: {
             fontSize: DESIGN_TOKENS.typography.sizes.md,
@@ -164,6 +167,9 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         editorArea: {
             flex: 1,
             minHeight: 0,
+            ...(isWeb
+                ? ({ maxHeight: 560, overflow: 'auto' } as any)
+                : null),
         },
         editor: { minHeight: 200, flex: 1 },
         html: {
@@ -333,7 +339,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         }
 
         const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
-        const htmlSnippet = `<span id="${id}"></span>`;
+        const htmlSnippet = `<span id="${id}">&#8203;</span>`;
         try {
             editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
             editor.setSelection(range.index + 1, 0, 'silent');
@@ -509,6 +515,16 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                                     setAnchorModalVisible(false);
                                     if (tmpStoredRange.current && quillRef.current) {
                                         quillRef.current.getEditor().setSelection(tmpStoredRange.current, 'silent');
+                                    }
+                                    if (showHtml) {
+                                        const id = normalizeAnchorId(anchorValue);
+                                        if (!id) {
+                                            Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
+                                            return;
+                                        }
+                                        const htmlSnippet = `<span id="${id}">&#8203;</span>`;
+                                        fireChange(`${html}${htmlSnippet}`);
+                                        return;
                                     }
                                     insertAnchor(anchorValue);
                                 }}

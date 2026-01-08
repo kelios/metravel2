@@ -171,6 +171,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     title={stepMeta?.title ?? 'О маршруте'}
                     subtitle={stepMeta?.subtitle ?? 'Укажите название и кратко опишите маршрут — это увидят в карточке и при публикации.'}
                     progressPercent={progressPercent}
+                    warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onGoNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'Далее'}
@@ -184,7 +185,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
                 />
-                {shouldShowValidationSummary && (
+                {shouldShowValidationSummary && !isMobile && (
                     <View style={styles.validationSummaryWrapper}>
                         <ValidationSummary
                             errorCount={validation.errors.length}

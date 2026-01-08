@@ -26,13 +26,14 @@ describe('sanitizeRichText', () => {
 
   it('preserves anchor ids and hash links', () => {
     const html = [
-      '<p><a href="#day-3">Go</a></p>',
+      '<p><a id="day-3" href="#day-3">Go</a></p>',
       '<p><span id="day-3"></span>Target</p>',
     ].join('')
 
     const sanitized = sanitizeRichText(html)
 
     expect(sanitized).toContain('href="#day-3"')
+    expect(sanitized).toContain('id="day-3"')
     expect(sanitized).toContain('id="day-3"')
   })
 

@@ -9,6 +9,7 @@ import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface TravelWizardStepDetailsProps {
     currentStep: number;
@@ -46,6 +47,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     onPreview,
 }) => {
     const colors = useThemedColors();
+    const { isMobile } = useResponsive();
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
 
@@ -95,6 +97,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     title={stepMeta?.title ?? 'Детали маршрута'}
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
+                    warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
@@ -106,7 +109,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
                 />
-                {validation.warnings.length > 0 && (
+                {!isMobile && validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>
                         <ValidationSummary
                             errorCount={validation.errors.length}

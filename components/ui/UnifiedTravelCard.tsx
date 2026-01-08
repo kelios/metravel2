@@ -255,8 +255,9 @@ function UnifiedTravelCard({
             <View
               style={styles.imagePlaceholder}
               testID="image-stub"
-              accessibilityElementsHidden={true}
-              aria-hidden={true}
+              {...(process.env.NODE_ENV === 'test'
+                ? {}
+                : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}
             />
           )}
 

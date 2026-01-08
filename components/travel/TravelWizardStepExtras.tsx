@@ -10,6 +10,7 @@ import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel, type TravelFilters } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface TravelWizardStepExtrasProps {
     currentStep: number;
@@ -58,6 +59,8 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     onPreview,
 }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
 
@@ -163,6 +166,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     title={stepMeta?.title ?? 'Доп. параметры'}
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
+                    warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'К публикации'}
@@ -174,7 +178,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
                 />
-                {validation.warnings.length > 0 && (
+                {!isMobile && validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>
                         <ValidationSummary
                             errorCount={validation.errors.length}

@@ -104,6 +104,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const suppressAutosaveErrorToastRef = useRef(false);
   const mountedRef = useRef(true); // ✅ FIX: Защита от memory leak
   const initialLoadKeyRef = useRef<string | null>(null);
+  const pendingBaselineRef = useRef<TravelFormData | null>(null);
 
   const formState = useOptimizedFormState(initialFormData, {
     debounce: 5000,
@@ -113,6 +114,15 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
   useEffect(() => {
     formDataRef.current = formState.data as TravelFormData;
+  }, [formState.data]);
+
+  useEffect(() => {
+    const pending = pendingBaselineRef.current;
+    if (!pending) return;
+    // Only update baseline once the reset payload is actually reflected in state.
+    if (formState.data !== pending) return;
+    updateBaselineRef.current?.(pending);
+    pendingBaselineRef.current = null;
   }, [formState.data]);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
@@ -383,6 +393,16 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         }
       };
 
+      const keepCurrentIfServerNilArray = <K extends keyof TravelFormData>(key: K) => {
+        const serverValue = (normalizedSavedData as any)[key];
+        const currentValue = (currentDataSnapshot as any)[key];
+        if (serverValue == null) {
+          if (Array.isArray(currentValue) && currentValue.length > 0) {
+            (normalizedSavedData as any)[key] = currentValue;
+          }
+        }
+      };
+
       const keepCurrentIfServerMissingImageUrl = <K extends keyof TravelFormData>(key: K) => {
         const serverValue = (normalizedSavedData as any)[key];
         const currentValue = (currentDataSnapshot as any)[key];
@@ -419,6 +439,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       keepCurrentIfServerMissingImageUrl('travel_image_thumb_url');
       keepCurrentIfServerMissingImageUrl('travel_image_thumb_small_url');
       keepCurrentIfServerEmptyArray('gallery');
+      keepCurrentIfServerNilArray('gallery');
 
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
         ? (normalizedSavedData.coordsMeTravel as any)
@@ -430,11 +451,14 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         : currentMarkers;
       const syncedCountries = syncCountriesFromMarkers(effectiveMarkers, normalizedSavedData.countries || []);
 
-      formState.reset({
+      const finalData = {
         ...normalizedSavedData,
         countries: syncedCountries,
         coordsMeTravel: effectiveMarkers,
-      });
+      };
+
+      pendingBaselineRef.current = finalData;
+      formState.reset(finalData);
       setMarkers(effectiveMarkers);
 
       // ✅ FIX: Обновляем версию данных при получении с сервера
@@ -591,7 +615,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         const savedData = await cleanAndSave(toSave);
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
         applySavedData(normalizedSavedData);
-        autosave?.updateBaseline?.(normalizedSavedData);
         autosave?.cancelPending?.();
         showToast('Сохранено');
         return savedData;

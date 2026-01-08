@@ -148,6 +148,39 @@ describe('ArticleEditor.ios Component', () => {
     });
   });
 
+  it('should include anchor insertion snippet in the editor HTML template', () => {
+    const { getByTestId } = renderComponent();
+
+    const webView = getByTestId('editor-webview');
+    const sourceHtml = (webView.props?.source?.html ?? '') as string;
+
+    expect(sourceHtml).toContain("type === 'insert-anchor'");
+    expect(sourceHtml).toContain('<span id="' + "' + id + '" + '">');
+    expect(sourceHtml).toContain('&#8203;');
+  });
+
+  it('should preserve inserted anchor span id in onChange (sanitized)', async () => {
+    const { getByTestId } = renderComponent();
+    const webView = getByTestId('editor-webview');
+
+    const htmlWithAnchor = '<p>Intro</p><p><span id="day-3">&#8203;</span>Target</p>';
+
+    fireEvent(webView, 'message', {
+      nativeEvent: {
+        data: JSON.stringify({
+          type: 'content-change',
+          html: htmlWithAnchor,
+        }),
+      },
+    });
+
+    await waitFor(() => {
+      expect(mockOnChange).toHaveBeenCalled();
+      const lastArg = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1]?.[0] as string;
+      expect(lastArg).toContain('id="day-3"');
+    });
+  });
+
   it('should handle ready message from WebView', async () => {
     const { getByTestId } = renderComponent();
 

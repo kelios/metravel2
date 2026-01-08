@@ -33,6 +33,7 @@ jest-results.json
 # Playwright artifacts
 /test-results/
 /playwright-report/
+.playwright-report-extracted/
 
 # Android sensitive files
 google-services.json
@@ -41,6 +42,10 @@ android-keystore.jks
 *.keystore
 *.jks
 upload-keystore.jks
+
+# Local tooling artifacts
+lighthouse-report*.json
+yarn-error.log
 
 # Android build files
 android/

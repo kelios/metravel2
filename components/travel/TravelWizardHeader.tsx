@@ -12,6 +12,8 @@ type TravelWizardHeaderProps = {
     title: string;
     subtitle: string;
     progressPercent: number;
+    warningCount?: number;
+    onWarningsPress?: () => void;
     autosaveBadge?: string;
     onPrimary?: () => void;
     primaryLabel?: string;
@@ -36,6 +38,8 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     title,
     subtitle,
     progressPercent,
+    warningCount,
+    onWarningsPress,
     autosaveBadge,
     onPrimary,
     primaryLabel,
@@ -87,6 +91,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             onPress={() => setIsTipOpen(v => !v)}
             style={({ pressed }) => [
                 styles.iconButton,
+                isMobile && styles.iconButtonMobile,
                 isTipOpen && styles.iconButtonActive,
                 globalFocusStyles.focusable,
                 Platform.OS === 'web' && { cursor: 'pointer' },
@@ -115,6 +120,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             onPress={onBack}
             style={({ pressed }) => [
                 styles.backButton,
+                isMobile && styles.backButtonMobile,
                 globalFocusStyles.focusable,
                 Platform.OS === 'web' && { cursor: 'pointer' },
                 pressed && { opacity: 0.8 }
@@ -136,6 +142,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             style={({ pressed }) => [
                 styles.actionButton,
                 styles.actionButtonPrimary,
+                isMobile && styles.actionButtonMobile,
                 globalFocusStyles.focusable,
                 Platform.OS === 'web' && { cursor: primaryDisabled ? 'default' : 'pointer' },
                 primaryDisabled && styles.actionButtonDisabled,
@@ -157,6 +164,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             onPress={onSave}
             style={({ pressed }) => [
                 styles.iconButton,
+                isMobile && styles.iconButtonMobile,
                 globalFocusStyles.focusable,
                 Platform.OS === 'web' && { cursor: 'pointer' },
                 pressed && { opacity: 0.9 },
@@ -180,6 +188,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             onPress={onQuickDraft}
             style={({ pressed }) => [
                 styles.iconButton,
+                isMobile && styles.iconButtonMobile,
                 globalFocusStyles.focusable,
                 Platform.OS === 'web' && { cursor: 'pointer' },
                 pressed && { opacity: 0.9 },
@@ -198,12 +207,34 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
         </Pressable>
     ) : null;
 
+    const WarningsAction = isMobile && (warningCount ?? 0) > 0 ? (
+        <Pressable
+            onPress={onWarningsPress}
+            style={({ pressed }) => [
+                styles.iconButton,
+                isMobile && styles.iconButtonMobile,
+                globalFocusStyles.focusable,
+                Platform.OS === 'web' && { cursor: onWarningsPress ? 'pointer' : 'default' },
+                pressed && { opacity: 0.9 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`Предупреждения: ${warningCount}`}
+            disabled={!onWarningsPress}
+        >
+            <Feather name="info" size={16} color={colors.warning} />
+            <View style={styles.badge}>
+                <Text style={styles.badgeText}>{warningCount}</Text>
+            </View>
+        </Pressable>
+    ) : null;
+
     return (
         <View style={[styles.headerWrapper, isMobile && styles.headerWrapperMobile]}>
             <View style={styles.topNavRow}>
                 <View style={styles.leftNav}>
-                    {BackButton}
+                    {isMobile ? BackButton : null}
                 </View>
+                {isMobile ? <View style={styles.rightNav}>{PrimaryAction}</View> : null}
             </View>
 
             <View style={styles.titleRow}>
@@ -219,6 +250,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                             onPress={onPreview}
                             style={({ pressed }) => [
                                 styles.iconButton,
+                                isMobile && styles.iconButtonMobile,
                                 globalFocusStyles.focusable,
                                 Platform.OS === 'web' && { cursor: 'pointer' },
                                 pressed && { opacity: 0.8 }
@@ -236,13 +268,17 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                             ) : null}
                         </Pressable>
                     )}
+                    {WarningsAction}
                     {TipTrigger}
                     {QuickDraftAction}
                     {SaveAction}
                 </View>
             </View>
 
-            <Text style={isMobile ? styles.headerSubtitleMobile : styles.headerSubtitle} numberOfLines={2}>
+            <Text
+                style={isMobile ? styles.headerSubtitleMobile : styles.headerSubtitle}
+                numberOfLines={isMobile ? 1 : 2}
+            >
                 {subtitle}
             </Text>
 
@@ -262,8 +298,9 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 )}
             </View>
 
-            <View style={styles.belowProgressRow}>
+            <View style={[styles.belowProgressRow, isMobile && styles.belowProgressRowMobile]}>
                 <View style={styles.belowProgressLeft}>
+                    {!isMobile ? BackButton : null}
                     {!isMobile && totalSteps && currentStep && totalSteps > 1 ? (
                         <View style={styles.milestonesInlineWrapper}>
                             {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
@@ -293,7 +330,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                 </View>
 
                 <View style={styles.belowProgressRight}>
-                    {PrimaryAction}
+                    {!isMobile ? PrimaryAction : null}
                 </View>
             </View>
 
@@ -336,6 +373,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         gap: DESIGN_TOKENS.spacing.sm,
         flex: 1,
         minWidth: 0,
+    },
+    rightNav: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        flexShrink: 0,
     },
     rightActions: {
         flexDirection: 'row',
@@ -382,6 +425,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.surfaceMuted,
         borderWidth: 0,
     },
+    iconButtonMobile: {
+        width: 36,
+        height: 36,
+        minHeight: 36,
+    },
     iconButtonActive: {
         backgroundColor: colors.primarySoft,
         borderWidth: 0,
@@ -408,6 +456,23 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '600',
         textAlign: 'center',
     },
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 4,
+        backgroundColor: colors.warning,
+    },
+    badgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.textOnPrimary,
+    },
     actionButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -417,6 +482,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
         borderRadius: DESIGN_TOKENS.radii.pill,
         borderWidth: 1,
+    },
+    actionButtonMobile: {
+        minHeight: 36,
+        height: 36,
+        paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     },
     actionButtonSecondary: {
         backgroundColor: colors.surfaceMuted,
@@ -450,6 +520,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.surfaceMuted,
         borderWidth: 1,
         borderColor: colors.border,
+    },
+    backButtonMobile: {
+        minHeight: 36,
+        height: 36,
+        paddingHorizontal: 10,
     },
     backButtonText: {
         fontSize: 12,
@@ -571,6 +646,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: DESIGN_TOKENS.spacing.md,
+    },
+    belowProgressRowMobile: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        gap: DESIGN_TOKENS.spacing.sm,
     },
     belowProgressLeft: {
         flex: 1,

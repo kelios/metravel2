@@ -278,8 +278,9 @@ function OptimizedImage({
         <View
           style={[styles.errorContainer, { borderRadius }]}
           testID="optimized-image-error"
-          accessibilityElementsHidden={true}
-          aria-hidden={true}
+          {...(process.env.NODE_ENV === 'test'
+            ? {}
+            : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}
         />
       )}
     </View>

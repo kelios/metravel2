@@ -134,11 +134,19 @@ test.describe('Draft recovery popup', () => {
 
       // Manual save should clear the local draft. Click the save action in the header.
       await page.getByRole('button', { name: 'Сохранить' }).click({ timeout: 20_000 });
-      await page.waitForTimeout(1500);
 
-      // After reload, the draft popup should not appear again.
+      // Ensure no beforeunload warning blocks reload after save.
+      const dialogs: string[] = [];
+      page.on('dialog', async (dialog) => {
+        dialogs.push(dialog.type());
+        await dialog.dismiss().catch(() => undefined);
+      });
+
+      // Immediately reload: this reproduces the real user behavior (click save -> reload right away).
       await page.reload({ waitUntil: 'domcontentloaded' });
       await expect(page.getByText('Найден черновик', { exact: true })).toHaveCount(0);
+
+      expect(dialogs, 'Reload after save should not trigger a dialog (beforeunload)').toEqual([]);
     } finally {
       await deleteTravel(apiCtx, travelId);
     }
