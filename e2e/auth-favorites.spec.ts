@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Auth favorites', () => {
   test('favorites tab does not show auth gate after login', async ({ page }) => {

@@ -3,7 +3,8 @@
  * Tests real user workflows across all platforms
  */
 
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from './fixtures';
+import type { Page } from '@playwright/test';
 import { getTravelsListPath } from './helpers/routes';
 
 let travelBasePath: string | null = null;

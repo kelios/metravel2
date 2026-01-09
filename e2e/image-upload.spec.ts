@@ -1,4 +1,5 @@
-import { test, expect, request } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { request } from '@playwright/test';
 
 /**
  * E2E API test: upload travel image and ensure URL is returned.

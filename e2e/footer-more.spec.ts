@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 
 test.describe('Footer dock (web mobile) - More modal', () => {

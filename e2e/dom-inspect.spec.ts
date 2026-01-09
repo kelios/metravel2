@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 
 test('DOM structure inspection', async ({ page }) => {

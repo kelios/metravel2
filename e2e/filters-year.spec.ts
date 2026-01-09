@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Filters', () => {
   test('year filter can be set', async ({ page }) => {
+    await page.goto('/travelsby', { waitUntil: 'domcontentloaded' });
     await page.addInitScript(() => {
       try {
         window.localStorage.setItem(

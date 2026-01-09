@@ -323,7 +323,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         const raw = String(value ?? '').trim().toLowerCase();
         const collapsed = raw
           .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9\-_]+/g, '-')
+          .replace(/[^\p{L}\p{N}\-_]+/gu, '-')
           .replace(/-+/g, '-')
           .replace(/^-|-$/g, '');
         return collapsed;
@@ -339,14 +339,14 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         }
 
         const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
-        const htmlSnippet = `<span id="${id}">&#8203;</span>`;
         try {
+            const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
             editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
             editor.setSelection(range.index + 1, 0, 'silent');
             fireChange(editor.root.innerHTML);
         } catch (e) {
             try {
-                editor.insertText(range.index, `#${id} `, 'user');
+                editor.insertText(range.index, `[#${id}] `, 'user');
                 fireChange(editor.root.innerHTML);
             } catch (inner) {
                 if (__DEV__) {
@@ -522,7 +522,7 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                                             Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
                                             return;
                                         }
-                                        const htmlSnippet = `<span id="${id}">&#8203;</span>`;
+                                        const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
                                         fireChange(`${html}${htmlSnippet}`);
                                         return;
                                     }

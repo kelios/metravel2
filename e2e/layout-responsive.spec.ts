@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 
 function getNumberEnv(name: string, fallback: number): number {

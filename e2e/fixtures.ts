@@ -1,5 +1,5 @@
 import { test as base, expect } from '@playwright/test';
-import { apiContextFromEnv, deleteTravel, installCreatedTravelsTracker } from './helpers/e2eApi';
+import { apiContextFromEnv, apiContextFromTracker, deleteTravel, installCreatedTravelsTracker } from './helpers/e2eApi';
 
 export const test = base.extend<{
   createdTravels: Set<string | number>;
@@ -11,12 +11,12 @@ export const test = base.extend<{
     } finally {
       tracker.dispose();
 
-      const ctx = await apiContextFromEnv().catch(() => null);
-      if (ctx) {
-        const ids = Array.from(tracker.ids);
-        for (const id of ids) {
-          await deleteTravel(ctx, id).catch(() => undefined);
-        }
+      const ctxFromEnv = await apiContextFromEnv().catch(() => null);
+      const ctx = ctxFromEnv ?? apiContextFromTracker({ apiBase: tracker.getApiBase?.() ?? null });
+      if (!ctx) return;
+      const ids = Array.from(tracker.ids);
+      for (const id of ids) {
+        await deleteTravel(ctx, id).catch(() => undefined);
       }
     }
   },

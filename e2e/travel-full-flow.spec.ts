@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { apiLogin, createOrUpdateTravel, deleteTravel, markAsFavorite, readTravel } from './helpers/e2eApi';
 
 const basePayload = {

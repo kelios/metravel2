@@ -460,6 +460,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       pendingBaselineRef.current = finalData;
       formState.reset(finalData);
       setMarkers(effectiveMarkers);
+      updateBaselineRef.current?.(finalData);
+      pendingBaselineRef.current = null;
 
       // ✅ FIX: Обновляем версию данных при получении с сервера
       setDataVersion(prev => prev + 1);

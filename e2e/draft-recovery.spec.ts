@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { apiLogin, createOrUpdateTravel, deleteTravel } from './helpers/e2eApi';
 
 test.describe('Draft recovery popup', () => {

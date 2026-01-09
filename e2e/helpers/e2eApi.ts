@@ -1,4 +1,5 @@
 import { expect, request } from '@playwright/test';
+import fs from 'node:fs';
 
 type LoginResponse = {
   token?: string;
@@ -12,6 +13,34 @@ export type E2EApiContext = {
   apiBase: string;
   token: string;
 };
+
+function simpleDecrypt(base64: string, key: string): string {
+  const raw = Buffer.from(String(base64 || ''), 'base64').toString('binary');
+  let result = '';
+  for (let i = 0; i < raw.length; i++) {
+    result += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return result;
+}
+
+function tokenFromStorageState(): string {
+  try {
+    const raw = fs.readFileSync('e2e/.auth/storageState.json', 'utf8');
+    const json = JSON.parse(raw) as any;
+    const origins = Array.isArray(json?.origins) ? json.origins : [];
+    for (const origin of origins) {
+      const ls = Array.isArray(origin?.localStorage) ? origin.localStorage : [];
+      const tokenEntry = ls.find((x: any) => x?.name === 'secure_userToken');
+      const encrypted = String(tokenEntry?.value ?? '').trim();
+      if (!encrypted) continue;
+      const token = simpleDecrypt(encrypted, 'metravel_encryption_key_v1').trim();
+      if (token) return normalizeToken(token);
+    }
+  } catch {
+    // ignore
+  }
+  return '';
+}
 
 function normalizeToken(raw: string): string {
   const v = String(raw || '').trim();
@@ -62,13 +91,30 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
   return null;
 }
 
+export function apiContextFromTracker(opts: { apiBase?: string | null } = {}): E2EApiContext | null {
+  const apiBase = String(opts.apiBase ?? '').trim().replace(/\/+$/, '');
+  if (!apiBase) return null;
+  const token = tokenFromStorageState();
+  if (!token) return null;
+  return { apiBase, token };
+}
+
 export function installCreatedTravelsTracker(page: any) {
   const ids = new Set<string | number>();
+  let apiBase: string | null = null;
 
   const handler = async (resp: any) => {
     try {
       const url = String(resp?.url?.() ?? '');
       if (!url.includes('/travels/upsert/')) return;
+
+      if (!apiBase) {
+        try {
+          apiBase = new URL(url).origin;
+        } catch {
+          // ignore
+        }
+      }
 
       const req = resp.request?.();
       const method = String(req?.method?.() ?? '').toUpperCase();
@@ -87,6 +133,7 @@ export function installCreatedTravelsTracker(page: any) {
 
   return {
     ids,
+    getApiBase: () => apiBase,
     dispose: () => {
       try {
         page.off('response', handler);

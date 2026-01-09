@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 function hasCreds(): boolean {
   return !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD;

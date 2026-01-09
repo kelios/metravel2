@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 
 const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;

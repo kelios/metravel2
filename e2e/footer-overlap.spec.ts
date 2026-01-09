@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 
 // This test protects against a regression where the mobile footer dock (position: fixed on web)
