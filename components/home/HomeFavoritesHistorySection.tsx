@@ -94,7 +94,7 @@ function HorizontalCards({
   const historyBadge =
     badge?.icon === 'history'
       ? {
-          icon: 'history' as const,
+          icon: 'clock' as const,
           backgroundColor: colors.overlay,
           iconColor: isDark ? colors.text : colors.textOnDark,
         }

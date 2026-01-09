@@ -83,6 +83,11 @@ export function useActiveSection(
           const viewportTop = safeHeaderOffset;
           const TOP_BUFFER_PX = 24;
 
+          const rootRect =
+            scrollRoot && !isDocumentRoot(scrollRoot) && typeof scrollRoot.getBoundingClientRect === 'function'
+              ? scrollRoot.getBoundingClientRect()
+              : null;
+
           const keys = Array.from(registeredSectionsRef.current);
           const measured: Array<{ key: string; top: number }> = [];
 
@@ -90,7 +95,8 @@ export function useActiveSection(
             const el = doc.querySelector(`[data-section-key="${key}"]`) as HTMLElement | null;
             if (!el || typeof el.getBoundingClientRect !== 'function') return;
             const rect = el.getBoundingClientRect();
-            measured.push({ key, top: rect.top });
+            const relativeTop = rootRect ? rect.top - rootRect.top : rect.top;
+            measured.push({ key, top: relativeTop });
           });
 
           if (!measured.length) return;

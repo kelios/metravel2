@@ -1,5 +1,6 @@
 // components/travel/PopupContentWeb.tsx
 import React, { useCallback, memo, useEffect, useRef, useState, useMemo } from 'react';
+import { useRouter } from 'expo-router';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
@@ -29,10 +30,12 @@ const parseLatLng = (coord: string): { lat: number; lng: number } | null => {
 
 const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose }) => {
   const colors = useThemedColors();
+  const router = useRouter();
   const { address, coord, travelImageThumbUrl, updated_at, categoryName, description, articleUrl, urlTravel } = travel;
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const mounted = useRef(false);
   const loggedImageErrorsRef = useRef<Set<string>>(new Set());
 
@@ -59,6 +62,11 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
     return optimized;
   }, [travelImageThumbUrl, updated_at]);
 
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [optimizedImageUrl]);
+
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const safeOpen = useCallback((url?: string) => {
@@ -66,8 +74,21 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
     const baseUrl = typeof window !== 'undefined' ? window.location?.origin ?? '' : '';
     const safeUrl = getSafeExternalUrl(url, { allowRelative: true, baseUrl });
     if (!safeUrl) return;
-    if (typeof window !== 'undefined') window.open(safeUrl, '_blank', 'noopener,noreferrer');
-  }, []);
+    if (typeof window !== 'undefined') {
+      try {
+        const parsed = new URL(safeUrl, baseUrl || undefined);
+        const isSameOrigin = baseUrl && parsed.origin === baseUrl;
+        if (isSameOrigin) {
+          const nextPath = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+          router.push(nextPath as any);
+          return;
+        }
+      } catch {
+        // noop
+      }
+      window.open(safeUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, [router]);
 
   const openPrimary = useCallback(() => { safeOpen(urlTravel || articleUrl); }, [urlTravel, articleUrl, safeOpen]);
 
@@ -149,7 +170,7 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
                 priority="low"
                 style={{ position: 'absolute', inset: 0 } as any}
                 onLoad={() => {
-                  setImageError(false);
+                  setImageLoaded(true);
                 }}
                 onError={() => {
                   const src = String(optimizedImageUrl || '');
@@ -164,9 +185,12 @@ const PopupContentWeb: React.FC<PopupContentWebProps> = memo(({ travel, onClose 
                     }
                   }
                   setImageError(true);
+                  setImageLoaded(false);
                 }}
               />
-            ) : (
+            ) : null}
+
+            {(!optimizedImageUrl || imageError || !imageLoaded) && (
               <div className="popup-image-placeholder" aria-label="Нет фото для этой точки">
                 <span className="popup-placeholder-stub" aria-hidden="true" />
               </div>
@@ -375,20 +399,21 @@ const popupStyles = `
   justify-content: center;
   flex-direction: column;
   gap: 8px;
-  background: var(--color-backgroundTertiary);
+  background: var(--color-backgroundSecondary);
 }
 
 .popup-placeholder-stub {
   width: 64px;
   height: 64px;
   border-radius: 16px;
+  border: 1px solid var(--color-borderLight);
   background: linear-gradient(
     90deg,
-    var(--color-backgroundSecondary),
-    var(--color-surface),
-    var(--color-backgroundSecondary)
+    var(--color-borderLight),
+    var(--color-backgroundTertiary),
+    var(--color-borderLight)
   );
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .popup-placeholder-icon {
@@ -506,7 +531,7 @@ const popupStyles = `
   color: var(--color-textSubtle);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-}
+ }
 
 .popup-coord-text {
   border: 1px dashed var(--color-borderStrong);
@@ -525,7 +550,16 @@ const popupStyles = `
   text-decoration: none;
   appearance: none;
   -webkit-appearance: none;
-}
+ }
+
+html[data-theme="light"] .popup-coord-label {
+  color: var(--color-textMuted);
+ }
+
+html[data-theme="light"] .popup-coord-text {
+  color: var(--color-text) !important;
+  font-weight: 700;
+ }
 
 .popup-coord-inline {
   display: inline-flex;

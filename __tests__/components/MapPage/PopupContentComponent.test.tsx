@@ -1,6 +1,22 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
+
+let lastImageCardMediaProps: any = null;
+
+jest.mock('@/components/ui/ImageCardMedia', () => {
+  const React = require('react');
+  return function MockImageCardMedia(props: any) {
+    lastImageCardMediaProps = props;
+    return (
+      <div
+        data-testid="image-card-media"
+        onLoad={() => props?.onLoad?.()}
+        onError={() => props?.onError?.()}
+      />
+    );
+  };
+});
 
 const baseTravel = {
   address: 'Test address, City, Country',
@@ -228,5 +244,22 @@ describe('PopupContentComponent (web popup template)', () => {
       expect(withImage.tagName).toBe(withoutImage.tagName);
       expect(withImage.className).toBe(withoutImage.className);
     }
+  });
+
+  it('shows placeholder while image is loading and hides it after image load', () => {
+    lastImageCardMediaProps = null;
+
+    const { getByLabelText, queryByLabelText } = render(
+      <PopupContentComponent travel={baseTravel} />
+    );
+
+    expect(getByLabelText('Нет фото для этой точки')).toBeTruthy();
+
+    expect(lastImageCardMediaProps).not.toBeNull();
+    act(() => {
+      lastImageCardMediaProps?.onLoad?.();
+    });
+
+    expect(queryByLabelText('Нет фото для этой точки')).toBeNull();
   });
 });
