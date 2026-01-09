@@ -137,7 +137,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     paddingHorizontal: 8,
-    backgroundColor: colors.backgroundSecondary,
+    backgroundColor: colors.overlay,
     borderRadius: 8,
   },
   pointMarker: {
@@ -167,12 +167,12 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   pointLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textOnDark,
     marginBottom: 2,
   },
   pointCoords: {
     fontSize: 11,
-    color: colors.textMuted,
+    color: colors.textOnDark,
   },
   removeButton: {
     padding: 4,

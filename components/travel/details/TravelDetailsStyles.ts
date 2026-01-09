@@ -76,6 +76,15 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
       default: 520,
     }),
   },
+  webDeferredSection: Platform.select({
+    web: {
+      // Defer render/paint for below-the-fold sections without CLS.
+      contentVisibility: 'auto',
+      contain: 'layout style paint',
+      containIntrinsicSize: '720px 480px',
+    } as any,
+    default: {},
+  }),
 
   // ✅ РЕДИЗАЙН: Адаптивное боковое меню
   sideMenuBase: {

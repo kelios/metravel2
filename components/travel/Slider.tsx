@@ -292,6 +292,16 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const isMobile = isPhone || isLargePhone;
 
   const isTestEnv = process.env.NODE_ENV === 'test';
+  const canPrefetchOnWeb = useMemo(() => {
+    if (Platform.OS !== 'web') return true;
+    if (isMobile) return false;
+    if (typeof navigator === 'undefined') return false;
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    if (connection?.saveData) return false;
+    const effectiveType = String(connection?.effectiveType || '').toLowerCase();
+    if (effectiveType.includes('2g') || effectiveType === '3g') return false;
+    return true;
+  }, [isMobile]);
 
   const [containerW, setContainerW] = useState(winW);
   const [containerH, setContainerH] = useState<number | null>(null);
@@ -306,14 +316,16 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   );
   const [retryTokens, setRetryTokens] = useState<number[]>(() => images.map(() => 0));
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
-  const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== "web");
+  const [prefetchEnabled, setPrefetchEnabled] = useState(
+    Platform.OS !== "web" ? true : canPrefetchOnWeb
+  );
 
   useEffect(() => {
     setLoadStatuses(images.map(() => "loading"));
     setRetryTokens(images.map(() => 0));
     setShowSwipeHint(images.length > 1);
-    setPrefetchEnabled(Platform.OS !== "web");
-  }, [images]);
+    setPrefetchEnabled(Platform.OS !== "web" ? true : canPrefetchOnWeb);
+  }, [images, canPrefetchOnWeb]);
 
   const updateLoadStatus = useCallback((idx: number, status: LoadStatus) => {
     setLoadStatuses((prev) => {
@@ -334,7 +346,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       updateLoadStatus(idx, "loading");
       if (idx === 0) {
         onFirstImageLoad?.();
-        if (!prefetchEnabled) {
+        if (!prefetchEnabled && (Platform.OS !== 'web' || canPrefetchOnWeb)) {
           setPrefetchEnabled(true);
         }
       }

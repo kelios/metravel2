@@ -38,7 +38,7 @@ import ReadingProgressBar from "@/components/ReadingProgressBar";
 import TravelSectionsSheet from "@/components/travel/TravelSectionsSheet";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
-import { optimizeImageUrl, getPreferredImageFormat } from "@/utils/imageOptimization";
+import { optimizeImageUrl, getPreferredImageFormat, buildResponsiveImageProps } from "@/utils/imageOptimization";
 import { SectionSkeleton } from '@/components/SectionSkeleton';
 
 import {
@@ -171,6 +171,7 @@ export default function TravelDetailsContainer() {
     canonicalUrl,
     readyImage,
     lcpPreloadImage: _lcpPreloadImage,
+    lcpPreloadProps,
     firstImgOrigin,
     firstImg,
     jsonLd,
@@ -190,14 +191,28 @@ export default function TravelDetailsContainer() {
     const versioned = firstUrl
       ? buildVersioned(firstUrl, (rawFirst as any)?.updated_at, (rawFirst as any)?.id)
       : undefined;
+    const lcpTargetWidth =
+      typeof window !== "undefined"
+        ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
+        : 1200;
+    const lcpProps = versioned
+      ? buildResponsiveImageProps(versioned, {
+          maxWidth: lcpTargetWidth,
+          quality: isMobile ? 75 : 85,
+          format: getPreferredImageFormat(),
+          fit: "contain",
+          sizes: isMobile ? "100vw" : "(max-width: 1024px) 92vw, 860px",
+        })
+      : undefined;
     const lcpUrl =
-      versioned &&
-      optimizeImageUrl(versioned, {
-        width: 1440,
-        format: getPreferredImageFormat(),
-        quality: 85,
-        fit: "contain",
-      });
+      lcpProps?.src ||
+      (versioned &&
+        optimizeImageUrl(versioned, {
+          width: lcpTargetWidth,
+          format: getPreferredImageFormat(),
+          quality: isMobile ? 75 : 85,
+          fit: "contain",
+        }));
     const origin = firstUrl ? getOrigin(firstUrl) : null;
 
     const structuredData = createSafeJsonLd(travel);
@@ -208,11 +223,12 @@ export default function TravelDetailsContainer() {
       canonicalUrl: canonical,
       readyImage: firstUrl,
       lcpPreloadImage: lcpUrl ?? versioned ?? firstUrl,
+      lcpPreloadProps: lcpProps,
       firstImgOrigin: origin,
       firstImg: firstUrl ? { url: firstUrl } : null,
       jsonLd: structuredData,
     };
-  }, [travel]);
+  }, [travel, isMobile]);
   const forceDeferMount = !!forceOpenKey;
 
   // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation
@@ -321,6 +337,16 @@ export default function TravelDetailsContainer() {
                 <>
                   {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
                 </>
+              )}
+              {Platform.OS === "web" && lcpPreloadProps?.src && (
+                <link
+                  rel="preload"
+                  as="image"
+                  href={lcpPreloadProps.src}
+                  {...(lcpPreloadProps.srcSet ? { imagesrcset: lcpPreloadProps.srcSet } : {})}
+                  {...(lcpPreloadProps.sizes ? { imagesizes: lcpPreloadProps.sizes } : {})}
+                  crossOrigin="anonymous"
+                />
               )}
               <meta name="theme-color" content={themedColors.background} />
               {jsonLd && (

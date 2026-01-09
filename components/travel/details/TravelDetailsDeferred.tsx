@@ -935,7 +935,7 @@ const TravelVisualSections: React.FC<{
           <ExcursionsLazySection>
             <View
               ref={anchors.excursions}
-              style={[styles.sectionContainer, styles.contentStable]}
+              style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
               collapsable={false}
               accessibilityLabel="Экскурсии"
               {...(Platform.OS === 'web' ? { 'data-section-key': 'excursions' } : {})}
@@ -958,7 +958,7 @@ const TravelVisualSections: React.FC<{
       <View
         ref={anchors.map}
         testID="travel-details-map"
-        style={[styles.sectionContainer, styles.contentStable]}
+        style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Карта маршрута"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'map', 'data-map-for-pdf': '1' } : {})}
@@ -1000,7 +1000,7 @@ const TravelVisualSections: React.FC<{
       <View
         ref={anchors.points}
         testID="travel-details-points"
-        style={[styles.sectionContainer, styles.contentStable]}
+        style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Координаты мест"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'points' } : {})}
@@ -1137,7 +1137,7 @@ const TravelRelatedContent: React.FC<{
     <>
       <View
         ref={anchors.near}
-        style={[styles.sectionContainer, styles.contentStable]}
+        style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Рядом можно посмотреть"
         onLayout={
@@ -1196,7 +1196,7 @@ const TravelRelatedContent: React.FC<{
 
       <View
         ref={anchors.popular}
-        style={[styles.sectionContainer, styles.contentStable]}
+        style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Популярные маршруты"
         onLayout={
@@ -1252,7 +1252,7 @@ export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boole
       <View
         testID="travel-details-telegram"
         accessibilityLabel="Обсуждение в Telegram"
-        style={[styles.sectionContainer, styles.authorCardContainer]}
+        style={[styles.sectionContainer, styles.authorCardContainer, styles.webDeferredSection]}
       >
         <TelegramDiscussionSection travel={travel} />
       </View>
@@ -1261,7 +1261,7 @@ export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boole
         <View
           testID="travel-details-share"
           accessibilityLabel="Поделиться маршрутом"
-          style={[styles.sectionContainer, styles.shareButtonsContainer]}
+          style={[styles.sectionContainer, styles.shareButtonsContainer, styles.webDeferredSection]}
         >
           <ShareButtons travel={travel} />
         </View>
@@ -1270,7 +1270,7 @@ export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boole
       <View
         testID="travel-details-cta"
         accessibilityLabel="Призыв к действию"
-        style={[styles.sectionContainer, styles.ctaContainer]}
+        style={[styles.sectionContainer, styles.ctaContainer, styles.webDeferredSection]}
       >
         <CTASection travel={travel} />
       </View>

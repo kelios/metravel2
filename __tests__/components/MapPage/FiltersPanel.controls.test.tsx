@@ -15,6 +15,7 @@ jest.mock('@/hooks/useTheme', () => ({
     text: '#1a1a1a',
     textMuted: '#666666',
     textOnPrimary: '#ffffff',
+    textOnDark: '#ffffff',
     surface: '#ffffff',
     surfaceSecondary: '#f5f5f5',
     surfaceMuted: '#f5f5f5',
@@ -33,6 +34,7 @@ jest.mock('@/hooks/useTheme', () => ({
     info: '#2196f3',
     infoLight: '#e3f2fd',
     infoDark: '#1565c0',
+    overlay: 'rgba(0,0,0,0.6)',
     overlayLight: 'rgba(0,0,0,0.1)',
     background: '#ffffff',
     focusRing: '#5d8c7c',
@@ -164,6 +166,32 @@ describe('FiltersPanel Controls', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('Route point pills', () => {
+    it('renders route points as pills and calls onRemoveRoutePoint when X is pressed', () => {
+      const onRemoveRoutePoint = jest.fn();
+
+      const { getByTestId, getByText } = render(
+        <FiltersPanel
+          {...defaultProps}
+          mode="route"
+          startAddress=""
+          endAddress=""
+          onRemoveRoutePoint={onRemoveRoutePoint}
+          routePoints={[
+            { id: 'p1', coordinates: { lat: 50.0, lng: 19.9 }, address: 'Kraków', type: 'start', timestamp: Date.now() },
+            { id: 'p2', coordinates: { lat: 50.1, lng: 20.0 }, address: 'Rynek Główny', type: 'end', timestamp: Date.now() },
+          ]}
+        />
+      );
+
+      expect(getByTestId('route-points-list')).toBeTruthy();
+      expect(getByText('Kraków')).toBeTruthy();
+
+      fireEvent.press(getByTestId('route-point-remove-p1'));
+      expect(onRemoveRoutePoint).toHaveBeenCalledWith('p1');
+    });
   });
 
   describe('Transport Mode Controls', () => {

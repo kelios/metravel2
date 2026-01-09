@@ -1,16 +1,22 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { Platform, View } from 'react-native'
+import { useThemedColors } from '@/hooks/useTheme'
+
+const TravelDetailsLazy = React.lazy(() => import('@/components/travel/details/TravelDetailsContainer'))
 
 export default function TravelDetailsScreen() {
+  const colors = useThemedColors()
+
   if (Platform.OS !== 'web') {
     const TravelDetailsNative = require('@/components/travel/details/TravelDetailsContainer').default
     return <TravelDetailsNative />
   }
 
-  const TravelDetailsLazy = React.lazy(() => import('@/components/travel/details/TravelDetailsContainer'))
   return (
-    <React.Suspense fallback={<View />}>
+    <Suspense
+      fallback={<View style={{ flex: 1, backgroundColor: colors.background }} />}
+    >
       <TravelDetailsLazy />
-    </React.Suspense>
+    </Suspense>
   )
 }

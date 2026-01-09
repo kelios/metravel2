@@ -375,11 +375,20 @@ const popupStyles = `
   justify-content: center;
   flex-direction: column;
   gap: 8px;
-  color: var(--color-textMuted);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  background: var(--color-backgroundTertiary);
+}
+
+.popup-placeholder-stub {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--color-backgroundSecondary),
+    var(--color-surface),
+    var(--color-backgroundSecondary)
+  );
+  opacity: 0.9;
 }
 
 .popup-placeholder-icon {

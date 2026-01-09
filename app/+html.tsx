@@ -123,14 +123,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="icon" href="/favicon.ico" sizes="any" />
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-
-      <link
-        rel="preload"
-        as="font"
-        type="font/ttf"
-        crossOrigin="anonymous"
-        href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.a76d309774d33d9856f650bed4292a23.ttf"
-      />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
 

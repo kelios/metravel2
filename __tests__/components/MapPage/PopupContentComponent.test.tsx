@@ -218,6 +218,12 @@ describe('PopupContentComponent (web popup template)', () => {
     const withoutImage = (rootWithoutImage as any)?.querySelector?.('.popup-photo') as HTMLElement | null;
     expect(withoutImage).not.toBeNull();
 
+    const placeholder = (rootWithoutImage as any)?.querySelector?.('.popup-image-placeholder') as HTMLElement | null;
+    expect(placeholder).not.toBeNull();
+
+    const stub = (rootWithoutImage as any)?.querySelector?.('.popup-placeholder-stub') as HTMLElement | null;
+    expect(stub).not.toBeNull();
+
     if (withImage && withoutImage) {
       expect(withImage.tagName).toBe(withoutImage.tagName);
       expect(withImage.className).toBe(withoutImage.className);

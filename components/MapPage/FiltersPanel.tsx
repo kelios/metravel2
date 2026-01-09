@@ -125,6 +125,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      endAddress,
                                                      routeDistance,
                                                      routePoints = [],
+                                                     onRemoveRoutePoint,
                                                      onClearRoute,
                                                      swapStartEnd: _swapStartEnd,
                                                      routeHintDismissed = false,
@@ -159,6 +160,14 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       onFilterChange(field, value);
     },
     [onFilterChange]
+  );
+
+  const safeRemoveRoutePoint = useCallback(
+    (id: string) => {
+      if (typeof onRemoveRoutePoint !== 'function') return;
+      onRemoveRoutePoint(id);
+    },
+    [onRemoveRoutePoint]
   );
 
   const safeResetFilters = useCallback(() => {
@@ -579,6 +588,38 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                   onClear={onClearRoute}
                   compact
                 />
+              )}
+
+              {mode === 'route' && routePoints.length > 0 && (
+                <View style={styles.routePointsList} testID="route-points-list">
+                  {routePoints.map((p, index) => {
+                    const label = String(p?.address || '').trim() || `Точка ${index + 1}`;
+                    const canRemove = typeof onRemoveRoutePoint === 'function' && Boolean(p?.id);
+                    return (
+                      <View key={String(p?.id ?? index)} style={styles.routePointRow}>
+                        <View style={styles.routePointPill} testID={`route-point-pill-${String(p?.id ?? index)}`}>
+                          <Text style={styles.routePointPillText} numberOfLines={1}>
+                            {label}
+                          </Text>
+                        </View>
+                        <Pressable
+                          disabled={!canRemove}
+                          onPress={() => {
+                            if (!canRemove) return;
+                            safeRemoveRoutePoint(String(p.id));
+                          }}
+                          style={[styles.routePointRemoveBtn, !canRemove && styles.routePointRemoveBtnDisabled]}
+                          hitSlop={10}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Удалить точку: ${label}`}
+                          testID={`route-point-remove-${String(p?.id ?? index)}`}
+                        >
+                          <MapIcon name="close" size={18} color={colors.textOnDark} />
+                        </Pressable>
+                      </View>
+                    );
+                  })}
+                </View>
               )}
 
               {/* ✅ Validation и warnings */}
@@ -1098,7 +1139,41 @@ const getStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number)
       backgroundColor: colors.border,
     },
     transportSection: {
-      marginTop: 4,
+      gap: 8,
+    },
+    routePointsList: {
+      marginTop: 10,
+      gap: 10,
+    },
+    routePointRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    routePointPill: {
+      flex: 1,
+      minWidth: 0,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 999,
+      backgroundColor: colors.overlay,
+    },
+    routePointPillText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.textOnDark,
+    },
+    routePointRemoveBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.overlay,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    routePointRemoveBtnDisabled: {
+      opacity: 0.4,
     },
     sectionTight: {
       marginBottom: 8,
