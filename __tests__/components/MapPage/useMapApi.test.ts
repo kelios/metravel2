@@ -54,4 +54,130 @@ describe('useMapApi', () => {
 
     unmount();
   });
+
+  it('openPopupForCoord opens marker popup on moveend', async () => {
+    jest.useFakeTimers();
+
+    const openPopup = jest.fn();
+    const setZIndexOffset = jest.fn();
+
+    const moveEndHandlers: Array<() => void> = [];
+    const mapInstance = {
+      once: jest.fn((event: string, cb: any) => {
+        if (event === 'moveend') moveEndHandlers.push(cb);
+      }),
+    };
+
+    const marker = {
+      _map: mapInstance,
+      openPopup,
+      setZIndexOffset,
+    };
+
+    const markerByCoord = new Map<string, any>([['50.0, 19.0', marker]]);
+
+    const map = {
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+    };
+
+    const onMapUiApiReady = jest.fn();
+
+    const { unmount } = renderHook(() =>
+      useMapApi({
+        map,
+        L: {},
+        onMapUiApiReady,
+        travelData: [],
+        userLocation: null,
+        routePoints: [],
+        leafletBaseLayerRef: { current: null },
+        leafletOverlayLayersRef: { current: new Map() },
+        leafletControlRef: { current: { markerByCoord } },
+      })
+    );
+
+    await act(async () => {});
+
+    const api = onMapUiApiReady.mock.calls.find((c: any[]) => c[0] != null)?.[0];
+    expect(api).toBeTruthy();
+    expect(typeof api.openPopupForCoord).toBe('function');
+
+    await act(async () => {
+      api.openPopupForCoord('50.0, 19.0');
+    });
+
+    // Not opened yet; waiting for moveend
+    expect(openPopup).not.toHaveBeenCalled();
+
+    // Fire moveend
+    await act(async () => {
+      moveEndHandlers.forEach((cb) => cb());
+    });
+
+    expect(setZIndexOffset).toHaveBeenCalledWith(1000);
+    expect(openPopup).toHaveBeenCalledTimes(1);
+
+    unmount();
+    jest.useRealTimers();
+  });
+
+  it('openPopupForCoord uses timeout fallback if moveend is not fired', async () => {
+    jest.useFakeTimers();
+
+    const openPopup = jest.fn();
+    const setZIndexOffset = jest.fn();
+
+    const mapInstance = {
+      once: jest.fn(),
+    };
+
+    const marker = {
+      _map: mapInstance,
+      openPopup,
+      setZIndexOffset,
+    };
+
+    const markerByCoord = new Map<string, any>([['50.0, 19.0', marker]]);
+
+    const map = {
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+    };
+
+    const onMapUiApiReady = jest.fn();
+
+    const { unmount } = renderHook(() =>
+      useMapApi({
+        map,
+        L: {},
+        onMapUiApiReady,
+        travelData: [],
+        userLocation: null,
+        routePoints: [],
+        leafletBaseLayerRef: { current: null },
+        leafletOverlayLayersRef: { current: new Map() },
+        leafletControlRef: { current: { markerByCoord } },
+      })
+    );
+
+    await act(async () => {});
+
+    const api = onMapUiApiReady.mock.calls.find((c: any[]) => c[0] != null)?.[0];
+    expect(api).toBeTruthy();
+
+    await act(async () => {
+      api.openPopupForCoord('50.0, 19.0');
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(420);
+    });
+
+    expect(setZIndexOffset).toHaveBeenCalledWith(1000);
+    expect(openPopup).toHaveBeenCalledTimes(1);
+
+    unmount();
+    jest.useRealTimers();
+  });
 });
