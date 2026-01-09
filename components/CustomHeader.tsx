@@ -5,6 +5,7 @@ import Feather from '@expo/vector-icons/Feather';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
+import { useFilters } from '@/providers/FiltersProvider';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -32,8 +33,9 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const isMobile = isPhone || isLargePhone || isTablet;
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
     const mobileMenuOpenedAtRef = useRef(0);
-    const { isAuthenticated, username, logout, userAvatar, profileRefreshToken } = useAuth();
+    const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
     const { favorites } = useFavorites();
+    const { updateFilters } = useFilters();
     const [avatarLoadError, setAvatarLoadError] = useState(false);
     const lastHeightRef = useRef(0);
 
@@ -101,6 +103,13 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         },
         [router]
     );
+
+    const handleMyTravels = useCallback(() => {
+        const numericUserId = userId ? Number(userId) : undefined;
+        handleUserAction('/metravel', () => {
+            updateFilters({ user_id: numericUserId });
+        });
+    }, [handleUserAction, updateFilters, userId]);
 
     const handleLogout = useCallback(async () => {
         await logout();
@@ -625,6 +634,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                   }}
                   onNavPress={handleNavPress}
                   onUserAction={handleUserAction}
+                  onMyTravels={handleMyTravels}
                   onCreate={handleCreate}
                   onLogout={handleLogout}
                   colors={colors as any}
@@ -652,6 +662,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                   }}
                   onNavPress={handleNavPress}
                   onUserAction={handleUserAction}
+                  onMyTravels={handleMyTravels}
                   onCreate={handleCreate}
                   onLogout={handleLogout}
                   colors={colors as any}

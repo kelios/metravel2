@@ -247,12 +247,12 @@ jest.mock('@/components/MapPage/RoutingMachine', () => {
   }
 })
 
-// Mock PopupContentComponent
-jest.mock('@/components/MapPage/PopupContentComponent', () => {
-  const RN = require('react-native')
-  const View = RN.View
-  return function PopupContentComponent() {
-    return <View testID="popup-content" />
+// Mock UnifiedTravelCard
+jest.mock('@/components/ui/UnifiedTravelCard', () => {
+  const MockComponent = () => <div data-testid="unified-travel-card" />
+  return {
+    __esModule: true,
+    default: MockComponent,
   }
 })
 

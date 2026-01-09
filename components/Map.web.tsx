@@ -1,5 +1,5 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
-import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
@@ -30,8 +30,8 @@ interface MapClientSideProps {
   showRoute?: boolean;
 }
 
-// Ленивая подгрузка содержимого попапа (не тянем в начальный чанк карты)
-const PopupContent = lazy(() => import('@/components/MapPage/PopupContentComponent'));
+// Используем UnifiedTravelCard для попапов
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 
 const isWeb = Platform.OS === 'web';
 const getLatLng = (latlng: string): [number, number] | null => {
@@ -344,9 +344,20 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         autoPanPaddingBottomRight={[16, 120] as any}
         closeButton={false}
       >
-        <Suspense fallback={<Text>Загрузка…</Text>}>
-          <PopupContent travel={point} onClose={handleClose} />
-        </Suspense>
+        <UnifiedTravelCard
+          title={point.address || ''}
+          imageUrl={point.travelImageThumbUrl}
+          metaText={point.categoryName}
+          onPress={handleClose}
+          imageHeight={180}
+          width={300}
+          mediaProps={{
+            blurBackground: true,
+            blurRadius: 16,
+            loading: 'lazy',
+            priority: 'low',
+          }}
+        />
       </Popup>
     );
   };

@@ -16,7 +16,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
@@ -382,20 +382,21 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
         ]}
       >
         {Platform.OS === 'web' ? (
-          <div style={{ padding: DESIGN_TOKENS.spacing.sm, width: '100%' }}>
-            <PopupContentComponent
-              travel={{
-                address: item.address,
-                coord: item.coord,
-                travelImageThumbUrl: item.travelImageThumbUrl,
-                updated_at: item.updated_at,
-                categoryName: item.categoryName,
-                description: item.description,
-                articleUrl: baseUrl,
-                urlTravel: baseUrl,
-              }}
-            />
-          </div>
+          <UnifiedTravelCard
+            title={item.address}
+            imageUrl={getOptimizedImageUrl(item.travelImageThumbUrl, item.updated_at)}
+            metaText={item.categoryName}
+            onPress={() => {}}
+            imageHeight={180}
+            width={300}
+            mediaProps={{
+              blurBackground: true,
+              blurRadius: 16,
+              loading: 'lazy',
+              priority: 'low',
+            }}
+            style={{ margin: DESIGN_TOKENS.spacing.sm }}
+          />
         ) : (
           <PointCard
             point={item}
@@ -410,7 +411,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
         )}
       </View>
     ),
-    [baseUrl, colors, isMobile, numColumns, onCopy, onOpenMap, onShare, responsive, styles]
+    [colors, isMobile, numColumns, onCopy, onOpenMap, onShare, responsive, styles]
   );
 
   return (

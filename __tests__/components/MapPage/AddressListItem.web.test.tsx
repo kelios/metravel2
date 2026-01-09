@@ -2,17 +2,18 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Platform, View, Text } from 'react-native';
 
-const mockPopup = jest.fn((props: any) => (
-  <View testID="popup-content-mock">
-    <Text testID="popup-address">{props.travel.address}</Text>
+const mockUnifiedCard = jest.fn((props: any) => (
+  <View testID="unified-card-mock">
+    <Text testID="card-title">{props.title}</Text>
+    <Text testID="card-meta">{props.metaText}</Text>
   </View>
 ));
 
-// Мокаем PopupContentComponent, чтобы проверить, что он используется AddressListItem
-jest.mock('@/components/MapPage/PopupContentComponent', () => {
+// Мокаем UnifiedTravelCard, чтобы проверить, что он используется AddressListItem
+jest.mock('@/components/ui/UnifiedTravelCard', () => {
   return {
     __esModule: true,
-    default: (props: any) => mockPopup(props),
+    default: (props: any) => mockUnifiedCard(props),
   };
 });
 
@@ -30,7 +31,7 @@ const baseTravel: any = {
 };
 
 describe('AddressListItem (web right panel)', () => {
-  it('renders PopupContentComponent with travel data on web', () => {
+  it('renders UnifiedTravelCard with travel data on web', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
@@ -38,16 +39,16 @@ describe('AddressListItem (web right panel)', () => {
       <AddressListItem travel={baseTravel} isMobile={false} />
     );
 
-    const popup = getByTestId('popup-content-mock');
-    expect(popup).toBeTruthy();
+    const card = getByTestId('unified-card-mock');
+    expect(card).toBeTruthy();
 
-    const address = getByTestId('popup-address');
-    expect((address as any).props.children).toContain('Kraków');
+    const title = getByTestId('card-title');
+    expect((title as any).props.children).toContain('Kraków');
 
-    expect(mockPopup).toHaveBeenCalledTimes(1);
-    expect(mockPopup).toHaveBeenCalledWith(
+    expect(mockUnifiedCard).toHaveBeenCalledTimes(1);
+    expect(mockUnifiedCard).toHaveBeenCalledWith(
       expect.objectContaining({
-        travel: expect.objectContaining({ address: baseTravel.address }),
+        title: baseTravel.address,
       }),
     );
 

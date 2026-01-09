@@ -55,10 +55,10 @@ jest.mock('@/components/MapPage/RoutingMachine', () => {
   return () => React.createElement('div', { 'data-testid': 'routing-machine' });
 });
 
-// Mock PopupContentComponent
-jest.mock('@/components/MapPage/PopupContentComponent', () => {
+// Mock UnifiedTravelCard
+jest.mock('@/components/ui/UnifiedTravelCard', () => {
   const React = require('react');
-  return () => React.createElement('div', { 'data-testid': 'popup-content' });
+  return () => React.createElement('div', { 'data-testid': 'unified-travel-card' });
 });
 
 // Mock MapLegend

@@ -2,15 +2,16 @@ import React from 'react';
 import { Platform, View, Text } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
 
-const mockPopup = jest.fn((props: any) => (
-  <View testID="popup-content-mock">
-    <Text testID="popup-article-url">{props.travel.articleUrl}</Text>
+const mockUnifiedCard = jest.fn((props: any) => (
+  <View testID="unified-card-mock">
+    <Text testID="card-title">{props.title}</Text>
+    <Text testID="card-meta">{props.metaText}</Text>
   </View>
 ));
 
-jest.mock('@/components/MapPage/PopupContentComponent', () => ({
+jest.mock('@/components/ui/UnifiedTravelCard', () => ({
   __esModule: true,
-  default: (props: any) => mockPopup(props),
+  default: (props: any) => mockUnifiedCard(props),
 }));
 
 import PointList from '@/components/travel/PointList';
@@ -38,9 +39,10 @@ describe('PointList (web coordinates list uses popup template)', () => {
     const toggleButton = getByLabelText('Показать координаты мест');
     fireEvent.press(toggleButton);
 
-    expect(mockPopup).toHaveBeenCalledWith(
+    expect(mockUnifiedCard).toHaveBeenCalledWith(
       expect.objectContaining({
-        travel: expect.objectContaining({ articleUrl: baseUrl, urlTravel: baseUrl }),
+        title: expect.any(String),
+        metaText: expect.any(String),
       }),
     );
 

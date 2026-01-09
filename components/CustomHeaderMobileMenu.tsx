@@ -10,6 +10,7 @@ type Props = {
   onOverlayPress: () => void
   onNavPress: (path: string) => void
   onUserAction: (path: string, extraAction?: () => void) => void
+  onMyTravels?: () => void
   onCreate: () => void
   onLogout: () => void
   colors: ThemedColors
@@ -27,6 +28,7 @@ export default function CustomHeaderMobileMenu({
   onOverlayPress,
   onNavPress,
   onUserAction,
+  onMyTravels,
   onCreate,
   onLogout,
   colors,
@@ -146,6 +148,18 @@ export default function CustomHeaderMobileMenu({
                   <Text style={styles.modalNavLabel}>
                     {`Личный кабинет${favoritesCount > 0 ? ` (${favoritesCount})` : ''}`}
                   </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={onMyTravels ? onMyTravels : () => onUserAction('/metravel')}
+                  style={styles.modalNavItem}
+                  accessibilityRole="button"
+                  accessibilityLabel="Мои путешествия"
+                >
+                  <View style={styles.iconSlot20}>
+                    <Feather name="map" size={20} color={colors.textMuted} />
+                  </View>
+                  <Text style={styles.modalNavLabel}>Мои путешествия</Text>
                 </Pressable>
 
                 <Pressable

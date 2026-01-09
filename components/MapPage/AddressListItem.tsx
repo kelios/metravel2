@@ -1,5 +1,5 @@
 // components/MapPage/AddressListItem.tsx
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useEffect, useMemo, useCallback, useState } from 'react';
 import {
     View,
     StyleSheet,
@@ -13,7 +13,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import * as Clipboard from 'expo-clipboard';
 import { TravelCoords } from '@/src/types/types';
 import { METRICS } from '@/constants/layout';
-import PopupContentComponent from './PopupContentComponent';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
@@ -182,6 +182,16 @@ const AddressListItem: React.FC<Props> = ({
       return addVersion(travelImageThumbUrl, (travel as any).updated_at);
     }, [travelImageThumbUrl, travel]);
 
+    const isNoImage = !imgUri;
+
+    useEffect(() => {
+        if (isNoImage) {
+            setImgLoaded(true);
+        } else {
+            setImgLoaded(false);
+        }
+    }, [isNoImage]);
+
     // Расчет расстояния и времени в пути
     const distanceInfo = useMemo(() => {
         const parsed = parseCoord(coord);
@@ -196,17 +206,21 @@ const AddressListItem: React.FC<Props> = ({
 
     if (Platform.OS === 'web') {
         return (
-          <div style={{ padding: 8 }}>
-            <PopupContentComponent travel={{
-              address: address ?? '',
-              coord: coord ?? '',
-              travelImageThumbUrl,
-              categoryName,
-              description: undefined,
-              articleUrl,
-              urlTravel,
-            }} />
-          </div>
+          <UnifiedTravelCard
+            title={address ?? ''}
+            imageUrl={imgUri}
+            metaText={categoryName}
+            onPress={handleMainPress}
+            imageHeight={180}
+            width={300}
+            mediaProps={{
+              blurBackground: true,
+              blurRadius: 16,
+              loading: 'lazy',
+              priority: 'low',
+            }}
+            style={{ margin: 8 }}
+          />
         );
     }
 
@@ -233,17 +247,7 @@ const AddressListItem: React.FC<Props> = ({
               onError={() => setImgLoaded(true)}
             />
           ) : (
-            <View style={styles.noDataWrap}>
-              <ImageCardMedia
-                source={require('@/assets/no-data.webp')}
-                fit="contain"
-                blurBackground={false}
-                transition={0}
-                loading="lazy"
-                priority="low"
-                style={styles.noDataImage}
-              />
-            </View>
+            <View style={styles.noImageFallback} />
           )}
 
           {!imgLoaded && (
@@ -279,24 +283,24 @@ const AddressListItem: React.FC<Props> = ({
                       icon="link"
                       size={iconSize}
                       onPress={handleIconPress(openArticle)}
-                      iconColor={colors.textOnDark}
-                      style={[styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
+                      iconColor={isNoImage ? colors.text : colors.textOnDark}
+                      style={[isNoImage ? styles.iconBtnLight : styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Открыть статью"
                     />
                     <IconButton
                       icon="content-copy"
                       size={iconSize}
                       onPress={handleIconPress(copyCoords)}
-                      iconColor={colors.textOnDark}
-                      style={[styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
+                      iconColor={isNoImage ? colors.text : colors.textOnDark}
+                      style={[isNoImage ? styles.iconBtnLight : styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Скопировать координаты"
                     />
                     <IconButton
                       icon="send"
                       size={iconSize}
                       onPress={handleIconPress(openTelegram)}
-                      iconColor={colors.textOnDark}
-                      style={[styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
+                      iconColor={isNoImage ? colors.text : colors.textOnDark}
+                      style={[isNoImage ? styles.iconBtnLight : styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Поделиться в Telegram"
                     />
                 </View>
@@ -304,9 +308,12 @@ const AddressListItem: React.FC<Props> = ({
 
               {/* нижняя плашка — по hover на web, всегда на мобиле */}
               {showOverlays && (
-                <View style={styles.overlay}>
+                <View style={[styles.overlay, isNoImage ? styles.overlayLight : null]}>
                     {!!address && (
-                      <Text style={[styles.title, { fontSize: titleFontSize }]} numberOfLines={2}>
+                      <Text
+                        style={[styles.title, isNoImage ? styles.titleOnLight : null, { fontSize: titleFontSize, color: isNoImage ? colors.text : colors.textOnDark }]}
+                        numberOfLines={2}
+                      >
                           {address}
                       </Text>
                     )}
@@ -332,7 +339,7 @@ const AddressListItem: React.FC<Props> = ({
                         accessibilityRole="button"
                         accessibilityLabel="Открыть в карте"
                       >
-                          <Text style={[styles.coord, { fontSize: coordFontSize }]}>{coord}</Text>
+                          <Text style={[styles.coord, isNoImage ? styles.coordOnLight : null, { fontSize: coordFontSize, color: isNoImage ? colors.text : colors.textOnDark }]}>{coord}</Text>
                       </Pressable>
                     )}
 
@@ -373,6 +380,12 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
     imageOverlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: colors.overlayLight,
+    },
+    noImageFallback: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: colors.backgroundTertiary,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderLight,
     },
     noDataWrap: {
         ...StyleSheet.absoluteFillObject,
@@ -417,6 +430,16 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         alignItems: 'center',
         ...colors.shadows.medium,
     },
+    iconBtnLight: {
+        backgroundColor: colors.backgroundSecondary,
+        margin: 0,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: colors.borderLight,
+        ...colors.shadows.medium,
+    },
     iconBtnDanger: {
         backgroundColor: colors.danger,
         margin: 0,
@@ -434,6 +457,11 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         zIndex: 2,
         position: 'relative',
     },
+    overlayLight: {
+        backgroundColor: colors.backgroundSecondary,
+        borderTopWidth: StyleSheet.hairlineWidth,
+        borderTopColor: colors.borderLight,
+    },
     title: {
         color: colors.textOnDark,
         fontWeight: '800',
@@ -443,6 +471,11 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         textShadowColor: colors.overlay,
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 8,
+    },
+    titleOnLight: {
+        textShadowColor: 'transparent',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 0,
     },
     distanceRow: {
         flexDirection: 'row',
@@ -492,6 +525,11 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         textShadowColor: colors.overlay,
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 4,
+    },
+    coordOnLight: {
+        textShadowColor: 'transparent',
+        textShadowOffset: { width: 0, height: 0 },
+        textShadowRadius: 0,
     },
     catWrap: {
         flexDirection: 'row',

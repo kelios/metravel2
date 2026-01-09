@@ -186,7 +186,6 @@ function UnifiedTravelCard({
           color: colors.text,
           lineHeight: 18,
           letterSpacing: -0.2,
-          minHeight: 36,
         },
         metaRow: {
           flexDirection: 'row',
@@ -299,13 +298,13 @@ function UnifiedTravelCard({
         ) : (
           <View key="content-default" style={styles.content}>
             {!heroTitleOverlay && (
-              <Text style={styles.title} numberOfLines={2}>
+              <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">
                 {title}
               </Text>
             )}
             <View style={styles.metaRow}>
               <Feather name="map-pin" size={12} color={colors.textMuted} style={{ marginRight: 4 } as any} />
-              <Text style={styles.metaText} numberOfLines={1}>
+              <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
                 {metaText || ' '}
               </Text>
             </View>

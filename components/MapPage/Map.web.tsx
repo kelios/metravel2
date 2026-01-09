@@ -3,7 +3,7 @@ import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-nativ
 import * as Location from 'expo-location';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import RoutingMachine from './RoutingMachine';
-import PopupContentComponent from '@/components/MapPage/PopupContentComponent';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/src/types/mapUi';
@@ -376,21 +376,33 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [circleCenter, coordinates, mode, radius, safeCenter]);
 
   // Popup component
-  const PopupWithClose = useMemo(() => {
+  const PopupComponent = useMemo(() => {
     if (!rl) return null;
     const { useMap } = rl;
     const Comp: React.FC<{ point: Point }> = ({ point }) => {
       const map = useMap();
-      const handleClose = useCallback(() => {
+      const handlePress = useCallback(() => {
         if (map) {
           map.closePopup();
         }
       }, [map]);
-      // Early return if map is not yet available
-      if (!map) {
-        return <PopupContentComponent travel={point} onClose={() => {}} />;
-      }
-      return <PopupContentComponent travel={point} onClose={handleClose} />;
+      
+      return (
+        <UnifiedTravelCard
+          title={point.address || ''}
+          imageUrl={point.travelImageThumbUrl}
+          metaText={point.categoryName}
+          onPress={handlePress}
+          imageHeight={180}
+          width={300}
+          mediaProps={{
+            blurBackground: true,
+            blurRadius: 16,
+            loading: 'lazy',
+            priority: 'low',
+          }}
+        />
+      );
     };
     return Comp;
   }, [rl]);
@@ -558,24 +570,24 @@ const MapPageComponent: React.FC<Props> = (props) => {
         )}
 
         {/* Travel markers (not clustered) */}
-        {customIcons?.meTravel && travelData.length > 0 && !shouldRenderClusters && PopupWithClose && (
+        {customIcons?.meTravel && travelData.length > 0 && !shouldRenderClusters && PopupComponent && (
           <MapMarkers
             points={travelData}
             icon={customIcons.meTravel}
             Marker={Marker}
             Popup={Popup}
-            PopupContent={PopupWithClose}
+            PopupContent={PopupComponent}
             onMarkerClick={handleMarkerZoom}
           />
         )}
 
         {/* Travel markers (clustered) */}
-        {customIcons?.meTravel && travelData.length > 0 && shouldRenderClusters && PopupWithClose && (
+        {customIcons?.meTravel && travelData.length > 0 && shouldRenderClusters && PopupComponent && (
           <ClusterLayer
             points={travelData}
             Marker={Marker}
             Popup={Popup}
-            PopupContent={PopupWithClose}
+            PopupContent={PopupComponent}
             markerIcon={customIcons.meTravel}
             markerOpacity={travelMarkerOpacity}
             grid={0.045}

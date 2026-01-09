@@ -259,6 +259,18 @@ html[data-theme="dark"] .modal-select option {
   contain: layout style paint;
 }
 
+html[data-theme="light"] .leaflet-tile {
+  filter: saturate(0.86) contrast(0.88) brightness(1.02);
+}
+
+html[data-theme="dark"] .leaflet-tile {
+  filter: saturate(0.90) contrast(0.92) brightness(0.98);
+}
+.leaflet-container {
+  background-color: var(--color-backgroundTertiary) !important;
+  background-image: none !important;
+}
+
 /* Маркеры и попапы должны быть выше карты, но ниже хедера */
 .leaflet-marker-icon,
 .leaflet-popup {
