@@ -20,6 +20,7 @@ type Props = {
   imageUrl?: string | null;
   metaText?: string | null;
   onPress: () => void;
+  onMediaPress?: () => void;
   mediaFit?: 'contain' | 'cover';
   heroTitleOverlay?: boolean;
   heroTitleMaxLines?: number;
@@ -51,6 +52,7 @@ function UnifiedTravelCard({
   imageUrl,
   metaText,
   onPress,
+  onMediaPress,
   mediaFit = 'contain',
   heroTitleOverlay = false,
   heroTitleMaxLines = 2,
@@ -208,14 +210,22 @@ function UnifiedTravelCard({
   const containerProps =
     isWeb
       ? (webPressableProps ?? {
-          role: 'button',
           tabIndex: 0,
+          'aria-label': title,
           onClick: (e: any) => {
+            const target = e?.target as any;
+            if (target?.closest?.('[data-card-action="true"]')) {
+              return;
+            }
             e?.preventDefault?.();
             onPress();
           },
           onKeyDown: (e: any) => {
             if (e.key === 'Enter' || e.key === ' ') {
+              const target = e?.target as any;
+              if (target?.closest?.('[data-card-action="true"]')) {
+                return;
+              }
               e.preventDefault();
               onPress();
             }
@@ -233,10 +243,7 @@ function UnifiedTravelCard({
       {...Platform.select({ web: { cursor: 'pointer' } as any })}
     >
       {[
-        <View
-          key="media"
-          style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null]}
-        >
+        <View key="media" style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null]}>
           {imageUrl ? (
             <ImageCardMedia
               src={imageUrl}
@@ -245,7 +252,7 @@ function UnifiedTravelCard({
               blurBackground={mediaProps?.blurBackground ?? true}
               blurRadius={mediaProps?.blurRadius ?? 16}
               placeholderBlurhash={mediaProps?.placeholderBlurhash}
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
               loading={mediaProps?.loading ?? (Platform.OS === 'web' ? 'lazy' : 'lazy')}
               priority={mediaProps?.priority ?? (Platform.OS === 'web' ? 'low' : 'normal')}
               prefetch={mediaProps?.prefetch ?? false}
@@ -254,11 +261,45 @@ function UnifiedTravelCard({
             <View
               style={styles.imagePlaceholder}
               testID="image-stub"
+              {...(isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : {})}
               {...(process.env.NODE_ENV === 'test'
                 ? {}
                 : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}
             />
           )}
+
+          {onMediaPress ? (
+            isWeb ? (
+              <View
+                style={StyleSheet.absoluteFill}
+                {...({
+                  tabIndex: 0,
+                  'aria-label': title,
+                  onClick: (e: any) => {
+                    e?.preventDefault?.();
+                    e?.stopPropagation?.();
+                    onMediaPress();
+                  },
+                  onKeyDown: (e: any) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      e?.stopPropagation?.();
+                      onMediaPress();
+                    }
+                  },
+                  'data-card-action': 'true',
+                  style: { cursor: 'pointer', position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
+                } as any)}
+              />
+            ) : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onMediaPress}
+                style={StyleSheet.absoluteFill}
+                {...({ 'data-card-action': 'true' } as any)}
+              />
+            )
+          ) : null}
 
           {heroTitleOverlay ? (
             <View style={StyleSheet.absoluteFillObject}>

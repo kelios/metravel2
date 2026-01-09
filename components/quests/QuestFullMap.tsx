@@ -52,7 +52,7 @@ function buildGPX(pts: StepPoint[]) {
         .join('\n');
     return `<?xml version="1.0" encoding="UTF-8"?>
 <gpx creator="MeTravel" version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
-<trk><name>Quest route</name><trkseg>
+<trk><name>Маршрут квеста</name><trkseg>
 ${trkpts}
 </trkseg></trk>
 </gpx>`;
@@ -74,7 +74,7 @@ function buildGeoJSON(pts: StepPoint[]) {
                         type: 'LineString',
                         coordinates: pts.map(p => [p.lng, p.lat]),
                     },
-                    properties: { name: 'Quest route' },
+                    properties: { name: 'Маршрут квеста' },
                 },
             ],
         },
@@ -116,7 +116,7 @@ async function ensureDomToImage(): Promise<any> {
     await (ensureDomToImage as any)._loader;
 
     if (!w.domtoimage) {
-        throw new Error('dom-to-image failed to load from CDN');
+        throw new Error('Не удалось загрузить dom-to-image из CDN');
     }
 
     return w.domtoimage;

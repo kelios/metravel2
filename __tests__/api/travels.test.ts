@@ -67,6 +67,68 @@ describe('src/api/travelsApi.ts', () => {
     mockedGetSecureItem.mockResolvedValue(null);
   });
 
+  describe('fetchTravelsForMap normalization', () => {
+    it('normalizes snake_case payload into TravelCoords shape', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        1: {
+          id: 1,
+          coord: '50.0619474,19.9368564',
+          address: 'Kraków, Poland',
+          category_name: 'Cafe',
+          travel_image_thumb_url: 'https://example.com/thumb.jpg',
+          url: '/travels/test',
+        },
+      } as any);
+
+      const result = await fetchTravelsForMap(0, 10, {
+        lat: '50.0619474',
+        lng: '19.9368564',
+        radius: '60',
+      });
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          1: expect.objectContaining({
+            address: 'Kraków, Poland',
+            categoryName: 'Cafe',
+            travelImageThumbUrl: 'https://example.com/thumb.jpg',
+            urlTravel: '/travels/test',
+          }),
+        })
+      );
+    });
+
+    it('derives coord from lat/lng and supports categoryName field', async () => {
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        0: {
+          id: 2,
+          lat: 50.1,
+          lng: 19.9,
+          address: 'Some place',
+          categoryName: 'Museum',
+          travelImageThumbUrl: 'https://example.com/img.jpg',
+          urlTravel: '/travels/2',
+        },
+      } as any);
+
+      const result = await fetchTravelsForMap(0, 10, {
+        lat: '50.1',
+        lng: '19.9',
+        radius: '60',
+      });
+
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          coord: '50.1,19.9',
+          categoryName: 'Museum',
+          address: 'Some place',
+        })
+      );
+    });
+  });
+
   describe('fetchTravels', () => {
     it('должен возвращать массив, если API отдаёт массив', async () => {
       const { fetchTravels } = loadTravelsApi();
@@ -308,10 +370,11 @@ describe('src/api/travelsApi.ts', () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
       mockedSafeJsonParse.mockResolvedValueOnce([{ id: 1 }] as any);
 
-      const route: [number, number][] = [[27.5, 53.9]];
+      const route: [number, number][] = [[27.5667, 53.9], [27.5767, 53.91]];
       const result = await fetchTravelsNearRoute(route, 2);
 
-      expect(result).toEqual([{ id: 1 }]);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toEqual([expect.objectContaining({ id: 1 })]);
       expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 

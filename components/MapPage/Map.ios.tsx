@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useThemedColors } from '@/hooks/useTheme';
+import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 
 type Point = {
   id: number;
@@ -11,6 +12,8 @@ type Point = {
   address: string;
   travelImageThumbUrl: string;
   categoryName: string;
+  articleUrl?: string;
+  urlTravel?: string;
 };
 
 type PaginatedResponse = {
@@ -59,6 +62,8 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
 
+  const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+
   useEffect(() => {
     if (!localCoordinates) {
       setLocalCoordinates({ latitude: 53.8828449, longitude: 27.7273595 });
@@ -104,6 +109,10 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
           border-radius: 8px 8px 0 0; 
           display: block;
         }
+        .popup-image-link {
+          display: block;
+          text-decoration: none;
+        }
         .popup-text { padding: 12px; font-size: 13px; line-height: 1.5; }
         .popup-label { font-weight: 600; color: ${themeColors.text}; margin-top: 8px; margin-bottom: 4px; }
         .popup-label:first-of-type { margin-top: 0; }
@@ -124,6 +133,17 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
         const points = ${JSON.stringify(travelAddress)};
         const bounds = L.latLngBounds();
 
+        function sendOpenUrl(rawUrl) {
+          try {
+            if (!rawUrl) return;
+            if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'OPEN_URL', url: rawUrl }));
+            }
+          } catch {
+            // noop
+          }
+        }
+
         // Создаем иконку маркера
         const markerIcon = L.icon({
           iconUrl: '${markerSvgUrl}',
@@ -138,7 +158,10 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
           
           let popupContent = '';
           if (point.travelImageThumbUrl) {
-            popupContent += '<img src="' + point.travelImageThumbUrl + '" class="popup-image" alt="' + (point.address || 'Image') + '" />';
+            const link = (point.articleUrl || point.urlTravel || '');
+            popupContent += '<a href="#" class="popup-image-link" data-open-url="' + String(link).replace(/"/g, '&quot;') + '">' +
+              '<img src="' + point.travelImageThumbUrl + '" class="popup-image" alt="' + (point.address || 'Image') + '" />' +
+            '</a>';
           }
           
           popupContent += '<div class="popup-text">';
@@ -154,6 +177,28 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
           
           const marker = L.marker([lat, lng], { icon: markerIcon }).addTo(map);
           marker.bindPopup(popupContent, { maxWidth: 200 });
+
+          marker.on('popupopen', function(e) {
+            try {
+              const popupEl = e && e.popup ? e.popup.getElement() : null;
+              if (!popupEl) return;
+              const linkEl = popupEl.querySelector('.popup-image-link');
+              if (!linkEl) return;
+              linkEl.addEventListener('click', function(ev) {
+                try {
+                  ev.preventDefault();
+                  const url = (linkEl.getAttribute('data-open-url') || '').trim();
+                  if (!url) return;
+                  sendOpenUrl(url);
+                } catch {
+                  // noop
+                }
+              }, { once: true });
+            } catch {
+              // noop
+            }
+          });
+
           bounds.extend([lat, lng]);
         });
 
@@ -179,6 +224,22 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
         domStorageEnabled={true}
         startInLoadingState={true}
         onLoadEnd={() => setIsLoading(false)}
+        onMessage={async (event) => {
+          const raw = String(event?.nativeEvent?.data ?? '');
+          if (!raw) return;
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed?.type !== 'OPEN_URL') return;
+            const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl: SITE_URL });
+            if (!safeUrl) return;
+            const can = await Linking.canOpenURL(safeUrl);
+            if (can) {
+              await Linking.openURL(safeUrl);
+            }
+          } catch {
+            // noop
+          }
+        }}
         scrollEnabled={true}
         pinchZoomEnabled={true}
       />

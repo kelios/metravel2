@@ -190,11 +190,28 @@ export function useMapScreenController() {
   const buildRouteTo = useCallback(
     (item: TravelCoords) => {
       if (!item?.coord) return;
-      const parsed = CoordinateConverter.fromLooseString(String(item.coord));
-      if (!parsed) return;
-      updateCoordinates(parsed.lat, parsed.lng);
+      const coordStr = String(item.coord);
+
+      try {
+        mapUiApi?.focusOnCoord?.(coordStr, { zoom: 14 });
+      } catch {
+        // noop
+      }
+
+      try {
+        // Open popup after the map starts moving so user immediately sees the exact point.
+        setTimeout(() => {
+          try {
+            mapUiApi?.openPopupForCoord?.(coordStr);
+          } catch {
+            // noop
+          }
+        }, 420);
+      } catch {
+        // noop
+      }
     },
-    [updateCoordinates]
+    [mapUiApi]
   );
 
   // Build route from store points

@@ -5,6 +5,86 @@ import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 
+const normalizeCoordString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const normalizeString = (value: unknown, fallback = ''): string => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : fallback;
+  }
+  if (value == null) return fallback;
+  return String(value);
+};
+
+const normalizeLatLngString = (value: unknown): string => {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : '';
+  }
+  return '';
+};
+
+const normalizeTravelCoordsItem = (raw: any) => {
+  const t = raw && typeof raw === 'object' ? raw : {};
+
+  const lat = normalizeLatLngString(t.lat ?? t.latitude);
+  const lng = normalizeLatLngString(t.lng ?? t.longitude);
+
+  const coord =
+    normalizeCoordString(t.coord) ??
+    (lat && lng ? `${lat},${lng}` : undefined);
+
+  const address =
+    normalizeString(t.address ?? t.adress ?? t.full_address ?? t.name, '').trim() || undefined;
+
+  const categoryName = normalizeString(
+    t.categoryName ?? t.category_name ?? t.category ?? t.categoryTravelAddress,
+    ''
+  );
+
+  const travelImageThumbUrl = normalizeString(
+    t.travelImageThumbUrl ?? t.travel_image_thumb_url ?? t.image ?? t.thumb,
+    ''
+  );
+
+  const urlTravel = normalizeString(t.urlTravel ?? t.url_travel ?? t.url, '');
+  const articleUrl = normalizeString(t.articleUrl ?? t.article_url, '') || undefined;
+
+  return {
+    ...t,
+    address,
+    categoryName,
+    coord,
+    lat,
+    lng,
+    travelImageThumbUrl,
+    urlTravel,
+    articleUrl,
+  };
+};
+
+const normalizeTravelsForMapPayload = (payload: unknown): TravelsForMap => {
+  if (!payload) return {} as TravelsForMap;
+  if (Array.isArray(payload)) {
+    // Some backend endpoints historically returned arrays. Preserve that shape
+    // to avoid breaking callers/tests that expect arrays.
+    return payload.map((item) => normalizeTravelCoordsItem(item)) as unknown as TravelsForMap;
+  }
+  if (typeof payload === 'object') {
+    const out: any = {};
+    Object.entries(payload as Record<string, any>).forEach(([key, value]) => {
+      out[key] = normalizeTravelCoordsItem(value);
+    });
+    return out as TravelsForMap;
+  }
+  return {} as TravelsForMap;
+};
+
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 
 const rawApiUrl: string =
@@ -134,7 +214,8 @@ export const fetchTravelsForMap = async (
 
     const urlTravel = `${SEARCH_TRAVELS_FOR_MAP}?${params}`;
     const res = await fetchWithTimeout(urlTravel, {}, LONG_TIMEOUT);
-    return await safeJsonParse<TravelsForMap>(res, [] as unknown as TravelsForMap);
+    const payload = await safeJsonParse<unknown>(res, [] as unknown as TravelsForMap);
+    return normalizeTravelsForMapPayload(payload);
   } catch (e) {
     devWarn('Error fetching fetchTravelsForMap:', e);
     return [] as unknown as TravelsForMap;
@@ -169,7 +250,8 @@ export const fetchTravelsNearRoute = async (
       return [] as unknown as TravelsForMap;
     }
 
-    return await safeJsonParse<TravelsForMap>(res, [] as unknown as TravelsForMap);
+    const payload = await safeJsonParse<unknown>(res, [] as unknown as TravelsForMap);
+    return normalizeTravelsForMapPayload(payload);
   } catch (e) {
     devWarn('Error fetching fetchTravelsNearRoute:', e);
     return [] as unknown as TravelsForMap;

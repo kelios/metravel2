@@ -18,6 +18,7 @@ interface MapMarkersProps {
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
+  onMarkerInstance?: (coord: string, marker: any | null) => void;
 }
 
 const MapMarkers: React.FC<MapMarkersProps> = ({
@@ -27,6 +28,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   Popup,
   PopupContent,
   onMarkerClick,
+  onMarkerInstance,
 }) => {
   const validPoints = useMemo(() => {
     return points
@@ -58,13 +60,33 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 
       onMarkerClick?.(point, coords);
       if (e?.target?.openPopup) {
+        const map = e?.target?._map;
+        let didOpen = false;
+        try {
+          if (map && typeof map.once === 'function') {
+            map.once('moveend', () => {
+              if (didOpen) return;
+              didOpen = true;
+              try {
+                e.target.openPopup();
+              } catch {
+                // noop
+              }
+            });
+          }
+        } catch {
+          // noop
+        }
+
         setTimeout(() => {
+          if (didOpen) return;
+          didOpen = true;
           try {
             e.target.openPopup();
           } catch {
             // noop
           }
-        }, 360);
+        }, 420);
       }
     },
     [onMarkerClick]
@@ -77,6 +99,15 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           key={key}
           position={CoordinateConverter.toLeaflet(coords)}
           icon={icon}
+          ref={(marker: any) => {
+            try {
+              if (typeof onMarkerInstance === 'function') {
+                onMarkerInstance(String(point.coord ?? ''), marker ?? null);
+              }
+            } catch {
+              // noop
+            }
+          }}
           eventHandlers={{
             click: (e: any) => handleMarkerClick(e, point, coords),
           }}

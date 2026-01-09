@@ -266,7 +266,7 @@ export default function FavoritesScreen() {
                                 country: item.country ?? item.countryName ?? null,
                             }}
                             badge={{
-                                icon: 'favorite',
+                                icon: 'heart',
                                 backgroundColor: colors.danger,
                                 iconColor: colors.textOnDark,
                             }}

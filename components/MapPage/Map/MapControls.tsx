@@ -19,7 +19,7 @@ const MapControls: React.FC<MapControlsProps> = ({
     <div
       style={{
         position: 'absolute',
-        top: 10,
+        bottom: 18,
         right: 10,
         zIndex: 1000,
       }}

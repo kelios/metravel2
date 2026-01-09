@@ -312,7 +312,10 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Минимальный черновик');
 
     // Клик по Quick Draft
-    await page.getByRole('button', { name: /быстрый черновик/i }).click();
+    const quickDraftButton = page
+      .getByTestId('travel-wizard-quick-draft')
+      .or(page.getByRole('button', { name: /быстрый черновик/i }));
+    await quickDraftButton.click();
 
     // Проверяем успешное сообщение
     await expect(page.locator('text=Черновик сохранен')).toBeVisible({ timeout: 5000 });
@@ -334,7 +337,10 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('AB');
 
     // Клик по Quick Draft
-    await page.getByRole('button', { name: /быстрый черновик/i }).click();
+    const quickDraftButton = page
+      .getByTestId('travel-wizard-quick-draft')
+      .or(page.getByRole('button', { name: /быстрый черновик/i }));
+    await quickDraftButton.click();
 
     // Проверяем ошибку
     await expect(page.locator('text=/Минимум 3 символа/i')).toBeVisible({ timeout: 3000 });
@@ -350,7 +356,9 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     await page.goto('/travel/new');
     await ensureCanCreateTravel(page);
 
-    const quickDraftButton = page.getByRole('button', { name: /быстрый черновик/i });
+    const quickDraftButton = page
+      .getByTestId('travel-wizard-quick-draft')
+      .or(page.getByRole('button', { name: /быстрый черновик/i }));
     await expect(quickDraftButton).toBeVisible();
 
     // Mobile
@@ -360,7 +368,8 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
 
     // On mobile we may hide text and keep accessible label; rely on accessibility name instead of emoji.
     const quickDraftButtonMobile = page
-      .getByRole('button', { name: /быстрый черновик/i })
+      .getByTestId('travel-wizard-quick-draft')
+      .or(page.getByRole('button', { name: /быстрый черновик/i }))
       .or(page.locator('button[aria-label*="Быстрый черновик"]'));
     await expect(quickDraftButtonMobile.first()).toBeVisible({ timeout: 15_000 });
   });

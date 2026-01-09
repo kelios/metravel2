@@ -37,6 +37,10 @@ export function useMapApi({
   leafletOverlayLayersRef,
   leafletControlRef,
 }: UseMapApiProps) {
+  const pendingOverlayTogglesRef = useRef<Map<string, boolean>>(new Map());
+  const pendingOverlayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingOverlayAttemptsRef = useRef(0);
+
   const canExportRoute = useMemo(() => routePoints.length >= 2, [routePoints.length]);
 
   const centerOnUserLocation = useCallback(() => {
@@ -69,6 +73,63 @@ export function useMapApi({
   const api = useMemo<MapUiApi | null>(() => {
     if (!map || !L) return null;
 
+    const schedulePendingOverlayFlush = () => {
+      try {
+        if (pendingOverlayTimerRef.current) return;
+        pendingOverlayTimerRef.current = setTimeout(() => {
+          pendingOverlayTimerRef.current = null;
+          try {
+            const available = leafletOverlayLayersRef.current;
+            if (!available || available.size === 0) {
+              pendingOverlayAttemptsRef.current += 1;
+              if (pendingOverlayAttemptsRef.current < 10) {
+                schedulePendingOverlayFlush();
+              } else {
+                pendingOverlayTogglesRef.current.clear();
+                pendingOverlayAttemptsRef.current = 0;
+              }
+              return;
+            }
+
+            const toApply = Array.from(pendingOverlayTogglesRef.current.entries());
+            pendingOverlayTogglesRef.current.clear();
+            pendingOverlayAttemptsRef.current = 0;
+
+            for (const [id, enabled] of toApply) {
+              try {
+                const layer = available.get(id);
+                if (!layer) continue;
+                if (enabled) {
+                  layer.addTo(map);
+                } else if (map.hasLayer?.(layer)) {
+                  map.removeLayer(layer);
+                }
+
+                const overpassController = (leafletControlRef as any).overpassController;
+                if (overpassController?.layer === layer) {
+                  if (enabled) overpassController.start?.();
+                  else overpassController.stop?.();
+                }
+
+                const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
+                const controller = controllers?.get?.(id);
+                if (controller?.layer === layer) {
+                  if (enabled) controller.start?.();
+                  else controller.stop?.();
+                }
+              } catch {
+                // noop
+              }
+            }
+          } catch {
+            // noop
+          }
+        }, 220);
+      } catch {
+        // noop
+      }
+    };
+
     return {
       zoomIn: () => {
         try {
@@ -85,6 +146,89 @@ export function useMapApi({
         }
       },
       centerOnUser: centerOnUserLocation,
+      focusOnCoord: (coord: string, options?: { zoom?: number }) => {
+        try {
+          const parsed = CoordinateConverter.fromLooseString(String(coord));
+          if (!parsed || !CoordinateConverter.isValid(parsed)) return;
+
+          const targetZoom =
+            typeof options?.zoom === 'number' && Number.isFinite(options.zoom)
+              ? options.zoom
+              : 14;
+
+          try {
+            map.closePopup?.();
+          } catch {
+            // noop
+          }
+
+          if (typeof map.flyTo === 'function') {
+            map.flyTo(CoordinateConverter.toLeaflet(parsed), targetZoom, { animate: true, duration: 0.35 } as any);
+            return;
+          }
+          if (typeof map.setView === 'function') {
+            map.setView(CoordinateConverter.toLeaflet(parsed), targetZoom, { animate: true } as any);
+          }
+        } catch {
+          // noop
+        }
+      },
+      openPopupForCoord: (coord: string) => {
+        try {
+          const key = String(coord ?? '').trim();
+          if (!key) return;
+
+          const markerIndex: Map<string, any> | undefined = (leafletControlRef as any).markerByCoord;
+          const marker = markerIndex?.get?.(key);
+          if (!marker) return;
+
+          try {
+            marker.setZIndexOffset?.(1000);
+          } catch {
+            // noop
+          }
+
+          const mapInstance = marker?._map;
+          let didOpen = false;
+
+          try {
+            if (mapInstance && typeof mapInstance.once === 'function') {
+              mapInstance.once('moveend', () => {
+                if (didOpen) return;
+                didOpen = true;
+                try {
+                  marker.openPopup?.();
+                } catch {
+                  // noop
+                }
+              });
+            }
+          } catch {
+            // noop
+          }
+
+          setTimeout(() => {
+            if (didOpen) return;
+            didOpen = true;
+            try {
+              marker.openPopup?.();
+            } catch {
+              // noop
+            }
+          }, 420);
+
+          // Reset zIndex after a short delay so it doesn't permanently stay on top
+          setTimeout(() => {
+            try {
+              marker.setZIndexOffset?.(0);
+            } catch {
+              // noop
+            }
+          }, 1400);
+        } catch {
+          // noop
+        }
+      },
       fitToResults: () => {
         if (!travelData?.length) return;
         try {
@@ -125,6 +269,12 @@ export function useMapApi({
           console.info('[useMapApi] setOverlayEnabled called:', id, enabled);
           const layer = leafletOverlayLayersRef.current.get(id);
           if (!layer) {
+            if (leafletOverlayLayersRef.current.size === 0) {
+              pendingOverlayTogglesRef.current.set(id, enabled);
+              schedulePendingOverlayFlush();
+              return;
+            }
+
             console.warn('[useMapApi] Layer not found:', id, 'Available layers:', Array.from(leafletOverlayLayersRef.current.keys()));
             return;
           }

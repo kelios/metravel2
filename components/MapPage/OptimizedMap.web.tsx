@@ -32,6 +32,7 @@ interface OptimizedMapProps {
   setRouteDistance: (distance: number) => void;
   setFullRouteCoords: (coords: [number, number][]) => void;
   placesAlongRoute?: any[]; // For compatibility, not used in Map.web
+  onMapUiApiReady?: (api: any | null) => void;
 }
 
 const OptimizedMap: React.FC<OptimizedMapProps> = ({
@@ -45,6 +46,7 @@ const OptimizedMap: React.FC<OptimizedMapProps> = ({
   setRouteDistance,
   setFullRouteCoords,
   placesAlongRoute: _placesAlongRoute, // Accepted but not passed to Map.web
+  onMapUiApiReady,
 }) => {
   return (
     <MapPageComponent
@@ -57,6 +59,7 @@ const OptimizedMap: React.FC<OptimizedMapProps> = ({
       transportMode={transportMode}
       setRouteDistance={setRouteDistance}
       setFullRouteCoords={setFullRouteCoords}
+      onMapUiApiReady={onMapUiApiReady}
     />
   );
 };

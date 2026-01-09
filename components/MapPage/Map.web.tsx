@@ -8,6 +8,8 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/src/types/mapUi';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import Feather from '@expo/vector-icons/Feather';
 
 // Import modular components and hooks
 import { useMapCleanup } from '@/components/MapPage/Map/useMapCleanup';
@@ -32,6 +34,24 @@ type Point = {
   categoryName: string;
   articleUrl?: string;
   urlTravel?: string;
+};
+
+const buildGoogleMapsUrl = (coord: string) => {
+  const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
+  const [latStr, lonStr] = cleaned.split(',').map((s) => s.trim());
+  const lat = Number(latStr);
+  const lon = Number(lonStr);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+};
+
+const buildOrganicMapsUrl = (coord: string) => {
+  const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
+  const [latStr, lonStr] = cleaned.split(',').map((s) => s.trim());
+  const lat = Number(latStr);
+  const lon = Number(lonStr);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+  return `https://omaps.app/${lat},${lon}`;
 };
 
 interface Coordinates {
@@ -84,6 +104,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
   const [mapInstance, setMapInstance] = useState<any>(null);
+
+  const markerByCoordRef = useRef<Map<string, any>>(new Map());
 
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -169,6 +191,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
     map: mapInstance,
     L,
   });
+
+  // Expose marker index for MapUiApi.openPopupForCoord
+  try {
+    (leafletControlRef as any).markerByCoord = markerByCoordRef.current;
+  } catch {
+    // noop
+  }
 
   useMapApi({
     map: mapInstance,
@@ -381,11 +410,75 @@ const MapPageComponent: React.FC<Props> = (props) => {
     const { useMap } = rl;
     const Comp: React.FC<{ point: Point }> = ({ point }) => {
       const map = useMap();
+      const coord = String(point.coord ?? '').trim();
       const handlePress = useCallback(() => {
         if (map) {
           map.closePopup();
         }
       }, [map]);
+
+      const handleOpenArticle = useCallback(() => {
+        const url = String(point.articleUrl || point.urlTravel || '').trim();
+        if (!url) return;
+        try {
+          if (typeof window !== 'undefined') {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          }
+        } catch {
+          // noop
+        }
+      }, [point.articleUrl, point.urlTravel]);
+
+      const handleCopyCoord = useCallback(async () => {
+        if (!coord) return;
+        try {
+          if ((navigator as any)?.clipboard?.writeText) {
+            await (navigator as any).clipboard.writeText(coord);
+          }
+        } catch {
+          // noop
+        }
+      }, [coord]);
+
+      const handleOpenGoogleMaps = useCallback(() => {
+        if (!coord) return;
+        const url = buildGoogleMapsUrl(coord);
+        if (!url) return;
+        try {
+          if (typeof window !== 'undefined') {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          }
+        } catch {
+          // noop
+        }
+      }, [coord]);
+
+      const handleOpenOrganicMaps = useCallback(() => {
+        if (!coord) return;
+        const url = buildOrganicMapsUrl(coord);
+        if (!url) return;
+        try {
+          if (typeof window !== 'undefined') {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          }
+        } catch {
+          // noop
+        }
+      }, [coord]);
+
+      const handleShareTelegram = useCallback(() => {
+        if (!coord) return;
+        const mapUrl = buildGoogleMapsUrl(coord);
+        const text = `📍 Координаты: ${coord}`;
+        const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`;
+        try {
+          if (typeof window !== 'undefined') {
+            window.open(telegramUrl, '_blank', 'noopener,noreferrer');
+          }
+        } catch {
+          // noop
+        }
+      }, [coord]);
       
       return (
         <UnifiedTravelCard
@@ -393,8 +486,168 @@ const MapPageComponent: React.FC<Props> = (props) => {
           imageUrl={point.travelImageThumbUrl}
           metaText={point.categoryName}
           onPress={handlePress}
+          onMediaPress={handleOpenArticle}
           imageHeight={180}
           width={300}
+          contentSlot={
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: (colors as any).text ?? undefined }} numberOfLines={1}>
+                {point.address || ''}
+              </Text>
+              {!!coord && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: (colors as any).textMuted ?? undefined,
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {coord}
+                  </Text>
+                  <View
+                    {...({
+                      role: 'button',
+                      tabIndex: 0,
+                      title: 'Скопировать координаты',
+                      'aria-label': 'Скопировать координаты',
+                      'data-card-action': 'true',
+                      onClick: (e: any) => {
+                        e?.preventDefault?.();
+                        e?.stopPropagation?.();
+                        void handleCopyCoord();
+                      },
+                      onKeyDown: (e: any) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e?.stopPropagation?.();
+                          void handleCopyCoord();
+                        }
+                      },
+                      style: { cursor: 'pointer' },
+                    } as any)}
+                  >
+                    <Feather name="clipboard" size={16} color={(colors as any).textMuted ?? undefined} />
+                  </View>
+                  <View
+                    {...({
+                      role: 'button',
+                      tabIndex: 0,
+                      title: 'Поделиться в Telegram',
+                      'aria-label': 'Поделиться в Telegram',
+                      'data-card-action': 'true',
+                      onClick: (e: any) => {
+                        e?.preventDefault?.();
+                        e?.stopPropagation?.();
+                        handleShareTelegram();
+                      },
+                      onKeyDown: (e: any) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e?.stopPropagation?.();
+                          handleShareTelegram();
+                        }
+                      },
+                      style: { cursor: 'pointer' },
+                    } as any)}
+                  >
+                    <Feather name="send" size={16} color={(colors as any).textMuted ?? undefined} />
+                  </View>
+                </View>
+              )}
+              {(!!point.categoryName || !!coord) && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  {!!point.categoryName && (
+                    <Text style={{ fontSize: 12, color: (colors as any).textMuted ?? undefined }} numberOfLines={1}>
+                      {point.categoryName}
+                    </Text>
+                  )}
+
+                  {!!coord && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                      <View
+                        {...({
+                          role: 'button',
+                          tabIndex: 0,
+                          title: 'Открыть в Google Maps',
+                          'aria-label': 'Открыть в Google Maps',
+                          'data-card-action': 'true',
+                          onClick: (e: any) => {
+                            e?.preventDefault?.();
+                            e?.stopPropagation?.();
+                            handleOpenGoogleMaps();
+                          },
+                          onKeyDown: (e: any) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e?.stopPropagation?.();
+                              handleOpenGoogleMaps();
+                            }
+                          },
+                          style: { cursor: 'pointer' },
+                        } as any)}
+                      >
+                        <Feather name="external-link" size={16} color={(colors as any).textMuted ?? undefined} />
+                      </View>
+
+                      <View
+                        {...({
+                          role: 'button',
+                          tabIndex: 0,
+                          title: 'Открыть в Organic Maps',
+                          'aria-label': 'Открыть в Organic Maps',
+                          'data-card-action': 'true',
+                          onClick: (e: any) => {
+                            e?.preventDefault?.();
+                            e?.stopPropagation?.();
+                            handleOpenOrganicMaps();
+                          },
+                          onKeyDown: (e: any) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e?.stopPropagation?.();
+                              handleOpenOrganicMaps();
+                            }
+                          },
+                          style: { cursor: 'pointer' },
+                        } as any)}
+                      >
+                        <Feather name="navigation" size={16} color={(colors as any).textMuted ?? undefined} />
+                      </View>
+
+                      {!!String(point.articleUrl || point.urlTravel || '').trim() && (
+                        <View
+                          {...({
+                            role: 'button',
+                            tabIndex: 0,
+                            title: 'Открыть статью',
+                            'aria-label': 'Открыть статью',
+                            'data-card-action': 'true',
+                            onClick: (e: any) => {
+                              e?.preventDefault?.();
+                              e?.stopPropagation?.();
+                              handleOpenArticle();
+                            },
+                            onKeyDown: (e: any) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e?.stopPropagation?.();
+                                handleOpenArticle();
+                              }
+                            },
+                            style: { cursor: 'pointer' },
+                          } as any)}
+                        >
+                          <Feather name="book-open" size={16} color={(colors as any).textMuted ?? undefined} />
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          }
           mediaProps={{
             blurBackground: true,
             blurRadius: 16,
@@ -405,7 +658,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       );
     };
     return Comp;
-  }, [rl]);
+  }, [rl, colors]);
 
   const noPointsAlongRoute = useMemo(() => {
     if (mode !== 'route') return false;
@@ -414,9 +667,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [mode, routePoints, travelData.length]);
 
   // Early returns
-  if (loading) return renderLoader('Loading map...');
+  if (loading) return renderLoader('Загрузка карты...');
   if (!L || !rl) {
-    return renderLoader(errors.loadingModules ? 'Loading map modules failed' : 'Loading map...');
+    return renderLoader(errors.loadingModules ? 'Не удалось загрузить модули карты' : 'Загрузка карты...');
   }
 
   const rlSafe = (rl ?? {}) as ReactLeafletNS;
@@ -424,6 +677,38 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   return (
     <View style={styles.wrapper} testID="map-leaflet-wrapper">
+      {Platform.OS === 'web' && (
+        <style>
+          {`
+          html[data-theme='dark'] .leaflet-popup-content-wrapper,
+          html[data-theme='dark'] .leaflet-popup-tip {
+            background: ${(colors as any).surface} !important;
+            opacity: 1 !important;
+          }
+
+          html[data-theme='dark'] .leaflet-popup-content-wrapper {
+            color: ${(colors as any).text} !important;
+            border-radius: ${DESIGN_TOKENS.radii.md}px !important;
+            box-shadow: ${DESIGN_TOKENS.shadows.modal} !important;
+            border: 1px solid ${(colors as any).border} !important;
+          }
+
+          html[data-theme='dark'] .leaflet-popup-content {
+            margin: ${DESIGN_TOKENS.spacing.md}px !important;
+            color: ${(colors as any).text} !important;
+          }
+
+          html[data-theme='dark'] .leaflet-popup-close-button {
+            display: block !important;
+            color: ${(colors as any).textMuted} !important;
+          }
+
+          html[data-theme='dark'] .leaflet-popup-close-button:hover {
+            color: ${(colors as any).text} !important;
+          }
+          `}
+        </style>
+      )}
       {noPointsAlongRoute && (
         <View
           testID="no-points-message"
@@ -523,7 +808,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
               },
             }}
           >
-            <Popup>Start</Popup>
+            <Popup>Старт</Popup>
           </Marker>
         )}
 
@@ -541,7 +826,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
               },
             }}
           >
-            <Popup>End</Popup>
+            <Popup>Финиш</Popup>
           </Marker>
         )}
 
@@ -565,7 +850,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         {/* User location marker */}
         {userLocationLatLng && customIcons?.userLocation && (
           <Marker position={[userLocationLatLng.lat, userLocationLatLng.lng]} icon={customIcons.userLocation}>
-            <Popup>Your location</Popup>
+            <Popup>Ваше местоположение</Popup>
           </Marker>
         )}
 
@@ -578,6 +863,16 @@ const MapPageComponent: React.FC<Props> = (props) => {
             Popup={Popup}
             PopupContent={PopupComponent}
             onMarkerClick={handleMarkerZoom}
+            onMarkerInstance={(coord, marker) => {
+              try {
+                const key = String(coord ?? '').trim();
+                if (!key) return;
+                if (marker) markerByCoordRef.current.set(key, marker);
+                else markerByCoordRef.current.delete(key);
+              } catch {
+                // noop
+              }
+            }}
           />
         )}
 

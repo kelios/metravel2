@@ -195,6 +195,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             ]}
             accessibilityRole="button"
             accessibilityLabel={quickDraftLabel}
+            testID="travel-wizard-quick-draft"
             onHoverIn={() => showHover('draft')}
             onHoverOut={hideHover}
         >

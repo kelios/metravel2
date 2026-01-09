@@ -351,7 +351,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         }
       }
     },
-    [onFirstImageLoad, prefetchEnabled, updateLoadStatus]
+    [onFirstImageLoad, prefetchEnabled, updateLoadStatus, canPrefetchOnWeb]
   );
   const dismissSwipeHint = useCallback(() => setShowSwipeHint(false), []);
   useEffect(() => {

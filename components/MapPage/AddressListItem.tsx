@@ -14,6 +14,7 @@ import * as Clipboard from 'expo-clipboard';
 import { TravelCoords } from '@/src/types/types';
 import { METRICS } from '@/constants/layout';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
@@ -46,6 +47,11 @@ const parseCoord = (coord?: string) => {
 const buildMapUrl = (coord?: string) => {
     const p = parseCoord(coord);
     return p ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}` : '';
+};
+
+const buildOrganicMapsUrl = (coord?: string) => {
+    const p = parseCoord(coord);
+    return p ? `https://omaps.app/${p.lat},${p.lon}` : '';
 };
 
 const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
@@ -151,6 +157,11 @@ const AddressListItem: React.FC<Props> = ({
         openExternal(buildMapUrl(coord));
     }, [coord]);
 
+    const openOrganicMaps = useCallback((e: any) => {
+        e?.stopPropagation();
+        openExternal(buildOrganicMapsUrl(coord));
+    }, [coord]);
+
     const openArticle = useCallback((e?: any) => {
         e?.stopPropagation();
         openExternal(articleUrl || urlTravel);
@@ -213,6 +224,115 @@ const AddressListItem: React.FC<Props> = ({
             onPress={handleMainPress}
             imageHeight={180}
             width={300}
+            contentSlot={
+              <View style={{ gap: 8 }}>
+                {!!address && (
+                  <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+                    {address}
+                  </Text>
+                )}
+
+                {!!coord && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: colors.textMuted,
+                        fontFamily:
+                          Platform.OS === 'web'
+                            ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)
+                            : 'monospace',
+                      }}
+                    >
+                      {coord}
+                    </Text>
+
+                    <Pressable
+                      accessibilityLabel="Скопировать координаты"
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        void copyCoords();
+                      }}
+                      {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
+                    >
+                      <View {...({ title: 'Скопировать координаты', 'aria-label': 'Скопировать координаты' } as any)}>
+                        <Feather name="clipboard" size={16} color={colors.textMuted} />
+                      </View>
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityLabel="Поделиться в Telegram"
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        void openTelegram();
+                      }}
+                      {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
+                    >
+                      <View {...({ title: 'Поделиться в Telegram', 'aria-label': 'Поделиться в Telegram' } as any)}>
+                        <Feather name="send" size={16} color={colors.textMuted} />
+                      </View>
+                    </Pressable>
+                  </View>
+                )}
+
+                {(!!categoryName || !!coord) && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    {!!categoryName && (
+                      <Text numberOfLines={1} style={{ fontSize: 12, color: colors.textMuted }}>
+                        {categoryName}
+                      </Text>
+                    )}
+
+                    {!!coord && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                        <Pressable
+                          accessibilityLabel="Открыть в Google Maps"
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            openMap(e);
+                          }}
+                          {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
+                        >
+                          <View {...({ title: 'Открыть в Google Maps', 'aria-label': 'Открыть в Google Maps' } as any)}>
+                            <Feather name="map" size={16} color={colors.textMuted} />
+                          </View>
+                        </Pressable>
+
+                        <Pressable
+                          accessibilityLabel="Открыть в Organic Maps"
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            openOrganicMaps(e);
+                          }}
+                          {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
+                        >
+                          <View {...({ title: 'Открыть в Organic Maps', 'aria-label': 'Открыть в Organic Maps' } as any)}>
+                            <Feather name="navigation" size={16} color={colors.textMuted} />
+                          </View>
+                        </Pressable>
+
+                        {(!!articleUrl || !!urlTravel) && (
+                          <Pressable
+                            accessibilityLabel="Открыть статью"
+                            onPress={(e) => {
+                              e?.stopPropagation?.();
+                              openArticle(e);
+                            }}
+                            {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
+                          >
+                            <View {...({ title: 'Открыть статью', 'aria-label': 'Открыть статью' } as any)}>
+                              <Feather name="book-open" size={16} color={colors.textMuted} />
+                            </View>
+                          </Pressable>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            }
             mediaProps={{
               blurBackground: true,
               blurRadius: 16,
@@ -220,6 +340,7 @@ const AddressListItem: React.FC<Props> = ({
               priority: 'low',
             }}
             style={{ margin: 8 }}
+            testID="map-travel-card"
           />
         );
     }

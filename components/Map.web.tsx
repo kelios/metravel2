@@ -1,18 +1,60 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import Feather from '@expo/vector-icons/Feather';
 
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 
 export type Point = {
-  id: number;
+  id: string;
   coord: string;
   address: string;
-  travelImageThumbUrl: string;
-  categoryName: string;
+  travelImageThumbUrl?: string;
+  updated_at?: string;
+  categoryName?: string;
   articleUrl?: string;
   urlTravel?: string;
+};
+
+const normalizePoint = (input: any, index: number): Point => {
+  const raw = input && typeof input === 'object' ? input : {};
+
+  const id =
+    raw.id !== undefined && raw.id !== null && String(raw.id).trim().length > 0
+      ? String(raw.id)
+      : `idx-${index}`;
+
+  const lat = typeof raw.lat === 'number' ? raw.lat : Number(raw.lat);
+  const lng = typeof raw.lng === 'number' ? raw.lng : Number(raw.lng);
+
+  const coord =
+    typeof raw.coord === 'string' && raw.coord.trim()
+      ? raw.coord.trim()
+      : typeof raw.coords === 'string' && raw.coords.trim()
+        ? raw.coords.trim()
+        : Number.isFinite(lat) && Number.isFinite(lng)
+          ? `${lat}, ${lng}`
+          : '';
+
+  const address =
+    typeof raw.address === 'string' && raw.address.trim()
+      ? raw.address.trim()
+      : typeof raw.name === 'string' && raw.name.trim()
+        ? raw.name.trim()
+        : '';
+
+  return {
+    id,
+    coord,
+    address,
+    travelImageThumbUrl: raw.travelImageThumbUrl ?? raw.travel_image_thumb_url ?? raw.image ?? undefined,
+    updated_at: raw.updated_at,
+    categoryName: raw.categoryName ?? raw.category_name,
+    articleUrl: raw.articleUrl ?? raw.article_url,
+    urlTravel: raw.urlTravel ?? raw.url_travel ?? raw.url,
+  };
 };
 
 type TravelPropsType = {
@@ -57,6 +99,24 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   const rootRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
+
+  const buildGoogleMapsUrl = useCallback((coord: string) => {
+    const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
+    const [latStr, lonStr] = cleaned.split(',').map((s) => s.trim());
+    const lat = Number(latStr);
+    const lon = Number(lonStr);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+  }, []);
+
+  const buildOrganicMapsUrl = useCallback((coord: string) => {
+    const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
+    const [latStr, lonStr] = cleaned.split(',').map((s) => s.trim());
+    const lat = Number(latStr);
+    const lon = Number(lonStr);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+    return `https://omaps.app/${lat},${lon}`;
+  }, []);
 
   // Очистка Leaflet контейнера при размонтировании, чтобы избежать "Map container is already initialized"
   useEffect(() => {
@@ -122,7 +182,11 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     return () => { cancelled = true; };
   }, []);
 
-  const travelData = useMemo(() => travel.data || [], [travel.data]);
+  const travelData = useMemo(() => {
+    const rawData = Array.isArray(travel?.data) ? travel.data : [];
+    return rawData.map((p: any, idx: number) => normalizePoint(p, idx));
+  }, [travel]);
+
   const initialCenter: [number, number] = [
     coordinates?.latitude ?? 53.8828449,
     coordinates?.longitude ?? 27.7273595,
@@ -331,9 +395,74 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const PopupWithClose: React.FC<{ point: Point }> = ({ point }) => {
     const map = useMap();
 
+    const coord = String(point.coord ?? '').trim();
+
     const handleClose = useCallback(() => {
       map.closePopup();
     }, [map]);
+
+    const handleOpenArticle = useCallback(() => {
+      const url = String(point.articleUrl || point.urlTravel || '').trim();
+      if (!url) return;
+      try {
+        if (typeof window !== 'undefined') {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      } catch {
+        // noop
+      }
+    }, [point.articleUrl, point.urlTravel]);
+
+    const handleCopyCoord = useCallback(async () => {
+      if (!coord) return;
+      try {
+        if ((navigator as any)?.clipboard?.writeText) {
+          await (navigator as any).clipboard.writeText(coord);
+        }
+      } catch {
+        // noop
+      }
+    }, [coord]);
+
+    const handleOpenGoogleMaps = useCallback(() => {
+      if (!coord) return;
+      const url = buildGoogleMapsUrl(coord);
+      if (!url) return;
+      try {
+        if (typeof window !== 'undefined') {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      } catch {
+        // noop
+      }
+    }, [coord]);
+
+    const handleOpenOrganicMaps = useCallback(() => {
+      if (!coord) return;
+      const url = buildOrganicMapsUrl(coord);
+      if (!url) return;
+      try {
+        if (typeof window !== 'undefined') {
+          window.open(url, '_blank', 'noopener,noreferrer');
+        }
+      } catch {
+        // noop
+      }
+    }, [coord]);
+
+    const handleShareTelegram = useCallback(() => {
+      if (!coord) return;
+      const mapUrl = buildGoogleMapsUrl(coord);
+      const text = `📍 Координаты: ${coord}`;
+      const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`;
+      try {
+        if (typeof window !== 'undefined') {
+          window.open(telegramUrl, '_blank', 'noopener,noreferrer');
+        }
+      } catch {
+        // noop
+      }
+    }, [coord]);
 
     return (
       <Popup
@@ -342,15 +471,115 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         autoPanPadding={[16, 16] as any}
         autoPanPaddingTopLeft={[16, 96] as any}
         autoPanPaddingBottomRight={[16, 120] as any}
-        closeButton={false}
+        closeButton
       >
         <UnifiedTravelCard
           title={point.address || ''}
           imageUrl={point.travelImageThumbUrl}
           metaText={point.categoryName}
           onPress={handleClose}
+          onMediaPress={handleOpenArticle}
           imageHeight={180}
           width={300}
+          contentSlot={
+            <View style={{ gap: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: (colors as any).text ?? undefined }} numberOfLines={1}>
+                {point.address || ''}
+              </Text>
+              {!!coord && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: (colors as any).textMuted ?? undefined,
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {coord}
+                  </Text>
+                  <Pressable
+                    accessibilityLabel="Скопировать координаты"
+                    onPress={(e) => {
+                      (e as any)?.stopPropagation?.();
+                      void handleCopyCoord();
+                    }}
+                    {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
+                  >
+                    <View {...({ title: 'Скопировать координаты', 'aria-label': 'Скопировать координаты' } as any)}>
+                      <Feather name="clipboard" size={16} color={(colors as any).textMuted ?? undefined} />
+                    </View>
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel="Поделиться в Telegram"
+                    onPress={(e) => {
+                      (e as any)?.stopPropagation?.();
+                      handleShareTelegram();
+                    }}
+                    {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
+                  >
+                    <View {...({ title: 'Поделиться в Telegram', 'aria-label': 'Поделиться в Telegram' } as any)}>
+                      <Feather name="send" size={16} color={(colors as any).textMuted ?? undefined} />
+                    </View>
+                  </Pressable>
+                </View>
+              )}
+              {(!!point.categoryName || !!coord) && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  {!!point.categoryName && (
+                    <Text style={{ fontSize: 12, color: (colors as any).textMuted ?? undefined }} numberOfLines={1}>
+                      {point.categoryName}
+                    </Text>
+                  )}
+
+                  {!!coord && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                      <Pressable
+                        accessibilityLabel="Открыть в Google Maps"
+                        onPress={(e) => {
+                          (e as any)?.stopPropagation?.();
+                          handleOpenGoogleMaps();
+                        }}
+                        {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
+                      >
+                        <View {...({ title: 'Открыть в Google Maps', 'aria-label': 'Открыть в Google Maps' } as any)}>
+                          <Feather name="external-link" size={16} color={(colors as any).textMuted ?? undefined} />
+                        </View>
+                      </Pressable>
+
+                      <Pressable
+                        accessibilityLabel="Открыть в Organic Maps"
+                        onPress={(e) => {
+                          (e as any)?.stopPropagation?.();
+                          handleOpenOrganicMaps();
+                        }}
+                        {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
+                      >
+                        <View {...({ title: 'Открыть в Organic Maps', 'aria-label': 'Открыть в Organic Maps' } as any)}>
+                          <Feather name="navigation" size={16} color={(colors as any).textMuted ?? undefined} />
+                        </View>
+                      </Pressable>
+
+                      {!!String(point.articleUrl || point.urlTravel || '').trim() && (
+                        <Pressable
+                          accessibilityLabel="Открыть статью"
+                          onPress={(e) => {
+                            (e as any)?.stopPropagation?.();
+                            handleOpenArticle();
+                          }}
+                          {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
+                        >
+                          <View {...({ title: 'Открыть статью', 'aria-label': 'Открыть статью' } as any)}>
+                            <Feather name="book-open" size={16} color={(colors as any).textMuted ?? undefined} />
+                          </View>
+                        </Pressable>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          }
           mediaProps={{
             blurBackground: true,
             blurRadius: 16,
@@ -363,10 +592,37 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   };
 
   return (
-    <View 
+    <View
       style={styles.mapContainer}
       ref={rootRef}
+      {...({ className: 'metravel-travel-map' } as any)}
     >
+      <style>
+        {`
+        .metravel-travel-map .leaflet-popup-content-wrapper,
+        .metravel-travel-map .leaflet-popup-tip {
+          background: ${(colors as any).surface} !important;
+          opacity: 1 !important;
+        }
+        .metravel-travel-map .leaflet-popup-content-wrapper {
+          color: ${(colors as any).text} !important;
+          border-radius: ${DESIGN_TOKENS.radii.md}px !important;
+          box-shadow: ${DESIGN_TOKENS.shadows.modal} !important;
+          border: 1px solid ${(colors as any).border} !important;
+        }
+        .metravel-travel-map .leaflet-popup-content {
+          margin: ${DESIGN_TOKENS.spacing.md}px !important;
+          color: ${(colors as any).text} !important;
+        }
+        .metravel-travel-map .leaflet-popup-close-button {
+          display: block !important;
+          color: ${(colors as any).textMuted} !important;
+        }
+        .metravel-travel-map .leaflet-popup-close-button:hover {
+          color: ${(colors as any).text} !important;
+        }
+        `}
+      </style>
       <MapContainer
         center={initialCenter}
         zoom={7}

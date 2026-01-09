@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Feather from '@expo/vector-icons/Feather';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -29,6 +30,8 @@ type Point = {
   coord: string;
   categoryName?: string;
   description?: string;
+  articleUrl?: string;
+  urlTravel?: string;
 };
 
 type PointListProps = { points: Point[]; baseUrl?: string };
@@ -78,6 +81,13 @@ const buildMapUrl = (coordStr: string) => {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
 };
 
+const buildOrganicMapsUrl = (coordStr: string) => {
+  const p = parseCoord(coordStr);
+  if (!p) return '';
+  const { lat, lon } = p;
+  return `https://omaps.app/${lat},${lon}`;
+};
+
 const openExternal = async (url: string) => {
   try {
     const can = await Linking.canOpenURL(url);
@@ -102,6 +112,7 @@ const PointCard = React.memo(function PointCard({
                                                   onCopy,
                                                   onShare,
                                                   onOpenMap,
+                                                  onOpenOrganic,
                                                   colors,
                                                   styles,
                                                 }: {
@@ -111,6 +122,7 @@ const PointCard = React.memo(function PointCard({
   onCopy: (coordStr: string) => void;
   onShare: (coordStr: string) => void;
   onOpenMap: (coordStr: string) => void;
+  onOpenOrganic: (coordStr: string) => void;
   colors: ReturnType<typeof useThemedColors>;
   styles: ReturnType<typeof createStyles>;
 }) {
@@ -186,9 +198,24 @@ const PointCard = React.memo(function PointCard({
                     openMapFromLink();
                   }}
                   accessibilityLabel="Открыть в картах"
-                  accessibilityRole="button"
+                  {...(Platform.OS === 'web'
+                    ? ({ title: 'Открыть в Google Maps' } as any)
+                    : ({ accessibilityRole: 'button' } as any))}
                 >
-                  <Feather name="external-link" size={18} color={colors.textOnDark} />
+                  <Feather name="map-pin" size={18} color={colors.textOnDark} />
+                </Pressable>
+                <Pressable
+                  style={styles.actionBtn}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onOpenOrganic(point.coord);
+                  }}
+                  accessibilityLabel="Открыть в Organic Maps"
+                  {...(Platform.OS === 'web'
+                    ? ({ title: 'Открыть в Organic Maps' } as any)
+                    : ({ accessibilityRole: 'button' } as any))}
+                >
+                  <Feather name="navigation" size={18} color={colors.textOnDark} />
                 </Pressable>
                 <Pressable
                   style={styles.actionBtn}
@@ -197,9 +224,11 @@ const PointCard = React.memo(function PointCard({
                     onCopy(point.coord);
                   }}
                   accessibilityLabel="Скопировать координаты"
-                  accessibilityRole="button"
+                  {...(Platform.OS === 'web'
+                    ? ({ title: 'Скопировать координаты' } as any)
+                    : ({ accessibilityRole: 'button' } as any))}
                 >
-                  <Feather name="copy" size={18} color={colors.textOnDark} />
+                  <Feather name="clipboard" size={18} color={colors.textOnDark} />
                 </Pressable>
                 <Pressable
                   style={styles.actionBtn}
@@ -208,7 +237,9 @@ const PointCard = React.memo(function PointCard({
                     onShare(point.coord);
                   }}
                   accessibilityLabel="Поделиться"
-                  accessibilityRole="button"
+                  {...(Platform.OS === 'web'
+                    ? ({ title: 'Поделиться в Telegram' } as any)
+                    : ({ accessibilityRole: 'button' } as any))}
                 >
                   <Feather name="send" size={18} color={colors.textOnDark} />
                 </Pressable>
@@ -232,7 +263,9 @@ const PointCard = React.memo(function PointCard({
                 openMapFromLink();
               }}
               accessibilityLabel={`Координаты: ${point.coord}`}
-              accessibilityRole="button"
+              {...(Platform.OS === 'web'
+                ? ({ title: 'Открыть координаты в Google Maps' } as any)
+                : ({ accessibilityRole: 'button' } as any))}
             >
               <Feather name="map-pin" size={14} color={colors.textOnDark} />
               <Text
@@ -365,6 +398,20 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
     if (url) openExternal(url);
   }, []);
 
+  const onOpenOrganic = useCallback((coordStr: string) => {
+    const url = buildOrganicMapsUrl(coordStr);
+    if (url) openExternal(url);
+  }, []);
+
+  const onOpenArticle = useCallback(
+    (point: Point) => {
+      const url = String(point.articleUrl || point.urlTravel || baseUrl || '').trim();
+      if (!url) return;
+      openExternal(url);
+    },
+    [baseUrl]
+  );
+
   // ✅ УЛУЧШЕНИЕ: Более плавные переходы между количеством колонок
   const numColumns = useMemo(() => {
     if (width >= 1024) return 2; // Десктопы и большие экраны: 2 колонки, чтобы карточки были крупнее
@@ -387,8 +434,103 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
             imageUrl={getOptimizedImageUrl(item.travelImageThumbUrl, item.updated_at)}
             metaText={item.categoryName}
             onPress={() => {}}
+            onMediaPress={() => onOpenArticle(item)}
             imageHeight={180}
             width={300}
+            contentSlot={
+              <View style={{ gap: 8 }}>
+                <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+                  {item.address}
+                </Text>
+
+                {!!item.coord && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: colors.textMuted,
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
+                      }}
+                    >
+                      {item.coord}
+                    </Text>
+
+                    <Pressable
+                      accessibilityLabel="Скопировать координаты"
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        void onCopy(item.coord);
+                      }}
+                      {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
+                    >
+                      <Feather name="clipboard" size={16} color={colors.textMuted} />
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityLabel="Поделиться в Telegram"
+                      onPress={(e) => {
+                        e?.stopPropagation?.();
+                        void onShare(item.coord);
+                      }}
+                      {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
+                    >
+                      <Feather name="send" size={16} color={colors.textMuted} />
+                    </Pressable>
+                  </View>
+                )}
+
+                {(!!item.categoryName || !!item.articleUrl || !!item.urlTravel || !!baseUrl) && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    {!!item.categoryName && (
+                      <Text style={{ fontSize: 12, color: colors.textMuted }} numberOfLines={1}>
+                        {item.categoryName}
+                      </Text>
+                    )}
+
+                    {!!item.coord && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                        <Pressable
+                          accessibilityLabel="Открыть в Google Maps"
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            onOpenMap(item.coord);
+                          }}
+                          {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
+                        >
+                          <FontAwesome5 name="google" brand size={16} color={colors.textMuted} />
+                        </Pressable>
+
+                        <Pressable
+                          accessibilityLabel="Открыть в Organic Maps"
+                          onPress={(e) => {
+                            e?.stopPropagation?.();
+                            onOpenOrganic(item.coord);
+                          }}
+                          {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
+                        >
+                          <Feather name="navigation" size={16} color={colors.textMuted} />
+                        </Pressable>
+
+                        {(!!item.articleUrl || !!item.urlTravel || !!baseUrl) && (
+                          <Pressable
+                            accessibilityLabel="Открыть статью"
+                            onPress={(e) => {
+                              e?.stopPropagation?.();
+                              onOpenArticle(item);
+                            }}
+                            {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
+                          >
+                            <Feather name="book-open" size={16} color={colors.textMuted} />
+                          </Pressable>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            }
             mediaProps={{
               blurBackground: true,
               blurRadius: 16,
@@ -405,13 +547,14 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
             onCopy={onCopy}
             onShare={onShare}
             onOpenMap={onOpenMap}
+            onOpenOrganic={onOpenOrganic}
             colors={colors}
             styles={styles}
           />
         )}
       </View>
     ),
-    [colors, isMobile, numColumns, onCopy, onOpenMap, onShare, responsive, styles]
+    [baseUrl, colors, isMobile, numColumns, onCopy, onOpenArticle, onOpenMap, onOpenOrganic, onShare, responsive, styles]
   );
 
   return (

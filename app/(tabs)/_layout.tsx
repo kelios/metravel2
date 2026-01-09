@@ -45,6 +45,11 @@ const HIDDEN_NOHREF = { title: '', href: null, lazy: true } as const;
 
 export default function TabLayout() {
     const tabBarHiddenStyle = useMemo(() => ({ display: 'none' as const }), []);
+    const travelDetailsOptions =
+      Platform.OS === 'web'
+        ? HIDDEN
+        : { ...HIDDEN, lazy: false, freezeOnBlur: false };
+
     return (
         <Tabs
             initialRouteName="index"
@@ -53,7 +58,9 @@ export default function TabLayout() {
                 tabBarStyle: tabBarHiddenStyle,
                 header: () => <Header />, // кастомный заголовок
                 lazy: true,               // экраны создаются по первому фокусу
-                freezeOnBlur: true,       // заморозка внефокусных экранов
+                freezeOnBlur: Platform.OS !== 'web', // на web размонтируем неактивные экраны
+                unmountOnBlur: Platform.OS === 'web',
+                detachInactiveScreens: Platform.OS === 'web',
             }}
         >
             <Tabs.Screen name="index" />
@@ -66,10 +73,7 @@ export default function TabLayout() {
             <Tabs.Screen name="favorites" options={HIDDEN} />
             <Tabs.Screen name="history" options={HIDDEN} />
             <Tabs.Screen name="settings" options={HIDDEN} />
-            <Tabs.Screen
-              name="travels/[param]"
-              options={{ ...HIDDEN, lazy: false, freezeOnBlur: false }}
-            />
+            <Tabs.Screen name="travels/[param]" options={travelDetailsOptions} />
             <Tabs.Screen name="user/[id]" options={HIDDEN} />
 
             {/* полностью скрытые из линкинга */}

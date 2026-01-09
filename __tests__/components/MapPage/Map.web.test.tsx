@@ -93,8 +93,13 @@ jest.mock('@/components/MapPage/Map/ClusterLayer', () => {
 jest.mock('@/components/MapPage/Map/MapMarkers', () => {
   const RN = require('react-native')
   const View = RN.View
-  return function MapMarkers() {
-    return <View testID="map-markers" />
+  return function MapMarkers(props: any) {
+    const point = props?.points?.[0]
+    return (
+      <View testID="map-markers">
+        {point ? <props.PopupContent point={point} /> : null}
+      </View>
+    )
   }
 })
 
@@ -249,7 +254,18 @@ jest.mock('@/components/MapPage/RoutingMachine', () => {
 
 // Mock UnifiedTravelCard
 jest.mock('@/components/ui/UnifiedTravelCard', () => {
-  const MockComponent = () => <div data-testid="unified-travel-card" />
+  const React = require('react')
+  const RN = require('react-native')
+  const View = RN.View
+  const Pressable = RN.Pressable
+  const MockComponent = (props: any) => {
+    // Expose media click separately (matches new onMediaPress behavior)
+    return (
+      <View testID="unified-travel-card">
+        <Pressable testID="unified-travel-card-media" onPress={props.onMediaPress} />
+      </View>
+    )
+  }
   return {
     __esModule: true,
     default: MockComponent,
@@ -287,8 +303,45 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
   it('renders loading state initially', async () => {
     const { getByText } = render(<MapPageComponent {...defaultProps} />)
-    expect(getByText(/Loading map/i)).toBeTruthy()
+    expect(getByText(/(Loading map|Загрузка карты)/i)).toBeTruthy()
     await act(async () => {})
+  })
+
+  it('opens article when clicking popup image', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    ;(process.env as any).NODE_ENV = 'test'
+
+    const openSpy = jest.fn()
+    ;(globalThis as any).window = (globalThis as any).window || {}
+    ;(globalThis as any).window.open = openSpy
+
+    const travel = {
+      data: [
+        {
+          id: 1,
+          coord: '53.9,27.5667',
+          address: 'Test Address',
+          travelImageThumbUrl: 'thumb.jpg',
+          categoryName: 'Test',
+          articleUrl: 'https://example.com/article',
+        },
+      ],
+    }
+
+    const { getByTestId } = render(
+      <MapPageComponent
+        {...defaultProps}
+        mode="radius"
+        travel={travel as any}
+      />
+    )
+
+    await act(async () => {})
+
+    fireEvent.press(getByTestId('unified-travel-card-media'))
+    expect(openSpy).toHaveBeenCalledWith('https://example.com/article', '_blank', 'noopener,noreferrer')
+
+    ;(process.env as any).NODE_ENV = prevNodeEnv
   })
 
   it('does not use require() with template literals', () => {
@@ -351,7 +404,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     await act(async () => {})
 
     await waitFor(() => {
-      expect(getByText(/Loading map modules failed/i)).toBeTruthy()
+      expect(getByText(/(Loading map modules failed|Не удалось загрузить модули карты)/i)).toBeTruthy()
     })
   })
 
