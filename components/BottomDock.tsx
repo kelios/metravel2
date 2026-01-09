@@ -123,6 +123,12 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         icon: <Feather name="flag" size={22} color={iconColor} />,
       },
       {
+        key: "search",
+        label: "Поиск",
+        route: "/search" as any,
+        icon: <Feather name="search" size={22} color={iconColor} />,
+      },
+      {
         key: "map",
         label: "Карта",
         route: "/map" as any,

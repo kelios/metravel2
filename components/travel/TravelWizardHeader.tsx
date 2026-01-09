@@ -230,12 +230,14 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
 
     return (
         <View style={[styles.headerWrapper, isMobile && styles.headerWrapperMobile]}>
-            <View style={styles.topNavRow}>
-                <View style={styles.leftNav}>
-                    {isMobile ? BackButton : null}
+            {isMobile ? (
+                <View style={styles.topNavRow}>
+                    <View style={styles.leftNav}>
+                        {BackButton}
+                    </View>
+                    <View style={styles.rightNav}>{PrimaryAction}</View>
                 </View>
-                {isMobile ? <View style={styles.rightNav}>{PrimaryAction}</View> : null}
-            </View>
+            ) : null}
 
             <View style={styles.titleRow}>
                 <View style={styles.titleColumn}>
@@ -641,7 +643,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '500',
     },
     belowProgressRow: {
-        marginTop: DESIGN_TOKENS.spacing.sm,
+        marginTop: DESIGN_TOKENS.spacing.xs,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -654,6 +656,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     belowProgressLeft: {
         flex: 1,
         minWidth: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.sm,
     },
     belowProgressRight: {
         flexDirection: 'row',
@@ -666,13 +671,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         justifyContent: 'flex-end',
         gap: DESIGN_TOKENS.spacing.xs,
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap',
     },
     milestonesInlineWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.xs,
-        flexWrap: 'wrap',
+        flexWrap: 'nowrap',
     },
     tipPanel: {
         marginTop: DESIGN_TOKENS.spacing.sm,

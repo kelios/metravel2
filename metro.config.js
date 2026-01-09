@@ -36,6 +36,23 @@ config.resolver = {
         type: 'sourceFile',
       };
     }
+
+    // Avoid SVG icon stacks on web: lucide-react-native depends on react-native-svg.
+    // If any web-rendered UI accidentally imports lucide-react-native, resolve it to a stub.
+    const isWeb = platform === 'web' || (context && context.platform === 'web');
+    if (isWeb) {
+      const normalizedModuleName = moduleName.replace(/\\/g, '/');
+      if (
+        normalizedModuleName === 'lucide-react-native' ||
+        normalizedModuleName.startsWith('lucide-react-native/')
+      ) {
+        return {
+          filePath: path.resolve(__dirname, 'metro-stubs/lucide-react-native.js'),
+          type: 'sourceFile',
+        };
+      }
+    }
+
     // Исключаем html2canvas для jsPDF (не нужен для нашего использования)
     if (moduleName === 'html2canvas' || moduleName.includes('html2canvas')) {
       // Возвращаем пустой stub для html2canvas
@@ -47,7 +64,6 @@ config.resolver = {
 
     // Exclude Leaflet from the web entry bundle. We load Leaflet via CDN at runtime and
     // provide it to code via a lightweight stub that proxies window.L.
-    const isWeb = platform === 'web' || (context && context.platform === 'web');
     if (isWeb) {
       const normalizedModuleName = moduleName.replace(/\\/g, '/');
       const normalizedModuleNameNoDotSlash = normalizedModuleName.replace(/^\.\//, '');

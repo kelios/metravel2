@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState, memo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Linking, Image } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
+import { Asset } from 'expo-asset';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -99,7 +100,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     if (!showImage) return;
     if (typeof document === 'undefined') return;
 
-    const asset = Image.resolveAssetSource(require('../../assets/images/pdf.webp'));
+    const moduleId = require('../../assets/images/pdf.webp');
+    const asset = Asset.fromModule(moduleId);
     const href = typeof asset?.uri === 'string' ? asset.uri : '';
     if (!href) return;
 
