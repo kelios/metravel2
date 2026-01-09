@@ -13,10 +13,11 @@ export const test = base.extend<{
 
       const ctxFromEnv = await apiContextFromEnv().catch(() => null);
       const ctx = ctxFromEnv ?? apiContextFromTracker({ apiBase: tracker.getApiBase?.() ?? null });
-      if (!ctx) return;
-      const ids = Array.from(tracker.ids);
-      for (const id of ids) {
-        await deleteTravel(ctx, id).catch(() => undefined);
+      if (ctx) {
+        const ids = Array.from(tracker.ids);
+        for (const id of ids) {
+          await deleteTravel(ctx, id).catch(() => undefined);
+        }
       }
     }
   },

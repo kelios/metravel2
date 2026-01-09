@@ -131,6 +131,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
         crossOrigin="anonymous"
         href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.a76d309774d33d9856f650bed4292a23.ttf"
       />
+      <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />

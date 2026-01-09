@@ -292,8 +292,11 @@ export const SAFE_PRECONNECT_DOMAINS = [
   "https://img.youtube.com",
   "https://www.youtube.com",
   "https://youtu.be",
+  "https://metravel.by",
+  "https://www.metravel.by",
   "https://api.metravel.by",
   "https://cdn.metravel.by",
+  "https://images.weserv.nl",
 ] as const;
 
 /**

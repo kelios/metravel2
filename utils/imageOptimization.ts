@@ -250,7 +250,8 @@ export function getOptimalImageSize(
   containerHeight?: number,
   aspectRatio?: number
 ): { width: number; height: number } {
-  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const rawDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const dpr = Platform.OS === 'web' ? Math.min(rawDpr, 2) : rawDpr;
   const baseWidth = containerWidth * dpr;
 
   if (containerHeight && !aspectRatio) {
@@ -288,6 +289,7 @@ export function generateSrcSet(
   if (Platform.OS !== 'web') return baseUrl;
 
   const resolvedFormat = options.format ?? getPreferredImageFormat();
+  const resolvedDpr = options.dpr ?? 1;
   const srcset = sizes
     .map((size) => {
       const optimizedUrl = optimizeImageUrl(baseUrl, {
@@ -295,7 +297,7 @@ export function generateSrcSet(
         format: resolvedFormat,
         quality: options.quality ?? 85,
         fit: options.fit,
-        dpr: options.dpr,
+        dpr: resolvedDpr,
       });
       return `${optimizedUrl} ${size}w`;
     })
@@ -349,6 +351,7 @@ export function buildResponsiveImageProps(
   const widths = options.widths ?? getResponsiveSizes(options.maxWidth ?? 1920);
   const widest = widths.length > 0 ? widths[widths.length - 1] : options.maxWidth ?? 1920;
   const format = options.format ?? 'auto';
+  const resolvedDpr = Platform.OS === 'web' ? options.dpr ?? 1 : options.dpr;
 
   const src =
     optimizeImageUrl(baseUrl, {
@@ -356,7 +359,7 @@ export function buildResponsiveImageProps(
       quality: options.quality ?? 85,
       format,
       fit: options.fit,
-      dpr: options.dpr,
+      dpr: resolvedDpr,
     }) || baseUrl;
 
   if (Platform.OS !== 'web') {
@@ -367,7 +370,7 @@ export function buildResponsiveImageProps(
     format,
     quality: options.quality ?? 85,
     fit: options.fit,
-    dpr: options.dpr,
+    dpr: resolvedDpr,
   });
 
   return {

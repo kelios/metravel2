@@ -626,7 +626,7 @@ const popupStyles = `
   padding: 8px 12px;
   border-radius: 999px;
   background: var(--color-overlay);
-  color: var(--color-textOnDark);
+  color: var(--color-textOnDark) !important;
   backdrop-filter: blur(10px);
 }
 
@@ -634,9 +634,15 @@ const popupStyles = `
   flex: 1;
   font-size: 12px;
   font-weight: 600;
+  color: var(--color-textOnDark) !important;
+  text-shadow: 0 1px 2px var(--color-overlay);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+html[data-theme="light"] .popup-bottom-bar {
+  background: rgba(31, 31, 31, 0.58);
 }
 
 .popup-expand-handle {
@@ -767,6 +773,10 @@ const popupStyles = `
   cursor: pointer;
   transition: all 0.2s ease;
   backdrop-filter: blur(4px);
+}
+
+html[data-theme="light"] .popup-close-btn {
+  background: rgba(31, 31, 31, 0.58);
 }
 
 .popup-close-btn:hover {

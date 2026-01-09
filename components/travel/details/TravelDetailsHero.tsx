@@ -11,10 +11,6 @@ import {
 } from 'react-native'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
-import QuickFacts from '@/components/travel/QuickFacts'
-import AuthorCard from '@/components/travel/AuthorCard'
-import ShareButtons from '@/components/travel/ShareButtons'
-import WeatherWidget from '@/components/WeatherWidget'
 import { useThemedColors } from '@/hooks/useTheme'
 import {
   createSafeImageUrl,
@@ -25,7 +21,6 @@ import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
   getPreferredImageFormat,
-  optimizeImageUrl,
 } from '@/utils/imageOptimization'
 import type { Travel } from '@/src/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -36,6 +31,10 @@ import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
 
 const Slider = withLazy(() => import('@/components/travel/Slider'))
+const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
+const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
+const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
+const WeatherWidget = withLazy(() => import('@/components/WeatherWidget'))
 const HERO_QUICK_JUMP_KEYS = ['map', 'description', 'points'] as const
 
 const getOrigin = getSafeOrigin
@@ -75,19 +74,22 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
       typeof window !== 'undefined'
         ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
         : 1200
-    const _optimizedHref =
-      optimizeImageUrl(versionedHref, {
-        width: targetWidth,
-        format: getPreferredImageFormat(),
-        quality: isMobile ? 75 : 85,
-        fit: 'contain',
-      }) || versionedHref
+    const responsive = buildResponsiveImageProps(versionedHref, {
+      maxWidth: targetWidth,
+      quality: isMobile ? 75 : 85,
+      format: getPreferredImageFormat(),
+      fit: 'contain',
+      sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 860px',
+    })
+    const _optimizedHref = responsive.src || versionedHref
 
     if (_optimizedHref && !document.querySelector(`link[rel="preload"][href="${_optimizedHref}"]`)) {
       const preload = document.createElement('link')
       preload.rel = 'preload'
       preload.as = 'image'
       preload.href = _optimizedHref
+      if (responsive.srcSet) preload.setAttribute('imagesrcset', responsive.srcSet)
+      if (responsive.sizes) preload.setAttribute('imagesizes', responsive.sizes)
       preload.fetchPriority = 'high'
       preload.setAttribute('fetchpriority', 'high')
       preload.crossOrigin = 'anonymous'
@@ -192,9 +194,13 @@ export const OptimizedLCPHero: React.FC<{
     quality: isMobile ? 75 : 85,
     format: getPreferredImageFormat(),
     fit: 'contain',
+    sizes: isMobile
+      ? '100vw'
+      : '(max-width: 1024px) 92vw, 860px',
   })
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
+  const fixedHeight = height ? `${Math.round(height)}px` : '100%'
 
   if (Platform.OS !== 'web') {
     return (
@@ -244,7 +250,14 @@ export const OptimizedLCPHero: React.FC<{
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', contain: 'layout style paint' as any }}>
+    <div
+      style={{
+        width: '100%',
+        height: fixedHeight,
+        ...(height ? { minHeight: fixedHeight } : null),
+        contain: 'layout style paint' as any,
+      }}
+    >
       {loadError ? (
         <NeutralHeroPlaceholder height={height} />
       ) : (
@@ -380,12 +393,12 @@ export function TravelHeroSection({
         style={[styles.sectionContainer, styles.contentStable]}
       >
         <View
-          style={styles.sliderContainer}
-          collapsable={false}
-          onLayout={
-            Platform.OS === 'web'
-              ? undefined
-              : (e: LayoutChangeEvent) => {
+        style={[styles.sliderContainer, Platform.OS === 'web' && { height: heroHeight }]}
+        collapsable={false}
+        onLayout={
+          Platform.OS === 'web'
+            ? undefined
+            : (e: LayoutChangeEvent) => {
                   const w = e.nativeEvent.layout.width
                   if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2) {
                     setHeroContainerWidth(w)
@@ -433,7 +446,9 @@ export function TravelHeroSection({
         accessibilityLabel="Краткие факты"
         style={[styles.sectionContainer, styles.contentStable, styles.quickFactsContainer]}
       >
-        <QuickFacts travel={travel} />
+        <Suspense fallback={<View style={{ minHeight: 72 }} />}>
+          <QuickFacts travel={travel} />
+        </Suspense>
       </View>
 
       {isMobile && travel.travelAddress && (
@@ -442,7 +457,7 @@ export function TravelHeroSection({
           accessibilityLabel="Погода"
           style={[styles.sectionContainer, styles.contentStable, { marginTop: 16 }]}
         >
-          <Suspense fallback={null}>
+          <Suspense fallback={<View style={{ minHeight: 120 }} />}>
             <WeatherWidget points={travel.travelAddress as any} />
           </Suspense>
         </View>
@@ -494,7 +509,9 @@ export function TravelHeroSection({
           accessibilityLabel="Поделиться маршрутом"
           style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
         >
-          <ShareButtons travel={travel} />
+          <Suspense fallback={<View style={{ minHeight: 56 }} />}>
+            <ShareButtons travel={travel} />
+          </Suspense>
         </View>
       )}
 
@@ -508,7 +525,9 @@ export function TravelHeroSection({
           <Text style={styles.sectionHeaderText}>Автор</Text>
           <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
           <View style={{ marginTop: 12 }}>
-            <AuthorCard travel={travel} />
+            <Suspense fallback={<View style={{ minHeight: 160 }} />}>
+              <AuthorCard travel={travel} />
+            </Suspense>
           </View>
         </View>
       )}

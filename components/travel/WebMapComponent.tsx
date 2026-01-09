@@ -240,6 +240,8 @@ const WebMapComponent = ({
         if (typeof window === 'undefined') return false;
         return window.innerWidth >= 1024;
     });
+    const rootRef = useRef<HTMLDivElement | null>(null);
+    const mapRef = useRef<any>(null);
     const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
     // Только для старта: если маркеры пришли извне (редактирование маршрута), разрешаем авто-fit.
     // При создании нового маршрута (маркер ставит пользователь) авто-fit отключён.
@@ -339,19 +341,29 @@ const WebMapComponent = ({
 
     // Очистка Leaflet контейнеров при размонтировании, чтобы избежать ошибки "Map container is already initialized"
     useEffect(() => {
+        const rootEl = rootRef.current;
         return () => {
-            if (typeof document === 'undefined') return;
-            const containers = document.querySelectorAll('.leaflet-container');
-            containers.forEach((el) => {
-                const anyEl = el as any;
-                if (anyEl._leaflet_id) {
-                    try {
-                        delete anyEl._leaflet_id;
-                    } catch {
-                        // noop
-                    }
+            // React (особенно StrictMode) может смонтировать/размонтировать компонент быстро.
+            // Leaflet требует корректного `map.remove()` для освобождения контейнера.
+            try {
+                if (mapRef.current && typeof mapRef.current.remove === 'function') {
+                    mapRef.current.remove();
                 }
-            });
+            } catch {
+                // noop
+            } finally {
+                mapRef.current = null;
+            }
+
+            // Дополнительная страховка: сбрасываем id только в контейнере ЭТОГО компонента.
+            try {
+                const container = rootEl?.querySelector?.('.leaflet-container') as any;
+                if (container?._leaflet_id) {
+                    delete container._leaflet_id;
+                }
+            } catch {
+                // noop
+            }
         };
     }, []);
 
@@ -720,6 +732,7 @@ const WebMapComponent = ({
     return (
         <div
             className="metravel-webmap"
+            ref={rootRef}
             style={{
                 padding: DESIGN_TOKENS.spacing.xxs,
                 width: '100%',
@@ -776,6 +789,9 @@ const WebMapComponent = ({
                                 zoom={13}
                                 keyboard={false}
                                 key={mapInstanceKeyRef.current}
+                                whenCreated={(map: any) => {
+                                    mapRef.current = map;
+                                }}
                                 style={{ height: isWideLayout ? 600 : 460, width: '100%' }}
                             >
                                 <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

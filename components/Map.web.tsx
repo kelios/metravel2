@@ -1,5 +1,5 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
-import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
@@ -54,6 +54,46 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   const [L, setL] = useState<LeafletNS | null>(null);
   const [rl, setRl] = useState<RL | null>(null);
+
+  const rootRef = useRef<any>(null);
+  const mapRef = useRef<any>(null);
+
+  // Очистка Leaflet контейнера при размонтировании, чтобы избежать "Map container is already initialized"
+  useEffect(() => {
+    const rootEl = rootRef.current;
+    return () => {
+      try {
+        if (mapRef.current && typeof mapRef.current.remove === 'function') {
+          mapRef.current.remove();
+        }
+      } catch {
+        // noop
+      } finally {
+        mapRef.current = null;
+      }
+
+      try {
+        if (typeof window !== 'undefined') {
+          const w = window as any;
+          if (w.__metravelLeafletMap) {
+            delete w.__metravelLeafletMap;
+          }
+        }
+      } catch {
+        // noop
+      }
+
+      // Доп. страховка: сбрасываем _leaflet_id только для контейнера этого компонента.
+      try {
+        const container = (rootEl as any)?.querySelector?.('.leaflet-container') as any;
+        if (container?._leaflet_id) {
+          delete container._leaflet_id;
+        }
+      } catch {
+        // noop
+      }
+    };
+  }, []);
 
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
@@ -314,6 +354,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   return (
     <View 
       style={styles.mapContainer}
+      ref={rootRef}
     >
       <MapContainer
         center={initialCenter}
@@ -322,6 +363,9 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         scrollWheelZoom
         // чутка экономим на анимациях
         preferCanvas
+        whenCreated={(map: any) => {
+          mapRef.current = map;
+        }}
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
