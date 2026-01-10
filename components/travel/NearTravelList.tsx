@@ -324,7 +324,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<Segment>('list');
     const [visibleCount, setVisibleCount] = useState(6);
-    const { isPhone, isLargePhone, isTablet } = useResponsive();
+    const { isPhone, isLargePhone, isTablet, width } = useResponsive();
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const scrollViewRef = useRef<ScrollView>(null);
 
@@ -342,6 +342,12 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       if (isTablet) return 500;
       return 600; // desktop
     }, [isMobile, isTablet]);
+
+    const numColumns = useMemo(() => {
+      if (width <= 640) return 1;
+      if (width <= 1024) return 2;
+      return 3;
+    }, [width]);
 
     // Адаптивное количество колонок
     const loadMoreCount = useMemo(() => {
@@ -572,21 +578,44 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         paddingBottom: DESIGN_TOKENS.spacing.lg,
       },
       travelsGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+        width: '100%',
         gap: DESIGN_TOKENS.spacing.md,
         paddingHorizontal: 8,
+        ...Platform.select({
+          web: {
+            display: 'grid' as any,
+          } as any,
+          default: {},
+        }),
+      },
+      webScrollContainer: {
+        ...Platform.select({
+          web: {
+            overflowX: 'auto' as any,
+            overflowY: 'hidden' as any,
+            WebkitOverflowScrolling: 'touch' as any,
+            paddingBottom: DESIGN_TOKENS.spacing.xxs,
+            scrollSnapType: 'x mandatory' as any,
+            scrollBehavior: 'smooth' as any,
+          } as any,
+          default: {},
+        }),
+      },
+      webGridItem: {
+        flex: 1,
+        minWidth: 0,
+        ...Platform.select({
+          web: {
+            scrollSnapAlign: 'start' as any,
+          } as any,
+          default: {},
+        }),
       },
       travelItem: {
         marginBottom: DESIGN_TOKENS.spacing.md,
-      },
-      travelItemGrid: {
-        width: '48%',
-        flexBasis: '48%',
-        maxWidth: '48%',
         ...Platform.select({
           web: {
-            boxSizing: 'border-box',
+            marginBottom: 0,
           },
         }),
       },
@@ -751,6 +780,26 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     ), [styles.travelItem, styles.travelItemOdd]);
 
     const keyExtractor = useCallback((item: Travel) => `travel-${item.id}`, []);
+    const webGridStyle = useMemo(() => {
+      if (Platform.OS !== 'web') return undefined;
+      if (width <= 640) {
+        return {
+          display: 'grid',
+          gridAutoFlow: 'column',
+          gridAutoColumns: 'minmax(260px, 86vw)',
+          gap: DESIGN_TOKENS.spacing.md,
+          alignItems: 'stretch',
+          width: 'max-content',
+        };
+      }
+      return {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${numColumns}, minmax(0, 1fr))`,
+        gap: DESIGN_TOKENS.spacing.md,
+        alignItems: 'stretch',
+        width: '100%',
+      };
+    }, [numColumns, width]);
 
     if (error) {
       return (
@@ -801,19 +850,21 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                   showsVerticalScrollIndicator={true}
                   nestedScrollEnabled={true}
                 >
-                  <View style={styles.travelsGrid}>
-                    {displayedTravels.map((item, index) => (
-                      <View
-                        key={keyExtractor(item)}
-                        style={[
-                          styles.travelItem,
-                          styles.travelItemGrid,
-                          index % 2 !== 0 && styles.travelItemOdd,
-                        ]}
-                      >
-                        {renderTravelItem({ item, index })}
-                      </View>
-                    ))}
+                  <View style={width <= 640 ? styles.webScrollContainer : undefined}>
+                    <View style={[styles.travelsGrid, webGridStyle]}>
+                      {displayedTravels.map((item, index) => (
+                        <View
+                          key={keyExtractor(item)}
+                          style={[
+                            styles.travelItem,
+                            Platform.OS === 'web' && styles.webGridItem,
+                            index % 2 !== 0 && styles.travelItemOdd,
+                          ]}
+                        >
+                          {renderTravelItem({ item, index })}
+                        </View>
+                      ))}
+                    </View>
                   </View>
 
                   {visibleCount < travelsNear.length && (

@@ -18,6 +18,7 @@ jest.mock('@/hooks/useResponsive', () => ({
     isDesktop: true,
     isLargeDesktop: true,
     isMobile: false,
+    width: 1280,
   }),
 }));
 
