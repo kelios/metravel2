@@ -48,6 +48,18 @@ let subscription: { remove: () => void } | null = null;
 
 const ensureSubscription = () => {
   if (subscription) return;
+
+  // Ensure we start from the actual client window dimensions.
+  // On web with SSR, module-level initialization can run with incorrect dimensions.
+  try {
+    const { width, height } = Dimensions.get('window');
+    if (currentSnapshot.width !== width || currentSnapshot.height !== height) {
+      currentSnapshot = { width, height };
+    }
+  } catch {
+    // noop
+  }
+
   subscription = Dimensions.addEventListener('change', ({ window }) => {
     currentSnapshot = { width: window.width, height: window.height };
     subscribers.forEach((cb) => {

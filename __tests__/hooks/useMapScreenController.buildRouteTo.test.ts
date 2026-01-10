@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native'
 
-const updateCoordinatesMock = jest.fn()
+const mockUpdateCoordinates = jest.fn()
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/map',
@@ -28,7 +28,7 @@ jest.mock('@/hooks/map', () => ({
   }),
   useMapCoordinates: () => ({
     coordinates: { latitude: 53.9, longitude: 27.5667 },
-    updateCoordinates: updateCoordinatesMock,
+    updateCoordinates: mockUpdateCoordinates,
   }),
   useMapFilters: () => ({
     filters: { categories: [], radius: [], address: [] },
@@ -103,7 +103,7 @@ import { useMapScreenController } from '@/hooks/useMapScreenController'
 
 describe('useMapScreenController.buildRouteTo', () => {
   beforeEach(() => {
-    updateCoordinatesMock.mockClear()
+    mockUpdateCoordinates.mockClear()
     jest.useFakeTimers()
   })
 
@@ -148,6 +148,6 @@ describe('useMapScreenController.buildRouteTo', () => {
     expect(openPopupForCoord).toHaveBeenCalledWith('50.0619474, 19.9368564')
 
     // Critical regression guard: we must not update global search coordinates
-    expect(updateCoordinatesMock).not.toHaveBeenCalled()
+    expect(mockUpdateCoordinates).not.toHaveBeenCalled()
   })
 })

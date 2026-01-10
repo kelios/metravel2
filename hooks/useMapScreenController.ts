@@ -8,7 +8,6 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getStyles } from '@/app/(tabs)/map.styles';
-import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { TravelCoords } from '@/src/types/types';
 import { logMessage } from '@/src/utils/logger';
@@ -69,7 +68,7 @@ export function useMapScreenController() {
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
 
   // Coordinates
-  const { coordinates, updateCoordinates } = useMapCoordinates();
+  const { coordinates } = useMapCoordinates();
 
   // Filters
   const {

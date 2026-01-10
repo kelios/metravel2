@@ -83,6 +83,7 @@ describe('useMapApi', () => {
 
     const onMapUiApiReady = jest.fn();
 
+    const leafletControlRef = { current: { markerByCoord }, markerByCoord };
     const { unmount } = renderHook(() =>
       useMapApi({
         map,
@@ -93,7 +94,7 @@ describe('useMapApi', () => {
         routePoints: [],
         leafletBaseLayerRef: { current: null },
         leafletOverlayLayersRef: { current: new Map() },
-        leafletControlRef: { current: { markerByCoord } },
+        leafletControlRef,
       })
     );
 
@@ -117,6 +118,10 @@ describe('useMapApi', () => {
 
     expect(setZIndexOffset).toHaveBeenCalledWith(1000);
     expect(openPopup).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
 
     unmount();
     jest.useRealTimers();
@@ -147,6 +152,7 @@ describe('useMapApi', () => {
 
     const onMapUiApiReady = jest.fn();
 
+    const leafletControlRef = { current: { markerByCoord }, markerByCoord };
     const { unmount } = renderHook(() =>
       useMapApi({
         map,
@@ -157,7 +163,7 @@ describe('useMapApi', () => {
         routePoints: [],
         leafletBaseLayerRef: { current: null },
         leafletOverlayLayersRef: { current: new Map() },
-        leafletControlRef: { current: { markerByCoord } },
+        leafletControlRef,
       })
     );
 
@@ -176,6 +182,10 @@ describe('useMapApi', () => {
 
     expect(setZIndexOffset).toHaveBeenCalledWith(1000);
     expect(openPopup).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
 
     unmount();
     jest.useRealTimers();

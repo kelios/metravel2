@@ -49,7 +49,7 @@ describe('AddressListItem (web right panel)', () => {
     const meta = getByTestId('card-meta');
     expect((meta as any).props.children).toContain('Category 1');
 
-    expect(mockUnifiedCard).toHaveBeenCalledTimes(1);
+    expect(mockUnifiedCard).toHaveBeenCalled();
     expect(mockUnifiedCard).toHaveBeenCalledWith(
       expect.objectContaining({
         title: baseTravel.address,

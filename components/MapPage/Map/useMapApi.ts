@@ -178,7 +178,8 @@ export function useMapApi({
           const key = String(coord ?? '').trim();
           if (!key) return;
 
-          const markerIndex: Map<string, any> | undefined = (leafletControlRef as any).markerByCoord;
+          const markerIndex: Map<string, any> | undefined =
+            (leafletControlRef as any)?.current?.markerByCoord ?? (leafletControlRef as any)?.markerByCoord;
           const marker = markerIndex?.get?.(key);
           if (!marker) return;
 

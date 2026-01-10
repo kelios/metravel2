@@ -393,7 +393,7 @@ export function TravelHeroSection({
         style={[styles.sectionContainer, styles.contentStable]}
       >
         <View
-        style={[styles.sliderContainer, Platform.OS === 'web' && { height: heroHeight }]}
+        style={[styles.sliderContainer, Platform.OS === 'web' && { minHeight: heroHeight }]}
         collapsable={false}
         onLayout={
           Platform.OS === 'web'
