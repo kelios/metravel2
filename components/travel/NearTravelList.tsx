@@ -572,11 +572,23 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         paddingBottom: DESIGN_TOKENS.spacing.lg,
       },
       travelsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
         gap: DESIGN_TOKENS.spacing.md,
         paddingHorizontal: 8,
       },
       travelItem: {
         marginBottom: DESIGN_TOKENS.spacing.md,
+      },
+      travelItemGrid: {
+        width: '48%',
+        flexBasis: '48%',
+        maxWidth: '48%',
+        ...Platform.select({
+          web: {
+            boxSizing: 'border-box',
+          },
+        }),
       },
       travelItemOdd: {},
       mobileListContent: {
@@ -793,7 +805,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                     {displayedTravels.map((item, index) => (
                       <View
                         key={keyExtractor(item)}
-                        style={[styles.travelItem, index % 2 !== 0 && styles.travelItemOdd]}
+                        style={[
+                          styles.travelItem,
+                          styles.travelItemGrid,
+                          index % 2 !== 0 && styles.travelItemOdd,
+                        ]}
                       >
                         {renderTravelItem({ item, index })}
                       </View>
@@ -882,4 +898,3 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 );
 
 export default NearTravelList;
-

@@ -47,7 +47,8 @@ const subscribers = new Set<() => void>();
 let subscription: { remove: () => void } | null = null;
 
 const ensureSubscription = () => {
-  if (subscription) return;
+  if (subscription) return false;
+  let snapshotChanged = false;
 
   // Ensure we start from the actual client window dimensions.
   // On web with SSR, module-level initialization can run with incorrect dimensions.
@@ -55,6 +56,7 @@ const ensureSubscription = () => {
     const { width, height } = Dimensions.get('window');
     if (currentSnapshot.width !== width || currentSnapshot.height !== height) {
       currentSnapshot = { width, height };
+      snapshotChanged = true;
     }
   } catch {
     // noop
@@ -70,11 +72,19 @@ const ensureSubscription = () => {
       }
     });
   }) as any;
+  return snapshotChanged;
 };
 
 const subscribe = (onStoreChange: () => void) => {
   subscribers.add(onStoreChange);
-  ensureSubscription();
+  const snapshotChanged = ensureSubscription();
+  if (snapshotChanged) {
+    try {
+      onStoreChange();
+    } catch {
+      // noop
+    }
+  }
   return () => {
     subscribers.delete(onStoreChange);
     if (subscribers.size === 0 && subscription) {

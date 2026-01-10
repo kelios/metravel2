@@ -800,7 +800,7 @@ export default function ProfileScreen() {
                           city: item.city ?? null,
                           country: item.country ?? null,
                         }}
-                        badge={{ icon: 'history', backgroundColor: colors.overlay ?? 'rgba(0,0,0,0.75)', iconColor: colors.textOnDark }}
+                        badge={{ icon: 'clock', backgroundColor: colors.overlay ?? 'rgba(0,0,0,0.75)', iconColor: colors.textOnDark }}
                         onPress={() => router.push(item.url as any)}
                       />
                     ))}

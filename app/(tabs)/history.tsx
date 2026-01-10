@@ -236,7 +236,7 @@ export default function HistoryScreen() {
                                 country: item.country ?? item.countryName ?? null,
                             }}
                             badge={{
-                                icon: 'history',
+                                icon: 'clock',
                                 backgroundColor: colors.overlay,
                                 iconColor: colors.textOnDark,
                             }}
@@ -250,4 +250,3 @@ export default function HistoryScreen() {
         </SafeAreaView>
     );
 }
-

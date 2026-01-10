@@ -3253,9 +3253,9 @@
     "@types/node" "*"
 
 "@types/node@*":
-  version "25.0.3"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-25.0.3.tgz#79b9ac8318f373fbfaaf6e2784893efa9701f269"
-  integrity sha512-W609buLVRVmeW693xKfzHeIV6nJGGz98uCPfeXI1ELMLXVeKYZ9m15fAMSaUPBHYLGFsVRcMmSCksQOrZV9BYA==
+  version "25.0.5"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-25.0.5.tgz#7ee6356607b9c93b9d25bf5c5e8f8a8ed6240877"
+  integrity sha512-FuLxeLuSVOqHPxSN1fkcD8DLU21gAP7nCKqGRJ/FglbCUBs0NYN6TpHcdmyLeh8C0KwGIaZQJSv+OYG+KZz+Gw==
   dependencies:
     undici-types "~7.16.0"
 
@@ -6127,9 +6127,9 @@ flow-enums-runtime@^0.0.6:
   integrity sha512-3PYnM29RFXwvAN6Pc/scUfkI7RwhQ/xqyLUyPNlXUp9S40zI8nup9tUSrTLSVnWGBN38FNiGWbwZOB6uR4OGdw==
 
 flow-parser@0.*:
-  version "0.295.0"
-  resolved "https://registry.yarnpkg.com/flow-parser/-/flow-parser-0.295.0.tgz#168710333e9b90b34ba6ba2fa0ba98e2aab5acc6"
-  integrity sha512-M4GVdl9SIKQEGULoEh/PO5K1REnXvHT6XOEthuKMUDWsLCi576mOWo3Xe8BfKdy2e2aMaW5rKGfMDlMDOA9RqA==
+  version "0.296.0"
+  resolved "https://registry.yarnpkg.com/flow-parser/-/flow-parser-0.296.0.tgz#b69dba3da107412a46919c741beaaa5a18d8b124"
+  integrity sha512-IUd6lEFFXN0Ii8U0m4QhwEGoPxbfyx0uW3yddw3eXF92wO1/6lGP2GwJuYzRej7SyxLYKgb2kgdFMeNQ7GGcPQ==
 
 follow-redirects@^1.15.6:
   version "1.15.11"

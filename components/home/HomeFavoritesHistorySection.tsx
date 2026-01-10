@@ -83,7 +83,7 @@ function HorizontalCards({
   styles,
 }: {
   data: TravelLikeItem[];
-  badge?: { icon: 'history' | 'favorite' };
+  badge?: { icon: 'clock' | 'favorite' };
   onPressItem: (url: string) => void;
   testID: string;
   colors: ReturnType<typeof useThemedColors>;
@@ -92,7 +92,7 @@ function HorizontalCards({
   const { isDark } = useTheme();
   const scrollRef = useRef<any>(null);
   const historyBadge =
-    badge?.icon === 'history'
+    badge?.icon === 'clock'
       ? {
           icon: 'clock' as const,
           backgroundColor: colors.overlay,
@@ -281,7 +281,7 @@ export default function HomeFavoritesHistorySection() {
               />
               <HorizontalCards
                 data={historyData}
-                badge={{ icon: 'history' }}
+                badge={{ icon: 'clock' }}
                 onPressItem={openUrl}
                 testID="home-history-list"
                 colors={colors}
