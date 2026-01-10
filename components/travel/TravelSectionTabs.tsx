@@ -233,7 +233,12 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
             ref={(node) => {
               moreButtonRef.current = node
             }}
-            onPress={() => setMoreOpen(true)}
+            onPress={() => {
+              if (Platform.OS === "web" && typeof document !== "undefined") {
+                (document.activeElement as HTMLElement | null)?.blur?.()
+              }
+              setMoreOpen(true)
+            }}
             style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
             accessibilityRole="button"
             accessibilityLabel="Еще разделы"
@@ -308,4 +313,3 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
 }
 
 export default TravelSectionTabs
-

@@ -159,6 +159,12 @@ export default function TravelDetailsContainer() {
     handleLayout,
   } = useTravelDetailsScrollState({ isMobile });
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
+  const lcpLinkRel = useMemo(() => {
+    if (Platform.OS !== "web") return "preload";
+    if (typeof document === "undefined") return "preload";
+    // In SPA navigation, window load has already fired; prefetch avoids preload warnings.
+    return document.readyState === "complete" ? "prefetch" : "preload";
+  }, []);
   // Стабильный ключ для <Head>, чтобы избежать ReferenceError при отрисовке
   const headKey = useMemo(
     () => `travel-${travel?.id ?? slug ?? "unknown"}`,
@@ -340,7 +346,7 @@ export default function TravelDetailsContainer() {
               )}
               {Platform.OS === "web" && lcpPreloadProps?.src && (
                 <link
-                  rel="preload"
+                  rel={lcpLinkRel}
                   as="image"
                   href={lcpPreloadProps.src}
                   {...(lcpPreloadProps.srcSet ? { imagesrcset: lcpPreloadProps.srcSet } : {})}

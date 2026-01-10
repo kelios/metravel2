@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Text, View, Pressable, FlatList, Image } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname } from 'expo-router';
@@ -18,7 +18,18 @@ export default function RouletteScreen() {
   const pathname = usePathname();
   const isFocused = useIsFocused();
   const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // On web with SSR we must avoid changing layout branches (mobile vs desktop)
+  // between server render and the first client render.
+  const isMobile =
+    Platform.OS === 'web'
+      ? (isMounted ? isPhone || isLargePhone : false)
+      : isPhone || isLargePhone;
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -60,7 +71,7 @@ export default function RouletteScreen() {
           resizeMode="cover"
         />
       )}
-      {isFocused && Platform.OS === 'web' && (
+      {Platform.OS === 'web' && isMounted && isFocused && (
         <InstantSEO
           headKey="roulette"
           title={title}

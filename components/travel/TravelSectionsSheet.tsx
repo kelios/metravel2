@@ -47,6 +47,9 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
 
   useEffect(() => {
     if (openNonce <= 0) return
+    if (Platform.OS === "web" && typeof document !== "undefined") {
+      ;(document.activeElement as HTMLElement | null)?.blur?.()
+    }
     openedAtRef.current = Date.now()
     setOpen(true)
   }, [openNonce])
