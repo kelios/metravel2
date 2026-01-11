@@ -103,23 +103,24 @@ export interface ArticleEditorProps {
     variant?: 'default' | 'compact';
 }
 
-const WebEditor: React.FC<ArticleEditorProps> = ({
-                                                     label = 'Описание',
-                                                     placeholder = 'Введите описание…',
-                                                     content,
-                                                     onChange,
-                                                     onAutosave,
-                                                     autosaveDelay = 5000,
-                                                     idTravel,
-                                                     editorRef,
-                                                     variant = 'default',
-                                                 }) => {
+const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
+    label = 'Описание',
+    placeholder = 'Введите описание…',
+    content,
+    onChange,
+    onAutosave,
+    autosaveDelay = 5000,
+    idTravel,
+    editorRef,
+    variant = 'default',
+}) => {
     const colors = useThemedColors();
     const [html, setHtml] = useState(content);
     const [fullscreen, setFullscreen] = useState(false);
     const [showHtml, setShowHtml] = useState(false);
     const [anchorModalVisible, setAnchorModalVisible] = useState(false);
     const [anchorValue, setAnchorValue] = useState('');
+    const htmlSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
 
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
@@ -555,6 +556,14 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
             multiline
             value={html}
             onChangeText={text => fireChange(text)}
+            onSelectionChange={(e) => {
+                const sel = e?.nativeEvent?.selection;
+                if (!sel) return;
+                htmlSelectionRef.current = {
+                    start: typeof sel.start === 'number' ? sel.start : 0,
+                    end: typeof sel.end === 'number' ? sel.end : 0,
+                };
+            }}
             placeholder={placeholder}
             placeholderTextColor={colors.textSecondary}
         />
@@ -629,8 +638,29 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                                             Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
                                             return;
                                         }
-                                        const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
-                                        fireChange(`${html}${htmlSnippet}`);
+                                        const escapeHtml = (value: string) =>
+                                            String(value ?? '')
+                                                .replace(/&/g, '&amp;')
+                                                .replace(/</g, '&lt;')
+                                                .replace(/>/g, '&gt;')
+                                                .replace(/"/g, '&quot;')
+                                                .replace(/'/g, '&#039;');
+
+                                        const current = String(html ?? '');
+                                        const sel = htmlSelectionRef.current;
+                                        const start = Math.max(0, Math.min(sel.start ?? 0, current.length));
+                                        const end = Math.max(0, Math.min(sel.end ?? 0, current.length));
+                                        const from = Math.min(start, end);
+                                        const to = Math.max(start, end);
+
+                                        if (to > from) {
+                                            const selected = current.slice(from, to);
+                                            const wrapped = `<span id="${id}">${escapeHtml(selected)}</span>`;
+                                            fireChange(`${current.slice(0, from)}${wrapped}${current.slice(to)}`);
+                                        } else {
+                                            const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
+                                            fireChange(`${current.slice(0, from)}${htmlSnippet}${current.slice(from)}`);
+                                        }
                                         return;
                                     }
                                     insertAnchor(anchorValue);

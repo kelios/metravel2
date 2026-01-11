@@ -103,7 +103,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         return 'Отличное подробное описание!';
     }, [descriptionPlainLength]);
 
-    const descriptionAnchorHint = 'Якорь: вставьте через иконку закладки, ссылка в тексте — <a href="#id">.';
+    const descriptionAnchorHint = 'Якорь: поставьте курсор в месте, куда нужно прокручивать, и вставьте якорь через иконку закладки (получится <span id="id">…</span>). Ссылка в тексте/оглавлении — <a href="#id">Текст ссылки</a>.';
 
     const descriptionProgress = useMemo(() => {
         const progress = Math.min((descriptionPlainLength / 50) * 100, 100);

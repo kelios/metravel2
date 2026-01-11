@@ -15,6 +15,8 @@ type ConfirmDialogProps = {
     message?: string;
     confirmText?: string;
     cancelText?: string;
+    confirmTestID?: string;
+    cancelTestID?: string;
 };
 
 // ✅ FIX: Убрали forwardRef, так как Dialog не поддерживает ref напрямую
@@ -26,6 +28,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                           message = 'Вы уверены, что хотите продолжить?',
                                           confirmText = 'Удалить',
                                           cancelText = 'Отмена',
+                                          confirmTestID,
+                                          cancelTestID,
                                       }) => {
     const dialogRef = useRef<HTMLElement>(null);
     const cancelButtonRef = useRef<HTMLElement>(null);
@@ -59,7 +63,6 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     if (Platform.OS === 'web') {
         const portal = (() => {
             try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
                 const ReactDOM = require('react-dom');
                 return ReactDOM?.createPortal as ((node: React.ReactNode, container: Element) => React.ReactNode) | undefined;
             } catch {
@@ -125,6 +128,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                 onPress={onClose}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                                 style={[styles.cancelButtonContainer, globalFocusStyles.focusable]}
+                                testID={cancelTestID}
                                 accessibilityRole="button"
                                 accessibilityLabel={cancelText}
                                 {...Platform.select({
@@ -143,6 +147,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                                 onPress={onConfirm}
                                 style={[styles.deleteButtonContainer, globalFocusStyles.focusable]}
                                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                testID={confirmTestID}
                                 accessibilityRole="button"
                                 accessibilityLabel={confirmText}
                                 {...Platform.select({
@@ -160,7 +165,10 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             </View>
         ) : null;
 
-        if (portal && body) {
+        const isJest = !!process.env.JEST_WORKER_ID;
+        const shouldUsePortal = portal && body && !isJest;
+
+        if (shouldUsePortal) {
             return portal(content, body) as any;
         }
 

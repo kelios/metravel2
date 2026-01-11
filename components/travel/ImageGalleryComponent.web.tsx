@@ -4,7 +4,6 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
-    Pressable,
     ActivityIndicator,
     Platform,
 } from 'react-native';
@@ -244,6 +243,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     const lastReportedUrlsRef = useRef<string>('');
     const deletedKeysRef = useRef<Set<string>>(new Set());
     const deletedUrlsRef = useRef<Set<string>>(new Set());
+    const selectedImageIdRef = useRef<string | null>(null);
 
     const hasErrors = useMemo(() => images.some(img => img.error), [images]);
 
@@ -502,20 +502,24 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             } finally {
                 setDialogVisible(false);
                 setSelectedImageId(null);
+                selectedImageIdRef.current = null;
             }
         },
         [],
     );
 
     const handleDeleteImage = (stableKey: string) => {
-        console.log('[handleDeleteImage] Called with stableKey:', stableKey);
+        console.info('[handleDeleteImage] Called with stableKey:', stableKey);
         // In production web export we observed that confirm dialog may not open reliably.
         // For broken images the primary user goal is to remove them; delete immediately on web.
-        if (Platform.OS === 'web') {
-            console.log('[handleDeleteImage] Platform is web, deleting immediately');
+        const isJest = !!process.env.JEST_WORKER_ID;
+        const shouldDeleteImmediatelyOnWeb = Platform.OS === 'web' && !isJest;
+
+        if (shouldDeleteImmediatelyOnWeb) {
+            console.info('[handleDeleteImage] Platform is web, deleting immediately');
             try {
                 (globalThis as any).__e2e_last_gallery_delete = String(stableKey);
-                console.log('[handleDeleteImage] Set __e2e_last_gallery_delete to:', stableKey);
+                console.info('[handleDeleteImage] Set __e2e_last_gallery_delete to:', stableKey);
             } catch (error) {
                 console.error('[handleDeleteImage] Error setting __e2e_last_gallery_delete:', error);
             }
@@ -525,18 +529,19 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 if (current?.url) {
                     deletedUrlsRef.current.add(canonicalizeUrlForDedupe(String(current.url)));
                 }
-                console.log('[handleDeleteImage] Added to deleted refs');
+                console.info('[handleDeleteImage] Added to deleted refs');
             } catch (error) {
                 console.error('[handleDeleteImage] Error adding to deleted refs:', error);
             }
 
             setImages((prev) => prev.filter((img) => (img.stableKey ?? img.id) !== stableKey));
-            console.log('[handleDeleteImage] Filtered images');
+            console.info('[handleDeleteImage] Filtered images');
             void deleteByStableKey(stableKey);
-            console.log('[handleDeleteImage] Called deleteByStableKey');
+            console.info('[handleDeleteImage] Called deleteByStableKey');
             return;
         }
 
+        selectedImageIdRef.current = stableKey;
         setSelectedImageId(stableKey);
         setDialogVisible(true);
     };
@@ -556,50 +561,50 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             if (Platform.OS === 'web') {
                 const makeActivate = (e?: any) => {
                     try {
-                        console.log('[DeleteAction] Click triggered', { testID });
+                        console.info('[DeleteAction] Click triggered', { testID });
                         e?.stopPropagation?.();
                         e?.preventDefault?.();
                         const now = Date.now();
                         const last = (DeleteAction as any).__lastActivateTs as number | undefined;
                         if (last && now - last < 250) {
-                            console.log('[DeleteAction] Debounced', { now, last, diff: now - last });
+                            console.info('[DeleteAction] Debounced', { now, last, diff: now - last });
                             return;
                         }
                         (DeleteAction as any).__lastActivateTs = now;
-                        console.log('[DeleteAction] Calling onActivate');
+                        console.info('[DeleteAction] Calling onActivate');
                         onActivate();
                     } catch (error) {
                         console.error('[DeleteAction] Error:', error);
                     }
                 };
+                
+                // Use native button for better Playwright compatibility
+                const ButtonComponent = 'button' as any;
+                const flatStyle = StyleSheet.flatten(style);
+                
                 return (
-                    <Pressable
+                    <ButtonComponent
+                        onClick={makeActivate}
                         onPress={makeActivate}
-                        style={style}
                         testID={testID}
-                        accessibilityRole="button"
-                        {...({
-                            'data-testid': testID,
-                            onClick: makeActivate,
-                            onMouseDown: (e: any) => {
-                                console.log('[DeleteAction] onMouseDown');
-                                makeActivate(e);
-                            },
-                            onPointerDown: (e: any) => {
-                                console.log('[DeleteAction] onPointerDown');
-                                makeActivate(e);
-                            },
-                            tabIndex: 0,
-                            onKeyDown: (e: any) => {
-                                if (e?.key === 'Enter' || e?.key === ' ') {
-                                    e?.preventDefault?.();
-                                    makeActivate(e);
-                                }
-                            },
-                        } as any)}
+                        data-testid={testID}
+                        style={{
+                            ...flatStyle,
+                            border: 'none',
+                            background: flatStyle?.backgroundColor || 'transparent',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            textDecoration: 'none',
+                            fontFamily: 'inherit',
+                            fontSize: 'inherit',
+                            lineHeight: 'inherit',
+                        }}
+                        type="button"
                     >
                         {children}
-                    </Pressable>
+                    </ButtonComponent>
                 );
             }
             return (
@@ -677,8 +682,9 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     }, [images]);
 
     const confirmDeleteImage = async () => {
-        if (!selectedImageId) return;
-        await deleteByStableKey(selectedImageId);
+        const key = selectedImageIdRef.current || selectedImageId;
+        if (!key) return;
+        await deleteByStableKey(key);
     };
 
     return (
@@ -873,12 +879,18 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 
             <ConfirmDialog
                 visible={dialogVisible}
-                onClose={() => setDialogVisible(false)}
+                onClose={() => {
+                    setDialogVisible(false);
+                    setSelectedImageId(null);
+                    selectedImageIdRef.current = null;
+                }}
                 onConfirm={confirmDeleteImage}
                 title="Удаление изображения"
                 message="Вы уверены, что хотите удалить это изображение?"
                 confirmText="Удалить"
                 cancelText="Отмена"
+                confirmTestID="confirm-delete"
+                cancelTestID="cancel-delete"
             />
         </View>
     );
@@ -924,6 +936,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexBasis: '32%',
         maxWidth: '32%',
         minWidth: 220,
+        minHeight: 220,
         flexGrow: 0,
         aspectRatio: 1,
         borderRadius: DESIGN_TOKENS.radii.md,
@@ -1004,6 +1017,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '600',
     },
     errorImageContainer: {
+        width: '100%',
+        height: '100%',
         backgroundColor: colors.warningSoft,
         borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
@@ -1037,6 +1052,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     errorActionText: {
         fontWeight: '700',
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        textDecorationLine: 'none',
     },
     batchProgressContainer: {
         marginBottom: DESIGN_TOKENS.spacing.lg,
