@@ -158,7 +158,11 @@ describe('RoutingMachine', () => {
     render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
-      expect(mockSetErrors).toHaveBeenCalledWith(expect.objectContaining({
+      const calls = mockSetErrors.mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      const lastArg = calls[calls.length - 1]?.[0];
+      const nextState = typeof lastArg === 'function' ? lastArg({}) : lastArg;
+      expect(nextState).toEqual(expect.objectContaining({
         routing: expect.any(String),
       }));
     }, { timeout: 3000 });
@@ -209,7 +213,11 @@ describe('RoutingMachine', () => {
     );
 
     await waitFor(() => {
-      expect(mockSetErrors).toHaveBeenCalledWith({ routing: false });
+      const calls = mockSetErrors.mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      const lastArg = calls[calls.length - 1]?.[0];
+      const nextState = typeof lastArg === 'function' ? lastArg({}) : lastArg;
+      expect(nextState).toEqual({ routing: false });
       expect(mockSetRouteDistance).toHaveBeenCalledWith(0);
     });
   });

@@ -21,6 +21,9 @@ export const attachOsmRoutesOverlay = (L: any, map: LeafletMap, opts?: OsmRoutes
   let abort: AbortController | null = null;
   let timer: any = null;
   let lastKey: string | null = null;
+  let isLoading = false;
+  let nextAllowedAt = 0;
+  let backoffMs = 0;
   let started = false;
 
   const makeBBox = (): BBox | null => {
@@ -114,6 +117,10 @@ export const attachOsmRoutesOverlay = (L: any, map: LeafletMap, opts?: OsmRoutes
 
   const load = async () => {
     if (!map || !L) return;
+    if (isLoading) return;
+
+    const now = Date.now();
+    if (now < nextAllowedAt) return;
 
     const rawBBox = makeBBox();
     if (!rawBBox) return;
@@ -126,25 +133,45 @@ export const attachOsmRoutesOverlay = (L: any, map: LeafletMap, opts?: OsmRoutes
 
     abort?.abort();
     abort = new AbortController();
+    isLoading = true;
 
     try {
       const data = await fetchOsmRoutes(bbox, { signal: abort.signal });
       const lines = overpassToLines(data);
       renderLines(lines);
+
+      backoffMs = 0;
+      nextAllowedAt = Date.now() + 800;
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
-      if (e?.message?.includes('timeout') || e?.message?.includes('too busy')) {
+
+      const msg = String(e?.message || '').toLowerCase();
+      const isRateLimited = msg.includes('429') || msg.includes('too many requests');
+      const isTimeoutish = msg.includes('timeout') || msg.includes('too busy');
+
+      if (isRateLimited || isTimeoutish) {
+        backoffMs = backoffMs ? Math.min(backoffMs * 2, 30000) : 2000;
+        nextAllowedAt = Date.now() + backoffMs;
+      } else {
+        nextAllowedAt = Date.now() + 1500;
+      }
+
+      if (isTimeoutish || isRateLimited) {
         console.warn('[OSM Routes Overlay] Overpass API is busy, skipping load.');
       } else {
         console.warn('[OSM Routes Overlay] Failed to load data:', e?.message || e);
       }
       layerGroup.clearLayers();
+    } finally {
+      isLoading = false;
     }
   };
 
   const schedule = () => {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(load, options.debounceMs);
+    const now = Date.now();
+    const delay = Math.max(options.debounceMs, Math.max(0, nextAllowedAt - now));
+    timer = setTimeout(load, delay);
   };
 
   const onMoveEnd = () => schedule();

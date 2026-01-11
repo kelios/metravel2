@@ -629,7 +629,12 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           </>
         )}
 
-        <CollapsibleSection title="Настройки карты" icon="tune" defaultOpen={!isMobile}>
+        <CollapsibleSection
+          key={isMobile ? 'map-settings-mobile' : 'map-settings-desktop'}
+          title="Настройки карты"
+          icon="tune"
+          defaultOpen={!isMobile}
+        >
           {/* ✅ Аккордеон легенды */}
           <Pressable
             style={[styles.accordionHeader, globalFocusStyles.focusable]}

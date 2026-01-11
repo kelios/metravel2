@@ -4,23 +4,26 @@ import { apiContextFromEnv, apiContextFromTracker, deleteTravel, installCreatedT
 export const test = base.extend<{
   createdTravels: Set<string | number>;
 }>({
-  createdTravels: async ({ page }, runFixture) => {
-    const tracker = installCreatedTravelsTracker(page);
-    try {
-      await runFixture(tracker.ids);
-    } finally {
-      tracker.dispose();
+  createdTravels: [
+    async ({ page }, runFixture) => {
+      const tracker = installCreatedTravelsTracker(page);
+      try {
+        await runFixture(tracker.ids);
+      } finally {
+        tracker.dispose();
 
-      const ctxFromEnv = await apiContextFromEnv().catch(() => null);
-      const ctx = ctxFromEnv ?? apiContextFromTracker({ apiBase: tracker.getApiBase?.() ?? null });
-      if (ctx) {
-        const ids = Array.from(tracker.ids);
-        for (const id of ids) {
-          await deleteTravel(ctx, id).catch(() => undefined);
+        const ctxFromEnv = await apiContextFromEnv().catch(() => null);
+        const ctx = ctxFromEnv ?? apiContextFromTracker({ apiBase: tracker.getApiBase?.() ?? null });
+        if (ctx) {
+          const ids = Array.from(tracker.ids);
+          for (const id of ids) {
+            await deleteTravel(ctx, id).catch(() => undefined);
+          }
         }
       }
-    }
-  },
+    },
+    { auto: true },
+  ],
 });
 
 export { expect };

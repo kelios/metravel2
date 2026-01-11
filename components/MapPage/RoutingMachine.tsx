@@ -78,7 +78,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         if (clearedNoPointsRef.current) return
         clearedNoPointsRef.current = true
 
-        setErrors({ routing: false })
+        setErrors((prev: any) => ({ ...prev, routing: false }))
         setRouteDistance(0)
         setFullRouteCoords([])
 
@@ -139,9 +139,9 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             
             // Передаем ошибку только если она есть
             if (typeof routingState.error === 'string' && routingState.error) {
-                setErrors({ routing: routingState.error })
+                setErrors((prev: any) => ({ ...prev, routing: routingState.error }))
             } else {
-                setErrors({ routing: false })
+                setErrors((prev: any) => ({ ...prev, routing: false }))
             }
             
             setRouteDistance(routingState.distance)

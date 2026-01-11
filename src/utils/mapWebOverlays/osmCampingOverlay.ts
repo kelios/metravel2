@@ -21,6 +21,9 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
   let abort: AbortController | null = null;
   let timer: any = null;
   let lastKey: string | null = null;
+  let isLoading = false;
+  let nextAllowedAt = 0;
+  let backoffMs = 0;
   let started = false;
 
   const makeBBox = (): BBox | null => {
@@ -134,6 +137,10 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
 
   const load = async () => {
     if (!map || !L) return;
+    if (isLoading) return;
+
+    const now = Date.now();
+    if (now < nextAllowedAt) return;
 
     const rawBBox = makeBBox();
     if (!rawBBox) return;
@@ -146,16 +153,31 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
 
     abort?.abort();
     abort = new AbortController();
+    isLoading = true;
 
     try {
       const data = await fetchOsmCamping(bbox, { signal: abort.signal });
       const pts = overpassToPoints(data);
       renderPoints(pts);
+
+      backoffMs = 0;
+      nextAllowedAt = Date.now() + 800;
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
 
       // Логируем ошибку для отладки, но не показываем пользователю
-      if (e?.message?.includes('timeout') || e?.message?.includes('too busy')) {
+      const msg = String(e?.message || '').toLowerCase();
+      const isRateLimited = msg.includes('429') || msg.includes('too many requests');
+      const isTimeoutish = msg.includes('timeout') || msg.includes('too busy');
+
+      if (isRateLimited || isTimeoutish) {
+        backoffMs = backoffMs ? Math.min(backoffMs * 2, 30000) : 2000;
+        nextAllowedAt = Date.now() + backoffMs;
+      } else {
+        nextAllowedAt = Date.now() + 1500;
+      }
+
+      if (isTimeoutish || isRateLimited) {
         console.warn('[OSM Camping Overlay] Overpass API is busy, skipping load. This is expected and doesn\'t affect the main map.');
       } else {
         console.warn('[OSM Camping Overlay] Failed to load data:', e?.message || e);
@@ -163,12 +185,16 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
 
       // Очищаем слой при ошибке
       layerGroup.clearLayers();
+    } finally {
+      isLoading = false;
     }
   };
 
   const schedule = () => {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(load, options.debounceMs);
+    const now = Date.now();
+    const delay = Math.max(options.debounceMs, Math.max(0, nextAllowedAt - now));
+    timer = setTimeout(load, delay);
   };
 
   const onMoveEnd = () => schedule();

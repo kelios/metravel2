@@ -242,15 +242,7 @@ export default function MapScreen() {
             )}
             <SafeAreaView style={styles.container}>
                 <View style={styles.content}>
-                <View style={styles.mapArea}>
-                    {mapReady ? (
-                        <Suspense fallback={mapPanelPlaceholder}>
-                            <LazyMapPanel {...mapPanelProps} />
-                        </Suspense>
-                    ) : (
-                        mapPanelPlaceholder
-                    )}
-                </View>
+                {mapComponent}
 
                 {/* ✅ ИСПРАВЛЕНИЕ: RouteHint и RouteStats перенесены в боковую панель */}
 

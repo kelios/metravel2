@@ -93,7 +93,11 @@ describe('RoutingMachine E2E Tests', () => {
     }, { timeout: 3000 });
 
     expect(mockSetRouteDistance).toHaveBeenCalledWith(8500);
-    expect(mockSetErrors).toHaveBeenCalledWith({ routing: false });
+    const errorCalls = mockSetErrors.mock.calls;
+    expect(errorCalls.length).toBeGreaterThan(0);
+    const lastArg = errorCalls[errorCalls.length - 1]?.[0];
+    const nextState = typeof lastArg === 'function' ? lastArg({}) : lastArg;
+    expect(nextState).toEqual({ routing: false });
     expect(mockLeaflet.polyline).toHaveBeenCalled();
   });
 

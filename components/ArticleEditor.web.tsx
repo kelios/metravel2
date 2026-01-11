@@ -168,7 +168,10 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
             flex: 1,
             minHeight: 0,
             ...(isWeb
-                ? ({ maxHeight: 560, overflow: 'auto' } as any)
+                ? ({
+                    maxHeight: fullscreen ? undefined : 560,
+                    overflow: 'auto',
+                } as any)
                 : null),
         },
         editor: { minHeight: 200, flex: 1 },
@@ -190,9 +193,15 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
             flex: 1,
             height: '100%',
             width: '100%',
+            ...(isWeb
+                ? ({
+                    minHeight: '100vh',
+                    minWidth: '100vw',
+                } as any)
+                : null),
             backgroundColor: colors.background,
         },
-    }), [colors]);
+    }), [colors, fullscreen]);
 
     useEffect(() => {
         if (!editorRef) return;
@@ -625,4 +634,3 @@ const ArticleEditor = forwardRef<any, ArticleEditorProps>((props, ref) => {
 });
 
 export default React.memo(ArticleEditor);
-

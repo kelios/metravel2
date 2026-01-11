@@ -281,6 +281,9 @@ export const attachLasyZanocujWfsOverlay = (
   let abort: AbortController | null = null;
   let timer: any = null;
   let lastKey: string | null = null;
+  let isLoading = false;
+  let nextAllowedAt = 0;
+  let backoffMs = 0;
   let preferredAttempt: {
     version: string;
     typeParam: 'typeNames' | 'typeName';
@@ -408,6 +411,10 @@ export const attachLasyZanocujWfsOverlay = (
     if (!map || !L) return;
     if (!def?.url) return;
     if (!def?.wfsParams?.typeName) return;
+    if (isLoading) return;
+
+    const now = Date.now();
+    if (now < nextAllowedAt) return;
 
     const bbox = shrinkBBoxToMaxArea(makeBBox(), options.maxAreaKm2);
     const key = keyFromBBox(bbox);
@@ -416,29 +423,21 @@ export const attachLasyZanocujWfsOverlay = (
 
     abort?.abort();
     abort = new AbortController();
+    isLoading = true;
 
     try {
       const version = def.wfsParams?.version || '2.0.0';
       const outputFormat = def.wfsParams?.outputFormat || 'GEOJSON';
       const srsName = def.wfsParams?.srsName || 'urn:ogc:def:crs:OGC:1.3:CRS84';
 
-      // Many ArcGIS WFSServer deployments are picky about outputFormat strings.
-      // We try several GeoJSON-like variants.
+      // Keep attempts tight to avoid spamming WFS servers with many format probes.
       const outputFormatCandidates = [
         outputFormat,
-        'geojson',
-        'GEOJSON',
-        'application/geo+json',
-        'application/vnd.geo+json',
-        'application/json; subtype=geojson',
-        'json',
-        'GML2',
+        outputFormat?.toLowerCase() === 'geojson' ? null : 'GEOJSON',
         'GML3',
-        'text/xml; subtype=gml/3.1.1',
-        'application/gml+xml; version=3.2',
-      ].filter(Boolean);
+      ].filter(Boolean) as string[];
 
-      // Attempt list: first try the config (often WFS 2.0.0 + CRS84), then fallback to WFS 1.1.0 + EPSG:4326.
+      // Attempt list: prefer cached successful params, then config + one fallback.
       const attempts: Array<{
         version: string;
         typeParam: 'typeNames' | 'typeName';
@@ -458,24 +457,20 @@ export const attachLasyZanocujWfsOverlay = (
         addAttempt(preferredAttempt);
       }
 
-      for (const fmt of outputFormatCandidates) {
-        addAttempt({
-          version,
-          typeParam: 'typeNames',
-          outputFormat: fmt,
-          srsName,
-          bboxOrder: 'lonlat',
-        });
-      }
-      for (const fmt of outputFormatCandidates) {
-        addAttempt({
-          version: '1.1.0',
-          typeParam: 'typeName',
-          outputFormat: fmt,
-          srsName: 'EPSG:4326',
-          bboxOrder: 'latlon',
-        });
-      }
+      addAttempt({
+        version,
+        typeParam: 'typeNames',
+        outputFormat: outputFormatCandidates[0] || 'GEOJSON',
+        srsName,
+        bboxOrder: 'lonlat',
+      });
+      addAttempt({
+        version: '1.1.0',
+        typeParam: 'typeName',
+        outputFormat: outputFormatCandidates.includes('GML3') ? 'GML3' : (outputFormatCandidates[0] || 'GEOJSON'),
+        srsName: 'EPSG:4326',
+        bboxOrder: 'latlon',
+      });
 
       let lastErrorText = '';
       for (const attempt of attempts) {
@@ -496,20 +491,36 @@ export const attachLasyZanocujWfsOverlay = (
 
         renderGeoJson(parsed.data);
         preferredAttempt = attempt;
+        backoffMs = 0;
+        nextAllowedAt = Date.now() + 1200;
         return;
       }
 
       throw new Error(`WFS: no supported GeoJSON outputFormat. Last response: ${String(lastErrorText).slice(0, 200)}`);
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
+      const msg = String(e?.message || '').toLowerCase();
+      const isRateLimited = msg.includes('429') || msg.includes('too many requests');
+      const isTimeoutish = msg.includes('timeout') || msg.includes('too busy');
+
+      if (isRateLimited || isTimeoutish) {
+        backoffMs = backoffMs ? Math.min(backoffMs * 2, 30000) : 2000;
+        nextAllowedAt = Date.now() + backoffMs;
+      } else {
+        nextAllowedAt = Date.now() + 2000;
+      }
       console.warn('[Lasy Zanocuj WFS Overlay] Failed to load data:', e?.message || e);
       layerGroup.clearLayers();
+    } finally {
+      isLoading = false;
     }
   };
 
   const schedule = () => {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(load, options.debounceMs);
+    const now = Date.now();
+    const delay = Math.max(options.debounceMs, Math.max(0, nextAllowedAt - now));
+    timer = setTimeout(load, delay);
   };
 
   const onMoveEnd = () => schedule();
