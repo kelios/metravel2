@@ -555,10 +555,11 @@ test.describe('Превью карточки (Travel Preview)', () => {
     // Кликаем по кнопке превью
     await openPreviewModal(page);
 
-    // Проверяем что модальное окно открылось
+    // Проверяем содержимое модального окна
     await expect(page.getByText('Превью карточки', { exact: true })).toBeVisible();
     await expect(page.getByText('Путешествие для превью', { exact: true })).toBeVisible();
-    await expect(page.getByText('Описание путешествия для проверки превью карточки', { exact: true })).toBeVisible();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('Описание путешествия для проверки превью карточки', { exact: true })).toBeVisible();
 
     // Закрываем модальное окно
     await closePreviewModal(page);

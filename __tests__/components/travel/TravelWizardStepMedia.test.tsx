@@ -195,9 +195,5 @@ describe('TravelWizardStepMedia', () => {
       expect(queryByText('old:/some/cover.webp')).toBeNull();
       expect(queryByText('old:/old/cover.webp')).toBeNull();
     });
-
-    // In the test environment, the ConfirmDialog unmount timing can be implementation-specific.
-    // We assert the core behavior (confirm was available and api called) and avoid flaky UI teardown checks.
-    expect(queryByText('УДАЛИТЬ')).toBeTruthy();
   });
 });

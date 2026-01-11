@@ -244,6 +244,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     const deletedKeysRef = useRef<Set<string>>(new Set());
     const deletedUrlsRef = useRef<Set<string>>(new Set());
     const selectedImageIdRef = useRef<string | null>(null);
+    const imagesRef = useRef<GalleryItem[]>([]);
 
     const hasErrors = useMemo(() => images.some(img => img.error), [images]);
 
@@ -302,6 +303,10 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         });
         setIsInitialLoading(false);
     }, [initialImagesProp]);
+
+    useEffect(() => {
+        imagesRef.current = images;
+    }, [images]);
     
     // Cleanup blob URLs on unmount
     useEffect(() => {
@@ -458,13 +463,11 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 
     const deleteByStableKey = useCallback(
         async (stableKey: string) => {
-            let imageToDelete: any = null;
+            const snapshot = imagesRef.current;
+            const imageToDelete = snapshot.find((img) => (img.stableKey ?? img.id) === stableKey) ?? null;
 
             // Optimistically remove from UI first (user intent: just remove the broken card).
-            setImages((prev) => {
-                imageToDelete = prev.find((img) => (img.stableKey ?? img.id) === stableKey) ?? null;
-                return prev.filter((img) => (img.stableKey ?? img.id) !== stableKey);
-            });
+            setImages((prev) => prev.filter((img) => (img.stableKey ?? img.id) !== stableKey));
 
             try {
                 deletedKeysRef.current.add(String(stableKey));

@@ -166,7 +166,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         ) : null;
 
         const isJest = !!process.env.JEST_WORKER_ID;
-        const shouldUsePortal = portal && body && !isJest;
+        const forcePortalInTests = process.env.CONFIRM_DIALOG_FORCE_PORTAL === '1';
+        const shouldUsePortal = portal && body && (!isJest || forcePortalInTests);
 
         if (shouldUsePortal) {
             return portal(content, body) as any;

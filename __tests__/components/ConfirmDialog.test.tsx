@@ -68,9 +68,18 @@ describe('ConfirmDialog', () => {
     const originalPlatform = Platform.OS
     Object.defineProperty(Platform, 'OS', { value: 'web' })
 
+    const prev = process.env.CONFIRM_DIALOG_FORCE_PORTAL
+    process.env.CONFIRM_DIALOG_FORCE_PORTAL = '1'
+
     mockCreatePortal.mockClear()
     render(<ConfirmDialog {...defaultProps} />)
     expect(mockCreatePortal).toHaveBeenCalled()
+
+    if (prev === undefined) {
+      delete process.env.CONFIRM_DIALOG_FORCE_PORTAL
+    } else {
+      process.env.CONFIRM_DIALOG_FORCE_PORTAL = prev
+    }
 
     Object.defineProperty(Platform, 'OS', { value: originalPlatform })
   })

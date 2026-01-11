@@ -49,6 +49,11 @@ let mockWizardState: any = {
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockLocalParams,
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+  }),
 }));
 
 jest.mock('@/context/AuthContext', () => ({
