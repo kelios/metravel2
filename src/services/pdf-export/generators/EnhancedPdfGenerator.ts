@@ -709,6 +709,27 @@ export class EnhancedPdfGenerator {
     `;
   }
 
+  private buildGoogleMapsUrl(location: NormalizedLocation): string {
+    if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return '';
+    const query = `${location.lat},${location.lng}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+
+  private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {
+    const QRCode = await this.getQRCode();
+    return Promise.all(
+      locations.map(async (loc) => {
+        const url = this.buildGoogleMapsUrl(loc);
+        if (!url) return '';
+        try {
+          return await QRCode.toDataURL(url, { margin: 1, scale: 4, width: 140 });
+        } catch {
+          return '';
+        }
+      })
+    );
+  }
+
   /**
    * Рендерит страницу с фото путешествия
    */
@@ -1294,7 +1315,8 @@ export class EnhancedPdfGenerator {
       }
     }
 
-    const locationList = this.buildLocationList(locations);
+    const locationQRCodes = await this.generateLocationQRCodes(locations);
+    const locationList = this.buildLocationList(locations, locationQRCodes);
 
     return `
       <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
@@ -1911,7 +1933,7 @@ export class EnhancedPdfGenerator {
   `;
   }
 
-  private buildLocationList(locations: NormalizedLocation[]): string {
+  private buildLocationList(locations: NormalizedLocation[], qrCodes: string[]): string {
     const { colors, typography } = this.theme;
     return locations
       .map(
@@ -1922,6 +1944,8 @@ export class EnhancedPdfGenerator {
           const subtitle = rest.join(',').trim();
 
           const showCoordinates = this.currentSettings?.showCoordinatesOnMapPage !== false;
+          const qr = qrCodes[index] || '';
+          const mapsUrl = this.buildGoogleMapsUrl(location);
 
           return `
         <div style="
@@ -1976,6 +2000,17 @@ export class EnhancedPdfGenerator {
                 line-height: 1.35;
                 font-family: ${typography.bodyFont};
               ">${this.escapeHtml(title || location.address)}</div>
+              ${qr ? `
+                <a href="${this.escapeHtml(mapsUrl)}" target="_blank" rel="noreferrer" style="margin-left: auto; display: inline-flex;">
+                  <img src="${this.escapeHtml(qr)}" alt="QR" style="
+                    width: 24mm;
+                    height: 24mm;
+                    border-radius: 10px;
+                    border: 1px solid ${colors.border};
+                    background: #fff;
+                  "/>
+                </a>
+              ` : ''}
             </div>
             ${subtitle ? `
               <div style="

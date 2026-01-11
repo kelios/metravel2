@@ -2,6 +2,7 @@
 // ✅ АРХИТЕКТУРА: Утилита для генерации статичных изображений карт
 
 import type { MapPoint } from '@/src/types/article-pdf';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 /**
  * Генерирует URL для статичной карты через Google Static Maps API
@@ -306,7 +307,15 @@ export async function generateLeafletRouteSnapshot(
       const number = index + 1;
 
       const labelRaw = validPoints[index]?.label;
-      const label = typeof labelRaw === 'string' ? labelRaw.trim() : '';
+      const label =
+        typeof labelRaw === 'string'
+          ? labelRaw
+              .replace(/\s+/g, ' ')
+              .replace(/\s*,\s*/g, ', ')
+              .replace(/,\s*,+/g, ', ')
+              .replace(/[,\s]+$/g, '')
+              .trim()
+          : '';
 
       const isStart = index === 0;
       const isEnd = index === latLngs.length - 1;
@@ -315,6 +324,13 @@ export async function generateLeafletRouteSnapshot(
         : isEnd
           ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
           : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png';
+
+      const labelBg = DESIGN_TOKENS.colors.surface;
+      const labelText = DESIGN_TOKENS.colors.text;
+      const labelBorder = DESIGN_TOKENS.colors.border;
+      const badgeBg = DESIGN_TOKENS.colors.surface;
+      const badgeText = DESIGN_TOKENS.colors.text;
+      const fontFamily = DESIGN_TOKENS.typography.fontFamily;
 
       const iconHtml = `
         <div style="position: relative; width: 25px; height: 41px;">
@@ -325,37 +341,69 @@ export async function generateLeafletRouteSnapshot(
             top: 8px;
             left: 50%;
             transform: translateX(-50%);
-            width: 17px;
-            height: 17px;
+            width: 20px;
+            height: 20px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.96);
-            color: #333;
+            background: ${badgeBg};
+            color: ${badgeText};
+            border: 1px solid ${labelBorder};
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
-            font-weight: 600;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+            font-family: ${fontFamily};
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.28);
+            text-rendering: geometricPrecision;
+            -webkit-font-smoothing: antialiased;
           ">${number}</div>
           ${label ? `
             <div style="
               position: absolute;
-              top: -6px;
-              left: 28px;
-              max-width: 240px;
-              padding: 6px 10px;
-              border-radius: 10px;
-              background: rgba(255,255,255,0.98);
-              border: 1px solid rgba(17, 24, 39, 0.22);
-              color: #0b1220;
-              font-size: 13px;
+              top: -8px;
+              left: 30px;
+              max-width: 320px;
+              padding: 10px 12px;
+              border-radius: 14px;
+              background: ${labelBg};
+              border: 1px solid ${labelBorder};
+              color: ${labelText};
+              font-family: ${fontFamily};
+              font-size: 14px;
               line-height: 1.25;
               font-weight: 700;
-              white-space: nowrap;
+              white-space: normal;
               overflow: hidden;
               text-overflow: ellipsis;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.22);
-            ">${escapeHtml(label)}</div>
+              display: -webkit-box;
+              -webkit-line-clamp: 3;
+              -webkit-box-orient: vertical;
+              box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+              text-rendering: geometricPrecision;
+              -webkit-font-smoothing: antialiased;
+            ">
+              <div style="
+                position: absolute;
+                left: -9px;
+                top: 16px;
+                width: 0;
+                height: 0;
+                border-top: 9px solid transparent;
+                border-bottom: 9px solid transparent;
+                border-right: 9px solid ${labelBorder};
+              "></div>
+              <div style="
+                position: absolute;
+                left: -8px;
+                top: 16px;
+                width: 0;
+                height: 0;
+                border-top: 9px solid transparent;
+                border-bottom: 9px solid transparent;
+                border-right: 9px solid ${labelBg};
+              "></div>
+              ${escapeHtml(label)}
+            </div>
           ` : ''}
         </div>
       `;

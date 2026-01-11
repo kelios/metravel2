@@ -1,19 +1,12 @@
 import { test, expect } from './fixtures';
 
-const simpleEncrypt = (text: string, key: string): string => {
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return Buffer.from(result, 'binary').toString('base64');
-};
-
 test.describe('Gallery: delete broken image (404)', () => {
   test('shows delete UI for 404 image and removes card after confirm', async ({ page, baseURL }) => {
     const base = (baseURL || '').replace(/\/+$/, '');
     const brokenId = 3796;
     const brokenUrl = `${base}/gallery/${brokenId}/conversions/404.jpg`;
     const savedTravelId = 4242;
+    let currentGallery: any[] = [{ id: brokenId, url: brokenUrl }];
 
     // Seed consent + auth + a draft that contains a broken gallery image.
     await page.addInitScript(
@@ -77,9 +70,9 @@ test.describe('Gallery: delete broken image (404)', () => {
     }
 
     // In Step 3 (Media) the gallery is disabled until the travel has an id (saved).
-    // Mock upsert to return an id and preserve the gallery from request payload.
-    // Important: autosave runs in the background; if we always return the broken item,
-    // it can be reintroduced after deletion.
+    // Mock upsert to return an id and preserve the gallery across requests.
+    // Important: autosave runs in the background; some requests may omit gallery field.
+    // If we default to the broken item on missing gallery, it will be reintroduced after deletion.
     const upsertPatterns = ['**/api/travels/upsert/**', '**/api/travels/upsert/', '**/travels/upsert/**', '**/travels/upsert/'];
     for (const pattern of upsertPatterns) {
       await page.route(pattern, async (route) => {
@@ -96,18 +89,24 @@ test.describe('Gallery: delete broken image (404)', () => {
           body = null;
         }
         const payload = body?.data ?? body ?? {};
-        const nextGallery = Array.isArray(payload?.gallery) ? payload.gallery : [{ id: brokenId, url: brokenUrl }];
+        const responseBody: any = {
+          ...payload,
+          id: payload?.id ?? savedTravelId,
+          name: payload?.name ?? 'E2E draft with broken gallery',
+          publish: false,
+          moderation: false,
+        };
+        
+        // Only update and return gallery if it was provided in the request
+        if (Array.isArray(payload?.gallery)) {
+          currentGallery = payload.gallery;
+          responseBody.gallery = currentGallery;
+        }
+        
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
-            ...payload,
-            id: payload?.id ?? savedTravelId,
-            gallery: nextGallery,
-            name: payload?.name ?? 'E2E draft with broken gallery',
-            publish: false,
-            moderation: false,
-          }),
+          body: JSON.stringify(responseBody),
         });
       });
     }
@@ -182,35 +181,40 @@ test.describe('Gallery: delete broken image (404)', () => {
     const galleryLockedHint = page.getByText('Галерея станет доступна после сохранения путешествия.', { exact: true }).first();
     await galleryLockedHint.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => null);
 
-    // Wait for gallery card and delete control.
-    const cards = page.getByTestId('gallery-image');
-    await expect(cards.first()).toBeVisible({ timeout: 30_000 });
+    // Wait for Gallery section and its counter.
+    const galleryTitle = page.getByText('Галерея путешествия', { exact: true }).first();
+    await expect(galleryTitle).toBeVisible({ timeout: 30_000 });
 
-    const firstCard = cards.first();
-    const deleteButtons = firstCard.getByTestId('delete-image-button');
-    await expect(deleteButtons.first()).toBeVisible({ timeout: 30_000 });
+    const galleryCounter = page.getByText(/Загружено\s+\d+\s+из\s+\d+/i).first();
+    await expect(galleryCounter).toBeVisible({ timeout: 30_000 });
 
-    const beforeCount = await cards.count();
-    expect(beforeCount).toBeGreaterThan(0);
+    // Click delete action inside Gallery - use the "Удалить" button in error overlay.
+    const deleteButton = page.getByRole('button', { name: 'Удалить' }).first();
+    await expect(deleteButton).toBeVisible({ timeout: 30_000 });
+    await deleteButton.click({ force: true });
 
-    // Web behavior: deletion is immediate (no confirm dialog) to guarantee broken images can be removed.
-    const btnCount = await deleteButtons.count();
-    await deleteButtons.first().click({ force: true }).catch(() => null);
+    // Assert that handler was invoked (set by the app on web).
+    await expect
+      .poll(async () => {
+        return await page
+          .evaluate(() => {
+            try {
+              return Boolean((globalThis as any).__e2e_last_gallery_delete);
+            } catch {
+              return false;
+            }
+          })
+          .catch(() => false);
+      })
+      .toBeTruthy();
 
-    // Fallback: click by accessible role (snapshot shows a "button \"Удалить\"").
-    const roleDelete = firstCard.getByRole('button', { name: /^удалить$/i }).first();
-    if (await roleDelete.isVisible().catch(() => false)) {
-      await roleDelete.click({ force: true }).catch(() => null);
-    }
-
-    if (btnCount > 1) {
-      await deleteButtons.nth(1).click({ force: true }).catch(() => null);
-    }
+    const emptyText = page.getByText('Нет загруженных изображений', { exact: true }).first();
+    const zeroCount = page.getByText(/Загружено\s+0\s+из/i).first();
 
     await expect
       .poll(async () => {
-        const afterCount = await cards.count();
-        return afterCount < beforeCount;
+        if (await emptyText.isVisible().catch(() => false)) return true;
+        return await zeroCount.isVisible().catch(() => false);
       })
       .toBeTruthy();
   });

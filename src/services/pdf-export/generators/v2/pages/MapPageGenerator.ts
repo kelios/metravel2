@@ -54,7 +54,8 @@ export class MapPageGenerator extends BasePageGenerator {
       }
     }
 
-    const locationList = this.buildLocationList(locations, colors, typography);
+    const locationQRCodes = await this.generateLocationQRCodes(locations);
+    const locationList = this.buildLocationList(locations, locationQRCodes, colors, typography);
 
     return `
       <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
@@ -103,6 +104,39 @@ export class MapPageGenerator extends BasePageGenerator {
         ">${pageNumber}</div>
       </section>
     `;
+  }
+
+  private buildGoogleMapsUrl(location: NormalizedLocation): string {
+    if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return '';
+    // Using lat/lng keeps the URL stable across locales.
+    const query = `${location.lat},${location.lng}`;
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+
+  private async generateLocationQRCodes(locations: NormalizedLocation[]): Promise<string[]> {
+    const QRCode = await this.getQRCode();
+    return Promise.all(
+      locations.map(async (loc) => {
+        const url = this.buildGoogleMapsUrl(loc);
+        if (!url) return '';
+        try {
+          return await QRCode.toDataURL(url, {
+            margin: 1,
+            errorCorrectionLevel: 'M',
+            width: 120,
+            color: { dark: '#111827', light: '#ffffff' },
+          });
+        } catch {
+          return '';
+        }
+      })
+    );
+  }
+
+  private async getQRCode(): Promise<{ toDataURL: (text: string, options: Record<string, unknown>) => Promise<string> }> {
+    const mod = await import('qrcode');
+    const QRCode = (mod as any).default ?? mod;
+    return QRCode as any;
   }
 
   /**
@@ -210,7 +244,12 @@ export class MapPageGenerator extends BasePageGenerator {
   /**
    * Создает список локаций
    */
-  private buildLocationList(locations: NormalizedLocation[], colors: any, typography: any): string {
+  private buildLocationList(
+    locations: NormalizedLocation[],
+    qrCodes: string[],
+    colors: any,
+    typography: any
+  ): string {
     return `
       <div style="
         display: flex;
@@ -223,6 +262,7 @@ export class MapPageGenerator extends BasePageGenerator {
           const isLast = index === locations.length - 1;
           const bgColor = isFirst ? '#dcfce7' : isLast ? '#fee2e2' : colors.surfaceAlt;
           const textColor = isFirst ? '#16a34a' : isLast ? '#dc2626' : colors.text;
+          const qr = qrCodes[index] || '';
           
           return `
             <div style="
@@ -249,7 +289,12 @@ export class MapPageGenerator extends BasePageGenerator {
                 font-size: 11px;
                 font-weight: 700;
               ">${index + 1}</span>
-              ${this.escapeHtml(loc.name)}
+              <span style="max-width: 240px; word-break: break-word;">${this.escapeHtml(loc.name)}</span>
+              ${qr ? `
+                <a href="${this.escapeHtml(this.buildGoogleMapsUrl(loc))}" style="display: inline-flex; margin-left: 6px;" target="_blank" rel="noreferrer">
+                  <img src="${this.escapeHtml(qr)}" alt="QR" style="width: 22mm; height: 22mm; border-radius: 6px; border: 1px solid ${colors.border}; background: #fff;" />
+                </a>
+              ` : ''}
             </div>
           `;
         }).join('')}

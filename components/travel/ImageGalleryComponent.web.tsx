@@ -240,8 +240,10 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     const [batchUploadProgress, setBatchUploadProgress] = useState<{ current: number; total: number } | null>(null);
     
     const blobUrlsRef = useRef<Set<string>>(new Set());
-    const retryRef = useRef<Set<string>>(new Set());
+    const retryRef = useRef(new Set<string>());
     const lastReportedUrlsRef = useRef<string>('');
+    const deletedKeysRef = useRef<Set<string>>(new Set());
+    const deletedUrlsRef = useRef<Set<string>>(new Set());
 
     const hasErrors = useMemo(() => images.some(img => img.error), [images]);
 
@@ -284,11 +286,19 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 };
             });
 
+            const filteredFromProps = upgradedFromProps.filter((img) => {
+                const key = String(img.stableKey ?? img.id);
+                if (deletedKeysRef.current.has(key)) return false;
+                const canonical = canonicalizeUrlForDedupe(img.url);
+                if (canonical && deletedUrlsRef.current.has(canonical)) return false;
+                return true;
+            });
+
             // Preserve any in-flight uploads, but de-dupe if backend already returned the same URL.
-            const propUrls = new Set(upgradedFromProps.map((img) => img.url));
+            const propUrls = new Set(filteredFromProps.map((img) => img.url));
             const preservedUploading = uploading.filter((img) => !propUrls.has(img.url));
 
-            return dedupeGalleryItems([...upgradedFromProps, ...preservedUploading]);
+            return dedupeGalleryItems([...filteredFromProps, ...preservedUploading]);
         });
         setIsInitialLoading(false);
     }, [initialImagesProp]);
@@ -457,6 +467,15 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             });
 
             try {
+                deletedKeysRef.current.add(String(stableKey));
+                if (imageToDelete?.url) {
+                    deletedUrlsRef.current.add(canonicalizeUrlForDedupe(String(imageToDelete.url)));
+                }
+            } catch {
+                // ignore
+            }
+
+            try {
                 const deleteId =
                     (imageToDelete && isBackendImageId(imageToDelete.id) ? String(imageToDelete.id) : null) ||
                     (imageToDelete ? extractBackendImageIdFromUrl(imageToDelete.url) : null);
@@ -489,10 +508,32 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
     );
 
     const handleDeleteImage = (stableKey: string) => {
+        console.log('[handleDeleteImage] Called with stableKey:', stableKey);
         // In production web export we observed that confirm dialog may not open reliably.
         // For broken images the primary user goal is to remove them; delete immediately on web.
         if (Platform.OS === 'web') {
+            console.log('[handleDeleteImage] Platform is web, deleting immediately');
+            try {
+                (globalThis as any).__e2e_last_gallery_delete = String(stableKey);
+                console.log('[handleDeleteImage] Set __e2e_last_gallery_delete to:', stableKey);
+            } catch (error) {
+                console.error('[handleDeleteImage] Error setting __e2e_last_gallery_delete:', error);
+            }
+            try {
+                deletedKeysRef.current.add(String(stableKey));
+                const current = images.find((img) => (img.stableKey ?? img.id) === stableKey);
+                if (current?.url) {
+                    deletedUrlsRef.current.add(canonicalizeUrlForDedupe(String(current.url)));
+                }
+                console.log('[handleDeleteImage] Added to deleted refs');
+            } catch (error) {
+                console.error('[handleDeleteImage] Error adding to deleted refs:', error);
+            }
+
+            setImages((prev) => prev.filter((img) => (img.stableKey ?? img.id) !== stableKey));
+            console.log('[handleDeleteImage] Filtered images');
             void deleteByStableKey(stableKey);
+            console.log('[handleDeleteImage] Called deleteByStableKey');
             return;
         }
 
@@ -513,12 +554,23 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
             children: React.ReactNode;
         }) => {
             if (Platform.OS === 'web') {
-                const makeActivate = () => {
-                    const now = Date.now();
-                    const last = (DeleteAction as any).__lastActivateTs as number | undefined;
-                    if (last && now - last < 250) return;
-                    (DeleteAction as any).__lastActivateTs = now;
-                    onActivate();
+                const makeActivate = (e?: any) => {
+                    try {
+                        console.log('[DeleteAction] Click triggered', { testID });
+                        e?.stopPropagation?.();
+                        e?.preventDefault?.();
+                        const now = Date.now();
+                        const last = (DeleteAction as any).__lastActivateTs as number | undefined;
+                        if (last && now - last < 250) {
+                            console.log('[DeleteAction] Debounced', { now, last, diff: now - last });
+                            return;
+                        }
+                        (DeleteAction as any).__lastActivateTs = now;
+                        console.log('[DeleteAction] Calling onActivate');
+                        onActivate();
+                    } catch (error) {
+                        console.error('[DeleteAction] Error:', error);
+                    }
                 };
                 return (
                     <Pressable
@@ -527,14 +579,21 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                         testID={testID}
                         accessibilityRole="button"
                         {...({
+                            'data-testid': testID,
                             onClick: makeActivate,
-                            onMouseDown: makeActivate,
-                            onPointerDown: makeActivate,
+                            onMouseDown: (e: any) => {
+                                console.log('[DeleteAction] onMouseDown');
+                                makeActivate(e);
+                            },
+                            onPointerDown: (e: any) => {
+                                console.log('[DeleteAction] onPointerDown');
+                                makeActivate(e);
+                            },
                             tabIndex: 0,
                             onKeyDown: (e: any) => {
                                 if (e?.key === 'Enter' || e?.key === ' ') {
                                     e?.preventDefault?.();
-                                    makeActivate();
+                                    makeActivate(e);
                                 }
                             },
                         } as any)}
@@ -748,10 +807,10 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
                                     <DeleteAction
                                         onActivate={() => handleDeleteImage(image.stableKey ?? image.id)}
-                                        style={styles.deleteButton}
+                                        style={[styles.deleteButton, { backgroundColor: 'rgba(255,255,255,0.9)' }]}
                                         testID="delete-image-button"
                                     >
-                                        <Feather name="x" size={18} color={colors.textInverse} />
+                                        <Feather name="x" size={18} color={colors.text} />
                                     </DeleteAction>
                                 </View>
                             ) : (
@@ -868,7 +927,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexGrow: 0,
         aspectRatio: 1,
         borderRadius: DESIGN_TOKENS.radii.md,
-        overflow: 'hidden',
+        overflow: 'visible',
         position: 'relative',
         backgroundColor: colors.backgroundSecondary,
         borderWidth: 1,
