@@ -53,6 +53,7 @@ interface TravelWizardStepBasicProps {
     onStepSelect?: (step: number) => void;
     redirectDelayMs?: number;
     onPreview?: () => void;
+    onOpenPublic?: () => void;
 }
 
 const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
@@ -75,8 +76,9 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     stepMeta,
     progress = currentStep / totalSteps,
     onStepSelect,
-    redirectDelayMs = 500,
+    redirectDelayMs = 250,
     onPreview,
+    onOpenPublic,
 }) => {
     const colors = useThemedColors();
     const router = useRouter();
@@ -184,6 +186,7 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
+                    onOpenPublic={onOpenPublic}
                 />
                 {shouldShowValidationSummary && !isMobile && (
                     <View style={styles.validationSummaryWrapper}>

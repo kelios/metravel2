@@ -29,17 +29,38 @@ jest.mock('@/components/QuillEditor.web', () => {
   return {
     __esModule: true,
     default: React.forwardRef((props: any, ref: any) => {
+      const readSelection = () => {
+        const sel = (globalThis as any).__quillSelection__;
+        if (sel && typeof sel.index === 'number' && typeof sel.length === 'number') {
+          return { index: sel.index, length: sel.length };
+        }
+        return { index: 0, length: 0 };
+      };
+
       const editorRef = React.useRef({
         root: {
           innerHTML: props.value ?? '',
           addEventListener: jest.fn(),
           removeEventListener: jest.fn(),
         },
-        getSelection: () => ({ index: 0, length: 0 }),
+        focus: jest.fn(),
+        getSelection: () => readSelection(),
         getLength: () => (typeof editorRef.current?.root?.innerHTML === 'string'
           ? editorRef.current.root.innerHTML.length
           : 0),
         setSelection: jest.fn(),
+        getText: (index: number, length: number) => {
+          const current = String(editorRef.current.root.innerHTML ?? '');
+          const start = Math.max(0, Math.min(current.length, Number(index) || 0));
+          const end = Math.max(start, Math.min(current.length, start + (Number(length) || 0)));
+          return current.slice(start, end);
+        },
+        deleteText: (index: number, length: number) => {
+          const current = String(editorRef.current.root.innerHTML ?? '');
+          const start = Math.max(0, Math.min(current.length, Number(index) || 0));
+          const end = Math.max(start, Math.min(current.length, start + (Number(length) || 0)));
+          editorRef.current.root.innerHTML = current.slice(0, start) + current.slice(end);
+        },
         insertEmbed: jest.fn(),
         history: { undo: jest.fn(), redo: jest.fn() },
         clipboard: {
@@ -76,6 +97,7 @@ describe('ArticleEditor.web anchors', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     setPlatformOs('web');
+    (globalThis as any).__quillSelection__ = null;
   });
 
   it('inserts an anchor and it is visible in HTML mode', async () => {
@@ -133,5 +155,67 @@ describe('ArticleEditor.web anchors', () => {
       const htmlInput = inputs[inputs.length - 1];
       expect(String(htmlInput.props.value)).toContain('<span id="день-3">[#день-3]</span>');
     });
+  });
+
+  it('wraps selected text with the anchor instead of inserting at the end', async () => {
+    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+
+    // We use plain text content to make mock index math deterministic.
+    const initial = 'hello world';
+
+    // Select "world" (index 6..11)
+    (globalThis as any).__quillSelection__ = { index: 6, length: 5 };
+
+    const { getByLabelText, getByPlaceholderText, getAllByRole, UNSAFE_getAllByType, getByTestId } = render(
+      <ArticleEditor content={initial} onChange={jest.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+    });
+
+    fireEvent.press(getByLabelText('Вставить якорь'));
+    fireEvent.changeText(getByPlaceholderText('day-3'), 'desc');
+
+    const buttons = getAllByRole('button');
+    const insertBtn = buttons.find(b => b.props?.accessibilityLabel === 'Вставить');
+    expect(insertBtn).toBeTruthy();
+    fireEvent.press(insertBtn as any);
+
+    fireEvent.press(getByLabelText('Показать HTML-код'));
+
+    await waitFor(() => {
+      const inputs = UNSAFE_getAllByType(TextInput);
+      const htmlInput = inputs[inputs.length - 1];
+      const value = String(htmlInput.props.value);
+      expect(value).toContain('hello <span id="desc">world</span>');
+      // Verify insertion happened exactly at the selection start (index 6).
+      expect(value.indexOf('<span id="desc">')).toBe(6);
+      // When selection exists, we must wrap the selection, not insert a placeholder marker.
+      expect(value).not.toContain('[#desc]');
+    });
+  });
+
+  it('opens travel preview in a new tab', async () => {
+    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+
+    const openSpy = jest.fn();
+    ;(globalThis as any).open = openSpy;
+
+    const { getByLabelText, getByTestId } = render(
+      <ArticleEditor content={'hello'} onChange={jest.fn()} idTravel={'733'} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+    });
+
+    fireEvent.press(getByLabelText('Открыть превью'));
+
+    expect(openSpy).toHaveBeenCalledWith(
+      `${window.location.origin}/travels/733`,
+      '_blank',
+      'noopener,noreferrer'
+    );
   });
 });

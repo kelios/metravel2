@@ -160,5 +160,9 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(html).toContain('toc-page')
     expect(html).toContain('travel-content-page')
     expect(html).toContain('final-page')
+
+    expect(html).toContain('hyphens: none')
+    expect(html).toContain('word-break: normal')
+    expect(html).toContain('overflow-wrap: normal')
   })
 })

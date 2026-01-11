@@ -97,8 +97,6 @@ export class TravelPageGenerator extends BasePageGenerator {
                 padding: 6mm 6mm;
                 border-radius: 10px;
                 background: rgba(0,0,0,0.22);
-                backdrop-filter: blur(2px);
-                -webkit-backdrop-filter: blur(2px);
               ">
                 <h1 style="
                   color: #ffffff;

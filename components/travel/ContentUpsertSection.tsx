@@ -103,6 +103,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         return 'Отличное подробное описание!';
     }, [descriptionPlainLength]);
 
+    const descriptionAnchorHint = 'Якорь: вставьте через иконку закладки, ссылка в тексте — <a href="#id">.';
+
     const descriptionProgress = useMemo(() => {
         const progress = Math.min((descriptionPlainLength / 50) * 100, 100);
         return progress;
@@ -200,6 +202,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     </Text>
                                     <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
                                 </View>
+                                <Text style={styles.descriptionAnchorHint}>{descriptionAnchorHint}</Text>
                                 {!!error && (
                                     <View style={styles.errorContainer}>
                                         <Text style={styles.errorText}>{error}</Text>
@@ -567,6 +570,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
         color: colors.text,
+    },
+    descriptionAnchorHint: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+        marginTop: 6,
     },
     autosaveRow: {
         marginTop: 4,

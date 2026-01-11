@@ -44,6 +44,7 @@ interface TravelWizardStepMediaProps {
     onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
     onPreview?: () => void;
+    onOpenPublic?: () => void;
 }
 
 const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
@@ -62,6 +63,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     onAnchorHandled,
     onStepSelect,
     onPreview,
+    onOpenPublic,
 }) => {
     const colors = useThemedColors();
     const progressValue = Math.min(Math.max(progress, 0), 1);
@@ -210,6 +212,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     title={stepMeta?.title ?? 'Медиа путешествия'}
                     subtitle={stepMeta?.subtitle ?? `Шаг ${currentStep} из ${totalSteps}`}
                     progressPercent={progressPercent}
+                    warningCount={validation.warnings.length}
                     autosaveBadge={autosaveBadge}
                     onPrimary={onNext}
                     primaryLabel={stepMeta?.nextLabel ?? 'К деталям'}
@@ -220,6 +223,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
+                    onOpenPublic={onOpenPublic}
                 />
 
                 {validation.warnings.length > 0 && (

@@ -391,7 +391,22 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         ]}
         testID="travel-description"
       >
-          {noBox ? (
+        {noBox ? (
+          Platform.OS === 'web' ? (
+            <View style={[styles.scrollArea, styles.scrollContent]}>{inner}</View>
+          ) : (
+            <ScrollView
+              style={styles.scrollArea}
+              contentContainerStyle={styles.scrollContent}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator
+              keyboardShouldPersistTaps="handled"
+            >
+              {inner}
+            </ScrollView>
+          )
+        ) : (
+          <View style={[styles.fixedHeightBlock, { height: pageHeight }]}>
             <ScrollView
               style={styles.scrollArea}
               contentContainerStyle={styles.scrollContent}
@@ -400,22 +415,10 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
               keyboardShouldPersistTaps="handled"
               {...(Platform.OS === "web" ? ({ overScrollMode: "never" } as any) : {})}
             >
-                {inner}
+              {inner}
             </ScrollView>
-          ) : (
-            <View style={[styles.fixedHeightBlock, { height: pageHeight }]}>
-                <ScrollView
-                  style={styles.scrollArea}
-                  contentContainerStyle={styles.scrollContent}
-                  scrollEventThrottle={16}
-                  showsVerticalScrollIndicator
-                  keyboardShouldPersistTaps="handled"
-                  {...(Platform.OS === "web" ? ({ overScrollMode: "never" } as any) : {})}
-                >
-                    {inner}
-                </ScrollView>
-            </View>
-          )}
+          </View>
+        )}
       </View>
     );
 };

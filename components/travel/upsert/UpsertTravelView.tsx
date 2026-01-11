@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Animated, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Animated, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import NetInfo from '@react-native-community/netinfo';
+import { useRouter } from 'expo-router';
 
 import TravelWizardStepBasic from '@/components/travel/TravelWizardStepBasic';
 import TravelWizardStepRoute from '@/components/travel/TravelWizardStepRoute';
@@ -147,6 +148,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   const { setFormData } = controller;
   const { isDesktop, isTablet, isMobile } = useResponsive();
   const previewState = useTravelPreview();
+  const router = useRouter();
 
   // Offline detection
   const [isOffline, setIsOffline] = useState(false);
@@ -171,6 +173,23 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   const handleStepError = useCallback((error: Error, errorInfo: React.ErrorInfo) => {
     console.error(`Step ${controller.wizard.currentStep} error:`, error, errorInfo);
   }, [controller.wizard.currentStep]);
+
+  const handleOpenPublic = useCallback(() => {
+    const id = controller.formData?.id;
+    if (!id) return;
+    const path = `/travels/${encodeURIComponent(String(id))}`;
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try {
+        window.open(`${window.location.origin}${path}`, '_blank', 'noopener,noreferrer');
+      } catch {
+        // noop
+      }
+      return;
+    }
+
+    router.push(path as any);
+  }, [controller.formData?.id, router]);
 
   if (controller.isInitialLoading) {
     return (
@@ -255,6 +274,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onManualSave={controller.handleManualSave}
             onGoNext={controller.wizard.handleNext}
             onPreview={previewState.showPreview}
+            onOpenPublic={handleOpenPublic}
             snackbarVisible={controller.autosave.status === 'error'}
             snackbarMessage={controller.autosave.error?.message || ''}
             onDismissSnackbar={controller.autosave.clearError}
@@ -288,6 +308,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onNext={controller.wizard.handleNext}
             onManualSave={controller.handleManualSave}
             onPreview={previewState.showPreview}
+            onOpenPublic={handleOpenPublic}
             isFiltersLoading={controller.isFiltersLoading}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
@@ -315,6 +336,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onBack={controller.wizard.handleBack}
             onNext={controller.wizard.handleNext}
             onPreview={previewState.showPreview}
+            onOpenPublic={handleOpenPublic}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
@@ -340,6 +362,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onBack={controller.wizard.handleBack}
             onNext={controller.wizard.handleNext}
             onPreview={previewState.showPreview}
+            onOpenPublic={handleOpenPublic}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
@@ -366,6 +389,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onBack={controller.wizard.handleBack}
             onNext={controller.wizard.handleNext}
             onPreview={previewState.showPreview}
+            onOpenPublic={handleOpenPublic}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
@@ -394,6 +418,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             onNavigateToIssue={controller.wizard.handleNavigateToIssue}
             onStepSelect={controller.wizard.handleStepSelect}
             onPreview={previewState.showPreview}
+            onOpenPublic={handleOpenPublic}
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}

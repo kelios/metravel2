@@ -46,6 +46,7 @@ export class CoverPageGenerator extends BasePageGenerator {
       ">
         ${safeCoverImage ? `
           <img
+            class="cover-bg-blur"
             src="${this.escapeHtml(safeCoverImage)}"
             alt=""
             aria-hidden="true"
@@ -63,6 +64,7 @@ export class CoverPageGenerator extends BasePageGenerator {
             "
           />
           <img
+            class="cover-bg-main"
             src="${this.escapeHtml(safeCoverImage)}"
             alt=""
             aria-hidden="true"

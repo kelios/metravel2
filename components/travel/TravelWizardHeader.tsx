@@ -30,6 +30,7 @@ type TravelWizardHeaderProps = {
     totalSteps?: number;
     onStepSelect?: (step: number) => void;
     onPreview?: () => void; // ✅ ФАЗА 2: Кнопка превью
+    onOpenPublic?: () => void;
 };
 
 const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
@@ -56,6 +57,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
     totalSteps,
     onStepSelect,
     onPreview, // ✅ ФАЗА 2: Handler превью
+    onOpenPublic,
 }) => {
     const colors = useThemedColors();
     const { isPhone, isLargePhone } = useResponsive();
@@ -110,6 +112,30 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
             {Platform.OS === 'web' && hoveredAction === 'tips' ? (
                 <View style={styles.tooltipBubble}>
                     <Text style={styles.tooltipText}>{isTipOpen ? 'Скрыть советы' : 'Показать советы'}</Text>
+                </View>
+            ) : null}
+        </Pressable>
+    ) : null;
+
+    const OpenPublicAction = onOpenPublic ? (
+        <Pressable
+            onPress={onOpenPublic}
+            style={({ pressed }) => [
+                styles.iconButton,
+                isMobile && styles.iconButtonMobile,
+                globalFocusStyles.focusable,
+                Platform.OS === 'web' && { cursor: 'pointer' },
+                pressed && { opacity: 0.8 }
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Открыть статью"
+            onHoverIn={() => showHover('open-public')}
+            onHoverOut={hideHover}
+        >
+            <Feather name="external-link" size={16} color={colors.textMuted} />
+            {Platform.OS === 'web' && hoveredAction === 'open-public' ? (
+                <View style={styles.tooltipBubble}>
+                    <Text style={styles.tooltipText}>Открыть статью</Text>
                 </View>
             ) : null}
         </Pressable>
@@ -271,6 +297,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                             ) : null}
                         </Pressable>
                     )}
+                    {OpenPublicAction}
                     {WarningsAction}
                     {TipTrigger}
                     {QuickDraftAction}

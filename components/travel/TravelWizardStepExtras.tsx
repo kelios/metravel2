@@ -37,6 +37,7 @@ interface TravelWizardStepExtrasProps {
     onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
     onPreview?: () => void;
+    onOpenPublic?: () => void;
 }
 
 const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
@@ -57,6 +58,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
     onAnchorHandled,
     onStepSelect,
     onPreview,
+    onOpenPublic,
 }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const { isPhone, isLargePhone } = useResponsive();
@@ -177,6 +179,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
+                    onOpenPublic={onOpenPublic}
                 />
                 {!isMobile && validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>

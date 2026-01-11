@@ -34,11 +34,16 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
     }, [formData]);
 
     const description = useMemo(() => {
-        const desc = formData.description || '';
-        if (desc.length > 150) {
-            return desc.substring(0, 150) + '...';
+        const raw = formData.description || '';
+        const stripped = String(raw)
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/&nbsp;/gi, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (stripped.length > 150) {
+            return `${stripped.substring(0, 150)}...`;
         }
-        return desc;
+        return stripped;
     }, [formData.description]);
 
     const stats = useMemo(() => {
@@ -292,4 +297,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 });
 
 export default React.memo(TravelPreviewModal);
-

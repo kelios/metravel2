@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useMemo } from 'react';
 import { Dialog, Portal } from 'react-native-paper';
-import { Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity, Platform, View } from 'react-native';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -55,6 +55,119 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
     }, [visible, onClose]);
+
+    if (Platform.OS === 'web') {
+        const portal = (() => {
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const ReactDOM = require('react-dom');
+                return ReactDOM?.createPortal as ((node: React.ReactNode, container: Element) => React.ReactNode) | undefined;
+            } catch {
+                return undefined;
+            }
+        })();
+
+        const body = typeof document !== 'undefined' ? document.body : null;
+
+        const content = visible ? (
+            <View style={styles.webPortalRoot}>
+                <View style={styles.webBackdrop}>
+                    <View
+                        style={[
+                            styles.dialog,
+                            {
+                                width: isMobile ? '95%' : '90%',
+                                maxWidth: isMobile ? '95%' : 380,
+                                paddingVertical: isMobile ? 16 : 20,
+                                paddingHorizontal: isMobile ? 20 : 24,
+                            },
+                        ]}
+                        {...Platform.select({
+                            web: {
+                                // @ts-ignore
+                                role: 'dialog',
+                                // @ts-ignore
+                                'aria-modal': true,
+                                // @ts-ignore
+                                'aria-labelledby': 'dialog-title',
+                                // @ts-ignore
+                                'aria-describedby': 'dialog-message',
+                            },
+                        })}
+                    >
+                        <Text
+                            style={styles.dialogTitle}
+                            {...Platform.select({
+                                web: {
+                                    // @ts-ignore
+                                    id: 'dialog-title',
+                                },
+                            })}
+                        >
+                            {title}
+                        </Text>
+                        <Text
+                            style={styles.dialogText}
+                            {...Platform.select({
+                                web: {
+                                    // @ts-ignore
+                                    id: 'dialog-message',
+                                },
+                            })}
+                        >
+                            {message}
+                        </Text>
+
+                        <View style={[styles.actionContainer, isMobile && styles.actionContainerMobile]}>
+                            <TouchableOpacity
+                                onPress={onClose}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                style={[styles.cancelButtonContainer, globalFocusStyles.focusable]}
+                                accessibilityRole="button"
+                                accessibilityLabel={cancelText}
+                                {...Platform.select({
+                                    web: {
+                                        // @ts-ignore
+                                        ref: cancelButtonRef as any,
+                                        // @ts-ignore
+                                        tabIndex: 0,
+                                    },
+                                })}
+                            >
+                                <Text style={styles.cancelButton}>{cancelText.toUpperCase()}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                onPress={onConfirm}
+                                style={[styles.deleteButtonContainer, globalFocusStyles.focusable]}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                accessibilityRole="button"
+                                accessibilityLabel={confirmText}
+                                {...Platform.select({
+                                    web: {
+                                        // @ts-ignore
+                                        tabIndex: 0,
+                                    },
+                                })}
+                            >
+                                <Text style={styles.deleteButton}>{confirmText.toUpperCase()}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </View>
+        ) : null;
+
+        if (portal && body) {
+            return portal(content, body) as any;
+        }
+
+        return (
+            <View style={styles.webPortalRoot}>
+                {content}
+            </View>
+        );
+    }
 
     return (
         <Portal>
@@ -113,11 +226,14 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         ]}
                         accessibilityRole="button"
                         accessibilityLabel={cancelText}
-                        {...(Platform.OS === 'web' ? {
-                            // @ts-ignore - ref для focus trap, только для веб
-                            ref: cancelButtonRef as any,
-                            tabIndex: 0,
-                        } : {})}
+                        {...Platform.select({
+                            web: {
+                                // @ts-ignore - ref для focus trap, только для веб
+                                ref: cancelButtonRef as any,
+                                // @ts-ignore
+                                tabIndex: 0,
+                            },
+                        })}
                     >
                         <Text style={styles.cancelButton}>{cancelText.toUpperCase()}</Text>
                     </TouchableOpacity>
@@ -148,6 +264,21 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 export default ConfirmDialog;
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    webPortalRoot: {
+        position: 'fixed' as any,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 10000,
+    },
+    webBackdrop: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.overlay,
+        padding: DESIGN_TOKENS.spacing.md,
+    },
     dialog: {
         alignSelf: 'center',
         backgroundColor: colors.surface,

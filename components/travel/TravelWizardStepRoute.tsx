@@ -53,6 +53,7 @@ interface TravelWizardStepRouteProps {
     onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
     onPreview?: () => void;
+    onOpenPublic?: () => void;
 }
 
 const MAP_COACHMARK_STORAGE_KEY = 'travelWizardRouteMapCoachmarkDismissed';
@@ -79,6 +80,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     onAnchorHandled,
     onStepSelect,
     onPreview,
+    onOpenPublic,
 }) => {
     const colors = useThemedColors();
     const router = useRouter();
@@ -437,6 +439,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
+                    onOpenPublic={onOpenPublic}
                 />
 
                 {!isMobile && validation.errors.length > 0 && (

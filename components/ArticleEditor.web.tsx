@@ -273,6 +273,21 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
         fireChange(editor.root.innerHTML);
     }, [fireChange]);
 
+    const openPreview = useCallback(() => {
+        if (!isWeb || !win) return;
+        if (!idTravel) {
+            Alert.alert('Превью', 'Сначала сохраните путешествие, чтобы открыть превью');
+            return;
+        }
+
+        try {
+            const url = `${win.location.origin}/travels/${encodeURIComponent(String(idTravel))}`;
+            win.open(url, '_blank', 'noopener,noreferrer');
+        } catch {
+            // noop
+        }
+    }, [idTravel]);
+
     const uploadAndInsert = useCallback(async (file: File) => {
         if (!isAuthenticated) {
             Alert.alert('Авторизация', 'Войдите, чтобы загружать изображения');
@@ -347,15 +362,42 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
             return;
         }
 
-        const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
+        const escapeHtml = (value: string) =>
+            String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
         try {
-            const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
-            editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
-            editor.setSelection(range.index + 1, 0, 'silent');
+            if (typeof editor.focus === 'function') editor.focus();
+        } catch {
+            // noop
+        }
+
+        const range =
+            tmpStoredRange.current ||
+            editor.getSelection() ||
+            { index: editor.getLength(), length: 0 };
+        try {
+            if (range.length > 0) {
+                const selectedText = editor.getText(range.index, range.length);
+                const htmlSnippet = `<span id="${id}">${escapeHtml(selectedText)}</span>`;
+                editor.deleteText(range.index, range.length, 'user');
+                editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
+                editor.setSelection(range.index + selectedText.length, 0, 'silent');
+            } else {
+                const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
+                editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
+                editor.setSelection(range.index + 1, 0, 'silent');
+            }
+            tmpStoredRange.current = null;
             fireChange(editor.root.innerHTML);
         } catch (e) {
             try {
                 editor.insertText(range.index, `[#${id}] `, 'user');
+                tmpStoredRange.current = null;
                 fireChange(editor.root.innerHTML);
             } catch (inner) {
                 if (__DEV__) {
@@ -382,7 +424,23 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                 <IconButton
                     name="code"
                     onPress={() => {
-                        tmpStoredRange.current = quillRef.current?.getEditor().getSelection() ?? null;
+                        try {
+                            const editor = quillRef.current?.getEditor();
+                            if (editor && typeof editor.focus === 'function') editor.focus();
+                            const selection =
+                                (editor && typeof editor.getSelection === 'function'
+                                    ? (() => {
+                                          try {
+                                              return editor.getSelection(true);
+                                          } catch {
+                                              return editor.getSelection();
+                                          }
+                                      })()
+                                    : null) ?? null;
+                            tmpStoredRange.current = selection;
+                        } catch {
+                            tmpStoredRange.current = null;
+                        }
                         setShowHtml(v => !v);
                     }}
                     label={showHtml ? 'Скрыть HTML-код' : 'Показать HTML-код'}
@@ -390,7 +448,23 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                 <IconButton
                     name={fullscreen ? 'fullscreen-exit' : 'fullscreen'}
                     onPress={() => {
-                        tmpStoredRange.current = quillRef.current?.getEditor().getSelection() ?? null;
+                        try {
+                            const editor = quillRef.current?.getEditor();
+                            if (editor && typeof editor.focus === 'function') editor.focus();
+                            const selection =
+                                (editor && typeof editor.getSelection === 'function'
+                                    ? (() => {
+                                          try {
+                                              return editor.getSelection(true);
+                                          } catch {
+                                              return editor.getSelection();
+                                          }
+                                      })()
+                                    : null) ?? null;
+                            tmpStoredRange.current = selection;
+                        } catch {
+                            tmpStoredRange.current = null;
+                        }
                         setFullscreen(v => !v);
                     }}
                     label={fullscreen ? 'Выйти из полноэкранного режима' : 'Перейти в полноэкранный режим'}
@@ -422,10 +496,34 @@ const WebEditor: React.FC<ArticleEditorProps> = ({
                     label="Вставить изображение"
                 />
 
+                {isWeb && (
+                    <IconButton
+                        name="launch"
+                        onPress={openPreview}
+                        label="Открыть превью"
+                    />
+                )}
+
                 <IconButton
                     name="bookmark"
                     onPress={() => {
-                        tmpStoredRange.current = quillRef.current?.getEditor().getSelection() ?? null;
+                        try {
+                            const editor = quillRef.current?.getEditor();
+                            if (editor && typeof editor.focus === 'function') editor.focus();
+                            const selection =
+                                (editor && typeof editor.getSelection === 'function'
+                                    ? (() => {
+                                          try {
+                                              return editor.getSelection(true);
+                                          } catch {
+                                              return editor.getSelection();
+                                          }
+                                      })()
+                                    : null) ?? null;
+                            tmpStoredRange.current = selection;
+                        } catch {
+                            tmpStoredRange.current = null;
+                        }
                         setAnchorValue('');
                         setAnchorModalVisible(true);
                     }}

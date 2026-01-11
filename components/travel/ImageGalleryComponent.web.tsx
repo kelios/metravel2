@@ -8,10 +8,12 @@ import {
     Platform,
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useDropzone } from 'react-dropzone';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { uploadImage, deleteImage } from '@/src/api/misc';
+import { ApiError } from '@/src/api/client';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -30,6 +32,28 @@ const safeEncodeUrl = (value: string): string => {
 const isBackendImageId = (value: string | null | undefined): boolean => {
     if (!value) return false;
     return /^\d+$/.test(String(value));
+};
+
+const extractBackendImageIdFromUrl = (value: string | null | undefined): string | null => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return null;
+
+    // Accept both absolute and relative urls.
+    // Common patterns seen in gallery items:
+    // - /gallery/<id>/...
+    // - /media/gallery/<id>/...
+    // - .../gallery/<id> (no trailing slash)
+    const match = raw.match(/(?:\/media)?\/gallery\/(\d+)(?:\/|$)/);
+    if (match?.[1]) return match[1];
+
+    // Some backends can pass an id as query param.
+    try {
+        const parsed = new URL(raw, typeof window !== 'undefined' ? window.location.origin : 'https://example.test');
+        const id = parsed.searchParams.get('id');
+        return isBackendImageId(id) ? String(id) : null;
+    } catch {
+        return null;
+    }
 };
 
 const canonicalizeUrlForDedupe = (value: string): string => {
@@ -497,9 +521,24 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         const imageToDelete = images.find(img => (img.stableKey ?? img.id) === selectedImageId);
         
         try {
-            // Only call API if it's a real backend id (digits). Legacy/client ids (e.g. legacy-*) must be removed locally.
-            if (imageToDelete && !imageToDelete.error && isBackendImageId(imageToDelete.id)) {
-                await deleteImage(imageToDelete.id);
+            // Prefer explicit backend id; otherwise try to extract it from the URL.
+            // This is important when gallery items are stored as URLs (e.g. /gallery/<id>/conversions/...).
+            const deleteId =
+                (imageToDelete && isBackendImageId(imageToDelete.id) ? String(imageToDelete.id) : null) ||
+                (imageToDelete ? extractBackendImageIdFromUrl(imageToDelete.url) : null);
+
+            if (deleteId) {
+                try {
+                    await deleteImage(deleteId);
+                } catch (error) {
+                    // If the backend says "not found" during delete, treat it as success:
+                    // the file is already missing, and the user just wants to remove it from the gallery UI.
+                    if (error instanceof ApiError && error.status === 404) {
+                        // noop
+                    } else {
+                        throw error;
+                    }
+                }
             }
             
             // Cleanup blob URL if exists
@@ -602,10 +641,16 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
+                                        {...(Platform.OS === 'web'
+                                            ? ({
+                                                  onClick: () => handleDeleteImage(image.stableKey ?? image.id),
+                                                  onPointerDown: () => handleDeleteImage(image.stableKey ?? image.id),
+                                              } as any)
+                                            : null)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={18} color={colors.textInverse} />
+                                        <Feather name="x" size={18} color={colors.textInverse} />
                                     </TouchableOpacity>
                                 </View>
                             ) : image.error ? (
@@ -625,6 +670,12 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         <Text style={[styles.errorOverlaySubtext, { color: colors.warningDark }]}>{image.error}</Text>
                                         <TouchableOpacity
                                             onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
+                                            {...(Platform.OS === 'web'
+                                                ? ({
+                                                      onClick: () => handleDeleteImage(image.stableKey ?? image.id),
+                                                      onPointerDown: () => handleDeleteImage(image.stableKey ?? image.id),
+                                                  } as any)
+                                                : null)}
                                             style={[styles.errorActionButton, { backgroundColor: colors.primary }]}
                                             testID="delete-image-button"
                                         >
@@ -633,16 +684,48 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
+                                        {...(Platform.OS === 'web'
+                                            ? ({
+                                                  onClick: () => handleDeleteImage(image.stableKey ?? image.id),
+                                              } as any)
+                                            : null)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={18} color={colors.textInverse} />
+                                        <Feather name="x" size={18} color={colors.textInverse} />
+                                    </TouchableOpacity>
+                                </View>
+                            ) : !image.url ? (
+                                <View style={styles.uploadingImageContainer}>
+                                    <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
+                                    <TouchableOpacity
+                                        onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
+                                        {...(Platform.OS === 'web'
+                                            ? ({
+                                                  onClick: () => handleDeleteImage(image.stableKey ?? image.id),
+                                              } as any)
+                                            : null)}
+                                        style={styles.deleteButton}
+                                        testID="delete-image-button"
+                                    >
+                                        <Feather name="x" size={18} color={colors.textInverse} />
                                     </TouchableOpacity>
                                 </View>
                             ) : (
                                 <>
                                     {!image.hasLoaded && (
-                                        <View style={[StyleSheet.absoluteFillObject, { backgroundColor: colors.surfaceMuted, justifyContent: 'center', alignItems: 'center' }]}>
+                                        <View
+                                            pointerEvents="none"
+                                            style={[
+                                                StyleSheet.absoluteFillObject,
+                                                {
+                                                    backgroundColor: colors.surfaceMuted,
+                                                    justifyContent: 'center',
+                                                    alignItems: 'center',
+                                                    zIndex: 0,
+                                                },
+                                            ]}
+                                        >
                                             <ActivityIndicator size="small" color={colors.primary} />
                                         </View>
                                     )}
@@ -658,10 +741,15 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     />
                                     <TouchableOpacity
                                         onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
+                                        {...(Platform.OS === 'web'
+                                            ? ({
+                                                  onClick: () => handleDeleteImage(image.stableKey ?? image.id),
+                                              } as any)
+                                            : null)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
-                                        <MaterialIcons name="close" size={18} color={colors.textInverse} />
+                                        <Feather name="x" size={18} color={colors.textInverse} />
                                     </TouchableOpacity>
                                 </>
                             )}
@@ -763,8 +851,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 50,
-        elevation: 50,
+        zIndex: 9999,
+        elevation: 9999,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer',
+            },
+        }),
     },
     dropzone: {
         width: '100%',

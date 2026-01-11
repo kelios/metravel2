@@ -6,6 +6,7 @@ import { validateAIMessage, validateImageFile } from '@/src/utils/validation';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { getSecureItem } from '@/src/utils/secureStorage';
 import { apiClient } from '@/src/api/client';
+import { ApiError } from '@/src/api/client';
 import { Platform } from 'react-native';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
@@ -245,8 +246,11 @@ export const deleteImage = async (imageId: string) => {
 
   try {
     return await apiClient.delete<any>(`/gallery/${imageId}/`, DEFAULT_TIMEOUT);
-  } catch {
+  } catch (error) {
     // Preserve previous behavior: non-204 is treated as "Ошибка удаления изображения"
+    if (error instanceof ApiError) {
+      throw error;
+    }
     throw new Error('Ошибка удаления изображения');
   }
 };

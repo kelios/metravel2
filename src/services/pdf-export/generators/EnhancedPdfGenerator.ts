@@ -269,6 +269,7 @@ export class EnhancedPdfGenerator {
       ">
         ${safeCoverImage ? `
           <img
+            class="cover-bg-blur"
             src="${this.escapeHtml(safeCoverImage)}"
             alt=""
             aria-hidden="true"
@@ -279,13 +280,15 @@ export class EnhancedPdfGenerator {
               width: 100%;
               height: 100%;
               object-fit: cover;
+              object-position: center;
               filter: blur(18px);
               transform: scale(1.08);
-              opacity: 0.95;
+              opacity: 0.75;
               z-index: 0;
             "
           />
           <img
+            class="cover-bg-main"
             src="${this.escapeHtml(safeCoverImage)}"
             alt=""
             aria-hidden="true"
@@ -295,7 +298,8 @@ export class EnhancedPdfGenerator {
               inset: 0;
               width: 100%;
               height: 100%;
-              object-fit: contain;
+              object-fit: cover;
+              object-position: center;
               z-index: 1;
               ${this.getImageFilterStyle()}
             "
@@ -304,7 +308,8 @@ export class EnhancedPdfGenerator {
             position: absolute;
             inset: 0;
             background:
-              linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 45%, rgba(0,0,0,0.60) 100%);
+              radial-gradient(ellipse at center, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.50) 70%, rgba(0,0,0,0.75) 100%),
+              linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 45%, rgba(0,0,0,0.70) 100%);
             z-index: 2;
           "></div>
         ` : ''}
@@ -315,31 +320,41 @@ export class EnhancedPdfGenerator {
           position: relative;
           z-index: 3;
         ">
-          <h1 style="
-            color: ${colors.cover.text};
-            font-size: ${typography.h1.size};
-            font-weight: ${typography.h1.weight};
-            line-height: ${typography.h1.lineHeight};
-            margin: 0;
-            text-shadow: 0 10px 30px rgba(0,0,0,0.35);
-            font-family: ${typography.headingFont};
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            hyphens: auto;
-          ">${this.escapeHtml(settings.title)}</h1>
+          <div style="
+            display: inline-block;
+            max-width: 160mm;
+            padding: 10mm 12mm;
+            border-radius: 14px;
+            background: rgba(0,0,0,0.28);
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.35);
+          ">
+            <h1 style="
+              color: ${colors.cover.text};
+              font-size: ${typography.h1.size};
+              font-weight: ${typography.h1.weight};
+              line-height: ${typography.h1.lineHeight};
+              margin: 0;
+              text-shadow: 0 10px 30px rgba(0,0,0,0.35);
+              font-family: ${typography.headingFont};
+              overflow-wrap: normal;
+              word-break: normal;
+              hyphens: none;
+            ">${this.escapeHtml(settings.title)}</h1>
 
-          ${settings.subtitle ? `
-            <div style="
-              font-size: 16pt;
-              letter-spacing: 0.02em;
-              color: rgba(255,255,255,0.88);
-              margin-top: 6mm;
-              font-family: ${typography.bodyFont};
-              overflow-wrap: anywhere;
-              word-break: break-word;
-              hyphens: auto;
-            ">${this.escapeHtml(settings.subtitle)}</div>
-          ` : ''}
+            ${settings.subtitle ? `
+              <div style="
+                font-size: 16pt;
+                letter-spacing: 0.02em;
+                color: rgba(255,255,255,0.90);
+                margin-top: 5mm;
+                font-family: ${typography.bodyFont};
+                overflow-wrap: normal;
+                word-break: normal;
+                hyphens: none;
+              ">${this.escapeHtml(settings.subtitle)}</div>
+            ` : ''}
+          </div>
 
           <div style="
             font-size: 12pt;
@@ -409,7 +424,7 @@ export class EnhancedPdfGenerator {
             font-weight: 500;
             letter-spacing: 0.08em;
             font-family: ${typography.bodyFont};
-          ">MeTravel</div>
+          ">MeTravel.by</div>
         </div>
 
         <div style="
@@ -744,8 +759,6 @@ export class EnhancedPdfGenerator {
                 padding: 6mm 6mm;
                 border-radius: 10px;
                 background: rgba(0,0,0,0.22);
-                backdrop-filter: blur(2px);
-                -webkit-backdrop-filter: blur(2px);
               ">
                 <h1 style="
                   color: #ffffff;
@@ -755,9 +768,9 @@ export class EnhancedPdfGenerator {
                   line-height: ${typography.h1.lineHeight};
                   text-shadow: 0 6px 18px rgba(0,0,0,0.55);
                   font-family: ${typography.headingFont};
-                  overflow-wrap: anywhere;
-                  word-break: break-word;
-                  hyphens: auto;
+                  overflow-wrap: normal;
+                  word-break: normal;
+                  hyphens: none;
                 ">${this.escapeHtml(travel.name)}</h1>
               </div>
               ${metaPieces.length ? `
@@ -1598,6 +1611,8 @@ export class EnhancedPdfGenerator {
         line-height: ${typography.body.lineHeight};
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       .pdf-page {
         width: 210mm;
@@ -1606,7 +1621,7 @@ export class EnhancedPdfGenerator {
         margin: 0 auto 16px;
         box-shadow: ${this.theme.blocks.shadow};
         position: relative;
-        overflow: visible;
+        overflow: hidden;
       }
       /* Разрыв страницы ПЕРЕД каждой следующей .pdf-page (кроме первой) */
       .pdf-page + .pdf-page {
@@ -1616,8 +1631,7 @@ export class EnhancedPdfGenerator {
         max-width: 100%;
         display: block;
         height: auto;
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: crisp-edges;
+        image-rendering: auto;
       }
       h1, h2, h3, h4 {
         font-family: ${typography.headingFont};
@@ -1652,12 +1666,33 @@ export class EnhancedPdfGenerator {
         html, body {
           background: ${colors.background};
         }
+        * {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .pdf-page * {
+          box-shadow: none !important;
+          text-shadow: none !important;
+        }
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
         .pdf-page {
           page-break-after: always;
           box-shadow: none;
           margin: 0;
           width: 210mm;
           min-height: 297mm;
+        }
+        /* Avoid Chromium print artifacts with blurred layers on cover */
+        .cover-bg-blur {
+          display: none !important;
+          filter: none !important;
+        }
+        .cover-page img {
+          filter: none !important;
+          -webkit-filter: none !important;
         }
       }
     `;

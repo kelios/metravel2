@@ -7,12 +7,30 @@ import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent.web
 jest.mock('@/components/ui/OptimizedImage', () => {
   const React = require('react');
   const { Image } = require('react-native');
-  return ({ source }: any) =>
-    React.createElement(Image, {
+  const fired = new Set();
+
+  return ({ source, onError, onLoad }: any) => {
+    const uri = source?.uri;
+
+    React.useEffect(() => {
+      if (!uri) return;
+      const key = String(uri);
+      if (fired.has(key)) return;
+      fired.add(key);
+
+      if (key.includes('/404')) {
+        onError?.();
+      } else {
+        onLoad?.();
+      }
+    }, [uri, onError, onLoad]);
+
+    return React.createElement(Image, {
       testID: 'gallery-image',
       accessibilityLabel: 'Gallery image',
       source,
     });
+  };
 });
 
 jest.mock('expo-image-picker', () => ({
@@ -541,5 +559,63 @@ describe('ImageGalleryComponent.web', () => {
       expect(queryAllByTestId('gallery-image').length).toBeLessThan(before),
     );
     expect(deleteImageMock).not.toHaveBeenCalled();
+  });
+
+  it('shows delete button for items with missing url and removes them locally', async () => {
+    const { getAllByTestId, getByTestId, queryAllByTestId } = renderSafe(
+      <ImageGalleryComponent
+        collection="gallery"
+        idTravel="42"
+        initialImages={[{ id: 'legacy-0', url: '' }]}
+        maxImages={10}
+      />,
+    );
+
+    let initialCount = 0;
+    await waitFor(() => {
+      initialCount = queryAllByTestId('gallery-image').length;
+      expect(initialCount).toBeGreaterThan(0);
+    });
+
+    await waitFor(() => {
+      expect(getAllByTestId('delete-image-button').length).toBeGreaterThan(0);
+    });
+
+    fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    fireEvent.press(getByTestId('confirm-delete'));
+
+    await waitFor(() =>
+      expect(queryAllByTestId('gallery-image').length).toBeLessThan(initialCount),
+    );
+  });
+
+  it('marks existing image as error on 404 and still allows deleting it', async () => {
+    const { getByText, getAllByTestId, getByTestId, queryAllByTestId } = renderSafe(
+      <ImageGalleryComponent
+        collection="gallery"
+        idTravel="42"
+        initialImages={[
+          {
+            id: '3796',
+            url: 'http://192.168.50.36/gallery/3796/conversions/404-detail_hd.jpg',
+          },
+        ]}
+        maxImages={10}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(getByText('Ошибка загрузки')).toBeTruthy();
+    });
+
+    expect(getAllByTestId('delete-image-button').length).toBeGreaterThan(0);
+
+    const before = queryAllByTestId('gallery-image').length;
+    fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    fireEvent.press(getByTestId('confirm-delete'));
+
+    await waitFor(() =>
+      expect(queryAllByTestId('gallery-image').length).toBeLessThan(before),
+    );
   });
 });

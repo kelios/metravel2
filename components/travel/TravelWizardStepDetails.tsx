@@ -30,6 +30,7 @@ interface TravelWizardStepDetailsProps {
     autosaveBadge?: string;
     onStepSelect?: (step: number) => void;
     onPreview?: () => void;
+    onOpenPublic?: () => void;
 }
 
 const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
@@ -45,6 +46,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     autosaveBadge,
     onStepSelect,
     onPreview,
+    onOpenPublic,
 }) => {
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
@@ -108,6 +110,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     totalSteps={totalSteps}
                     onStepSelect={onStepSelect}
                     onPreview={onPreview}
+                    onOpenPublic={onOpenPublic}
                 />
                 {!isMobile && validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>
@@ -145,7 +148,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                 key={`plus-${idTravelStr ?? 'new'}`}
                                 label="Плюсы"
                                 content={formData.plus ?? ''}
-                                onChange={val => handleChange('plus', val as any)}
+                                onChange={(val: string) => handleChange('plus', val as any)}
                                 idTravel={idTravelStr}
                                 variant="compact"
                             />
@@ -157,7 +160,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                 key={`minus-${idTravelStr ?? 'new'}`}
                                 label="Минусы"
                                 content={formData.minus ?? ''}
-                                onChange={val => handleChange('minus', val as any)}
+                                onChange={(val: string) => handleChange('minus', val as any)}
                                 idTravel={idTravelStr}
                                 variant="compact"
                             />
@@ -169,7 +172,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                                 key={`rec-${idTravelStr ?? 'new'}`}
                                 label="Рекомендации"
                                 content={formData.recommendation ?? ''}
-                                onChange={val => handleChange('recommendation', val as any)}
+                                onChange={(val: string) => handleChange('recommendation', val as any)}
                                 idTravel={idTravelStr}
                                 variant="compact"
                             />

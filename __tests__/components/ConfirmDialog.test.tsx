@@ -1,6 +1,14 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 import ConfirmDialog from '@/components/ConfirmDialog'
+
+const mockCreatePortal = jest.fn((node: any, _container?: any) => node)
+
+jest.mock('react-dom', () => ({
+  __esModule: true,
+  createPortal: (node: any, container: any) => mockCreatePortal(node, container),
+}))
 
 describe('ConfirmDialog', () => {
   const defaultProps = {
@@ -54,6 +62,17 @@ describe('ConfirmDialog', () => {
   it('does not render when visible is false', () => {
     const { queryByText } = render(<ConfirmDialog {...defaultProps} visible={false} />)
     expect(queryByText('Подтверждение')).toBeNull()
+  })
+
+  it('renders via react-dom portal on web', () => {
+    const originalPlatform = Platform.OS
+    Object.defineProperty(Platform, 'OS', { value: 'web' })
+
+    mockCreatePortal.mockClear()
+    render(<ConfirmDialog {...defaultProps} />)
+    expect(mockCreatePortal).toHaveBeenCalled()
+
+    Object.defineProperty(Platform, 'OS', { value: originalPlatform })
   })
 })
 
