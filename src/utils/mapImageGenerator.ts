@@ -168,7 +168,7 @@ export async function generateMapImageFromDOM(
  * Использует скрытый off-screen контейнер, поэтому не влияет на основную верстку
  */
 export async function generateLeafletRouteSnapshot(
-  points: { lat: number; lng: number }[],
+  points: { lat: number; lng: number; label?: string }[],
   options: { width?: number; height?: number; zoom?: number } = {}
 ): Promise<string | null> {
   if (typeof document === 'undefined' || typeof window === 'undefined') {
@@ -252,8 +252,17 @@ export async function generateLeafletRouteSnapshot(
   container.id = 'metravel-map-snapshot';
   document.body.appendChild(container);
 
+  const escapeHtml = (value: string): string => {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
   // Фильтруем точки с валидными координатами
-  const validPoints = points.filter(p =>
+  const validPoints = points.filter((p) =>
     Number.isFinite(p.lat) &&
     Number.isFinite(p.lng) &&
     p.lat >= -90 && p.lat <= 90 &&
@@ -296,6 +305,9 @@ export async function generateLeafletRouteSnapshot(
     latLngs.forEach((latLng, index) => {
       const number = index + 1;
 
+      const labelRaw = validPoints[index]?.label;
+      const label = typeof labelRaw === 'string' ? labelRaw.trim() : '';
+
       const isStart = index === 0;
       const isEnd = index === latLngs.length - 1;
       const markerUrl = isStart
@@ -325,6 +337,26 @@ export async function generateLeafletRouteSnapshot(
             font-weight: 600;
             box-shadow: 0 1px 3px rgba(0,0,0,0.35);
           ">${number}</div>
+          ${label ? `
+            <div style="
+              position: absolute;
+              top: -6px;
+              left: 28px;
+              max-width: 240px;
+              padding: 6px 10px;
+              border-radius: 10px;
+              background: rgba(255,255,255,0.98);
+              border: 1px solid rgba(17, 24, 39, 0.22);
+              color: #0b1220;
+              font-size: 13px;
+              line-height: 1.25;
+              font-weight: 700;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.22);
+            ">${escapeHtml(label)}</div>
+          ` : ''}
         </div>
       `;
 

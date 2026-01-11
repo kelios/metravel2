@@ -85,6 +85,8 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
                         {...Platform.select({
                             web: {
                                 // @ts-ignore
+                                testID: 'confirm-dialog',
+                                // @ts-ignore
                                 role: 'dialog',
                                 // @ts-ignore
                                 'aria-modal': true,

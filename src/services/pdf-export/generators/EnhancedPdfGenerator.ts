@@ -750,20 +750,22 @@ export class EnhancedPdfGenerator {
               left: 0;
               right: 0;
               bottom: 0;
-              background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.72) 45%, rgba(0,0,0,0.92) 100%);
-              padding: 20mm 22mm 18mm 22mm;
+              background:
+                linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.78) 100%);
+              padding: 16mm 18mm 14mm 18mm;
             ">
               <div style="
                 display: inline-block;
-                max-width: 100%;
-                padding: 6mm 6mm;
-                border-radius: 10px;
-                background: rgba(0,0,0,0.22);
+                max-width: 165mm;
+                padding: 8mm 10mm;
+                border-radius: 14px;
+                background: rgba(0,0,0,0.30);
+                border: 1px solid rgba(255,255,255,0.14);
               ">
                 <h1 style="
                   color: #ffffff;
                   font-size: ${typography.h1.size};
-                  margin: 0 0 6mm 0;
+                  margin: 0 0 5mm 0;
                   font-weight: ${typography.h1.weight};
                   line-height: ${typography.h1.lineHeight};
                   text-shadow: 0 6px 18px rgba(0,0,0,0.55);
@@ -776,51 +778,12 @@ export class EnhancedPdfGenerator {
               ${metaPieces.length ? `
                 <div style="
                   color: rgba(255,255,255,0.95);
-                  font-size: ${typography.body.size};
-                  display: flex;
-                  gap: 16px;
-                  flex-wrap: wrap;
+                  font-size: 11pt;
+                  display: block;
                   font-weight: 500;
                   font-family: ${typography.bodyFont};
                 ">
-                  ${travel.countryName ? `
-                    <span style="display: inline-flex; align-items: center; gap: 6px;">
-                      <span style="
-                        width: 14px;
-                        height: 14px;
-                        border-radius: 999px;
-                        border: 1px solid rgba(255,255,255,0.8);
-                        opacity: 0.9;
-                        display: inline-block;
-                      "></span>
-                      <span>${this.escapeHtml(travel.countryName)}</span>
-                    </span>
-                  ` : ''}
-                  ${travel.year ? `
-                    <span style="display: inline-flex; align-items: center; gap: 6px;">
-                      <span style="
-                        width: 14px;
-                        height: 14px;
-                        border-radius: 4px;
-                        border: 1px solid rgba(255,255,255,0.8);
-                        opacity: 0.9;
-                        display: inline-block;
-                      "></span>
-                      <span>${this.escapeHtml(String(travel.year))}</span>
-                    </span>
-                  ` : ''}
-                  ${this.formatDays(travel.number_days) ? `
-                    <span style="display: inline-flex; align-items: center; gap: 6px;">
-                      <span style="
-                        width: 14px;
-                        height: 2px;
-                        border-radius: 999px;
-                        background-color: rgba(255,255,255,0.8);
-                        display: inline-block;
-                      "></span>
-                      <span>${this.formatDays(travel.number_days)}</span>
-                    </span>
-                  ` : ''}
+                  ${this.escapeHtml(metaPieces.join(' • '))}
                 </div>
               ` : ''}
             </div>
@@ -1322,6 +1285,7 @@ export class EnhancedPdfGenerator {
           pointsWithCoords.map((location) => ({
             lat: location.lat as number,
             lng: location.lng as number,
+            label: location.address,
           })),
           { width: 1400, height: 900 }
         );

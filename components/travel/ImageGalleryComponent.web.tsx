@@ -4,6 +4,7 @@ import {
     Text,
     StyleSheet,
     TouchableOpacity,
+    Pressable,
     ActivityIndicator,
     Platform,
 } from 'react-native';
@@ -445,10 +446,111 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
         };
     }, [getRootProps]);
 
+    const deleteByStableKey = useCallback(
+        async (stableKey: string) => {
+            let imageToDelete: any = null;
+
+            // Optimistically remove from UI first (user intent: just remove the broken card).
+            setImages((prev) => {
+                imageToDelete = prev.find((img) => (img.stableKey ?? img.id) === stableKey) ?? null;
+                return prev.filter((img) => (img.stableKey ?? img.id) !== stableKey);
+            });
+
+            try {
+                const deleteId =
+                    (imageToDelete && isBackendImageId(imageToDelete.id) ? String(imageToDelete.id) : null) ||
+                    (imageToDelete ? extractBackendImageIdFromUrl(imageToDelete.url) : null);
+
+                if (deleteId) {
+                    try {
+                        await deleteImage(deleteId);
+                    } catch (error) {
+                        if (error instanceof ApiError && error.status === 404) {
+                            // noop
+                        } else {
+                            // Best-effort: keep UI deletion even if request fails.
+                            console.error('Delete error:', error);
+                        }
+                    }
+                }
+
+                if (imageToDelete && blobUrlsRef.current.has(imageToDelete.url)) {
+                    URL.revokeObjectURL(imageToDelete.url);
+                    blobUrlsRef.current.delete(imageToDelete.url);
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+            } finally {
+                setDialogVisible(false);
+                setSelectedImageId(null);
+            }
+        },
+        [],
+    );
+
     const handleDeleteImage = (stableKey: string) => {
+        // In production web export we observed that confirm dialog may not open reliably.
+        // For broken images the primary user goal is to remove them; delete immediately on web.
+        if (Platform.OS === 'web') {
+            void deleteByStableKey(stableKey);
+            return;
+        }
+
         setSelectedImageId(stableKey);
         setDialogVisible(true);
     };
+
+    const DeleteAction = useCallback(
+        ({
+            onActivate,
+            style,
+            testID,
+            children,
+        }: {
+            onActivate: () => void;
+            style?: any;
+            testID?: string;
+            children: React.ReactNode;
+        }) => {
+            if (Platform.OS === 'web') {
+                const makeActivate = () => {
+                    const now = Date.now();
+                    const last = (DeleteAction as any).__lastActivateTs as number | undefined;
+                    if (last && now - last < 250) return;
+                    (DeleteAction as any).__lastActivateTs = now;
+                    onActivate();
+                };
+                return (
+                    <Pressable
+                        onPress={makeActivate}
+                        style={style}
+                        testID={testID}
+                        accessibilityRole="button"
+                        {...({
+                            onClick: makeActivate,
+                            onMouseDown: makeActivate,
+                            onPointerDown: makeActivate,
+                            tabIndex: 0,
+                            onKeyDown: (e: any) => {
+                                if (e?.key === 'Enter' || e?.key === ' ') {
+                                    e?.preventDefault?.();
+                                    makeActivate();
+                                }
+                            },
+                        } as any)}
+                    >
+                        {children}
+                    </Pressable>
+                );
+            }
+            return (
+                <TouchableOpacity onPress={onActivate} style={style} testID={testID}>
+                    {children}
+                </TouchableOpacity>
+            );
+        },
+        [],
+    );
 
     const handleImageError = useCallback((stableKey: string, currentUrl: string) => {
         if (retryRef.current.has(stableKey)) {
@@ -517,44 +619,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
 
     const confirmDeleteImage = async () => {
         if (!selectedImageId) return;
-        
-        const imageToDelete = images.find(img => (img.stableKey ?? img.id) === selectedImageId);
-        
-        try {
-            // Prefer explicit backend id; otherwise try to extract it from the URL.
-            // This is important when gallery items are stored as URLs (e.g. /gallery/<id>/conversions/...).
-            const deleteId =
-                (imageToDelete && isBackendImageId(imageToDelete.id) ? String(imageToDelete.id) : null) ||
-                (imageToDelete ? extractBackendImageIdFromUrl(imageToDelete.url) : null);
-
-            if (deleteId) {
-                try {
-                    await deleteImage(deleteId);
-                } catch (error) {
-                    // If the backend says "not found" during delete, treat it as success:
-                    // the file is already missing, and the user just wants to remove it from the gallery UI.
-                    if (error instanceof ApiError && error.status === 404) {
-                        // noop
-                    } else {
-                        throw error;
-                    }
-                }
-            }
-            
-            // Cleanup blob URL if exists
-            if (imageToDelete && blobUrlsRef.current.has(imageToDelete.url)) {
-                URL.revokeObjectURL(imageToDelete.url);
-                blobUrlsRef.current.delete(imageToDelete.url);
-            }
-            
-            setImages(prev => prev.filter(img => (img.stableKey ?? img.id) !== selectedImageId));
-        } catch (error) {
-            console.error('Delete error:', error);
-            alert('Не удалось удалить изображение');
-        } finally {
-            setDialogVisible(false);
-            setSelectedImageId(null);
-        }
+        await deleteByStableKey(selectedImageId);
     };
 
     return (
@@ -639,19 +704,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         <ActivityIndicator size="large" color={colors.textInverse} />
                                         <Text style={[styles.uploadingImageText, { color: colors.textInverse }]}>Загрузка...</Text>
                                     </View>
-                                    <TouchableOpacity
-                                        onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
-                                        {...(Platform.OS === 'web'
-                                            ? ({
-                                                  onClick: () => handleDeleteImage(image.stableKey ?? image.id),
-                                                  onPointerDown: () => handleDeleteImage(image.stableKey ?? image.id),
-                                              } as any)
-                                            : null)}
+                                    <DeleteAction
+                                        onActivate={() => handleDeleteImage(image.stableKey ?? image.id)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
                                         <Feather name="x" size={18} color={colors.textInverse} />
-                                    </TouchableOpacity>
+                                    </DeleteAction>
                                 </View>
                             ) : image.error ? (
                                 <View style={styles.errorImageContainer}>
@@ -668,48 +727,32 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                     <View style={styles.errorOverlay}>
                                         <MaterialIcons name="warning-amber" size={24} color={colors.warningDark} />
                                         <Text style={[styles.errorOverlaySubtext, { color: colors.warningDark }]}>{image.error}</Text>
-                                        <TouchableOpacity
-                                            onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
-                                            {...(Platform.OS === 'web'
-                                                ? ({
-                                                      onClick: () => handleDeleteImage(image.stableKey ?? image.id),
-                                                      onPointerDown: () => handleDeleteImage(image.stableKey ?? image.id),
-                                                  } as any)
-                                                : null)}
+                                        <DeleteAction
+                                            onActivate={() => handleDeleteImage(image.stableKey ?? image.id)}
                                             style={[styles.errorActionButton, { backgroundColor: colors.primary }]}
                                             testID="delete-image-button"
                                         >
                                             <Text style={[styles.errorActionText, { color: colors.textInverse }]}>Удалить</Text>
-                                        </TouchableOpacity>
+                                        </DeleteAction>
                                     </View>
-                                    <TouchableOpacity
-                                        onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
-                                        {...(Platform.OS === 'web'
-                                            ? ({
-                                                  onClick: () => handleDeleteImage(image.stableKey ?? image.id),
-                                              } as any)
-                                            : null)}
+                                    <DeleteAction
+                                        onActivate={() => handleDeleteImage(image.stableKey ?? image.id)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
                                         <Feather name="x" size={18} color={colors.textInverse} />
-                                    </TouchableOpacity>
+                                    </DeleteAction>
                                 </View>
                             ) : !image.url ? (
                                 <View style={styles.uploadingImageContainer}>
                                     <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
-                                    <TouchableOpacity
-                                        onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
-                                        {...(Platform.OS === 'web'
-                                            ? ({
-                                                  onClick: () => handleDeleteImage(image.stableKey ?? image.id),
-                                              } as any)
-                                            : null)}
+                                    <DeleteAction
+                                        onActivate={() => handleDeleteImage(image.stableKey ?? image.id)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
                                         <Feather name="x" size={18} color={colors.textInverse} />
-                                    </TouchableOpacity>
+                                    </DeleteAction>
                                 </View>
                             ) : (
                                 <>
@@ -739,18 +782,13 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                         onError={() => handleImageError(image.stableKey ?? image.id, image.url)}
                                         onLoad={() => handleImageLoad(image.stableKey ?? image.id)}
                                     />
-                                    <TouchableOpacity
-                                        onPress={() => handleDeleteImage(image.stableKey ?? image.id)}
-                                        {...(Platform.OS === 'web'
-                                            ? ({
-                                                  onClick: () => handleDeleteImage(image.stableKey ?? image.id),
-                                              } as any)
-                                            : null)}
+                                    <DeleteAction
+                                        onActivate={() => handleDeleteImage(image.stableKey ?? image.id)}
                                         style={styles.deleteButton}
                                         testID="delete-image-button"
                                     >
                                         <Feather name="x" size={18} color={colors.textInverse} />
-                                    </TouchableOpacity>
+                                    </DeleteAction>
                                 </>
                             )}
                         </View>

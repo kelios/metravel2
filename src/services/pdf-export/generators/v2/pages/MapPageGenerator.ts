@@ -45,6 +45,7 @@ export class MapPageGenerator extends BasePageGenerator {
           pointsWithCoords.map((location) => ({
             lat: location.lat as number,
             lng: location.lng as number,
+            label: location.name,
           })),
           { width: 1400, height: 900 }
         );

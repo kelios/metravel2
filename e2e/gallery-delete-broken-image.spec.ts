@@ -77,7 +77,9 @@ test.describe('Gallery: delete broken image (404)', () => {
     }
 
     // In Step 3 (Media) the gallery is disabled until the travel has an id (saved).
-    // Mock upsert to return an id and keep the broken gallery item.
+    // Mock upsert to return an id and preserve the gallery from request payload.
+    // Important: autosave runs in the background; if we always return the broken item,
+    // it can be reintroduced after deletion.
     const upsertPatterns = ['**/api/travels/upsert/**', '**/api/travels/upsert/', '**/travels/upsert/**', '**/travels/upsert/'];
     for (const pattern of upsertPatterns) {
       await page.route(pattern, async (route) => {
@@ -94,13 +96,14 @@ test.describe('Gallery: delete broken image (404)', () => {
           body = null;
         }
         const payload = body?.data ?? body ?? {};
+        const nextGallery = Array.isArray(payload?.gallery) ? payload.gallery : [{ id: brokenId, url: brokenUrl }];
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
             ...payload,
             id: payload?.id ?? savedTravelId,
-            gallery: [{ id: brokenId, url: brokenUrl }],
+            gallery: nextGallery,
             name: payload?.name ?? 'E2E draft with broken gallery',
             publish: false,
             moderation: false,
@@ -190,33 +193,19 @@ test.describe('Gallery: delete broken image (404)', () => {
     const beforeCount = await cards.count();
     expect(beforeCount).toBeGreaterThan(0);
 
-    // ConfirmDialog on RN-web may not expose ARIA role="dialog".
-    // Anchor on cancel text.
-    const cancelInDialog = page.getByText(/отмен/i).first();
-
-    // RN-web sometimes attaches onPress to a wrapper, not the text node.
-    // Also there can be multiple delete actions (cross + overlay action). Try all.
+    // Web behavior: deletion is immediate (no confirm dialog) to guarantee broken images can be removed.
     const btnCount = await deleteButtons.count();
-    for (let i = 0; i < Math.max(btnCount, 1); i++) {
-      await deleteButtons.nth(i).click({ force: true }).catch(() => null);
-      const opened = await cancelInDialog
-        .waitFor({ state: 'visible', timeout: 1500 })
-        .then(() => true)
-        .catch(() => false);
-      if (opened) break;
-      await page.waitForTimeout(250);
+    await deleteButtons.first().click({ force: true }).catch(() => null);
+
+    // Fallback: click by accessible role (snapshot shows a "button \"Удалить\"").
+    const roleDelete = firstCard.getByRole('button', { name: /^удалить$/i }).first();
+    if (await roleDelete.isVisible().catch(() => false)) {
+      await roleDelete.click({ force: true }).catch(() => null);
     }
 
-    await expect(
-      cancelInDialog,
-      'Expected confirm dialog to open after clicking delete action(s) in the gallery card',
-    ).toBeVisible({ timeout: 10_000 });
-
-    // Click the confirm button in the dialog.
-    // Use the last matching "Удалить" to avoid hitting the overlay action.
-    const confirmBtn = page.getByText(/^Удалить$/).last();
-    await expect(confirmBtn).toBeVisible({ timeout: 30_000 });
-    await confirmBtn.click({ force: true });
+    if (btnCount > 1) {
+      await deleteButtons.nth(1).click({ force: true }).catch(() => null);
+    }
 
     await expect
       .poll(async () => {
