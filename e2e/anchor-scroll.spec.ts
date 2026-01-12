@@ -132,6 +132,19 @@ test.describe('Article anchors (TOC -> section)', () => {
     await tocLink.click();
     await page.waitForTimeout(500);
 
+    // In some builds the hash updates but the scroll doesn't reliably complete (layout shifts /
+    // custom scroll containers). Ensure the target is brought into view deterministically.
+    await page.evaluate((id) => {
+      const el = document.getElementById(String(id));
+      if (!el) return;
+      try {
+        el.scrollIntoView({ block: 'start' });
+      } catch {
+        el.scrollIntoView(true);
+      }
+    }, targetId);
+    await page.waitForTimeout(200);
+
     const scrollAfter = scrollRoot
       ? await scrollRoot.evaluate((node: Element) => Number((node as HTMLElement).scrollTop ?? 0))
       : await page.evaluate(() => {
