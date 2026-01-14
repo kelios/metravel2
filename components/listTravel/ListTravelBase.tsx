@@ -4,9 +4,7 @@ import {
   Alert,
   FlatList,
   Platform,
-  Pressable,
   StyleSheet,
-  Text,
   View,
   ViewStyle,
 } from 'react-native'
@@ -17,15 +15,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
 import SidebarFilters from './SidebarFilters'
 import RightColumn from './RightColumn'
-import UIButton from '@/components/ui/Button'
-import BookSettingsModal from '@/components/export/BookSettingsModal'
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useResponsive } from '@/hooks/useResponsive'
-import ProgressIndicator from '@/components/ProgressIndicator'
 import type { Travel } from '@/src/types/types'
 import {
   BREAKPOINTS,
@@ -35,7 +30,6 @@ import { LAYOUT } from '@/constants/layout'
 import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
-import { useListTravelExport } from './hooks/useListTravelExport'
 import { calculateColumns } from './utils/listTravelHelpers'
 
 // ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
@@ -288,111 +282,6 @@ const deleteTravel = async (id: string): Promise<void> => {
     }
 };
 
-const pluralizeTravels = (count: number) => {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'путешествие';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'путешествия';
-  return 'путешествий';
-};
-
-/* ===== Small local component: Export bar ===== */
-const ExportBar = memo(function ExportBar({
-                       isMobile,
-                       selectedCount,
-                       allCount,
-                       onToggleSelectAll,
-                       onClearSelection,
-                       onSave,
-                       onSettings,
-                       isGenerating,
-                       progress,
-                       settingsSummary,
-                       hasSelection,
-                       styles,
-                   }: {
-    isMobile: boolean;
-    selectedCount: number;
-    allCount: number;
-    onToggleSelectAll: () => void;
-    onClearSelection: () => void;
-    onSave: () => void;
-    onSettings: () => void;
-    isGenerating?: boolean;
-    progress?: number;
-    settingsSummary: string;
-    hasSelection: boolean;
-    styles?: ReturnType<typeof createStyles>;
-}) {
-    const colors = useThemedColors();
-    const resolvedStyles = useMemo(
-      () => styles ?? createStyles(colors),
-      [colors, styles]
-    );
-    const selectionText = selectedCount
-      ? `Выбрано ${selectedCount} ${pluralizeTravels(selectedCount)}`
-      : 'Выберите путешествия для экспорта';
-
-  return (
-      <View
-        style={[
-          resolvedStyles.exportBar,
-          isMobile && resolvedStyles.exportBarMobile,
-          Platform.OS === 'web' && isMobile && resolvedStyles.exportBarMobileWeb,
-        ]}
-      >
-          <View style={resolvedStyles.exportBarInfo}>
-            <Text style={resolvedStyles.exportBarInfoTitle as any}>{selectionText}</Text>
-            <Text style={resolvedStyles.exportBarInfoSubtitle as any}>
-              {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
-            </Text>
-            <View style={resolvedStyles.exportBarInfoActions}>
-              <Pressable onPress={onToggleSelectAll} accessibilityRole="button">
-                <Text style={resolvedStyles.linkButton as any}>
-                  {selectedCount === allCount && allCount > 0 ? "Снять выделение" : "Выбрать все"}
-                </Text>
-              </Pressable>
-              {hasSelection && (
-                <Pressable onPress={onClearSelection} accessibilityRole="button">
-                  <Text style={resolvedStyles.linkButton as any}>Очистить выбор</Text>
-                </Pressable>
-              )}
-              {hasSelection && (
-                <Pressable onPress={onSettings} accessibilityRole="button">
-                  <Text style={resolvedStyles.linkButton as any}>Настройки</Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-
-          <View style={[resolvedStyles.exportBarButtons, isMobile && resolvedStyles.exportBarButtonsMobile]}>
-            <UIButton
-              label={isGenerating ? `Генерация... ${progress || 0}%` : (isMobile ? "Сохранить PDF" : "Сохранить PDF")}
-              onPress={onSave}
-              disabled={!hasSelection || isGenerating}
-            />
-          </View>
-
-          {isGenerating && Platform.OS === "web" && (
-            <View style={resolvedStyles.progressWrapper}>
-              <ProgressIndicator
-                progress={progress ?? 0}
-                stage={(progress ?? 0) < 30 ? 'Подготовка данных...' : 
-                       (progress ?? 0) < 60 ? 'Генерация содержимого...' :
-                       (progress ?? 0) < 90 ? 'Обработка изображений...' : 
-                       'Создание PDF...'}
-                message={(progress ?? 0) < 30 ? 'Проверка выбранных путешествий' :
-                         (progress ?? 0) < 60 ? 'Формирование макета' :
-                         (progress ?? 0) < 90 ? 'Оптимизация изображений' :
-                         'Финальная обработка'}
-                showPercentage={true}
-              />
-            </View>
-          )}
-      </View>
-    );
-});
-
 const MemoizedTravelItem = memo(RenderTravelItem);
 
 interface ListTravelProps {
@@ -402,7 +291,7 @@ interface ListTravelProps {
     isWeeklyHighlightsVisible?: boolean;
 }
 
-function ListTravel({
+function ListTravelBase({
     onTogglePersonalization,
     isPersonalizationVisible: externalPersonalizationVisible,
     onToggleWeeklyHighlights,
@@ -763,24 +652,6 @@ function ListTravel({
         ]);
     }, [deleteId, handleDelete]);
 
-    /* Selection for export */
-    const exportState = useListTravelExport(travels, { ownerName: userId });
-    const {
-        toggleSelect,
-        toggleSelectAll,
-        clearSelection,
-        isSelected,
-        hasSelection,
-        selectionCount,
-        pdfExport,
-        lastSettings,
-        baseSettings,
-        handleSaveWithSettings,
-        handlePreviewWithSettings,
-    } = exportState;
-
-    const [isBookSettingsOpen, setIsBookSettingsOpen] = useState(false);
-
     const renderTravelListItem = useCallback(
       (travel: Travel, index: number) => (
         <MemoizedTravelItem
@@ -791,33 +662,16 @@ function ListTravel({
           isMetravel={isMeTravel}
           onDeletePress={handleDeletePress}
           isFirst={index === 0}
-          selectable={isExport}
-          isSelected={isSelected(travel.id)}
-          onToggle={() => toggleSelect(travel)}
+          selectable={false}
         />
       ),
       [
         handleDeletePress,
-        isExport,
         isMeTravel,
         isMobileDevice,
-        isSelected,
         isSuper,
-        toggleSelect,
       ]
     );
-
-    const handleCloseSettings = useCallback(() => {
-      setIsBookSettingsOpen(false);
-    }, []);
-
-    const handleImmediateSave = useCallback(() => {
-      handleSaveWithSettings(lastSettings);
-    }, [handleSaveWithSettings, lastSettings]);
-
-    const handleOpenSettings = useCallback(() => {
-      setIsBookSettingsOpen(true);
-    }, []);
 
     /* Loading helpers */
     const hasAnyItems = travels.length > 0;
@@ -1092,23 +946,6 @@ function ListTravel({
     
   return (
     <View style={[styles.root, isMobileDevice ? styles.rootMobile : undefined]}>
-      {isExport && Platform.OS === 'web' ? (
-        <BookSettingsModal
-          visible={isBookSettingsOpen}
-          onClose={handleCloseSettings}
-          onSave={(settings) => {
-            handleSaveWithSettings(settings);
-          }}
-          onPreview={(settings) => {
-            handlePreviewWithSettings(settings);
-          }}
-          defaultSettings={lastSettings || baseSettings}
-          travelCount={selectionCount}
-          userName={String(userId || '')}
-          mode="save"
-        />
-      ) : null}
-
       <SidebarFilters
         isMobile={isMobileDevice}
         filterGroups={filterGroups}
@@ -1135,24 +972,7 @@ function ListTravel({
           }
         }}
         availableWidth={effectiveWidth}
-        topContent={
-          isExport ? (
-            <ExportBar
-              isMobile={isMobileDevice}
-              selectedCount={selectionCount}
-              allCount={travels.length}
-              onToggleSelectAll={toggleSelectAll}
-              onClearSelection={clearSelection}
-              onSave={handleImmediateSave}
-              onSettings={handleOpenSettings}
-              isGenerating={pdfExport.isGenerating}
-              progress={pdfExport.progress}
-              settingsSummary={exportState.settingsSummary}
-              hasSelection={hasSelection}
-              styles={styles}
-            />
-          ) : null
-        }
+        topContent={null}
         isRecommendationsVisible={isRecommendationsVisible}
         handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
         activeFiltersCount={activeFiltersCount}
@@ -1187,5 +1007,4 @@ function ListTravel({
   );
 }
 
-export default memo(ListTravel);
-export { ExportBar };
+export default memo(ListTravelBase);

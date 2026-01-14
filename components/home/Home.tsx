@@ -75,6 +75,8 @@ function Home() {
   const isFocused = useIsFocused();
   const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
+  const { isSmallPhone, isPhone } = useResponsive();
+  const isMobile = isSmallPhone || isPhone;
 
   const [showHeavyContent, setShowHeavyContent] = useState(false);
   const [hydrated, setHydrated] = useState(!isWeb);
@@ -98,7 +100,9 @@ function Home() {
       }).start();
     };
 
-    const fallbackMs = Platform.OS === 'web' ? 800 : 150;
+    const fallbackMs = Platform.OS === 'web'
+      ? (isMobile ? 1400 : 900)
+      : (isMobile ? 700 : 150);
     const timer = setTimeout(show, fallbackMs);
 
     let idleId: any = null;
@@ -123,7 +127,7 @@ function Home() {
         }
       }
     };
-  }, [fadeAnim]);
+  }, [fadeAnim, isMobile]);
 
   // Lightweight: avoid fetching full list of user travels on home screen.
   // Count can be provided later from a dedicated endpoint if needed.
@@ -229,8 +233,8 @@ function Home() {
   }), [colors]);
 
   const isTestEnv = process.env.NODE_ENV === 'test';
-  const initialNumToRender = isTestEnv ? sectionCount : (Platform.OS === 'web' ? 1 : 3);
-  const maxToRenderPerBatch = isTestEnv ? sectionCount : (Platform.OS === 'web' ? 1 : 3);
+  const initialNumToRender = isTestEnv ? sectionCount : 1;
+  const maxToRenderPerBatch = isTestEnv ? sectionCount : 1;
 
   return (
     <FlatList
@@ -244,8 +248,8 @@ function Home() {
       removeClippedSubviews={Platform.OS === 'android'}
       initialNumToRender={Math.min(initialNumToRender, sectionCount)}
       maxToRenderPerBatch={Math.min(maxToRenderPerBatch, sectionCount)}
-      windowSize={Platform.OS === 'web' ? 5 : 7}
-      updateCellsBatchingPeriod={Platform.OS === 'web' ? 50 : 16}
+      windowSize={isMobile ? 3 : (Platform.OS === 'web' ? 5 : 7)}
+      updateCellsBatchingPeriod={isMobile ? 100 : (Platform.OS === 'web' ? 50 : 16)}
       nestedScrollEnabled={Platform.OS === 'android'}
       {...Platform.select({
         web: {

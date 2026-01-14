@@ -11,18 +11,17 @@ import {
 } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 
-import TravelListPanel from '@/components/MapPage/TravelListPanel';
-import { MapMobileLayout } from '@/components/MapPage/MapMobileLayout';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { useMapScreenController } from '@/hooks/useMapScreenController';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 
-// Ensure RouteHint is bundled (used inside FiltersPanel)
-import '@/components/MapPage/RouteHint';
-
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
+const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'));
+const LazyMapMobileLayout = lazy(() =>
+    import('@/components/MapPage/MapMobileLayout').then((mod) => ({ default: mod.MapMobileLayout }))
+);
 
 export default function MapScreen() {
     const {
@@ -69,7 +68,7 @@ export default function MapScreen() {
         openRightPanelRef.current();
     }, [openNonce]);
 
-    const FiltersPanelComponent = filtersPanelProps.Component;
+    const FiltersPanelComponent = filtersPanelProps?.Component;
 
     const mapPanelPlaceholder = useMemo(
         () => (
@@ -111,19 +110,21 @@ export default function MapScreen() {
                         canonical={canonical}
                     />
                 )}
-                <MapMobileLayout
-                    mapComponent={mapComponent}
-                    travelsData={travelsData}
-                    coordinates={coordinates}
-                    transportMode={transportMode}
-                    buildRouteTo={buildRouteTo}
-                    onCenterOnUser={() => {
-                        // TODO: Implement center on user location
-                        console.info('Center on user location');
-                    }}
-                    onOpenFilters={selectFiltersTab}
-                    filtersPanelProps={filtersPanelProps}
-                />
+                <Suspense fallback={mapPanelPlaceholder}>
+                    <LazyMapMobileLayout
+                        mapComponent={mapComponent}
+                        travelsData={travelsData}
+                        coordinates={coordinates}
+                        transportMode={transportMode}
+                        buildRouteTo={buildRouteTo}
+                        onCenterOnUser={() => {
+                            // TODO: Implement center on user location
+                            console.info('Center on user location');
+                        }}
+                        onOpenFilters={selectFiltersTab}
+                        filtersPanelProps={filtersPanelProps}
+                    />
+                </Suspense>
             </>
         );
     }
@@ -271,10 +272,12 @@ export default function MapScreen() {
                                 {panelHeader}
                                 <View style={styles.panelContent}>
                                     {rightPanelTab === 'filters' ? (
-                                        <FiltersPanelComponent
-                                            {...filtersPanelProps.props}
-                                            hideFooterReset={Platform.OS === 'web' && !isMobile}
-                                        />
+                                        FiltersPanelComponent ? (
+                                            <FiltersPanelComponent
+                                                {...filtersPanelProps.props}
+                                                hideFooterReset={Platform.OS === 'web' && !isMobile}
+                                            />
+                                        ) : null
                                     ) : (
                                         <View style={styles.travelsListContainer} testID="map-travels-tab">
                                             {loading && !isPlaceholderData ? (
@@ -298,16 +301,25 @@ export default function MapScreen() {
                                                             <Text style={styles.updatingText}>Обновление...</Text>
                                                         </View>
                                                     )}
-                                                    <TravelListPanel
-                                                        travelsData={travelsData}
-                                                        buildRouteTo={buildRouteTo}
-                                                        isMobile={isMobile}
-                                                        isLoading={loading && !isPlaceholderData}
-                                                        onRefresh={invalidateTravelsQuery}
-                                                        isRefreshing={isFetching && !isPlaceholderData}
-                                                        userLocation={mapPanelProps.coordinates}
-                                                        transportMode={mapPanelProps.transportMode}
-                                                    />
+                                                    <Suspense
+                                                        fallback={
+                                                            <View style={styles.loader}>
+                                                                <ActivityIndicator size="small" color={themedColors.primary} />
+                                                                <Text style={styles.loaderText}>Загрузка...</Text>
+                                                            </View>
+                                                        }
+                                                    >
+                                                        <LazyTravelListPanel
+                                                            travelsData={travelsData}
+                                                            buildRouteTo={buildRouteTo}
+                                                            isMobile={isMobile}
+                                                            isLoading={loading && !isPlaceholderData}
+                                                            onRefresh={invalidateTravelsQuery}
+                                                            isRefreshing={isFetching && !isPlaceholderData}
+                                                            userLocation={mapPanelProps.coordinates}
+                                                            transportMode={mapPanelProps.transportMode}
+                                                        />
+                                                    </Suspense>
                                                 </>
                                             )}
                                         </View>

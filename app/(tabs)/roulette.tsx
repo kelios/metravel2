@@ -47,6 +47,7 @@ export default function RouletteScreen() {
     handleFilterChange,
     showLoading,
     onSelect,
+    filtersLoading,
   } = useRouletteLogic();
 
   const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
@@ -90,6 +91,7 @@ export default function RouletteScreen() {
               onFilterChange={handleFilterChange}
               onClearAll={handleClearAll}
               resultsCount={travels.length}
+              isLoading={filtersLoading}
               year={filter.year}
               onYearChange={(value) => onSelect('year', value)}
             />
@@ -281,6 +283,7 @@ export default function RouletteScreen() {
               onFilterChange={handleFilterChange}
               onClearAll={handleClearAll}
               resultsCount={travels.length}
+              isLoading={filtersLoading}
               year={filter.year}
               onYearChange={(value) => onSelect('year', value)}
               onClose={() => setShowFilters(false)}

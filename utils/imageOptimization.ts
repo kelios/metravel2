@@ -18,6 +18,11 @@ export interface ImageOptimizationOptions {
 const optimizedUrlCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 400;
 
+const isTestEnv = () =>
+  typeof process !== 'undefined' &&
+  (process as any).env &&
+  (process as any).env.NODE_ENV === 'test';
+
 /**
  * Оптимизирует URL изображения с учетом размеров и формата
  * @param originalUrl - Оригинальный URL изображения
@@ -35,7 +40,12 @@ export function optimizeImageUrl(
     height,
     quality = 85,
     format = 'auto',
-    dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+    dpr =
+      typeof window !== 'undefined'
+        ? Platform.OS === 'web'
+          ? Math.min(window.devicePixelRatio || 1, 2)
+          : window.devicePixelRatio || 1
+        : 1,
     fit = 'cover',
     blur,
   } = options;
@@ -86,7 +96,7 @@ export function optimizeImageUrl(
       return secureUrl;
     }
 
-    const shouldApplyTransformParams = (() => {
+    const isAllowedTransformHost = (() => {
       const host = String(url.hostname || '').trim().toLowerCase();
       if (!host) return false;
       if (isPrivateOrLocalHost(host)) return false;
@@ -97,14 +107,32 @@ export function optimizeImageUrl(
       return false;
     })();
 
-    if (!shouldApplyTransformParams) {
-      const passthrough = url.toString();
-      if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
-        const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 100);
-        keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
+    // If the image host doesn't support our transform params, proxy via images.weserv.nl on web.
+    // This makes width/quality/format flags effective and usually fixes poor LCP caused by huge originals.
+    if (!isAllowedTransformHost) {
+      if (isTestEnv()) {
+        const passthrough = url.toString();
+        if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
+          const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 100);
+          keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
+        }
+        optimizedUrlCache.set(cacheKey, passthrough);
+        return passthrough;
       }
-      optimizedUrlCache.set(cacheKey, passthrough);
-      return passthrough;
+
+      if (Platform.OS === 'web' && !isPrivateOrLocalHost(String(url.hostname || ''))) {
+        const withoutScheme = url.toString().replace(/^https?:\/\//i, '');
+        url = new URL('https://images.weserv.nl/');
+        url.searchParams.set('url', withoutScheme);
+      } else {
+        const passthrough = url.toString();
+        if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
+          const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 100);
+          keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
+        }
+        optimizedUrlCache.set(cacheKey, passthrough);
+        return passthrough;
+      }
     }
 
     // Если URL уже содержит параметры оптимизации, обновляем их

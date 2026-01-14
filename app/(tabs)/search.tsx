@@ -13,8 +13,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 const isWeb = Platform.OS === 'web';
 const isClient = typeof window !== 'undefined';
 const ListTravel = isWeb && isClient
-  ? lazy(() => import('@/components/listTravel/ListTravel'))
-  : require('@/components/listTravel/ListTravel').default;
+  ? lazy(() => import('@/components/listTravel/ListTravelBase'))
+  : require('@/components/listTravel/ListTravelBase').default;
 
 function SearchScreen() {
     const pathname = usePathname();

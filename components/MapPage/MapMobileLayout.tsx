@@ -208,7 +208,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     const body =
       contentTab === 'filters' ? (
         (() => {
-          const FilterComponent = filtersPanelProps.Component;
+          const FilterComponent = filtersPanelProps?.Component;
+          if (!FilterComponent) {
+            return <View style={styles.sheetRoot} />;
+          }
           return (
             <FilterComponent
               {...filtersPanelProps.props}

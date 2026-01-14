@@ -78,14 +78,21 @@ function ImageCardMedia({
     if (!src) return;
     if (typeof document === 'undefined') return;
 
-    const id = `prefetch-img-${encodeURIComponent(src)}`;
+    const shouldPreload = loading === 'eager';
+    const rel = shouldPreload ? 'preload' : 'prefetch';
+    const id = `${rel}-img-${encodeURIComponent(src)}`;
     if (document.getElementById(id)) return;
 
     const link = document.createElement('link');
     link.id = id;
-    link.rel = 'prefetch';
+    link.rel = rel;
     link.as = 'image';
     link.href = src;
+    if (shouldPreload) {
+      link.fetchPriority = 'high';
+      link.setAttribute('fetchpriority', 'high');
+      link.crossOrigin = 'anonymous';
+    }
     document.head.appendChild(link);
 
     return () => {
@@ -93,7 +100,7 @@ function ImageCardMedia({
         link.parentNode.removeChild(link);
       }
     };
-  }, [prefetch, priority, src]);
+  }, [prefetch, priority, src, loading]);
 
   return (
     <View

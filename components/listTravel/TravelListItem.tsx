@@ -7,7 +7,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
-import { optimizeImageUrl } from "@/utils/imageOptimization";
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -180,47 +179,6 @@ function TravelListItem({
         // Упрощенная обработка - меньше вычислений при скролле
         return travel_image_thumb_url;
     }, [travel_image_thumb_url]);
-
-    useEffect(() => {
-        if (!isFirst || Platform.OS !== 'web' || !imgUrl) return;
-        if (typeof document === 'undefined') return;
-
-        const linkId = `preload-travel-img-${String(id)}`;
-        // Если уже есть такой preload — не дублируем
-        if (document.getElementById(linkId)) return;
-
-        // Для LCP-картинки прелоадим оптимизированный вариант под реальный размер карточки,
-        // чтобы не тянуть оригинал слишком большого разрешения и не создавать лишние скачивания.
-        const assumedCardWidth =
-          typeof cardWidth === 'number'
-            ? Math.round(cardWidth)
-            : 360;
-        const assumedImageHeight = TRAVEL_CARD_IMAGE_HEIGHT; // соответствует styles.imageContainer
-
-        const preloadUrl =
-          optimizeImageUrl(imgUrl, {
-            width: assumedCardWidth,
-            height: assumedImageHeight,
-            format: 'webp',
-            quality: 85,
-          }) ?? imgUrl;
-
-        const link = document.createElement('link');
-        link.id = linkId;
-        // Use prefetch (instead of preload) to avoid "preloaded but not used" warnings when the first card
-        // image is lazily mounted/updated.
-        link.rel = 'prefetch';
-        link.as = 'image';
-        link.href = preloadUrl;
-        link.crossOrigin = 'anonymous';
-        document.head.appendChild(link);
-
-        return () => {
-            if (link.parentNode) {
-                link.parentNode.removeChild(link);
-            }
-        };
-    }, [isFirst, imgUrl, id, cardWidth]);
 
     const countries = useMemo(
         () => (countryName || "").split(",").map((c) => c.trim()).filter(Boolean),

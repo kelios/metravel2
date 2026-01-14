@@ -12,6 +12,7 @@ interface SidebarFiltersProps {
   setSearch: (value: string) => void
   resetFilters: () => void
   isVisible?: boolean
+  isLoading?: boolean
   onClose?: () => void
   containerStyle?: StyleProp<ViewStyle>
 }
@@ -27,6 +28,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
     setSearch,
     resetFilters,
     isVisible = true,
+    isLoading = false,
     onClose,
     containerStyle,
   }) => {
@@ -58,6 +60,7 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
             resetFilters()
           }}
           resultsCount={total}
+          isLoading={isLoading}
           year={filter.year}
           onYearChange={(value) => onSelect('year', value)}
           showModeration={isSuper}

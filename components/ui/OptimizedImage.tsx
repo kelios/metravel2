@@ -135,7 +135,8 @@ function OptimizedImage({
     return null;
   }, [source, validSource]);
 
-  const shouldRenderBlurBackground = blurBackground && validSource && !webBlobOrDataUri;
+  const shouldRenderBlurBackground =
+    Platform.OS !== 'web' && blurBackground && validSource && !webBlobOrDataUri;
 
   const handleLoad = () => {
     setIsLoading(false);

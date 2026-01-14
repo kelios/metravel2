@@ -8,6 +8,7 @@ import Feather from '@expo/vector-icons/Feather';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 export type UnifiedTravelCardBadge = {
   icon: keyof typeof Feather.glyphMap;
@@ -72,6 +73,25 @@ function UnifiedTravelCard({
 }: Props) {
   const isWeb = Platform.OS === 'web';
   const colors = useThemedColors();
+  const optimizedImageUrl = useMemo(() => {
+    if (!imageUrl || Platform.OS !== 'web') return imageUrl ?? null;
+
+    const targetHeight = typeof imageHeight === 'number' ? imageHeight : 200;
+    const targetWidth =
+      typeof width === 'number'
+        ? width
+        : typeof window !== 'undefined'
+          ? Math.min(window.innerWidth || 360, 640)
+          : undefined;
+
+    return (
+      optimizeImageUrl(imageUrl, {
+        width: targetWidth,
+        height: targetHeight,
+        fit: mediaFit === 'contain' ? 'contain' : 'cover',
+      }) ?? imageUrl
+    );
+  }, [imageUrl, imageHeight, mediaFit, width]);
 
   const styles = useMemo(
     () =>
@@ -244,9 +264,9 @@ function UnifiedTravelCard({
     >
       {[
         <View key="media" style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null]}>
-          {imageUrl ? (
+          {optimizedImageUrl ? (
             <ImageCardMedia
-              src={imageUrl}
+              src={optimizedImageUrl}
               alt={title}
               fit={mediaFit}
               blurBackground={mediaProps?.blurBackground ?? true}

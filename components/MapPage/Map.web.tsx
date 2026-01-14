@@ -23,6 +23,11 @@ import MapControls from './Map/MapControls';
 
 type ReactLeafletNS = typeof import('react-leaflet');
 
+const isTestEnv =
+  typeof process !== 'undefined' &&
+  (process as any).env &&
+  (process as any).env.NODE_ENV === 'test';
+
 const ORS_API_KEY = process.env.EXPO_PUBLIC_ORS_API_KEY || undefined;
 
 type Props = MapProps;
@@ -176,22 +181,49 @@ const MapPageComponent: React.FC<Props> = (props) => {
     let cancelled = false;
     setLoading(true);
 
-    ensureLeafletAndReactLeaflet()
-      .then(({ L: leaflet, rl: reactLeaflet }) => {
-        if (cancelled) return;
-        setL(leaflet);
-        setRl(reactLeaflet);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('[Map] Failed to load Leaflet:', err);
-        if (cancelled) return;
-        setErrors((prev) => ({ ...prev, loadingModules: true }));
-        setLoading(false);
-      });
+    const load = () => {
+      ensureLeafletAndReactLeaflet()
+        .then(({ L: leaflet, rl: reactLeaflet }) => {
+          if (cancelled) return;
+          setL(leaflet);
+          setRl(reactLeaflet);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error('[Map] Failed to load Leaflet:', err);
+          if (cancelled) return;
+          setErrors((prev) => ({ ...prev, loadingModules: true }));
+          setLoading(false);
+        });
+    };
+
+    // Defer loading heavy map libraries until the browser is idle.
+    // This reduces main-thread blocking and typically improves TBT/INP on mobile.
+    let idleHandle: any = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    if (isTestEnv) {
+      load();
+    } else if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleHandle = (window as any).requestIdleCallback(load, { timeout: 2500 });
+    } else {
+      timeoutHandle = setTimeout(load, 1500);
+    }
 
     return () => {
       cancelled = true;
+
+      try {
+        if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+          (window as any).cancelIdleCallback(idleHandle);
+        }
+      } catch {
+        // noop
+      }
+
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
     };
   }, []);
 
@@ -199,38 +231,67 @@ const MapPageComponent: React.FC<Props> = (props) => {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
 
+    // Avoid requesting geolocation before the map is ready.
+    // This reduces early main-thread work and prevents unnecessary permission prompts.
+    if (!L || !rl) return;
+
     let cancelled = false;
 
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted' || cancelled) {
-          setErrors((prev) => ({ ...prev, location: true }));
-          return;
-        }
+    let idleHandle: any = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
 
-        const location = await Location.getCurrentPositionAsync({});
-        if (cancelled) return;
+    const loadLocation = () => {
+      ;(async () => {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted' || cancelled) {
+            setErrors((prev) => ({ ...prev, location: true }));
+            return;
+          }
 
-        const lat = location.coords.latitude;
-        const lng = location.coords.longitude;
-        if (isValidCoordinate(lat, lng)) {
-          setUserLocation({ latitude: lat, longitude: lng });
-        } else {
-          setErrors((prev) => ({ ...prev, location: true }));
+          const location = await Location.getCurrentPositionAsync({});
+          if (cancelled) return;
+
+          const lat = location.coords.latitude;
+          const lng = location.coords.longitude;
+          if (isValidCoordinate(lat, lng)) {
+            setUserLocation({ latitude: lat, longitude: lng });
+          } else {
+            setErrors((prev) => ({ ...prev, location: true }));
+          }
+        } catch (err) {
+          console.error('[Map] Location error:', err);
+          if (!cancelled) {
+            setErrors((prev) => ({ ...prev, location: true }));
+          }
         }
-      } catch (err) {
-        console.error('[Map] Location error:', err);
-        if (!cancelled) {
-          setErrors((prev) => ({ ...prev, location: true }));
-        }
-      }
-    })();
+      })();
+    };
+
+    if (isTestEnv) {
+      loadLocation();
+    } else if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleHandle = (window as any).requestIdleCallback(loadLocation, { timeout: 3500 });
+    } else {
+      timeoutHandle = setTimeout(loadLocation, 2000);
+    }
 
     return () => {
       cancelled = true;
+
+      try {
+        if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+          (window as any).cancelIdleCallback(idleHandle);
+        }
+      } catch {
+        // noop
+      }
+
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle);
+      }
     };
-  }, []);
+  }, [L, rl]);
 
   // Center user location handler
   const centerOnUserLocation = useCallback(() => {

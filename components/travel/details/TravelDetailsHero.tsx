@@ -83,6 +83,14 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
     })
     const _optimizedHref = responsive.src || versionedHref
 
+    const optimizedOrigin = (() => {
+      try {
+        return _optimizedHref ? new URL(_optimizedHref).origin : null
+      } catch {
+        return null
+      }
+    })()
+
     if (_optimizedHref && !document.querySelector(`link[rel="preload"][href="${_optimizedHref}"]`)) {
       const preload = document.createElement('link')
       preload.rel = 'preload'
@@ -109,6 +117,7 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
     const domains = [
       getOrigin(imageUrl),
       apiOrigin,
+      optimizedOrigin,
     ].filter((d): d is string => isSafePreconnectDomain(d))
 
     domains.forEach((d) => {

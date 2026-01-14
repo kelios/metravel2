@@ -39,6 +39,7 @@ interface ModernFiltersProps {
   onClearAll: () => void;
   resultsCount?: number;
   isCompact?: boolean;
+  isLoading?: boolean;
   year?: string | number | undefined;
   onYearChange?: (value: string | undefined) => void;
   showModeration?: boolean;
@@ -55,6 +56,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   onClearAll,
   resultsCount,
   isCompact = false,
+  isLoading = false,
   year,
   onYearChange,
   showModeration,
@@ -68,6 +70,11 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   const styles = createStyles(colors);
 
   const isNarrowWeb = Platform.OS === 'web' && Dimensions.get('window').width <= METRICS.breakpoints.tablet;
+  const hasOptions = filterGroups.some((group) => (group.options || []).length > 0);
+  const shouldReserveSpace = isLoading || !hasOptions;
+  const reserveMinHeight = Platform.OS === 'web'
+    ? (isNarrowWeb ? 720 : 760)
+    : 640;
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set()
   );
@@ -164,6 +171,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         isCompact && styles.containerCompact,
         Platform.OS !== 'web' && styles.containerMobile,
         Platform.OS === 'web' && isNarrowWeb && styles.containerWebFull,
+        shouldReserveSpace && { minHeight: reserveMinHeight },
       ]}
     >
       {/* Header */}
