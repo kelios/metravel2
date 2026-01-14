@@ -213,6 +213,14 @@ export function useMapScreenController() {
     [mapUiApi]
   );
 
+  const centerOnUser = useCallback(() => {
+    try {
+      mapUiApi?.centerOnUser?.();
+    } catch {
+      // noop
+    }
+  }, [mapUiApi]);
+
   // Build route from store points
   const handleBuildRoute = useCallback(() => {
     if (routeStorePoints.length >= 2) {
@@ -395,6 +403,7 @@ export function useMapScreenController() {
 
     // Route actions
     buildRouteTo,
+    centerOnUser,
 
     // Refs
     filtersTabRef,

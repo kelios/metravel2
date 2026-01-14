@@ -90,7 +90,7 @@ describe('RenderTravelItem Component', () => {
 
     expect(screen.getAllByText('Test Travel')[0]).toBeTruthy();
     // Note: Test User and Россия may not be rendered in the current component structure
-    expect(screen.getByTestId('travel-card-1')).toBeTruthy();
+    expect(screen.getByTestId('travel-card-test-travel')).toBeTruthy();
   });
 
   it('renders mobile version correctly', () => {
@@ -111,7 +111,7 @@ describe('RenderTravelItem Component', () => {
 
     expect(screen.getAllByText('Test Travel')[0]).toBeTruthy();
     // Note: Россия may not be rendered in the current component structure
-    expect(screen.getByTestId('travel-card-1')).toBeTruthy();
+    expect(screen.getByTestId('travel-card-test-travel')).toBeTruthy();
   });
 
   it('shows delete button for superuser', () => {

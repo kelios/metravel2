@@ -60,6 +60,7 @@ const buildApiPrefixedUrl = (value: string): string | null => {
 export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
   useEffect(() => {
     if (Platform.OS !== 'web') return
+    const createdLinks: HTMLLinkElement[] = []
     const first = travel?.gallery?.[0]
     if (!first) return
 
@@ -91,17 +92,21 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
       }
     })()
 
-    if (_optimizedHref && !document.querySelector(`link[rel="preload"][href="${_optimizedHref}"]`)) {
+    const rel = document.readyState === 'complete' ? 'prefetch' : 'preload'
+    if (_optimizedHref && !document.querySelector(`link[rel="${rel}"][href="${_optimizedHref}"]`)) {
       const preload = document.createElement('link')
-      preload.rel = 'preload'
+      preload.rel = rel
       preload.as = 'image'
       preload.href = _optimizedHref
       if (responsive.srcSet) preload.setAttribute('imagesrcset', responsive.srcSet)
       if (responsive.sizes) preload.setAttribute('imagesizes', responsive.sizes)
-      preload.fetchPriority = 'high'
-      preload.setAttribute('fetchpriority', 'high')
+      if (rel === 'preload') {
+        preload.fetchPriority = 'high'
+        preload.setAttribute('fetchpriority', 'high')
+      }
       preload.crossOrigin = 'anonymous'
       document.head.appendChild(preload)
+      createdLinks.push(preload)
     }
 
     const apiOrigin = (() => {
@@ -127,8 +132,18 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
         l.href = d
         l.crossOrigin = 'anonymous'
         document.head.appendChild(l)
+        createdLinks.push(l)
       }
     })
+    return () => {
+      createdLinks.forEach((link) => {
+        try {
+          link.parentNode?.removeChild(link)
+        } catch {
+          // noop
+        }
+      })
+    }
   }, [isMobile, travel?.gallery])
 }
 
@@ -210,6 +225,10 @@ export const OptimizedLCPHero: React.FC<{
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
+
+  if (!srcWithRetry) {
+    return <NeutralHeroPlaceholder height={height} />
+  }
 
   if (Platform.OS !== 'web') {
     return (
@@ -306,6 +325,7 @@ export const OptimizedLCPHero: React.FC<{
             decoding="async"
             // @ts-ignore
             fetchpriority="high"
+            crossOrigin="anonymous"
             referrerPolicy="no-referrer"
             data-lcp
             onLoad={onLoad as any}
@@ -364,15 +384,14 @@ export function TravelHeroSection({
     const h = resolvedWidth / (aspectRatio || 16 / 9)
     return Math.max(272, Math.min(h, 544)); // было 320/640 (-15%)
   }, [aspectRatio, isMobile, winH, resolvedWidth])
-  const galleryImages = useMemo(
-    () =>
-      travel.gallery?.map((item, index) =>
-        typeof item === 'string'
-          ? { url: item, id: index }
-          : { ...item, id: item.id || index }
-      ) || [],
-    [travel.gallery]
-  )
+  const galleryImages = useMemo(() => {
+    const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
+    return gallery.map((item, index) =>
+      typeof item === 'string'
+        ? { url: item, id: index }
+        : { ...item, id: item.id || index }
+    )
+  }, [travel.gallery])
   const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : 'Фото путешествия'
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
   const quickJumpLinks = useMemo(() => {

@@ -237,8 +237,8 @@ describe('TravelListItem content & metadata', () => {
       } as any);
       
       // Обе карточки должны иметь одинаковую высоту
-      const contentCard = cardWithContent.getByTestId('travel-card-1');
-      const noContentCard = cardWithoutContent.getByTestId('travel-card-1');
+      const contentCard = cardWithContent.getByTestId('travel-card-test-travel');
+      const noContentCard = cardWithoutContent.getByTestId('travel-card-test-travel');
       
       // Высота должна быть одинаковой (изображение + опциональный контент)
       expect(contentCard.props.style).toEqual(

@@ -80,6 +80,7 @@ interface RightColumnProps {
   renderItem: (travel: Travel, index: number) => React.ReactNode
   cardSpacing?: number
   testID?: string
+  listRef?: React.RefObject<FlatList<Travel[]>>
 }
 
 const RightColumn: React.FC<RightColumnProps> = memo(
@@ -113,9 +114,11 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      footerLoaderStyle,
      renderItem,
      cardSpacing = 16,
+     listRef: externalListRef,
    }) => {
     const router = useRouter()
-    const listRef = useRef<FlatList<Travel[]> | null>(null)
+    const localListRef = useRef<FlatList<Travel[]> | null>(null)
+    const listRef = externalListRef ?? localListRef
     const recommendationsOffsetRef = useRef(0)
     const prevVisibilityRef = useRef(isRecommendationsVisible)
 

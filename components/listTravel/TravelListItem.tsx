@@ -158,19 +158,27 @@ function TravelListItem({
 
     const viewsFormatted = useMemo(() => formatViewCount(views), [views]);
 
-    const travelUrl = useMemo(() => {
-        const key = (typeof slug === 'string' && slug.trim()) ? slug.trim() : id;
-        return `/travels/${key}`;
+    const travelKey = useMemo(() => {
+        if (typeof slug === 'string' && slug.trim()) return slug.trim();
+        if (typeof id === 'number' || typeof id === 'string') return String(id);
+        return '';
     }, [id, slug]);
 
+    const travelUrl = useMemo(() => {
+        if (!travelKey) return '';
+        return `/travels/${travelKey}`;
+    }, [travelKey]);
+
     const navigationUrl = useMemo(() => {
+        if (!travelUrl) return '';
         if (!_isMetravel) return travelUrl;
         return `${travelUrl}?returnTo=${encodeURIComponent('/metravel')}`;
     }, [_isMetravel, travelUrl]);
 
     const cardTestId = useMemo(() => {
-        return selectable ? `travel-card-selectable-${id}` : `travel-card-${id}`;
-    }, [selectable, id]);
+        const suffix = travelKey || 'unknown';
+        return selectable ? `travel-card-selectable-${suffix}` : `travel-card-${suffix}`;
+    }, [selectable, travelKey]);
 
     // ✅ УЛУЧШЕНИЕ: Оптимизация превью под карточку с использованием новых утилит
     const imgUrl = useMemo(() => {
@@ -180,10 +188,10 @@ function TravelListItem({
         return travel_image_thumb_url;
     }, [travel_image_thumb_url]);
 
-    const countries = useMemo(
-        () => (countryName || "").split(",").map((c) => c.trim()).filter(Boolean),
-        [countryName]
-    );
+    const countries = useMemo(() => {
+        const raw = typeof countryName === 'string' ? countryName : String(countryName ?? '');
+        return raw.split(",").map((c) => c.trim()).filter(Boolean);
+    }, [countryName]);
 
     // ✅ Width-based адаптивные значения для карточки: используем фактическую ширину, если она есть
     const effectiveWidth = typeof cardWidth === 'number' ? cardWidth : viewportWidth;
@@ -315,6 +323,7 @@ function TravelListItem({
     }, [prefetchTravelDetails]);
 
     const handlePress = useCallback(() => {
+        if (!navigationUrl) return;
         if (selectable) {
             onToggle?.();
         } else {
@@ -638,6 +647,7 @@ const unifiedCard = (
 );
 
 const card = unifiedCard;
+const isNavigable = Boolean(navigationUrl);
 
 return (
   <View
@@ -661,9 +671,11 @@ return (
               {...(Platform.OS === 'web'
                 ? ({
                     'data-testid': 'travel-card-link',
-                    role: 'link',
-                    tabIndex: 0,
+                    role: isNavigable ? 'link' : 'group',
+                    tabIndex: isNavigable ? 0 : -1,
+                    'aria-disabled': !isNavigable,
                     onClick: (e: any) => {
+                      if (!isNavigable) return;
                       e.stopPropagation();
 
                       const hasModifier =
@@ -685,6 +697,7 @@ return (
                       handlePress();
                     },
                     onKeyDown: (e: any) => {
+                      if (!isNavigable) return;
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         handlePress();

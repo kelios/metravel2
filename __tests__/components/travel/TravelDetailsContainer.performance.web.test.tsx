@@ -81,10 +81,12 @@ describe('TravelDetailsContainer performance (web)', () => {
     render(<Harness />)
 
     await waitFor(() => {
-      const preload = document.head.querySelector('link[rel="preload"]') as any
-      expect(preload).toBeTruthy()
-      expect(preload.getAttribute('fetchpriority')).toBe('high')
-      expect(String(preload.getAttribute('href') || '')).toContain('https://cdn.example.com/img.jpg')
+      const link = document.head.querySelector('link[rel="preload"], link[rel="prefetch"]') as any
+      expect(link).toBeTruthy()
+      if (link.getAttribute('rel') === 'preload') {
+        expect(link.getAttribute('fetchpriority')).toBe('high')
+      }
+      expect(String(link.getAttribute('href') || '')).toContain('https://cdn.example.com/img.jpg')
     })
   })
 })

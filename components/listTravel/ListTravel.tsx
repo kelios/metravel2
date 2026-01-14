@@ -1181,6 +1181,7 @@ function ListTravel({
         cardSpacing={gapSize}
         footerLoaderStyle={styles.footerLoader}
         renderItem={renderTravelListItem}
+        listRef={flatListRef as any}
         testID="travels-list"
       />
     </View>

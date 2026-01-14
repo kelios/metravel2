@@ -12,6 +12,7 @@ import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 import { METRICS } from '@/constants/layout';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { getThemedColors, useTheme } from '@/hooks/useTheme';
+import { showToast } from '@/src/utils/toast';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 
@@ -349,7 +350,11 @@ export default function BookSettingsModal({
       onClose();
     } catch (error) {
       console.error('Failed to save PDF settings:', error);
-      // TODO: Показать toast уведомление об ошибке
+      void showToast({
+        type: 'error',
+        text1: 'Не удалось сохранить настройки PDF',
+        position: 'bottom',
+      });
     } finally {
       setIsSaving(false);
     }
@@ -369,7 +374,11 @@ export default function BookSettingsModal({
       onClose();
     } catch (error) {
       console.error('Failed to generate preview:', error);
-      // TODO: Показать toast уведомление об ошибке
+      void showToast({
+        type: 'error',
+        text1: 'Не удалось создать превью PDF',
+        position: 'bottom',
+      });
     } finally {
       setIsSaving(false);
     }

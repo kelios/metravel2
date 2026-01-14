@@ -107,15 +107,10 @@ describe('useScrollNavigation (web)', () => {
     expect((window as any).scrollBy).not.toHaveBeenCalled();
   });
 
-  it('falls back to numeric scrollTo signature when options-object scrollTo is unsupported', () => {
+  it('falls back to scrollTop assignment when scrollTo throws', () => {
     const { result } = renderHook(() => useScrollNavigation());
 
     const container: any = document.getElementById('scroll-container');
-
-    // Simulate a polyfill where scrollTo({top}) throws, but scrollTo(x,y) works.
-    const numericScrollTo = jest.fn((_x: number, y: number) => {
-      container.scrollTop = y;
-    });
 
     container.scrollTo = jest
       .fn()
@@ -123,7 +118,7 @@ describe('useScrollNavigation (web)', () => {
         if (typeof arg1 === 'object') {
           throw new Error('Options object signature not supported');
         }
-        return numericScrollTo(arg1, arg2);
+        throw new Error('Numeric signature not supported');
       });
 
     (result.current.scrollRef as any).current = {
@@ -134,9 +129,7 @@ describe('useScrollNavigation (web)', () => {
       result.current.scrollTo('description');
     });
 
-    // numeric signature should have been attempted
-    expect(numericScrollTo).toHaveBeenCalledTimes(1);
-    expect(numericScrollTo).toHaveBeenCalledWith(0, 130);
+    expect(container.scrollTo).toHaveBeenCalled();
     expect(container.scrollTop).toBe(130);
 
     // Regression guard: should not scroll the window

@@ -187,7 +187,9 @@ export default function TravelDetailsContainer() {
     const canonical =
       typeof travel?.slug === "string" && travel.slug
         ? `https://metravel.by/travels/${travel.slug}`
-        : undefined;
+        : typeof travel?.id === "number" || typeof travel?.id === "string"
+          ? `https://metravel.by/travels/${travel.id}`
+          : undefined;
     const rawFirst = travel?.gallery?.[0];
     const firstUrl = rawFirst
       ? typeof rawFirst === "string"

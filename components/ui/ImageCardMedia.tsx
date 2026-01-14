@@ -88,10 +88,10 @@ function ImageCardMedia({
     link.rel = rel;
     link.as = 'image';
     link.href = src;
+    link.crossOrigin = 'anonymous';
     if (shouldPreload) {
       link.fetchPriority = 'high';
       link.setAttribute('fetchpriority', 'high');
-      link.crossOrigin = 'anonymous';
     }
     document.head.appendChild(link);
 

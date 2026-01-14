@@ -23,7 +23,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const { param } = useLocalSearchParams();
   const slug = Array.isArray(param) ? param[0] : (param ?? '');
   const idNum = Number(slug);
-  const isId = !Number.isNaN(idNum);
+  const isId = Number.isFinite(idNum) && idNum > 0;
   const normalizedSlug = String(slug ?? '')
     .trim()
     .split('#')[0]
@@ -56,4 +56,3 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     isMissingParam,
   };
 }
-

@@ -135,6 +135,15 @@ function OptimizedImage({
     return null;
   }, [source, validSource]);
 
+  const webCrossOrigin = useMemo(() => {
+    if (Platform.OS !== 'web') return undefined;
+    if (!validSource) return undefined;
+    if (typeof source === 'number') return undefined;
+    if (webBlobOrDataUri) return undefined;
+    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+    return /^https?:\/\//i.test(uri) ? 'anonymous' : undefined;
+  }, [source, validSource, webBlobOrDataUri]);
+
   const shouldRenderBlurBackground =
     Platform.OS !== 'web' && blurBackground && validSource && !webBlobOrDataUri;
 
@@ -258,6 +267,7 @@ function OptimizedImage({
             fetchpriority: fetchPriority,
             alt: alt || '',
             decoding: 'async',
+            crossOrigin: webCrossOrigin,
           })}
           // Кэширование
           cachePolicy={cachePolicy}

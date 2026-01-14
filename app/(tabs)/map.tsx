@@ -50,6 +50,7 @@ export default function MapScreen() {
         refetchMapData,
         invalidateTravelsQuery,
         buildRouteTo,
+        centerOnUser,
         filtersTabRef,
         panelRef,
         coordinates,
@@ -113,17 +114,14 @@ export default function MapScreen() {
                 <Suspense fallback={mapPanelPlaceholder}>
                     <LazyMapMobileLayout
                         mapComponent={mapComponent}
-                        travelsData={travelsData}
-                        coordinates={coordinates}
-                        transportMode={transportMode}
-                        buildRouteTo={buildRouteTo}
-                        onCenterOnUser={() => {
-                            // TODO: Implement center on user location
-                            console.info('Center on user location');
-                        }}
-                        onOpenFilters={selectFiltersTab}
-                        filtersPanelProps={filtersPanelProps}
-                    />
+                    travelsData={travelsData}
+                    coordinates={coordinates}
+                    transportMode={transportMode}
+                    buildRouteTo={buildRouteTo}
+                    onCenterOnUser={centerOnUser}
+                    onOpenFilters={selectFiltersTab}
+                    filtersPanelProps={filtersPanelProps}
+                />
                 </Suspense>
             </>
         );
