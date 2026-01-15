@@ -101,6 +101,8 @@ function OptimizedImage({
   onError,
   style,
 }: OptimizedImageProps) {
+  const disableRemoteImages =
+    __DEV__ && process.env.EXPO_PUBLIC_DISABLE_REMOTE_IMAGES === 'true';
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [overrideUri, setOverrideUri] = useState<string | null>(null);
@@ -167,7 +169,15 @@ function OptimizedImage({
 
     const glue = uri.includes('?') ? '&' : '?';
     return { ...(activeSource as any), uri: `${uri}${glue}__retry=${retryAttempt}` };
-  }, [activeSource, retryAttempt, source]);
+  }, [activeSource, retryAttempt]);
+
+  const shouldDisableNetwork = useMemo(() => {
+    if (!disableRemoteImages) return false;
+    if (typeof activeSource === 'number') return false;
+    const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
+    if (!uri) return false;
+    return !/^(blob:|data:)/i.test(uri);
+  }, [disableRemoteImages, activeSource]);
 
   const webBlobOrDataUri = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -189,7 +199,11 @@ function OptimizedImage({
   }, [activeSource, validSource, webBlobOrDataUri]);
 
   const shouldRenderBlurBackground =
-    Platform.OS !== 'web' && blurBackground && validSource && !webBlobOrDataUri;
+    Platform.OS !== 'web' &&
+    blurBackground &&
+    validSource &&
+    !webBlobOrDataUri &&
+    !shouldDisableNetwork;
 
   const handleLoad = () => {
     setIsLoading(false);
@@ -249,7 +263,7 @@ function OptimizedImage({
   // Определяем приоритет загрузки
   const fetchPriority = priority === 'high' ? 'high' : priority === 'low' ? 'low' : 'auto';
 
-  const showFallback = !blurOnly && (!validSource || hasError);
+  const showFallback = !blurOnly && (!validSource || hasError || shouldDisableNetwork);
 
   return (
     <View
@@ -264,7 +278,7 @@ function OptimizedImage({
         style,
       ]}
     >
-      {!blurOnly && !!webBlobOrDataUri && !hasError && (
+      {!blurOnly && !!webBlobOrDataUri && !hasError && !shouldDisableNetwork && (
         <img
           src={webBlobOrDataUri}
           alt={alt || ''}
@@ -306,7 +320,7 @@ function OptimizedImage({
         </>
       )}
 
-      {!blurOnly && validSource && !webBlobOrDataUri && (
+      {!blurOnly && validSource && !webBlobOrDataUri && !shouldDisableNetwork && (
         <ExpoImage
           {...(imageProps as any)}
           source={resolvedSource}
@@ -336,7 +350,7 @@ function OptimizedImage({
       )}
 
       {/* Индикатор загрузки */}
-      {!blurOnly && validSource && isLoading && !hasError && (
+      {!blurOnly && validSource && isLoading && !hasError && !shouldDisableNetwork && (
         <View style={styles.loadingContainer} testID="optimized-image-loading">
           <ActivityIndicator
             size="small"

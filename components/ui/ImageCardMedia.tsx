@@ -74,6 +74,8 @@ function ImageCardMedia({
   onLoad,
   onError,
 }: Props) {
+  const disableRemoteImages =
+    __DEV__ && process.env.EXPO_PUBLIC_DISABLE_REMOTE_IMAGES === 'true';
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
@@ -82,6 +84,13 @@ function ImageCardMedia({
     if (src) return { uri: src };
     return null;
   }, [source, src]);
+  const shouldDisableNetwork = useMemo(() => {
+    if (!disableRemoteImages) return false;
+    if (!resolvedSource || typeof resolvedSource === 'number') return false;
+    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
+    if (!uri) return false;
+    return !/^(data:|blob:)/i.test(uri);
+  }, [disableRemoteImages, resolvedSource]);
   const webOptimizedSource = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
@@ -158,6 +167,7 @@ function ImageCardMedia({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
+    if (shouldDisableNetwork) return;
     if (!prefetch) return;
     if (priority !== 'high') return;
     if (!prefetchHref) return;
@@ -185,7 +195,7 @@ function ImageCardMedia({
         link.parentNode.removeChild(link);
       }
     };
-  }, [prefetch, priority, prefetchHref, loading]);
+  }, [prefetch, priority, prefetchHref, loading, shouldDisableNetwork]);
 
   return (
     <View
@@ -200,7 +210,7 @@ function ImageCardMedia({
       ]}
       testID={testID}
     >
-      {resolvedSource ? (
+      {resolvedSource && !shouldDisableNetwork ? (
         <>
           {Platform.OS === 'web' && blurBackground && (webBlurSrc || webBlurUri) && (
             <img

@@ -123,6 +123,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   // Очистка Leaflet контейнера при размонтировании, чтобы избежать "Map container is already initialized"
   useEffect(() => {
     const rootEl = rootRef.current;
+    const mapContainerId = mapContainerIdRef.current;
     return () => {
       try {
         if (mapRef.current && typeof mapRef.current.remove === 'function') {
@@ -148,8 +149,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       // Доп. страховка: сбрасываем _leaflet_id только для контейнера этого компонента.
       try {
         const container = (rootEl as any)?.querySelector?.('.leaflet-container') as any;
-        const idContainer = mapContainerIdRef.current
-          ? (document.getElementById(mapContainerIdRef.current) as any)
+        const idContainer = mapContainerId
+          ? (document.getElementById(mapContainerId) as any)
           : null;
         if (container?._leaflet_id) {
           delete container._leaflet_id;
@@ -185,7 +186,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         // noop
       }
     }
-  }, [isWeb]);
+  }, []);
 
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
