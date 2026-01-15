@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { seedNecessaryConsent } from './helpers/storage';
 
 type ClsEntry = {
   value: number;
@@ -38,16 +39,8 @@ async function waitForMainToRender(page: any) {
 }
 
 async function initClsCollector(page: any) {
+  await page.addInitScript(seedNecessaryConsent);
   await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem(
-        'metravel_consent_v1',
-        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-      );
-    } catch {
-      // ignore
-    }
-
     const describeNode = (node: any) => {
       try {
         if (!node) return 'unknown';

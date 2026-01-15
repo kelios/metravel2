@@ -1,24 +1,11 @@
 import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { getTravelsListPath } from './helpers/routes';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 async function preacceptCookiesAndStabilize(page: any) {
-  await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem(
-        'metravel_consent_v1',
-        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-      );
-    } catch {
-      // ignore
-    }
-
-    try {
-      sessionStorage.setItem('recommendations_visible', 'false');
-    } catch {
-      // ignore
-    }
-  });
+  await page.addInitScript(seedNecessaryConsent);
+  await page.addInitScript(hideRecommendationsBanner);
 }
 
 async function gotoWithRetry(page: any, url: string) {

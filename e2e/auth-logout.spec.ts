@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { seedNecessaryConsent } from './helpers/storage';
 
 function hasCreds(): boolean {
   return !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD;
@@ -6,16 +7,7 @@ function hasCreds(): boolean {
 
 test.describe('Auth logout', () => {
   test('logout from profile', async ({ page }) => {
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
 
     await page.goto('/profile', { waitUntil: 'domcontentloaded' });
 

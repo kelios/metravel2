@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 type WebVitalsResult = {
   clsTotal: number;
@@ -62,26 +63,9 @@ const INP_MAX_MS = process.env.CI
 
 test.describe('Web Vitals (CLS/LCP/INP)', () => {
   test('travels page stays stable and fast', async ({ page }: any) => {
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(hideRecommendationsBanner);
     await page.addInitScript(() => {
-      // Hide cookie consent banner by pre-setting consent.
-      // See components/ConsentBanner.tsx (CONSENT_KEY = 'metravel_consent_v1').
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-
-      // Reduce LCP noise in local/dev by disabling the heavy recommendations block.
-      // The app reads this from sessionStorage on web (see ListTravel.tsx).
-      try {
-        sessionStorage.setItem('recommendations_visible', 'false');
-      } catch {
-        // ignore
-      }
-
       (window as any).__e2eVitals = {
         clsTotal: 0,
         clsAfterRender: 0,

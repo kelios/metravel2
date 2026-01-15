@@ -1,26 +1,13 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 test.describe('Footer dock (web mobile) - More modal', () => {
   test('shows More (Ещё), opens modal with legal + support links, and aligns dock item', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-
-      try {
-        sessionStorage.setItem('recommendations_visible', 'false');
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(hideRecommendationsBanner);
 
     // Expo dev server can occasionally return transient ERR_EMPTY_RESPONSE while hot reloading.
     // Retry navigation to reduce flakiness.

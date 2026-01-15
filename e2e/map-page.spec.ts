@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
+import { seedNecessaryConsent } from './helpers/storage';
 
 const maybeRecoverFromWorkletError = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
@@ -79,16 +80,7 @@ const gotoMapWithRecovery = async (page: any) => {
 test.describe('Map Page (/map) - smoke e2e', () => {
   test.beforeEach(async ({ page }) => {
     installNoConsoleErrorsGuard(page);
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
   });
 
   test('desktop: loads map and shows filters panel', async ({ page }) => {

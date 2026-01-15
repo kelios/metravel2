@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { seedNecessaryConsent } from './helpers/storage';
 
 type ClsEntry = {
   value: number;
@@ -77,17 +78,8 @@ test.describe('CLS audit', () => {
       // inflating clsTotal with breakpoint-related relayout.
       await routePage.setViewportSize({ width: 1440, height: 900 });
 
+      await routePage.addInitScript(seedNecessaryConsent);
       await routePage.addInitScript(() => {
-        // Hide cookie consent banner by pre-setting consent.
-        try {
-          window.localStorage.setItem(
-            'metravel_consent_v1',
-            JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-          );
-        } catch {
-          // ignore
-        }
-
         const describeNode = (node: any) => {
           try {
             if (!node) return 'unknown';

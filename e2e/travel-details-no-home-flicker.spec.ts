@@ -1,24 +1,11 @@
 import { test, expect } from './fixtures';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
 
 async function preacceptCookies(page: any) {
-  await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem(
-        'metravel_consent_v1',
-        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-      );
-    } catch {
-      // ignore
-    }
-
-    try {
-      sessionStorage.setItem('recommendations_visible', 'false');
-    } catch {
-      // ignore
-    }
-  });
+  await page.addInitScript(seedNecessaryConsent);
+  await page.addInitScript(hideRecommendationsBanner);
 }
 
 test.describe('Travel details should not flash Home', () => {

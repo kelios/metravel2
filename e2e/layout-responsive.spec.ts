@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { seedNecessaryConsent } from './helpers/storage';
 
 function getNumberEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -11,16 +12,7 @@ function getNumberEnv(name: string, fallback: number): number {
 const SHOULD_CAPTURE_VISUAL = process.env.E2E_VISUAL === '1';
 
 async function preacceptCookies(page: any) {
-  await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem(
-        'metravel_consent_v1',
-        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-      );
-    } catch {
-      // ignore
-    }
-  });
+  await page.addInitScript(seedNecessaryConsent);
 }
 
 async function waitForTravelsListToRender(page: any) {
@@ -177,16 +169,8 @@ test.describe('Responsive layout invariants', () => {
     // It focuses on just '/', with a tunable threshold.
     const CLS_AFTER_RENDER_MAX = getNumberEnv('E2E_CLS_AFTER_RENDER_MAX_TRAVELS', 0.02);
 
+    await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-
       (window as any).__e2eClsTravel = {
         clsTotal: 0,
         clsAfterRender: 0,

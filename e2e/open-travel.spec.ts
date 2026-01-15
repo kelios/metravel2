@@ -1,18 +1,10 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { seedNecessaryConsent } from './helpers/storage';
 
 test.describe('Travel details', () => {
   test('can open a travel details page from list', async ({ page }) => {
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
 
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
 

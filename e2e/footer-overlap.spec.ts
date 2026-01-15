@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 // This test protects against a regression where the mobile footer dock (position: fixed on web)
 // overlaps the main content / skeletons because no bottom gutter is reserved.
@@ -9,24 +10,8 @@ test.describe('Footer dock (web mobile)', () => {
     // Force mobile-ish viewport to trigger Footer mobile dock.
     await page.setViewportSize({ width: 390, height: 844 });
 
-    await page.addInitScript(() => {
-      // Hide cookie consent banner by pre-setting consent.
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-
-      // Reduce noise: keep recommendations collapsed.
-      try {
-        sessionStorage.setItem('recommendations_visible', 'false');
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(hideRecommendationsBanner);
 
     // Expo dev server can occasionally return transient ERR_EMPTY_RESPONSE / ERR_CONNECTION_REFUSED while starting.
     // Retry navigation with backoff to reduce flakiness.

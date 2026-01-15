@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { seedNecessaryConsent } from './helpers/storage';
 
 test.describe('Auth favorites', () => {
   test('favorites tab does not show auth gate after login', async ({ page }) => {
@@ -12,16 +13,7 @@ test.describe('Auth favorites', () => {
     }
 
     // Pre-accept cookies to avoid overlay affecting interactions.
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
 
     // Go directly to the favorites route (more stable than relying on tabs UI).
     await page.goto('/favorites', { waitUntil: 'domcontentloaded' });

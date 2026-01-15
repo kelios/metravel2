@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { seedNecessaryConsent } from './helpers/storage';
 
 async function gotoWithRetry(page: any, url: string) {
   let lastError: any = null;
@@ -32,16 +33,7 @@ async function gotoWithRetry(page: any, url: string) {
 test.describe('Auth smoke', () => {
   test('travels page loads (with storageState if available)', async ({ page }) => {
     // Pre-accept cookies to avoid overlay affecting interactions.
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
 
     // Travels list route is '/'
     await gotoWithRetry(page, getTravelsListPath());

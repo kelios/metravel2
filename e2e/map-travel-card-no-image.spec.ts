@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { seedNecessaryConsent } from './helpers/storage';
 
 const maybeRecoverFromWorkletError = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
@@ -71,16 +72,7 @@ const gotoMapWithRecovery = async (page: any) => {
 
 test.describe('Map Travel Card - UnifiedTravelCard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
 
     await gotoMapWithRecovery(page);
   });

@@ -1,17 +1,9 @@
 import { test, expect } from './fixtures';
+import { seedNecessaryConsent } from './helpers/storage';
 
 test.describe('Roulette', () => {
   test('can spin and get results (or empty) on /roulette', async ({ page }) => {
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
 
     await page.goto('/roulette', { waitUntil: 'domcontentloaded' });
 

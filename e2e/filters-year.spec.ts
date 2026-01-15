@@ -1,18 +1,10 @@
 import { test, expect } from './fixtures';
+import { seedNecessaryConsent } from './helpers/storage';
 
 test.describe('Filters', () => {
   test('year filter can be set', async ({ page }) => {
     await page.goto('/travelsby', { waitUntil: 'domcontentloaded' });
-    await page.addInitScript(() => {
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-    });
+    await page.addInitScript(seedNecessaryConsent);
 
     // На главной странице нет сайдбара, поэтому проверяем рабочую страницу поиска,
     // где фильтры (и поле "Год") доступны на десктопе.

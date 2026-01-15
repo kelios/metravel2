@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { seedNecessaryConsent } from './helpers/storage';
 
 type WebVitalsResult = {
   clsTotal: number;
@@ -57,16 +58,8 @@ const INP_MAX_MS = process.env.CI
   : getNumberEnv('E2E_INP_MAX_MS', 500);
 
 async function setupVitalsCollection(page: any) {
+  await page.addInitScript(seedNecessaryConsent);
   await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem(
-        'metravel_consent_v1',
-        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-      );
-    } catch {
-      // ignore
-    }
-
     (window as any).__e2eVitals = {
       clsTotal: 0,
       clsAfterRender: 0,

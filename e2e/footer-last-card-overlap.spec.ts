@@ -1,11 +1,14 @@
 import { test, expect } from './fixtures';
 import { expectNoOverlap } from './helpers/layoutAsserts';
 import { getTravelsListPath } from './helpers/routes';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 test.describe('Footer dock overlap – last card (web mobile)', () => {
   test('reserves space so last travel card is fully visible', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(hideRecommendationsBanner);
     await page.addInitScript(() => {
       // Intercept travels fetch before any app code runs to guarantee data.
       const mockPayload = {
@@ -52,19 +55,6 @@ test.describe('Footer dock overlap – last card (web mobile)', () => {
         return originalFetch(...args);
       };
 
-      try {
-        window.localStorage.setItem(
-          'metravel_consent_v1',
-          JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-        );
-      } catch {
-        // ignore
-      }
-      try {
-        sessionStorage.setItem('recommendations_visible', 'false');
-      } catch {
-        // ignore
-      }
     });
 
     // Navigate with retries to reduce flakiness on dev server cold start.

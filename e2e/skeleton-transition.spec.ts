@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 async function preacceptCookies(page: any) {
   await page.addInitScript(() => {
@@ -11,23 +12,10 @@ async function preacceptCookies(page: any) {
     } catch {
       // ignore
     }
-
-    try {
-      window.localStorage.setItem(
-        'metravel_consent_v1',
-        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-      );
-    } catch {
-      // ignore
-    }
-
-    // Keep base UI stable for the skeleton test.
-    try {
-      sessionStorage.setItem('recommendations_visible', 'false');
-    } catch {
-      // ignore
-    }
   });
+  await page.addInitScript(seedNecessaryConsent);
+  // Keep base UI stable for the skeleton test.
+  await page.addInitScript(hideRecommendationsBanner);
 }
 
 async function assertNoHorizontalScroll(page: any) {

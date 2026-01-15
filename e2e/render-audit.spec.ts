@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
 
@@ -10,23 +11,9 @@ const VIEWPORTS = [
 ];
 
 async function preacceptCookiesAndStabilize(page: any) {
-  await page.addInitScript(() => {
-    try {
-      window.localStorage.setItem(
-        'metravel_consent_v1',
-        JSON.stringify({ necessary: true, analytics: false, date: new Date().toISOString() })
-      );
-    } catch {
-      // ignore
-    }
-
-    // Reduce perf noise in audits: recommendations can be heavy and not critical for base layout.
-    try {
-      sessionStorage.setItem('recommendations_visible', 'false');
-    } catch {
-      // ignore
-    }
-  });
+  await page.addInitScript(seedNecessaryConsent);
+  // Reduce perf noise in audits: recommendations can be heavy and not critical for base layout.
+  await page.addInitScript(hideRecommendationsBanner);
 }
 
 async function waitForAppShell(page: any) {
