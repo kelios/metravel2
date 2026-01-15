@@ -24,9 +24,10 @@ const reportPath = path.resolve(
 )
 const targetUrl = process.env.LIGHTHOUSE_URL || `http://${host}:${port}/`
 const lighthousePackage = process.env.LIGHTHOUSE_PACKAGE || 'lighthouse'
+const defaultFlags = ['--only-categories=performance', '--emulated-form-factor=desktop', '--throttling-method=provided']
 const extraFlags = process.env.LIGHTHOUSE_FLAGS
   ? process.env.LIGHTHOUSE_FLAGS.split(' ').filter(Boolean)
-  : []
+  : defaultFlags
 
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',

@@ -4,7 +4,6 @@ import {
   Platform,
   StyleSheet,
   Image as RNImage,
-  Text,
 } from "react-native";
 import { CustomRendererProps } from "react-native-render-html";
 import { useResponsive } from '@/hooks/useResponsive';
@@ -163,10 +162,13 @@ const CustomImageRenderer = ({ tnode, contentWidth }: CustomImageRendererProps) 
         />
 
         {err && (
-          <View style={[StyleSheet.absoluteFillObject, styles.errorContainer]}>
-            <Text style={styles.errorText}>📷</Text>
-            <Text style={[styles.errorMessage, { color: colors.textMuted }]}>Не удалось загрузить</Text>
-          </View>
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              styles.errorContainer,
+              { backgroundColor: colors.backgroundSecondary },
+            ]}
+          />
         )}
       </View>
     </View>
@@ -204,8 +206,5 @@ const styles = StyleSheet.create({
   errorContainer: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "transparent",
   },
-  errorText: { fontSize: 32, marginBottom: 8 },
-  errorMessage: { fontSize: 14, textAlign: "center" },
 });

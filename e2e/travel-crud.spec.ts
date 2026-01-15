@@ -51,7 +51,7 @@ const basePayload = {
 };
 
 test.describe('Travel CRUD (API)', () => {
-  test('create, edit, delete travel via API', async ({ baseURL }) => {
+  test('create, edit, delete travel via API', async ({ baseURL, createdTravels }) => {
     const token = process.env.E2E_API_TOKEN;
     if (!token) {
       test.info().annotations.push({
@@ -71,30 +71,38 @@ test.describe('Travel CRUD (API)', () => {
       },
     });
 
-    // Create
-    const createResp = await apiContext.put(UPsert_PATH, { data: { ...basePayload } });
-    expect(createResp.ok()).toBeTruthy();
-    const created = await createResp.json();
-    expect(created.id).toBeTruthy();
-    const travelId = created.id;
+    let travelId: string | number | null = null;
+    try {
+      // Create
+      const createResp = await apiContext.put(UPsert_PATH, { data: { ...basePayload } });
+      expect(createResp.ok()).toBeTruthy();
+      const created = await createResp.json();
+      expect(created.id).toBeTruthy();
+      travelId = created.id;
+      createdTravels.add(travelId);
 
-    // Read
-    const readResp = await apiContext.get(`${BASE_PATH}/${travelId}/`);
-    expect(readResp.ok()).toBeTruthy();
-    const readData = await readResp.json();
-    expect(readData.name).toBe(basePayload.name);
+      // Read
+      const readResp = await apiContext.get(`${BASE_PATH}/${travelId}/`);
+      expect(readResp.ok()).toBeTruthy();
+      const readData = await readResp.json();
+      expect(readData.name).toBe(basePayload.name);
 
-    // Update
-    const newName = `${basePayload.name} (edited)`;
-    const updateResp = await apiContext.put(UPsert_PATH, {
-      data: { ...basePayload, id: travelId, name: newName },
-    });
-    expect(updateResp.ok()).toBeTruthy();
-    const updated = await updateResp.json();
-    expect(updated.name).toBe(newName);
-
-    // Delete (best-effort, ignore 404)
-    const deleteResp = await apiContext.delete(`${BASE_PATH}/${travelId}/`);
-    expect(deleteResp.ok() || deleteResp.status() === 404).toBeTruthy();
+      // Update
+      const newName = `${basePayload.name} (edited)`;
+      const updateResp = await apiContext.put(UPsert_PATH, {
+        data: { ...basePayload, id: travelId, name: newName },
+      });
+      expect(updateResp.ok()).toBeTruthy();
+      const updated = await updateResp.json();
+      expect(updated.name).toBe(newName);
+    } finally {
+      if (travelId != null) {
+        const deleteResp = await apiContext.delete(`${BASE_PATH}/${travelId}/`).catch(() => null);
+        if (deleteResp) {
+          expect(deleteResp.ok() || deleteResp.status() === 404).toBeTruthy();
+        }
+      }
+      await apiContext.dispose();
+    }
   });
 });

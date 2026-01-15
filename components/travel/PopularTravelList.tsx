@@ -332,7 +332,7 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
       return (
         <View style={styles.loadingContainer} onLayout={onLayout}>
           <Text style={styles.errorText}>
-            {hasError ? 'Ошибка загрузки маршрутов' : 'Нет популярных маршрутов 😔'}
+            {hasError ? 'Ошибка загрузки маршрутов' : 'Нет популярных маршрутов'}
           </Text>
         </View>
       );

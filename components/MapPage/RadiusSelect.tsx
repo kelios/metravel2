@@ -10,6 +10,7 @@ import {
     ActivityIndicator,
     FlatList,
 } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 interface Option {
@@ -114,7 +115,7 @@ const RadiusSelect: React.FC<RadiusSelectProps> = ({
                 disabled={disabled || loading}
             >
                 <View style={styles.leftIcon}>
-                    <Text style={{ fontSize: 16 }}>📡</Text>
+                    <Feather name="radio" size={16} color={themeColors.textMuted} />
                 </View>
 
                 {loading ? (

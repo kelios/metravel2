@@ -159,9 +159,12 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
           accessibilityRole="button"
           accessibilityLabel="Полезно"
         >
-          <Text style={[styles.reactionIcon, userReaction === 'like' && styles.reactionIconActive]}>
-            👍
-          </Text>
+          <Feather
+            name="thumbs-up"
+            size={compact ? 14 : 16}
+            color={userReaction === 'like' ? colors.primary : colors.textMuted}
+            style={styles.reactionIcon}
+          />
           {reactions.like > 0 && (
             <Text style={[styles.reactionCount, compact && styles.textCompact]}>
               {formatNumber(reactions.like)}
@@ -180,9 +183,12 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
           accessibilityRole="button"
           accessibilityLabel="Вдохновляет"
         >
-          <Text style={[styles.reactionIcon, userReaction === 'love' && styles.reactionIconActive]}>
-            ❤️
-          </Text>
+          <Feather
+            name="heart"
+            size={compact ? 14 : 16}
+            color={userReaction === 'love' ? colors.primary : colors.textMuted}
+            style={styles.reactionIcon}
+          />
           {reactions.love > 0 && (
             <Text style={[styles.reactionCount, compact && styles.textCompact]}>
               {formatNumber(reactions.love)}
@@ -201,9 +207,12 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
           accessibilityRole="button"
           accessibilityLabel="Круто"
         >
-          <Text style={[styles.reactionIcon, userReaction === 'fire' && styles.reactionIconActive]}>
-            🔥
-          </Text>
+          <Feather
+            name="zap"
+            size={compact ? 14 : 16}
+            color={userReaction === 'fire' ? colors.primary : colors.textMuted}
+            style={styles.reactionIcon}
+          />
           {reactions.fire > 0 && (
             <Text style={[styles.reactionCount, compact && styles.textCompact]}>
               {formatNumber(reactions.fire)}

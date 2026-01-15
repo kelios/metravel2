@@ -1,11 +1,12 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Platform, Pressable } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface BadgeNotificationProps {
   badgeName: string;
-  badgeIcon: string;
+  badgeIcon: keyof typeof Feather.glyphMap;
   badgeColor: string;
   visible: boolean;
   onDismiss: () => void;
@@ -82,11 +83,11 @@ const BadgeNotification = ({
     >
       <Pressable onPress={handleDismiss} style={styles.content}>
         <View style={[styles.iconContainer, { backgroundColor: badgeColor }]}>
-          <Text style={styles.icon}>{badgeIcon}</Text>
+          <Feather name={badgeIcon} size={24} color={colors.textOnDark} />
         </View>
         
         <View style={styles.textContainer}>
-          <Text style={styles.title}>🎉 Новое достижение!</Text>
+          <Text style={styles.title}>Новое достижение!</Text>
           <Text style={styles.badgeName}>{badgeName}</Text>
         </View>
       </Pressable>

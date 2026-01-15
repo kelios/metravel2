@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useAboutStyles } from './aboutStyles';
 
@@ -22,27 +22,18 @@ export const VideoCard: React.FC<Props> = ({ youtubeThumb, onOpenYoutube }) => {
         accessibilityRole="button"
         accessibilityLabel="Смотреть инструкцию на YouTube"
       >
-        {Platform.OS === 'web' ? (
-          // @ts-ignore
-          <img
-            src={youtubeThumb}
-            alt="YouTube видео о MeTravel"
-            style={styles.videoThumbWeb}
-            loading="lazy"
-            decoding="async"
-          />
-        ) : (
-          <ImageCardMedia
-            src={youtubeThumb}
-            fit="cover"
-            blurBackground={false}
-            transition={200}
-            cachePolicy="memory-disk"
-            priority="low"
-            placeholderBlurhash="L6PZfSi_.AyE_3t7t7R**0o#DgRj"
-            style={styles.videoThumb}
-          />
-        )}
+        <ImageCardMedia
+          src={youtubeThumb}
+          alt="YouTube видео о MeTravel"
+          fit="contain"
+          blurBackground
+          borderRadius={0}
+          transition={200}
+          cachePolicy="memory-disk"
+          priority="low"
+          placeholderBlurhash="L6PZfSi_.AyE_3t7t7R**0o#DgRj"
+          style={styles.videoThumb}
+        />
         <View style={styles.playBadge}>
           <View style={styles.playIconContainer}>
             <Text style={styles.playIcon}>▶</Text>

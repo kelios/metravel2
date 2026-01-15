@@ -136,16 +136,16 @@ interface ActivityItemProps {
 const ActivityItem = memo(({ activity, colors, styles }: ActivityItemProps) => {
   const { type, userName, timestamp, data } = activity;
 
-  const getActivityIcon = (): string => {
+  const getActivityIcon = (): keyof typeof Feather.glyphMap => {
     switch (type) {
-      case 'article_published': return '📝';
-      case 'badge_earned': return data.badgeIcon || '🏆';
-      case 'level_up': return '⬆️';
-      case 'reaction_received': return '❤️';
-      case 'comment_received': return '💬';
-      case 'photo_added': return '📸';
-      case 'route_added': return '🗺️';
-      default: return '✨';
+      case 'article_published': return 'file-text';
+      case 'badge_earned': return 'award';
+      case 'level_up': return 'trending-up';
+      case 'reaction_received': return 'heart';
+      case 'comment_received': return 'message-circle';
+      case 'photo_added': return 'camera';
+      case 'route_added': return 'map';
+      default: return 'activity';
     }
   };
 
@@ -154,7 +154,7 @@ const ActivityItem = memo(({ activity, colors, styles }: ActivityItemProps) => {
       case 'article_published':
         return `опубликовал статью "${data.articleTitle}"`;
       case 'badge_earned':
-        return `получил бейдж ${data.badgeIcon} ${data.badgeName}`;
+        return `получил бейдж ${data.badgeName || 'без названия'}`;
       case 'level_up':
         return `достиг уровня ${data.levelName}`;
       case 'reaction_received':
@@ -200,7 +200,7 @@ const ActivityItem = memo(({ activity, colors, styles }: ActivityItemProps) => {
       disabled={!isClickable}
     >
       <View style={styles.activityIcon}>
-        <Text style={styles.activityIconText}>{getActivityIcon()}</Text>
+        <Feather name={getActivityIcon()} size={16} color={colors.textOnDark} />
       </View>
 
       <View style={styles.activityContent}>

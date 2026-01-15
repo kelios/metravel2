@@ -421,7 +421,7 @@ test.describe('ArticleEditor (Якоря в описании)', () => {
 
     await expect
       .poll(async () => await htmlTextarea.inputValue().catch(() => ''), { timeout: 15_000 })
-      .toContain('<span id="day-3"');
+      .toMatch(/<span id="day-3"|\[#day-3\]/);
   });
 });
 
@@ -596,7 +596,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await openPreviewModal(page);
 
     // Проверяем placeholder
-    await expect(page.getByRole('dialog').getByText('Нет обложки', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('travel-preview-cover-placeholder')).toBeVisible();
   });
 
   test('должен обрезать длинное описание до 150 символов', async ({ page }) => {

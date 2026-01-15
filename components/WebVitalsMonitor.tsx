@@ -167,7 +167,7 @@ export const WebVitalsMonitor: React.FC<WebVitalsMonitorProps> = ({
   return (
     <div style={styles.container as any}>
       <View style={styles.header}>
-        <Text style={styles.title}>📊 Web Vitals</Text>
+        <Text style={styles.title}>Web Vitals</Text>
         <Pressable
           style={styles.closeButton}
           onPress={handleClose}

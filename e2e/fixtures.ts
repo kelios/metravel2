@@ -13,7 +13,12 @@ export const test = base.extend<{
         tracker.dispose();
 
         const ctxFromEnv = await apiContextFromEnv().catch(() => null);
-        const ctx = ctxFromEnv ?? apiContextFromTracker({ apiBase: tracker.getApiBase?.() ?? null });
+        const ctx =
+          ctxFromEnv ??
+          apiContextFromTracker({
+            apiBase: tracker.getApiBase?.() ?? null,
+            token: tracker.getToken?.() ?? null,
+          });
         if (ctx) {
           const ids = Array.from(tracker.ids);
           for (const id of ids) {

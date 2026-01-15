@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, fireEvent, render, waitFor, type RenderAPI } from '@testing-library/react-native'
+import { act, fireEvent, render, type RenderAPI } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import Slider, { type SliderImage } from '@/components/travel/Slider'
 
@@ -80,43 +80,17 @@ describe('Slider', () => {
     expect(landscapeRender.getByTestId('slider-blur-bg-0')).toBeTruthy()
   })
 
-  it('shows placeholder when image fails to load', async () => {
-    const { getByTestId, getByText, queryByTestId } = await renderSlider([portraitImage])
+  it('shows neutral placeholder when image fails to load', async () => {
+    const { getByTestId, queryByTestId, queryByText } = await renderSlider([portraitImage])
     const image = getByTestId('slider-image-0')
 
     act(() => {
       image.props.onError?.()
     })
 
-    expect(getByTestId('slider-placeholder-0')).toBeTruthy()
-    expect(getByText('Фото не загрузилось')).toBeTruthy()
-    expect(queryByTestId('slider-loading-overlay-0')).toBeNull()
-  })
-
-  it('shows neutral placeholder for first slide when neutralFirstSlideErrorPlaceholder is enabled', async () => {
-    const { getByTestId, queryByTestId, queryByText } = render(
-      <Slider
-        images={[portraitImage]}
-        showArrows={false}
-        showDots={false}
-        autoPlay={false}
-        preloadCount={0}
-        blurBackground
-        neutralFirstSlideErrorPlaceholder
-      />
-    )
-
-    const image = getByTestId('slider-image-0')
-
-    await act(async () => {
-      image.props.onError?.()
-    })
-
-    await waitFor(() => {
-      expect(queryByTestId('slider-neutral-placeholder-0')).toBeTruthy()
-    })
-    expect(queryByTestId('slider-placeholder-0')).toBeNull()
+    expect(getByTestId('slider-neutral-placeholder-0')).toBeTruthy()
     expect(queryByText('Фото не загрузилось')).toBeNull()
+    expect(queryByTestId('slider-loading-overlay-0')).toBeNull()
   })
 
   it('renders arrows on desktop when enabled and hides them on mobile when hideArrowsOnMobile is true', async () => {
@@ -154,7 +128,7 @@ describe('Slider', () => {
     expect(apiMobile.queryByLabelText('Next slide')).toBeNull()
   })
 
-  it('uses flat background for web first slide while not loaded, then shows blur background after load', async () => {
+  it('uses blurred background on web while loading and after load', async () => {
     ;(Platform as any).OS = 'web'
 
     const { getByTestId, queryByTestId } = render(
@@ -168,16 +142,14 @@ describe('Slider', () => {
       />
     )
 
-    // Web + first slide + status=loading => shouldRenderBlurBg=false
-    expect(getByTestId('slider-flat-bg-0')).toBeTruthy()
-    expect(queryByTestId('slider-blur-bg-0')).toBeNull()
+    expect(getByTestId('slider-blur-bg-0')).toBeTruthy()
+    expect(queryByTestId('slider-flat-bg-0')).toBeNull()
 
     const img = getByTestId('slider-image-0')
     act(() => {
       img.props.onLoad?.()
     })
 
-    expect(queryByTestId('slider-flat-bg-0')).toBeNull()
     expect(getByTestId('slider-blur-bg-0')).toBeTruthy()
   })
 

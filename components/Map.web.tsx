@@ -1,5 +1,5 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
-import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -99,6 +99,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   const rootRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
+  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
+  const mapContainerIdRef = useRef<string>(`metravel-leaflet-map-${Math.random().toString(36).slice(2)}`);
 
   const buildGoogleMapsUrl = useCallback((coord: string) => {
     const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
@@ -146,14 +148,44 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       // Доп. страховка: сбрасываем _leaflet_id только для контейнера этого компонента.
       try {
         const container = (rootEl as any)?.querySelector?.('.leaflet-container') as any;
+        const idContainer = mapContainerIdRef.current
+          ? (document.getElementById(mapContainerIdRef.current) as any)
+          : null;
         if (container?._leaflet_id) {
           delete container._leaflet_id;
+        }
+        if (idContainer?._leaflet_id) {
+          delete idContainer._leaflet_id;
         }
       } catch {
         // noop
       }
     };
   }, []);
+
+  // React/Leaflet: если контейнер "завис" с _leaflet_id, очистим его до инициализации карты.
+  useLayoutEffect(() => {
+    if (!isWeb) return;
+    const containerId = mapContainerIdRef.current;
+    if (!containerId || typeof document === 'undefined') return;
+
+    const container = document.getElementById(containerId) as any;
+    if (!container || !container._leaflet_id || mapRef.current) return;
+
+    try {
+      if (container._leaflet_map && typeof container._leaflet_map.remove === 'function') {
+        container._leaflet_map.remove();
+      }
+    } catch {
+      // noop
+    } finally {
+      try {
+        delete container._leaflet_id;
+      } catch {
+        // noop
+      }
+    }
+  }, [isWeb]);
 
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
@@ -453,7 +485,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     const handleShareTelegram = useCallback(() => {
       if (!coord) return;
       const mapUrl = buildGoogleMapsUrl(coord);
-      const text = `📍 Координаты: ${coord}`;
+      const text = `Координаты: ${coord}`;
       const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`;
       try {
         if (typeof window !== 'undefined') {
@@ -628,6 +660,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         zoom={7}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom
+        id={mapContainerIdRef.current}
+        key={mapInstanceKeyRef.current}
         // чутка экономим на анимациях
         preferCanvas
         whenCreated={(map: any) => {

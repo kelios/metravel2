@@ -26,6 +26,9 @@
     "build:web": "npx expo export -p web",
     "analyze:bundle": "node scripts/analyze-bundle.js",
     "lighthouse": "node scripts/run-lighthouse.js",
+    "lighthouse:travel": "node scripts/lighthouse-travel-score.js",
+    "lighthouse:travel:mobile": "LIGHTHOUSE_FORM_FACTOR=mobile node scripts/lighthouse-travel-score.js",
+    "lighthouse:travel:desktop": "LIGHTHOUSE_FORM_FACTOR=desktop node scripts/lighthouse-travel-score.js",
     "clean": "npx expo start --clear",
     "reset": "EXPO_RESET_CACHE=true npx expo start --clear",
     "prod:web": "NODE_ENV=production npx expo export -p web",
@@ -197,7 +200,8 @@
     "tar": "^6.2.1",
     "yaml": "^2.5.1",
     "follow-redirects": "^1.15.6",
-    "cookie": "^0.6.0"
+    "cookie": "^0.6.0",
+    "quill": "^2.0.2"
   },
   "prettier": {
     "jsxBracketSameLine": true,

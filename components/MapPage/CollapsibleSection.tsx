@@ -1,7 +1,7 @@
 // components/MapPage/CollapsibleSection.tsx
 import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutAnimation, Platform, UIManager } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -60,7 +60,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
       >
         <View style={styles.collapsibleTitle}>
           {icon && (
-            <Icon name={icon} size={18} color={colors.text} style={styles.titleIcon} />
+            <MaterialIcons name={icon as any} size={18} color={colors.text} style={styles.titleIcon} />
           )}
           <Text style={styles.sectionLabel}>{title}</Text>
           {badge !== undefined && badge !== null && badge !== '' && (
@@ -69,7 +69,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
             </View>
           )}
         </View>
-        <Icon
+        <MaterialIcons
           name={open ? 'expand-less' : 'expand-more'}
           size={20}
           color={colors.textMuted}
@@ -138,4 +138,3 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
 });
 
 export default CollapsibleSection;
-

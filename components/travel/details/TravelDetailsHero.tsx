@@ -21,6 +21,7 @@ import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
   getPreferredImageFormat,
+  optimizeImageUrl,
 } from '@/utils/imageOptimization'
 import type { Travel } from '@/src/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -73,11 +74,12 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
     const versionedHref = buildVersioned(imageUrl, updatedAt, id)
     const targetWidth =
       typeof window !== 'undefined'
-        ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
+        ? Math.min(window.innerWidth || 1200, isMobile ? 360 : 1200)
         : 1200
+    const lcpQuality = isMobile ? 60 : 80
     const responsive = buildResponsiveImageProps(versionedHref, {
       maxWidth: targetWidth,
-      quality: isMobile ? 75 : 85,
+      quality: lcpQuality,
       format: getPreferredImageFormat(),
       fit: 'contain',
       sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 860px',
@@ -93,11 +95,12 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
     })()
 
     const rel = document.readyState === 'complete' ? 'prefetch' : 'preload'
-    if (_optimizedHref && !document.querySelector(`link[rel="${rel}"][href="${_optimizedHref}"]`)) {
+    const preloadHref = buildApiPrefixedUrl(_optimizedHref) ?? _optimizedHref
+    if (preloadHref && !document.querySelector(`link[rel="${rel}"][href="${preloadHref}"]`)) {
       const preload = document.createElement('link')
       preload.rel = rel
       preload.as = 'image'
-      preload.href = _optimizedHref
+      preload.href = preloadHref
       if (responsive.srcSet) preload.setAttribute('imagesrcset', responsive.srcSet)
       if (responsive.sizes) preload.setAttribute('imagesizes', responsive.sizes)
       if (rel === 'preload') {
@@ -210,12 +213,13 @@ export const OptimizedLCPHero: React.FC<{
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9
   const targetWidth =
     typeof window !== 'undefined'
-      ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
+      ? Math.min(window.innerWidth || 1200, isMobile ? 360 : 1200)
       : 1200
+  const lcpQuality = isMobile ? 60 : 80
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
-    quality: isMobile ? 75 : 85,
+    quality: lcpQuality,
     format: getPreferredImageFormat(),
     fit: 'contain',
     sizes: isMobile
@@ -224,6 +228,19 @@ export const OptimizedLCPHero: React.FC<{
   })
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
+  const blurSrc = useMemo(() => {
+    if (!srcWithRetry) return '';
+    return (
+      optimizeImageUrl(srcWithRetry, {
+        width: 64,
+        height: 64,
+        quality: 30,
+        blur: 30,
+        fit: 'cover',
+        format: 'auto',
+      }) ?? srcWithRetry
+    );
+  }, [srcWithRetry])
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
 
   if (!srcWithRetry) {
@@ -307,6 +324,23 @@ export const OptimizedLCPHero: React.FC<{
             }}
           />
           <img
+            src={blurSrc}
+            alt=""
+            aria-hidden
+            crossOrigin="anonymous"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              filter: 'blur(18px)',
+              transform: 'scale(1.08)',
+            }}
+            loading="eager"
+            decoding="async"
+          />
+          <img
             src={srcWithRetry}
             srcSet={responsive.srcSet}
             sizes={responsive.sizes}
@@ -356,6 +390,7 @@ export function TravelHeroSection({
   onFirstImageLoad,
   sectionLinks,
   onQuickJump,
+  deferExtras = false,
 }: {
   travel: Travel
   anchors: AnchorsMap
@@ -364,11 +399,13 @@ export function TravelHeroSection({
   onFirstImageLoad: () => void
   sectionLinks: TravelSectionLink[]
   onQuickJump: (key: string) => void
+  deferExtras?: boolean
 }) {
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()
   const { width: winW, height: winH } = useWindowDimensions()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
+  const [extrasReady, setExtrasReady] = useState(!deferExtras || Platform.OS !== 'web')
   const firstImg = (travel?.gallery?.[0] ?? null) as unknown as ImgLike | null
   const aspectRatio =
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
@@ -399,6 +436,30 @@ export function TravelHeroSection({
       Boolean
     ) as TravelSectionLink[]
   }, [sectionLinks])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      setExtrasReady(true)
+      return
+    }
+    if (!deferExtras) {
+      setExtrasReady(true)
+      return
+    }
+
+    let cancelled = false
+    const kick = () => {
+      if (!cancelled) setExtrasReady(true)
+    }
+    if (typeof (window as any)?.requestIdleCallback === 'function') {
+      ;(window as any).requestIdleCallback(kick, { timeout: 1200 })
+    } else {
+      setTimeout(kick, 800)
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [deferExtras])
 
   return (
     <>
@@ -451,16 +512,15 @@ export function TravelHeroSection({
               onLoad={onFirstImageLoad}
             />
           ) : (
-            <Slider
-              key={`${isMobile ? 'mobile' : 'desktop'}`}
-              images={galleryImages}
-              showArrows={!isMobile}
-              hideArrowsOnMobile
-              showDots={isMobile}
-              preloadCount={isMobile ? 1 : 2}
-              blurBackground
-              neutralFirstSlideErrorPlaceholder
-              aspectRatio={aspectRatio as number}
+              <Slider
+                key={`${isMobile ? 'mobile' : 'desktop'}`}
+                images={galleryImages}
+                showArrows={!isMobile}
+                hideArrowsOnMobile
+                showDots={isMobile}
+                preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
+                blurBackground
+                aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.6}
               onFirstImageLoad={onFirstImageLoad}
             />
@@ -474,12 +534,16 @@ export function TravelHeroSection({
         accessibilityLabel="Краткие факты"
         style={[styles.sectionContainer, styles.contentStable, styles.quickFactsContainer]}
       >
-        <Suspense fallback={<View style={{ minHeight: 72 }} />}>
-          <QuickFacts travel={travel} />
-        </Suspense>
+        {extrasReady ? (
+          <Suspense fallback={<View style={{ minHeight: 72 }} />}>
+            <QuickFacts travel={travel} />
+          </Suspense>
+        ) : (
+          <View style={{ minHeight: 72 }} />
+        )}
       </View>
 
-      {isMobile && travel.travelAddress && (
+      {isMobile && travel.travelAddress && extrasReady && (
         <View
           accessibilityRole="none"
           accessibilityLabel="Погода"
@@ -491,7 +555,7 @@ export function TravelHeroSection({
         </View>
       )}
 
-      {quickJumpLinks.length > 0 && (
+      {quickJumpLinks.length > 0 && extrasReady && (
         <View style={[styles.sectionContainer, styles.contentStable, styles.quickJumpWrapper]}>
           {isMobile ? (
             <ScrollView
@@ -530,7 +594,7 @@ export function TravelHeroSection({
         </View>
       )}
 
-      {isMobile && (
+      {isMobile && extrasReady && (
         <View
           testID="travel-details-primary-actions"
           accessibilityRole="none"
@@ -543,7 +607,7 @@ export function TravelHeroSection({
         </View>
       )}
 
-      {!isMobile && (
+      {!isMobile && extrasReady && (
         <View
           testID="travel-details-author"
           accessibilityRole="none"

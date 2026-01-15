@@ -8,7 +8,7 @@ import {
     ActivityIndicator,
     Platform,
 } from 'react-native';
-import { Text, IconButton } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import * as Clipboard from 'expo-clipboard';
 import { TravelCoords } from '@/src/types/types';
@@ -130,7 +130,7 @@ const AddressListItem: React.FC<Props> = ({
     const openTelegram = useCallback(async () => {
         if (!coord) return;
         const mapUrl = buildMapUrl(coord);
-        const text = `📍 Координаты: ${coord}`;
+        const text = `Координаты: ${coord}`;
 
         const deeplinks = [
             `tg://msg_url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`,
@@ -345,6 +345,31 @@ const AddressListItem: React.FC<Props> = ({
         );
     }
 
+    const ActionIconButton = ({
+        name,
+        size,
+        color,
+        onPress,
+        style,
+        accessibilityLabel,
+    }: {
+        name: keyof typeof Feather.glyphMap;
+        size: number;
+        color: string;
+        onPress?: () => void;
+        style?: any;
+        accessibilityLabel: string;
+    }) => (
+        <Pressable
+            onPress={onPress}
+            style={({ pressed }) => [style, pressed && { opacity: 0.85 }]}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel}
+        >
+            <Feather name={name} size={size} color={color} />
+        </Pressable>
+    );
+
     return (
       <Pressable
         style={[styles.card, { height }]}
@@ -392,35 +417,35 @@ const AddressListItem: React.FC<Props> = ({
               {/* верхние иконки — по hover на web, всегда на мобиле */}
               {showOverlays && (
                 <View style={styles.iconCol}>
-                    <IconButton
-                      icon="eye-off"
+                    <ActionIconButton
+                      name="eye-off"
                       size={iconSize}
                       onPress={onHidePress ? handleIconPress(onHidePress) : undefined}
-                      iconColor={colors.textOnDark}
+                      color={colors.textOnDark}
                       style={[styles.iconBtnDanger, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Скрыть объект"
                     />
-                    <IconButton
-                      icon="link"
+                    <ActionIconButton
+                      name="link"
                       size={iconSize}
                       onPress={handleIconPress(openArticle)}
-                      iconColor={isNoImage ? colors.text : colors.textOnDark}
+                      color={isNoImage ? colors.text : colors.textOnDark}
                       style={[isNoImage ? styles.iconBtnLight : styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Открыть статью"
                     />
-                    <IconButton
-                      icon="content-copy"
+                    <ActionIconButton
+                      name="copy"
                       size={iconSize}
                       onPress={handleIconPress(copyCoords)}
-                      iconColor={isNoImage ? colors.text : colors.textOnDark}
+                      color={isNoImage ? colors.text : colors.textOnDark}
                       style={[isNoImage ? styles.iconBtnLight : styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Скопировать координаты"
                     />
-                    <IconButton
-                      icon="send"
+                    <ActionIconButton
+                      name="send"
                       size={iconSize}
                       onPress={handleIconPress(openTelegram)}
-                      iconColor={isNoImage ? colors.text : colors.textOnDark}
+                      color={isNoImage ? colors.text : colors.textOnDark}
                       style={[isNoImage ? styles.iconBtnLight : styles.iconBtn, { width: iconButtonSize, height: iconButtonSize }]}
                       accessibilityLabel="Поделиться в Telegram"
                     />
@@ -443,11 +468,19 @@ const AddressListItem: React.FC<Props> = ({
                     {distanceInfo && (
                       <View style={styles.distanceRow}>
                           <View style={styles.distanceBadge}>
-                              <Text style={styles.distanceText}>📍 {distanceInfo.distanceText}</Text>
+                              <View style={styles.distanceTextRow}>
+                                  <Feather name="map-pin" size={12} color={colors.textOnPrimary} />
+                                  <Text style={styles.distanceText}>{distanceInfo.distanceText}</Text>
+                              </View>
                           </View>
                           <View style={styles.timeBadge}>
                               <Text style={styles.timeText}>
-                                  {transportMode === 'car' ? '🚗' : transportMode === 'bike' ? '🚴' : '🚶'} {distanceInfo.travelTimeText}
+                                  {transportMode === 'car'
+                                    ? 'Авто'
+                                    : transportMode === 'bike'
+                                      ? 'Велосипед'
+                                      : 'Пешком'}{' '}
+                                  {distanceInfo.travelTimeText}
                               </Text>
                           </View>
                       </View>
@@ -610,6 +643,11 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         paddingHorizontal: 10,
         paddingVertical: 6,
         ...colors.shadows.light,
+    },
+    distanceTextRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
     },
     distanceText: {
         color: colors.textOnPrimary,

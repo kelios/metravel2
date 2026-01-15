@@ -1,7 +1,7 @@
 // MapErrorBoundary.tsx
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemeContext, getThemedColors } from '@/hooks/useTheme';
 
 interface Props {
@@ -102,7 +102,7 @@ class MapErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <View style={styles.content}>
-            <Icon name="error-outline" size={48} color={colors.danger} />
+            <MaterialIcons name="error-outline" size={48} color={colors.danger} />
             <Text style={styles.title}>Ошибка загрузки карты</Text>
             <Text style={styles.message}>
               {this.state.error?.message || 'Произошла непредвиденная ошибка'}
@@ -114,7 +114,7 @@ class MapErrorBoundary extends Component<Props, State> {
               ]}
               onPress={this.handleReset}
             >
-              <Icon name="refresh" size={20} color={colors.textOnPrimary} />
+              <MaterialIcons name="refresh" size={20} color={colors.textOnPrimary} />
               <Text style={styles.buttonText}>Попробовать снова</Text>
             </Pressable>
           </View>

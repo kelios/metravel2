@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
@@ -165,13 +165,13 @@ export function StepProgressSidebar({
         const isClickable = !!onStepSelect && (isCompleted || step.id <= currentStep + 1);
 
         return (
-          <View
+          <Pressable
             key={step.id}
             style={[
               sidebarStyles.stepItem,
               isActive && sidebarStyles.stepItemActive,
             ]}
-            onTouchEnd={() => isClickable && onStepSelect?.(step.id)}
+            onPress={() => isClickable && onStepSelect?.(step.id)}
             accessibilityRole="button"
             accessibilityLabel={`Шаг ${step.id}: ${step.title}`}
             accessibilityState={{ selected: isActive }}
@@ -210,7 +210,7 @@ export function StepProgressSidebar({
                 isCompleted && sidebarStyles.connectorCompleted,
               ]} />
             )}
-          </View>
+          </Pressable>
         );
       })}
     </View>
@@ -285,4 +285,3 @@ const sidebarStyles = StyleSheet.create({
 });
 
 export default ResponsiveWizardLayout;
-

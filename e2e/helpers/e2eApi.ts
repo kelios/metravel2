@@ -91,10 +91,10 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
   return null;
 }
 
-export function apiContextFromTracker(opts: { apiBase?: string | null } = {}): E2EApiContext | null {
+export function apiContextFromTracker(opts: { apiBase?: string | null; token?: string | null } = {}): E2EApiContext | null {
   const apiBase = String(opts.apiBase ?? '').trim().replace(/\/+$/, '');
   if (!apiBase) return null;
-  const token = tokenFromStorageState();
+  const token = normalizeToken(opts.token || '') || tokenFromStorageState();
   if (!token) return null;
   return { apiBase, token };
 }
@@ -102,6 +102,7 @@ export function apiContextFromTracker(opts: { apiBase?: string | null } = {}): E
 export function installCreatedTravelsTracker(page: any) {
   const ids = new Set<string | number>();
   let apiBase: string | null = null;
+  let token: string | null = null;
 
   const handler = async (resp: any) => {
     try {
@@ -120,6 +121,12 @@ export function installCreatedTravelsTracker(page: any) {
       const method = String(req?.method?.() ?? '').toUpperCase();
       if (method !== 'PUT' && method !== 'POST') return;
       if (!resp.ok?.()) return;
+      if (!token) {
+        const headers = (req?.headers?.() ?? {}) as Record<string, string>;
+        const auth = headers.authorization || headers.Authorization || '';
+        const normalized = normalizeToken(auth);
+        if (normalized) token = normalized;
+      }
 
       const json = await resp.json().catch(() => null);
       const id = json?.id ?? json?.data?.id;
@@ -134,6 +141,7 @@ export function installCreatedTravelsTracker(page: any) {
   return {
     ids,
     getApiBase: () => apiBase,
+    getToken: () => token,
     dispose: () => {
       try {
         page.off('response', handler);

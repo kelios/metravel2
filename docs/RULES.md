@@ -16,6 +16,9 @@ npm run lint
 npm run test:run
 ```
 
+- Always run `npm run lint` and `npm run test:run` at the end of a task to verify nothing broke.
+- If you find unused code during work, remove it.
+
 ## UI rules
 
 ### Images and placeholders
@@ -27,6 +30,7 @@ npm run test:run
   - no emoji
   - no bright accent colors
 - Placeholder must preserve the same geometry (size/radii) as the real media to avoid layout jumps.
+- Images must preserve original aspect ratio (use `contain`) and any unused area should be filled by a blurred version of the same image.
 
 ### Icons
 

@@ -503,6 +503,13 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                         <View style={styles.previewContainer as any}>
                             <img
                                 src={currentDisplayUrl}
+                                alt=""
+                                aria-hidden
+                                referrerPolicy="no-referrer"
+                                style={styles.previewBlur as any}
+                            />
+                            <img
+                                src={currentDisplayUrl}
                                 alt="Предпросмотр"
                                 referrerPolicy="no-referrer"
                                 style={styles.previewImage as any}
@@ -645,8 +652,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 <View style={styles.nativePreviewContainer}>
                     <ImageCardMedia
                         src={currentDisplayUrl}
-                        fit="cover"
-                        blurBackground={false}
+                        fit="contain"
+                        blurBackground
                         loading="lazy"
                         priority="low"
                         style={styles.nativePreviewImage as any}
@@ -743,11 +750,23 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
         overflow: 'hidden',
         borderRadius: DESIGN_TOKENS.radii.md,
     },
+    previewBlur: {
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        filter: 'blur(18px)',
+        transform: 'scale(1.08)',
+        pointerEvents: 'none',
+    },
     previewImage: {
         display: 'block',
         width: '100%',
         height: '100%',
         objectFit: 'contain',
+        position: 'relative',
+        zIndex: 1,
     },
     removeButton: {
         position: 'absolute',

@@ -270,8 +270,8 @@ function AccountMenu() {
             {isAuthenticated && avatarUri ? (
               <ImageCardMedia
                 src={avatarUri}
-                fit="cover"
-                blurBackground={false}
+                fit="contain"
+                blurBackground
                 borderRadius={12}
                 style={styles.avatar}
                 loading="lazy"

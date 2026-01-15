@@ -190,7 +190,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
     onQuickDraft, // ✅ НОВОЕ: Handler быстрого черновика
     primaryLabel,
     saveLabel = 'Сохранить',
-    quickDraftLabel = '💾 Быстрый черновик', // ✅ НОВОЕ: Текст кнопки
+    quickDraftLabel = 'Быстрый черновик', // ✅ НОВОЕ: Текст кнопки
     primaryDisabled = false,
     onLayout,
     currentStep,
@@ -248,7 +248,7 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                 style={styles.quickDraftButtonMobile}
                                 compact
                             >
-                                💾
+                                <Feather name="save" size={16} color={colors.text} />
                             </Button>
                         )}
 

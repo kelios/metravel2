@@ -71,6 +71,30 @@
   npm run lighthouse     # Цель: Performance > 90
   ```
 
+- [ ] **Performance (локально, mobile + desktop)**
+  Цель: зеленый скор (>= 80) на основных страницах.
+
+  ```bash
+  # 1) Собрать web
+  yarn build:web
+
+  # 2) Mobile
+  yarn lighthouse:travel:mobile
+  LIGHTHOUSE_PATH=/ yarn lighthouse:travel:mobile
+  LIGHTHOUSE_PATH=/search yarn lighthouse:travel:mobile
+  LIGHTHOUSE_PATH=/map yarn lighthouse:travel:mobile
+
+  # 3) Desktop
+  yarn lighthouse:travel:desktop
+  LIGHTHOUSE_PATH=/ yarn lighthouse:travel:desktop
+  LIGHTHOUSE_PATH=/search yarn lighthouse:travel:desktop
+  LIGHTHOUSE_PATH=/map yarn lighthouse:travel:desktop
+  ```
+
+  Примечания:
+  - Порог можно повысить через `LIGHTHOUSE_MIN_SCORE=0.9`
+  - Любую страницу можно проверить через `LIGHTHOUSE_PATH=/нужная-страница`
+
 - [ ] **Analytics**
   - [ ] Настроить Google Analytics 4 (ключ уже в .env)
   - [ ] Настроить Yandex Metrika (ID уже в .env)
@@ -165,4 +189,3 @@ npm run build:all:prod
 **Последнее обновление:** 3 января 2026  
 **Статус:** ✅ Google Maps проблемы исправлены, зависимости оптимизированы  
 **См. полный отчет:** `PRODUCTION_READINESS_REPORT.md`
-

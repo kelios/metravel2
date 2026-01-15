@@ -310,12 +310,6 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     height: '100%',
     backgroundColor: colors.backgroundTertiary,
   },
-  videoThumbWeb: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
-    display: Platform.OS === 'web' ? ('block' as any) : undefined,
-  },
   videoCardPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
   playBadge: {
     width: 80,

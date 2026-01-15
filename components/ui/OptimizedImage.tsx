@@ -12,6 +12,32 @@ const hasValidUriSource = (source: { uri: string } | number): boolean => {
   return uri.length > 0;
 };
 
+const isPrivateOrLocalHost = (host: string): boolean => {
+  const h = String(host || '').trim().toLowerCase();
+  if (!h) return false;
+  if (h === 'localhost' || h === '127.0.0.1') return true;
+  if (/^10\./.test(h)) return true;
+  if (/^192\.168\./.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
+  return false;
+};
+
+const buildApiPrefixedUrl = (value: string): string | null => {
+  try {
+    const baseRaw =
+      process.env.EXPO_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+    if (!/\/api\/?$/i.test(baseRaw)) return null;
+
+    const apiOrigin = baseRaw.replace(/\/api\/?$/, '');
+    const parsed = new URL(value, apiOrigin);
+    if (parsed.pathname.startsWith('/api/')) return null;
+
+    return `${apiOrigin}/api${parsed.pathname}${parsed.search}`;
+  } catch {
+    return null;
+  }
+};
+
 interface OptimizedImageProps {
   source: { uri: string } | number;
   contentFit?: ImageContentFit;
@@ -77,18 +103,36 @@ function OptimizedImage({
 }: OptimizedImageProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
-  const validSource = hasValidUriSource(source);
+  const [overrideUri, setOverrideUri] = useState<string | null>(null);
+  const activeSource = useMemo(() => {
+    if (typeof source === 'number') return source;
+    const uri = overrideUri ?? (typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '');
+    return uri ? { ...(source as any), uri } : source;
+  }, [source, overrideUri]);
+  const validSource = hasValidUriSource(activeSource as any);
   const [isLoading, setIsLoading] = useState(() => validSource);
   const [hasError, setHasError] = useState(false);
   const [retryAttempt, setRetryAttempt] = useState(0);
   const [lastUriKey, setLastUriKey] = useState('');
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const uriKey = useMemo(() => {
+  const originalUriKey = useMemo(() => {
     if (typeof source === 'number') return '__asset__';
     const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
     return uri;
   }, [source]);
+  const uriKey = useMemo(() => {
+    if (typeof activeSource === 'number') return '__asset__';
+    const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
+    return uri;
+  }, [activeSource]);
+
+  useEffect(() => {
+    if (!overrideUri) return;
+    if (originalUriKey && originalUriKey !== overrideUri) {
+      setOverrideUri(null);
+    }
+  }, [originalUriKey, overrideUri]);
 
   useEffect(() => {
     if (uriKey === lastUriKey) return;
@@ -113,36 +157,36 @@ function OptimizedImage({
   }, []);
 
   const resolvedSource = useMemo(() => {
-    if (typeof source === 'number') return source;
-    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
-    if (!uri) return source;
-    if (/^(blob:|data:)/i.test(uri)) return source;
-    if (!/^https?:\/\//i.test(uri)) return source;
+    if (typeof activeSource === 'number') return activeSource;
+    const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
+    if (!uri) return activeSource;
+    if (/^(blob:|data:)/i.test(uri)) return activeSource;
+    if (!/^https?:\/\//i.test(uri)) return activeSource;
 
-    if (retryAttempt <= 0) return source;
+    if (retryAttempt <= 0) return activeSource;
 
     const glue = uri.includes('?') ? '&' : '?';
-    return { ...(source as any), uri: `${uri}${glue}__retry=${retryAttempt}` };
-  }, [source, retryAttempt]);
+    return { ...(activeSource as any), uri: `${uri}${glue}__retry=${retryAttempt}` };
+  }, [activeSource, retryAttempt, source]);
 
   const webBlobOrDataUri = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!validSource) return null;
-    if (typeof source === 'number') return null;
-    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+    if (typeof activeSource === 'number') return null;
+    const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
     if (!uri) return null;
     if (/^(blob:|data:)/i.test(uri)) return uri;
     return null;
-  }, [source, validSource]);
+  }, [activeSource, validSource]);
 
   const webCrossOrigin = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
     if (!validSource) return undefined;
-    if (typeof source === 'number') return undefined;
+    if (typeof activeSource === 'number') return undefined;
     if (webBlobOrDataUri) return undefined;
-    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+    const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
     return /^https?:\/\//i.test(uri) ? 'anonymous' : undefined;
-  }, [source, validSource, webBlobOrDataUri]);
+  }, [activeSource, validSource, webBlobOrDataUri]);
 
   const shouldRenderBlurBackground =
     Platform.OS !== 'web' && blurBackground && validSource && !webBlobOrDataUri;
@@ -154,13 +198,30 @@ function OptimizedImage({
   };
 
   const handleError = () => {
-    const uri = typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '';
+    const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
+    if (!overrideUri && uri) {
+      const fallback = buildApiPrefixedUrl(uri);
+      if (fallback && fallback !== uri) {
+        setOverrideUri(fallback);
+        onError?.();
+        return;
+      }
+    }
+
+    let isPrivateHost = false;
+    try {
+      const parsed = new URL(uri);
+      isPrivateHost = isPrivateOrLocalHost(parsed.hostname);
+    } catch {
+      isPrivateHost = false;
+    }
     const canRetry =
       Platform.OS === 'web' &&
-      typeof source !== 'number' &&
+      typeof activeSource !== 'number' &&
       uri.length > 0 &&
       /^https?:\/\//i.test(uri) &&
-      !/^(blob:|data:)/i.test(uri);
+      !/^(blob:|data:)/i.test(uri) &&
+      !isPrivateHost;
 
     // Retry a few times with cache-busting query param.
     if (canRetry && retryAttempt < 6) {

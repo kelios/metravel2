@@ -825,7 +825,7 @@ const WebMapComponent = ({
                                                         <ImageCardMedia
                                                             src={normalizeImageUrl(marker.image)}
                                                             alt="Фото"
-                                                            fit="cover"
+                                                            fit="contain"
                                                             blurBackground
                                                             loading="lazy"
                                                             priority="low"

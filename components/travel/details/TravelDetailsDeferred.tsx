@@ -305,8 +305,8 @@ const LazyYouTube: React.FC<{ url: string }> = ({ url }) => {
       >
         <ImageCardMedia
           src={`https://img.youtube.com/vi/${id}/hqdefault.jpg`}
-          fit="cover"
-          blurBackground={false}
+          fit="contain"
+          blurBackground
           cachePolicy="memory-disk"
           style={StyleSheet.absoluteFill}
           borderRadius={DESIGN_TOKENS.radii.md}

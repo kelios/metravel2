@@ -86,7 +86,7 @@ const ImageZoomModal = ({ image, visible, onClose }: { image: any; visible: bool
                     </PinchGestureHandler>
                 </GestureHandlerRootView>
                 <Pressable style={styles.closeButton} onPress={onClose} hitSlop={10}><Text style={styles.closeButtonText}>✕</Text></Pressable>
-                <View style={styles.zoomHintContainer}><Text style={styles.zoomHint}>🔍 Двумя пальцами увеличивай фото</Text></View>
+                <View style={styles.zoomHintContainer}><Text style={styles.zoomHint}>Используйте два пальца, чтобы увеличить фото</Text></View>
             </View>
         </Modal>
     );
@@ -174,7 +174,7 @@ const StepCard = memo((props: StepCardProps) => {
             {/* Заголовок */}
             <View style={styles.cardHeader}>
                 <View style={[styles.stepNumber, isPassed && styles.stepNumberCompleted]}>
-                    <Text style={styles.stepNumberText}>{step.id === 'intro' ? '🎯' : index}</Text>
+                    <Text style={styles.stepNumberText}>{step.id === 'intro' ? '0' : index}</Text>
                 </View>
                 <View style={styles.headerContent}>
                     <Text style={styles.stepTitle}>{step.title}</Text>
@@ -262,7 +262,7 @@ const StepCard = memo((props: StepCardProps) => {
                         )
                 )}
 
-                {hintVisible && step.hint && (<View style={styles.hintContainer}><Text style={styles.hintText}>💡 {step.hint}</Text></View>)}
+                {hintVisible && step.hint && (<View style={styles.hintContainer}><Text style={styles.hintText}>Подсказка: {step.hint}</Text></View>)}
 
                 {isPassed && (
                     <View style={styles.answerContainer}>
@@ -447,7 +447,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const FinaleDot = ({ active }: { active: boolean }) => (
         <Pressable onPress={() => setShowFinaleOnly(true)}
                    style={[styles.stepDotMini, active ? styles.stepDotMiniActive : styles.stepDotMiniUnlocked]} hitSlop={6}>
-            <Text style={[styles.stepDotMiniText, active && { color: colors.textOnPrimary }]}>🏁</Text>
+            <Text style={[styles.stepDotMiniText, active && { color: colors.textOnPrimary }]}>Ф</Text>
         </Pressable>
     );
 
@@ -531,7 +531,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                             <Pressable key={s.id} onPress={() => { if (isUnlocked) goToStep(i); }}
                                                        style={[styles.stepDotMini, isUnlocked && styles.stepDotMiniUnlocked, isActive && styles.stepDotMiniActive, isDone && styles.stepDotMiniDone, !isUnlocked && styles.stepDotMiniLocked]}
                                                        hitSlop={6}>
-                                                <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '🎯' : i}</Text>
+                                                <Text style={[styles.stepDotMiniText, (isActive || isDone) && { color: colors.textOnPrimary }]}>{s.id === 'intro' ? '0' : i}</Text>
                                             </Pressable>
                                         );
                                     }

@@ -66,7 +66,6 @@ export interface SliderProps {
   blurBackground?: boolean;
   onFirstImageLoad?: () => void;
   mobileHeightPercent?: number;
-  neutralFirstSlideErrorPlaceholder?: boolean;
 }
 
 export interface SliderRef {
@@ -186,27 +185,25 @@ const useSliderTheme = () => {
   return { colors, styles };
 };
 
-const appendCacheBust = (uri: string, token: number) => {
-  if (!token) return uri;
-  const sep = uri.includes("?") ? "&" : "?";
-  return `${uri}${sep}retry=${token}`;
-};
-
 const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: number, isFirst: boolean = false) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
+  const isWeb = Platform.OS === "web";
 
   // ✅ УЛУЧШЕНИЕ: Оптимизация размера изображения для контейнера
   if (containerWidth && img.width && img.height) {
     const aspectRatio = img.width / img.height;
-    const optimalSize = getOptimalImageSize(containerWidth, containerHeight, aspectRatio);
+    const cappedWidth = isWeb ? Math.min(containerWidth, 1200) : containerWidth;
+    const optimalSize = getOptimalImageSize(cappedWidth, containerHeight, aspectRatio);
+    const quality = isWeb ? (isFirst ? 75 : 70) : isFirst ? 90 : 85;
 
     // Не обрезаем изображение по высоте: сохраняем исходные пропорции, подстраиваясь только по ширине
     return (
       optimizeImageUrl(versionedUrl, {
         width: optimalSize.width,
         format: getPreferredImageFormat(),
-        quality: isFirst ? 90 : 85, // Выше качество для первого изображения
+        quality,
         fit: "contain",
+        ...(isWeb ? { dpr: 1 } : null),
       }) || versionedUrl
     );
   }
@@ -284,7 +281,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     blurBackground = true,
     onFirstImageLoad,
     mobileHeightPercent = MOBILE_HEIGHT_PERCENT,
-    neutralFirstSlideErrorPlaceholder = false,
   } = props;
 
   const insets = useSafeAreaInsets();
@@ -314,7 +310,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const [loadStatuses, setLoadStatuses] = useState<LoadStatus[]>(() =>
     images.map(() => "loading")
   );
-  const [retryTokens, setRetryTokens] = useState<number[]>(() => images.map(() => 0));
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
   const [prefetchEnabled, setPrefetchEnabled] = useState(
     Platform.OS !== "web" ? true : canPrefetchOnWeb
@@ -322,7 +317,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   useEffect(() => {
     setLoadStatuses(images.map(() => "loading"));
-    setRetryTokens(images.map(() => 0));
     setShowSwipeHint(images.length > 1);
     setPrefetchEnabled(Platform.OS !== "web" ? true : canPrefetchOnWeb);
   }, [images, canPrefetchOnWeb]);
@@ -336,23 +330,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     });
   }, []);
 
-  const retryImage = useCallback(
-    (idx: number) => {
-      setRetryTokens((prev) => {
-        const next = [...prev];
-        next[idx] = (next[idx] ?? 0) + 1;
-        return next;
-      });
-      updateLoadStatus(idx, "loading");
-      if (idx === 0) {
-        onFirstImageLoad?.();
-        if (!prefetchEnabled && (Platform.OS !== 'web' || canPrefetchOnWeb)) {
-          setPrefetchEnabled(true);
-        }
-      }
-    },
-    [onFirstImageLoad, prefetchEnabled, updateLoadStatus, canPrefetchOnWeb]
-  );
   const dismissSwipeHint = useCallback(() => setShowSwipeHint(false), []);
   useEffect(() => {
     if (!showSwipeHint) return;
@@ -396,9 +373,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           containerH ?? computeHeight(containerW),
           idx === 0
         );
-        return appendCacheBust(base, retryTokens[idx] ?? 0);
+        return base;
       }),
-    [images, containerW, containerH, computeHeight, retryTokens]
+    [images, containerW, containerH, computeHeight]
   );
 
   // начальная высота по AR, потом обновляется при layout
@@ -625,8 +602,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       // пока он не загрузился — используем плоский фон, чтобы избежать расхождений с тестами/LCP.
       const shouldRenderBlurBg =
         shouldBlur &&
-        status !== "error" &&
-        !(Platform.OS === "web" && isFirstSlide && status !== "loaded");
+        status !== "error";
 
       const useElevatedWrapper = Platform.OS === 'web' && !isMobile && (isPortrait || isSquareish);
       // Показываем всю картинку: используем contain на всех платформах
@@ -661,30 +637,10 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           >
             <View style={styles.imageCardSurface}>
               {status === "error" ? (
-                neutralFirstSlideErrorPlaceholder && isFirstSlide ? (
-                  <View
-                    style={styles.neutralPlaceholder}
-                    testID={`slider-neutral-placeholder-${index}`}
-                  />
-                ) : (
-                  <View style={styles.placeholder} testID={`slider-placeholder-${index}`}>
-                    <Feather name="image" size={32} color={colors.textMuted} />
-                    <Text style={styles.placeholderTitle}>Фото не загрузилось</Text>
-                    <Text style={styles.placeholderSubtitle}>
-                      Проверьте подключение или попробуйте позже
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => retryImage(index)}
-                      style={styles.retryBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel="Повторить загрузку фото"
-                      hitSlop={10}
-                      activeOpacity={0.85}
-                    >
-                      <Text style={styles.retryBtnText}>Повторить</Text>
-                    </TouchableOpacity>
-                  </View>
-                )
+                <View
+                  style={styles.neutralPlaceholder}
+                  testID={`slider-neutral-placeholder-${index}`}
+                />
               ) : (
                 <ImageCardMedia
                   src={uri}
@@ -745,7 +701,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [
       uriMap,
       blurBackground,
-      colors.textMuted,
       colors.textOnDark,
       containerW,
       containerH,
@@ -764,16 +719,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       styles.img,
       styles.loadingOverlay,
       styles.neutralPlaceholder,
-      styles.placeholder,
-      styles.placeholderSubtitle,
-      styles.placeholderTitle,
-      styles.retryBtn,
-      styles.retryBtnText,
       styles.slide,
       updateLoadStatus,
-      retryImage,
       prefetchEnabled,
-      neutralFirstSlideErrorPlaceholder,
       isMobile,
     ]
   );
@@ -968,16 +916,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     height: "100%",
     borderRadius: 0,
   },
-  placeholder: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 24,
-    backgroundColor: colors.surface,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-  },
   neutralPlaceholder: {
     width: "100%",
     height: "100%",
@@ -992,36 +930,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         boxSizing: "border-box",
       },
     }),
-  },
-  placeholderTitle: {
-    color: colors.text,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: "600",
-    marginTop: 12,
-    textAlign: "center",
-  },
-  placeholderSubtitle: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    marginTop: 4,
-    textAlign: "center",
-  },
-  retryBtn: {
-    marginTop: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: colors.primary,
-    ...Platform.select({
-      web: {
-        cursor: "pointer",
-      },
-    }),
-  },
-  retryBtnText: {
-    color: colors.textOnPrimary,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: "600",
   },
   loadingOverlay: {
     position: "absolute",

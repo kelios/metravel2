@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { TravelFormData } from '@/src/types/types';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface TravelPreviewModalProps {
     visible: boolean;
@@ -100,16 +101,15 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                     <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                         <View style={styles.previewCard}>
                             {coverImage ? (
-                                <Image
-                                    source={{ uri: coverImage }}
+                                <ImageCardMedia
+                                    src={coverImage}
+                                    alt={formData.name || 'Обложка путешествия'}
+                                    fit="contain"
+                                    blurBackground
                                     style={styles.cardImage}
-                                    resizeMode="cover"
                                 />
                             ) : (
-                                <View style={styles.cardImagePlaceholder}>
-                                    <Feather name="image" size={48} color={colors.textMuted} />
-                                    <Text style={styles.placeholderText}>Нет обложки</Text>
-                                </View>
+                                <View style={styles.cardImagePlaceholder} testID="travel-preview-cover-placeholder" />
                             )}
 
                             <View style={styles.cardContent}>
@@ -225,14 +225,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     cardImagePlaceholder: {
         width: '100%',
         height: 200,
-        backgroundColor: colors.surfaceMuted,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    placeholderText: {
-        marginTop: DESIGN_TOKENS.spacing.sm,
-        fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: colors.textMuted,
+        backgroundColor: colors.backgroundSecondary,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.borderLight,
     },
     cardContent: {
         padding: DESIGN_TOKENS.spacing.md,

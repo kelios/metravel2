@@ -1,5 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -7,7 +8,7 @@ export interface Badge {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: keyof typeof Feather.glyphMap;
   color: string;
   progress?: number;
   maxProgress?: number;
@@ -46,7 +47,11 @@ const BadgeCard = ({ badge, size = 'medium' }: BadgeCardProps) => {
           },
         ]}
       >
-        <Text style={{ fontSize: config.iconSize }}>{icon}</Text>
+        <Feather
+          name={icon}
+          size={config.iconSize}
+          color={earned ? colors.textOnDark : colors.textMuted}
+        />
         
         {!earned && maxProgress > 1 && (
           <View style={styles.progressContainer}>

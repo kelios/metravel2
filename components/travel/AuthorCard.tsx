@@ -209,8 +209,8 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               width={avatarSize}
               height={avatarSize}
               borderRadius={avatarBorderRadius}
-              fit="cover"
-              blurBackground={false}
+              fit="contain"
+              blurBackground
               priority="low"
               loading="lazy"
               style={[styles.avatar, isMobile && styles.avatarMobile]}

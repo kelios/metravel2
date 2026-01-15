@@ -105,7 +105,6 @@ function CompactSideBarTravel({
   const navLinksSource = Array.isArray(links) && links.length ? links : null;
   const [active, setActive] = useState<string>("");
   const [showAllCategories, setShowAllCategories] = useState(false);
-  const placeholderIconSize = isWeb ? 44 : 60;
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
@@ -339,14 +338,14 @@ function CompactSideBarTravel({
               width={styles.avatar.width as any}
               height={styles.avatar.height as any}
               borderRadius={styles.avatar.borderRadius as any}
-              fit="cover"
-              blurBackground={false}
+              fit="contain"
+              blurBackground
               priority="low"
               loading="lazy"
               style={styles.avatar}
             />
           ) : (
-            <MaterialIcons name="image" size={placeholderIconSize} color={mutedText} />
+            <View style={[styles.avatar, styles.avatarPlaceholder]} />
           )}
         </View>
 
@@ -773,6 +772,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...(Platform.OS === 'web' ? {
       boxShadow: '0 4px 12px rgba(122, 157, 143, 0.2), 0 2px 4px rgba(122, 157, 143, 0.1)',
     } as any : {}),
+  },
+  avatarPlaceholder: {
+    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.borderLight,
   },
   
   infoSection: {

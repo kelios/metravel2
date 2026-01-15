@@ -114,7 +114,7 @@ describe('useScrollNavigation (web)', () => {
 
     container.scrollTo = jest
       .fn()
-      .mockImplementation((arg1: any, arg2?: any) => {
+      .mockImplementation((arg1: any, _arg2?: any) => {
         if (typeof arg1 === 'object') {
           throw new Error('Options object signature not supported');
         }

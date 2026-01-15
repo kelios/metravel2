@@ -77,7 +77,7 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
       onPress={onPress}
       metaText={location || ' '}
       badge={badge}
-      mediaFit={Platform.OS === 'web' ? 'cover' : 'contain'}
+      mediaFit="contain"
       heroTitleOverlay={false}
       contentSlot={contentSlot}
       width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (tabCardTemplate.container as any)?.width)}

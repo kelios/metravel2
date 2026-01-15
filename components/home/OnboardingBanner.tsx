@@ -253,13 +253,13 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
-            <Text style={styles.icon}>🌟</Text>
+            <Feather name="star" size={24} color={colors.primary} />
           </View>
 
           <View style={styles.textContainer}>
             <Text style={styles.title}>Готов поделиться своим путешествием?</Text>
             <Text style={styles.description}>
-              Создай первую историю и получи бейдж <Text style={styles.badge}>🌟 Первопроходца</Text>
+              Создай первую историю и получи бейдж <Text style={styles.badge}>Первопроходца</Text>
             </Text>
 
             {/* Прогресс-бар */}

@@ -13,6 +13,15 @@ const resolveIsDark = () => {
   return document.documentElement.getAttribute('data-theme') === 'dark';
 };
 
+const resolveIconName = (icon?: string): keyof typeof Feather.glyphMap => {
+  if (!icon) return 'bell';
+  const glyphMap = (Feather as any).glyphMap as Record<string, number> | undefined;
+  if (glyphMap && Object.prototype.hasOwnProperty.call(glyphMap, icon)) {
+    return icon as keyof typeof Feather.glyphMap;
+  }
+  return 'bell';
+};
+
 export type NotificationType = 
   | 'badge_earned'
   | 'level_up'
@@ -188,7 +197,7 @@ const NotificationItem = memo(({ notification, onPress }: NotificationItemProps)
         onPress={onPress}
       >
         <View style={[styles.notificationIcon, { backgroundColor: color }]}>
-          <Text style={styles.notificationIconText}>{icon}</Text>
+          <Feather name={resolveIconName(icon)} size={16} color={colors.textOnDark} />
         </View>
 
         <View style={styles.notificationContent}>
@@ -363,7 +372,7 @@ export const checkDraftReminders = async () => {
       type: 'reminder_draft',
       title: 'У вас есть незавершенная статья',
       message: 'Продолжите работу над статьей "Путешествие в горы"',
-      icon: '📝',
+      icon: 'file-text',
       color: colors.primaryLight,
     });
 

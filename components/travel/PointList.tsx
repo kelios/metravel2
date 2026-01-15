@@ -368,7 +368,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
   // ✅ исправленный Telegram share
   const onShare = useCallback(async (coordStr: string) => {
     const mapUrl = buildMapUrl(coordStr);
-    const text = `📍 Координаты: ${coordStr}`;
+    const text = `Координаты: ${coordStr}`;
 
     // 1) пытаемся открыть приложение Telegram
     const tgDeepLinks = [

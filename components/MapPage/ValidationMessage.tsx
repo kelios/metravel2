@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface ValidationMessageProps {
@@ -55,7 +55,7 @@ const ValidationMessage: React.FC<ValidationMessageProps> = ({ type, messages })
 
   return (
     <View style={[styles.container, isError ? styles.errorContainer : styles.warningContainer]}>
-      <Icon name={iconName} size={18} color={iconColor} style={styles.icon} />
+      <MaterialIcons name={iconName} size={18} color={iconColor} style={styles.icon} />
       <View style={styles.textContainer}>
         {messages.map((message, index) => (
           <Text key={index} style={[styles.text, isError ? styles.errorText : styles.warningText]}>

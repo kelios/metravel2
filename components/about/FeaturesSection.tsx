@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useAboutStyles } from './aboutStyles';
+import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
   isWide: boolean;
@@ -32,6 +34,7 @@ const roadmapFeatures = [
 
 export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
   const styles = useAboutStyles();
+  const colors = useThemedColors();
   return (
     <View style={styles.featuresSection}>
       <View style={styles.sectionHeader}>
@@ -42,7 +45,7 @@ export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
       <View style={isWide ? styles.twoColumns : styles.oneColumn}>
         <View style={[isWide ? styles.column : null, styles.featureCard]}>
           <View style={styles.featureCardHeader}>
-            <Text style={styles.featureCardIcon}>✨</Text>
+            <Feather name="star" size={18} color={colors.primary} style={styles.featureCardIcon} />
             <Text style={styles.featureCardTitle}>Доступно сейчас</Text>
           </View>
           <View style={styles.featureList}>
@@ -57,7 +60,7 @@ export const FeaturesSection: React.FC<Props> = ({ isWide }) => {
 
         <View style={[isWide ? styles.column : null, styles.featureCard]}>
           <View style={styles.featureCardHeader}>
-            <Text style={styles.featureCardIcon}>🚀</Text>
+            <Feather name="zap" size={18} color={colors.info} style={styles.featureCardIcon} />
             <Text style={styles.featureCardTitle}>В разработке</Text>
           </View>
           <View style={styles.featureList}>

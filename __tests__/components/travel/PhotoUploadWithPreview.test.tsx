@@ -30,6 +30,18 @@ jest.mock('@expo/vector-icons', () => ({
 }));
 
 const mockUploadImage = uploadImage as jest.MockedFunction<typeof uploadImage>;
+const getWebPreviewImg = (screen: any) => {
+    const nodes = screen.UNSAFE_getAllByType('img' as any);
+    const preview = nodes.find((node: any) => node?.props?.alt === 'Предпросмотр');
+    if (!preview) {
+        throw new Error('Preview image not found');
+    }
+    return preview;
+};
+const queryWebPreviewImg = (screen: any) => {
+    const nodes = screen.UNSAFE_queryAllByType?.('img' as any) ?? [];
+    return nodes.find((node: any) => node?.props?.alt === 'Предпросмотр') ?? null;
+};
 
 describe('PhotoUploadWithPreview', () => {
     const defaultProps = {
@@ -106,19 +118,19 @@ describe('PhotoUploadWithPreview', () => {
 
                 // Ensure <img> is rendered with blob src.
                 await waitFor(() => {
-                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    const imgNode = getWebPreviewImg(screen);
                     expect(String(imgNode.props.src)).toBe(deadBlobUrl);
                 });
 
                 // Trigger error; component should clear preview and notify parent.
                 await act(async () => {
-                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    const imgNode = getWebPreviewImg(screen);
                     imgNode.props.onError?.();
                 });
 
                 await waitFor(() => {
                     // After clear, no img should be present (placeholder shown).
-                    expect(() => screen.UNSAFE_getByType('img' as any)).toThrow();
+                    expect(queryWebPreviewImg(screen)).toBeNull();
                     expect(onPreviewChange).toHaveBeenCalledWith(null);
                 });
             } finally {
@@ -142,7 +154,7 @@ describe('PhotoUploadWithPreview', () => {
                 );
 
                 await waitFor(() => {
-                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    const imgNode = getWebPreviewImg(screen);
                     // On the buggy implementation this became "/travel-image/..." and loaded from localhost.
                     expect(String(imgNode.props.src)).toBe(absolutePrivateIpUrl);
                     expect(String(imgNode.props.src).startsWith('http')).toBe(true);
@@ -167,7 +179,7 @@ describe('PhotoUploadWithPreview', () => {
                 );
 
                 await waitFor(() => {
-                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    const imgNode = getWebPreviewImg(screen);
                     expect(String(imgNode.props.src)).toBe(absoluteUrl);
                 });
             } finally {
@@ -230,7 +242,7 @@ describe('PhotoUploadWithPreview', () => {
                 });
 
                 await waitFor(() => {
-                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    const imgNode = getWebPreviewImg(screen);
                     expect(String(imgNode.props.src)).toBe(serverUrl);
                 });
             } finally {
@@ -276,7 +288,7 @@ describe('PhotoUploadWithPreview', () => {
                 });
 
                 await waitFor(() => {
-                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    const imgNode = getWebPreviewImg(screen);
                     expect(String(imgNode.props.src)).toBe(blobUrl);
                 });
             } finally {
@@ -402,7 +414,7 @@ describe('PhotoUploadWithPreview', () => {
 
                 // Wait until the uploaded (remote) URL is rendered.
                 await waitFor(() => {
-                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    const imgNode = getWebPreviewImg(screen);
                     expect(String(imgNode.props.src)).toBe(remoteBadUrl);
                 });
 
@@ -414,7 +426,7 @@ describe('PhotoUploadWithPreview', () => {
                 const delays = [300, 600, 1200, 2000, 2500, 3000];
                 for (let attempt = 1; attempt <= delays.length; attempt++) {
                     await act(async () => {
-                        const imgNode = screen.UNSAFE_getByType('img' as any);
+                        const imgNode = getWebPreviewImg(screen);
                         imgNode.props.onError?.();
                     });
 
@@ -423,17 +435,17 @@ describe('PhotoUploadWithPreview', () => {
                     });
 
                     // With fake timers, assert synchronously after advancing timers.
-                    const nextImg = screen.UNSAFE_getByType('img' as any);
+                    const nextImg = getWebPreviewImg(screen);
                     expect(String(nextImg.props.src)).toContain(`__retry=${attempt}`);
                 }
 
                 // One more error after retries exhausted should apply blob fallback.
                 await act(async () => {
-                    const imgNode = screen.UNSAFE_getByType('img' as any);
+                    const imgNode = getWebPreviewImg(screen);
                     imgNode.props.onError?.();
                 });
 
-                const finalImg = screen.UNSAFE_getByType('img' as any);
+                const finalImg = getWebPreviewImg(screen);
                 expect(finalImg.props.src).toBe(blobUrl);
             } finally {
                 act(() => {
@@ -552,7 +564,7 @@ describe('PhotoUploadWithPreview', () => {
                 );
 
                 // When oldImage is null, no <img> should be rendered.
-                expect(() => screen.UNSAFE_getByType('img' as any)).toThrow();
+                expect(queryWebPreviewImg(screen)).toBeNull();
 
                 screen.rerender(
                     <PhotoUploadWithPreview
@@ -561,7 +573,7 @@ describe('PhotoUploadWithPreview', () => {
                     />
                 );
 
-                const imgNode = screen.UNSAFE_getByType('img' as any);
+                const imgNode = getWebPreviewImg(screen);
                 expect(String(imgNode.props.src)).toBe('https://example.com/new-image.jpg');
             } finally {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
@@ -580,7 +592,7 @@ describe('PhotoUploadWithPreview', () => {
                     />
                 );
 
-                const imgNode = screen.UNSAFE_getByType('img' as any);
+                const imgNode = getWebPreviewImg(screen);
                 expect(String(imgNode.props.src)).toBe('https://example.com/old-image.jpg');
             } finally {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
@@ -602,7 +614,7 @@ describe('PhotoUploadWithPreview', () => {
                 );
 
                 const expected = `${window.location.origin}/uploads/image.jpg`;
-                const imgNode = screen.UNSAFE_getByType('img' as any);
+                const imgNode = getWebPreviewImg(screen);
                 expect(String(imgNode.props.src)).toBe(expected);
             } finally {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
@@ -621,7 +633,7 @@ describe('PhotoUploadWithPreview', () => {
                     />
                 );
 
-                const imgNode = screen.UNSAFE_getByType('img' as any);
+                const imgNode = getWebPreviewImg(screen);
                 expect(String(imgNode.props.src)).toBe('https://example.com/image.jpg');
             } finally {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
@@ -640,7 +652,7 @@ describe('PhotoUploadWithPreview', () => {
                     />
                 );
 
-                const imgNode = screen.UNSAFE_getByType('img' as any);
+                const imgNode = getWebPreviewImg(screen);
                 expect(String(imgNode.props.src)).toBe('blob:http://localhost:8081/abc-123');
             } finally {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });
@@ -660,7 +672,7 @@ describe('PhotoUploadWithPreview', () => {
                     />
                 );
 
-                const imgNode = screen.UNSAFE_getByType('img' as any);
+                const imgNode = getWebPreviewImg(screen);
                 expect(String(imgNode.props.src)).toBe(dataUrl);
             } finally {
                 Object.defineProperty(Platform, 'OS', { value: originalOs });

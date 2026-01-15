@@ -201,12 +201,13 @@ export default function TravelDetailsContainer() {
       : undefined;
     const lcpTargetWidth =
       typeof window !== "undefined"
-        ? Math.min(window.innerWidth || 1200, isMobile ? 480 : 1440)
+        ? Math.min(window.innerWidth || 1200, isMobile ? 360 : 1200)
         : 1200;
+    const lcpQuality = isMobile ? 60 : 80;
     const lcpProps = versioned
       ? buildResponsiveImageProps(versioned, {
           maxWidth: lcpTargetWidth,
-          quality: isMobile ? 75 : 85,
+          quality: lcpQuality,
           format: getPreferredImageFormat(),
           fit: "contain",
           sizes: isMobile ? "100vw" : "(max-width: 1024px) 92vw, 860px",
@@ -218,7 +219,7 @@ export default function TravelDetailsContainer() {
         optimizeImageUrl(versioned, {
           width: lcpTargetWidth,
           format: getPreferredImageFormat(),
-          quality: isMobile ? 75 : 85,
+          quality: lcpQuality,
           fit: "contain",
         }));
     const origin = firstUrl ? getOrigin(firstUrl) : null;
@@ -472,6 +473,7 @@ export default function TravelDetailsContainer() {
                     onFirstImageLoad={() => setLcpLoaded(true)}
                     sectionLinks={sectionLinks}
                     onQuickJump={scrollToWithMenuClose}
+                    deferExtras={!deferAllowed}
                   />
                   </View>
 

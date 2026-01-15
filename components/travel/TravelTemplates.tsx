@@ -8,7 +8,7 @@ export interface TravelTemplate {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: keyof typeof Feather.glyphMap;
   color: string;
   category: 'city' | 'nature' | 'beach' | 'adventure' | 'culture';
   fields: {
@@ -24,7 +24,7 @@ const TEMPLATES: TravelTemplate[] = [
     id: 'city_weekend',
     name: 'Выходные в городе',
     description: 'Короткая поездка в город на 2-3 дня',
-    icon: '🏙️',
+    icon: 'map-pin',
     color: '#5D8AA8',
     category: 'city',
     fields: {
@@ -48,7 +48,7 @@ const TEMPLATES: TravelTemplate[] = [
     id: 'mountain_trek',
     name: 'Поход в горы',
     description: 'Треккинг и горные приключения',
-    icon: '⛰️',
+    icon: 'activity',
     color: '#4CAF50',
     category: 'nature',
     fields: {
@@ -72,7 +72,7 @@ const TEMPLATES: TravelTemplate[] = [
     id: 'beach_vacation',
     name: 'Пляжный отдых',
     description: 'Отдых на море или океане',
-    icon: '🏖️',
+    icon: 'sun',
     color: '#00BCD4',
     category: 'beach',
     fields: {
@@ -96,7 +96,7 @@ const TEMPLATES: TravelTemplate[] = [
     id: 'cultural_tour',
     name: 'Культурный тур',
     description: 'Знакомство с историей и культурой',
-    icon: '🏛️',
+    icon: 'book-open',
     color: '#9C27B0',
     category: 'culture',
     fields: {
@@ -120,7 +120,7 @@ const TEMPLATES: TravelTemplate[] = [
     id: 'road_trip',
     name: 'Автопутешествие',
     description: 'Поездка на автомобиле по маршруту',
-    icon: '🚗',
+    icon: 'truck',
     color: '#FF9800',
     category: 'adventure',
     fields: {
@@ -152,12 +152,12 @@ const TravelTemplates = ({ onSelectTemplate, onClose }: TravelTemplatesProps) =>
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const categories = [
-    { id: 'all', name: 'Все', icon: '✨' },
-    { id: 'city', name: 'Город', icon: '🏙️' },
-    { id: 'nature', name: 'Природа', icon: '🌲' },
-    { id: 'beach', name: 'Пляж', icon: '🏖️' },
-    { id: 'adventure', name: 'Приключения', icon: '🎒' },
-    { id: 'culture', name: 'Культура', icon: '🏛️' },
+    { id: 'all', name: 'Все', icon: 'grid' },
+    { id: 'city', name: 'Город', icon: 'map-pin' },
+    { id: 'nature', name: 'Природа', icon: 'leaf' },
+    { id: 'beach', name: 'Пляж', icon: 'sun' },
+    { id: 'adventure', name: 'Приключения', icon: 'compass' },
+    { id: 'culture', name: 'Культура', icon: 'book-open' },
   ];
 
   const filteredTemplates = selectedCategory && selectedCategory !== 'all'
@@ -360,7 +360,12 @@ const TravelTemplates = ({ onSelectTemplate, onClose }: TravelTemplatesProps) =>
             ]}
             onPress={() => setSelectedCategory(category.id)}
           >
-            <Text style={styles.categoryIcon}>{category.icon}</Text>
+            <Feather
+              name={category.icon}
+              size={16}
+              color={selectedCategory === category.id ? colors.surface : colors.text}
+              style={styles.categoryIcon}
+            />
             <Text
               style={[
                 styles.categoryText,
@@ -499,7 +504,7 @@ const TemplateCard = memo(({ template, onSelect }: TemplateCardProps) => {
         onPress={() => setExpanded(!expanded)}
       >
         <View style={[cardStyles.templateIcon, { backgroundColor: template.color }]}>
-          <Text style={cardStyles.templateIconText}>{template.icon}</Text>
+          <Feather name={template.icon} size={24} color={colors.textOnDark} />
         </View>
 
         <View style={cardStyles.templateInfo}>

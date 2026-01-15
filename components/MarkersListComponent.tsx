@@ -498,7 +498,7 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                         {hasImage ? (
                                             <ImageCardMedia
                                                 src={normalizeImageUrl(marker.image)}
-                                                fit="cover"
+                                                fit="contain"
                                                 blurBackground
                                                 loading="lazy"
                                                 priority="low"
