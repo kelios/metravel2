@@ -41,12 +41,7 @@ import { ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
 import { optimizeImageUrl, getPreferredImageFormat, buildResponsiveImageProps } from "@/utils/imageOptimization";
 import { SectionSkeleton } from '@/components/SectionSkeleton';
 
-import {
-  TravelDeferredSections as TravelDeferredSectionsComponent,
-  TravelHeroSection,
-  useLCPPreload,
-  OptimizedLCPHero,
-} from "@/components/travel/details/TravelDetailsSections";
+import { TravelHeroSection, useLCPPreload, OptimizedLCPHero } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 
@@ -59,6 +54,11 @@ import { useThemedColors } from "@/hooks/useTheme";
 /* -------------------- helpers -------------------- */
 
 const CompactSideBarTravel = withLazy(() => import("@/components/travel/CompactSideBarTravel"));
+const TravelDeferredSectionsLazy = React.lazy(() =>
+  import("@/components/travel/details/TravelDetailsDeferred").then((mod) => ({
+    default: mod.TravelDeferredSections,
+  }))
+);
 
 /* -------------------- SuspenseList shim -------------------- */
 const SList: React.FC<{
@@ -199,14 +199,17 @@ export default function TravelDetailsContainer() {
     const versioned = firstUrl
       ? buildVersioned(firstUrl, (rawFirst as any)?.updated_at, (rawFirst as any)?.id)
       : undefined;
+    const lcpMaxWidth = isMobile ? 480 : 960;
+    const lcpWidths = isMobile ? [320, 420, 480] : [640, 768, 960];
     const lcpTargetWidth =
       typeof window !== "undefined"
-        ? Math.min(window.innerWidth || 1200, isMobile ? 360 : 1200)
-        : 1200;
-    const lcpQuality = isMobile ? 60 : 80;
+        ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
+        : lcpMaxWidth;
+    const lcpQuality = isMobile ? 55 : 70;
     const lcpProps = versioned
       ? buildResponsiveImageProps(versioned, {
           maxWidth: lcpTargetWidth,
+          widths: lcpWidths,
           quality: lcpQuality,
           format: getPreferredImageFormat(),
           fit: "contain",
@@ -491,23 +494,8 @@ export default function TravelDetailsContainer() {
                   {/* -------- deferred heavy content -------- */}
                   <Defer when={deferAllowed || forceDeferMount}>
                     {forceDeferMount ? (
-                      <TravelDeferredSectionsComponent
-                        travel={travel}
-                        isMobile={isMobile}
-                        forceOpenKey={forceOpenKey}
-                        anchors={anchors}
-                        relatedTravels={relatedTravels}
-                        setRelatedTravels={setRelatedTravels}
-                        scrollY={scrollY}
-                        viewportHeight={viewportHeight}
-                        scrollRef={scrollRef}
-                      />
-                    ) : (
-                      <ProgressiveWrapper 
-                        config={{ priority: 'normal', rootMargin: '100px' }}
-                        fallback={<SectionSkeleton />}
-                      >
-                        <TravelDeferredSectionsComponent
+                      <Suspense fallback={<SectionSkeleton />}>
+                        <TravelDeferredSectionsLazy
                           travel={travel}
                           isMobile={isMobile}
                           forceOpenKey={forceOpenKey}
@@ -518,6 +506,25 @@ export default function TravelDetailsContainer() {
                           viewportHeight={viewportHeight}
                           scrollRef={scrollRef}
                         />
+                      </Suspense>
+                    ) : (
+                      <ProgressiveWrapper 
+                        config={{ priority: 'normal', rootMargin: '100px' }}
+                        fallback={<SectionSkeleton />}
+                      >
+                        <Suspense fallback={<SectionSkeleton />}>
+                          <TravelDeferredSectionsLazy
+                            travel={travel}
+                            isMobile={isMobile}
+                            forceOpenKey={forceOpenKey}
+                            anchors={anchors}
+                            relatedTravels={relatedTravels}
+                            setRelatedTravels={setRelatedTravels}
+                            scrollY={scrollY}
+                            viewportHeight={viewportHeight}
+                            scrollRef={scrollRef}
+                          />
+                        </Suspense>
                       </ProgressiveWrapper>
                     )}
                   </Defer>

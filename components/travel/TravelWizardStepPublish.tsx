@@ -12,33 +12,22 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from 'react-native-paper';
-import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import { TravelFormData } from '@/src/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
-import { getQualityScore } from '@/utils/travelWizardValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/src/utils/toast';
+import { useTravelPublishChecklist } from '@/components/travel/useTravelPublishChecklist';
+import PublishChecklistCard from '@/components/travel/PublishChecklistCard';
 
 async function showToastMessage(payload: any) {
     await showToast(payload);
 }
-
-type UnknownRecord = Record<string, unknown>;
-
-type ChecklistItem = {
-    key: string;
-    label: string;
-    detail?: string;
-    benefit?: string;
-    ok: boolean;
-    required?: boolean;
-};
 
 interface TravelWizardStepPublishProps {
     currentStep: number;
@@ -88,22 +77,6 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const progressPercent = Math.round(progressValue * 100);
     const actionPendingRef = useRef(false);
 
-    const getLegacyArray = useCallback((key: string): unknown[] => {
-        const value = (formData as unknown as UnknownRecord)[key];
-        return Array.isArray(value) ? value : [];
-    }, [formData]);
-
-    const getRoutePoints = useCallback((): unknown[] => {
-        const coords = getLegacyArray('coordsMeTravel');
-        if (coords.length > 0) return coords;
-        return getLegacyArray('markers');
-    }, [getLegacyArray]);
-
-    const getGalleryItems = useCallback((): unknown[] => {
-        const gallery = (formData.gallery ?? []) as unknown[];
-        return Array.isArray(gallery) ? gallery : [];
-    }, [formData.gallery]);
-
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -136,74 +109,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const pendingModeration = formData.publish && !formData.moderation;
     const userPendingModeration = isUser && pendingModeration;
 
-    // ✅ УЛУЧШЕНИЕ: Разделение чеклиста на обязательные и рекомендуемые
-    const requiredChecklist = useMemo<ChecklistItem[]>(() => {
-        const hasName = !!formData.name && formData.name.trim().length >= 3;
-        const hasDescription = !!formData.description && formData.description.trim().length >= 50;
-        const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
-        const hasCategories = Array.isArray(formData.categories) && formData.categories.length > 0;
-        const hasRoute = getRoutePoints().length > 0;
-        const galleryArr = getGalleryItems();
-        const hasCover = !!formData.travel_image_thumb_small_url;
-        const hasPhotos = hasCover || galleryArr.length > 0;
-
-        return [
-            { key: 'name', label: 'Название маршрута', detail: 'Минимум 3 символа', ok: hasName, required: true },
-            { key: 'description', label: 'Описание маршрута', detail: 'Минимум 50 символов', ok: hasDescription, required: true },
-            { key: 'route', label: 'Маршрут на карте', detail: 'Минимум 1 точка (шаг 2)', ok: hasRoute, required: true },
-            { key: 'countries', label: 'Страны маршрута', detail: 'Минимум 1 страна (шаг 2)', ok: hasCountries, required: true },
-            { key: 'categories', label: 'Категории маршрута', detail: 'Минимум 1 категория (шаг 5)', ok: hasCategories, required: true },
-            { key: 'photos', label: 'Фото или обложка', detail: 'Обложка или ≥1 фото (шаг 3)', ok: hasPhotos, required: true },
-        ];
-    }, [formData.categories, formData.countries, formData.description, formData.name, formData.travel_image_thumb_small_url, getGalleryItems, getRoutePoints]);
-
-    const recommendedChecklist = useMemo<ChecklistItem[]>(() => {
-        return [];
-    }, []);
-
-    const checklist = useMemo(() => {
-        // Для обратной совместимости со старым кодом
-        const hasName = !!formData.name && formData.name.trim().length > 0;
-        const hasDescription = !!formData.description && formData.description.trim().length > 0;
-        const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
-        const hasCategories = Array.isArray(formData.categories) && formData.categories.length > 0;
-        const hasRoute = getRoutePoints().length > 0;
-        const galleryArr = getGalleryItems();
-        const hasCover = !!formData.travel_image_thumb_small_url;
-        const hasPhotos = hasCover || galleryArr.length > 0;
-
-        return [
-            { key: 'name', label: 'Название маршрута (не менее 3 символов)', ok: hasName },
-            { key: 'description', label: 'Описание для кого маршрут и чего ожидать (не менее 50 символов)', ok: hasDescription },
-            { key: 'countries', label: 'Страны маршрута (минимум одна, выбираются на шаге "Маршрут")', ok: hasCountries },
-            { key: 'categories', label: 'Категории маршрута (минимум одна, выбираются на шаге "Доп. параметры")', ok: hasCategories },
-            { key: 'route', label: 'Маршрут на карте (минимум одна точка на шаге "Маршрут")', ok: hasRoute },
-            { key: 'photos', label: 'Фото или обложка маршрута (рекомендуем горизонтальное изображение, без коллажей)', ok: hasPhotos },
-        ];
-    }, [formData, getGalleryItems, getRoutePoints]);
-
-    const moderationIssues = useMemo(() => {
-        return getModerationIssues({
-            name: formData.name ?? '',
-            description: formData.description ?? '',
-            countries: formData.countries ?? [],
-            categories: formData.categories ?? [],
-            coordsMeTravel: getRoutePoints(),
-            gallery: getGalleryItems(),
-            travel_image_thumb_small_url: formData.travel_image_thumb_small_url ?? null,
-        });
-    }, [formData.categories, formData.countries, formData.description, formData.name, formData.travel_image_thumb_small_url, getGalleryItems, getRoutePoints]);
-
-    // Качественная оценка заполнения
-    const qualityScore = useMemo(() => {
-        return getQualityScore(formData);
-    }, [formData]);
-
-    const moderationIssuesByKey = useMemo(() => {
-        const map = new Map<string, ModerationIssue>();
-        moderationIssues.forEach(issue => map.set(issue.key, issue));
-        return map;
-    }, [moderationIssues]);
+    const {
+        routePoints,
+        galleryItems,
+        requiredChecklist,
+        recommendedChecklist,
+        checklist,
+        moderationIssuesByKey,
+        qualityScore,
+    } = useTravelPublishChecklist(formData);
 
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
     const isNew = !formData.id;
@@ -285,8 +199,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             const hasName = !!formData.name && formData.name.trim().length > 0;
             const hasDescription = !!formData.description && formData.description.trim().length > 0;
             const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
-            const hasRoute = getRoutePoints().length > 0;
-            const galleryArr = getGalleryItems();
+            const hasRoute = routePoints.length > 0;
+            const galleryArr = galleryItems;
             const hasCover = !!formData.travel_image_thumb_small_url;
             const hasPhotos = hasCover || galleryArr.length > 0;
 
@@ -324,8 +238,8 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             description: formData.description ?? '',
             countries: formData.countries ?? [],
             categories: formData.categories ?? [],
-            coordsMeTravel: getRoutePoints(),
-            gallery: getGalleryItems(),
+            coordsMeTravel: routePoints,
+            gallery: galleryItems,
             travel_image_thumb_small_url: formData.travel_image_thumb_small_url ?? null,
         });
         const missingLabels = criticalMissing.map(i => i.label);
@@ -615,161 +529,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         )}
                     </View>
 
-                    <View style={[styles.card, styles.checklistCard]}>
-                        <View style={styles.checklistHeader}>
-                            <Text style={styles.cardTitle}>Готовность к публикации</Text>
-                            <View style={styles.progressRing}>
-                                <Text style={styles.progressRingText}>
-                                    {checklist.filter(item => item.ok).length}/{checklist.length}
-                                </Text>
-                            </View>
-                        </View>
-
-                        {/* ✅ УЛУЧШЕНИЕ: Обязательные пункты */}
-                        <View style={styles.checklistSection}>
-                            <View style={styles.sectionHeaderRow}>
-                                <Feather name="check-circle" size={16} color={colors.success} />
-                                <Text style={styles.sectionHeaderText}>Обязательно для публикации</Text>
-                            </View>
-                            {requiredChecklist.map(item => {
-                                const issue = moderationIssuesByKey.get(item.key);
-                                const isClickable = !item.ok && !!issue && !!onNavigateToIssue;
-
-                                const rowContent = (
-                                    <>
-                                        <View
-                                            style={[
-                                                styles.checkBadge,
-                                                item.ok ? styles.checkBadgeOk : styles.checkBadgeMissing,
-                                            ]}
-                                        >
-                                            <Icon
-                                                source={item.ok ? 'check' : 'alert-circle'}
-                                                size={16}
-                                                color={item.ok ? colors.successDark : colors.dangerDark}
-                                            />
-                                        </View>
-                                        <View style={styles.checklistTextColumn}>
-                                            <Text
-                                                style={[
-                                                    styles.checklistLabel,
-                                                    isClickable && styles.checklistLabelClickable,
-                                                    item.ok && styles.checklistLabelComplete,
-                                                ]}
-                                            >
-                                                {item.label}
-                                            </Text>
-                                            <Text style={styles.checklistDetail}>{item.detail}</Text>
-                                            {isClickable && !item.ok && (
-                                                <Text style={styles.checklistHint}>Нажмите, чтобы перейти</Text>
-                                            )}
-                                        </View>
-                                        {isClickable && !item.ok && (
-                                            <Icon source="chevron-right" size={16} color={colors.textMuted} />
-                                        )}
-                                    </>
-                                );
-
-                                const rowStyle = [
-                                    styles.checklistRow,
-                                    isClickable && styles.checklistRowClickable,
-                                    item.ok && styles.checklistRowComplete,
-                                ];
-
-                                if (isClickable) {
-                                    return (
-                                        <TouchableOpacity
-                                            key={item.key}
-                                            style={rowStyle}
-                                            onPress={() => onNavigateToIssue?.(issue)}
-                                            activeOpacity={0.7}
-                                        >
-                                            {rowContent}
-                                        </TouchableOpacity>
-                                    );
-                                }
-
-                                return (
-                                    <View key={item.key} style={rowStyle}>
-                                        {rowContent}
-                                    </View>
-                                );
-                            })}
-                        </View>
-
-                        {/* ✅ УЛУЧШЕНИЕ: Рекомендуемые пункты */}
-                        <View style={[styles.checklistSection, styles.checklistSectionRecommended]}>
-                            <View style={styles.sectionHeaderRow}>
-                                <Feather name="info" size={16} color={colors.primary} />
-                                <Text style={styles.sectionHeaderText}>Рекомендуем заполнить</Text>
-                            </View>
-                            {recommendedChecklist.map(item => {
-                                const issue = moderationIssuesByKey.get(item.key);
-                                const isClickable = !item.ok && !!issue && !!onNavigateToIssue;
-
-                                const rowContent = (
-                                    <>
-                                        <View
-                                            style={[
-                                                styles.checkBadge,
-                                                item.ok ? styles.checkBadgeOk : styles.checkBadgeRecommended,
-                                            ]}
-                                        >
-                                            <Icon
-                                                source={item.ok ? 'check' : 'star-outline'}
-                                                size={16}
-                                                color={item.ok ? colors.successDark : colors.primary}
-                                            />
-                                        </View>
-                                        <View style={styles.checklistTextColumn}>
-                                            <Text
-                                                style={[
-                                                    styles.checklistLabel,
-                                                    isClickable && styles.checklistLabelClickable,
-                                                    item.ok && styles.checklistLabelComplete,
-                                                ]}
-                                            >
-                                                {item.label}
-                                            </Text>
-                                            <Text style={styles.checklistDetail}>{item.detail}</Text>
-                                            {item.benefit && <Text style={styles.benefitText}>{item.benefit}</Text>}
-                                            {isClickable && !item.ok && (
-                                                <Text style={styles.checklistHint}>Нажмите, чтобы перейти</Text>
-                                            )}
-                                        </View>
-                                        {isClickable && !item.ok && (
-                                            <Icon source="chevron-right" size={16} color={colors.textMuted} />
-                                        )}
-                                    </>
-                                );
-
-                                const rowStyle = [
-                                    styles.checklistRow,
-                                    isClickable && styles.checklistRowClickable,
-                                    item.ok && styles.checklistRowComplete,
-                                ];
-
-                                if (isClickable) {
-                                    return (
-                                        <TouchableOpacity
-                                            key={item.key}
-                                            style={rowStyle}
-                                            onPress={() => onNavigateToIssue?.(issue)}
-                                            activeOpacity={0.7}
-                                        >
-                                            {rowContent}
-                                        </TouchableOpacity>
-                                    );
-                                }
-
-                                return (
-                                    <View key={item.key} style={rowStyle}>
-                                        {rowContent}
-                                    </View>
-                                );
-                            })}
-                        </View>
-                    </View>
+                    <PublishChecklistCard
+                        colors={colors}
+                        styles={styles}
+                        checklist={checklist}
+                        requiredChecklist={requiredChecklist}
+                        recommendedChecklist={recommendedChecklist}
+                        moderationIssuesByKey={moderationIssuesByKey}
+                        onNavigateToIssue={onNavigateToIssue}
+                    />
 
                     {isSuperAdmin && (pendingModeration || formData.moderation || status === 'moderation') && (
                         <View style={[styles.card, styles.adminCard]}>

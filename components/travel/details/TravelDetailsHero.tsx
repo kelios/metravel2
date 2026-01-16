@@ -72,13 +72,16 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
     if (!imageUrl) return
 
     const versionedHref = buildVersioned(imageUrl, updatedAt, id)
+    const lcpMaxWidth = isMobile ? 480 : 960
+    const lcpWidths = isMobile ? [320, 420, 480] : [640, 768, 960]
     const targetWidth =
       typeof window !== 'undefined'
-        ? Math.min(window.innerWidth || 1200, isMobile ? 360 : 1200)
-        : 1200
-    const lcpQuality = isMobile ? 60 : 80
+        ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
+        : lcpMaxWidth
+    const lcpQuality = isMobile ? 55 : 70
     const responsive = buildResponsiveImageProps(versionedHref, {
       maxWidth: targetWidth,
+      widths: lcpWidths,
       quality: lcpQuality,
       format: getPreferredImageFormat(),
       fit: 'contain',
@@ -211,14 +214,17 @@ export const OptimizedLCPHero: React.FC<{
     img.id
   )
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9
+  const lcpMaxWidth = isMobile ? 480 : 960
+  const lcpWidths = isMobile ? [320, 420, 480] : [640, 768, 960]
   const targetWidth =
     typeof window !== 'undefined'
-      ? Math.min(window.innerWidth || 1200, isMobile ? 360 : 1200)
-      : 1200
-  const lcpQuality = isMobile ? 60 : 80
+      ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
+      : lcpMaxWidth
+  const lcpQuality = isMobile ? 55 : 70
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
+    widths: lcpWidths,
     quality: lcpQuality,
     format: getPreferredImageFormat(),
     fit: 'contain',

@@ -4,9 +4,6 @@ import {
   Alert,
   FlatList,
   Platform,
-  Pressable,
-  StyleSheet,
-  Text,
   View,
   ViewStyle,
 } from 'react-native'
@@ -17,263 +14,24 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import RenderTravelItem from './RenderTravelItem'
 import SidebarFilters from './SidebarFilters'
 import RightColumn from './RightColumn'
-import UIButton from '@/components/ui/Button'
 import BookSettingsModal from '@/components/export/BookSettingsModal'
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext'
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useResponsive } from '@/hooks/useResponsive'
-import ProgressIndicator from '@/components/ProgressIndicator'
 import type { Travel } from '@/src/types/types'
 import {
   BREAKPOINTS,
   RECOMMENDATIONS_VISIBLE_KEY
 } from './utils/listTravelConstants'
-import { LAYOUT } from '@/constants/layout'
 import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { useListTravelExport } from './hooks/useListTravelExport'
 import { calculateColumns } from './utils/listTravelHelpers'
-
-// ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
-const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.background,
-    // Современный минималистичный layout
-    display: 'flex',
-    flexDirection: 'row',
-    overflowX: 'hidden',
-    width: '100%',
-    maxWidth: '100%',
-    ...Platform.select({
-      web: {
-        minHeight: 900,
-      },
-    }),
-  },
-  rootMobile: {
-    flexDirection: 'column',
-  },
-  content: {
-    flex: 1,
-    flexDirection: 'row',
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingTop: DESIGN_TOKENS.spacing.lg,
-    paddingBottom: DESIGN_TOKENS.spacing.lg,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  contentMobile: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingTop: DESIGN_TOKENS.spacing.md,
-    paddingBottom: DESIGN_TOKENS.spacing.md,
-  },
-  sidebar: {
-    width: 320,
-    flexShrink: 0,
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingTop: DESIGN_TOKENS.spacing.lg,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
-  },
-  sidebarMobile: {
-    width: '100%',
-    borderRightWidth: 0,
-    borderBottomWidth: 1,
-  },
-  listContainer: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingTop: DESIGN_TOKENS.spacing.lg,
-    paddingBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  listContainerMobile: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingTop: DESIGN_TOKENS.spacing.md,
-    paddingBottom: DESIGN_TOKENS.spacing.md,
-  },
-  exportBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    padding: DESIGN_TOKENS.spacing.md,
-    marginBottom: DESIGN_TOKENS.spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.medium,
-      } as any,
-      ios: DESIGN_TOKENS.shadowsNative.medium,
-      android: { elevation: 4 },
-      default: DESIGN_TOKENS.shadowsNative.medium,
-    }),
-  },
-  exportBarMobile: {
-    flexDirection: 'column',
-    gap: DESIGN_TOKENS.spacing.sm,
-    alignItems: 'stretch',
-    padding: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBarMobileWeb: {
-    marginHorizontal: -DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBarInfo: {
-    flex: 1,
-    marginRight: DESIGN_TOKENS.spacing.md,
-  },
-  exportBarInfoTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
-  },
-  exportBarInfoSubtitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBarInfoActions: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  linkButton: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.primary,
-    textDecorationLine: 'underline',
-  },
-  exportBarButtons: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  exportBarButtonsMobile: {
-    flexDirection: 'column',
-    width: '100%',
-    alignItems: 'stretch',
-  },
-  progressWrapper: {
-    marginTop: DESIGN_TOKENS.spacing.sm,
-  },
-  recommendationsLoader: {
-    marginTop: DESIGN_TOKENS.spacing.lg,
-    padding: DESIGN_TOKENS.spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    alignItems: 'center',
-  },
-  recommendationsSkeleton: {
-    width: '100%',
-  },
-  recommendationsSkeletonHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: DESIGN_TOKENS.spacing.md,
-  },
-  recommendationsSkeletonTitle: {
-    width: 120,
-    height: 20,
-    backgroundColor: colors.borderLight,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-  },
-  recommendationsSkeletonTabs: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  recommendationsSkeletonContent: {
-    flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  recommendationsSkeletonCard: {
-    flex: 1,
-    height: 80,
-    backgroundColor: colors.borderLight,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-  },
-  // ✅ RIGHT COLUMN: Основной контейнер правой части
-  rightColumn: {
-    flex: 1,
-    minWidth: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-    height: '100%',
-    ...Platform.select({
-      web: {
-        minHeight: 900,
-      },
-    }),
-    ...(Platform.OS === 'web' ? ({ paddingTop: DESIGN_TOKENS.spacing.lg } as const) : null),
-  },
-  rightColumnMobile: {
-    width: '100%',
-  },
-  // ✅ SEARCH HEADER: Прикрепленный заголовок поиска
-  searchHeader: {
-    position: 'relative',
-    zIndex: 10,
-    backgroundColor: colors.surface,
-    ...Platform.select({
-      web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
-      } as any,
-      ios: DESIGN_TOKENS.shadowsNative.light,
-      android: { elevation: 2 },
-      default: DESIGN_TOKENS.shadowsNative.light,
-    }),
-  },
-  // ✅ CARDS CONTAINER: Прокручиваемый контейнер для карточек
-  cardsContainer: {
-    flex: 1,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
-    // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
-    paddingTop: DESIGN_TOKENS.spacing.lg,
-    paddingBottom: DESIGN_TOKENS.spacing.md,
-    ...Platform.select({
-      web: {
-        minHeight: 900,
-      },
-    }),
-  },
-  cardsContainerMobile: {
-    // Reserve space for the fixed mobile footer/dock so the last card is not covered.
-    // Uses tabBarHeight as a stable dock height across platforms.
-    paddingBottom: LAYOUT.tabBarHeight + DESIGN_TOKENS.spacing.xl,
-    minHeight: 720,
-  },
-  // ✅ CARDS GRID: Flexbox layout for both platforms
-  cardsGrid: {
-    width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  resultsCount: {
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-  },
-  resultsCountText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-    color: colors.text,
-  },
-  footerLoader: {
-    paddingVertical: DESIGN_TOKENS.spacing.lg,
-    alignItems: 'center',
-  },
-});
+import { ExportBar } from './ExportBar'
+import { createStyles } from './listTravelStyles'
 
 // Simple delete function implementation
 const deleteTravel = async (id: string): Promise<void> => {
@@ -287,111 +45,6 @@ const deleteTravel = async (id: string): Promise<void> => {
         throw new Error(`Failed to delete travel: ${response.statusText}`);
     }
 };
-
-const pluralizeTravels = (count: number) => {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'путешествие';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'путешествия';
-  return 'путешествий';
-};
-
-/* ===== Small local component: Export bar ===== */
-const ExportBar = memo(function ExportBar({
-                       isMobile,
-                       selectedCount,
-                       allCount,
-                       onToggleSelectAll,
-                       onClearSelection,
-                       onSave,
-                       onSettings,
-                       isGenerating,
-                       progress,
-                       settingsSummary,
-                       hasSelection,
-                       styles,
-                   }: {
-    isMobile: boolean;
-    selectedCount: number;
-    allCount: number;
-    onToggleSelectAll: () => void;
-    onClearSelection: () => void;
-    onSave: () => void;
-    onSettings: () => void;
-    isGenerating?: boolean;
-    progress?: number;
-    settingsSummary: string;
-    hasSelection: boolean;
-    styles?: ReturnType<typeof createStyles>;
-}) {
-    const colors = useThemedColors();
-    const resolvedStyles = useMemo(
-      () => styles ?? createStyles(colors),
-      [colors, styles]
-    );
-    const selectionText = selectedCount
-      ? `Выбрано ${selectedCount} ${pluralizeTravels(selectedCount)}`
-      : 'Выберите путешествия для экспорта';
-
-  return (
-      <View
-        style={[
-          resolvedStyles.exportBar,
-          isMobile && resolvedStyles.exportBarMobile,
-          Platform.OS === 'web' && isMobile && resolvedStyles.exportBarMobileWeb,
-        ]}
-      >
-          <View style={resolvedStyles.exportBarInfo}>
-            <Text style={resolvedStyles.exportBarInfoTitle as any}>{selectionText}</Text>
-            <Text style={resolvedStyles.exportBarInfoSubtitle as any}>
-              {hasSelection ? `Настройки: ${settingsSummary}` : 'Выберите хотя бы одно путешествие, чтобы включить кнопки'}
-            </Text>
-            <View style={resolvedStyles.exportBarInfoActions}>
-              <Pressable onPress={onToggleSelectAll} accessibilityRole="button">
-                <Text style={resolvedStyles.linkButton as any}>
-                  {selectedCount === allCount && allCount > 0 ? "Снять выделение" : "Выбрать все"}
-                </Text>
-              </Pressable>
-              {hasSelection && (
-                <Pressable onPress={onClearSelection} accessibilityRole="button">
-                  <Text style={resolvedStyles.linkButton as any}>Очистить выбор</Text>
-                </Pressable>
-              )}
-              {hasSelection && (
-                <Pressable onPress={onSettings} accessibilityRole="button">
-                  <Text style={resolvedStyles.linkButton as any}>Настройки</Text>
-                </Pressable>
-              )}
-            </View>
-          </View>
-
-          <View style={[resolvedStyles.exportBarButtons, isMobile && resolvedStyles.exportBarButtonsMobile]}>
-            <UIButton
-              label={isGenerating ? `Генерация... ${progress || 0}%` : (isMobile ? "Сохранить PDF" : "Сохранить PDF")}
-              onPress={onSave}
-              disabled={!hasSelection || isGenerating}
-            />
-          </View>
-
-          {isGenerating && Platform.OS === "web" && (
-            <View style={resolvedStyles.progressWrapper}>
-              <ProgressIndicator
-                progress={progress ?? 0}
-                stage={(progress ?? 0) < 30 ? 'Подготовка данных...' : 
-                       (progress ?? 0) < 60 ? 'Генерация содержимого...' :
-                       (progress ?? 0) < 90 ? 'Обработка изображений...' : 
-                       'Создание PDF...'}
-                message={(progress ?? 0) < 30 ? 'Проверка выбранных путешествий' :
-                         (progress ?? 0) < 60 ? 'Формирование макета' :
-                         (progress ?? 0) < 90 ? 'Оптимизация изображений' :
-                         'Финальная обработка'}
-                showPercentage={true}
-              />
-            </View>
-          )}
-      </View>
-    );
-});
 
 const MemoizedTravelItem = memo(RenderTravelItem);
 

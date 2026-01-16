@@ -27,11 +27,12 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 
 // Make TravelDetailsContainer deterministic: provide travel data and avoid network
-jest.mock('@/hooks/useTravelDetails', () => ({
-  useTravelDetails: () => ({
+jest.mock('@/hooks/useTravelDetailsData', () => ({
+  useTravelDetailsData: () => ({
     travel: {
       id: 1,
       name: 'Demo',
+      slug: 'demo',
       gallery: [],
       travelAddress: [],
     },
@@ -40,7 +41,7 @@ jest.mock('@/hooks/useTravelDetails', () => ({
     error: null,
     refetch: jest.fn(),
     slug: 'demo',
-    isId: false,
+    isMissingParam: false,
   }),
 }));
 
@@ -84,6 +85,15 @@ jest.mock('@/hooks/useProgressiveLoading', () => ({
   ProgressiveWrapper: ({ children }: any) => children,
 }));
 
+jest.mock('@/hooks/useTravelDetailsPerformance', () => ({
+  useTravelDetailsPerformance: () => ({
+    lcpLoaded: true,
+    setLcpLoaded: jest.fn(),
+    sliderReady: true,
+    deferAllowed: true,
+  }),
+}));
+
 jest.mock('@/components/SectionSkeleton', () => ({
   SectionSkeleton: () => null,
 }));
@@ -92,6 +102,15 @@ jest.mock('@/components/travel/TelegramDiscussionSection', () => ({
   __esModule: true,
   default: () => null,
 }));
+
+jest.mock('@/components/travel/details/TravelDetailsDeferred', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    TravelDeferredSections: () => React.createElement(View, { testID: 'travel-details-telegram' }),
+  };
+});
 
 jest.mock('@/components/travel/CTASection', () => ({
   __esModule: true,
@@ -181,12 +200,13 @@ describe('TravelDetailsContainer (mobile) no duplicated engagement blocks', () =
     jest.useRealTimers();
   });
 
-  it('renders Telegram engagement block only once', () => {
+  it('renders Telegram engagement block only once', async () => {
     const { queryAllByTestId } = render(<TravelDetailsContainer />);
 
     // TravelDetails uses internal Defer (rIC + timeout up to 2600ms) before rendering heavy sections.
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(3000);
+      await Promise.resolve();
     });
 
     expect(queryAllByTestId('travel-details-telegram')).toHaveLength(1);
