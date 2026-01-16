@@ -158,8 +158,8 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   containerMobile: {
-    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    minHeight: 40,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
   },
   crumbRow: {
     flexDirection: 'row',
@@ -196,27 +196,27 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
   mobileRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   backButton: {
-    minWidth: DESIGN_TOKENS.touchTarget.minWidth,
-    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    minWidth: 40,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   mobileTitle: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
   },
   mobileRightSpacer: {
-    width: DESIGN_TOKENS.touchTarget.minWidth,
-    height: DESIGN_TOKENS.touchTarget.minHeight,
+    width: 40,
+    height: 40,
   },
   mobileSectionsButton: {
-    minWidth: DESIGN_TOKENS.touchTarget.minWidth,
-    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+    minWidth: 40,
+    minHeight: 40,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.72,

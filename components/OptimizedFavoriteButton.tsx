@@ -68,8 +68,10 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
         }
     };
 
+    const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
+
     // On web, avoid rendering a <button> to prevent nested button warnings inside other Pressables.
-    if (Platform.OS === 'web') {
+    if (isWeb) {
         return (
             <WebView
                 tabIndex={0}

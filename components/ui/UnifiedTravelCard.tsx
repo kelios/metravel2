@@ -70,11 +70,16 @@ function UnifiedTravelCard({
   style,
   testID,
   webPressableProps,
+  webAsView = false,
 }: Props) {
-  const isWeb = Platform.OS === 'web';
+  const isWeb =
+    Platform.OS === 'web' ||
+    typeof window !== 'undefined' ||
+    typeof document !== 'undefined' ||
+    webAsView;
   const colors = useThemedColors();
   const optimizedImageUrl = useMemo(() => {
-    if (!imageUrl || Platform.OS !== 'web') return imageUrl ?? null;
+    if (!imageUrl || !isWeb) return imageUrl ?? null;
 
     const targetHeight = typeof imageHeight === 'number' ? imageHeight : 200;
     const targetWidth =
@@ -91,7 +96,7 @@ function UnifiedTravelCard({
         fit: mediaFit === 'contain' ? 'contain' : 'cover',
       }) ?? imageUrl
     );
-  }, [imageUrl, imageHeight, mediaFit, width]);
+  }, [imageUrl, imageHeight, isWeb, mediaFit, width]);
 
   const styles = useMemo(
     () =>
@@ -112,7 +117,7 @@ function UnifiedTravelCard({
         },
         imageContainer: {
           width: '100%',
-          height: Platform.OS === 'web' ? 200 : 180,
+          height: isWeb ? 200 : 180,
           position: 'relative',
           backgroundColor: colors.backgroundSecondary,
         },
@@ -134,20 +139,20 @@ function UnifiedTravelCard({
         },
         imageTitleOverlayBg: {
           ...StyleSheet.absoluteFillObject,
-          ...(Platform.OS === 'web'
+          ...(isWeb
             ? ({
                 backgroundImage: `linear-gradient(to top, ${colors.overlay} 0%, rgba(0, 0, 0, 0) 100%)`,
               } as any)
             : ({ backgroundColor: colors.overlay } as any)),
         },
         imageTitleOverlayText: {
-          fontSize: Platform.OS === 'web' ? 16 : 14,
+          fontSize: isWeb ? 16 : 14,
           fontWeight: '800',
-          lineHeight: Platform.OS === 'web' ? 20 : 18,
+          lineHeight: isWeb ? 20 : 18,
           color: colors.textOnDark,
           letterSpacing: -0.2,
           textAlign: 'center',
-          ...(Platform.OS === 'web'
+          ...(isWeb
             ? { textShadow: '0px 1px 6px rgba(0,0,0,0.32)' }
             : {
                 textShadowColor: 'rgba(0,0,0,0.32)',
@@ -157,7 +162,7 @@ function UnifiedTravelCard({
         },
         imageVignetteOverlay: {
           ...StyleSheet.absoluteFillObject,
-          ...(Platform.OS === 'web'
+          ...(isWeb
             ? ({
                 backgroundImage:
                   `radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 45%, ${colors.overlayLight} 100%)`,
@@ -221,12 +226,12 @@ function UnifiedTravelCard({
           flex: 1,
         },
       }),
-    [colors],
+    [colors, isWeb],
   );
 
   // On web we avoid rendering <button> because cards often contain interactive children
   // (e.g. favorite button). Nested <button> triggers validateDOMNesting warnings.
-  const ContainerComponent: any = isWeb ? View : Pressable;
+  const ContainerComponent: any = isWeb || webPressableProps ? View : Pressable;
   const containerProps =
     isWeb
       ? (webPressableProps ?? {
@@ -273,8 +278,8 @@ function UnifiedTravelCard({
               blurRadius={mediaProps?.blurRadius ?? 16}
               placeholderBlurhash={mediaProps?.placeholderBlurhash}
               style={[StyleSheet.absoluteFill, isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null]}
-              loading={mediaProps?.loading ?? (Platform.OS === 'web' ? 'lazy' : 'lazy')}
-              priority={mediaProps?.priority ?? (Platform.OS === 'web' ? 'low' : 'normal')}
+              loading={mediaProps?.loading ?? (isWeb ? 'lazy' : 'lazy')}
+              priority={mediaProps?.priority ?? (isWeb ? 'low' : 'normal')}
               prefetch={mediaProps?.prefetch ?? false}
             />
           ) : (
@@ -337,7 +342,7 @@ function UnifiedTravelCard({
             <View
               style={[
                 StyleSheet.absoluteFillObject,
-                Platform.OS === 'web' ? ({ pointerEvents: 'none' } as any) : ({ pointerEvents: 'box-none' } as any),
+                isWeb ? ({ pointerEvents: 'none' } as any) : ({ pointerEvents: 'box-none' } as any),
               ]}
             >
               {containerOverlaySlot}

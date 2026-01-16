@@ -49,6 +49,12 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
       },
     }),
   },
+  containerMobile: {
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    minHeight: 44,
+    borderRadius: radii.md,
+  },
   containerFlush: {
     paddingHorizontal: 0,
   },
@@ -117,6 +123,10 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     flex: 1,
     minWidth: 0,
     marginBottom: 0,
+    height: 40,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xxs,
+    gap: 6,
   },
   input: {
     flex: 1,
@@ -130,6 +140,9 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
         borderColor: 'transparent',
       },
     }),
+  },
+  inputMobile: {
+    fontSize: 13,
   },
   clearButton: {
     padding: spacing.xs,
@@ -226,6 +239,11 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
       },
     }),
   },
+  actionButtonMobile: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+  },
   actionButtonMobileWeb: {
     width: 46,
     height: 46,
@@ -294,6 +312,9 @@ function StickySearchBar({
   const isMobile = isPhone || isLargePhone;
   const inputRef = useRef<TextInput>(null);
   const [isFocused, setIsFocused] = useState(false);
+  const searchIconSize = isMobile ? 16 : 18;
+  const actionIconSize = isMobile ? 18 : 20;
+  const filterIconSize = isMobile ? 14 : 16;
 
   // UX УЛУЧШЕНИЕ: Показываем счетчик только если есть результаты
   const showResultsCount = resultsCount !== undefined && resultsCount > 0 && !isMobile;
@@ -327,6 +348,7 @@ function StickySearchBar({
         styles.container,
         flush && Platform.OS === 'web' ? styles.containerFlush : null,
         isMobile && Platform.OS === 'web' ? styles.containerMobileWeb : null,
+        isMobile ? styles.containerMobile : null,
         isFocused && styles.containerFocused,
       ]}
     >
@@ -342,7 +364,7 @@ function StickySearchBar({
           >
           <Feather
             name="search"
-            size={18}
+            size={searchIconSize}
             color={isFocused ? colors.primary : colors.textMuted}
           />
           <TextInput
@@ -353,7 +375,7 @@ function StickySearchBar({
             onBlur={() => setIsFocused(false)}
             placeholder={placeholder}
             placeholderTextColor={colors.textMuted}
-            style={styles.input}
+            style={[styles.input, isMobile && styles.inputMobile]}
             returnKeyType="search"
             accessibilityLabel="Поиск путешествий"
             {...Platform.select({
@@ -413,6 +435,7 @@ function StickySearchBar({
               style={[
                 styles.actionButton,
                 isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
+                isMobile ? styles.actionButtonMobile : null,
                 isRecommendationsVisible && styles.actionButtonActive,
               ]}
               accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
@@ -420,7 +443,7 @@ function StickySearchBar({
             >
               <MaterialIcons
                 name="lightbulb-outline"
-                size={20}
+                size={actionIconSize}
                 color={isRecommendationsVisible ? colors.primary : colors.textMuted}
               />
             </Pressable>
@@ -434,6 +457,7 @@ function StickySearchBar({
               style={[
                 styles.actionButton,
                 isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
+                isMobile ? styles.actionButtonMobile : null,
                 hasActiveFilters && styles.actionButtonActive,
               ]}
               accessibilityLabel="Открыть фильтры"
@@ -441,7 +465,7 @@ function StickySearchBar({
             >
               <Feather
                 name="filter"
-                size={16}
+                size={filterIconSize}
                 color={hasActiveFilters ? colors.primary : colors.textMuted}
               />
               {hasActiveFilters && (

@@ -376,8 +376,8 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           style={[
             searchHeaderStyle,
             Platform.OS === 'web'
-              ? ({ minHeight: isMobile ? 76 : 76 } as any)
-              : ({ minHeight: 60 } as any),
+              ? ({ minHeight: isMobile ? 56 : 76 } as any)
+              : ({ minHeight: 52 } as any),
           ]}
         >
           <StickySearchBar

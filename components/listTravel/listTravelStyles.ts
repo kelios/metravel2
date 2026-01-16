@@ -368,14 +368,69 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flex: 1,
     },
     rightColumn: {
-      width: 360,
-      marginLeft: DESIGN_TOKENS.spacing.lg,
-      flexShrink: 0,
+      flex: 1,
+      minWidth: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      height: '100%',
+      ...Platform.select({
+        web: {
+          minHeight: 900,
+        },
+      }),
+      ...(Platform.OS === 'web' ? ({ paddingTop: DESIGN_TOKENS.spacing.lg } as const) : null),
     },
     rightColumnMobile: {
       width: '100%',
       marginLeft: 0,
       marginTop: DESIGN_TOKENS.spacing.md,
+    },
+    // ✅ SEARCH HEADER: Прикрепленный заголовок поиска
+    searchHeader: {
+      position: 'relative',
+      zIndex: 10,
+      backgroundColor: colors.surface,
+      ...Platform.select({
+        web: {
+          boxShadow: DESIGN_TOKENS.shadows.light,
+        } as any,
+        ios: DESIGN_TOKENS.shadowsNative.light,
+        android: { elevation: 2 },
+        default: DESIGN_TOKENS.shadowsNative.light,
+      }),
+    },
+    // ✅ CARDS CONTAINER: Прокручиваемый контейнер для карточек
+    cardsContainer: {
+      flex: 1,
+      overflowY: 'auto',
+      overflowX: 'hidden',
+      ...(Platform.OS === 'web' ? ({ scrollbarGutter: 'stable' } as any) : null),
+      // Горизонтальные отступы задаются динамически через contentPadding, чтобы избежать лишних белых полей
+      paddingTop: DESIGN_TOKENS.spacing.lg,
+      paddingBottom: DESIGN_TOKENS.spacing.md,
+      ...Platform.select({
+        web: {
+          minHeight: 900,
+        },
+      }),
+    },
+    cardsContainerMobile: {
+      // Reserve space for the fixed mobile footer/dock so the last card is not covered.
+      // Uses tabBarHeight as a stable dock height across platforms.
+      paddingBottom: LAYOUT.tabBarHeight + DESIGN_TOKENS.spacing.xl,
+      minHeight: 720,
+    },
+    // ✅ CARDS GRID: Flexbox layout for both platforms
+    cardsGrid: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'flex-start',
+      alignItems: 'flex-start',
+    },
+    resultsCount: {
+      marginBottom: DESIGN_TOKENS.spacing.lg,
     },
     recommendationsTabsWrapper: {
       marginTop: DESIGN_TOKENS.spacing.lg,

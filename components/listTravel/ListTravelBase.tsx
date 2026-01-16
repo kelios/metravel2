@@ -63,7 +63,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   contentMobile: {
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingTop: DESIGN_TOKENS.spacing.md,
+    paddingTop: 0,
     paddingBottom: DESIGN_TOKENS.spacing.md,
   },
   sidebar: {
@@ -211,6 +211,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   rightColumnMobile: {
     width: '100%',
+    paddingTop: 0,
   },
   // ✅ SEARCH HEADER: Прикрепленный заголовок поиска
   searchHeader: {

@@ -82,7 +82,10 @@ function ListTravel({
 
     const isMeTravel = (route as any).name === "metravel";
     const isTravelBy = (route as any).name === "travelsby";
-    const isExport = (route as any).name === "export" || pathname?.includes('/export');
+    const isExport =
+      (route as any).name === "export" ||
+      pathname?.includes('/export') ||
+      (typeof window !== 'undefined' && window.location.pathname.includes('/export'));
     const isTestEnv = process.env.NODE_ENV === 'test';
 
     // ✅ Используем значения из useResponsive
