@@ -35,6 +35,9 @@ export async function fetchWithTimeout(
         });
         return response;
     } catch (error: any) {
+        if (error?.code === 'ERR_STREAM_PREMATURE_CLOSE' || error?.message === 'Premature close') {
+            throw new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
+        }
         if (error.name === 'AbortError') {
             // Если отмена произошла из-за внешнего signal, пробрасываем оригинальную ошибку
             if (externalSignal?.aborted) {

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from 'react-native-paper';
+import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
@@ -551,7 +552,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                     onPress={handleApproveModeration}
                                     activeOpacity={0.85}
                                 >
-                                    <Icon source="check-circle" size={20} color={colors.textOnPrimary} />
+                                    <Feather name="check-circle" size={20} color={colors.textOnPrimary} />
                                     <Text style={styles.adminButtonText}>Одобрить модерацию</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
@@ -559,7 +560,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                     onPress={handleRejectModeration}
                                     activeOpacity={0.85}
                                 >
-                                    <Icon source="close-circle" size={20} color={colors.textOnPrimary} />
+                                    <Feather name="x-circle" size={20} color={colors.textOnPrimary} />
                                     <Text style={styles.adminButtonText}>Отклонить</Text>
                                 </TouchableOpacity>
                             </View>
