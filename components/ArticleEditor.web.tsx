@@ -124,6 +124,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const editorViewportRef = useRef<any>(null);
 
+    const prevFullscreenRef = useRef(false);
+
     const lastExternalContentRef = useRef<string>('');
 
     const quillRef = useRef<any>(null);
@@ -690,6 +692,69 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             quillRef.current.getEditor().setSelection(tmpStoredRange.current, 'silent');
         }
     }, [fullscreen, showHtml]);
+
+    useEffect(() => {
+        if (!isWeb) return;
+
+        // Track transitions to avoid repeated work (and visual blinking).
+        if (!fullscreen) {
+            prevFullscreenRef.current = false;
+            return;
+        }
+        if (prevFullscreenRef.current) return;
+        prevFullscreenRef.current = true;
+
+        if (showHtml) return;
+        if (!shouldLoadQuill) return;
+
+        let raf = 0;
+        raf = (win as any)?.requestAnimationFrame?.(() => {
+            try {
+                const editor = quillRef.current?.getEditor?.();
+                if (!editor) return;
+
+                // Force Quill to recalc layout in the new fullscreen container.
+                editor.update?.('silent');
+                editor.scroll?.update?.('silent');
+
+                // Fallback: if Quill still renders empty while html is non-empty, remount once.
+                const nextHtml = typeof html === 'string' ? html : '';
+                if (nextHtml.trim().length === 0) return;
+                const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
+                const isEditorEmpty = text.replace(/\s+/g, '').length === 0;
+                if (!isEditorEmpty) return;
+
+                // Quill sometimes mounts inside a Modal and renders blank even though value prop is non-empty.
+                // Force-set the HTML to ensure the user sees the existing description.
+                try {
+                    const clean = sanitizeHtml(nextHtml);
+                    editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
+                    editor.setSelection?.(0, 0, 'silent');
+                } catch {
+                    // noop
+                }
+
+                // If it still looks empty after paste, remount once as a last resort.
+                try {
+                    const textAfter = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
+                    const stillEmpty = textAfter.replace(/\s+/g, '').length === 0;
+                    if (stillEmpty) setQuillMountKey(v => v + 1);
+                } catch {
+                    setQuillMountKey(v => v + 1);
+                }
+            } catch {
+                // noop
+            }
+        }) ?? 0;
+
+        return () => {
+            try {
+                (win as any)?.cancelAnimationFrame?.(raf);
+            } catch {
+                // noop
+            }
+        };
+    }, [fullscreen, showHtml, shouldLoadQuill, html]);
 
     const Loader = () => (
         <View style={dynamicStyles.loadBox}>

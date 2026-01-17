@@ -1599,13 +1599,16 @@ export class EnhancedPdfGenerator {
         -moz-osx-font-smoothing: grayscale;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        text-rendering: optimizeLegibility;
+        font-feature-settings: "kern" 1;
+        font-kerning: normal;
       }
       .pdf-page {
         width: 210mm;
         min-height: 297mm;
         background: ${colors.surface};
         margin: 0 auto 16px;
-        box-shadow: ${this.theme.blocks.shadow};
+        box-shadow: none;
         position: relative;
         overflow: hidden;
       }
@@ -1617,7 +1620,8 @@ export class EnhancedPdfGenerator {
         max-width: 100%;
         display: block;
         height: auto;
-        image-rendering: auto;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
       }
       h1, h2, h3, h4 {
         font-family: ${typography.headingFont};
@@ -1626,6 +1630,8 @@ export class EnhancedPdfGenerator {
         page-break-inside: avoid;
         orphans: 3;
         widows: 3;
+        text-rendering: optimizeLegibility;
+        font-feature-settings: "kern" 1;
       }
       h1 + p, h2 + p, h3 + p, h4 + p {
         page-break-before: avoid;
@@ -1634,6 +1640,7 @@ export class EnhancedPdfGenerator {
         orphans: 2;
         widows: 2;
         page-break-inside: avoid;
+        text-rendering: optimizeLegibility;
       }
       img, figure, blockquote, pre, table {
         page-break-inside: avoid;
@@ -1656,10 +1663,6 @@ export class EnhancedPdfGenerator {
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
-        .pdf-page * {
-          box-shadow: none !important;
-          text-shadow: none !important;
-        }
         a {
           color: inherit;
           text-decoration: none;
@@ -1671,14 +1674,9 @@ export class EnhancedPdfGenerator {
           width: 210mm;
           min-height: 297mm;
         }
-        /* Avoid Chromium print artifacts with blurred layers on cover */
-        .cover-bg-blur {
-          display: none !important;
-          filter: none !important;
-        }
-        .cover-page img {
-          filter: none !important;
-          -webkit-filter: none !important;
+        img {
+          image-rendering: -webkit-optimize-contrast;
+          image-rendering: crisp-edges;
         }
       }
     `;
@@ -2137,7 +2135,9 @@ export class EnhancedPdfGenerator {
     try {
       const normalized = trimmed.replace(/^https?:\/\//i, '');
       const delimiter = encodeURIComponent(normalized);
-      return `https://images.weserv.nl/?url=${delimiter}&w=1600&fit=inside`;
+      // Увеличено разрешение до 2400px для высокого качества печати (300 DPI)
+      // Добавлены параметры: q=90 (качество JPEG), il (прогрессивная загрузка)
+      return `https://images.weserv.nl/?url=${delimiter}&w=2400&q=90&il&fit=inside`;
     } catch {
       return trimmed;
     }

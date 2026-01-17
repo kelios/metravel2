@@ -48,10 +48,12 @@ export function Text(props: TextProps) {
  * Компонент View с поддержкой темной и светлой темы.
  */
 export function View(props: ViewProps) {
-  const { style, lightColor, darkColor, ...otherProps } = props;
+  const { style, lightColor, darkColor, pointerEvents, ...otherProps } = props as any;
   const backgroundColor = useThemeColor({ light: lightColor, dark: darkColor }, 'background');
 
-  return <DefaultView style={[{ backgroundColor }, style]} {...otherProps} />;
+  const pointerEventsStyle = pointerEvents ? ({ pointerEvents } as any) : null;
+
+  return <DefaultView style={[{ backgroundColor }, pointerEventsStyle, style]} {...otherProps} />;
 }
 
 /**

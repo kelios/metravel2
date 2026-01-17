@@ -3,6 +3,30 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 type UnknownRecord = Record<string, unknown>;
 
+const coerceString = (value: unknown, fallback = ''): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (value == null) return fallback;
+  return fallback;
+};
+
+const pickFirstString = (
+  source: UnknownRecord,
+  keys: string[],
+  fallback = ''
+): string => {
+  for (const key of keys) {
+    const v = source[key];
+    if (typeof v === 'string' && v.trim().length > 0) return v;
+  }
+  // Allow empty-but-explicit strings (e.g. server returns "") when nothing else exists.
+  for (const key of keys) {
+    const v = source[key];
+    if (typeof v === 'string') return v;
+  }
+  return fallback;
+};
+
 const coerceBoolean = (value: unknown, fallback = false): boolean => {
   if (typeof value === 'boolean') return value;
   if (value === 'true' || value === '1' || value === 1) return true;
@@ -186,6 +210,26 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
   const travelRecord = travel as unknown as UnknownRecord;
   const daysStr = travelRecord.number_days != null ? String(travelRecord.number_days) : '';
   const peoplesStr = travelRecord.number_peoples != null ? String(travelRecord.number_peoples) : '';
+
+  const description = pickFirstString(travelRecord, [
+    'description',
+    'description_html',
+    'descriptionHtml',
+    'descriptionTravel',
+    'description_travel',
+  ]);
+  const plus = pickFirstString(travelRecord, ['plus', 'plus_html', 'plusHtml']);
+  const minus = pickFirstString(travelRecord, ['minus', 'minus_html', 'minusHtml']);
+  const recommendation = pickFirstString(travelRecord, [
+    'recommendation',
+    'recommendation_html',
+    'recommendationHtml',
+  ]);
+  const youtube_link = coerceString(
+    travelRecord.youtube_link ?? travelRecord.youtubeLink,
+    ''
+  );
+
   const mergedTravel = {
     ...getEmptyFormData(String(travel.id)),
     ...normalizeDefinedFields(travelRecord),
@@ -199,6 +243,11 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
     year: yearStr,
     number_days: daysStr,
     number_peoples: peoplesStr,
+    description,
+    plus,
+    minus,
+    recommendation,
+    youtube_link,
     moderation: coerceBoolean(travelRecord.moderation, false),
     publish: coerceBoolean(travelRecord.publish, false),
     visa: coerceBoolean(travelRecord.visa, false),

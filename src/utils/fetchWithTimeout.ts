@@ -15,7 +15,11 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
     const externalSignal = options.signal;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+    let didTimeout = false;
+    const timeoutId = setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+    }, timeout);
     let cleanupExternalAbort: (() => void) | undefined;
 
     // Если есть внешний signal, слушаем его для отмены
@@ -35,7 +39,7 @@ export async function fetchWithTimeout(
         });
         return response;
     } catch (error: any) {
-        if (error?.code === 'ERR_STREAM_PREMATURE_CLOSE' || error?.message === 'Premature close') {
+        if ((error?.code === 'ERR_STREAM_PREMATURE_CLOSE' || error?.message === 'Premature close') && didTimeout) {
             throw new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
         }
         if (error.name === 'AbortError') {

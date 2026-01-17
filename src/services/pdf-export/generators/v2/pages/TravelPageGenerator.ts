@@ -100,10 +100,10 @@ export class TravelPageGenerator extends BasePageGenerator {
               ">
                 <h1 style="
                   color: #ffffff;
-                  font-size: ${typography.h1.size};
+                  font-size: ${typography.h2.size};
                   margin: 0 0 6mm 0;
-                  font-weight: ${typography.h1.weight};
-                  line-height: ${typography.h1.lineHeight};
+                  font-weight: ${typography.h2.weight};
+                  line-height: ${typography.h2.lineHeight};
                   text-shadow: 0 6px 18px rgba(0,0,0,0.55);
                   font-family: ${typography.headingFont};
                   overflow-wrap: anywhere;

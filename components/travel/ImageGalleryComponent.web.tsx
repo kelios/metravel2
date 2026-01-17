@@ -588,6 +588,8 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                 return (
                     <ButtonComponent
                         onClick={makeActivate}
+                        onPress={makeActivate}
+                        testID={testID}
                         data-testid={testID}
                         style={{
                             ...flatStyle,
