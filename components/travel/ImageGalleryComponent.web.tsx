@@ -824,7 +824,6 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                 <>
                                     {!image.hasLoaded && (
                                         <View
-                                            pointerEvents="none"
                                             style={[
                                                 StyleSheet.absoluteFillObject,
                                                 {
@@ -832,6 +831,7 @@ const ImageGalleryComponent: React.FC<ImageGalleryComponentProps> = ({
                                                     justifyContent: 'center',
                                                     alignItems: 'center',
                                                     zIndex: 0,
+                                                    pointerEvents: 'none',
                                                 },
                                             ]}
                                         >

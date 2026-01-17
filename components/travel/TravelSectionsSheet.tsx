@@ -265,8 +265,12 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
       >
         <Pressable
           testID="travel-sections-overlay"
-          style={styles.overlay}
-          pointerEvents={Platform.OS === 'web' ? (webOverlayInteractive ? 'auto' : 'none') : 'auto'}
+          style={[
+            styles.overlay,
+            {
+              pointerEvents: Platform.OS === 'web' ? (webOverlayInteractive ? 'auto' : 'none') : 'auto',
+            },
+          ]}
           onPress={() => {
             if (Platform.OS === 'web') {
               const dt = Date.now() - openedAtRef.current

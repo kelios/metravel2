@@ -798,7 +798,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
         {/* Instagram-style 1/N counter */}
         {images.length > 1 && (
-          <View style={[styles.counter, isMobile && styles.counterMobile]} pointerEvents="none">
+          <View
+            style={[styles.counter, isMobile && styles.counterMobile, { pointerEvents: 'none' }]}
+          >
             <View style={styles.counterContainer}>
               <Text style={styles.counterText}>
                 {currentIndex + 1}/{images.length}
@@ -809,7 +811,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
         {/* Instagram-style pagination dots */}
         {showDots && images.length > 1 && (
-          <View style={[styles.dots, isMobile && styles.dotsMobile]} pointerEvents="none">
+          <View style={[styles.dots, isMobile && styles.dotsMobile, { pointerEvents: 'none' }]}>
             <View style={styles.dotsContainer}>
               {images.map((_, i) => (
                 <View key={i} style={styles.dotWrap}>
@@ -842,14 +844,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     borderRadius: 12,
     borderWidth: 0,
     borderColor: "transparent",
-    ...Platform.select({
+    ...Platform.select<any>({
       web: {
         boxShadow: colors.boxShadows.heavy,
       },
       android: {
         elevation: 8,
       },
-      default: colors.shadows.medium,
+      ios: colors.shadows.medium,
+      native: colors.shadows.medium,
     }),
   },
   wrapperMobile: {

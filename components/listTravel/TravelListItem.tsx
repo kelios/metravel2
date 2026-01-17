@@ -391,7 +391,7 @@ function TravelListItem({
           };
 
 const selectableOverlay = selectable ? (
-  <View style={styles.checkWrap} pointerEvents={isWeb ? 'none' : 'auto'}>
+  <View style={[styles.checkWrap, { pointerEvents: isWeb ? 'none' : 'auto' }] as any}>
     {isWeb ? (
       <View
         accessibilityLabel={isSelected ? 'Убрать из выбранного' : 'Выбрать'}

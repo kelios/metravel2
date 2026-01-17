@@ -152,12 +152,12 @@ function SearchAndFilterBar({
                 // Добавляем aria-hidden для веб-версии через обертку
                 return {
                     search: (
-                        <View pointerEvents="none" {...({ 'aria-hidden': true } as any)}>
+                        <View style={{ pointerEvents: 'none' }} {...({ 'aria-hidden': true } as any)}>
                             {searchIcon}
                         </View>
                     ),
                     clear: (
-                        <View pointerEvents="none" {...({ 'aria-hidden': true } as any)}>
+                        <View style={{ pointerEvents: 'none' }} {...({ 'aria-hidden': true } as any)}>
                             {clearIcon}
                         </View>
                     ),

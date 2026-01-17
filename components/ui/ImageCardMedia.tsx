@@ -265,8 +265,10 @@ function ImageCardMedia({
           )}
           {!!overlayColor && (
             <View
-              pointerEvents="none"
-              style={[StyleSheet.absoluteFillObject, { backgroundColor: overlayColor, borderRadius }]}
+              style={[
+                StyleSheet.absoluteFillObject,
+                { backgroundColor: overlayColor, borderRadius, pointerEvents: 'none' },
+              ]}
             />
           )}
         </>

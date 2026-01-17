@@ -108,7 +108,10 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         }
 
         return (
-          <View testID="map-panel-overlay" style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <View
+            testID="map-panel-overlay"
+            style={[StyleSheet.absoluteFill, { pointerEvents: 'box-none' }]}
+          >
             <BottomSheetBackdrop
               {...props}
               disappearsOnIndex={0}

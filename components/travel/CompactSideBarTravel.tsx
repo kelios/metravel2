@@ -566,10 +566,10 @@ function CompactSideBarTravel({
             } : {})}
           >
             <View
-              pointerEvents="none"
               style={[
                 styles.activeIndicator,
                 currentActive === key && styles.activeIndicatorActive,
+                { pointerEvents: 'none' },
               ]}
             />
             <View style={styles.linkLeft}>
