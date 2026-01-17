@@ -1,6 +1,4 @@
 import { act, renderHook } from '@testing-library/react-native'
-import { Animated } from 'react-native'
-
 import {
   useAnimationFrame,
   useComponentLifecycle,
@@ -11,7 +9,6 @@ import {
   useIdleCallback,
   useIntersectionObserver,
   useInterval,
-  useScrollListener,
   useTimeout,
 } from '@/hooks/useTravelDetailsUtils'
 
@@ -32,19 +29,6 @@ describe('useTravelDetailsUtils', () => {
     ;(window as any).requestIdleCallback = originalRequestIdleCallback
     ;(window as any).cancelIdleCallback = originalCancelIdleCallback
     ;(global as any).IntersectionObserver = originalIntersectionObserver
-  })
-
-  it('useScrollListener calls handler on updates', () => {
-    const scrollY = new Animated.Value(0)
-    const handler = jest.fn()
-
-    renderHook(() => useScrollListener(scrollY, handler))
-
-    act(() => {
-      scrollY.setValue(24)
-    })
-
-    expect(handler).toHaveBeenCalled()
   })
 
   it('useTimeout runs once and cleans up', () => {

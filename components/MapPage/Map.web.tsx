@@ -449,6 +449,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
       {Platform.OS === 'web' && (
         <style>
           {`
+          /* Mobile: ensure Leaflet receives touch drag gestures instead of page scroll */
+          .leaflet-container {
+            touch-action: none;
+            -ms-touch-action: none;
+            overscroll-behavior: none;
+          }
+
           html[data-theme='dark'] .leaflet-popup-content-wrapper,
           html[data-theme='dark'] .leaflet-popup-tip {
             background: ${(colors as any).surface} !important;

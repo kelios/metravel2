@@ -19,6 +19,7 @@ export interface ProgressiveLoadConfig {
   threshold?: number;   // Intersection threshold
   rootMargin?: string;  // Root margin for Intersection Observer
   fallbackDelay?: number; // Fallback delay for non-supporting browsers
+  enabled?: boolean;
 }
 
 // Hook for progressive component loading
@@ -27,9 +28,10 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
   const threshold = config.threshold;
   const rootMargin = config.rootMargin;
   const fallbackDelay = config.fallbackDelay;
+  const enabled = config.enabled !== false;
 
   const [shouldLoad, setShouldLoad] = useState(
-    priority === 'immediate' || priority === 'high'
+    enabled && (priority === 'immediate' || priority === 'high')
   );
   const elementRef = useRef<any>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -39,6 +41,11 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) {
+      setShouldLoad(false);
+      return;
+    }
+
     if (priority === 'immediate') {
       setShouldLoad(true);
       return;
@@ -97,7 +104,7 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
         observerRef.current.disconnect();
       }
     };
-  }, [fallbackDelay, priority, rootMargin, shouldLoad, threshold]);
+  }, [enabled, fallbackDelay, priority, rootMargin, shouldLoad, threshold]);
 
   return { shouldLoad, elementRef, setElementRef };
 }

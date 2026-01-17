@@ -413,6 +413,7 @@ export const TravelDeferredSections: React.FC<{
         setRelatedTravels={setRelatedTravels}
         scrollY={scrollY}
         viewportHeight={viewportHeight}
+        canRenderHeavy={canRenderHeavy}
       />
 
       <TravelEngagementSection travel={travel} isMobile={isMobile} />
@@ -914,9 +915,20 @@ const TravelVisualSections: React.FC<{
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0
-  const { shouldLoad: shouldLoadMap, setElementRef } = useLazyMap({ enabled: Platform.OS === 'web' })
+  const [mapLazyEnabled, setMapLazyEnabled] = useState(Platform.OS !== 'web')
+  const { shouldLoad: shouldLoadMap, setElementRef } = useLazyMap({
+    enabled: mapLazyEnabled,
+    rootMargin: '0px',
+    threshold: 0.2,
+  })
   const shouldRenderMap = canRenderHeavy && (Platform.OS !== 'web' || shouldLoadMap) && hasMapData
   const [hasMountedMap, setHasMountedMap] = useState(false)
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!canRenderHeavy) return
+    rIC(() => setMapLazyEnabled(true), 2000)
+  }, [canRenderHeavy])
 
   useEffect(() => {
     if (shouldRenderMap && !hasMountedMap) {
@@ -1025,22 +1037,34 @@ const TravelRelatedContent: React.FC<{
   setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>
   scrollY: Animated.Value
   viewportHeight: number
-}> = ({ travel, anchors, relatedTravels, setRelatedTravels, scrollY, viewportHeight }) => {
+  canRenderHeavy: boolean
+}> = ({
+  travel,
+  anchors,
+  relatedTravels,
+  setRelatedTravels,
+  scrollY,
+  viewportHeight,
+  canRenderHeavy,
+}) => {
   const styles = useTravelDetailsStyles()
   const isWeb = Platform.OS === 'web'
-  const preloadMargin = 200
+  const preloadMargin = 0
+  const progressiveEnabled = !isWeb || canRenderHeavy
 
   const { shouldLoad: shouldLoadNearWeb, setElementRef: setNearRefWeb } = useProgressiveLoad({
     priority: 'low',
     rootMargin: `${preloadMargin}px`,
-    threshold: 0.1,
-    fallbackDelay: 1500,
+    threshold: 0.25,
+    fallbackDelay: 2500,
+    enabled: progressiveEnabled,
   })
   const { shouldLoad: shouldLoadPopularWeb, setElementRef: setPopularRefWeb } = useProgressiveLoad({
     priority: 'low',
     rootMargin: `${preloadMargin}px`,
-    threshold: 0.1,
-    fallbackDelay: 1500,
+    threshold: 0.25,
+    fallbackDelay: 2600,
+    enabled: progressiveEnabled,
   })
 
   const [nearTop, setNearTop] = useState<number | null>(null)

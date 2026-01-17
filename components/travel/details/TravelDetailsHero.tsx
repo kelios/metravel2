@@ -437,6 +437,7 @@ export function TravelHeroSection({
   }, [travel.gallery])
   const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : 'Фото путешествия'
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
+  const canShowSlider = renderSlider
   const quickJumpLinks = useMemo(() => {
     return HERO_QUICK_JUMP_KEYS.map((key) => sectionLinks.find((link) => link.key === key)).filter(
       Boolean
@@ -503,7 +504,7 @@ export function TravelHeroSection({
         >
           {!firstImg ? (
             <NeutralHeroPlaceholder height={heroHeight} />
-          ) : shouldShowOptimizedHero && !renderSlider ? (
+          ) : shouldShowOptimizedHero && !canShowSlider ? (
             <OptimizedLCPHero
               img={{
                 url: firstImg.url,
@@ -524,6 +525,7 @@ export function TravelHeroSection({
                 showArrows={!isMobile}
                 hideArrowsOnMobile
                 showDots={isMobile}
+                autoPlay={false}
                 preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
                 blurBackground
                 aspectRatio={aspectRatio as number}

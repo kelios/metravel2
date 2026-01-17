@@ -7,9 +7,8 @@ test.describe('Article anchors (TOC -> section)', () => {
     const slug = 'e2e-anchor-scroll';
     const targetId = 'desc';
 
-    let fulfilledOnce = false;
     const routeHandler = async (route: any, request: any) => {
-      if (fulfilledOnce || request.method() !== 'GET') {
+      if (request.method() !== 'GET') {
         await route.continue();
         return;
       }
@@ -25,8 +24,6 @@ test.describe('Article anchors (TOC -> section)', () => {
         await route.continue();
         return;
       }
-      fulfilledOnce = true;
-
       const filler = Array.from({ length: 24 })
         .map((_, i) => `<p>Заполнитель ${i + 1}. Текст для прокрутки.</p>`)
         .join('');

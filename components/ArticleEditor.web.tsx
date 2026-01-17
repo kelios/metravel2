@@ -28,6 +28,10 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 const isWeb = Platform.OS === 'web';
 const win = isWeb && typeof window !== 'undefined' ? window : undefined;
+const isTestEnv =
+    typeof process !== 'undefined' &&
+    (process as any)?.env &&
+    ((process as any).env.NODE_ENV === 'test' || (process as any).env.JEST_WORKER_ID !== undefined);
 
 function useDebounce<T extends unknown[]>(fn: (...args: T) => void, ms = 300) {
     const timeout = useRef<ReturnType<typeof setTimeout>>();
@@ -56,17 +60,6 @@ const QuillEditor =
     isWeb && win
         ? (React.lazy(() => import('@/components/QuillEditor.web')) as any)
         : undefined;
-
-// CSS темы подключаем один раз и только на web
-if (isWeb && win) {
-    const href = 'https://cdn.jsdelivr.net/npm/react-quill@2/dist/quill.snow.css';
-    if (!win.document.querySelector(`link[href="${href}"]`)) {
-        const link = win.document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = href;
-        win.document.head.appendChild(link);
-    }
-}
 
 const quillModulesDefault = {
     toolbar: [
@@ -116,15 +109,99 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 }) => {
     const colors = useThemedColors();
     const [html, setHtml] = useState(content);
+    const [quillMountKey, setQuillMountKey] = useState(0);
+    const [shouldLoadQuill, setShouldLoadQuill] = useState(() => {
+        if (isTestEnv) return true;
+        if (!isWeb || !win) return true;
+        const initial = typeof content === 'string' ? content : '';
+        return initial.trim().length > 0;
+    });
     const [fullscreen, setFullscreen] = useState(false);
     const [showHtml, setShowHtml] = useState(false);
     const [anchorModalVisible, setAnchorModalVisible] = useState(false);
     const [anchorValue, setAnchorValue] = useState('');
     const htmlSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
 
+    const editorViewportRef = useRef<any>(null);
+
+    const lastExternalContentRef = useRef<string>('');
+
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
     const { isAuthenticated } = useAuth();
+
+    const pendingForceSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const forceSyncAttemptRef = useRef(0);
+
+    const handleQuillRef = useCallback(
+        (node: any) => {
+            quillRef.current = node;
+
+            if (editorRef) {
+                if (typeof editorRef === 'function') editorRef(node);
+                else (editorRef as any).current = node;
+            }
+        },
+        [editorRef]
+    );
+
+    useEffect(() => {
+        if (!isWeb || !win) return;
+        if (shouldLoadQuill) return;
+        if (showHtml) return;
+
+        const startLoad = () => setShouldLoadQuill(true);
+
+        const el = editorViewportRef.current as Element | null;
+        let observer: IntersectionObserver | null = null;
+        let idleId: any = null;
+        let t: any = null;
+
+        if (typeof (win as any).IntersectionObserver === 'function' && el) {
+            observer = new (win as any).IntersectionObserver(
+                (entries: any[]) => {
+                    const hit = entries?.some(e => e?.isIntersecting);
+                    if (hit) {
+                        startLoad();
+                        observer?.disconnect();
+                        observer = null;
+                    }
+                },
+                { rootMargin: '300px 0px' }
+            );
+            if (observer) observer.observe(el);
+        }
+
+        if (typeof (win as any).requestIdleCallback === 'function') {
+            idleId = (win as any).requestIdleCallback(() => startLoad(), { timeout: 2500 });
+        } else {
+            t = setTimeout(() => startLoad(), 2500);
+        }
+
+        return () => {
+            if (observer) observer.disconnect();
+            if (idleId && typeof (win as any).cancelIdleCallback === 'function') {
+                try {
+                    (win as any).cancelIdleCallback(idleId);
+                } catch {
+                    // noop
+                }
+            }
+            if (t) clearTimeout(t);
+        };
+    }, [shouldLoadQuill, showHtml]);
+
+    useEffect(() => {
+        if (!isWeb || !win) return;
+        if (!shouldLoadQuill) return;
+        const href = 'https://cdn.jsdelivr.net/npm/react-quill@2/dist/quill.snow.css';
+        if (!win.document.querySelector(`link[href="${href}"]`)) {
+            const link = win.document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            win.document.head.appendChild(link);
+        }
+    }, [shouldLoadQuill]);
 
     // Динамические стили на основе темы
     const dynamicStyles = useMemo(() => StyleSheet.create({
@@ -206,6 +283,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     useEffect(() => {
         if (!editorRef) return;
+        if (!quillRef.current) return;
         if (typeof editorRef === 'function') editorRef(quillRef.current);
         else (editorRef as any).current = quillRef.current;
     }, [editorRef]);
@@ -229,6 +307,79 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     useEffect(() => {
         if (content !== html) setHtml(content);
     }, [content]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        const prev = lastExternalContentRef.current;
+        lastExternalContentRef.current = typeof content === 'string' ? content : '';
+        if (typeof prev === 'string' && typeof content === 'string') {
+            if (prev.trim().length === 0 && content.trim().length > 0) {
+                setQuillMountKey(v => v + 1);
+            }
+        }
+    }, [content]);
+
+    useEffect(() => {
+        if (!isWeb) return;
+        if (showHtml) return;
+        const next = typeof content === 'string' ? content : '';
+        if (next.trim().length === 0) return;
+
+        const MAX_ATTEMPTS = 20;
+        const ATTEMPT_DELAY_MS = 50;
+
+        const clearPending = () => {
+            if (pendingForceSyncTimeoutRef.current) {
+                clearTimeout(pendingForceSyncTimeoutRef.current);
+                pendingForceSyncTimeoutRef.current = null;
+            }
+        };
+
+        const attempt = () => {
+            clearPending();
+            forceSyncAttemptRef.current += 1;
+
+            // Wait for lazy-loaded Quill to mount.
+            if (!quillRef.current) {
+                if (forceSyncAttemptRef.current < MAX_ATTEMPTS) {
+                    pendingForceSyncTimeoutRef.current = setTimeout(attempt, ATTEMPT_DELAY_MS);
+                }
+                return;
+            }
+
+            try {
+                const editor = quillRef.current?.getEditor?.();
+                if (!editor) return;
+
+                const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
+                const isEditorEmpty = text.replace(/\s+/g, '').length === 0;
+                if (!isEditorEmpty) return;
+
+                const clean = sanitizeHtml(next);
+
+                if (__DEV__) {
+                    console.info('[ArticleEditor] Forcing Quill content sync', {
+                        contentLen: clean.length,
+                        htmlLen: typeof html === 'string' ? html.length : 0,
+                        attempt: forceSyncAttemptRef.current,
+                    });
+                }
+
+                editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
+                editor.setSelection?.(0, 0, 'silent');
+            } catch (e) {
+                if (__DEV__) {
+                    console.info('[ArticleEditor] Failed to force Quill content sync', e);
+                }
+            }
+        };
+
+        forceSyncAttemptRef.current = 0;
+        pendingForceSyncTimeoutRef.current = setTimeout(attempt, 0);
+
+        return () => {
+            clearPending();
+        };
+    }, [content, html, showHtml]);
 
     useEffect(() => {
         if (!win) return;
@@ -568,23 +719,28 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             placeholderTextColor={colors.textSecondary}
         />
     ) : (
-        <Suspense fallback={<Loader />}>
-            <QuillEditor
-                ref={quillRef}
-                theme="snow"
-                value={html}
-                onChange={(val: string) => fireChange(val)}
-                modules={modules}
-                placeholder={placeholder}
-                style={dynamicStyles.editor}
-            />
-        </Suspense>
+        shouldLoadQuill ? (
+            <Suspense fallback={<Loader />}>
+                <QuillEditor
+                    key={quillMountKey}
+                    ref={handleQuillRef}
+                    theme="snow"
+                    value={html}
+                    onChange={(val: string) => fireChange(val)}
+                    modules={modules}
+                    placeholder={placeholder}
+                    style={dynamicStyles.editor}
+                />
+            </Suspense>
+        ) : (
+            <Loader />
+        )
     );
 
     const body = (
         <>
             <Toolbar />
-            <View style={dynamicStyles.editorArea}>{editorArea}</View>
+            <View ref={editorViewportRef} style={dynamicStyles.editorArea}>{editorArea}</View>
             <Modal
                 visible={anchorModalVisible}
                 transparent

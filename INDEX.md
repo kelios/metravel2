@@ -152,7 +152,6 @@
    - Animation timing (getAnimationTiming)
 
 ✅ hooks/useTravelDetailsUtils.ts (320 lines)
-   - useScrollListener (scroll with auto-cleanup)
    - useTimeout, useInterval (managed timers)
    - useDOMElement (React Native Web DOM access)
    - useIdleCallback (requestIdleCallback wrapper)
@@ -402,4 +401,3 @@ TOTAL PROJECT:
 ---
 
 👉 **Start Here:** [`PROJECT_COMPLETION_REPORT.md`](./PROJECT_COMPLETION_REPORT.md) (5 min read)
-

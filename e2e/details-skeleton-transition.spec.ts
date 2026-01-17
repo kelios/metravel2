@@ -30,15 +30,15 @@ test.describe('Travel details skeleton transition (no layout shift)', () => {
     await preacceptCookies(page);
 
     // Deterministic: delay and mock the travel-by-slug request.
-    let fulfilledOnce = false;
+    let requestCount = 0;
     await page.route('**/api/travels/by-slug/**', async (route: any, request: any) => {
-      if (fulfilledOnce || request.method() !== 'GET') {
+      if (request.method() !== 'GET') {
         await route.continue();
         return;
       }
 
-      fulfilledOnce = true;
-      await new Promise((r) => setTimeout(r, 1500));
+      requestCount += 1;
+      await new Promise((r) => setTimeout(r, requestCount === 1 ? 1500 : 250));
 
       const mocked = {
         id: 999998,

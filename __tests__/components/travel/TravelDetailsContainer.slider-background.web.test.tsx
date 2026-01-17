@@ -62,6 +62,13 @@ describe('TravelHeroSection slider background regression (web)', () => {
           updated_at: '2025-01-01',
           id: 1,
         },
+        {
+          url: 'https://cdn.example.com/img-2.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-02',
+          id: 2,
+        },
       ],
       travelAddress: [],
     }

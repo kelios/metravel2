@@ -148,6 +148,25 @@ const getTravelHeroPreloadScript = () => String.raw`
       ? apiBase + '/api/travels/' + encodeURIComponent(slug) + '/'
       : apiBase + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
 
+    function buildOptimizedUrl(rawUrl, width, quality) {
+      try {
+        var resolved = new URL(rawUrl, window.location.origin);
+        var host = resolved.hostname || '';
+        var allowed =
+          host === 'metravel.by' ||
+          host === 'cdn.metravel.by' ||
+          host === 'api.metravel.by';
+        if (!allowed) return null;
+        if (width) resolved.searchParams.set('w', String(Math.round(width)));
+        if (quality) resolved.searchParams.set('q', String(quality));
+        resolved.searchParams.set('f', 'auto');
+        resolved.searchParams.set('fit', 'contain');
+        return resolved.toString();
+      } catch (_e) {
+        return null;
+      }
+    }
+
     var controller = window.AbortController ? new AbortController() : null;
     var timeout = setTimeout(function(){
       try { if (controller) controller.abort(); } catch (_e) {}
@@ -168,8 +187,19 @@ const getTravelHeroPreloadScript = () => String.raw`
       var url = typeof first === 'string' ? first : first && first.url;
       if (!url || typeof url !== 'string') return;
 
+      var viewport = Math.max(320, Math.min(window.innerWidth || 480, 960));
+      var isMobile = (window.innerWidth || 0) <= 540;
+      var targetWidth = isMobile ? Math.min(viewport, 480) : Math.min(viewport, 960);
+      var quality = isMobile ? 55 : 70;
+      var highWidth = Math.min(isMobile ? 720 : 1280, Math.round(targetWidth * 2));
+      var optimizedHref = buildOptimizedUrl(url, targetWidth, quality);
+      if (!optimizedHref) return;
+      var optimizedHrefHigh = highWidth !== targetWidth
+        ? buildOptimizedUrl(url, highWidth, quality)
+        : null;
+
       try {
-        var resolved = new URL(url, window.location.origin);
+        var resolved = new URL(optimizedHref, window.location.origin);
         var origin = resolved.origin;
         if (origin && !document.querySelector('link[rel="preconnect"][href="' + origin + '"]')) {
           var pre = document.createElement('link');
@@ -180,11 +210,15 @@ const getTravelHeroPreloadScript = () => String.raw`
         }
       } catch (_e) {}
 
-      if (document.querySelector('link[rel="preload"][href="' + url + '"]')) return;
+      if (document.querySelector('link[rel="preload"][href="' + optimizedHref + '"]')) return;
       var link = document.createElement('link');
       link.rel = 'preload';
       link.as = 'image';
-      link.href = url;
+      link.href = optimizedHref;
+      if (optimizedHrefHigh) {
+        link.setAttribute('imagesrcset', optimizedHref + ' ' + Math.round(targetWidth) + 'w, ' + optimizedHrefHigh + ' ' + Math.round(highWidth) + 'w');
+        link.setAttribute('imagesizes', '100vw');
+      }
       link.fetchPriority = 'high';
       link.setAttribute('fetchpriority', 'high');
       link.crossOrigin = 'anonymous';

@@ -4,26 +4,7 @@
  */
 
 import { useEffect, useRef, MutableRefObject, useCallback, useState } from "react";
-import { Platform, Animated } from "react-native";
-
-/**
- * Hook for safe scroll listener that prevents memory leaks
- */
-export function useScrollListener(
-  scrollY: Animated.Value,
-  handler: (value: number) => void,
-  additionalDeps: React.DependencyList = []
-) {
-  useEffect(() => {
-    const id = scrollY.addListener(({ value }) => {
-      handler(value);
-    });
-
-    return () => {
-      scrollY.removeListener(id);
-    };
-  }, [scrollY, handler, additionalDeps]);
-}
+import { Platform } from "react-native";
 
 /**
  * Hook for safe setTimeout cleanup
@@ -309,4 +290,3 @@ export function useComponentLifecycle(componentName: string) {
     };
   }, [componentName]);
 }
-

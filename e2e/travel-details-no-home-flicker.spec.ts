@@ -13,15 +13,15 @@ test.describe('Travel details should not flash Home', () => {
     await preacceptCookies(page);
 
     // Force deterministic slow details load.
-    let fulfilledOnce = false;
+    let requestCount = 0;
     await page.route('**/api/travels/by-slug/**', async (route: any, request: any) => {
-      if (fulfilledOnce || request.method() !== 'GET') {
+      if (request.method() !== 'GET') {
         await route.continue();
         return;
       }
 
-      fulfilledOnce = true;
-      await new Promise((r) => setTimeout(r, 1200));
+      requestCount += 1;
+      await new Promise((r) => setTimeout(r, requestCount === 1 ? 1200 : 200));
 
       const mocked = {
         id: 999997,

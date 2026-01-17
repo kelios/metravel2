@@ -154,10 +154,9 @@ export default function TravelDetailsContainer() {
     scrollY,
     contentHeight,
     viewportHeight,
-    setHeroBlockHeight,
     handleContentSizeChange,
     handleLayout,
-  } = useTravelDetailsScrollState({ isMobile });
+  } = useTravelDetailsScrollState();
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   const lcpLinkRel = useMemo(() => {
     if (Platform.OS !== "web") return "preload";
@@ -461,13 +460,7 @@ export default function TravelDetailsContainer() {
                 collapsable={false}
               >
                 <SList revealOrder="forwards" tail="collapsed">
-                  <View
-                    collapsable={false}
-                    onLayout={(e) => {
-                      const h = e.nativeEvent.layout.height;
-                      setHeroBlockHeight((prev) => (prev === h ? prev : h));
-                    }}
-                  >
+                  <View collapsable={false}>
                   <TravelHeroSection
                     travel={travel}
                     anchors={anchors}
