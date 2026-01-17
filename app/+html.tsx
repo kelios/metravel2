@@ -112,6 +112,90 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
 })();
 `;
 
+const getFontFaceSwapScript = () => String.raw`
+(function(){
+  try {
+    if (!window.CSSStyleSheet) return;
+    var proto = window.CSSStyleSheet.prototype;
+    if (!proto || proto.__metravelFontSwapPatched) return;
+    var originalInsertRule = proto.insertRule;
+    if (typeof originalInsertRule !== 'function') return;
+    proto.insertRule = function(rule, index) {
+      try {
+        if (typeof rule === 'string' && rule.indexOf('@font-face') === 0 && rule.indexOf('font-display') === -1) {
+          rule = rule.replace(/\}\s*$/, ';font-display:swap;}');
+        }
+      } catch (_e) {}
+      return originalInsertRule.call(this, rule, index);
+    };
+    proto.__metravelFontSwapPatched = true;
+  } catch (_e) {}
+})();
+`;
+
+const getTravelHeroPreloadScript = () => String.raw`
+(function(){
+  try {
+    var path = window.location && window.location.pathname;
+    if (!path || path.indexOf('/travels/') !== 0) return;
+    var slug = path.replace(/^\/travels\//, '').replace(/\/+$/, '');
+    if (!slug) return;
+
+    var isId = /^[0-9]+$/.test(slug);
+    var apiBase = (window.location && window.location.origin) || '';
+    if (!apiBase) return;
+    var endpoint = isId
+      ? apiBase + '/api/travels/' + encodeURIComponent(slug) + '/'
+      : apiBase + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
+
+    var controller = window.AbortController ? new AbortController() : null;
+    var timeout = setTimeout(function(){
+      try { if (controller) controller.abort(); } catch (_e) {}
+    }, 2500);
+
+    fetch(endpoint, {
+      method: 'GET',
+      credentials: 'omit',
+      signal: controller ? controller.signal : undefined
+    }).then(function(res){
+      if (!res || !res.ok) return null;
+      return res.json();
+    }).then(function(data){
+      if (!data) return;
+      var gallery = data.gallery;
+      if (!gallery || !gallery.length) return;
+      var first = gallery[0];
+      var url = typeof first === 'string' ? first : first && first.url;
+      if (!url || typeof url !== 'string') return;
+
+      try {
+        var resolved = new URL(url, window.location.origin);
+        var origin = resolved.origin;
+        if (origin && !document.querySelector('link[rel="preconnect"][href="' + origin + '"]')) {
+          var pre = document.createElement('link');
+          pre.rel = 'preconnect';
+          pre.href = origin;
+          pre.crossOrigin = 'anonymous';
+          document.head.appendChild(pre);
+        }
+      } catch (_e) {}
+
+      if (document.querySelector('link[rel="preload"][href="' + url + '"]')) return;
+      var link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = url;
+      link.fetchPriority = 'high';
+      link.setAttribute('fetchpriority', 'high');
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+    }).catch(function(){}).finally(function(){
+      clearTimeout(timeout);
+    });
+  } catch (_e) {}
+})();
+`;
+
 export default function Root({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru" data-theme="light" suppressHydrationWarning>
@@ -128,6 +212,16 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
+
+      {/* Ensure font-display=swap for dynamically injected icon fonts */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getFontFaceSwapScript() }}
+      />
+
+      {/* Early travel hero preload to improve LCP on /travels/* */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
+      />
 
       <ScrollViewStyleReset />
 

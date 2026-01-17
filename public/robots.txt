@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Allow: /*?
 Disallow: /api/
 Disallow: /_expo/
 Disallow: /metro/
@@ -12,4 +13,3 @@ Host: metravel.by
 
 # Основная карта сайта: обновляется при сборке фронтенда
 Sitemap: https://metravel.by/sitemap.xml
-
