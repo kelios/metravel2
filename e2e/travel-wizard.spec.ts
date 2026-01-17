@@ -1087,6 +1087,42 @@ test.describe('Создание путешествия - Полный flow', () 
 });
 
 test.describe('Валидация и ошибки', () => {
+  test.beforeEach(async ({ page }) => {
+    // Ensure stable state for this suite (mocks + no draft dialogs).
+    await page.addInitScript((payload) => {
+      try {
+        // Prevent draft recovery dialog from blocking interactions.
+        window.localStorage.removeItem('metravel_travel_draft_new');
+        Object.keys(window.localStorage)
+          .filter((k) => k.startsWith('metravel_travel_draft_'))
+          .forEach((k) => window.localStorage.removeItem(k));
+
+        // In mocked mode, autosave requires an auth token to exist in storage,
+        // otherwise it fails before hitting any mocked network route.
+        if (payload.shouldSeedAuth) {
+          window.localStorage.setItem('secure_userToken', payload.encrypted);
+          window.localStorage.setItem('userId', payload.userId);
+          window.localStorage.setItem('userName', payload.userName);
+          window.localStorage.setItem('isSuperuser', payload.isSuperuser);
+        }
+      } catch {
+        // ignore
+      }
+    }, {
+      shouldSeedAuth: !USE_REAL_API && (!e2eEmail || !e2ePassword),
+      encrypted: simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1'),
+      userId: '1',
+      userName: 'E2E User',
+      isSuperuser: 'false',
+    });
+
+    await maybeMockTravelUpsert(page);
+    await maybeMockTravelFilters(page);
+    await maybeMockNominatimSearch(page);
+    await maybeLogin(page);
+    await page.goto('/');
+  });
+
   test('должен показать ошибку при попытке сохранить без названия', async ({ page }) => {
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
