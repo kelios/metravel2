@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import type { ImportedPoint } from '@/types/userPoints';
-import { COLOR_CATEGORIES } from '@/types/userPoints';
+import { COLOR_CATEGORIES, PointColor } from '@/types/userPoints';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -11,9 +11,10 @@ interface PointsMapProps {
   onPointPress?: (point: ImportedPoint) => void;
   onMapPress?: (coords: { lat: number; lng: number }) => void;
   pendingMarker?: { lat: number; lng: number } | null;
+  pendingMarkerColor?: PointColor;
 }
 
-export const PointsMap: React.FC<PointsMapProps> = ({ points, center, onPointPress, onMapPress, pendingMarker }) => {
+export const PointsMap: React.FC<PointsMapProps> = ({ points, center, onPointPress, onMapPress, pendingMarker, pendingMarkerColor }) => {
   // Для web используем react-leaflet, для mobile - react-native-maps
   if (Platform.OS === 'web') {
     return (
@@ -23,6 +24,7 @@ export const PointsMap: React.FC<PointsMapProps> = ({ points, center, onPointPre
         onPointPress={onPointPress}
         onMapPress={onMapPress}
         pendingMarker={pendingMarker}
+        pendingMarkerColor={pendingMarkerColor}
       />
     );
   }
@@ -34,12 +36,13 @@ export const PointsMap: React.FC<PointsMapProps> = ({ points, center, onPointPre
       onPointPress={onPointPress}
       onMapPress={onMapPress}
       pendingMarker={pendingMarker}
+      pendingMarkerColor={pendingMarkerColor}
     />
   );
 };
 
 // Web версия с Leaflet
-const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride, onPointPress, onMapPress, pendingMarker }) => {
+const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride, onPointPress, onMapPress, pendingMarker, pendingMarkerColor }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -90,6 +93,44 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride
       cancelled = true;
     };
   }, []);
+
+  const getMarkerColorName = React.useCallback((color: PointColor | undefined): string => {
+    switch (color) {
+      case PointColor.GREEN:
+        return 'green';
+      case PointColor.PURPLE:
+        return 'violet';
+      case PointColor.BROWN:
+        return 'orange';
+      case PointColor.BLUE:
+        return 'blue';
+      case PointColor.RED:
+        return 'red';
+      case PointColor.YELLOW:
+        return 'gold';
+      case PointColor.GRAY:
+        return 'grey';
+      default:
+        return 'blue';
+    }
+  }, []);
+
+  const getMarkerIcon = React.useCallback(
+    (color: PointColor | undefined) => {
+      const L = mods?.L;
+      if (!L) return undefined;
+      const markerColor = getMarkerColorName(color);
+      return new L.Icon({
+        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${markerColor}.png`,
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+      });
+    },
+    [getMarkerColorName, mods?.L]
+  );
 
   if (!mods?.MapContainer || !mods?.TileLayer) {
     return <View style={styles.container} />;
@@ -181,6 +222,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride
           <mods.Marker
             key="__pending__"
             position={[pendingMarker.lat, pendingMarker.lng]}
+            icon={getMarkerIcon(pendingMarkerColor)}
           />
         )}
 
@@ -190,6 +232,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride
             <mods.Marker
               key={point.id}
               position={[point.latitude, point.longitude]}
+              icon={getMarkerIcon(point.color)}
               eventHandlers={{
                 click: () => onPointPress?.(point),
               }}

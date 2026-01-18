@@ -9,6 +9,7 @@ import { PointFilters } from '@/components/UserPoints/PointFilters';
 import { PointsMap } from '@/components/UserPoints/PointsMap';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
+import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { COLOR_CATEGORIES, PointCategory, PointColor, PointStatus, STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -33,6 +34,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [manualName, setManualName] = useState('');
   const [manualNameTouched, setManualNameTouched] = useState(false);
+  const [manualAutoName, setManualAutoName] = useState('');
+  const [manualAddress, setManualAddress] = useState('');
   const [manualCoords, setManualCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
@@ -100,6 +103,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const resetManualForm = useCallback(() => {
     setManualName('');
     setManualNameTouched(false);
+    setManualAutoName('');
+    setManualAddress('');
     setManualCoords(null);
     setManualLat('');
     setManualLng('');
@@ -107,6 +112,47 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setManualSiteCategories([]);
     setManualStatus(PointStatus.PLANNING);
     setManualError(null);
+  }, []);
+
+  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+    try {
+      const primary = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=ru`
+      );
+      if (primary.ok) {
+        return await primary.json();
+      }
+    } catch {
+      // ignore and fall back
+    }
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ru&extratags=1&namedetails=1&zoom=18`
+      );
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const getPrimaryPlaceName = useCallback((geocodeData: any, lat: number, lng: number): string => {
+    const poi =
+      geocodeData?.name ||
+      geocodeData?.address?.name ||
+      geocodeData?.address?.tourism ||
+      geocodeData?.address?.amenity ||
+      geocodeData?.address?.historic ||
+      geocodeData?.address?.leisure ||
+      geocodeData?.address?.place_of_worship ||
+      geocodeData?.address?.building;
+
+    if (poi && String(poi).trim()) return String(poi).trim();
+
+    const address = buildAddressFromGeocode(geocodeData, { lat, lng });
+    const firstPart = String(address || '').split('·')[0]?.trim();
+    return firstPart || String(address || '').trim() || 'Новая точка';
   }, []);
 
   const closeManualAdd = useCallback(() => {
@@ -130,11 +176,27 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setManualLng(coords.lng.toFixed(6));
       setManualName('Новая точка');
       setShowManualAdd(true);
+
+      void (async () => {
+        const geocodeData = await reverseGeocode(coords.lat, coords.lng);
+        if (!geocodeData) return;
+
+        const addr = buildAddressFromGeocode(geocodeData, { lat: coords.lat, lng: coords.lng });
+        setManualAddress(String(addr || '').trim());
+
+        const primaryName = getPrimaryPlaceName(geocodeData, coords.lat, coords.lng);
+        setManualAutoName(primaryName);
+
+        if (!manualNameTouched) {
+          setManualName(primaryName);
+        }
+      })();
     },
-    [resetManualForm]
+    [getPrimaryPlaceName, manualNameTouched, resetManualForm, reverseGeocode]
   );
 
   const suggestManualName = useCallback((): string => {
+    if (manualAutoName) return manualAutoName;
     const firstSiteId = manualSiteCategories[0];
     if (firstSiteId && siteCategoryTravelAddressOptions.length) {
       const found = siteCategoryTravelAddressOptions.find((o: any) => String(o.value) === String(firstSiteId));
@@ -142,7 +204,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     }
 
     return 'Новая точка';
-  }, [manualSiteCategories, siteCategoryTravelAddressOptions]);
+  }, [manualAutoName, manualSiteCategories, siteCategoryTravelAddressOptions]);
 
   useEffect(() => {
     if (!showManualAdd) return;
@@ -195,6 +257,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     try {
       await userPointsApi.createPoint({
         name,
+        address: manualAddress || undefined,
         latitude: manualCoords.lat,
         longitude: manualCoords.lng,
         color: manualColor,
@@ -210,7 +273,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     } finally {
       setIsSavingManual(false);
     }
-  }, [closeManualAdd, manualColor, manualCoords, manualName, manualSiteCategories, manualStatus, refetch]);
+  }, [closeManualAdd, manualAddress, manualColor, manualCoords, manualName, manualSiteCategories, manualStatus, refetch]);
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
@@ -430,6 +493,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
               center={currentLocation ?? undefined}
               onMapPress={handleMapPress}
               pendingMarker={showManualAdd ? manualCoords : null}
+              pendingMarkerColor={manualColor}
             />
 
             <TouchableOpacity
