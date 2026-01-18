@@ -94,6 +94,27 @@ async function fillLoginForm(page: any, email: string, password: string) {
   return true;
 }
 
+function installFakeAuth(context: any) {
+  const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
+  context.addInitScript((value: string) => {
+    try {
+      window.localStorage.setItem('secure_userToken', value);
+    } catch {
+      // ignore
+    }
+  }, encrypted);
+
+  context.addInitScript(() => {
+    try {
+      window.localStorage.setItem('userId', '1');
+      window.localStorage.setItem('userName', 'E2E User');
+      window.localStorage.setItem('isSuperuser', 'false');
+    } catch {
+      // ignore
+    }
+  });
+}
+
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
   const email = ensureEnv('E2E_EMAIL');
@@ -125,6 +146,7 @@ export default async function globalSetup(config: FullConfig) {
 
   // If creds are not provided, keep anonymous state.
   if (!email || !password) {
+    installFakeAuth(context);
     await context.storageState({ path: STORAGE_STATE_PATH });
     await browser.close();
     return;

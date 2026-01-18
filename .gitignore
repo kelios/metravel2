@@ -15,6 +15,7 @@ settings.json
 .env.dev
 .env.preprod
 .env.prod
+.env.e2e
 .expo
 .idea
 env.sh

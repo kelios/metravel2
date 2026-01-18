@@ -30,7 +30,8 @@ describe('TocPageGenerator', () => {
       expect(html).toContain('Париж');
       expect(html).toContain('Франция');
       expect(html).toContain('2024');
-      expect(html).toContain('стр. 3');
+      expect(html).toContain('стр.');
+      expect(html).toContain('>3<');
     });
 
     it('должен отображать миниатюры если есть', () => {

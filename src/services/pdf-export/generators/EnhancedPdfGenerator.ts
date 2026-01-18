@@ -10,6 +10,7 @@ import type { ContentParser, ParsedContentBlock } from '../parsers/ContentParser
 import type { BlockRenderer } from '../renderers/BlockRenderer';
 import type { TravelQuote } from '../quotes/travelQuotes';
 import { pickRandomGalleryQuote, pickRandomQuote } from '../quotes/travelQuotes';
+import { CoverPageGenerator } from './pages/CoverPageGenerator';
 
 const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
   clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
@@ -184,8 +185,21 @@ export class EnhancedPdfGenerator {
     const pages: string[] = [];
     let currentPage = settings.includeToc ? 3 : 2;
 
-    // Обложка
-    pages.push(this.renderCoverPage(settings, userName, sortedTravels.length, yearRange, coverImage));
+    // Обложка с улучшенным дизайном
+    const coverGenerator = new CoverPageGenerator(this.theme);
+    const coverQuote = this.selectedQuotes?.cover;
+    const coverPage = await coverGenerator.generate({
+      title: settings.title,
+      subtitle: settings.subtitle,
+      userName,
+      travelCount: sortedTravels.length,
+      yearRange,
+      coverImage,
+      quote: coverQuote && coverQuote.author ? { text: coverQuote.text, author: coverQuote.author } : undefined,
+      textPosition: 'auto',
+      showDecorations: true,
+    });
+    pages.push(coverPage);
 
     // Оглавление
     if (settings.includeToc) {
@@ -279,7 +293,7 @@ export class EnhancedPdfGenerator {
               inset: 0;
               width: 100%;
               height: 100%;
-              object-fit: cover;
+              object-fit: contain;
               object-position: center;
               filter: blur(18px);
               transform: scale(1.08);
@@ -298,7 +312,7 @@ export class EnhancedPdfGenerator {
               inset: 0;
               width: 100%;
               height: 100%;
-              object-fit: cover;
+              object-fit: contain;
               object-position: center;
               z-index: 1;
               ${this.getImageFilterStyle()}
@@ -510,7 +524,7 @@ export class EnhancedPdfGenerator {
                 position: relative;
               ">
                 <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                  style="width: 100%; height: 48mm; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
+                  style="width: 100%; height: 48mm; object-fit: contain; display: block; ${this.getImageFilterStyle()}"
                   crossorigin="anonymous"
                   onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
                 ${index === 3 ? `
@@ -552,7 +566,7 @@ export class EnhancedPdfGenerator {
             position: relative;
           ">
             <img src="${this.escapeHtml(photos[0])}" alt="Фото путешествия"
-              style="width: 100%; height: 85mm; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
+              style="width: 100%; height: 85mm; object-fit: contain; display: block; ${this.getImageFilterStyle()}"
               crossorigin="anonymous"
               onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
             ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
@@ -591,7 +605,7 @@ export class EnhancedPdfGenerator {
             ">
               ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
               <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
+                style="width: 100%; height: ${imageHeight}; object-fit: contain; display: block; ${this.getImageFilterStyle()}"
                 crossorigin="anonymous"
                 onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
               ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
@@ -760,7 +774,7 @@ export class EnhancedPdfGenerator {
               style="
                 width: 100%;
                 height: 100%;
-                object-fit: cover;
+                object-fit: contain;
                 display: block;
                 ${this.getImageFilterStyle()}
               "
@@ -1335,7 +1349,7 @@ export class EnhancedPdfGenerator {
             ">
               ${snapshotDataUrl ? `
                 <img src="${this.escapeHtml(snapshotDataUrl)}" alt="Карта маршрута"
-                  style="width: 100%; height: 100%; display: block; object-fit: cover; ${this.getImageFilterStyle()}" />
+                  style="width: 100%; height: 100%; display: block; object-fit: contain; ${this.getImageFilterStyle()}" />
               ` : `
                 ${mapSvg}
               `}
@@ -1688,6 +1702,12 @@ export class EnhancedPdfGenerator {
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>${this.escapeHtml(settings.title)}</title>
+  
+  <!-- Google Fonts для улучшенной типографики -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;600;700;800&family=Open+Sans:wght@400;500;600;700&family=Lora:wght@400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
   <style>${styles}</style>
 </head>
 <body>
@@ -1966,7 +1986,7 @@ export class EnhancedPdfGenerator {
               background: ${colors.surfaceAlt};
             ">
               <img src="${this.escapeHtml(location.thumbnailUrl)}" alt="Точка ${index + 1}"
-                style="width: 100%; height: auto; object-fit: cover; display: block; ${this.getImageFilterStyle()}" />
+                style="width: 100%; height: auto; object-fit: contain; display: block; ${this.getImageFilterStyle()}" />
             </div>
           ` : ''}
           <div style="flex: 1; min-width: 0;">

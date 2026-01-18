@@ -1,7 +1,15 @@
 // src/services/pdf-export/generators/pages/CoverPageGenerator.ts
-// Генератор обложки книги
+// Генератор обложки книги с улучшенным дизайном
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
+import {
+  analyzeImageBrightness,
+  analyzeImageComposition,
+  getOptimalTextPosition,
+  getOptimalOverlayOpacity,
+  getOptimalOverlayColor,
+  getOptimalTextColor,
+} from '@/src/utils/imageAnalysis';
 
 export interface CoverPageData {
   title: string;
@@ -14,18 +22,48 @@ export interface CoverPageData {
     text: string;
     author: string;
   };
+  // Опциональные параметры для кастомизации
+  textPosition?: 'top' | 'center' | 'bottom' | 'auto';
+  overlayOpacity?: number;
+  showDecorations?: boolean;
 }
 
 export class CoverPageGenerator {
   constructor(private theme: PdfThemeConfig) {}
 
   /**
-   * Генерирует HTML для обложки
+   * Генерирует HTML для обложки с умным затемнением
    */
-  generate(data: CoverPageData): string {
+  async generate(data: CoverPageData): Promise<string> {
     const { colors } = this.theme;
     const travelLabel = this.getTravelLabel(data.travelCount);
     const safeCoverImage = this.buildSafeImageUrl(data.coverImage);
+
+    // Анализируем изображение для умного затемнения
+    let brightness = 128;
+    let composition = { topBusy: 0.5, centerBusy: 0.5, bottomBusy: 0.5 };
+    let textPosition: 'top' | 'center' | 'bottom' = 'center';
+    let overlayOpacity = 0.6;
+    let overlayColor = 'rgba(0,0,0,';
+    let textColor = colors.cover.text;
+
+    if (safeCoverImage) {
+      try {
+        brightness = await analyzeImageBrightness(safeCoverImage);
+        composition = await analyzeImageComposition(safeCoverImage);
+        
+        // Определяем оптимальные параметры
+        textPosition = data.textPosition === 'auto' || !data.textPosition
+          ? getOptimalTextPosition(composition)
+          : data.textPosition;
+        
+        overlayOpacity = data.overlayOpacity ?? getOptimalOverlayOpacity(brightness);
+        overlayColor = getOptimalOverlayColor(brightness);
+        textColor = getOptimalTextColor(brightness);
+      } catch (error) {
+        console.warn('Image analysis failed, using defaults:', error);
+      }
+    }
 
     const background = safeCoverImage
       ? `url('${this.escapeHtml(safeCoverImage)}')`
@@ -45,27 +83,10 @@ export class CoverPageGenerator {
         position: relative;
         overflow: hidden;
       ">
-        ${safeCoverImage ? `
-          <div style="
-            position: absolute;
-            inset: 0;
-            background:
-              linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.10) 45%, rgba(0,0,0,0.60) 100%);
-            z-index: 1;
-          "></div>
-        ` : ''}
+        ${safeCoverImage ? this.renderSmartOverlay(overlayColor, overlayOpacity, textPosition) : ''}
+        ${data.showDecorations !== false ? this.renderDecorativeElements() : ''}
 
-        <div style="
-          padding: 26mm 24mm 0 24mm;
-          text-align: center;
-          position: relative;
-          z-index: 2;
-        ">
-          ${this.renderTitle(data.title)}
-          ${data.subtitle ? this.renderSubtitle(data.subtitle) : ''}
-          ${this.renderUserName(data.userName)}
-          ${data.quote ? this.renderQuote(data.quote) : ''}
-        </div>
+        ${this.renderContent(data, textPosition, textColor)}
 
         <div style="
           padding: 0 24mm 24mm 24mm;
@@ -107,54 +128,144 @@ export class CoverPageGenerator {
     `;
   }
 
-  private renderDecorativeElements(): string {
+  /**
+   * Умный overlay с градиентом на основе позиции текста
+   */
+  private renderSmartOverlay(
+    overlayColor: string,
+    opacity: number,
+    textPosition: 'top' | 'center' | 'bottom'
+  ): string {
+    let gradient = '';
+    
+    if (textPosition === 'top') {
+      gradient = `linear-gradient(180deg, ${overlayColor}${opacity}) 0%, ${overlayColor}0.1) 50%, ${overlayColor}0.3) 100%)`;
+    } else if (textPosition === 'bottom') {
+      gradient = `linear-gradient(180deg, ${overlayColor}0.3) 0%, ${overlayColor}0.1) 50%, ${overlayColor}${opacity}) 100%)`;
+    } else {
+      gradient = `linear-gradient(180deg, ${overlayColor}0.4) 0%, ${overlayColor}0.1) 30%, ${overlayColor}0.1) 70%, ${overlayColor}0.4) 100%)`;
+    }
+
     return `
       <div style="
         position: absolute;
-        top: 20mm;
-        left: 20mm;
-        width: 60mm;
-        height: 60mm;
-        border: 2px solid rgba(255,255,255,0.2);
-        border-radius: 50%;
-        opacity: 0.3;
-      "></div>
-      <div style="
-        position: absolute;
-        top: 30mm;
-        right: 30mm;
-        width: 40mm;
-        height: 40mm;
-        border: 2px solid rgba(255,255,255,0.15);
-        border-radius: 50%;
-        opacity: 0.2;
+        inset: 0;
+        background: ${gradient};
+        z-index: 1;
       "></div>
     `;
   }
 
-  private renderSubtitle(subtitle: string): string {
+  /**
+   * Рендерит контент с адаптивной позицией
+   */
+  private renderContent(
+    data: CoverPageData,
+    textPosition: 'top' | 'center' | 'bottom',
+    textColor: string
+  ): string {
+    const justifyContent = textPosition === 'top' 
+      ? 'flex-start' 
+      : textPosition === 'bottom' 
+      ? 'flex-end' 
+      : 'center';
+    
+    const paddingTop = textPosition === 'top' ? '30mm' : '0';
+    const paddingBottom = textPosition === 'bottom' ? '30mm' : '0';
+
+    return `
+      <div style="
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: ${justifyContent};
+        padding: ${paddingTop} 24mm ${paddingBottom} 24mm;
+        text-align: center;
+        position: relative;
+        z-index: 2;
+      ">
+        ${this.renderTitle(data.title, textColor)}
+        ${data.subtitle ? this.renderSubtitle(data.subtitle, textColor) : ''}
+        ${this.renderUserName(data.userName, textColor)}
+        ${data.quote ? this.renderQuote(data.quote, textColor) : ''}
+      </div>
+    `;
+  }
+
+  /**
+   * Улучшенные декоративные элементы
+   */
+  private renderDecorativeElements(): string {
+    const { colors } = this.theme;
+    return `
+      <!-- Рамка -->
+      <div style="
+        position: absolute;
+        inset: 15mm;
+        border: 2px solid rgba(255,255,255,0.25);
+        border-radius: 16px;
+        pointer-events: none;
+        z-index: 1;
+      "></div>
+      
+      <!-- Декоративные круги -->
+      <div style="
+        position: absolute;
+        top: 20mm;
+        right: 20mm;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+        opacity: 0.6;
+        z-index: 1;
+      "></div>
+      
+      <div style="
+        position: absolute;
+        bottom: 40mm;
+        left: 25mm;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, ${colors.accent}40, ${colors.accent}20);
+        opacity: 0.5;
+        z-index: 1;
+      "></div>
+    `;
+  }
+
+  private renderSubtitle(subtitle: string, textColor?: string): string {
     const { typography } = this.theme;
+    const opacity = textColor === '#000000' ? '0.7' : '0.88';
+    
     return `
       <div style="
         font-size: 16pt;
         letter-spacing: 0.02em;
-        color: rgba(255,255,255,0.88);
+        color: ${textColor || 'rgba(255,255,255,0.88)'};
+        opacity: ${opacity};
         margin-top: 6mm;
         font-family: ${typography.bodyFont};
       ">${this.escapeHtml(subtitle)}</div>
     `;
   }
 
-  private renderTitle(title: string): string {
+  private renderTitle(title: string, textColor?: string): string {
     const { typography, colors } = this.theme;
+    const color = textColor || colors.cover.text;
+    
     return `
       <h1 style="
-        color: ${colors.cover.text};
-        font-size: ${typography.h1.size};
-        font-weight: ${typography.h1.weight};
-        line-height: ${typography.h1.lineHeight};
+        color: ${color};
+        font-size: 36pt;
+        font-weight: 800;
+        line-height: 1.15;
         margin: 0;
-        text-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        text-shadow: 
+          0 2px 4px rgba(0,0,0,0.3),
+          0 4px 12px rgba(0,0,0,0.2);
+        letter-spacing: 0.02em;
         font-family: ${typography.headingFont};
         overflow-wrap: anywhere;
         word-break: break-word;
@@ -187,11 +298,12 @@ export class CoverPageGenerator {
     `;
   }
 
-  private renderUserName(userName: string): string {
+  private renderUserName(userName: string, textColor?: string): string {
     const { typography } = this.theme;
     return `
       <div style="
         font-size: 12pt;
+        color: ${textColor || 'rgba(255,255,255,0.85)'};
         opacity: 0.85;
         margin-top: 10mm;
         font-family: ${typography.bodyFont};
@@ -215,7 +327,7 @@ export class CoverPageGenerator {
     `;
   }
 
-  private renderQuote(quote: { text: string; author: string }): string {
+  private renderQuote(quote: { text: string; author: string }, textColor?: string): string {
     return `
       <div style="
         margin-top: 14mm;
@@ -224,6 +336,7 @@ export class CoverPageGenerator {
         margin-right: auto;
         font-style: italic;
         opacity: 0.85;
+        color: ${textColor || 'rgba(255,255,255,0.85)'};
       ">
         <div style="font-size: 12pt; margin-bottom: 5mm;">
           "${this.escapeHtml(quote.text)}"

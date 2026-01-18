@@ -3,7 +3,7 @@
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
 
-export type GalleryLayout = 'grid' | 'mosaic' | 'collage' | 'polaroid';
+export type GalleryLayout = 'grid' | 'mosaic' | 'collage' | 'polaroid' | 'dynamic';
 
 export interface GalleryPhoto {
   url: string;
@@ -62,6 +62,8 @@ export class GalleryPageGenerator {
 
   private renderGallery(photos: GalleryPhoto[], layout: GalleryLayout): string {
     switch (layout) {
+      case 'dynamic':
+        return this.renderDynamicLayout(photos);
       case 'grid':
         return this.renderGridLayout(photos);
       case 'mosaic':
@@ -73,6 +75,108 @@ export class GalleryPageGenerator {
       default:
         return this.renderGridLayout(photos);
     }
+  }
+
+  /**
+   * Динамическая сетка с акцентом на главное фото (2x2)
+   */
+  private renderDynamicLayout(photos: GalleryPhoto[]): string {
+    const { colors, typography } = this.theme;
+
+    if (photos.length === 0) return '';
+
+    return `
+      <div style="
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        grid-template-rows: repeat(4, 1fr);
+        gap: 4mm;
+        height: 220mm;
+        margin-bottom: 15mm;
+      ">
+        ${photos[0] ? `
+          <!-- Главное фото (2x2) -->
+          <div style="
+            grid-column: 1 / 3;
+            grid-row: 1 / 3;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+          ">
+            <img
+              src="${this.escapeHtml(photos[0].url)}"
+              alt="${this.escapeHtml(photos[0].caption || 'Main photo')}"
+              style="
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+              "
+              crossorigin="anonymous"
+            />
+            ${photos[0].caption ? `
+              <div style="
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                padding: 8mm;
+                background: linear-gradient(transparent, rgba(0,0,0,0.7));
+                color: white;
+              ">
+                <div style="
+                  font-size: 13pt;
+                  font-weight: 600;
+                  font-family: ${typography.headingFont};
+                ">
+                  ${this.escapeHtml(photos[0].caption)}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+        
+        ${photos.slice(1, 9).map((photo, index) => {
+          // Позиции для остальных фото (1x1)
+          const positions = [
+            { col: '3 / 4', row: '1 / 2' },
+            { col: '4 / 5', row: '1 / 2' },
+            { col: '5 / 7', row: '1 / 2' },
+            { col: '3 / 4', row: '2 / 3' },
+            { col: '4 / 5', row: '2 / 3' },
+            { col: '5 / 7', row: '2 / 3' },
+            { col: '1 / 3', row: '3 / 5' },
+            { col: '3 / 7', row: '3 / 5' },
+          ];
+          
+          const pos = positions[index];
+          if (!pos) return '';
+          
+          return `
+            <div style="
+              grid-column: ${pos.col};
+              grid-row: ${pos.row};
+              border-radius: 8px;
+              overflow: hidden;
+              background: ${colors.surfaceAlt};
+            ">
+              <img
+                src="${this.escapeHtml(photo.url)}"
+                alt="${this.escapeHtml(photo.caption || 'Gallery photo')}"
+                style="
+                  width: 100%;
+                  height: 100%;
+                  object-fit: contain;
+                  ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+                "
+                crossorigin="anonymous"
+              />
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
   }
 
   /**
@@ -101,7 +205,7 @@ export class GalleryPageGenerator {
               style="
                 width: 100%;
                 height: 100%;
-                object-fit: cover;
+                object-fit: contain;
                 ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
               "
               crossorigin="anonymous"
@@ -147,7 +251,7 @@ export class GalleryPageGenerator {
                 style="
                   width: 100%;
                   height: 100%;
-                  object-fit: cover;
+                  object-fit: contain;
                   ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
                 "
                 crossorigin="anonymous"
@@ -205,7 +309,7 @@ export class GalleryPageGenerator {
                 style="
                   width: 100%;
                   height: 100%;
-                  object-fit: cover;
+                  object-fit: contain;
                   ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
                 "
                 crossorigin="anonymous"
@@ -250,7 +354,7 @@ export class GalleryPageGenerator {
                 style="
                   width: 100%;
                   height: 100%;
-                  object-fit: cover;
+                  object-fit: contain;
                   ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
                 "
                 crossorigin="anonymous"

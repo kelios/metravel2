@@ -1,5 +1,35 @@
-import 'dotenv/config';
+import fs from 'node:fs';
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
+
+function applyEnvFile(filePath: string) {
+  if (!fs.existsSync(filePath)) return;
+  const raw = fs.readFileSync(filePath, 'utf8');
+  const lines = raw.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    if (!key) continue;
+    if (process.env[key] == null || String(process.env[key]).length === 0) {
+      process.env[key] = value;
+    }
+  }
+}
+
+// Ensure E2E env vars are loaded for global-setup (auth) and test runtime.
+// We intentionally support env files that may contain spaces around '='.
+const rootDir = process.cwd();
+applyEnvFile(path.join(rootDir, '.env.e2e'));
+applyEnvFile(path.join(rootDir, '.env.dev'));
+applyEnvFile(path.join(rootDir, '.env'));
 
 // Используем отдельный порт для e2e, чтобы не конфликтовать с локальной разработкой.
 // NOTE: prefer 127.0.0.1 over localhost to avoid IPv6 (::1) vs IPv4 binding mismatches on some systems.

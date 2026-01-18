@@ -63,12 +63,12 @@ export class TocPageGenerator {
         gap: 12mm;
         margin-bottom: 15mm;
       ">
-        ${entries.map((entry, index) => this.renderEntry(entry, index)).join('')}
+        ${entries.map((entry) => this.renderEntry(entry)).join('')}
       </div>
     `;
   }
 
-  private renderEntry(entry: TocEntry, index: number): string {
+  private renderEntry(entry: TocEntry): string {
     const { colors, typography } = this.theme;
     const { travel, pageNumber } = entry;
 
@@ -77,20 +77,22 @@ export class TocPageGenerator {
         break-inside: avoid;
         page-break-inside: avoid;
         display: flex;
-        gap: 8mm;
-        padding: 6mm;
+        gap: 6mm;
+        padding: 8mm;
         background: ${colors.surface};
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        transition: all 0.2s;
       ">
         ${travel.travel_image_thumb_small_url ? `
           <div style="
-            width: 20mm;
-            height: 20mm;
+            width: 35mm;
+            height: 35mm;
             flex-shrink: 0;
-            border-radius: 6px;
+            border-radius: 8px;
             overflow: hidden;
             background: ${colors.surfaceAlt};
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
           ">
             <img
               src="${this.escapeHtml(travel.travel_image_thumb_small_url)}"
@@ -98,49 +100,58 @@ export class TocPageGenerator {
               style="
                 width: 100%;
                 height: 100%;
-                object-fit: cover;
+                object-fit: contain;
                 ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
               "
               crossorigin="anonymous"
             />
           </div>
         ` : ''}
-        
-        <div style="flex: 1; min-width: 0;">
+
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+          <h3 style="
+            font-size: 14pt;
+            font-weight: 600;
+            margin: 0 0 4mm 0;
+            color: ${colors.text};
+            font-family: ${typography.headingFont};
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            hyphens: auto;
+            line-height: 1.3;
+          ">${this.escapeHtml(travel.name)}</h3>
+
           <div style="
+            font-size: 11pt;
+            color: ${colors.textMuted};
+            margin-bottom: auto;
+            font-family: ${typography.bodyFont};
+          ">
+            ${travel.countryName || ''}${travel.countryName && travel.year ? ' • ' : ''}${travel.year || ''}
+          </div>
+
+          <div style="
+            display: inline-flex;
+            align-items: center;
+            gap: 4mm;
             font-size: 12pt;
             font-weight: 600;
-            color: ${colors.text};
-            margin-bottom: 2mm;
-            font-family: ${typography.headingFont};
-            line-height: 1.25;
-            max-height: 2.5em;
-            overflow: hidden;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            hyphens: auto;
+            color: ${colors.accent};
+            margin-top: 4mm;
           ">
-            ${index + 1}. ${this.escapeHtml(travel.name)}
-          </div>
-          
-          <div style="
-            font-size: 10pt;
-            color: ${colors.textSecondary};
-            font-family: ${typography.bodyFont};
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            hyphens: auto;
-          ">
-            ${travel.countryName || '—'} • ${travel.year || '—'}
-          </div>
-          
-          <div style="
-            font-size: 9pt;
-            color: ${colors.textMuted};
-            margin-top: 2mm;
-            font-family: ${typography.bodyFont};
-          ">
-            стр. ${pageNumber}
+            <span>стр.</span>
+            <span style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              min-width: 28px;
+              height: 28px;
+              padding: 0 6px;
+              background: ${colors.accentSoft};
+              border-radius: 6px;
+              font-weight: 700;
+              color: ${colors.accentStrong};
+            ">${pageNumber}</span>
           </div>
         </div>
       </div>

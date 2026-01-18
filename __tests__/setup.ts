@@ -45,6 +45,18 @@ console.info = (message, ...args) => {
 
 require('@testing-library/jest-native/extend-expect')
 
+jest.mock('@/src/utils/imageAnalysis', () => {
+  return {
+    __esModule: true,
+    analyzeImageBrightness: jest.fn(async () => 128),
+    analyzeImageComposition: jest.fn(async () => ({ topBusy: 0.5, centerBusy: 0.5, bottomBusy: 0.5 })),
+    getOptimalTextPosition: jest.fn(() => 'center'),
+    getOptimalOverlayOpacity: jest.fn(() => 0.6),
+    getOptimalOverlayColor: jest.fn(() => 'rgba(0,0,0,'),
+    getOptimalTextColor: jest.fn(() => '#ffffff'),
+  }
+})
+
 jest.mock('@gorhom/bottom-sheet', () => {
   const React = require('react')
   const { View } = require('react-native')

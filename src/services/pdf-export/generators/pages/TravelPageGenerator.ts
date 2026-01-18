@@ -4,10 +4,13 @@
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
 import type { TravelForBook } from '@/src/types/pdf-export';
 
+export type PhotoPageLayout = 'full-bleed' | 'framed' | 'split';
+
 export interface TravelPageOptions {
   qrCode?: string;
   showMetadata?: boolean;
   showRating?: boolean;
+  photoLayout?: PhotoPageLayout;
 }
 
 export class TravelPageGenerator {
@@ -21,8 +24,9 @@ export class TravelPageGenerator {
     pageNumber: number,
     options: TravelPageOptions = {}
   ): string {
+    const layout = options.photoLayout || 'full-bleed';
     return `
-      ${this.generatePhotoPage(travel, pageNumber)}
+      ${this.generatePhotoPage(travel, pageNumber, layout)}
       ${this.generateContentPage(travel, pageNumber + 1, options)}
     `;
   }
@@ -30,7 +34,26 @@ export class TravelPageGenerator {
   /**
    * Генерирует левую страницу с большим фото
    */
-  generatePhotoPage(travel: TravelForBook, pageNumber: number): string {
+  generatePhotoPage(
+    travel: TravelForBook,
+    pageNumber: number,
+    layout: PhotoPageLayout = 'full-bleed'
+  ): string {
+    switch (layout) {
+      case 'framed':
+        return this.generateFramedPhotoPage(travel, pageNumber);
+      case 'split':
+        return this.generateSplitPhotoPage(travel, pageNumber);
+      case 'full-bleed':
+      default:
+        return this.generateFullBleedPhotoPage(travel, pageNumber);
+    }
+  }
+
+  /**
+   * Layout 1: Full Bleed (текущий стиль)
+   */
+  private generateFullBleedPhotoPage(travel: TravelForBook, pageNumber: number): string {
     const { colors } = this.theme;
     const imageUrl = this.getMainImage(travel);
 
@@ -43,6 +66,141 @@ export class TravelPageGenerator {
       ">
         ${this.renderPhotoImage(imageUrl)}
         ${this.renderPhotoOverlay(travel)}
+        ${this.renderPageNumber(pageNumber, 'left')}
+      </section>
+    `;
+  }
+
+  /**
+   * Layout 2: Framed - фото в рамке с подписью под ним
+   */
+  private generateFramedPhotoPage(travel: TravelForBook, pageNumber: number): string {
+    const { colors, typography } = this.theme;
+    const imageUrl = this.getMainImage(travel);
+
+    return `
+      <section class="pdf-page travel-photo-page" style="
+        padding: 20mm;
+        background: ${colors.surfaceAlt || colors.background};
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      ">
+        <div style="
+          width: 100%;
+          height: 200mm;
+          border-radius: 16px;
+          overflow: hidden;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+          margin-bottom: 15mm;
+        ">
+          <img
+            src="${this.escapeHtml(imageUrl)}"
+            alt="${this.escapeHtml(travel.name)}"
+            style="
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+            "
+            crossorigin="anonymous"
+          />
+        </div>
+        
+        <div style="
+          padding: 12mm;
+          background: ${colors.surface};
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        ">
+          <h2 style="
+            margin: 0;
+            color: ${colors.text};
+            font-size: ${typography.h2.size};
+            font-weight: ${typography.h2.weight};
+            font-family: ${typography.headingFont};
+          ">${this.escapeHtml(travel.name)}</h2>
+          <div style="
+            color: ${colors.textMuted};
+            margin-top: 4mm;
+            font-size: 12pt;
+            font-family: ${typography.bodyFont};
+          ">
+            ${travel.countryName || ''}${travel.countryName && travel.year ? ' • ' : ''}${travel.year || ''}
+          </div>
+        </div>
+        
+        ${this.renderPageNumber(pageNumber, 'left')}
+      </section>
+    `;
+  }
+
+  /**
+   * Layout 3: Split - фото 70% + цветной блок 30%
+   */
+  private generateSplitPhotoPage(travel: TravelForBook, pageNumber: number): string {
+    const { colors, typography } = this.theme;
+    const imageUrl = this.getMainImage(travel);
+
+    return `
+      <section class="pdf-page travel-photo-page" style="
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+      ">
+        <div style="flex: 7; overflow: hidden; position: relative;">
+          <img
+            src="${this.escapeHtml(imageUrl)}"
+            alt="${this.escapeHtml(travel.name)}"
+            style="
+              width: 100%;
+              height: 100%;
+              object-fit: contain;
+              ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+            "
+            crossorigin="anonymous"
+          />
+        </div>
+        
+        <div style="
+          flex: 3;
+          background: linear-gradient(135deg, ${colors.accent}, ${colors.accentStrong || colors.accent});
+          padding: 20mm;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          color: ${colors.cover.text || '#ffffff'};
+        ">
+          <h2 style="
+            font-size: 24pt;
+            margin: 0 0 6mm 0;
+            font-weight: ${typography.h2.weight};
+            font-family: ${typography.headingFont};
+          ">${this.escapeHtml(travel.name)}</h2>
+          
+          <div style="
+            font-size: 14pt;
+            opacity: 0.9;
+            font-family: ${typography.bodyFont};
+          ">
+            ${travel.countryName || ''}${travel.countryName && travel.year ? ' • ' : ''}${travel.year || ''}
+          </div>
+          
+          ${travel.number_days ? `
+            <div style="
+              font-size: 12pt;
+              opacity: 0.8;
+              margin-top: 6mm;
+              font-family: ${typography.bodyFont};
+            ">
+              ${travel.number_days} ${this.getDaysLabel(travel.number_days)}
+            </div>
+          ` : ''}
+        </div>
+        
         ${this.renderPageNumber(pageNumber, 'left')}
       </section>
     `;
@@ -89,7 +247,7 @@ export class TravelPageGenerator {
           style="
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
           "
           crossorigin="anonymous"
@@ -235,7 +393,7 @@ export class TravelPageGenerator {
   }
 
   private renderHighlights(travel: TravelForBook): string {
-    const { colors, typography } = this.theme;
+    const { typography, colors } = this.theme;
     const highlights = [];
 
     if (travel.plus) {
@@ -243,9 +401,11 @@ export class TravelPageGenerator {
       if (plusItems.length > 0) {
         highlights.push({
           title: 'Понравилось',
-          icon: this.renderPdfIcon('sparkle', colors.textMuted, 14),
           items: plusItems,
-          color: colors.textMuted,
+          bgColor: colors.tipBlock?.background || '#f0fdf4',
+          borderColor: colors.tipBlock?.border || '#22c55e',
+          textColor: colors.tipBlock?.text || '#14532d',
+          iconColor: colors.tipBlock?.icon || '#22c55e',
         });
       }
     }
@@ -255,9 +415,11 @@ export class TravelPageGenerator {
       if (minusItems.length > 0) {
         highlights.push({
           title: 'Не понравилось',
-          icon: this.renderPdfIcon('warning', colors.textMuted, 14),
           items: minusItems,
-          color: colors.textMuted,
+          bgColor: colors.dangerBlock?.background || '#fef2f2',
+          borderColor: colors.dangerBlock?.border || '#ef4444',
+          textColor: colors.dangerBlock?.text || '#7f1d1d',
+          iconColor: colors.dangerBlock?.icon || '#ef4444',
         });
       }
     }
@@ -267,57 +429,84 @@ export class TravelPageGenerator {
       if (recItems.length > 0) {
         highlights.push({
           title: 'Рекомендации',
-          icon: this.renderPdfIcon('bulb', colors.textMuted, 14),
           items: recItems,
-          color: colors.textMuted,
+          bgColor: colors.infoBlock?.background || '#eff6ff',
+          borderColor: colors.infoBlock?.border || '#3b82f6',
+          textColor: colors.infoBlock?.text || '#1e40af',
+          iconColor: colors.infoBlock?.icon || '#3b82f6',
         });
       }
     }
 
     if (highlights.length === 0) return '';
 
+    // Если есть и плюсы и минусы, показываем в две колонки
+    const hasPlusAndMinus = travel.plus && travel.minus;
+    
+    if (hasPlusAndMinus) {
+      return `
+        <div style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8mm;
+          margin-bottom: 10mm;
+        ">
+          ${highlights.slice(0, 2).map(section => this.renderHighlightCard(section, typography)).join('')}
+        </div>
+        ${highlights.length > 2 ? highlights.slice(2).map(section => this.renderHighlightCard(section, typography)).join('') : ''}
+      `;
+    }
+
     return `
       <div style="margin-bottom: 16mm;">
-        ${highlights.map(section => `
-          <div style="margin-bottom: 12mm;">
-            <h3 style="
-              font-size: ${typography.h3.size};
-              font-weight: ${typography.h3.weight};
-              margin: 0 0 6mm 0;
-              color: ${section.color};
-              font-family: ${typography.headingFont};
-              display: flex;
-              align-items: center;
-              gap: 8px;
+        ${highlights.map(section => this.renderHighlightCard(section, typography)).join('')}
+      </div>
+    `;
+  }
+
+  private renderHighlightCard(section: any, typography: any): string {
+    return `
+      <div style="
+        background: ${section.bgColor};
+        border-left: 4px solid ${section.borderColor};
+        padding: 10mm;
+        border-radius: 8px;
+        margin-bottom: 8mm;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      ">
+        <h3 style="
+          font-size: 13pt;
+          font-weight: 600;
+          margin: 0 0 6mm 0;
+          color: ${section.textColor};
+          font-family: ${typography.headingFont};
+        ">${section.title}</h3>
+        <ul style="
+          margin: 0;
+          padding-left: 5mm;
+          list-style: none;
+        ">
+          ${section.items.map((item: string) => `
+            <li style="
+              margin-bottom: 3mm;
+              font-size: 11pt;
+              line-height: 1.6;
+              color: ${section.textColor};
+              font-family: ${typography.bodyFont};
+              position: relative;
+              padding-left: 6mm;
             ">
-              ${section.icon}<span>${section.title}</span>
-            </h3>
-            <ul style="
-              margin: 0;
-              padding-left: 20px;
-              list-style: none;
-            ">
-              ${section.items.map((item: string) => `
-                <li style="
-                  margin-bottom: 4mm;
-                  font-size: ${typography.body.size};
-                  line-height: ${typography.body.lineHeight};
-                  color: ${colors.text};
-                  font-family: ${typography.bodyFont};
-                  position: relative;
-                  padding-left: 8mm;
-                ">
-                  <span style="
-                    position: absolute;
-                    left: 0;
-                    color: ${section.color};
-                  ">•</span>
-                  ${this.escapeHtml(item)}
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-        `).join('')}
+              <span style="
+                position: absolute;
+                left: 0;
+                color: ${section.iconColor};
+                font-weight: 700;
+              ">•</span>
+              ${this.escapeHtml(item)}
+            </li>
+          `).join('')}
+        </ul>
       </div>
     `;
   }
@@ -327,30 +516,45 @@ export class TravelPageGenerator {
 
     return `
       <div style="
-        position: absolute;
-        bottom: 20mm;
-        right: 20mm;
-        text-align: center;
+        background: ${colors.surface};
+        padding: 10mm;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8mm;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        margin-top: 10mm;
+        break-inside: avoid;
+        page-break-inside: avoid;
       ">
         <img
           src="${this.escapeHtml(qrCodeDataUrl)}"
           alt="QR Code"
           style="
-            width: 25mm;
-            height: 25mm;
-            border: 2px solid ${colors.border};
-            border-radius: 4px;
-            background: #ffffff;
-            padding: 2mm;
+            width: 40mm;
+            height: 40mm;
+            border-radius: 8px;
+            flex-shrink: 0;
           "
         />
-        <div style="
-          margin-top: 3mm;
-          font-size: 8pt;
-          color: ${colors.textMuted};
-          font-family: ${typography.bodyFont};
-        ">
-          Подробнее
+        <div style="flex: 1;">
+          <div style="
+            font-size: 12pt;
+            font-weight: 600;
+            margin-bottom: 3mm;
+            color: ${colors.text};
+            font-family: ${typography.headingFont};
+          ">Подробнее онлайн</div>
+          <div style="
+            font-size: 10pt;
+            color: ${colors.textMuted};
+            line-height: 1.5;
+            font-family: ${typography.bodyFont};
+          ">
+            Отсканируйте QR-код<br/>
+            для просмотра полной<br/>
+            версии путешествия
+          </div>
         </div>
       </div>
     `;
