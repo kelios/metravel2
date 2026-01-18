@@ -24,14 +24,7 @@ const depArray = Object.entries(allDeps).map(([name, version]) => ({
   isDev: !!packageJson.devDependencies[name]
 }));
 
-console.log('📊 BUNDLE ANALYSIS REPORT');
-console.log('='.repeat(80));
-console.log('');
 
-console.log('Total Dependencies:', depArray.length);
-console.log('Production Dependencies:', depArray.filter(d => !d.isDev).length);
-console.log('Dev Dependencies:', depArray.filter(d => d.isDev).length);
-console.log('');
 
 // Identify heavy dependencies (estimated)
 const heavyDeps = [
@@ -47,9 +40,6 @@ const heavyDeps = [
   { name: 'lucide-react', weight: 60, category: 'Icons' }
 ];
 
-console.log('📦 HEAVY DEPENDENCIES (Estimated Size)');
-console.log('-'.repeat(80));
-console.log('');
 
 let totalEstimated = 0;
 heavyDeps.forEach((dep, idx) => {
@@ -59,23 +49,14 @@ heavyDeps.forEach((dep, idx) => {
   if (installed) totalEstimated += dep.weight;
 });
 
-console.log('');
-console.log(`Estimated total heavy deps: ${totalEstimated}KB`);
-console.log('');
 
 // List all dependencies
-console.log('📋 ALL DEPENDENCIES');
-console.log('-'.repeat(80));
 depArray.sort((a, b) => a.name.localeCompare(b.name)).forEach(dep => {
   const devLabel = dep.isDev ? '[DEV]' : '[PROD]';
   console.log(`${dep.name.padEnd(45)} ${dep.version.padEnd(20)} ${devLabel}`);
 });
 
 // Analyze component files
-console.log('');
-console.log('📂 LARGE COMPONENT FILES ANALYSIS');
-console.log('-'.repeat(80));
-console.log('');
 
 const componentDir = path.join(__dirname, '../components');
 const appDir = path.join(__dirname, '../app');
@@ -104,11 +85,8 @@ function analyzeDir(dir, prefix = '') {
   });
 }
 
-console.log('Components:');
 analyzeDir(componentDir, '  ');
 
-console.log('');
-console.log('App routes:');
 analyzeDir(appDir, '  ');
 
 // Create baseline metrics JSON
@@ -137,14 +115,4 @@ const baselineMetrics = {
 const metricsPath = path.join(__dirname, '../BASELINE_METRICS.json');
 fs.writeFileSync(metricsPath, JSON.stringify(baselineMetrics, null, 2));
 
-console.log('');
-console.log('✅ Baseline metrics saved to BASELINE_METRICS.json');
-console.log('');
-console.log('='.repeat(80));
-console.log('Next steps:');
-console.log('1. Run: npm run build:web');
-console.log('2. Analyze bundle with webpack-bundle-analyzer');
-console.log('3. Run Lighthouse audit');
-console.log('4. Profile React component rendering');
-console.log('='.repeat(80));
 

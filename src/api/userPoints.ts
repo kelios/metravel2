@@ -56,6 +56,17 @@ export const userPointsApi = {
     if (filters?.sortOrder) {
       params.append('sortOrder', filters.sortOrder);
     }
+
+    if (typeof filters?.page === 'number' && Number.isFinite(filters.page) && filters.page > 0) {
+      params.append('page', String(filters.page));
+    }
+    if (
+      typeof filters?.perPage === 'number' &&
+      Number.isFinite(filters.perPage) &&
+      filters.perPage > 0
+    ) {
+      params.append('perPage', String(filters.perPage));
+    }
     
     const queryString = params.toString();
     const endpoint = queryString ? `/user-points/?${queryString}` : '/user-points/';

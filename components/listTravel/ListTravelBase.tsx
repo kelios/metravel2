@@ -681,22 +681,6 @@ function ListTravelBase({
     const showNextPageLoading = isNextPageLoading;
     const showEmptyState = !isUserIdLoading && isEmpty;
 
-    // DEBUG: Add logging to see what's happening
-    // console.log('ListTravel Debug:', {
-    //   travelsLength: travels?.length || 0,
-    //   gridRowsLength: gridRows?.length || 0,
-    //   isInitialLoading,
-    //   isUserIdLoading,
-    //   isQueryEnabled,
-    //   isEmpty,
-    //   showInitialLoading,
-    //   showEmptyState,
-    //   userId,
-    //   isMeTravel,
-    //   isExport,
-    //   routeName: (route as any)?.name,
-    //   pathname,
-    // });
 
     const handleListEndReached = useCallback(() => {
         if (onMomentumRef.current) return;

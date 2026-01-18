@@ -60,6 +60,8 @@ export interface PointFilters {
   colors?: PointColor[];
   siteCategories?: string[];
   statuses?: PointStatus[];
+  page?: number;
+  perPage?: number;
   bounds?: {
     north: number;
     south: number;

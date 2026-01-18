@@ -3,6 +3,12 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
 
     // ✅ современный JSX для TS >= 4.1
     "jsx": "react-jsx",

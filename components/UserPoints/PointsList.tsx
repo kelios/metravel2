@@ -1,12 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Platform, View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Modal, ScrollView, Pressable, useWindowDimensions } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { Platform, View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { userPointsApi } from '@/src/api/userPoints';
 import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized';
 import { PointCard } from '@/components/UserPoints/PointCard';
-import { PointFilters } from '@/components/UserPoints/PointFilters';
-import { PointsMap } from '@/components/UserPoints/PointsMap';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
 import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
@@ -15,6 +12,11 @@ import { COLOR_CATEGORIES, PointCategory, PointColor, PointStatus, STATUS_LABELS
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
+import { PointsListHeader } from './PointsListHeader'
+import { PointsListGrid } from './PointsListGrid'
+import { PointsListItem } from './PointsListItem'
+import { PointsListPagination } from './PointsListPagination'
+
 type ViewMode = 'list' | 'map';
 
 type PointsListProps = {
@@ -22,7 +24,7 @@ type PointsListProps = {
 };
 
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
-  const [filters, setFilters] = useState<PointFiltersType>({});
+  const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: 50 });
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('map');
@@ -277,12 +279,35 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
-    setFilters(prev => ({ ...prev, search: text }));
+    setFilters(prev => ({ ...prev, search: text, page: 1 }));
   };
 
   const handleFilterChange = (newFilters: PointFiltersType) => {
-    setFilters(newFilters);
+    setFilters({ ...newFilters, page: 1, perPage: filters.perPage ?? 50 });
   };
+
+  const page = useMemo(() => {
+    const fromData = (data as any)?.page
+    if (typeof fromData === 'number' && Number.isFinite(fromData) && fromData > 0) return fromData
+    const fromFilters = filters.page
+    if (typeof fromFilters === 'number' && Number.isFinite(fromFilters) && fromFilters > 0) return fromFilters
+    return 1
+  }, [data, filters.page])
+
+  const perPage = useMemo(() => {
+    const fromData = (data as any)?.perPage
+    if (typeof fromData === 'number' && Number.isFinite(fromData) && fromData > 0) return fromData
+    const fromFilters = filters.perPage
+    if (typeof fromFilters === 'number' && Number.isFinite(fromFilters) && fromFilters > 0) return fromFilters
+    return 50
+  }, [data, filters.perPage])
+
+  const handlePageChange = useCallback((nextPage: number) => {
+    setFilters((prev) => ({
+      ...prev,
+      page: Math.max(1, nextPage),
+    }))
+  }, [])
 
   const handleLocateMe = useCallback(async () => {
     setIsLocating(true);
@@ -328,116 +353,27 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, []);
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={[styles.titleRow, isNarrow && styles.titleRowNarrow]}>
-        <View>
-          <Text style={styles.title}>Мои точки</Text>
-          <Text style={styles.subtitle}>
-            Всего: {data?.total || 0} точек
-          </Text>
-        </View>
-
-        <View style={isNarrow ? styles.headerActionsNarrow : styles.headerActions}>
-          <TouchableOpacity
-            style={[styles.headerButton, isMobile && styles.headerIconButton]}
-            onPress={() => setShowActions(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Добавить"
-          >
-            {isMobile ? (
-              <Feather name="plus" size={18} color={colors.text} />
-            ) : (
-              <Text style={styles.headerButtonText}>Добавить</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.headerButton, isMobile && styles.headerIconButton]}
-            onPress={() => setShowFilters((v) => !v)}
-            accessibilityRole="button"
-            accessibilityLabel={showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
-          >
-            {isMobile ? (
-              <Feather name="filter" size={18} color={colors.text} />
-            ) : (
-              <Text style={styles.headerButtonText}>
-                {showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
-              </Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.recoOpenButton, isMobile && styles.headerIconButtonPrimary]}
-            onPress={() => setShowRecommendations(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Куда поехать сегодня"
-          >
-            {isMobile ? (
-              <Feather name="compass" size={18} color={colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.recoOpenButtonText}>Куда поехать сегодня</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.viewToggle}>
-            <TouchableOpacity
-              style={[styles.viewButton, isMobile && styles.viewIconButton, viewMode === 'list' && styles.viewButtonActive]}
-              onPress={() => setViewMode('list')}
-              accessibilityRole="button"
-              accessibilityLabel="Список"
-            >
-              {isMobile ? (
-                <Feather
-                  name="list"
-                  size={18}
-                  color={viewMode === 'list' ? colors.textOnPrimary : colors.textMuted}
-                />
-              ) : (
-                <Text style={[styles.viewButtonText, viewMode === 'list' && styles.viewButtonTextActive]}>
-                  Список
-                </Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.viewButton, isMobile && styles.viewIconButton, viewMode === 'map' && styles.viewButtonActive]}
-              onPress={() => setViewMode('map')}
-              accessibilityRole="button"
-              accessibilityLabel="Карта"
-            >
-              {isMobile ? (
-                <Feather
-                  name="map"
-                  size={18}
-                  color={viewMode === 'map' ? colors.textOnPrimary : colors.textMuted}
-                />
-              ) : (
-                <Text style={[styles.viewButtonText, viewMode === 'map' && styles.viewButtonTextActive]}>
-                  Карта
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Поиск по названию..."
-          value={searchQuery}
-          onChangeText={handleSearch}
-          placeholderTextColor={colors.textMuted}
-        />
-      </View>
-
-      {showFilters && (
-        <PointFilters
-          filters={filters}
-          onChange={handleFilterChange}
-          siteCategoryOptions={siteCategoryTravelAddressOptions.map((o: any) => ({ id: String(o.value), name: String(o.label) }))}
-        />
-      )}
-    </View>
+    <PointsListHeader
+      styles={styles}
+      colors={{ text: colors.text, textMuted: colors.textMuted, textOnPrimary: colors.textOnPrimary }}
+      isNarrow={isNarrow}
+      isMobile={isMobile}
+      total={data?.total || 0}
+      viewMode={viewMode}
+      onViewModeChange={(mode) => setViewMode(mode)}
+      showFilters={showFilters}
+      onToggleFilters={() => setShowFilters((v) => !v)}
+      onOpenActions={() => setShowActions(true)}
+      onOpenRecommendations={() => setShowRecommendations(true)}
+      searchQuery={searchQuery}
+      onSearch={handleSearch}
+      filters={filters}
+      onFilterChange={handleFilterChange}
+      siteCategoryOptions={siteCategoryTravelAddressOptions.map((o: any) => ({
+        id: String(o.value),
+        name: String(o.label),
+      }))}
+    />
   );
 
   const renderEmpty = () => (
@@ -465,49 +401,42 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, [points, recommendationsNonce]);
 
   const renderItem = useCallback(
-    ({ item }: { item: any }) => (
-      <PointCard point={item} siteCategoryLookup={siteCategoryLookup} />
-    ),
+    ({ item }: { item: any }) => <PointsListItem point={item} siteCategoryLookup={siteCategoryLookup} />,
     [siteCategoryLookup]
   );
 
+  const renderFooter = useCallback(() => {
+    return (
+      <PointsListPagination
+        page={page}
+        perPage={perPage}
+        total={data?.total || 0}
+        onPageChange={handlePageChange}
+      />
+    )
+  }, [data?.total, handlePageChange, page, perPage])
+
   return (
     <View style={styles.container}>
-      {viewMode === 'list' ? (
-        <FlatList
-          data={filteredPoints}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={renderHeader}
-          ListEmptyComponent={!isLoading ? renderEmpty : null}
-          contentContainerStyle={styles.listContent}
-          refreshing={isLoading}
-          onRefresh={refetch}
-        />
-      ) : (
-        <View style={styles.mapContainer}>
-          {renderHeader()}
-          <View style={styles.mapInner}>
-            <PointsMap
-              points={filteredPoints}
-              center={currentLocation ?? undefined}
-              onMapPress={handleMapPress}
-              pendingMarker={showManualAdd ? manualCoords : null}
-              pendingMarkerColor={manualColor}
-            />
-
-            <TouchableOpacity
-              style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
-              onPress={handleLocateMe}
-              disabled={isLocating}
-              accessibilityRole="button"
-              accessibilityLabel="Моё местоположение"
-            >
-              <Feather name="crosshair" size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      <PointsListGrid
+        styles={styles}
+        colors={{ text: colors.text }}
+        viewMode={viewMode}
+        isLoading={isLoading}
+        filteredPoints={filteredPoints}
+        renderHeader={renderHeader}
+        renderItem={renderItem}
+        renderEmpty={renderEmpty}
+        renderFooter={renderFooter}
+        onRefresh={refetch}
+        currentLocation={currentLocation}
+        onMapPress={handleMapPress}
+        showManualAdd={showManualAdd}
+        manualCoords={manualCoords}
+        manualColor={manualColor}
+        isLocating={isLocating}
+        onLocateMe={handleLocateMe}
+      />
 
       <Modal
         visible={showActions}
@@ -758,6 +687,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     </View>
   );
 };
+
+export type PointsListStyles = ReturnType<typeof createStyles>;
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {

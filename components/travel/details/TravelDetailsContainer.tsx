@@ -25,12 +25,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 
 import type { Travel } from "@/src/types/types";
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
-import { useTravelDetailsData } from "@/hooks/useTravelDetailsData";
-import { useTravelDetailsLayout } from "@/hooks/useTravelDetailsLayout";
-import { useTravelDetailsMenu } from "@/hooks/useTravelDetailsMenu";
-import { useTravelDetailsNavigation } from "@/hooks/useTravelDetailsNavigation";
-import { useTravelDetailsPerformance } from "@/hooks/useTravelDetailsPerformance";
-import { useTravelDetailsScrollState } from "@/hooks/useTravelDetailsScrollState";
+import { useTravelDetails } from "@/hooks/travel-details";
 import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { createSafeJsonLd, stripHtml, createSafeImageUrl, getSafeOrigin } from "@/utils/travelDetailsSecure";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
@@ -133,30 +128,20 @@ export default function TravelDetailsContainer() {
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
   
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
-  const { travel, isLoading, isError, error, refetch, slug, isMissingParam } = useTravelDetailsData();
-  const { headerOffset, contentHorizontalPadding, sideMenuPlatformStyles } = useTravelDetailsLayout({
+  const travelDetails = useTravelDetails({
     isMobile,
     screenWidth,
-  });
+    startTransition,
+  })
+
+  const { travel, isError, error, refetch, slug, isMissingParam } = travelDetails.data
+  const { contentHorizontalPadding, sideMenuPlatformStyles } = travelDetails.layout
   const { anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey } =
-    useTravelDetailsNavigation({
-      headerOffset,
-      slug,
-      startTransition,
-    });
-  const { setLcpLoaded, sliderReady, deferAllowed } = useTravelDetailsPerformance({
-    travel,
-    isMobile,
-    isLoading,
-  });
-  const { closeMenu, animatedX, menuWidth: _menuWidth, menuWidthNum } = useTravelDetailsMenu(isMobile, deferAllowed);
-  const {
-    scrollY,
-    contentHeight,
-    viewportHeight,
-    handleContentSizeChange,
-    handleLayout,
-  } = useTravelDetailsScrollState();
+    travelDetails.navigation
+  const { setLcpLoaded, sliderReady, deferAllowed } = travelDetails.performance
+  const { closeMenu, animatedX, menuWidth: _menuWidth, menuWidthNum } = travelDetails.menu
+  const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
+    travelDetails.scroll
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   const lcpLinkRel = useMemo(() => {
     if (Platform.OS !== "web") return "preload";

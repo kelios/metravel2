@@ -159,7 +159,9 @@ type MattePalette = Record<keyof typeof MODERN_MATTE_PALETTE, string>;
 export function getThemedColors(isDark: boolean) {
   const raw = isDark ? MODERN_MATTE_PALETTE_DARK : MODERN_MATTE_PALETTE;
   // Normalize to a simple string map to avoid literal-type conflicts.
-  const palette: MattePalette = { ...(MODERN_MATTE_PALETTE as any), ...(raw as any) };
+  const basePalette: Record<string, string> = { ...MODERN_MATTE_PALETTE };
+  const themePalette: Record<string, string> = { ...raw };
+  const palette: MattePalette = { ...basePalette, ...themePalette } as MattePalette;
   const shadows = isDark ? MODERN_MATTE_SHADOWS_DARK : MODERN_MATTE_SHADOWS;
   const boxShadows = isDark ? MODERN_MATTE_BOX_SHADOWS_DARK : MODERN_MATTE_BOX_SHADOWS;
   const gradients = isDark ? MODERN_MATTE_GRADIENTS_DARK : MODERN_MATTE_GRADIENTS;
