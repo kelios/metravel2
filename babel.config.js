@@ -12,7 +12,6 @@ module.exports = function (api) {
             !isTest && 'react-native-web',
             isTest && 'babel-plugin-dynamic-import-node',
             !isTest && ['module-resolver', {
-                root: ['./'],
                 alias: {
                     '@': './',
                     '@/components': './src/components',

@@ -40,6 +40,24 @@ export const designTokens = {
       glass: 'rgba(255, 255, 255, 0.95)',
       overlay: 'rgba(0, 0, 0, 0.5)',
     },
+
+    text: {
+      primary: '#0f172a',
+      secondary: '#475569',
+      tertiary: '#64748b',
+      inverse: '#f8fafc',
+    },
+
+    background: {
+      primary: '#f8fafc',
+      secondary: '#f1f5f9',
+      tertiary: '#e2e8f0',
+    },
+
+    border: {
+      default: '#e2e8f0',
+      strong: '#cbd5e1',
+    },
   },
 
   // Typography
@@ -95,6 +113,13 @@ export const designTokens = {
     16: 64,
     20: 80,
     24: 96,
+
+    xs: 8,
+    sm: 12,
+    md: 16,
+    lg: 24,
+    xl: 32,
+    xxl: 48,
   },
 
   // Border radius
@@ -106,6 +131,16 @@ export const designTokens = {
     lg: 16,
     xl: 20,
     '2xl': 24,
+    full: 9999,
+  },
+
+  borderRadius: {
+    none: 0,
+    sm: 4,
+    base: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
     full: 9999,
   },
 

@@ -290,6 +290,13 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     setFullRouteCoords: jest.fn(),
   }
 
+  const getUserLocationMarkers = (queryAllByTestId: any) => {
+    const markers = queryAllByTestId('marker')
+    return (markers || []).filter(
+      (m: any) => (m as any)?.props?.['data-icon-class'] === 'user-location-marker'
+    )
+  }
+
   beforeEach(() => {
     jest.clearAllMocks()
     ;(window as any).L = mockLeaflet
@@ -305,6 +312,65 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     const { getByText } = render(<MapPageComponent {...defaultProps} />)
     expect(getByText(/(Loading map|Загрузка карты)/i)).toBeTruthy()
     await act(async () => {})
+  })
+
+  it('auto-requests user location on web (permission + current position)', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    ;(process.env as any).NODE_ENV = 'test'
+
+    const Location = require('expo-location')
+
+    const { queryAllByTestId } = render(<MapPageComponent {...defaultProps} />)
+    await act(async () => {})
+
+    await waitFor(() => {
+      expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1)
+      expect(Location.getCurrentPositionAsync).toHaveBeenCalledTimes(1)
+    })
+
+    await waitFor(() => {
+      expect(getUserLocationMarkers(queryAllByTestId).length).toBe(1)
+    })
+
+    ;(process.env as any).NODE_ENV = prevNodeEnv
+  })
+
+  it('does not request current position when geolocation permission is denied', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    ;(process.env as any).NODE_ENV = 'test'
+
+    const Location = require('expo-location')
+    Location.requestForegroundPermissionsAsync.mockResolvedValueOnce({ status: 'denied' })
+
+    const { queryAllByTestId } = render(<MapPageComponent {...defaultProps} />)
+    await act(async () => {})
+
+    await waitFor(() => {
+      expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1)
+    })
+    expect(Location.getCurrentPositionAsync).not.toHaveBeenCalled()
+    expect(getUserLocationMarkers(queryAllByTestId).length).toBe(0)
+
+    ;(process.env as any).NODE_ENV = prevNodeEnv
+  })
+
+  it('does not render user location marker when location retrieval throws', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    ;(process.env as any).NODE_ENV = 'test'
+
+    const Location = require('expo-location')
+    Location.getCurrentPositionAsync.mockRejectedValueOnce(new Error('boom'))
+
+    const { queryAllByTestId } = render(<MapPageComponent {...defaultProps} />)
+    await act(async () => {})
+
+    await waitFor(() => {
+      expect(Location.requestForegroundPermissionsAsync).toHaveBeenCalledTimes(1)
+      expect(Location.getCurrentPositionAsync).toHaveBeenCalledTimes(1)
+    })
+    expect(getUserLocationMarkers(queryAllByTestId).length).toBe(0)
+
+    ;(process.env as any).NODE_ENV = prevNodeEnv
   })
 
   it('opens article when clicking popup image', async () => {

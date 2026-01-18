@@ -142,9 +142,19 @@ export const fetchTravelsPopular = async (): Promise<TravelsMap> => {
   try {
     const urlTravel = `${GET_TRAVELS}popular/`;
     const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
+    if (!res.ok) {
+      // Keep behavior: return empty payload, but surface actionable info in dev.
+      if (res.status === 404) {
+        devWarn('Travels popular not found (404):', urlTravel);
+        return {} as TravelsMap;
+      }
+
+      devError('Error fetching travels popular: HTTP', res.status, res.statusText, urlTravel);
+      return {} as TravelsMap;
+    }
     return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
   } catch (e) {
-    devWarn('Error fetching fetchTravelsPopular:', e);
+    devWarn('Error fetching travels popular:', { url: `${GET_TRAVELS}popular/`, error: e });
     return {} as TravelsMap;
   }
 };

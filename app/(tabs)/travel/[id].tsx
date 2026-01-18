@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { useIsFocused } from '@react-navigation/native';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 const UpsertTravel = React.lazy(() => import('@/components/travel/UpsertTravel'));
 
@@ -13,7 +13,7 @@ const LoadingFallback = () => (
 
 export default function EditTravelScreen() {
    const isFocused = useIsFocused();
-   const shouldRender = Platform.OS === 'web' || isFocused;
+   const shouldRender = isFocused;
 
   return (
     <Suspense fallback={<LoadingFallback />}>

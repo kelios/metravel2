@@ -133,7 +133,11 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const { isAuthenticated } = useAuth();
 
     const pendingForceSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingForceSyncIdleRef = useRef<number | null>(null);
+    const pendingForceSyncRafRef = useRef<number | null>(null);
     const forceSyncAttemptRef = useRef(0);
+    const lastForceSyncedContentRef = useRef<string>('');
+    const lastSanitizedForceSyncRef = useRef<{ raw: string; clean: string } | null>(null);
 
     const handleQuillRef = useCallback(
         (node: any) => {
@@ -307,8 +311,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const debouncedParentChange = useDebounce(onChange, 250);
 
     useEffect(() => {
-        if (content !== html) setHtml(content);
-    }, [content]); // eslint-disable-line react-hooks/exhaustive-deps
+        setHtml(prev => (prev === content ? prev : content));
+    }, [content]);
 
     useEffect(() => {
         const prev = lastExternalContentRef.current;
@@ -334,6 +338,42 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 clearTimeout(pendingForceSyncTimeoutRef.current);
                 pendingForceSyncTimeoutRef.current = null;
             }
+            if (pendingForceSyncIdleRef.current != null && typeof (win as any)?.cancelIdleCallback === 'function') {
+                try {
+                    (win as any).cancelIdleCallback(pendingForceSyncIdleRef.current);
+                } catch {
+                    // noop
+                }
+                pendingForceSyncIdleRef.current = null;
+            }
+            if (pendingForceSyncRafRef.current != null && typeof (win as any)?.cancelAnimationFrame === 'function') {
+                try {
+                    (win as any).cancelAnimationFrame(pendingForceSyncRafRef.current);
+                } catch {
+                    // noop
+                }
+                pendingForceSyncRafRef.current = null;
+            }
+        };
+
+        const scheduleForceSyncWork = (fn: () => void) => {
+            if (!isWeb || !win) {
+                fn();
+                return;
+            }
+
+            if (typeof (win as any).requestIdleCallback === 'function') {
+                pendingForceSyncIdleRef.current = (win as any).requestIdleCallback(() => {
+                    pendingForceSyncIdleRef.current = null;
+                    fn();
+                }, { timeout: 1000 });
+                return;
+            }
+
+            pendingForceSyncRafRef.current = win.requestAnimationFrame(() => {
+                pendingForceSyncRafRef.current = null;
+                fn();
+            });
         };
 
         const attempt = () => {
@@ -348,31 +388,38 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 return;
             }
 
-            try {
-                const editor = quillRef.current?.getEditor?.();
-                if (!editor) return;
+            if (lastForceSyncedContentRef.current === next) return;
 
-                const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
-                const isEditorEmpty = text.replace(/\s+/g, '').length === 0;
-                if (!isEditorEmpty) return;
+            scheduleForceSyncWork(() => {
+                try {
+                    const editor = quillRef.current?.getEditor?.();
+                    if (!editor) return;
 
-                const clean = sanitizeHtml(next);
+                    const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
+                    const isEditorEmpty = text.replace(/\s+/g, '').length === 0;
+                    if (!isEditorEmpty) return;
 
-                if (__DEV__) {
-                    console.info('[ArticleEditor] Forcing Quill content sync', {
-                        contentLen: clean.length,
-                        htmlLen: typeof html === 'string' ? html.length : 0,
-                        attempt: forceSyncAttemptRef.current,
-                    });
+                    const prevSanitized = lastSanitizedForceSyncRef.current;
+                    const clean = prevSanitized?.raw === next ? prevSanitized.clean : sanitizeHtml(next);
+                    lastSanitizedForceSyncRef.current = { raw: next, clean };
+
+                    if (__DEV__) {
+                        console.info('[ArticleEditor] Forcing Quill content sync', {
+                            contentLen: clean.length,
+                            htmlLen: typeof html === 'string' ? html.length : 0,
+                            attempt: forceSyncAttemptRef.current,
+                        });
+                    }
+
+                    editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
+                    editor.setSelection?.(0, 0, 'silent');
+                    lastForceSyncedContentRef.current = next;
+                } catch (e) {
+                    if (__DEV__) {
+                        console.info('[ArticleEditor] Failed to force Quill content sync', e);
+                    }
                 }
-
-                editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
-                editor.setSelection?.(0, 0, 'silent');
-            } catch (e) {
-                if (__DEV__) {
-                    console.info('[ArticleEditor] Failed to force Quill content sync', e);
-                }
-            }
+            });
         };
 
         forceSyncAttemptRef.current = 0;
@@ -461,24 +508,56 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [idTravel, insertImage, isAuthenticated]);
 
     useEffect(() => {
-        if (!quillRef.current) return;
-        const root = quillRef.current.getEditor().root as HTMLElement;
-        const onDrop = (e: DragEvent) => {
-            if (!e.dataTransfer?.files?.length) return;
-            e.preventDefault();
-            uploadAndInsert(e.dataTransfer.files[0]);
+        if (!isWeb) return;
+
+        const MAX_ATTEMPTS = 20;
+        const ATTEMPT_DELAY_MS = 50;
+        let attempt = 0;
+        let t: ReturnType<typeof setTimeout> | null = null;
+
+        let cleanup: (() => void) | null = null;
+
+        const tryAttach = () => {
+            attempt += 1;
+
+            const editor = quillRef.current?.getEditor?.();
+            const root = editor?.root as HTMLElement | undefined;
+            if (!root) {
+                if (attempt < MAX_ATTEMPTS) {
+                    t = setTimeout(tryAttach, ATTEMPT_DELAY_MS);
+                }
+                return;
+            }
+
+            const onDrop = (e: DragEvent) => {
+                if (!e.dataTransfer?.files?.length) return;
+                e.preventDefault();
+                uploadAndInsert(e.dataTransfer.files[0]);
+            };
+            const onPaste = (e: ClipboardEvent) => {
+                const file = Array.from(e.clipboardData?.files ?? [])[0];
+                if (file) {
+                    e.preventDefault();
+                    uploadAndInsert(file);
+                }
+            };
+
+            root.addEventListener('drop', onDrop);
+            root.addEventListener('paste', onPaste);
+
+            cleanup = () => {
+                root.removeEventListener('drop', onDrop);
+                root.removeEventListener('paste', onPaste);
+            };
         };
-        const onPaste = (e: ClipboardEvent) => {
-            const file = Array.from(e.clipboardData?.files ?? [])[0];
-            if (file) { e.preventDefault(); uploadAndInsert(file); }
-        };
-        root.addEventListener('drop', onDrop);
-        root.addEventListener('paste', onPaste);
+
+        tryAttach();
+
         return () => {
-            root.removeEventListener('drop', onDrop);
-            root.removeEventListener('paste', onPaste);
+            if (t) clearTimeout(t);
+            if (cleanup) cleanup();
         };
-    }, [uploadAndInsert]);
+    }, [uploadAndInsert, quillMountKey, showHtml, shouldLoadQuill]);
 
     const IconButton = React.memo(function IconButton({
                                                           name,

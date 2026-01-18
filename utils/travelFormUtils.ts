@@ -17,12 +17,18 @@ const pickFirstString = (
 ): string => {
   for (const key of keys) {
     const v = source[key];
-    if (typeof v === 'string' && v.trim().length > 0) return v;
+    if (typeof v === 'string' && v.trim().length > 0) {
+      if (v.startsWith('__draft_placeholder__')) continue;
+      return v;
+    }
   }
   // Allow empty-but-explicit strings (e.g. server returns "") when nothing else exists.
   for (const key of keys) {
     const v = source[key];
-    if (typeof v === 'string') return v;
+    if (typeof v === 'string') {
+      if (v.startsWith('__draft_placeholder__')) continue;
+      return v;
+    }
   }
   return fallback;
 };

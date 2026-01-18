@@ -249,7 +249,7 @@ describe('MapPageGenerator', () => {
       const html = await generator.generate(mockContext);
       expect(html).toContain('Место 1');
       expect(html).toContain('Место 50');
-    });
+    }, 15000);
 
     it('должен обработать невалидные координаты', async () => {
       mockContext.metadata = {

@@ -45,8 +45,35 @@ export function useTheme(): ThemeContextType {
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemColorScheme = useColorScheme();
-  const [savedTheme, setSavedTheme] = useState<Theme>('auto');
-  const [isDark, setIsDark] = useState(false);
+  const [savedTheme, setSavedTheme] = useState<Theme>(() => {
+    if (Platform.OS !== 'web') return 'auto';
+    if (typeof window === 'undefined') return 'auto';
+    try {
+      const stored = localStorage.getItem('theme') as Theme | null;
+      if (stored && ['light', 'dark', 'auto'].includes(stored)) {
+        return stored;
+      }
+    } catch {
+      // noop
+    }
+    return 'auto';
+  });
+  const [isDark, setIsDark] = useState(() => {
+    if (Platform.OS === 'web') {
+      if (typeof window === 'undefined') return false;
+      try {
+        const stored = localStorage.getItem('theme') as Theme | null;
+        const theme = stored && ['light', 'dark', 'auto'].includes(stored) ? stored : 'auto';
+        if (theme === 'dark') return true;
+        if (theme === 'light') return false;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } catch {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+    }
+
+    return systemColorScheme === 'dark';
+  });
 
   // Инициализация темы при монтировании
   useEffect(() => {

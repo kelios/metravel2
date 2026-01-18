@@ -232,10 +232,35 @@ const getTravelHeroPreloadScript = () => String.raw`
 
 export default function Root({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru" data-theme="light" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning>
     <head>
       <meta charSet="utf-8" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
+
+      <script
+        dangerouslySetInnerHTML={{
+          __html: String.raw`
+(function(){
+  try {
+    var stored = null;
+    try { stored = window.localStorage.getItem('theme'); } catch (_e) {}
+    var theme = (stored === 'light' || stored === 'dark' || stored === 'auto') ? stored : 'auto';
+    var isDark = false;
+    if (theme === 'dark') {
+      isDark = true;
+    } else if (theme === 'light') {
+      isDark = false;
+    } else {
+      isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    var root = document.documentElement;
+    root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    root.style.colorScheme = isDark ? 'dark' : 'light';
+  } catch (_e) {}
+})();
+`,
+        }}
+      />
 
       {/* Icons */}
       <link rel="icon" href="/favicon.ico" sizes="any" />

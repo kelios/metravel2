@@ -87,6 +87,7 @@
     "expo-clipboard": "~7.0.0",
     "expo-constants": "~17.0.5",
     "expo-dev-client": "~5.0.10",
+    "expo-document-picker": "^14.0.8",
     "expo-fast-image": "^1.1.3",
     "expo-font": "~13.0.3",
     "expo-haptics": "~14.0.1",

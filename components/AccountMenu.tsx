@@ -393,6 +393,13 @@ function AccountMenu() {
             titleStyle={styles.menuItemTitle}
           />
           <Menu.Item
+            onPress={() => handleNavigate('/userpoints')}
+            title="Мои точки"
+            leadingIcon={({ size }) => <Feather name="map-pin" size={size} color={styles.iconMuted.color} />}
+            style={styles.menuItem}
+            titleStyle={styles.menuItemTitle}
+          />
+          <Menu.Item
             onPress={() => handleNavigate('/travel/new')}
             title="Поделиться путешествием"
             leadingIcon={({ size }) => <Feather name="share-2" size={size} color={styles.iconPrimary.color} />}

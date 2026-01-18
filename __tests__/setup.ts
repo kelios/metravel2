@@ -157,6 +157,9 @@ console.error = (message, ...args) => {
   if (/(Ошибка при создании формы|Ошибка при отправке обратной связи|Error: AI request failed)/.test(text)) {
     return;
   }
+  if (joined.includes('[Map] Location error:')) {
+    return
+  }
   // Suppress expected API fallback logs (devError) during unit tests
   // These are intentionally triggered by tests that validate error fallbacks.
   if (/\bError fetching filters\b/i.test(joined)) {
