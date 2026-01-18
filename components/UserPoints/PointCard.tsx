@@ -1,19 +1,30 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { ImportedPoint } from '@/types/userPoints';
-import { COLOR_CATEGORIES, CATEGORY_LABELS, STATUS_LABELS } from '@/types/userPoints';
+import { COLOR_CATEGORIES, STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface PointCardProps {
   point: ImportedPoint;
   onPress?: (point: ImportedPoint) => void;
+  siteCategoryLookup?: Map<string, string>;
 }
 
-export const PointCard: React.FC<PointCardProps> = ({ point, onPress }) => {
+export const PointCard: React.FC<PointCardProps> = ({ point, onPress, siteCategoryLookup }) => {
   const colorInfo = COLOR_CATEGORIES[point.color];
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
+
+  const siteCategoryLabel = React.useMemo(() => {
+    const ids = point.categoryTravelAddress || [];
+    if (!ids.length) return null;
+    if (!siteCategoryLookup) return ids.join(', ');
+    const labels = ids
+      .map((id) => siteCategoryLookup.get(String(id)))
+      .filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+    return labels.length ? labels.join(', ') : ids.join(', ');
+  }, [point.categoryTravelAddress, siteCategoryLookup]);
 
   return (
     <TouchableOpacity
@@ -35,11 +46,11 @@ export const PointCard: React.FC<PointCardProps> = ({ point, onPress }) => {
         )}
         
         <View style={styles.metadata}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              {CATEGORY_LABELS[point.category]}
-            </Text>
-          </View>
+          {siteCategoryLabel ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{siteCategoryLabel}</Text>
+            </View>
+          ) : null}
           
           <View style={[styles.badge, styles.statusBadge]}>
             <Text style={styles.badgeText}>

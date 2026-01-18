@@ -44,6 +44,7 @@ export interface ImportedPoint {
   address?: string;
   color: PointColor;
   category: PointCategory;
+  categoryTravelAddress?: string[];
   status: PointStatus;
   source: 'google_maps' | 'osm';
   originalId?: string;
@@ -57,7 +58,7 @@ export interface ImportedPoint {
 
 export interface PointFilters {
   colors?: PointColor[];
-  categories?: PointCategory[];
+  siteCategories?: string[];
   statuses?: PointStatus[];
   bounds?: {
     north: number;

@@ -12,6 +12,7 @@ describe('PointCard', () => {
     longitude: 30.5234,
     color: PointColor.GREEN,
     category: PointCategory.RESTAURANT,
+    categoryTravelAddress: ['1'],
     status: PointStatus.VISITED,
     description: 'A great place to eat',
     address: 'Main Street 123, Kyiv',
@@ -19,6 +20,8 @@ describe('PointCard', () => {
     source: 'google_maps',
     importedAt: '2024-01-15T10:00:00Z'
   };
+
+  const siteCategoryLookup = new Map<string, string>([['1', 'Ресторан']]);
 
   it('should render point name', () => {
     render(<PointCard point={mockPoint} />);
@@ -36,7 +39,7 @@ describe('PointCard', () => {
   });
 
   it('should render category label', () => {
-    render(<PointCard point={mockPoint} />);
+    render(<PointCard point={mockPoint} siteCategoryLookup={siteCategoryLookup} />);
     expect(screen.getByText('Ресторан')).toBeTruthy();
   });
 

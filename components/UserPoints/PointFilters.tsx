@@ -8,9 +8,10 @@ import { useThemedColors } from '@/hooks/useTheme';
 interface PointFiltersProps {
   filters: PointFiltersType;
   onChange: (filters: PointFiltersType) => void;
+  siteCategoryOptions?: Array<{ id: string; name: string }>;
 }
 
-export const PointFilters: React.FC<PointFiltersProps> = ({ filters, onChange }) => {
+export const PointFilters: React.FC<PointFiltersProps> = ({ filters, onChange, siteCategoryOptions }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -21,6 +22,12 @@ export const PointFilters: React.FC<PointFiltersProps> = ({ filters, onChange })
       : [...currentColors, color];
     
     onChange({ ...filters, colors: newColors });
+  };
+
+  const toggleSiteCategory = (id: string) => {
+    const current = filters.siteCategories || [];
+    const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id];
+    onChange({ ...filters, siteCategories: next });
   };
 
   return (
@@ -47,6 +54,26 @@ export const PointFilters: React.FC<PointFiltersProps> = ({ filters, onChange })
           );
         })}
       </ScrollView>
+
+      {siteCategoryOptions?.length ? (
+        <>
+          <Text style={[styles.label, { marginTop: DESIGN_TOKENS.spacing.md }]}>Категории:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
+            {siteCategoryOptions.map((cat) => {
+              const isSelected = filters.siteCategories?.includes(cat.id);
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.chip, isSelected && styles.chipActive]}
+                  onPress={() => toggleSiteCategory(cat.id)}
+                >
+                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{cat.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </>
+      ) : null}
     </View>
   );
 };
@@ -72,8 +99,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginRight: DESIGN_TOKENS.spacing.xs,
     backgroundColor: colors.surface,
   },
+  chipActive: {
+    backgroundColor: colors.backgroundTertiary,
+    borderColor: colors.primary,
+  },
   chipText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.text,
+  },
+  chipTextActive: {
+    fontWeight: '600' as any,
     color: colors.text,
   },
 });

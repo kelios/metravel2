@@ -3,14 +3,14 @@ import { Platform, View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput
 import Feather from '@expo/vector-icons/Feather';
 import { useQuery } from '@tanstack/react-query';
 import { userPointsApi } from '@/src/api/userPoints';
+import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized';
 import { PointCard } from '@/components/UserPoints/PointCard';
 import { PointFilters } from '@/components/UserPoints/PointFilters';
 import { PointsMap } from '@/components/UserPoints/PointsMap';
-import AddressSearch from '@/components/MapPage/AddressSearch';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
-import { CATEGORY_LABELS, COLOR_CATEGORIES, PointCategory, PointColor, PointStatus, STATUS_LABELS } from '@/types/userPoints';
+import { COLOR_CATEGORIES, PointCategory, PointColor, PointStatus, STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -32,10 +32,12 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [isLocating, setIsLocating] = useState(false);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [manualName, setManualName] = useState('');
-  const [manualAddress, setManualAddress] = useState('');
+  const [manualNameTouched, setManualNameTouched] = useState(false);
   const [manualCoords, setManualCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [manualLat, setManualLat] = useState('');
+  const [manualLng, setManualLng] = useState('');
   const [manualColor, setManualColor] = useState<PointColor>(PointColor.BLUE);
-  const [manualCategory, setManualCategory] = useState<PointCategory>(PointCategory.OTHER);
+  const [manualSiteCategories, setManualSiteCategories] = useState<string[]>([]);
   const [manualStatus, setManualStatus] = useState<PointStatus>(PointStatus.PLANNING);
   const [isSavingManual, setIsSavingManual] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
@@ -52,36 +54,57 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     queryFn: () => userPointsApi.getPoints(filters),
   });
 
+  const { data: siteFilters } = useQuery({
+    queryKey: ['filter-options'],
+    queryFn: fetchAllFiltersOptimized,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const siteCategoryTravelAddressOptions = useMemo(() => {
+    const raw = (siteFilters as any)?.categoryTravelAddress;
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .map((item: any) => ({
+        value: String(item?.id ?? item?.value ?? item),
+        label: String(item?.name ?? item?.title_ru ?? item?.title ?? item),
+      }))
+      .filter((it: any) => it.value && it.label)
+      .sort((a: any, b: any) => a.label.localeCompare(b.label, 'ru'));
+  }, [siteFilters]);
+
+  const siteCategoryLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const opt of siteCategoryTravelAddressOptions) {
+      map.set(String((opt as any).value), String((opt as any).label));
+    }
+    return map;
+  }, [siteCategoryTravelAddressOptions]);
+
   // If backend errors (or not ready) — treat as empty list.
   const points = useMemo(() => {
     if (error) return [];
     return data?.data || [];
   }, [data?.data, error]);
 
-  const availableCategoryOptions = useMemo(() => {
-    const unique = new Set<string>();
-    for (const p of points) {
-      if (p?.category) unique.add(String(p.category));
-    }
+  const filteredPoints = useMemo(() => {
+    const siteCats = filters.siteCategories || [];
+    if (!siteCats.length) return points;
 
-    if (unique.size === 0) {
-      unique.add(PointCategory.OTHER);
-    }
-
-    return Array.from(unique)
-      .map((value) => ({
-        value,
-        label: CATEGORY_LABELS[value as PointCategory] ?? value,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label, 'ru'));
-  }, [points]);
+    return points.filter((p) => {
+      const pointCats = (p as any)?.categoryTravelAddress as string[] | undefined;
+      if (!Array.isArray(pointCats) || pointCats.length === 0) return false;
+      return siteCats.some((id) => pointCats.includes(String(id)));
+    });
+  }, [filters.siteCategories, points]);
 
   const resetManualForm = useCallback(() => {
     setManualName('');
-    setManualAddress('');
+    setManualNameTouched(false);
     setManualCoords(null);
+    setManualLat('');
+    setManualLng('');
     setManualColor(PointColor.BLUE);
-    setManualCategory(PointCategory.OTHER);
+    setManualSiteCategories([]);
     setManualStatus(PointStatus.PLANNING);
     setManualError(null);
   }, []);
@@ -103,19 +126,58 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setShowActions(false);
       resetManualForm();
       setManualCoords(coords);
+      setManualLat(coords.lat.toFixed(6));
+      setManualLng(coords.lng.toFixed(6));
+      setManualName('Новая точка');
       setShowManualAdd(true);
     },
     [resetManualForm]
   );
 
+  const suggestManualName = useCallback((): string => {
+    const firstSiteId = manualSiteCategories[0];
+    if (firstSiteId && siteCategoryTravelAddressOptions.length) {
+      const found = siteCategoryTravelAddressOptions.find((o: any) => String(o.value) === String(firstSiteId));
+      if (found?.label) return String(found.label);
+    }
+
+    return 'Новая точка';
+  }, [manualSiteCategories, siteCategoryTravelAddressOptions]);
+
   useEffect(() => {
     if (!showManualAdd) return;
-    const isValid = availableCategoryOptions.some((o) => o.value === manualCategory);
-    if (!isValid) {
-      const first = availableCategoryOptions[0]?.value as PointCategory | undefined;
-      if (first) setManualCategory(first);
-    }
-  }, [availableCategoryOptions, manualCategory, showManualAdd]);
+    if (manualNameTouched) return;
+    setManualName(suggestManualName());
+  }, [manualNameTouched, showManualAdd, suggestManualName]);
+
+  const parseCoordinate = useCallback((value: string): number | null => {
+    const trimmed = value.trim().replace(',', '.');
+    if (!trimmed) return null;
+    const num = Number(trimmed);
+    if (!Number.isFinite(num)) return null;
+    return num;
+  }, []);
+
+  const syncCoordsFromInputs = useCallback(
+    (nextLatStr: string, nextLngStr: string) => {
+      const lat = parseCoordinate(nextLatStr);
+      const lng = parseCoordinate(nextLngStr);
+      if (lat == null || lng == null) {
+        setManualCoords(null);
+        return;
+      }
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        setManualCoords(null);
+        return;
+      }
+      setManualCoords({ lat, lng });
+    },
+    [parseCoordinate]
+  );
+
+  useEffect(() => {
+    // noop (legacy POI categories removed from UI)
+  }, []);
 
   const handleSaveManual = useCallback(async () => {
     setManualError(null);
@@ -125,7 +187,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       return;
     }
     if (!manualCoords) {
-      setManualError('Укажите адрес или координаты');
+      setManualError('Укажите координаты');
       return;
     }
 
@@ -133,11 +195,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     try {
       await userPointsApi.createPoint({
         name,
-        address: manualAddress || undefined,
         latitude: manualCoords.lat,
         longitude: manualCoords.lng,
         color: manualColor,
-        category: manualCategory,
+        category: PointCategory.OTHER,
+        categoryTravelAddress: manualSiteCategories.length ? manualSiteCategories : undefined,
         status: manualStatus,
       } as any);
 
@@ -148,7 +210,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     } finally {
       setIsSavingManual(false);
     }
-  }, [closeManualAdd, manualAddress, manualCategory, manualColor, manualCoords, manualName, manualStatus, refetch]);
+  }, [closeManualAdd, manualColor, manualCoords, manualName, manualSiteCategories, manualStatus, refetch]);
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
@@ -306,7 +368,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       </View>
 
       {showFilters && (
-        <PointFilters filters={filters} onChange={handleFilterChange} />
+        <PointFilters
+          filters={filters}
+          onChange={handleFilterChange}
+          siteCategoryOptions={siteCategoryTravelAddressOptions.map((o: any) => ({ id: String(o.value), name: String(o.label) }))}
+        />
       )}
     </View>
   );
@@ -335,12 +401,19 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return copy.slice(0, 3);
   }, [points, recommendationsNonce]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: any }) => (
+      <PointCard point={item} siteCategoryLookup={siteCategoryLookup} />
+    ),
+    [siteCategoryLookup]
+  );
+
   return (
     <View style={styles.container}>
       {viewMode === 'list' ? (
         <FlatList
-          data={points}
-          renderItem={({ item }) => <PointCard point={item} />}
+          data={filteredPoints}
+          renderItem={renderItem}
           keyExtractor={(item) => item.id}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={!isLoading ? renderEmpty : null}
@@ -353,7 +426,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
           {renderHeader()}
           <View style={styles.mapInner}>
             <PointsMap
-              points={points}
+              points={filteredPoints}
               center={currentLocation ?? undefined}
               onMapPress={handleMapPress}
               pendingMarker={showManualAdd ? manualCoords : null}
@@ -453,23 +526,47 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
                 <TextInput
                   style={styles.manualInput}
                   value={manualName}
-                  onChangeText={setManualName}
+                  onChangeText={(v) => {
+                    setManualNameTouched(true);
+                    setManualName(v);
+                  }}
                   placeholder="Например: Любимое кафе"
                   placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                 />
               </FormFieldWithValidation>
 
-              <FormFieldWithValidation label="Адрес или координаты" required error={manualError && !manualCoords ? manualError : null}>
-                <AddressSearch
-                  placeholder="Введите адрес или lat, lng"
-                  enableCoordinateInput
-                  value={manualAddress}
-                  onAddressSelect={(address, coords) => {
-                    setManualAddress(address);
-                    setManualCoords(coords);
-                  }}
-                />
-              </FormFieldWithValidation>
+              <View style={styles.coordsRow}>
+                <View style={styles.coordsCol}>
+                  <FormFieldWithValidation label="Lat" required error={manualError && !manualCoords ? manualError : null}>
+                    <TextInput
+                      style={styles.manualInput}
+                      value={manualLat}
+                      onChangeText={(v) => {
+                        setManualLat(v);
+                        syncCoordsFromInputs(v, manualLng);
+                      }}
+                      placeholder="55.755800"
+                      placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                      keyboardType={Platform.OS === 'ios' || Platform.OS === 'android' ? 'numeric' : (undefined as any)}
+                    />
+                  </FormFieldWithValidation>
+                </View>
+                <View style={styles.coordsCol}>
+                  <FormFieldWithValidation label="Lng" required error={manualError && !manualCoords ? manualError : null}>
+                    <TextInput
+                      style={styles.manualInput}
+                      value={manualLng}
+                      onChangeText={(v) => {
+                        setManualLng(v);
+                        syncCoordsFromInputs(manualLat, v);
+                      }}
+                      placeholder="37.617300"
+                      placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
+                      keyboardType={Platform.OS === 'ios' || Platform.OS === 'android' ? 'numeric' : (undefined as any)}
+                    />
+                  </FormFieldWithValidation>
+                </View>
+              </View>
 
               <FormFieldWithValidation label="Цвет" required>
                 <SimpleMultiSelect
@@ -487,11 +584,10 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
               <FormFieldWithValidation label="Категория" required>
                 <SimpleMultiSelect
-                  data={availableCategoryOptions}
-                  value={[manualCategory]}
+                  data={siteCategoryTravelAddressOptions}
+                  value={manualSiteCategories}
                   onChange={(vals) => {
-                    const v = vals[0] as PointCategory | undefined;
-                    if (v) setManualCategory(v);
+                    setManualSiteCategories(vals.map(String));
                   }}
                   labelField="label"
                   valueField="value"
@@ -851,6 +947,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  coordsRow: {
+    flexDirection: 'row',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  coordsCol: {
+    flex: 1,
+    minWidth: 120,
   },
   manualFooter: {
     padding: DESIGN_TOKENS.spacing.lg,

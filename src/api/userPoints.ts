@@ -44,9 +44,6 @@ export const userPointsApi = {
     if (filters?.colors && filters.colors.length > 0) {
       params.append('colors', filters.colors.join(','));
     }
-    if (filters?.categories && filters.categories.length > 0) {
-      params.append('categories', filters.categories.join(','));
-    }
     if (filters?.statuses && filters.statuses.length > 0) {
       params.append('statuses', filters.statuses.join(','));
     }
