@@ -9,7 +9,7 @@ jest.mock('@/components/travel/details/TravelDetailsSections', () => ({
 jest.mock('@/styles/criticalCSS', () => ({
   injectCriticalStyles: jest.fn(),
 }))
-jest.mock('@/utils/performanceMonitoring', () => ({
+jest.mock('@/utils/performance', () => ({
   initPerformanceMonitoring: jest.fn(),
 }))
 jest.mock('@/utils/advancedPerformanceOptimization', () => ({
@@ -50,7 +50,7 @@ const useLCPPreload = jest.requireMock(
 ).useLCPPreload as jest.Mock
 const injectCriticalStyles = jest.requireMock('@/styles/criticalCSS')
   .injectCriticalStyles as jest.Mock
-const initPerformanceMonitoring = jest.requireMock('@/utils/performanceMonitoring')
+const initPerformanceMonitoring = jest.requireMock('@/utils/performance')
   .initPerformanceMonitoring as jest.Mock
 const optimizeCriticalPath = jest.requireMock('@/utils/advancedPerformanceOptimization')
   .optimizeCriticalPath as jest.Mock

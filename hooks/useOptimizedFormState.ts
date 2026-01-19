@@ -20,7 +20,7 @@ interface FormState<T> {
   isSubmitting: boolean;
 }
 
-export function useOptimizedFormState<T extends Record<string, any>>(
+export function useOptimizedFormState<T extends object>(
   initialData: T,
   options: UseOptimizedFormStateOptions<T> = {}
 ) {

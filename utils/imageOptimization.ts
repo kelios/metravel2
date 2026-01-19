@@ -15,8 +15,26 @@ export interface ImageOptimizationOptions {
   blur?: number; // 1-100 (if supported by CDN)
 }
 
+export interface ResponsiveImageSource {
+  src: string
+  srcSet?: string
+  sizes?: string
+  format: string
+}
+
 const optimizedUrlCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 400;
+
+export function clearImageOptimizationCache(): void {
+  optimizedUrlCache.clear()
+}
+
+export function getImageCacheStats(): { size: number; entries: number } {
+  return {
+    size: optimizedUrlCache.size,
+    entries: optimizedUrlCache.size,
+  }
+}
 
 const isTestEnv = () =>
   typeof process !== 'undefined' &&
@@ -49,6 +67,8 @@ export function optimizeImageUrl(
     fit = 'cover',
     blur,
   } = options;
+
+  const clampedQuality = Math.max(1, Math.min(100, Number.isFinite(quality as any) ? (quality as number) : 85))
 
   try {
     const cacheKey = `${originalUrl}:${JSON.stringify({ ...options, dpr })}`;
@@ -144,8 +164,8 @@ export function optimizeImageUrl(
     if (height) {
       url.searchParams.set('h', String(Math.round(height * dpr)));
     }
-    if (quality && quality !== 100) {
-      url.searchParams.set('q', String(quality));
+    if (clampedQuality && clampedQuality !== 100) {
+      url.searchParams.set('q', String(clampedQuality));
     }
     const resolvedFormat = resolveImageFormat(format);
     if (resolvedFormat) {
@@ -314,6 +334,7 @@ export function generateSrcSet(
   sizes: number[],
   options: Omit<ImageOptimizationOptions, 'width' | 'height'> = {}
 ): string {
+  if (!baseUrl) return '';
   if (Platform.OS !== 'web') return baseUrl;
 
   const resolvedFormat = options.format ?? getPreferredImageFormat();
@@ -332,6 +353,20 @@ export function generateSrcSet(
     .join(', ');
 
   return srcset || baseUrl;
+}
+
+export function generateSizes(
+  breakpoints: {
+    desktop?: number
+    tablet?: number
+    mobile?: number
+  } = {}
+): string {
+  const desktop = breakpoints.desktop || 1200
+  const tablet = breakpoints.tablet || 768
+  const mobile = breakpoints.mobile || 375
+
+  return `(min-width: ${desktop}px) ${desktop}px, (min-width: ${tablet}px) ${tablet}px, ${mobile}px`
 }
 
 /**
@@ -408,6 +443,36 @@ export function buildResponsiveImageProps(
   };
 }
 
+export function buildResponsiveImage(
+  imageUrl: string,
+  options: ImageOptimizationOptions & { sizes?: string } = {}
+): ResponsiveImageSource {
+  if (!imageUrl) {
+    return {
+      src: '',
+      format: 'unknown',
+    }
+  }
+
+  const format = resolveImageFormat(options.format ?? 'auto') || 'jpg'
+  const { src, srcSet, sizes } = buildResponsiveImageProps(imageUrl, {
+    maxWidth:
+      typeof window !== 'undefined' ? window.innerWidth || 1440 : 1440,
+    sizes: options.sizes,
+    quality: options.quality,
+    format: options.format,
+    fit: options.fit,
+    dpr: options.dpr,
+  })
+
+  return {
+    src,
+    srcSet,
+    sizes,
+    format,
+  }
+}
+
 /**
  * Creates a low-quality placeholder URL for fast preview.
  */
@@ -426,6 +491,38 @@ export function buildLqipUrl(
       blur: options.blur ?? 30,
     }) || baseUrl
   );
+}
+
+export function generateLQIP(
+  imageUrl: string,
+  width: number = 15
+): string | undefined {
+  if (!imageUrl) return undefined
+  return optimizeImageUrl(imageUrl, {
+    width,
+    quality: 50,
+    format: 'jpg',
+    fit: 'contain',
+    blur: 5,
+  })
+}
+
+export function calculateImageDimensions(
+  originalWidth: number,
+  originalHeight: number,
+  constraints: { maxWidth?: number; maxHeight?: number }
+): { width: number; height: number } {
+  const maxWidth = constraints.maxWidth || originalWidth
+  const maxHeight = constraints.maxHeight || originalHeight
+
+  const widthRatio = maxWidth / originalWidth
+  const heightRatio = maxHeight / originalHeight
+  const ratio = Math.min(widthRatio, heightRatio, 1)
+
+  return {
+    width: Math.round(originalWidth * ratio),
+    height: Math.round(originalHeight * ratio),
+  }
 }
 
 /**

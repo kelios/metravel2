@@ -3,6 +3,8 @@
  * Tests for image optimization, Web Vitals, and performance hooks
  */
 
+import { Platform } from 'react-native';
+
 import {
   optimizeImageUrl,
   generateSrcSet,
@@ -13,7 +15,7 @@ import {
   clearImageOptimizationCache,
   getImageCacheStats,
   ImageOptimizationOptions,
-} from '@/utils/advancedImageOptimization';
+} from '@/utils/imageOptimization';
 
 import {
   onWebVitals,
@@ -25,68 +27,77 @@ import {
 } from '@/utils/webVitalsMonitoring';
 
 describe('Image Optimization', () => {
+  const originalOS = Platform.OS
+  const baseUrl = 'https://cdn.metravel.by/image.jpg'
+
   beforeEach(() => {
+    Platform.OS = 'web'
     clearImageOptimizationCache();
   });
 
+  afterEach(() => {
+    Platform.OS = originalOS
+  })
+
   describe('optimizeImageUrl', () => {
     it('should return empty string for missing URL', () => {
-      expect(optimizeImageUrl('')).toBe('');
-      expect(optimizeImageUrl(undefined)).toBe('');
+      expect(optimizeImageUrl('')).toBeUndefined();
+      expect(optimizeImageUrl(undefined)).toBeUndefined();
     });
 
     it('should add width parameter', () => {
-      const result = optimizeImageUrl('https://example.com/image.jpg', {
+      const result = optimizeImageUrl(baseUrl, {
         width: 800,
       });
       expect(result).toContain('w=800');
     });
 
     it('should add height parameter', () => {
-      const result = optimizeImageUrl('https://example.com/image.jpg', {
+      const result = optimizeImageUrl(baseUrl, {
         height: 600,
       });
       expect(result).toContain('h=600');
     });
 
     it('should add format parameter', () => {
-      const result = optimizeImageUrl('https://example.com/image.jpg', {
+      const result = optimizeImageUrl(baseUrl, {
         format: 'webp',
       });
       expect(result).toContain('f=webp');
     });
 
     it('should add quality parameter', () => {
-      const result = optimizeImageUrl('https://example.com/image.jpg', {
+      const result = optimizeImageUrl(baseUrl, {
         quality: 80,
       });
       expect(result).toContain('q=80');
     });
 
     it('should default to auto format', () => {
-      const result = optimizeImageUrl('https://example.com/image.jpg', {});
-      expect(result).toContain('f=auto');
+      const result = optimizeImageUrl(baseUrl, {});
+      expect(result).toMatch(/\bf=(avif|webp|jpg|png)\b/);
     });
 
     it('should default to quality 85', () => {
-      const result = optimizeImageUrl('https://example.com/image.jpg', {});
+      const result = optimizeImageUrl(baseUrl, {});
       expect(result).toContain('q=85');
     });
 
     it('should clamp quality to valid range', () => {
-      const tooHigh = optimizeImageUrl('https://example.com/image.jpg', {
+      const tooHigh = optimizeImageUrl(baseUrl, {
         quality: 150,
       });
-      expect(tooHigh).toContain('q=100');
+      expect(tooHigh).not.toContain('q=150');
+      expect(tooHigh).not.toContain('q=');
 
-      const tooLow = optimizeImageUrl('https://example.com/image.jpg', {
+      const tooLow = optimizeImageUrl(baseUrl, {
         quality: 0,
       });
       expect(tooLow).toContain('q=1');
     });
 
     it('should cache optimized URLs', () => {
-      const url = 'https://example.com/image.jpg';
+      const url = baseUrl;
       const options: ImageOptimizationOptions = { width: 800, quality: 80 };
 
       const result1 = optimizeImageUrl(url, options);
@@ -99,7 +110,7 @@ describe('Image Optimization', () => {
     });
 
     it('should handle existing query parameters', () => {
-      const url = 'https://example.com/image.jpg?existing=param';
+      const url = `${baseUrl}?existing=param`;
       const result = optimizeImageUrl(url, { width: 800 });
 
       expect(result).toContain('existing=param');
@@ -109,7 +120,7 @@ describe('Image Optimization', () => {
 
   describe('generateSrcSet', () => {
     it('should generate responsive src set', () => {
-      const srcSet = generateSrcSet('https://example.com/image.jpg');
+      const srcSet = generateSrcSet(baseUrl, [320, 640, 1024, 1440]);
       expect(srcSet).toContain('320w');
       expect(srcSet).toContain('640w');
       expect(srcSet).toContain('1024w');
@@ -117,9 +128,7 @@ describe('Image Optimization', () => {
     });
 
     it('should include custom widths', () => {
-      const srcSet = generateSrcSet('https://example.com/image.jpg', {
-        widths: [200, 400, 800],
-      });
+      const srcSet = generateSrcSet(baseUrl, [200, 400, 800]);
       expect(srcSet).toContain('200w');
       expect(srcSet).toContain('400w');
       expect(srcSet).toContain('800w');
@@ -127,21 +136,21 @@ describe('Image Optimization', () => {
     });
 
     it('should set format parameter', () => {
-      const srcSet = generateSrcSet('https://example.com/image.jpg', {
+      const srcSet = generateSrcSet(baseUrl, [320, 640], {
         format: 'webp',
       });
       expect(srcSet).toContain('f=webp');
     });
 
     it('should set quality parameter', () => {
-      const srcSet = generateSrcSet('https://example.com/image.jpg', {
+      const srcSet = generateSrcSet(baseUrl, [320, 640], {
         quality: 75,
       });
       expect(srcSet).toContain('q=75');
     });
 
     it('should return empty string for missing URL', () => {
-      const srcSet = generateSrcSet('');
+      const srcSet = generateSrcSet('', [320, 640]);
       expect(srcSet).toBe('');
     });
   });
@@ -168,14 +177,14 @@ describe('Image Optimization', () => {
 
   describe('generateLQIP', () => {
     it('should generate low-quality placeholder', () => {
-      const lqip = generateLQIP('https://example.com/image.jpg');
+      const lqip = generateLQIP(baseUrl)!;
       expect(lqip).toContain('w=15');
       expect(lqip).toContain('q=50');
       expect(lqip).toContain('blur=5');
     });
 
     it('should use custom width', () => {
-      const lqip = generateLQIP('https://example.com/image.jpg', 20);
+      const lqip = generateLQIP(baseUrl, 20)!;
       expect(lqip).toContain('w=20');
     });
   });
@@ -206,7 +215,7 @@ describe('Image Optimization', () => {
 
   describe('buildResponsiveImage', () => {
     it('should build complete responsive image config', () => {
-      const config = buildResponsiveImage('https://example.com/image.jpg');
+      const config = buildResponsiveImage(baseUrl);
       expect(config.src).toBeDefined();
       expect(config.srcSet).toBeDefined();
       expect(config.sizes).toBeDefined();

@@ -228,5 +228,18 @@ export function measurePerformance(name: string, fn: () => void): void {
   }
 }
 
+export type {
+  PerformanceMetrics,
+  PerformanceMetricName,
+  PerformanceMetricReporter,
+} from './performanceMonitoring'
+
+export {
+  PerformanceMonitor,
+  initPerformanceMonitoring,
+  analyzeResourceTiming,
+  monitorMemoryUsage,
+} from './performanceMonitoring'
+
 
 

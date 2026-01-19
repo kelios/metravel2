@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { fetchTravel } from '@/src/api/travelsApi';
 import { saveFormData } from '@/src/api/misc';
 import { TravelFormData, Travel, MarkerData } from '@/src/types/types';
-import { useOptimizedFormState } from '@/hooks/useOptimizedFormState';
+import { useFormState } from '@/hooks/useFormState';
 import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
 import {
   getEmptyFormData,
@@ -106,14 +106,14 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const initialLoadKeyRef = useRef<string | null>(null);
   const pendingBaselineRef = useRef<TravelFormData | null>(null);
 
-  const formState = useOptimizedFormState(initialFormData, {
+  const formState = useFormState<TravelFormData>(initialFormData, {
     debounce: 5000,
     validateOnChange: true,
     validationDebounce: 300,
   });
 
   useEffect(() => {
-    formDataRef.current = formState.data as TravelFormData;
+    formDataRef.current = formState.data;
   }, [formState.data]);
 
   useEffect(() => {

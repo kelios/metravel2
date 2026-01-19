@@ -5,7 +5,7 @@ import { Platform } from 'react-native'
 import type { Travel } from '@/src/types/types'
 import { useLCPPreload } from '@/components/travel/details/TravelDetailsSections'
 import { injectCriticalStyles } from '@/styles/criticalCSS'
-import { initPerformanceMonitoring } from '@/utils/performanceMonitoring'
+import { initPerformanceMonitoring } from '@/utils/performance'
 import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization'
 
 export interface UseTravelDetailsPerformanceArgs {

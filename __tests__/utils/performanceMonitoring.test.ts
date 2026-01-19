@@ -1,4 +1,4 @@
-import * as performanceMonitoring from '@/utils/performanceMonitoring';
+import * as performanceMonitoring from '@/utils/performance';
 
 describe('performanceMonitoring', () => {
   it('should initialize without errors', () => {

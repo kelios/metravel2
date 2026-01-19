@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import { validateTravelForm, ValidationError, ValidationResult } from '@/utils/formValidation';
 
 interface UseOptimizedValidationOptions {
+  enabled?: boolean;
   debounce?: number;
   validateOnChange?: boolean;
   validateOnBlur?: boolean;
@@ -14,11 +15,12 @@ interface ValidationState {
   lastValidated: Date | null;
 }
 
-export function useOptimizedValidation<T extends Record<string, any>>(
+export function useOptimizedValidation<T extends object>(
   data: T,
   options: UseOptimizedValidationOptions = {}
 ) {
   const {
+    enabled = true,
     debounce = 300,
     validateOnChange = true,
   } = options;
@@ -47,6 +49,11 @@ export function useOptimizedValidation<T extends Record<string, any>>(
   // Optimized validation with debouncing
   const validate = useCallback((force = false): Promise<ValidationResult> => {
     return new Promise((resolve) => {
+      if (!enabled) {
+        resolve({ isValid: state.isValid, errors: state.errors })
+        return
+      }
+
       // Skip validation if data hasn't changed and не форсируем проверку
       if (!force && _isEqual(data, lastValidatedDataRef.current)) {
         resolve({ isValid: state.isValid, errors: state.errors });
@@ -95,14 +102,15 @@ export function useOptimizedValidation<T extends Record<string, any>>(
         }
       }, debounce);
     });
-  }, [data, debounce, state.errors, state.isValid]);
+  }, [data, debounce, enabled, state.errors, state.isValid]);
 
   // Auto-validate on data change
   useEffect(() => {
+    if (!enabled) return
     if (validateOnChange) {
       validate();
     }
-  }, [data, validateOnChange, validate]);
+  }, [data, enabled, validateOnChange, validate]);
 
   // Immediate validation for specific field
   const validateField = useCallback((fieldName: string): ValidationError | null => {
