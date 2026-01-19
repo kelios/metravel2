@@ -10,7 +10,6 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type ImportStep = 'intro' | 'preview' | 'progress' | 'complete';
-type ImportSource = 'google_maps' | 'osm' | null;
 
 export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => void }> = ({ 
   onComplete, 
@@ -18,7 +17,6 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
 }) => {
   const queryClient = useQueryClient();
   const [step, setStep] = useState<ImportStep>('intro');
-  const [source, setSource] = useState<ImportSource>(null);
   const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [parsedPoints, setParsedPoints] = useState<ParsedPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,14 +29,14 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   const detectAndParse = async (selectedFile: DocumentPicker.DocumentPickerAsset) => {
     try {
       const points = await GoogleMapsParser.parse(selectedFile);
-      return { source: 'google_maps' as const, points };
+      return { points };
     } catch {
       // noop
     }
 
     try {
       const points = await OSMParser.parse(selectedFile);
-      return { source: 'osm' as const, points };
+      return { points };
     } catch {
       // noop
     }
@@ -52,8 +50,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     setError(null);
 
     try {
-      const { source: detectedSource, points } = await detectAndParse(selectedFile);
-      setSource(detectedSource);
+      const { points } = await detectAndParse(selectedFile);
       setParsedPoints(points);
       setStep('preview');
     } catch (err) {
@@ -64,14 +61,14 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   };
 
   const handleImport = async () => {
-    if (!file || !source) return;
+    if (!file) return;
 
     setIsLoading(true);
     setError(null);
     setStep('progress');
 
     try {
-      const result = await userPointsApi.importPoints(source, file);
+      const result = await userPointsApi.importPoints(file);
       setImportResult(result);
       setStep('complete');
 

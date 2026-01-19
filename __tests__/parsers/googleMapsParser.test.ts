@@ -1,4 +1,5 @@
 import { GoogleMapsParser } from '@/src/api/parsers/googleMapsParser';
+import { PointStatus } from '@/types/userPoints';
 
 describe('Google Maps Parser', () => {
   describe('parseJSON', () => {
@@ -94,6 +95,29 @@ describe('Google Maps Parser', () => {
       expect(result[0].latitude).toBe(50.4501);
       expect(result[0].longitude).toBe(30.5234);
       expect(result[0].color).toBeDefined();
+    });
+
+    it('should preserve status and color from KML ExtendedData when provided', () => {
+      const kmlData = `<?xml version="1.0" encoding="UTF-8"?>
+        <kml xmlns="http://www.opengis.net/kml/2.2">
+          <Document>
+            <Placemark>
+              <name>Test Location</name>
+              <ExtendedData>
+                <Data name="status"><value>visited</value></Data>
+                <Data name="color"><value>green</value></Data>
+              </ExtendedData>
+              <Point>
+                <coordinates>30.5234,50.4501,0</coordinates>
+              </Point>
+            </Placemark>
+          </Document>
+        </kml>`;
+
+      const result = (GoogleMapsParser as any).parseKML(kmlData);
+      expect(result).toHaveLength(1);
+      expect(result[0].status).toBe(PointStatus.VISITED);
+      expect(result[0].color).toBe('green');
     });
 
     it('should handle multiple placemarks', () => {

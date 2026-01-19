@@ -1,4 +1,5 @@
 import { OSMParser } from '@/src/api/parsers/osmParser';
+import { PointStatus } from '@/types/userPoints';
 
 describe('OSM Parser', () => {
   describe('parseGeoJSON', () => {
@@ -29,6 +30,31 @@ describe('OSM Parser', () => {
       expect(result[0].longitude).toBe(30.5234);
       expect(result[0].color).toBeDefined();
       expect(result[0].category).toBe('');
+    });
+
+    it('should preserve status and color from GeoJSON properties when provided', () => {
+      const geoJSON = {
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [30.5, 50.4]
+            },
+            properties: {
+              name: 'Custom',
+              status: 'visited',
+              color: 'red'
+            }
+          }
+        ]
+      };
+
+      const result = (OSMParser as any).parseGeoJSON(JSON.stringify(geoJSON));
+      expect(result).toHaveLength(1);
+      expect(result[0].status).toBe(PointStatus.VISITED);
+      expect(result[0].color).toBe('red');
     });
 
     it('should auto-detect restaurant category', () => {
@@ -97,6 +123,22 @@ describe('OSM Parser', () => {
       expect(result[0].latitude).toBe(50.4501);
       expect(result[0].longitude).toBe(30.5234);
       expect(result[0].color).toBeDefined();
+    });
+
+    it('should preserve status and color from GPX when provided', () => {
+      const gpxData = `<?xml version="1.0" encoding="UTF-8"?>
+        <gpx version="1.1">
+          <wpt lat="50.4501" lon="30.5234">
+            <name>Test Waypoint</name>
+            <status>want_to_visit</status>
+            <color>purple</color>
+          </wpt>
+        </gpx>`;
+
+      const result = (OSMParser as any).parseGPX(gpxData);
+      expect(result).toHaveLength(1);
+      expect(result[0].status).toBe(PointStatus.WANT_TO_VISIT);
+      expect(result[0].color).toBe('purple');
     });
 
     it('should handle multiple waypoints', () => {

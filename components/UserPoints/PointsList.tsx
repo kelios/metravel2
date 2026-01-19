@@ -58,7 +58,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [manualCoords, setManualCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
-  const [manualColor, setManualColor] = useState<string>('blue');
+  const [manualColor, setManualColor] = useState<string>('#2196F3');
   const [manualStatus, setManualStatus] = useState<PointStatus>(PointStatus.PLANNING);
   const [manualCategory, setManualCategory] = useState('');
   const [isSavingManual, setIsSavingManual] = useState(false);
@@ -173,7 +173,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setManualCoords(null);
     setManualLat('');
     setManualLng('');
-    setManualColor('blue');
+    setManualColor('#2196F3');
     setManualStatus(PointStatus.PLANNING);
     setManualCategory('');
     setManualError(null);
@@ -279,14 +279,14 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         setManualLat('');
         setManualLng('');
       }
-      setManualColor(String(point?.color ?? 'blue'));
+      setManualColor(String(point?.color ?? '#2196F3'));
       const nextStatus = ((point?.status as any) ?? PointStatus.PLANNING) as PointStatus;
       setManualStatus(nextStatus);
       setManualCategory(String((point as any)?.category ?? ''));
       setManualError(null);
       setShowManualAdd(true);
     },
-    [points, resetManualForm]
+    [resetManualForm]
   );
 
   const requestDeletePoint = useCallback((point: any) => {

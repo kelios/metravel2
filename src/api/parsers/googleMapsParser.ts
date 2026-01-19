@@ -34,6 +34,21 @@ export class GoogleMapsParser {
     
     throw new Error('Неподдерживаемый формат файла. Используйте JSON, KML или KMZ.');
   }
+
+  private static normalizeStatus(input: unknown): PointStatus | null {
+    const raw = String(input ?? '').trim();
+    if (!raw) return null;
+
+    const allowed = new Set<string>(Object.values(PointStatus));
+    if (allowed.has(raw)) return raw as PointStatus;
+    return null;
+  }
+
+  private static normalizeColor(input: unknown): string | null {
+    const raw = String(input ?? '').trim();
+    if (!raw) return null;
+    return raw;
+  }
   
   private static parseJSON(text: string): ParsedPoint[] {
     const data = JSON.parse(text);
@@ -60,7 +75,6 @@ export class GoogleMapsParser {
         color: this.mapGoogleCategoryToColor(props.Category),
         category: '',
         status: this.mapGoogleStatusToStatus(props.Category),
-        source: 'google_maps',
         originalId: props['Google Maps URL'],
         importedAt: new Date().toISOString(),
         rating: props.rating,
@@ -86,7 +100,9 @@ export class GoogleMapsParser {
           const description = placemark.getElementsByTagName('description')[0]?.textContent;
           const coordinates = placemark.getElementsByTagName('coordinates')[0]?.textContent;
 
-          const point = this.placemarkToPoint({ name, description, coordinates });
+          const extra = this.extractExtendedDataFromPlacemark(placemark);
+
+          const point = this.placemarkToPoint({ name, description, coordinates, ...extra });
           if (point) points.push(point);
         }
 
@@ -125,6 +141,8 @@ export class GoogleMapsParser {
     name?: string | null;
     description?: string | null;
     coordinates?: string | null;
+    color?: string | null;
+    status?: string | null;
   }): ParsedPoint | null {
     const coordinates = String(input.coordinates ?? '').trim();
     if (!coordinates) return null;
@@ -138,16 +156,18 @@ export class GoogleMapsParser {
     const name = String(input.name ?? '').trim() || 'Без названия';
     const description = (input.description ?? undefined) ? String(input.description).trim() : undefined;
 
+    const status = this.normalizeStatus(input.status) ?? PointStatus.WANT_TO_VISIT;
+    const color = this.normalizeColor(input.color) ?? '#2196F3';
+
     return {
       id: this.generateId(),
       name,
       description: description || undefined,
       latitude: lat,
       longitude: lng,
-      color: '#2196F3',
+      color,
       category: '',
-      status: PointStatus.WANT_TO_VISIT,
-      source: 'google_maps',
+      status,
       importedAt: new Date().toISOString(),
     };
   }
@@ -161,11 +181,47 @@ export class GoogleMapsParser {
       const description = this.extractTagText(pm, 'description');
       const coordinates = this.extractTagText(pm, 'coordinates');
 
-      const point = this.placemarkToPoint({ name, description, coordinates });
+      const status = this.extractDataValue(pm, 'status');
+      const color = this.extractDataValue(pm, 'color');
+
+      const point = this.placemarkToPoint({ name, description, coordinates, status, color });
       if (point) points.push(point);
     }
 
     return points;
+  }
+
+  private static extractExtendedDataFromPlacemark(placemark: Element): {
+    status?: string | null;
+    color?: string | null;
+  } {
+    const result: { status?: string | null; color?: string | null } = {};
+
+    try {
+      const data = placemark.getElementsByTagName('Data');
+      for (let i = 0; i < data.length; i++) {
+        const el = data[i];
+        const name = el.getAttribute('name');
+        const value = el.getElementsByTagName('value')[0]?.textContent;
+        if (!name) continue;
+        if (name === 'status') result.status = value;
+        if (name === 'color') result.color = value;
+      }
+    } catch {
+      // ignore
+    }
+
+    return result;
+  }
+
+  private static extractDataValue(xml: string, dataName: string): string | null {
+    const re = new RegExp(
+      `<Data\\s+[^>]*name=["']${dataName}["'][^>]*>[\\s\\S]*?<value[^>]*>([\\s\\S]*?)<\\/value>[\\s\\S]*?<\\/Data>`,
+      'i'
+    );
+    const m = xml.match(re);
+    if (!m?.[1]) return null;
+    return m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1').trim();
   }
 
   private static extractTagText(xml: string, tagName: string): string | null {

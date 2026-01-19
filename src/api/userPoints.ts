@@ -20,7 +20,6 @@ const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
   if (!raw || typeof raw !== 'object') {
     return {
       importId: '',
-      source: 'google_maps',
       dedupePolicy: 'skip',
       totalParsed: 0,
       created: 0,
@@ -66,9 +65,6 @@ const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
     (typeof raw.id === 'string' ? raw.id : undefined) ??
     '';
 
-  const source =
-    (raw.source === 'google_maps' || raw.source === 'osm' ? raw.source : undefined) ?? 'google_maps';
-
   const dedupePolicy =
     (raw.dedupePolicy === 'merge' || raw.dedupePolicy === 'skip' || raw.dedupePolicy === 'duplicate'
       ? raw.dedupePolicy
@@ -80,7 +76,6 @@ const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
 
   return {
     importId,
-    source,
     dedupePolicy,
     totalParsed: Number.isFinite(totalParsed) ? totalParsed : 0,
     created: Number.isFinite(created) ? created : 0,
@@ -92,7 +87,6 @@ const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
 
 export const userPointsApi = {
   async importPoints(
-    source: 'google_maps' | 'osm',
     file: FileInput,
     options?: {
       dedupePolicy?: DedupePolicy;
@@ -101,7 +95,6 @@ export const userPointsApi = {
     }
   ) {
     const formData = new FormData();
-    formData.append('source', source);
 
     if (options?.dedupePolicy) {
       formData.append('dedupe_policy', options.dedupePolicy);
@@ -174,7 +167,7 @@ export const userPointsApi = {
     }
 
     const raw = await apiClient.uploadFormData<any>('/user-points/import/', formData, 'POST');
-    return normalizeImportPointsResult({ ...raw, source });
+    return normalizeImportPointsResult(raw);
   },
   
   async getPoints(filters?: PointFilters) {

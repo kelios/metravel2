@@ -32,6 +32,21 @@ export class OSMParser {
     
     throw new Error('Неподдерживаемый формат файла. Используйте GeoJSON или GPX.');
   }
+
+  private static normalizeStatus(input: unknown): PointStatus | null {
+    const raw = String(input ?? '').trim();
+    if (!raw) return null;
+
+    const allowed = new Set<string>(Object.values(PointStatus));
+    if (allowed.has(raw)) return raw as PointStatus;
+    return null;
+  }
+
+  private static normalizeColor(input: unknown): string | null {
+    const raw = String(input ?? '').trim();
+    if (!raw) return null;
+    return raw;
+  }
   
   private static parseGeoJSON(text: string): ParsedPoint[] {
     const data = JSON.parse(text);
@@ -46,6 +61,14 @@ export class OSMParser {
       
       if (geometryType !== 'Point') continue;
       if (!coords || coords.length < 2) continue;
+
+      const color =
+        this.normalizeColor(props.color) ??
+        this.normalizeColor(props['marker-color']) ??
+        this.normalizeColor(props.markerColor) ??
+        '#2196F3';
+
+      const status = this.normalizeStatus(props.status) ?? PointStatus.PLANNING;
       
       const point: ParsedPoint = {
         id: this.generateId(),
@@ -53,9 +76,10 @@ export class OSMParser {
         description: props.description,
         latitude: coords[1],
         longitude: coords[0],
-        color: '#2196F3' as any,
+        color,
         category: '',
-        status: PointStatus.PLANNING,
+        status,
+        source: 'osm',
         importedAt: new Date().toISOString(),
       };
       
@@ -85,8 +109,13 @@ export class OSMParser {
       const lon = parseFloat(lonRaw);
       const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Без названия';
       const desc = wpt.getElementsByTagName('desc')[0]?.textContent;
+      const statusRaw = wpt.getElementsByTagName('status')[0]?.textContent;
+      const colorRaw = wpt.getElementsByTagName('color')[0]?.textContent;
       
       if (isNaN(lat) || isNaN(lon)) continue;
+
+      const status = this.normalizeStatus(statusRaw) ?? PointStatus.PLANNING;
+      const color = this.normalizeColor(colorRaw) ?? '#2196F3';
 
       const point: ParsedPoint = {
         id: this.generateId(),
@@ -94,9 +123,10 @@ export class OSMParser {
         description: desc || undefined,
         latitude: lat,
         longitude: lon,
-        color: '#2196F3' as any,
+        color,
         category: '',
-        status: PointStatus.PLANNING,
+        status,
+        source: 'osm',
         importedAt: new Date().toISOString(),
       };
       
