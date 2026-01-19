@@ -1,4 +1,5 @@
-import { ParsedPoint, PointColor, PointCategory, PointStatus } from '@/types/userPoints';
+import type { ParsedPoint, PointColor } from '@/types/userPoints';
+import { PointStatus } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import JSZip from 'jszip';
 
@@ -57,7 +58,7 @@ export class GoogleMapsParser {
         longitude: coords[0],
         address,
         color: this.mapGoogleCategoryToColor(props.Category),
-        category: this.detectCategory(props.Title, props.description),
+        category: '',
         status: this.mapGoogleStatusToStatus(props.Category),
         source: 'google_maps',
         originalId: props['Google Maps URL'],
@@ -143,8 +144,8 @@ export class GoogleMapsParser {
       description: description || undefined,
       latitude: lat,
       longitude: lng,
-      color: PointColor.BLUE,
-      category: this.detectCategory(name, description),
+      color: '#2196F3',
+      category: '',
       status: PointStatus.WANT_TO_VISIT,
       source: 'google_maps',
       importedAt: new Date().toISOString(),
@@ -193,21 +194,21 @@ export class GoogleMapsParser {
   }
   
   private static mapGoogleCategoryToColor(category?: string): PointColor {
-    if (!category) return PointColor.BLUE;
+    if (!category) return '#2196F3';
     
     const lowerCategory = category.toLowerCase();
     
     if (lowerCategory.includes('starred') || lowerCategory.includes('favorite')) {
-      return PointColor.RED;
+      return '#F44336';
     }
     if (lowerCategory.includes('want to go')) {
-      return PointColor.PURPLE;
+      return '#9C27B0';
     }
     if (lowerCategory.includes('visited')) {
-      return PointColor.GREEN;
+      return '#4CAF50';
     }
     
-    return PointColor.BLUE;
+    return '#2196F3';
   }
   
   private static mapGoogleStatusToStatus(category?: string): PointStatus {
@@ -219,26 +220,6 @@ export class GoogleMapsParser {
     if (lowerCategory.includes('want to go')) return PointStatus.WANT_TO_VISIT;
     
     return PointStatus.PLANNING;
-  }
-  
-  private static detectCategory(name?: string, description?: string): PointCategory {
-    const text = `${name} ${description}`.toLowerCase();
-    
-    if (/гора|mountain|peak|вершина|холм/i.test(text)) return PointCategory.MOUNTAIN;
-    if (/замок|castle|fortress|крепость/i.test(text)) return PointCategory.CASTLE;
-    if (/музей|museum|gallery|галерея/i.test(text)) return PointCategory.MUSEUM;
-    if (/ресторан|restaurant/i.test(text)) return PointCategory.RESTAURANT;
-    if (/кафе|cafe|coffee/i.test(text)) return PointCategory.CAFE;
-    if (/озеро|lake|море|sea/i.test(text)) return PointCategory.LAKE;
-    if (/пляж|beach/i.test(text)) return PointCategory.BEACH;
-    if (/церковь|church|храм|собор|cathedral/i.test(text)) return PointCategory.CHURCH;
-    if (/парк|park|сад|garden/i.test(text)) return PointCategory.PARK;
-    if (/отель|hotel/i.test(text)) return PointCategory.HOTEL;
-    if (/театр|theater|theatre/i.test(text)) return PointCategory.THEATER;
-    if (/кино|cinema/i.test(text)) return PointCategory.CINEMA;
-    if (/памятник|monument/i.test(text)) return PointCategory.MONUMENT;
-    
-    return PointCategory.OTHER;
   }
   
   private static generateId(): string {

@@ -1,5 +1,4 @@
 import { OSMParser } from '@/src/api/parsers/osmParser';
-import { PointCategory } from '@/types/userPoints';
 
 describe('OSM Parser', () => {
   describe('parseGeoJSON', () => {
@@ -29,7 +28,7 @@ describe('OSM Parser', () => {
       expect(result[0].latitude).toBe(50.4501);
       expect(result[0].longitude).toBe(30.5234);
       expect(result[0].color).toBeDefined();
-      expect(result[0].category).toBe(PointCategory.THEATER);
+      expect(result[0].category).toBe('');
     });
 
     it('should auto-detect restaurant category', () => {
@@ -51,7 +50,7 @@ describe('OSM Parser', () => {
       };
 
       const result = (OSMParser as any).parseGeoJSON(JSON.stringify(geoJSON));
-      expect(result[0].category).toBe(PointCategory.RESTAURANT);
+      expect(result[0].category).toBe('');
     });
 
     it('should handle features without Point geometry', () => {
@@ -137,7 +136,7 @@ describe('OSM Parser', () => {
         </gpx>`;
 
       const result = (OSMParser as any).parseGPX(gpxData);
-      expect(result[0].category).toBe(PointCategory.HOTEL);
+      expect(result[0].category).toBe('');
     });
   });
 });

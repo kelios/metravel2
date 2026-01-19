@@ -1,5 +1,4 @@
 import { GoogleMapsParser } from '@/src/api/parsers/googleMapsParser';
-import { PointCategory } from '@/types/userPoints';
 
 describe('Google Maps Parser', () => {
   describe('parseJSON', () => {
@@ -62,7 +61,7 @@ describe('Google Maps Parser', () => {
       };
 
       const result = (GoogleMapsParser as any).parseJSON(JSON.stringify(jsonData));
-      expect(result[0].category).toBe(PointCategory.RESTAURANT);
+      expect(result[0].category).toBe('');
     });
 
     it('should handle invalid JSON gracefully', () => {

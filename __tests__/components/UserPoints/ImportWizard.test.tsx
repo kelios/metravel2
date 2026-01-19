@@ -1,4 +1,5 @@
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
 
 jest.mock('expo-document-picker', () => ({
@@ -26,6 +27,40 @@ jest.mock('@/src/api/userPoints', () => ({
 describe('ImportWizard', () => {
   const mockOnComplete = jest.fn();
   const mockOnCancel = jest.fn();
+
+  const renderWithClient = () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    return render(
+      <QueryClientProvider client={client}>
+        <ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />
+      </QueryClientProvider>
+    );
+  };
+
+  const renderWithClientAndSpy = () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
+
+    const utils = render(
+      <QueryClientProvider client={client}>
+        <ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />
+      </QueryClientProvider>
+    );
+
+    return { ...utils, client, invalidateSpy };
+  };
 
   const mockGetDocumentAsync = require('expo-document-picker').getDocumentAsync as jest.Mock;
   const mockGoogleParse = require('@/src/api/parsers/googleMapsParser').GoogleMapsParser.parse as jest.Mock;
@@ -60,14 +95,14 @@ describe('ImportWizard', () => {
   });
 
   it('should render intro step with single import button', () => {
-    render(<ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />);
+    renderWithClient();
 
     expect(screen.getAllByText('Импорт точек').length).toBeGreaterThan(0);
     expect(screen.getByText('Отмена')).toBeTruthy();
   });
 
   it('should open file picker and move to preview after selecting a file', async () => {
-    render(<ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />);
+    renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
     fireEvent.press(importBtns[importBtns.length - 1]);
@@ -79,7 +114,7 @@ describe('ImportWizard', () => {
   });
 
   it('should allow going back to intro from preview', async () => {
-    render(<ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />);
+    renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
     fireEvent.press(importBtns[importBtns.length - 1]);
@@ -90,7 +125,7 @@ describe('ImportWizard', () => {
   });
 
   it('should call onCancel when cancel button is pressed', () => {
-    render(<ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />);
+    renderWithClient();
 
     const cancelButton = screen.getByText('Отмена');
     fireEvent.press(cancelButton);
@@ -99,7 +134,7 @@ describe('ImportWizard', () => {
   });
 
   it('should import after preview', async () => {
-    render(<ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />);
+    renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
     fireEvent.press(importBtns[importBtns.length - 1]);
@@ -115,8 +150,26 @@ describe('ImportWizard', () => {
     expect(screen.getByText(/Создано:\s*1\s*точек/)).toBeTruthy();
   });
 
+  it('should invalidate userPoints query after successful import', async () => {
+    const { invalidateSpy } = renderWithClientAndSpy();
+
+    const importBtns = screen.getAllByText('Импорт точек');
+    fireEvent.press(importBtns[importBtns.length - 1]);
+    await screen.findByText('Предпросмотр данных');
+
+    fireEvent.press(screen.getByText('Импортировать'));
+
+    await waitFor(() => {
+      expect(mockImportPoints).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['userPoints'] });
+    });
+  });
+
   it('should allow closing complete screen', async () => {
-    render(<ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />);
+    renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
     fireEvent.press(importBtns[importBtns.length - 1]);
@@ -133,7 +186,7 @@ describe('ImportWizard', () => {
     mockGoogleParse.mockRejectedValueOnce(new Error('bad google'));
     mockOsmParse.mockRejectedValueOnce(new Error('bad osm'));
 
-    render(<ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />);
+    renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
     fireEvent.press(importBtns[importBtns.length - 1]);

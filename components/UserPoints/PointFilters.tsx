@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import type { PointFilters as PointFiltersType, PointColor, PointStatus } from '@/types/userPoints';
-import { COLOR_CATEGORIES, STATUS_LABELS } from '@/types/userPoints';
+import type { PointFilters as PointFiltersType, PointStatus } from '@/types/userPoints';
+import { STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -9,20 +9,17 @@ interface PointFiltersProps {
   filters: PointFiltersType;
   onChange: (filters: PointFiltersType) => void;
   siteCategoryOptions?: Array<{ id: string; name: string }>;
+  availableStatuses?: string[];
 }
 
-export const PointFilters: React.FC<PointFiltersProps> = ({ filters, onChange, siteCategoryOptions }) => {
+export const PointFilters: React.FC<PointFiltersProps> = ({
+  filters,
+  onChange,
+  siteCategoryOptions,
+  availableStatuses,
+}) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
-
-  const toggleColor = (color: PointColor) => {
-    const currentColors = filters.colors || [];
-    const newColors = currentColors.includes(color)
-      ? currentColors.filter(c => c !== color)
-      : [...currentColors, color];
-    
-    onChange({ ...filters, colors: newColors });
-  };
 
   const toggleSiteCategory = (id: string) => {
     const current = filters.siteCategories || [];
@@ -36,43 +33,26 @@ export const PointFilters: React.FC<PointFiltersProps> = ({ filters, onChange, s
     onChange({ ...filters, statuses: next });
   };
 
+  const statusLabel = (status: PointStatus) => {
+    const label = (STATUS_LABELS as Record<string, string>)[status as unknown as string];
+    return label || String(status);
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Фильтр по цветам:</Text>
+      <Text style={styles.label}>Статус:</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
-        {Object.entries(COLOR_CATEGORIES).map(([colorKey, colorInfo]) => {
-          const isSelected = filters.colors?.includes(colorKey as PointColor);
-          
-          return (
-            <TouchableOpacity
-              key={colorKey}
-              style={[
-                styles.chip,
-                { borderColor: colorInfo.color },
-                isSelected && { backgroundColor: colorInfo.color + '20' }
-              ]}
-              onPress={() => toggleColor(colorKey as PointColor)}
-            >
-              <Text style={[styles.chipText, isSelected && { fontWeight: '600' }]}>
-                {colorInfo.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      <Text style={[styles.label, { marginTop: DESIGN_TOKENS.spacing.md }]}>Статус:</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
-        {(Object.keys(STATUS_LABELS) as unknown as PointStatus[]).map((status) => {
+        {(availableStatuses ?? []).map((statusValue) => {
+          const status = statusValue as unknown as PointStatus;
           const isSelected = filters.statuses?.includes(status);
           return (
             <TouchableOpacity
-              key={status}
+              key={statusValue}
               style={[styles.chip, isSelected && styles.chipActive]}
               onPress={() => toggleStatus(status)}
             >
               <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                {STATUS_LABELS[status]}
+                {statusLabel(status)}
               </Text>
             </TouchableOpacity>
           );

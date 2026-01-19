@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
-import { COLOR_CATEGORIES, STATUS_LABELS } from '@/types/userPoints';
+import { STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -27,8 +27,10 @@ export const PointCard: React.FC<PointCardProps> = ({
   selected,
   onToggleSelect,
 }) => {
-  const colorInfo = COLOR_CATEGORIES[point.color];
   const colors = useThemedColors();
+  const markerColor = String(point.color || '').trim() || colors.backgroundTertiary;
+  const hasCoords = Number.isFinite(point.latitude) && Number.isFinite(point.longitude);
+  const categoryLabel = String((point as any)?.category ?? '').trim();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const showActions = !selectionMode && (typeof onEdit === 'function' || typeof onDelete === 'function');
@@ -80,7 +82,7 @@ export const PointCard: React.FC<PointCardProps> = ({
       }}
       activeOpacity={0.7}
     >
-      <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: colorInfo.color }]} />
+      <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
       
       <View
         style={[
@@ -144,6 +146,11 @@ export const PointCard: React.FC<PointCardProps> = ({
         )}
         
         <View style={styles.metadata}>
+          {hasCoords && categoryLabel ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{categoryLabel}</Text>
+            </View>
+          ) : null}
           <View style={[styles.badge, styles.statusBadge]}>
             <Text style={styles.badgeText}>
               {STATUS_LABELS[point.status]}

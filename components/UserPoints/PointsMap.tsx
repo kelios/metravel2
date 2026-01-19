@@ -2,7 +2,8 @@ import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
-import { COLOR_CATEGORIES, PointColor } from '@/types/userPoints';
+import type { PointColor } from '@/types/userPoints';
+import { STATUS_LABELS } from '@/types/userPoints';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -119,42 +120,31 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     };
   }, []);
 
-  const getMarkerColorName = React.useCallback((color: PointColor | undefined): string => {
-    switch (color) {
-      case PointColor.GREEN:
-        return 'green';
-      case PointColor.PURPLE:
-        return 'violet';
-      case PointColor.BROWN:
-        return 'orange';
-      case PointColor.BLUE:
-        return 'blue';
-      case PointColor.RED:
-        return 'red';
-      case PointColor.YELLOW:
-        return 'gold';
-      case PointColor.GRAY:
-        return 'grey';
-      default:
-        return 'blue';
-    }
-  }, []);
-
   const getMarkerIcon = React.useCallback(
-    (color: PointColor | undefined) => {
+    (color: PointColor | string | undefined) => {
       const L = mods?.L;
       if (!L) return undefined;
-      const markerColor = getMarkerColorName(color);
-      return new L.Icon({
-        iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${markerColor}.png`,
-        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
+
+      const fill = String(color || '').trim() || colors.primary;
+
+      const html = `
+        <div style="width:28px;height:28px;position:relative;transform:translate(-14px,-28px);">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 22s7-4.5 7-12a7 7 0 0 0-14 0c0 7.5 7 12 7 12Z" fill="${fill}" stroke="${colors.border}" stroke-width="1" />
+            <circle cx="12" cy="10" r="3" fill="${colors.surface}" opacity="0.95" />
+          </svg>
+        </div>
+      `;
+
+      return L.divIcon({
+        html,
+        className: '',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -26],
       });
     },
-    [getMarkerColorName, mods?.L]
+    [colors.border, colors.primary, colors.surface, mods?.L]
   );
 
   if (!mods?.MapContainer || !mods?.TileLayer) {
@@ -291,7 +281,13 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
         )}
 
         {points.map((point) => {
-          const colorInfo = COLOR_CATEGORIES[point.color];
+          const badgeColor = String(point.color || '').trim() || colors.backgroundTertiary;
+          const hasCoords =
+            Number.isFinite((point as any)?.latitude) &&
+            Number.isFinite((point as any)?.longitude);
+          const categoryLabel = String((point as any)?.category ?? '').trim();
+          const colorLabel = String((point as any)?.color ?? '').trim();
+          const badgeLabel = hasCoords && categoryLabel ? categoryLabel : colorLabel;
           return (
             <mods.Marker
               key={point.id}
@@ -413,17 +409,32 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                   ) : null}
 
                   <div
-                    style={{
-                      display: 'inline-block',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      backgroundColor: colorInfo.color,
-                      color: colors.textOnPrimary,
-                      fontSize: '12px',
-                      marginTop: 8,
-                    }}
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}
                   >
-                    {colorInfo.label}
+                    <div
+                      style={{
+                        display: 'inline-block',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: badgeColor,
+                        color: colors.textOnPrimary,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {badgeLabel}
+                    </div>
+                    <div
+                      style={{
+                        display: 'inline-block',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: colors.backgroundTertiary,
+                        color: colors.textMuted,
+                        fontSize: '12px',
+                      }}
+                    >
+                      {STATUS_LABELS[point.status]}
+                    </div>
                   </div>
                 </div>
               </mods.Popup>

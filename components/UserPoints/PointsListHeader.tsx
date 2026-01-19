@@ -36,6 +36,7 @@ type PointsListHeaderProps = {
   onFilterChange: (newFilters: PointFiltersType) => void
 
   siteCategoryOptions: Array<{ id: string; name: string }>
+  availableStatuses?: string[]
 }
 
 export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
@@ -55,6 +56,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   filters,
   onFilterChange,
   siteCategoryOptions,
+  availableStatuses,
 }) => {
   return (
     <View style={styles.header}>
@@ -174,6 +176,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           filters={filters}
           onChange={onFilterChange}
           siteCategoryOptions={siteCategoryOptions}
+          availableStatuses={availableStatuses}
         />
       )}
     </View>

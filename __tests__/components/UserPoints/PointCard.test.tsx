@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react-native';
 import { PointCard } from '@/components/UserPoints/PointCard';
-import { PointColor, PointCategory, PointStatus } from '@/types/userPoints';
+import { PointStatus } from '@/types/userPoints';
 import type { ImportedPoint } from '@/types/userPoints';
 
 describe('PointCard', () => {
@@ -9,8 +9,8 @@ describe('PointCard', () => {
     name: 'Test Restaurant',
     latitude: 50.4501,
     longitude: 30.5234,
-    color: PointColor.GREEN,
-    category: PointCategory.RESTAURANT,
+    color: '#4CAF50',
+    category: 'Ресторан',
     status: PointStatus.VISITED,
     description: 'A great place to eat',
     address: 'Main Street 123, Kyiv',
@@ -39,6 +39,17 @@ describe('PointCard', () => {
   it('should render status label', () => {
     render(<PointCard point={mockPoint} />);
     expect(screen.getByText('Посещено')).toBeTruthy();
+  });
+
+  it('should render category when coordinates are present', () => {
+    render(<PointCard point={mockPoint} />);
+    expect(screen.getByText('Ресторан')).toBeTruthy();
+  });
+
+  it('should not render category when coordinates are missing', () => {
+    const pointWithoutCoords = { ...mockPoint, latitude: Number.NaN, longitude: Number.NaN };
+    render(<PointCard point={pointWithoutCoords} />);
+    expect(screen.queryByText('Ресторан')).toBeNull();
   });
 
   it('should render rating when provided', () => {

@@ -1,6 +1,5 @@
 import { render, fireEvent, screen } from '@testing-library/react-native';
 import { PointFilters } from '@/components/UserPoints/PointFilters';
-import { PointColor } from '@/types/userPoints';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 
 describe('PointFilters', () => {
@@ -8,73 +7,78 @@ describe('PointFilters', () => {
     const mockOnChange = jest.fn();
     const filters: PointFiltersType = {};
 
-    render(<PointFilters filters={filters} onChange={mockOnChange} />);
+    const availableColors = ['#4CAF50', '#9C27B0', '#2196F3'];
 
-    expect(screen.getAllByText('Посещено').length).toBeGreaterThan(0);
-    expect(screen.getByText('Мечта')).toBeTruthy();
-    expect(screen.getByText('Интересное')).toBeTruthy();
-    expect(screen.getAllByText('Планирую').length).toBeGreaterThan(0);
-    expect(screen.getByText('Избранное')).toBeTruthy();
-    expect(screen.getByText('В работе')).toBeTruthy();
-    expect(screen.getAllByText('Архив').length).toBeGreaterThan(0);
+    render(<PointFilters filters={filters} onChange={mockOnChange} availableColors={availableColors} />);
+
+    expect(screen.getByText('#4CAF50')).toBeTruthy();
+    expect(screen.getByText('#9C27B0')).toBeTruthy();
+    expect(screen.getByText('#2196F3')).toBeTruthy();
   });
 
   it('should call onChange when color chip is pressed', () => {
     const mockOnChange = jest.fn();
     const filters: PointFiltersType = {};
 
-    render(<PointFilters filters={filters} onChange={mockOnChange} />);
+    const availableColors = ['#4CAF50', '#9C27B0'];
 
-    const greenChip = screen.getAllByText('Посещено')[0];
-    fireEvent.press(greenChip);
+    render(<PointFilters filters={filters} onChange={mockOnChange} availableColors={availableColors} />);
+
+    fireEvent.press(screen.getByText('#4CAF50'));
 
     expect(mockOnChange).toHaveBeenCalledWith({
-      colors: [PointColor.GREEN]
+      colors: ['#4CAF50'],
     });
   });
 
   it('should add color to existing filters', () => {
     const mockOnChange = jest.fn();
     const filters: PointFiltersType = {
-      colors: [PointColor.GREEN]
+      colors: ['#4CAF50'],
     };
 
-    render(<PointFilters filters={filters} onChange={mockOnChange} />);
+    const availableColors = ['#4CAF50', '#9C27B0'];
 
-    const purpleChip = screen.getByText('Мечта');
-    fireEvent.press(purpleChip);
+    render(<PointFilters filters={filters} onChange={mockOnChange} availableColors={availableColors} />);
+
+    fireEvent.press(screen.getByText('#9C27B0'));
 
     expect(mockOnChange).toHaveBeenCalledWith({
-      colors: [PointColor.GREEN, PointColor.PURPLE]
+      colors: ['#4CAF50', '#9C27B0'],
     });
   });
 
   it('should remove color when already selected', () => {
     const mockOnChange = jest.fn();
     const filters: PointFiltersType = {
-      colors: [PointColor.GREEN, PointColor.PURPLE]
+      colors: ['#4CAF50', '#9C27B0'],
     };
 
-    render(<PointFilters filters={filters} onChange={mockOnChange} />);
+    const availableColors = ['#4CAF50', '#9C27B0'];
 
-    const greenChip = screen.getAllByText('Посещено')[0];
-    fireEvent.press(greenChip);
+    render(<PointFilters filters={filters} onChange={mockOnChange} availableColors={availableColors} />);
+
+    fireEvent.press(screen.getByText('#4CAF50'));
 
     expect(mockOnChange).toHaveBeenCalledWith({
-      colors: [PointColor.PURPLE]
+      colors: ['#9C27B0'],
     });
   });
 
   it('should highlight selected chips', () => {
     const mockOnChange = jest.fn();
     const filters: PointFiltersType = {
-      colors: [PointColor.GREEN]
+      colors: ['#4CAF50'],
     };
 
-    const { getByText } = render(<PointFilters filters={filters} onChange={mockOnChange} />);
+    const availableColors = ['#4CAF50', '#9C27B0'];
 
-    const greenText = screen.getAllByText('Посещено')[0];
-    const purpleText = getByText('Мечта');
+    const { getByText } = render(
+      <PointFilters filters={filters} onChange={mockOnChange} availableColors={availableColors} />
+    );
+
+    const greenText = screen.getByText('#4CAF50');
+    const purpleText = getByText('#9C27B0');
 
     expect(greenText.props.style).toContainEqual(expect.objectContaining({ fontWeight: '600' }));
     expect(purpleText.props.style).not.toContainEqual(expect.objectContaining({ fontWeight: '600' }));

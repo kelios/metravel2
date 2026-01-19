@@ -2,18 +2,26 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { userPointsApi } from '@/src/api/userPoints';
+import { fetchFiltersMap } from '@/src/api/map';
 import { PointCard } from '@/components/UserPoints/PointCard';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
 import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
-import { COLOR_CATEGORIES, PointCategory, PointColor, PointStatus, STATUS_LABELS } from '@/types/userPoints';
+import { PointStatus, STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 import { PointsListHeader } from './PointsListHeader'
 import { PointsListGrid } from './PointsListGrid'
 import { PointsListItem } from './PointsListItem'
+
+const STATUS_TO_COLOR: Record<PointStatus, string> = {
+  [PointStatus.VISITED]: 'green',
+  [PointStatus.WANT_TO_VISIT]: 'purple',
+  [PointStatus.PLANNING]: 'blue',
+  [PointStatus.ARCHIVED]: 'gray',
+}
 
 type ViewMode = 'list' | 'map';
 
@@ -34,7 +42,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
-  const [bulkColor, setBulkColor] = useState<PointColor | null>(null);
+  const [bulkColor, setBulkColor] = useState<string | null>(null);
   const [bulkStatus, setBulkStatus] = useState<PointStatus | null>(null);
   const [isBulkWorking, setIsBulkWorking] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
@@ -50,9 +58,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [manualCoords, setManualCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
-  const [manualColor, setManualColor] = useState<PointColor>(PointColor.BLUE);
+  const [manualColor, setManualColor] = useState<string>('blue');
   const [manualStatus, setManualStatus] = useState<PointStatus>(PointStatus.PLANNING);
-  const [manualCategory, setManualCategory] = useState<PointCategory>(PointCategory.OTHER);
+  const [manualCategory, setManualCategory] = useState('');
   const [isSavingManual, setIsSavingManual] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
@@ -71,6 +79,29 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const siteCategoryOptionsQuery = useQuery({
+    queryKey: ['userPointsSiteCategories'],
+    queryFn: async () => {
+      const data = await fetchFiltersMap();
+      const raw = (data as any)?.categories;
+      if (!Array.isArray(raw)) return [] as Array<{ id: string; name: string }>;
+
+      return raw
+        .map((cat: any, idx: number) => {
+          if (cat == null) return null;
+
+          const name = typeof cat === 'string' ? cat : cat?.name;
+          const id = cat && typeof cat === 'object' && cat?.id !== undefined ? cat.id : idx;
+          const normalizedName = String(name ?? cat ?? '').trim();
+          if (!normalizedName) return null;
+
+          return { id: String(id), name: normalizedName };
+        })
+        .filter((v: any): v is { id: string; name: string } => v != null);
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['userPoints', filters],
     queryFn: () => userPointsApi.getPoints(filters),
@@ -82,20 +113,27 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return Array.isArray(data) ? data : [];
   }, [data, error]);
 
+  const availableStatuses = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of points as any[]) {
+      const s = String(p?.status ?? '').trim();
+      if (s) set.add(s);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [points]);
+
   const filteredPoints = useMemo(() => {
     const q = String(searchQuery || '').trim().toLowerCase();
-    const selectedColors = filters.colors ?? [];
     const selectedStatuses = filters.statuses ?? [];
 
     return points.filter((p: any) => {
-      if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
       if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
       if (!q) return true;
 
       const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [filters.colors, filters.statuses, points, searchQuery]);
+  }, [filters.statuses, points, searchQuery]);
 
   const mapPoints = useMemo(() => {
     if (!selectionMode) return filteredPoints;
@@ -104,6 +142,22 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     const selected = new Set(selectedIds);
     return filteredPoints.filter((p: any) => selected.has(Number(p.id)));
   }, [filteredPoints, selectedIds, selectionMode, viewMode]);
+
+  const siteCategoryOptions = useMemo(() => {
+    return Array.isArray(siteCategoryOptionsQuery.data) ? siteCategoryOptionsQuery.data : [];
+  }, [siteCategoryOptionsQuery.data]);
+
+  const handleSearch = useCallback((text: string) => {
+    setSearchQuery(text);
+    setFilters((prev) => ({ ...prev, search: text, page: 1 }));
+  }, []);
+
+  const handleFilterChange = useCallback(
+    (newFilters: PointFiltersType) => {
+      setFilters({ ...newFilters, page: 1, perPage: filters.perPage ?? 50 });
+    },
+    [filters.perPage]
+  );
 
   useEffect(() => {
     if (!selectionMode) return;
@@ -119,9 +173,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setManualCoords(null);
     setManualLat('');
     setManualLng('');
-    setManualColor(PointColor.BLUE);
+    setManualColor('blue');
     setManualStatus(PointStatus.PLANNING);
-    setManualCategory(PointCategory.OTHER);
+    setManualCategory('');
     setManualError(null);
     setEditingPointId(null);
   }, []);
@@ -178,177 +232,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setShowManualAdd(true);
   }, [resetManualForm]);
 
-  const openEditPoint = useCallback(
-    (point: any) => {
-      const id = Number(point?.id);
-      if (!Number.isFinite(id)) return;
-
-      setShowActions(false);
-      setEditingPointId(id);
-      setManualName(String(point?.name ?? ''));
-      setManualNameTouched(true);
-      setManualAutoName('');
-      setManualAddress(String(point?.address ?? ''));
-      const lat = Number(point?.latitude);
-      const lng = Number(point?.longitude);
-      if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        setManualCoords({ lat, lng });
-        setManualLat(String(lat));
-        setManualLng(String(lng));
-      } else {
-        setManualCoords(null);
-        setManualLat('');
-        setManualLng('');
-      }
-      setManualColor((point?.color as any) ?? PointColor.BLUE);
-      setManualStatus((point?.status as any) ?? PointStatus.PLANNING);
-      setManualCategory((point?.category as any) ?? PointCategory.OTHER);
-      setManualError(null);
-      setShowManualAdd(true);
-    },
-    []
-  );
-
-  const requestDeletePoint = useCallback((point: any) => {
-    setPointToDelete(point);
-  }, []);
-
-  const toggleSelect = useCallback((point: any) => {
-    const id = Number(point?.id);
-    if (!Number.isFinite(id)) return;
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }, []);
-
-  const selectAllVisible = useCallback(() => {
-    const all = filteredPoints.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
-    setSelectedIds(Array.from(new Set(all)));
-  }, [filteredPoints]);
-
-  const clearSelection = useCallback(() => {
-    setSelectedIds([]);
-  }, []);
-
-  const exitSelectionMode = useCallback(() => {
-    setSelectionMode(false);
-    setSelectedIds([]);
-    setShowBulkEdit(false);
-    setBulkColor(null);
-    setBulkStatus(null);
-  }, []);
-
-  const applyBulkEdit = useCallback(async () => {
-    if (!selectedIds.length) return;
-    const updates: any = {};
-    if (bulkColor) updates.color = bulkColor;
-    if (bulkStatus) updates.status = bulkStatus;
-    if (!Object.keys(updates).length) return;
-
-    setIsBulkWorking(true);
-    try {
-      await userPointsApi.bulkUpdatePoints(selectedIds, updates);
-      await refetch();
-      setShowBulkEdit(false);
-      setBulkColor(null);
-      setBulkStatus(null);
-      setSelectedIds([]);
-      setSelectionMode(false);
-    } catch {
-      // noop
-    } finally {
-      setIsBulkWorking(false);
-    }
-  }, [bulkColor, bulkStatus, refetch, selectedIds]);
-
-  const deleteSelected = useCallback(async () => {
-    if (!selectedIds.length) return;
-    setIsBulkWorking(true);
-    setBulkProgress({ current: 0, total: selectedIds.length });
-    try {
-      const batchSize = 5;
-      let done = 0;
-      for (let i = 0; i < selectedIds.length; i += batchSize) {
-        const chunk = selectedIds.slice(i, i + batchSize);
-        await Promise.all(chunk.map((id) => userPointsApi.deletePoint(id)));
-        done += chunk.length;
-        setBulkProgress({ current: done, total: selectedIds.length });
-      }
-      await refetch();
-      setSelectedIds([]);
-      setSelectionMode(false);
-    } catch {
-      // noop
-    } finally {
-      setIsBulkWorking(false);
-      setBulkProgress(null);
-      setShowConfirmDeleteSelected(false);
-    }
-  }, [refetch, selectedIds]);
-
-  const deleteAll = useCallback(async () => {
-    const allIds = points.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
-    if (!allIds.length) return;
-    setIsBulkWorking(true);
-    setBulkProgress({ current: 0, total: allIds.length });
-    try {
-      const batchSize = 5;
-      let done = 0;
-      for (let i = 0; i < allIds.length; i += batchSize) {
-        const chunk = allIds.slice(i, i + batchSize);
-        await Promise.all(chunk.map((id) => userPointsApi.deletePoint(id)));
-        done += chunk.length;
-        setBulkProgress({ current: done, total: allIds.length });
-      }
-      await refetch();
-      exitSelectionMode();
-    } catch {
-      // noop
-    } finally {
-      setIsBulkWorking(false);
-      setBulkProgress(null);
-      setShowConfirmDeleteAll(false);
-    }
-  }, [exitSelectionMode, points, refetch]);
-
-  const handleMapPress = useCallback(
-    (coords: { lat: number; lng: number }) => {
-      setViewMode('map');
-      setShowActions(false);
-      resetManualForm();
-      setManualCoords(coords);
-      setManualLat(coords.lat.toFixed(6));
-      setManualLng(coords.lng.toFixed(6));
-      setManualName('Новая точка');
-      setShowManualAdd(true);
-
-      void (async () => {
-        const geocodeData = await reverseGeocode(coords.lat, coords.lng);
-        if (!geocodeData) return;
-
-        const addr = buildAddressFromGeocode(geocodeData, { lat: coords.lat, lng: coords.lng });
-        setManualAddress(String(addr || '').trim());
-
-        const primaryName = getPrimaryPlaceName(geocodeData, coords.lat, coords.lng);
-        setManualAutoName(primaryName);
-
-        if (!manualNameTouched) {
-          setManualName(primaryName);
-        }
-      })();
-    },
-    [getPrimaryPlaceName, manualNameTouched, resetManualForm, reverseGeocode]
-  );
-
-  const suggestManualName = useCallback((): string => {
-    if (manualAutoName) return manualAutoName;
-    return 'Новая точка';
-  }, [manualAutoName]);
-
-  useEffect(() => {
-    if (!showManualAdd) return;
-    if (manualNameTouched) return;
-    setManualName(suggestManualName());
-  }, [manualNameTouched, showManualAdd, suggestManualName]);
-
   const parseCoordinate = useCallback((value: string): number | null => {
     const trimmed = value.trim().replace(',', '.');
     if (!trimmed) return null;
@@ -374,9 +257,166 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     [parseCoordinate]
   );
 
-  useEffect(() => {
-    // noop (legacy POI categories removed from UI)
+  const openEditPoint = useCallback(
+    (point: any) => {
+      if (!point) return;
+      setShowActions(false);
+      resetManualForm();
+
+      setEditingPointId(Number(point.id));
+      setManualName(String(point?.name ?? ''));
+      setManualNameTouched(true);
+      setManualAutoName('');
+      setManualAddress(String(point?.address ?? ''));
+      const lat = Number(point?.latitude);
+      const lng = Number(point?.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        setManualCoords({ lat, lng });
+        setManualLat(String(lat));
+        setManualLng(String(lng));
+      } else {
+        setManualCoords(null);
+        setManualLat('');
+        setManualLng('');
+      }
+      setManualColor(String(point?.color ?? 'blue'));
+      const nextStatus = ((point?.status as any) ?? PointStatus.PLANNING) as PointStatus;
+      setManualStatus(nextStatus);
+      setManualCategory(String((point as any)?.category ?? ''));
+      setManualError(null);
+      setShowManualAdd(true);
+    },
+    [points, resetManualForm]
+  );
+
+  const requestDeletePoint = useCallback((point: any) => {
+    setPointToDelete(point);
   }, []);
+
+const toggleSelect = useCallback((point: any) => {
+  const id = Number(point?.id);
+  if (!Number.isFinite(id)) return;
+  setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+}, []);
+
+const selectAllVisible = useCallback(() => {
+  const all = filteredPoints.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
+  setSelectedIds(Array.from(new Set(all)));
+}, [filteredPoints]);
+
+const clearSelection = useCallback(() => {
+  setSelectedIds([]);
+}, []);
+
+const exitSelectionMode = useCallback(() => {
+  setSelectionMode(false);
+  setSelectedIds([]);
+  setShowBulkEdit(false);
+  setBulkColor(null);
+  setBulkStatus(null);
+}, []);
+
+const applyBulkEdit = useCallback(async () => {
+  if (!selectedIds.length) return;
+  const updates: any = {};
+  if (bulkColor) updates.color = bulkColor;
+  if (bulkStatus) updates.status = bulkStatus;
+  if (!Object.keys(updates).length) return;
+
+  setIsBulkWorking(true);
+  try {
+    await userPointsApi.bulkUpdatePoints(selectedIds, updates);
+    await refetch();
+    setShowBulkEdit(false);
+    setBulkColor(null);
+    setBulkStatus(null);
+    setSelectedIds([]);
+    setSelectionMode(false);
+  } catch {
+    // noop
+  } finally {
+    setIsBulkWorking(false);
+  }
+}, [bulkColor, bulkStatus, refetch, selectedIds]);
+
+const deleteSelected = useCallback(async () => {
+  if (!selectedIds.length) return;
+  setIsBulkWorking(true);
+  setBulkProgress({ current: 0, total: selectedIds.length });
+  try {
+    const batchSize = 5;
+    let done = 0;
+    for (let i = 0; i < selectedIds.length; i += batchSize) {
+      const chunk = selectedIds.slice(i, i + batchSize);
+      await Promise.all(chunk.map((id) => userPointsApi.deletePoint(id)));
+      done += chunk.length;
+      setBulkProgress({ current: done, total: selectedIds.length });
+    }
+    await refetch();
+    setSelectedIds([]);
+    setSelectionMode(false);
+  } catch {
+    // noop
+  } finally {
+    setIsBulkWorking(false);
+    setBulkProgress(null);
+    setShowConfirmDeleteSelected(false);
+  }
+}, [refetch, selectedIds]);
+
+const deleteAll = useCallback(async () => {
+  const allIds = points.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
+  if (!allIds.length) return;
+  setIsBulkWorking(true);
+  setBulkProgress({ current: 0, total: allIds.length });
+  try {
+    const batchSize = 5;
+    let done = 0;
+    for (let i = 0; i < allIds.length; i += batchSize) {
+      const chunk = allIds.slice(i, i + batchSize);
+      await Promise.all(chunk.map((id) => userPointsApi.deletePoint(id)));
+      done += chunk.length;
+      setBulkProgress({ current: done, total: allIds.length });
+    }
+    await refetch();
+    exitSelectionMode();
+  } catch {
+    // noop
+  } finally {
+    setIsBulkWorking(false);
+    setBulkProgress(null);
+    setShowConfirmDeleteAll(false);
+  }
+}, [exitSelectionMode, points, refetch]);
+
+const handleMapPress = useCallback(
+  (coords: { lat: number; lng: number }) => {
+    setViewMode('map');
+    setShowActions(false);
+    resetManualForm();
+    setManualCoords(coords);
+    setManualLat(coords.lat.toFixed(6));
+    setManualLng(coords.lng.toFixed(6));
+    setManualName('Новая точка');
+    setShowManualAdd(true);
+
+    void (async () => {
+      const geocodeData = await reverseGeocode(coords.lat, coords.lng);
+      if (!geocodeData) return;
+
+      const addr = buildAddressFromGeocode(geocodeData, { lat: coords.lat, lng: coords.lng });
+      setManualAddress(String(addr || '').trim());
+
+      const primaryName = getPrimaryPlaceName(geocodeData, coords.lat, coords.lng);
+      setManualAutoName(primaryName);
+
+      if (!manualNameTouched) {
+        setManualName(primaryName);
+      }
+    })();
+  },
+  [getPrimaryPlaceName, manualNameTouched, resetManualForm, reverseGeocode]
+);
 
   const handleSaveManual = useCallback(async () => {
     setManualError(null);
@@ -389,6 +429,10 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setManualError('Укажите координаты');
       return;
     }
+    if (!manualCategory) {
+      setManualError('Выберите категорию');
+      return;
+    }
 
     setIsSavingManual(true);
     try {
@@ -397,10 +441,14 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         address: manualAddress || undefined,
         latitude: manualCoords.lat,
         longitude: manualCoords.lng,
-        color: manualColor,
+        color: editingPointId ? manualColor : STATUS_TO_COLOR[manualStatus],
         category: manualCategory,
         status: manualStatus,
       };
+
+      if (!editingPointId) {
+        payload.source = 'osm';
+      }
 
       if (editingPointId) {
         await userPointsApi.updatePoint(editingPointId, payload);
@@ -435,15 +483,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setPointToDelete(null);
     }
   }, [pointToDelete, refetch]);
-
-  const handleSearch = (text: string) => {
-    setSearchQuery(text);
-    setFilters(prev => ({ ...prev, search: text, page: 1 }));
-  };
-
-  const handleFilterChange = (newFilters: PointFiltersType) => {
-    setFilters({ ...newFilters, page: 1, perPage: filters.perPage ?? 50 });
-  };
 
   const handleLocateMe = useCallback(async () => {
     setIsLocating(true);
@@ -488,26 +527,57 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     }
   }, []);
 
-  const renderHeader = () => (
-    <PointsListHeader
-      styles={styles}
-      colors={{ text: colors.text, textMuted: colors.textMuted, textOnPrimary: colors.textOnPrimary }}
-      isNarrow={isNarrow}
-      isMobile={isMobile}
-      total={filteredPoints.length}
-      viewMode={viewMode}
-      onViewModeChange={(mode) => setViewMode(mode)}
-      showFilters={showFilters}
-      onToggleFilters={() => setShowFilters((v) => !v)}
-      onOpenActions={() => setShowActions(true)}
-      onOpenRecommendations={() => setShowRecommendations(true)}
-      searchQuery={searchQuery}
-      onSearch={handleSearch}
-      filters={filters}
-      onFilterChange={handleFilterChange}
-      siteCategoryOptions={[]}
-    />
-  );
+  const renderHeader = useCallback(() => {
+    return (
+      <PointsListHeader
+        styles={styles}
+        colors={{ text: colors.text, textMuted: colors.textMuted, textOnPrimary: colors.textOnPrimary }}
+        isNarrow={isNarrow}
+        isMobile={isMobile}
+        total={filteredPoints.length}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => setViewMode(mode)}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters((v) => !v)}
+        onOpenActions={() => setShowActions(true)}
+        onOpenRecommendations={() => setShowRecommendations(true)}
+        searchQuery={searchQuery}
+        onSearch={handleSearch}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        siteCategoryOptions={siteCategoryOptions}
+        availableStatuses={availableStatuses}
+      />
+    );
+  }, [
+    availableStatuses,
+    colors.text,
+    colors.textMuted,
+    colors.textOnPrimary,
+    filters,
+    filteredPoints.length,
+    handleFilterChange,
+    handleSearch,
+    isMobile,
+    isNarrow,
+    searchQuery,
+    showFilters,
+    siteCategoryOptions,
+    styles,
+    viewMode,
+  ]);
+
+const suggestManualName = useCallback((): string => {
+  if (manualAutoName) return manualAutoName;
+  return 'Новая точка';
+}, [manualAutoName]);
+
+useEffect(() => {
+  if (!showManualAdd) return;
+  if (manualNameTouched) return;
+  setManualName(suggestManualName());
+}, [manualNameTouched, showManualAdd, suggestManualName]);
+
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -623,7 +693,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
               accessibilityRole="button"
               accessibilityLabel="Изменить"
             >
-              <Text style={styles.bulkBarButtonPrimaryText}>Изменить</Text>
+              <Text style={styles.bulkBarButtonText}>Изменить</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -884,20 +954,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>Изменить выбранные</Text>
 
-            <FormFieldWithValidation label="Цвет">
-              <SimpleMultiSelect
-                data={Object.entries(COLOR_CATEGORIES).map(([value, info]) => ({ value, label: (info as any).label }))}
-                value={bulkColor ? [bulkColor] : []}
-                onChange={(vals) => {
-                  const v = (vals[vals.length - 1] as PointColor | undefined) ?? undefined;
-                  setBulkColor(v ?? null);
-                }}
-                labelField="label"
-                valueField="value"
-                search={false}
-              />
-            </FormFieldWithValidation>
-
             <FormFieldWithValidation label="Статус">
               <SimpleMultiSelect
                 data={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
@@ -1085,13 +1141,16 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
                 </View>
               </View>
 
-              <FormFieldWithValidation label="Цвет" required>
+              <FormFieldWithValidation label="Категория" required>
                 <SimpleMultiSelect
-                  data={Object.entries(COLOR_CATEGORIES).map(([value, info]) => ({ value, label: (info as any).label }))}
-                  value={[manualColor]}
+                  data={(siteCategoryOptionsQuery.data ?? []).map((cat) => ({
+                    value: cat.name,
+                    label: cat.name,
+                  }))}
+                  value={manualCategory ? [manualCategory] : []}
                   onChange={(vals) => {
-                    const v = vals[vals.length - 1] as PointColor | undefined;
-                    if (v) setManualColor(v);
+                    const v = vals[vals.length - 1];
+                    if (typeof v === 'string') setManualCategory(v);
                   }}
                   labelField="label"
                   valueField="value"
@@ -1105,7 +1164,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
                   value={[manualStatus]}
                   onChange={(vals) => {
                     const v = vals[vals.length - 1] as PointStatus | undefined;
-                    if (v) setManualStatus(v);
+                    if (!v) return;
+                    setManualStatus(v);
+                    if (!editingPointId) setManualColor(STATUS_TO_COLOR[v]);
                   }}
                   labelField="label"
                   valueField="value"
@@ -1205,6 +1266,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    padding: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: 0,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   bulkBar: {
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
@@ -1340,10 +1406,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   gridColumnWrapper: {
     gap: DESIGN_TOKENS.spacing.md,
     paddingBottom: DESIGN_TOKENS.spacing.md,
-  },
-  header: {
-    padding: DESIGN_TOKENS.spacing.lg,
-    backgroundColor: colors.surface,
   },
   titleRow: {
     flexDirection: 'row',

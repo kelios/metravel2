@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { GoogleMapsParser } from '@/src/api/parsers/googleMapsParser';
 import { OSMParser } from '@/src/api/parsers/osmParser';
@@ -15,6 +16,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   onComplete, 
   onCancel 
 }) => {
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<ImportStep>('intro');
   const [source, setSource] = useState<ImportSource>(null);
   const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
@@ -72,6 +74,8 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       const result = await userPointsApi.importPoints(source, file);
       setImportResult(result);
       setStep('complete');
+
+      await queryClient.invalidateQueries({ queryKey: ['userPoints'] });
 
       const importedCount = (result?.created ?? 0) + (result?.updated ?? 0);
       if (parsedPoints.length > 0 && importedCount === 0) {

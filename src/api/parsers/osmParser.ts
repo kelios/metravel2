@@ -1,4 +1,5 @@
-import { ParsedPoint, PointColor, PointCategory, PointStatus } from '@/types/userPoints';
+import type { ParsedPoint } from '@/types/userPoints';
+import { PointStatus } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 
 type FileInput = File | DocumentPickerAsset;
@@ -52,10 +53,9 @@ export class OSMParser {
         description: props.description,
         latitude: coords[1],
         longitude: coords[0],
-        color: PointColor.BLUE,
-        category: this.detectCategoryFromTags(props),
+        color: '#2196F3' as any,
+        category: '',
         status: PointStatus.PLANNING,
-        source: 'osm',
         importedAt: new Date().toISOString(),
       };
       
@@ -85,22 +85,18 @@ export class OSMParser {
       const lon = parseFloat(lonRaw);
       const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Без названия';
       const desc = wpt.getElementsByTagName('desc')[0]?.textContent;
-      const type = wpt.getElementsByTagName('type')[0]?.textContent;
       
       if (isNaN(lat) || isNaN(lon)) continue;
 
-      const inferredCategory = this.detectCategoryFromGpx(name, desc, type);
-      
       const point: ParsedPoint = {
         id: this.generateId(),
         name,
         description: desc || undefined,
         latitude: lat,
         longitude: lon,
-        color: PointColor.BLUE,
-        category: inferredCategory,
+        color: '#2196F3' as any,
+        category: '',
         status: PointStatus.PLANNING,
-        source: 'osm',
         importedAt: new Date().toISOString(),
       };
       
@@ -108,46 +104,6 @@ export class OSMParser {
     }
     
     return points;
-  }
-  
-  private static detectCategoryFromTags(props: any): PointCategory {
-    const amenity = props.amenity;
-    const tourism = props.tourism;
-    const natural = props.natural;
-    const leisure = props.leisure;
-    
-    if (tourism === 'museum') return PointCategory.MUSEUM;
-    if (tourism === 'castle') return PointCategory.CASTLE;
-    if (tourism === 'attraction') return PointCategory.ATTRACTION;
-    if (tourism === 'hotel') return PointCategory.HOTEL;
-    
-    if (amenity === 'restaurant') return PointCategory.RESTAURANT;
-    if (amenity === 'cafe') return PointCategory.CAFE;
-    if (amenity === 'theatre') return PointCategory.THEATER;
-    if (amenity === 'cinema') return PointCategory.CINEMA;
-    if (amenity === 'place_of_worship') return PointCategory.CHURCH;
-    
-    if (natural === 'peak') return PointCategory.MOUNTAIN;
-    if (natural === 'beach') return PointCategory.BEACH;
-    if (natural === 'water') return PointCategory.LAKE;
-    
-    if (leisure === 'park') return PointCategory.PARK;
-    
-    return PointCategory.OTHER;
-  }
-
-  private static detectCategoryFromGpx(
-    name?: string | null,
-    description?: string | null,
-    type?: string | null
-  ): PointCategory {
-    const text = `${name ?? ''} ${description ?? ''} ${type ?? ''}`.toLowerCase();
-    if (text.includes('hotel')) return PointCategory.HOTEL;
-    if (text.includes('restaurant')) return PointCategory.RESTAURANT;
-    if (text.includes('cafe') || text.includes('coffee')) return PointCategory.CAFE;
-    if (text.includes('theatre') || text.includes('theater')) return PointCategory.THEATER;
-    if (text.includes('cinema')) return PointCategory.CINEMA;
-    return PointCategory.OTHER;
   }
   
   private static generateId(): string {
