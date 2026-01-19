@@ -87,15 +87,15 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       if (!Array.isArray(raw)) return [] as Array<{ id: string; name: string }>;
 
       return raw
-        .map((cat: any, idx: number) => {
+        .map((cat: any) => {
           if (cat == null) return null;
 
           const name = typeof cat === 'string' ? cat : cat?.name;
-          const id = cat && typeof cat === 'object' && cat?.id !== undefined ? cat.id : idx;
           const normalizedName = String(name ?? cat ?? '').trim();
           if (!normalizedName) return null;
 
-          return { id: String(id), name: normalizedName };
+          // Use the backend category name as the filter value to match point.category.
+          return { id: normalizedName, name: normalizedName };
         })
         .filter((v: any): v is { id: string; name: string } => v != null);
     },
@@ -124,16 +124,20 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const filteredPoints = useMemo(() => {
     const q = String(searchQuery || '').trim().toLowerCase();
+    const selectedColors = filters.colors ?? [];
     const selectedStatuses = filters.statuses ?? [];
+    const selectedCategories = filters.siteCategories ?? [];
 
     return points.filter((p: any) => {
+      if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
       if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
+      if (selectedCategories.length > 0 && !selectedCategories.includes(String(p.category ?? ''))) return false;
       if (!q) return true;
 
       const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [filters.statuses, points, searchQuery]);
+  }, [filters.colors, filters.siteCategories, filters.statuses, points, searchQuery]);
 
   const mapPoints = useMemo(() => {
     if (!selectionMode) return filteredPoints;
@@ -441,14 +445,10 @@ const handleMapPress = useCallback(
         address: manualAddress || undefined,
         latitude: manualCoords.lat,
         longitude: manualCoords.lng,
-        color: editingPointId ? manualColor : STATUS_TO_COLOR[manualStatus],
+        color: manualColor,
         category: manualCategory,
         status: manualStatus,
       };
-
-      if (!editingPointId) {
-        payload.source = 'osm';
-      }
 
       if (editingPointId) {
         await userPointsApi.updatePoint(editingPointId, payload);

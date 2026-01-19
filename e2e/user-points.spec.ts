@@ -10,7 +10,6 @@ type MockPoint = {
   status: string;
   category: string;
   address?: string;
-  source: string;
 };
 
 function uniqueName(prefix: string) {
@@ -56,7 +55,6 @@ test.describe('User points', () => {
           status: String(body?.status ?? 'planning'),
           category: String(body?.category ?? 'other'),
           address: body?.address ? String(body.address) : undefined,
-          source: String(body?.source ?? 'manual'),
         };
 
         if (!p.name || !Number.isFinite(p.latitude) || !Number.isFinite(p.longitude)) {
@@ -230,30 +228,27 @@ test.describe('User points', () => {
     // Seed 3 points directly in mock storage (faster than UI for this test)
     api.addPoint({
       name: pointNameA,
-      latitude: 52.2297,
-      longitude: 21.0122,
+      latitude: 55.7,
+      longitude: 37.6,
       color: 'blue',
       status: 'planning',
       category: 'other',
-      source: 'manual',
     });
     api.addPoint({
       name: pointNameB,
-      latitude: 50.0647,
-      longitude: 19.945,
+      latitude: 55.71,
+      longitude: 37.61,
       color: 'blue',
       status: 'planning',
       category: 'other',
-      source: 'manual',
     });
     api.addPoint({
       name: pointNameC,
-      latitude: 53.9,
-      longitude: 27.5667,
+      latitude: 55.72,
+      longitude: 37.62,
       color: 'blue',
       status: 'planning',
       category: 'other',
-      source: 'manual',
     });
 
     await page.addInitScript(seedNecessaryConsent);

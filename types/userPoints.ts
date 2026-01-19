@@ -17,6 +17,7 @@ export interface ImportedPoint {
   color: string;
   category: string;
   status: PointStatus;
+  source: 'google_maps' | 'osm';
   original_id?: string | null;
   imported_at: string;
   photos?: Record<string, unknown> | null;
@@ -50,6 +51,7 @@ export interface ParsedPoint {
   color: string;
   category: string;
   status: PointStatus;
+  source: 'google_maps' | 'osm';
   originalId?: string;
   importedAt: string;
   rating?: number;

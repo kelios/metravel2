@@ -48,7 +48,6 @@ describe('PointsList (manual create)', () => {
       color: 'blue',
       category: 'Food',
       status: 'planning',
-      source: 'osm',
       imported_at: new Date(0).toISOString(),
       created_at: new Date(0).toISOString(),
       updated_at: new Date(0).toISOString(),
@@ -93,7 +92,7 @@ describe('PointsList (manual create)', () => {
     expect(mockCreatePoint).not.toHaveBeenCalled();
   });
 
-  it('should create point with category (string) and source', async () => {
+  it('should create point with category (string)', async () => {
     renderWithClient();
     await openManualAdd();
 
@@ -108,6 +107,5 @@ describe('PointsList (manual create)', () => {
 
     const payload = mockCreatePoint.mock.calls[0][0];
     expect(payload.category).toBe('Food');
-    expect(payload.source).toBe('osm');
   });
 });

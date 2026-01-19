@@ -80,13 +80,12 @@ describe('ImportWizard', () => {
     mockGoogleParse.mockResolvedValue([
       {
         id: 'p1',
-        name: 'Test Point',
-        latitude: 10,
-        longitude: 20,
+        name: 'Point 1',
+        latitude: 1,
+        longitude: 2,
         color: 'blue',
         category: 'other',
         status: 'planning',
-        source: 'google_maps',
         importedAt: new Date(0).toISOString(),
       },
     ]);

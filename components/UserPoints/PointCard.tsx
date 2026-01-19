@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
 import { STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -30,6 +31,9 @@ export const PointCard: React.FC<PointCardProps> = ({
   const colors = useThemedColors();
   const markerColor = String(point.color || '').trim() || colors.backgroundTertiary;
   const hasCoords = Number.isFinite(point.latitude) && Number.isFinite(point.longitude);
+  const coordsText = hasCoords
+    ? `${Number(point.latitude).toFixed(6)}, ${Number(point.longitude).toFixed(6)}`
+    : '';
   const categoryLabel = String((point as any)?.category ?? '').trim();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -41,7 +45,7 @@ export const PointCard: React.FC<PointCardProps> = ({
     onActivate,
   }: {
     label: string;
-    icon: 'edit-2' | 'trash-2';
+    icon: 'edit-2' | 'trash-2' | 'copy';
     onActivate?: () => void;
   }) => {
     return (
@@ -69,6 +73,26 @@ export const PointCard: React.FC<PointCardProps> = ({
       </Pressable>
     );
   };
+
+  const copyCoords = React.useCallback(async () => {
+    if (!hasCoords) return;
+
+    const text = coordsText;
+    try {
+      if (
+        Platform.OS === 'web' &&
+        typeof window !== 'undefined' &&
+        (window as any).navigator?.clipboard?.writeText
+      ) {
+        await (window as any).navigator.clipboard.writeText(text);
+        return;
+      }
+
+      await Clipboard.setStringAsync(text);
+    } catch {
+      // ignore
+    }
+  }, [coordsText, hasCoords]);
 
   return (
     <TouchableOpacity
@@ -163,6 +187,34 @@ export const PointCard: React.FC<PointCardProps> = ({
             {point.address}
           </Text>
         )}
+
+        {hasCoords ? (
+          <View style={styles.coordsRow}>
+            <Text style={styles.coordsText} numberOfLines={1}>
+              {coordsText}
+            </Text>
+            {Platform.OS === 'web' ? (
+              <WebAction label="Копировать координаты" icon="copy" onActivate={copyCoords} />
+            ) : (
+              <TouchableOpacity
+                style={styles.copyButton}
+                accessibilityRole="button"
+                accessibilityLabel="Копировать координаты"
+                onPress={(e) => {
+                  try {
+                    (e as any)?.preventDefault?.();
+                    (e as any)?.stopPropagation?.();
+                  } catch {
+                    // noop
+                  }
+                  void copyCoords();
+                }}
+              >
+                <Feather name="copy" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : null}
         
         {typeof point.rating === 'number' && Number.isFinite(point.rating) && (
           <Text style={styles.rating}>
@@ -287,6 +339,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   address: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
+  },
+  coordsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: DESIGN_TOKENS.spacing.xs,
+  },
+  coordsText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: colors.textMuted,
+    flexShrink: 1,
+  },
+  copyButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: DESIGN_TOKENS.spacing.xs,
   },
   rating: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

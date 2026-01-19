@@ -1,7 +1,12 @@
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { PointCard } from '@/components/UserPoints/PointCard';
 import { PointStatus } from '@/types/userPoints';
 import type { ImportedPoint } from '@/types/userPoints';
+
+jest.mock('expo-clipboard', () => ({
+  __esModule: true,
+  setStringAsync: jest.fn(async () => true),
+}));
 
 describe('PointCard', () => {
   const mockPoint: ImportedPoint = {
@@ -36,6 +41,11 @@ describe('PointCard', () => {
     expect(screen.getByText('Main Street 123, Kyiv')).toBeTruthy();
   });
 
+  it('should render coordinates under address', () => {
+    render(<PointCard point={mockPoint} />);
+    expect(screen.getByText('50.450100, 30.523400')).toBeTruthy();
+  });
+
   it('should render status label', () => {
     render(<PointCard point={mockPoint} />);
     expect(screen.getByText('Посещено')).toBeTruthy();
@@ -50,6 +60,46 @@ describe('PointCard', () => {
     const pointWithoutCoords = { ...mockPoint, latitude: Number.NaN, longitude: Number.NaN };
     render(<PointCard point={pointWithoutCoords} />);
     expect(screen.queryByText('Ресторан')).toBeNull();
+  });
+
+  it('should not render coordinates when coordinates are missing', () => {
+    const pointWithoutCoords = { ...mockPoint, latitude: Number.NaN, longitude: Number.NaN };
+    render(<PointCard point={pointWithoutCoords} />);
+    expect(screen.queryByText('50.450100, 30.523400')).toBeNull();
+  });
+
+  it('should copy coordinates to clipboard on native', async () => {
+    const Clipboard = require('expo-clipboard');
+    render(<PointCard point={mockPoint} />);
+
+    fireEvent.press(screen.getByLabelText('Копировать координаты'));
+
+    await waitFor(() => {
+      expect(Clipboard.setStringAsync).toHaveBeenCalledWith('50.450100, 30.523400');
+    });
+  });
+
+  it('should copy coordinates via navigator.clipboard on web when available', async () => {
+    const originalPlatform = require('react-native').Platform.OS;
+    (require('react-native').Platform as any).OS = 'web';
+
+    const writeText = jest.fn(async () => true);
+    (global as any).window = {
+      navigator: {
+        clipboard: {
+          writeText,
+        },
+      },
+    };
+
+    render(<PointCard point={mockPoint} />);
+    fireEvent.press(screen.getByLabelText('Копировать координаты'));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith('50.450100, 30.523400');
+    });
+
+    (require('react-native').Platform as any).OS = originalPlatform;
   });
 
   it('should render rating when provided', () => {
