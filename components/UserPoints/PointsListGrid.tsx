@@ -16,6 +16,8 @@ export const PointsListGrid: React.FC<{
   isLoading: boolean
   filteredPoints: any[]
 
+  numColumns?: number
+
   renderHeader: () => React.ReactElement
   renderItem: ({ item }: { item: any }) => React.ReactElement
   renderEmpty: () => React.ReactElement
@@ -41,6 +43,7 @@ export const PointsListGrid: React.FC<{
   viewMode,
   isLoading,
   filteredPoints,
+  numColumns,
   renderHeader,
   renderItem,
   renderEmpty,
@@ -57,6 +60,7 @@ export const PointsListGrid: React.FC<{
   onLocateMe,
 }) => {
   if (viewMode === 'list') {
+    const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
     return (
       <FlatList
         data={filteredPoints}
@@ -65,7 +69,10 @@ export const PointsListGrid: React.FC<{
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={!isLoading ? renderEmpty : null}
         ListFooterComponent={renderFooter}
-        contentContainerStyle={styles.listContent}
+        numColumns={columns}
+        key={String(columns)}
+        contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}
+        columnWrapperStyle={columns > 1 ? styles.gridColumnWrapper : undefined}
         refreshing={isLoading}
         onRefresh={onRefresh}
       />

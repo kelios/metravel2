@@ -16,6 +16,80 @@ import JSZip from 'jszip';
 
 type FileInput = File | DocumentPickerAsset;
 
+const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
+  if (!raw || typeof raw !== 'object') {
+    return {
+      importId: '',
+      source: 'google_maps',
+      dedupePolicy: 'skip',
+      totalParsed: 0,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [],
+    };
+  }
+
+  const errors = Array.isArray(raw.errors)
+    ? raw.errors.map((e: any) => (typeof e === 'object' && e != null ? e : { message: String(e) }))
+    : [];
+
+  const created =
+    (typeof raw.created === 'number' ? raw.created : undefined) ??
+    (typeof raw.imported === 'number' ? raw.imported : undefined) ??
+    (Array.isArray(raw.points) ? raw.points.length : undefined) ??
+    0;
+
+  const updated =
+    (typeof raw.updated === 'number' ? raw.updated : undefined) ??
+    (typeof raw.updated_count === 'number' ? raw.updated_count : undefined) ??
+    0;
+
+  const skipped =
+    (typeof raw.skipped === 'number' ? raw.skipped : undefined) ??
+    (typeof raw.skipped_count === 'number' ? raw.skipped_count : undefined) ??
+    0;
+
+  const totalParsed =
+    (typeof raw.totalParsed === 'number' ? raw.totalParsed : undefined) ??
+    (typeof raw.total_parsed === 'number' ? raw.total_parsed : undefined) ??
+    (typeof raw.parsed === 'number' ? raw.parsed : undefined) ??
+    (typeof raw.imported === 'number' && typeof raw.skipped === 'number'
+      ? raw.imported + raw.skipped
+      : undefined) ??
+    (created + skipped)
+    0;
+
+  const importId =
+    (typeof raw.importId === 'string' ? raw.importId : undefined) ??
+    (typeof raw.import_id === 'string' ? raw.import_id : undefined) ??
+    (typeof raw.id === 'string' ? raw.id : undefined) ??
+    '';
+
+  const source =
+    (raw.source === 'google_maps' || raw.source === 'osm' ? raw.source : undefined) ?? 'google_maps';
+
+  const dedupePolicy =
+    (raw.dedupePolicy === 'merge' || raw.dedupePolicy === 'skip' || raw.dedupePolicy === 'duplicate'
+      ? raw.dedupePolicy
+      : undefined) ??
+    (raw.dedupe_policy === 'merge' || raw.dedupe_policy === 'skip' || raw.dedupe_policy === 'duplicate'
+      ? raw.dedupe_policy
+      : undefined) ??
+    'skip';
+
+  return {
+    importId,
+    source,
+    dedupePolicy,
+    totalParsed: Number.isFinite(totalParsed) ? totalParsed : 0,
+    created: Number.isFinite(created) ? created : 0,
+    updated: Number.isFinite(updated) ? updated : 0,
+    skipped: Number.isFinite(skipped) ? skipped : 0,
+    errors,
+  };
+};
+
 export const userPointsApi = {
   async importPoints(
     source: 'google_maps' | 'osm',
@@ -99,7 +173,8 @@ export const userPointsApi = {
       }
     }
 
-    return apiClient.uploadFormData<ImportPointsResult>('/user-points/import/', formData, 'POST');
+    const raw = await apiClient.uploadFormData<any>('/user-points/import/', formData, 'POST');
+    return normalizeImportPointsResult({ ...raw, source });
   },
   
   async getPoints(filters?: PointFilters) {

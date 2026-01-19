@@ -72,6 +72,13 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       const result = await userPointsApi.importPoints(source, file);
       setImportResult(result);
       setStep('complete');
+
+      const importedCount = (result?.created ?? 0) + (result?.updated ?? 0);
+      if (parsedPoints.length > 0 && importedCount === 0) {
+        setError(
+          'Импорт на сервере завершился без созданных точек. Возможно, файл слишком большой или сервер не смог распознать данные. Попробуйте JSON из Google Takeout или разделите файл на части.'
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка импорта');
       setStep('preview');
@@ -191,6 +198,8 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
         {typeof importResult?.updated === 'number' ? `\nОбновлено: ${importResult.updated}` : ''}
         {importResult?.skipped ? `\nПропущено: ${importResult.skipped}` : ''}
       </Text>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       {importResult?.errors?.length ? (
         <Text style={styles.errorText}>Ошибки: {importResult.errors.length}</Text>

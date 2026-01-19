@@ -1,0 +1,13 @@
+{
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [21.0122, 52.2297] },
+      "properties": {
+        "Title": "E2E Import Point",
+        "Category": "Want to go",
+        "description": "Imported via e2e"
+      }
+    }
+  ]
+}

@@ -60,6 +60,14 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const isNarrow = windowWidth < 420;
   const isMobile = Platform.OS !== 'web';
 
+  const listColumns = useMemo(() => {
+    if (viewMode !== 'list') return 1;
+    if (Platform.OS !== 'web') return 1;
+    if (windowWidth >= 1100) return 3;
+    if (windowWidth >= 740) return 2;
+    return 1;
+  }, [viewMode, windowWidth]);
+
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -564,12 +572,16 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     ({ item }: { item: any }) => (
       <PointsListItem
         point={item}
+        layout={listColumns > 1 ? 'grid' : 'list'}
+        onPress={selectionMode && viewMode === 'list' ? undefined : openEditPoint}
+        onEdit={selectionMode && viewMode === 'list' ? undefined : openEditPoint}
+        onDelete={selectionMode && viewMode === 'list' ? undefined : requestDeletePoint}
         selectionMode={selectionMode && viewMode === 'list'}
         selected={selectedIds.includes(Number(item?.id))}
         onToggleSelect={toggleSelect}
       />
     ),
-    [selectedIds, selectionMode, toggleSelect, viewMode]
+    [listColumns, openEditPoint, requestDeletePoint, selectedIds, selectionMode, toggleSelect, viewMode]
   );
 
   const renderFooter = useCallback(() => {
@@ -718,6 +730,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         viewMode={viewMode}
         isLoading={isLoading}
         filteredPoints={viewMode === 'map' ? mapPoints : filteredPoints}
+        numColumns={listColumns}
         renderHeader={renderHeader}
         renderItem={renderItem}
         renderEmpty={renderEmpty}
@@ -876,7 +889,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
                 data={Object.entries(COLOR_CATEGORIES).map(([value, info]) => ({ value, label: (info as any).label }))}
                 value={bulkColor ? [bulkColor] : []}
                 onChange={(vals) => {
-                  const v = (vals[0] as PointColor | undefined) ?? undefined;
+                  const v = (vals[vals.length - 1] as PointColor | undefined) ?? undefined;
                   setBulkColor(v ?? null);
                 }}
                 labelField="label"
@@ -890,7 +903,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
                 data={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
                 value={bulkStatus ? [bulkStatus] : []}
                 onChange={(vals) => {
-                  const v = (vals[0] as PointStatus | undefined) ?? undefined;
+                  const v = (vals[vals.length - 1] as PointStatus | undefined) ?? undefined;
                   setBulkStatus(v ?? null);
                 }}
                 labelField="label"
@@ -1077,7 +1090,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
                   data={Object.entries(COLOR_CATEGORIES).map(([value, info]) => ({ value, label: (info as any).label }))}
                   value={[manualColor]}
                   onChange={(vals) => {
-                    const v = vals[0] as PointColor | undefined;
+                    const v = vals[vals.length - 1] as PointColor | undefined;
                     if (v) setManualColor(v);
                   }}
                   labelField="label"
@@ -1091,7 +1104,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
                   data={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
                   value={[manualStatus]}
                   onChange={(vals) => {
-                    const v = vals[0] as PointStatus | undefined;
+                    const v = vals[vals.length - 1] as PointStatus | undefined;
                     if (v) setManualStatus(v);
                   }}
                   labelField="label"
@@ -1319,6 +1332,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   listContent: {
     paddingBottom: DESIGN_TOKENS.spacing.xl,
+  },
+  gridListContent: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: DESIGN_TOKENS.spacing.xl,
+  },
+  gridColumnWrapper: {
+    gap: DESIGN_TOKENS.spacing.md,
+    paddingBottom: DESIGN_TOKENS.spacing.md,
   },
   header: {
     padding: DESIGN_TOKENS.spacing.lg,

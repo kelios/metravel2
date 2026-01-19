@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
 import { COLOR_CATEGORIES, PointColor } from '@/types/userPoints';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
@@ -308,15 +309,29 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                     height: 220,
                     maxHeight: '40vh',
                     overflowY: 'auto',
+                    overflowX: 'hidden',
                     paddingRight: 6,
+                    boxSizing: 'border-box',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                    <strong style={{ display: 'block', lineHeight: 1.2 }}>{point.name}</strong>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <strong
+                      style={{
+                        display: 'block',
+                        lineHeight: 1.2,
+                        flex: 1,
+                        minWidth: 0,
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {point.name}
+                    </strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                       <button
                         type="button"
                         title="Редактировать"
+                        aria-label="Редактировать"
                         onClick={(e: any) => {
                           try {
                             e?.preventDefault?.();
@@ -330,20 +345,21 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                           border: `1px solid ${colors.border}`,
                           background: colors.surface,
                           color: colors.text,
-                          borderRadius: 8,
-                          padding: '6px 10px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          lineHeight: '14px',
-                          whiteSpace: 'nowrap',
+                          borderRadius: 10,
+                          width: 34,
+                          height: 34,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           cursor: 'pointer',
                         }}
                       >
-                        Редактировать
+                        <Feather name="edit-2" size={16} color={colors.text} />
                       </button>
                       <button
                         type="button"
                         title="Удалить"
+                        aria-label="Удалить"
                         onClick={(e: any) => {
                           try {
                             e?.preventDefault?.();
@@ -357,26 +373,41 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                           border: `1px solid ${colors.border}`,
                           background: colors.surface,
                           color: colors.text,
-                          borderRadius: 8,
-                          padding: '6px 10px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          lineHeight: '14px',
-                          whiteSpace: 'nowrap',
+                          borderRadius: 10,
+                          width: 34,
+                          height: 34,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           cursor: 'pointer',
                         }}
                       >
-                        Удалить
+                        <Feather name="trash-2" size={16} color={colors.text} />
                       </button>
                     </div>
                   </div>
 
                   {point.description ? (
-                    <p style={{ margin: '8px 0 0 0', whiteSpace: 'pre-wrap' }}>{point.description}</p>
+                    <p
+                      style={{
+                        margin: '8px 0 0 0',
+                        whiteSpace: 'pre-wrap',
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {point.description}
+                    </p>
                   ) : null}
 
                   {point.address ? (
-                    <p style={{ margin: '8px 0 0 0' }}>
+                    <p
+                      style={{
+                        margin: '8px 0 0 0',
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
+                    >
                       <small>{point.address}</small>
                     </p>
                   ) : null}
