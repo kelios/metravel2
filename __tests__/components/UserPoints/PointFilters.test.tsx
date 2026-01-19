@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react-native';
 import { PointFilters } from '@/components/UserPoints/PointFilters';
 import { PointColor } from '@/types/userPoints';
@@ -11,13 +10,13 @@ describe('PointFilters', () => {
 
     render(<PointFilters filters={filters} onChange={mockOnChange} />);
 
-    expect(screen.getByText('Посещено')).toBeTruthy();
+    expect(screen.getAllByText('Посещено').length).toBeGreaterThan(0);
     expect(screen.getByText('Мечта')).toBeTruthy();
     expect(screen.getByText('Интересное')).toBeTruthy();
-    expect(screen.getByText('Планирую')).toBeTruthy();
+    expect(screen.getAllByText('Планирую').length).toBeGreaterThan(0);
     expect(screen.getByText('Избранное')).toBeTruthy();
     expect(screen.getByText('В работе')).toBeTruthy();
-    expect(screen.getByText('Архив')).toBeTruthy();
+    expect(screen.getAllByText('Архив').length).toBeGreaterThan(0);
   });
 
   it('should call onChange when color chip is pressed', () => {
@@ -26,7 +25,7 @@ describe('PointFilters', () => {
 
     render(<PointFilters filters={filters} onChange={mockOnChange} />);
 
-    const greenChip = screen.getByText('Посещено');
+    const greenChip = screen.getAllByText('Посещено')[0];
     fireEvent.press(greenChip);
 
     expect(mockOnChange).toHaveBeenCalledWith({
@@ -58,7 +57,7 @@ describe('PointFilters', () => {
 
     render(<PointFilters filters={filters} onChange={mockOnChange} />);
 
-    const greenChip = screen.getByText('Посещено');
+    const greenChip = screen.getAllByText('Посещено')[0];
     fireEvent.press(greenChip);
 
     expect(mockOnChange).toHaveBeenCalledWith({
@@ -74,7 +73,7 @@ describe('PointFilters', () => {
 
     const { getByText } = render(<PointFilters filters={filters} onChange={mockOnChange} />);
 
-    const greenText = getByText('Посещено');
+    const greenText = screen.getAllByText('Посещено')[0];
     const purpleText = getByText('Мечта');
 
     expect(greenText.props.style).toContainEqual(expect.objectContaining({ fontWeight: '600' }));

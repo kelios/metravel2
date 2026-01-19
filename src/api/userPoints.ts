@@ -1,6 +1,8 @@
 import { apiClient } from './client';
 import type { 
   ImportedPoint, 
+  ImportPointsResult,
+  DedupePolicy,
   PointFilters, 
   RouteRequest, 
   RouteResponse,
@@ -10,32 +12,94 @@ import type {
 } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 
+import JSZip from 'jszip';
+
 type FileInput = File | DocumentPickerAsset;
 
 export const userPointsApi = {
-  async importPoints(source: 'google_maps' | 'osm', file: FileInput) {
+  async importPoints(
+    source: 'google_maps' | 'osm',
+    file: FileInput,
+    options?: {
+      dedupePolicy?: DedupePolicy;
+      defaultColor?: string;
+      defaultStatus?: string;
+    }
+  ) {
     const formData = new FormData();
     formData.append('source', source);
-    
-    // Обрабатываем разные типы файлов
+
+    if (options?.dedupePolicy) {
+      formData.append('dedupe_policy', options.dedupePolicy);
+    }
+    if (options?.defaultColor) {
+      formData.append('default_color', options.defaultColor);
+    }
+    if (options?.defaultStatus) {
+      formData.append('default_status', options.defaultStatus);
+    }
+
+    const extractKmlFromKmz = async (buffer: ArrayBuffer) => {
+      const zip = await JSZip.loadAsync(buffer);
+
+      const fileNames = Object.keys(zip.files);
+      const kmlName =
+        fileNames.find((n) => n.toLowerCase().endsWith('/doc.kml')) ??
+        fileNames.find((n) => n.toLowerCase().endsWith('doc.kml')) ??
+        fileNames.find((n) => n.toLowerCase().endsWith('.kml'));
+
+      if (!kmlName) {
+        throw new Error('KMZ не содержит KML файла');
+      }
+
+      const kmlFile = zip.file(kmlName);
+      if (!kmlFile) {
+        throw new Error('KMZ не содержит KML файла');
+      }
+
+      const kmlText = await kmlFile.async('string');
+      return kmlText;
+    };
+
+    const toKmlName = (originalName: string) => {
+      if (!originalName) return 'doc.kml';
+      const lower = originalName.toLowerCase();
+      if (lower.endsWith('.kmz')) return `${originalName.slice(0, -4)}.kml`;
+      return originalName;
+    };
+
+    // file upload handling for web/native
     if ('uri' in file) {
-      // React Native DocumentPickerAsset
       const asset = file as DocumentPickerAsset;
       const response = await fetch(asset.uri);
       const blob = await response.blob();
-      formData.append('file', blob, asset.name);
+
+      const isKmz = String(asset.name || '').toLowerCase().endsWith('.kmz');
+      if (isKmz) {
+        const buffer = await blob.arrayBuffer();
+        const kmlText = await extractKmlFromKmz(buffer);
+        const kmlBlob = new Blob([kmlText], { type: 'application/vnd.google-earth.kml+xml' });
+        formData.append('file', kmlBlob, toKmlName(asset.name));
+      } else {
+        formData.append('file', blob, asset.name);
+      }
     } else {
-      // Web File API
-      formData.append('file', file as File);
+      const webFile = file as File;
+      const isKmz = String(webFile.name || '').toLowerCase().endsWith('.kmz');
+
+      if (isKmz) {
+        const buffer = await webFile.arrayBuffer();
+        const kmlText = await extractKmlFromKmz(buffer);
+        const kmlFile = new File([kmlText], toKmlName(webFile.name), {
+          type: 'application/vnd.google-earth.kml+xml',
+        });
+        formData.append('file', kmlFile);
+      } else {
+        formData.append('file', webFile);
+      }
     }
-    
-    return apiClient.uploadFormData<{
-      success: boolean;
-      imported: number;
-      skipped: number;
-      errors: string[];
-      points: ImportedPoint[];
-    }>('/user-points/import/', formData, 'POST');
+
+    return apiClient.uploadFormData<ImportPointsResult>('/user-points/import/', formData, 'POST');
   },
   
   async getPoints(filters?: PointFilters) {
@@ -71,31 +135,26 @@ export const userPointsApi = {
     const queryString = params.toString();
     const endpoint = queryString ? `/user-points/?${queryString}` : '/user-points/';
     
-    return apiClient.get<{
-      data: ImportedPoint[];
-      total: number;
-      page: number;
-      perPage: number;
-    }>(endpoint);
+    return apiClient.get<ImportedPoint[]>(endpoint);
   },
   
-  async getPoint(id: string) {
-    return apiClient.get<{ point: ImportedPoint }>(`/user-points/${id}/`);
+  async getPoint(id: number) {
+    return apiClient.get<ImportedPoint>(`/user-points/${id}/`);
   },
   
   async createPoint(point: Partial<ImportedPoint>) {
-    return apiClient.post<{ point: ImportedPoint }>('/user-points/', point);
+    return apiClient.post<ImportedPoint>('/user-points/', point);
   },
   
-  async updatePoint(id: string, updates: Partial<ImportedPoint>) {
-    return apiClient.patch<{ point: ImportedPoint }>(`/user-points/${id}/`, updates);
+  async updatePoint(id: number, updates: Partial<ImportedPoint>) {
+    return apiClient.patch<ImportedPoint>(`/user-points/${id}/`, updates);
   },
   
-  async deletePoint(id: string) {
+  async deletePoint(id: number) {
     return apiClient.delete(`/user-points/${id}/`);
   },
   
-  async bulkUpdatePoints(pointIds: string[], updates: Partial<ImportedPoint>) {
+  async bulkUpdatePoints(pointIds: number[], updates: Partial<ImportedPoint>) {
     return apiClient.patch<{
       updated: number;
       points: ImportedPoint[];

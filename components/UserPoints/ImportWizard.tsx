@@ -4,7 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { GoogleMapsParser } from '@/src/api/parsers/googleMapsParser';
 import { OSMParser } from '@/src/api/parsers/osmParser';
 import { userPointsApi } from '@/src/api/userPoints';
-import type { ImportedPoint } from '@/types/userPoints';
+import type { ImportPointsResult, ParsedPoint } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -18,10 +18,10 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   const [step, setStep] = useState<ImportStep>('intro');
   const [source, setSource] = useState<ImportSource>(null);
   const [file, setFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
-  const [parsedPoints, setParsedPoints] = useState<ImportedPoint[]>([]);
+  const [parsedPoints, setParsedPoints] = useState<ParsedPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
+  const [importResult, setImportResult] = useState<ImportPointsResult | null>(null);
 
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -41,7 +41,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       // noop
     }
 
-    throw new Error('Не удалось распознать формат файла. Поддерживаются: JSON (Google Takeout), GeoJSON, GPX, KML.');
+    throw new Error('Не удалось распознать формат файла. Поддерживаются: JSON (Google Takeout), GeoJSON, GPX, KML, KMZ.');
   };
 
   const handleFileSelect = async (selectedFile: DocumentPicker.DocumentPickerAsset) => {
@@ -70,7 +70,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
 
     try {
       const result = await userPointsApi.importPoints(source, file);
-      setImportResult({ imported: result.imported, skipped: result.skipped });
+      setImportResult(result);
       setStep('complete');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка импорта');
@@ -106,7 +106,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       <Text style={styles.title}>Импорт точек</Text>
       <Text style={styles.subtitle}>
         Поддерживаемые форматы:\n
-        Google Maps: JSON (Google Takeout), KML (KMZ нужно распаковать)\n
+        Google Maps: JSON (Google Takeout), KML, KMZ\n
         OpenStreetMap: GeoJSON, GPX
       </Text>
 
@@ -187,9 +187,14 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
     <View style={styles.stepContainer}>
       <Text style={styles.title}>Импорт завершен!</Text>
       <Text style={styles.subtitle}>
-        Импортировано: {importResult?.imported || 0} точек
+        Создано: {importResult?.created ?? 0} точек
+        {typeof importResult?.updated === 'number' ? `\nОбновлено: ${importResult.updated}` : ''}
         {importResult?.skipped ? `\nПропущено: ${importResult.skipped}` : ''}
       </Text>
+
+      {importResult?.errors?.length ? (
+        <Text style={styles.errorText}>Ошибки: {importResult.errors.length}</Text>
+      ) : null}
 
       <TouchableOpacity style={styles.importButton} onPress={onComplete}>
         <Text style={styles.importButtonText}>Готово</Text>

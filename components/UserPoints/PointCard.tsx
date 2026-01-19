@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
 import { COLOR_CATEGORIES, STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -8,33 +9,47 @@ import { useThemedColors } from '@/hooks/useTheme';
 interface PointCardProps {
   point: ImportedPoint;
   onPress?: (point: ImportedPoint) => void;
-  siteCategoryLookup?: Map<string, string>;
+  selectionMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (point: ImportedPoint) => void;
 }
 
-export const PointCard: React.FC<PointCardProps> = ({ point, onPress, siteCategoryLookup }) => {
+export const PointCard: React.FC<PointCardProps> = ({
+  point,
+  onPress,
+  selectionMode,
+  selected,
+  onToggleSelect,
+}) => {
   const colorInfo = COLOR_CATEGORIES[point.color];
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
-  const siteCategoryLabel = React.useMemo(() => {
-    const ids = point.categoryTravelAddress || [];
-    if (!ids.length) return null;
-    if (!siteCategoryLookup) return ids.join(', ');
-    const labels = ids
-      .map((id) => siteCategoryLookup.get(String(id)))
-      .filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
-    return labels.length ? labels.join(', ') : ids.join(', ');
-  }, [point.categoryTravelAddress, siteCategoryLookup]);
-
   return (
     <TouchableOpacity
       style={styles.container}
-      onPress={() => onPress?.(point)}
+      onPress={() => {
+        if (selectionMode) {
+          onToggleSelect?.(point);
+          return;
+        }
+        onPress?.(point);
+      }}
       activeOpacity={0.7}
     >
       <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: colorInfo.color }]} />
       
-      <View style={styles.content}>
+      <View style={[styles.content, selectionMode ? styles.contentSelectionMode : null]}>
+        {selectionMode ? (
+          <View style={[styles.selectionBadge, selected ? styles.selectionBadgeSelected : styles.selectionBadgeUnselected]}>
+            <Feather
+              name={selected ? 'check-circle' : 'circle'}
+              size={18}
+              color={selected ? colors.textOnPrimary : colors.textMuted}
+            />
+          </View>
+        ) : null}
+
         <Text style={styles.name} numberOfLines={1}>
           {point.name}
         </Text>
@@ -46,12 +61,6 @@ export const PointCard: React.FC<PointCardProps> = ({ point, onPress, siteCatego
         )}
         
         <View style={styles.metadata}>
-          {siteCategoryLabel ? (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{siteCategoryLabel}</Text>
-            </View>
-          ) : null}
-          
           <View style={[styles.badge, styles.statusBadge]}>
             <Text style={styles.badgeText}>
               {STATUS_LABELS[point.status]}
@@ -65,7 +74,7 @@ export const PointCard: React.FC<PointCardProps> = ({ point, onPress, siteCatego
           </Text>
         )}
         
-        {point.rating && (
+        {typeof point.rating === 'number' && Number.isFinite(point.rating) && (
           <Text style={styles.rating}>
             {point.rating.toFixed(1)}
           </Text>
@@ -92,6 +101,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   content: {
     flex: 1,
     padding: DESIGN_TOKENS.spacing.md,
+  },
+  contentSelectionMode: {
+    paddingRight: DESIGN_TOKENS.spacing.md + 40,
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: DESIGN_TOKENS.spacing.sm,
+    right: DESIGN_TOKENS.spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  selectionBadgeSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  selectionBadgeUnselected: {
+    backgroundColor: colors.surface,
   },
   name: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,

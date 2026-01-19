@@ -1,42 +1,42 @@
-import { ImportedPoint, PointColor, PointCategory, PointStatus } from '@/types/userPoints';
+import { ParsedPoint, PointColor, PointCategory, PointStatus } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
+import JSZip from 'jszip';
 
 type FileInput = File | DocumentPickerAsset;
 
 export class GoogleMapsParser {
-  static async parse(file: FileInput): Promise<ImportedPoint[]> {
-    let text: string;
+  static async parse(file: FileInput): Promise<ParsedPoint[]> {
     let fileName: string;
 
     // Проверяем тип файла и читаем его соответствующим образом
     if ('text' in file && typeof file.text === 'function') {
       // Web File API
-      text = await file.text();
       fileName = file.name;
     } else {
       // React Native DocumentPickerAsset
       const asset = file as DocumentPickerAsset;
-      const response = await fetch(asset.uri);
-      text = await response.text();
       fileName = asset.name;
     }
 
     const extension = fileName.split('.').pop()?.toLowerCase();
     
     if (extension === 'json') {
+      const text = await this.readText(file);
       return this.parseJSON(text);
     } else if (extension === 'kml') {
+      const text = await this.readText(file);
       return this.parseKML(text);
     } else if (extension === 'kmz') {
-      return this.parseKMZ(text, file);
+      const buffer = await this.readArrayBuffer(file);
+      return this.parseKMZ(buffer);
     }
     
     throw new Error('Неподдерживаемый формат файла. Используйте JSON, KML или KMZ.');
   }
   
-  private static parseJSON(text: string): ImportedPoint[] {
+  private static parseJSON(text: string): ParsedPoint[] {
     const data = JSON.parse(text);
-    const points: ImportedPoint[] = [];
+    const points: ParsedPoint[] = [];
     
     const features = data.features || [];
     
@@ -49,7 +49,7 @@ export class GoogleMapsParser {
       const location = props.Location || props.location || {};
       const address = props.address ?? props.Address ?? location.Address ?? location.address;
       
-      const point: ImportedPoint = {
+      const point: ParsedPoint = {
         id: this.generateId(),
         name: props.Title || props.name || 'Без названия',
         description: props.description,
@@ -71,56 +71,125 @@ export class GoogleMapsParser {
     return points;
   }
   
-  private static parseKML(text: string): ImportedPoint[] {
-    if (typeof DOMParser === 'undefined') {
-      throw new Error('KML парсинг доступен только в web окружении');
+  private static parseKML(text: string): ParsedPoint[] {
+    if (typeof DOMParser !== 'undefined') {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/xml');
+        const placemarks = doc.getElementsByTagName('Placemark');
+        const points: ParsedPoint[] = [];
+
+        for (let i = 0; i < placemarks.length; i++) {
+          const placemark = placemarks[i];
+          const name = placemark.getElementsByTagName('name')[0]?.textContent || 'Без названия';
+          const description = placemark.getElementsByTagName('description')[0]?.textContent;
+          const coordinates = placemark.getElementsByTagName('coordinates')[0]?.textContent;
+
+          const point = this.placemarkToPoint({ name, description, coordinates });
+          if (point) points.push(point);
+        }
+
+        return points;
+      } catch {
+        // fallback below
+      }
     }
-    
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/xml');
-    const placemarks = doc.getElementsByTagName('Placemark');
-    const points: ImportedPoint[] = [];
-    
-    for (let i = 0; i < placemarks.length; i++) {
-      const placemark = placemarks[i];
-      const name = placemark.getElementsByTagName('name')[0]?.textContent || 'Без названия';
-      const description = placemark.getElementsByTagName('description')[0]?.textContent;
-      const coordinates = placemark.getElementsByTagName('coordinates')[0]?.textContent;
-      
-      if (!coordinates) continue;
-      
-      const [lng, lat] = coordinates.trim().split(',').map(Number);
-      
-      if (isNaN(lat) || isNaN(lng)) continue;
-      
-      const point: ImportedPoint = {
-        id: this.generateId(),
-        name,
-        description: description || undefined,
-        latitude: lat,
-        longitude: lng,
-        color: PointColor.BLUE,
-        category: this.detectCategory(name, description),
-        status: PointStatus.WANT_TO_VISIT,
-        source: 'google_maps',
-        importedAt: new Date().toISOString(),
-      };
-      
-      points.push(point);
+
+    return this.parseKMLFallback(text);
+  }
+
+  private static async parseKMZ(buffer: ArrayBuffer): Promise<ParsedPoint[]> {
+    const zip = await JSZip.loadAsync(buffer);
+
+    const fileNames = Object.keys(zip.files);
+    const kmlName =
+      fileNames.find((n) => n.toLowerCase().endsWith('/doc.kml')) ??
+      fileNames.find((n) => n.toLowerCase().endsWith('doc.kml')) ??
+      fileNames.find((n) => n.toLowerCase().endsWith('.kml'));
+
+    if (!kmlName) {
+      throw new Error('KMZ не содержит KML файла');
     }
-    
+
+    const kmlFile = zip.file(kmlName);
+    if (!kmlFile) {
+      throw new Error('KMZ не содержит KML файла');
+    }
+
+    const kmlText = await kmlFile.async('string');
+    return this.parseKML(kmlText);
+  }
+
+  private static placemarkToPoint(input: {
+    name?: string | null;
+    description?: string | null;
+    coordinates?: string | null;
+  }): ParsedPoint | null {
+    const coordinates = String(input.coordinates ?? '').trim();
+    if (!coordinates) return null;
+
+    const first = coordinates.split(/\s+/).find(Boolean);
+    if (!first) return null;
+
+    const [lng, lat] = first.trim().split(',').map(Number);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+    const name = String(input.name ?? '').trim() || 'Без названия';
+    const description = (input.description ?? undefined) ? String(input.description).trim() : undefined;
+
+    return {
+      id: this.generateId(),
+      name,
+      description: description || undefined,
+      latitude: lat,
+      longitude: lng,
+      color: PointColor.BLUE,
+      category: this.detectCategory(name, description),
+      status: PointStatus.WANT_TO_VISIT,
+      source: 'google_maps',
+      importedAt: new Date().toISOString(),
+    };
+  }
+
+  private static parseKMLFallback(text: string): ParsedPoint[] {
+    const points: ParsedPoint[] = [];
+    const placemarks = text.match(/<Placemark[\s\S]*?<\/Placemark>/gi) ?? [];
+
+    for (const pm of placemarks) {
+      const name = this.extractTagText(pm, 'name');
+      const description = this.extractTagText(pm, 'description');
+      const coordinates = this.extractTagText(pm, 'coordinates');
+
+      const point = this.placemarkToPoint({ name, description, coordinates });
+      if (point) points.push(point);
+    }
+
     return points;
   }
 
-  private static async parseKMZ(_text: string, _file: FileInput): Promise<ImportedPoint[]> {
-    // KMZ - это ZIP архив с KML файлом внутри
-    // Для парсинга нужна библиотека для работы с ZIP
-    // Пока выбрасываем ошибку с инструкцией
-    throw new Error(
-      'KMZ файлы нужно сначала распаковать. ' +
-      'Извлеките KML файл из архива и загрузите его. ' +
-      'Или используйте JSON формат из Google Takeout.'
-    );
+  private static extractTagText(xml: string, tagName: string): string | null {
+    const re = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i');
+    const m = xml.match(re);
+    if (!m?.[1]) return null;
+    return m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1').trim();
+  }
+
+  private static async readText(file: FileInput): Promise<string> {
+    if ('text' in file && typeof (file as any).text === 'function') {
+      return await (file as any).text();
+    }
+    const asset = file as DocumentPickerAsset;
+    const response = await fetch(asset.uri);
+    return await response.text();
+  }
+
+  private static async readArrayBuffer(file: FileInput): Promise<ArrayBuffer> {
+    if ('arrayBuffer' in file && typeof (file as any).arrayBuffer === 'function') {
+      return await (file as any).arrayBuffer();
+    }
+    const asset = file as DocumentPickerAsset;
+    const response = await fetch(asset.uri);
+    return await response.arrayBuffer();
   }
   
   private static mapGoogleCategoryToColor(category?: string): PointColor {

@@ -36,6 +36,41 @@ export enum PointStatus {
 }
 
 export interface ImportedPoint {
+  id: number;
+  name: string;
+  description?: string | null;
+  latitude: number;
+  longitude: number;
+  address?: string | null;
+  color: PointColor;
+  category: PointCategory;
+  status: PointStatus;
+  source: 'google_maps' | 'osm';
+  original_id?: string | null;
+  imported_at: string;
+  photos?: Record<string, unknown> | null;
+  rating?: number | null;
+  notes?: string | null;
+  visited_date?: string | null;
+  tags?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type DedupePolicy = 'merge' | 'skip' | 'duplicate';
+
+export interface ImportPointsResult {
+  importId: string;
+  source: 'google_maps' | 'osm';
+  dedupePolicy: DedupePolicy;
+  totalParsed: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: Array<Record<string, unknown>>;
+}
+
+export interface ParsedPoint {
   id: string;
   name: string;
   description?: string;
@@ -44,16 +79,11 @@ export interface ImportedPoint {
   address?: string;
   color: PointColor;
   category: PointCategory;
-  categoryTravelAddress?: string[];
   status: PointStatus;
   source: 'google_maps' | 'osm';
   originalId?: string;
   importedAt: string;
-  photos?: string[];
   rating?: number;
-  notes?: string;
-  visitedDate?: string;
-  tags?: string[];
 }
 
 export interface PointFilters {

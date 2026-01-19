@@ -9,12 +9,23 @@ interface PointsMapProps {
   points: ImportedPoint[];
   center?: { lat: number; lng: number };
   onPointPress?: (point: ImportedPoint) => void;
+  onEditPoint?: (point: ImportedPoint) => void;
+  onDeletePoint?: (point: ImportedPoint) => void;
   onMapPress?: (coords: { lat: number; lng: number }) => void;
   pendingMarker?: { lat: number; lng: number } | null;
   pendingMarkerColor?: PointColor;
 }
 
-export const PointsMap: React.FC<PointsMapProps> = ({ points, center, onPointPress, onMapPress, pendingMarker, pendingMarkerColor }) => {
+export const PointsMap: React.FC<PointsMapProps> = ({
+  points,
+  center,
+  onPointPress,
+  onEditPoint,
+  onDeletePoint,
+  onMapPress,
+  pendingMarker,
+  pendingMarkerColor,
+}) => {
   // Для web используем react-leaflet, для mobile - react-native-maps
   if (Platform.OS === 'web') {
     return (
@@ -22,6 +33,8 @@ export const PointsMap: React.FC<PointsMapProps> = ({ points, center, onPointPre
         points={points}
         center={center}
         onPointPress={onPointPress}
+        onEditPoint={onEditPoint}
+        onDeletePoint={onDeletePoint}
         onMapPress={onMapPress}
         pendingMarker={pendingMarker}
         pendingMarkerColor={pendingMarkerColor}
@@ -34,6 +47,8 @@ export const PointsMap: React.FC<PointsMapProps> = ({ points, center, onPointPre
       points={points}
       center={center}
       onPointPress={onPointPress}
+      onEditPoint={onEditPoint}
+      onDeletePoint={onDeletePoint}
       onMapPress={onMapPress}
       pendingMarker={pendingMarker}
       pendingMarkerColor={pendingMarkerColor}
@@ -42,7 +57,16 @@ export const PointsMap: React.FC<PointsMapProps> = ({ points, center, onPointPre
 };
 
 // Web версия с Leaflet
-const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride, onPointPress, onMapPress, pendingMarker, pendingMarkerColor }) => {
+const PointsMapWeb: React.FC<PointsMapProps> = ({
+  points,
+  center: centerOverride,
+  onPointPress,
+  onEditPoint,
+  onDeletePoint,
+  onMapPress,
+  pendingMarker,
+  pendingMarkerColor,
+}) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
@@ -161,6 +185,44 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride
     return null;
   };
 
+  const FitOnPoints = ({
+    nextPoints,
+    centerOverride,
+  }: {
+    nextPoints: ImportedPoint[]
+    centerOverride?: { lat: number; lng: number }
+  }) => {
+    const map = mods.useMap?.();
+    const L = mods.L;
+
+    const key = React.useMemo(() => {
+      return nextPoints
+        .map((p) => `${p.id}:${p.latitude.toFixed(6)},${p.longitude.toFixed(6)}`)
+        .join('|');
+    }, [nextPoints]);
+
+    React.useEffect(() => {
+      if (!map) return;
+      if (!L) return;
+      if (centerOverride) return;
+      if (!nextPoints.length) return;
+
+      try {
+        if (nextPoints.length === 1) {
+          const p = nextPoints[0];
+          map.setView([p.latitude, p.longitude], 14, { animate: true } as any);
+        } else {
+          const bounds = L.latLngBounds(nextPoints.map((p) => [p.latitude, p.longitude]));
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true } as any);
+        }
+      } catch {
+        // noop
+      }
+    }, [L, centerOverride, key, map, nextPoints]);
+
+    return null;
+  };
+
   const MapClickHandler = () => {
     mods.useMapEvents?.({
       click: (e: any) => {
@@ -212,6 +274,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride
       >
         <FixSize />
         <CenterOn nextCenter={centerOverride} />
+        <FitOnPoints nextPoints={points} centerOverride={centerOverride} />
         <MapClickHandler />
         <mods.TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -238,19 +301,97 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({ points, center: centerOverride
               }}
             >
               <mods.Popup>
-                <div>
-                  <strong>{point.name}</strong>
-                  {point.description && <p>{point.description}</p>}
-                  {point.address && <p><small>{point.address}</small></p>}
-                  <div style={{ 
-                    display: 'inline-block',
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    backgroundColor: colorInfo.color,
-                    color: colors.textOnPrimary,
-                    fontSize: '12px',
-                    marginTop: '4px'
-                  }}>
+                <div
+                  style={{
+                    width: 280,
+                    maxWidth: '70vw',
+                    height: 220,
+                    maxHeight: '40vh',
+                    overflowY: 'auto',
+                    paddingRight: 6,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                    <strong style={{ display: 'block', lineHeight: 1.2 }}>{point.name}</strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        type="button"
+                        title="Редактировать"
+                        onClick={(e: any) => {
+                          try {
+                            e?.preventDefault?.();
+                            e?.stopPropagation?.();
+                          } catch {
+                            // noop
+                          }
+                          onEditPoint?.(point);
+                        }}
+                        style={{
+                          border: `1px solid ${colors.border}`,
+                          background: colors.surface,
+                          color: colors.text,
+                          borderRadius: 8,
+                          padding: '6px 10px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          lineHeight: '14px',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Редактировать
+                      </button>
+                      <button
+                        type="button"
+                        title="Удалить"
+                        onClick={(e: any) => {
+                          try {
+                            e?.preventDefault?.();
+                            e?.stopPropagation?.();
+                          } catch {
+                            // noop
+                          }
+                          onDeletePoint?.(point);
+                        }}
+                        style={{
+                          border: `1px solid ${colors.border}`,
+                          background: colors.surface,
+                          color: colors.text,
+                          borderRadius: 8,
+                          padding: '6px 10px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          lineHeight: '14px',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+
+                  {point.description ? (
+                    <p style={{ margin: '8px 0 0 0', whiteSpace: 'pre-wrap' }}>{point.description}</p>
+                  ) : null}
+
+                  {point.address ? (
+                    <p style={{ margin: '8px 0 0 0' }}>
+                      <small>{point.address}</small>
+                    </p>
+                  ) : null}
+
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      backgroundColor: colorInfo.color,
+                      color: colors.textOnPrimary,
+                      fontSize: '12px',
+                      marginTop: 8,
+                    }}
+                  >
                     {colorInfo.label}
                   </div>
                 </div>

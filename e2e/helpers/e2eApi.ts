@@ -202,3 +202,45 @@ export async function unmarkAsFavorite(ctx: E2EApiContext, travelId: string | nu
   expect(resp.ok() || resp.status() === 404).toBeTruthy();
   await api.dispose();
 }
+
+export async function createUserPoint(ctx: E2EApiContext, payload: any): Promise<any> {
+  const api = await apiRequestContext(ctx);
+  const resp = await api.post('/api/user-points/', { data: payload });
+  if (!resp.ok()) {
+    const details = await resp
+      .json()
+      .catch(async () => {
+        const t = await resp.text().catch(() => '');
+        return t ? { raw: t } : null;
+      })
+      .catch(() => null);
+    await api.dispose();
+    expect(
+      resp.ok(),
+      `Create user point failed: ${resp.status()} ${resp.statusText()}\nPayload: ${JSON.stringify(payload)}\nResponse: ${JSON.stringify(details)}`
+    ).toBeTruthy();
+  }
+  const json = await resp.json().catch(() => null);
+  await api.dispose();
+  expect(json, 'Create user point returned no JSON').toBeTruthy();
+  return json;
+}
+
+export async function deleteUserPoint(ctx: E2EApiContext, pointId: string | number): Promise<void> {
+  const api = await apiRequestContext(ctx);
+  const resp = await api.delete(`/api/user-points/${pointId}/`);
+  expect(resp.ok() || resp.status() === 404).toBeTruthy();
+  await api.dispose();
+}
+
+export async function listUserPoints(ctx: E2EApiContext): Promise<any[]> {
+  const api = await apiRequestContext(ctx);
+  const resp = await api.get('/api/user-points/');
+  expect(resp.ok(), `List user points failed: ${resp.status()} ${resp.statusText()}`).toBeTruthy();
+  const json = await resp.json().catch(() => null);
+  await api.dispose();
+  if (Array.isArray(json)) return json;
+  if (Array.isArray((json as any)?.results)) return (json as any).results;
+  if (Array.isArray((json as any)?.data)) return (json as any).data;
+  return [];
+}

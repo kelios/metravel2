@@ -1,10 +1,10 @@
-import { ImportedPoint, PointColor, PointCategory, PointStatus } from '@/types/userPoints';
+import { ParsedPoint, PointColor, PointCategory, PointStatus } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 
 type FileInput = File | DocumentPickerAsset;
 
 export class OSMParser {
-  static async parse(file: FileInput): Promise<ImportedPoint[]> {
+  static async parse(file: FileInput): Promise<ParsedPoint[]> {
     let text: string;
     let fileName: string;
 
@@ -32,9 +32,9 @@ export class OSMParser {
     throw new Error('Неподдерживаемый формат файла. Используйте GeoJSON или GPX.');
   }
   
-  private static parseGeoJSON(text: string): ImportedPoint[] {
+  private static parseGeoJSON(text: string): ParsedPoint[] {
     const data = JSON.parse(text);
-    const points: ImportedPoint[] = [];
+    const points: ParsedPoint[] = [];
     
     const features = data.features || [];
     
@@ -46,7 +46,7 @@ export class OSMParser {
       if (geometryType !== 'Point') continue;
       if (!coords || coords.length < 2) continue;
       
-      const point: ImportedPoint = {
+      const point: ParsedPoint = {
         id: this.generateId(),
         name: props.name || 'Без названия',
         description: props.description,
@@ -65,7 +65,7 @@ export class OSMParser {
     return points;
   }
   
-  private static parseGPX(text: string): ImportedPoint[] {
+  private static parseGPX(text: string): ParsedPoint[] {
     if (typeof DOMParser === 'undefined') {
       throw new Error('GPX парсинг доступен только в web окружении');
     }
@@ -73,7 +73,7 @@ export class OSMParser {
     const parser = new DOMParser();
     const doc = parser.parseFromString(text, 'text/xml');
     const waypoints = doc.getElementsByTagName('wpt');
-    const points: ImportedPoint[] = [];
+    const points: ParsedPoint[] = [];
     
     for (let i = 0; i < waypoints.length; i++) {
       const wpt = waypoints[i];
@@ -91,7 +91,7 @@ export class OSMParser {
 
       const inferredCategory = this.detectCategoryFromGpx(name, desc, type);
       
-      const point: ImportedPoint = {
+      const point: ParsedPoint = {
         id: this.generateId(),
         name,
         description: desc || undefined,

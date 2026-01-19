@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { userPointsApi } from '@/src/api/userPoints';
-import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized';
 import { PointCard } from '@/components/UserPoints/PointCard';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
@@ -15,7 +14,6 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { PointsListHeader } from './PointsListHeader'
 import { PointsListGrid } from './PointsListGrid'
 import { PointsListItem } from './PointsListItem'
-import { PointsListPagination } from './PointsListPagination'
 
 type ViewMode = 'list' | 'map';
 
@@ -33,6 +31,17 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [recommendationsNonce, setRecommendationsNonce] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [bulkColor, setBulkColor] = useState<PointColor | null>(null);
+  const [bulkStatus, setBulkStatus] = useState<PointStatus | null>(null);
+  const [isBulkWorking, setIsBulkWorking] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number } | null>(null);
+  const [showConfirmDeleteSelected, setShowConfirmDeleteSelected] = useState(false);
+  const [showConfirmDeleteAll, setShowConfirmDeleteAll] = useState(false);
+  const [editingPointId, setEditingPointId] = useState<number | null>(null);
+  const [pointToDelete, setPointToDelete] = useState<any | null>(null);
   const [showManualAdd, setShowManualAdd] = useState(false);
   const [manualName, setManualName] = useState('');
   const [manualNameTouched, setManualNameTouched] = useState(false);
@@ -42,8 +51,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
   const [manualColor, setManualColor] = useState<PointColor>(PointColor.BLUE);
-  const [manualSiteCategories, setManualSiteCategories] = useState<string[]>([]);
   const [manualStatus, setManualStatus] = useState<PointStatus>(PointStatus.PLANNING);
+  const [manualCategory, setManualCategory] = useState<PointCategory>(PointCategory.OTHER);
   const [isSavingManual, setIsSavingManual] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
@@ -59,48 +68,40 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     queryFn: () => userPointsApi.getPoints(filters),
   });
 
-  const { data: siteFilters } = useQuery({
-    queryKey: ['filter-options'],
-    queryFn: fetchAllFiltersOptimized,
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const siteCategoryTravelAddressOptions = useMemo(() => {
-    const raw = (siteFilters as any)?.categoryTravelAddress;
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .map((item: any) => ({
-        value: String(item?.id ?? item?.value ?? item),
-        label: String(item?.name ?? item?.title_ru ?? item?.title ?? item),
-      }))
-      .filter((it: any) => it.value && it.label)
-      .sort((a: any, b: any) => a.label.localeCompare(b.label, 'ru'));
-  }, [siteFilters]);
-
-  const siteCategoryLookup = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const opt of siteCategoryTravelAddressOptions) {
-      map.set(String((opt as any).value), String((opt as any).label));
-    }
-    return map;
-  }, [siteCategoryTravelAddressOptions]);
-
   // If backend errors (or not ready) — treat as empty list.
   const points = useMemo(() => {
     if (error) return [];
-    return data?.data || [];
-  }, [data?.data, error]);
+    return Array.isArray(data) ? data : [];
+  }, [data, error]);
 
   const filteredPoints = useMemo(() => {
-    const siteCats = filters.siteCategories || [];
-    if (!siteCats.length) return points;
+    const q = String(searchQuery || '').trim().toLowerCase();
+    const selectedColors = filters.colors ?? [];
+    const selectedStatuses = filters.statuses ?? [];
 
-    return points.filter((p) => {
-      const pointCats = (p as any)?.categoryTravelAddress as string[] | undefined;
-      if (!Array.isArray(pointCats) || pointCats.length === 0) return false;
-      return siteCats.some((id) => pointCats.includes(String(id)));
+    return points.filter((p: any) => {
+      if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
+      if (!q) return true;
+
+      const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
+      return haystack.includes(q);
     });
-  }, [filters.siteCategories, points]);
+  }, [filters.colors, filters.statuses, points, searchQuery]);
+
+  const mapPoints = useMemo(() => {
+    if (!selectionMode) return filteredPoints;
+    if (viewMode !== 'map') return filteredPoints;
+    if (!selectedIds.length) return [];
+    const selected = new Set(selectedIds);
+    return filteredPoints.filter((p: any) => selected.has(Number(p.id)));
+  }, [filteredPoints, selectedIds, selectionMode, viewMode]);
+
+  useEffect(() => {
+    if (!selectionMode) return;
+    const visible = new Set(filteredPoints.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id)));
+    setSelectedIds((prev) => prev.filter((id) => visible.has(id)));
+  }, [filteredPoints, selectionMode]);
 
   const resetManualForm = useCallback(() => {
     setManualName('');
@@ -111,9 +112,10 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setManualLat('');
     setManualLng('');
     setManualColor(PointColor.BLUE);
-    setManualSiteCategories([]);
     setManualStatus(PointStatus.PLANNING);
+    setManualCategory(PointCategory.OTHER);
     setManualError(null);
+    setEditingPointId(null);
   }, []);
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
@@ -168,6 +170,137 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setShowManualAdd(true);
   }, [resetManualForm]);
 
+  const openEditPoint = useCallback(
+    (point: any) => {
+      const id = Number(point?.id);
+      if (!Number.isFinite(id)) return;
+
+      setShowActions(false);
+      setEditingPointId(id);
+      setManualName(String(point?.name ?? ''));
+      setManualNameTouched(true);
+      setManualAutoName('');
+      setManualAddress(String(point?.address ?? ''));
+      const lat = Number(point?.latitude);
+      const lng = Number(point?.longitude);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        setManualCoords({ lat, lng });
+        setManualLat(String(lat));
+        setManualLng(String(lng));
+      } else {
+        setManualCoords(null);
+        setManualLat('');
+        setManualLng('');
+      }
+      setManualColor((point?.color as any) ?? PointColor.BLUE);
+      setManualStatus((point?.status as any) ?? PointStatus.PLANNING);
+      setManualCategory((point?.category as any) ?? PointCategory.OTHER);
+      setManualError(null);
+      setShowManualAdd(true);
+    },
+    []
+  );
+
+  const requestDeletePoint = useCallback((point: any) => {
+    setPointToDelete(point);
+  }, []);
+
+  const toggleSelect = useCallback((point: any) => {
+    const id = Number(point?.id);
+    if (!Number.isFinite(id)) return;
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }, []);
+
+  const selectAllVisible = useCallback(() => {
+    const all = filteredPoints.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
+    setSelectedIds(Array.from(new Set(all)));
+  }, [filteredPoints]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds([]);
+  }, []);
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds([]);
+    setShowBulkEdit(false);
+    setBulkColor(null);
+    setBulkStatus(null);
+  }, []);
+
+  const applyBulkEdit = useCallback(async () => {
+    if (!selectedIds.length) return;
+    const updates: any = {};
+    if (bulkColor) updates.color = bulkColor;
+    if (bulkStatus) updates.status = bulkStatus;
+    if (!Object.keys(updates).length) return;
+
+    setIsBulkWorking(true);
+    try {
+      await userPointsApi.bulkUpdatePoints(selectedIds, updates);
+      await refetch();
+      setShowBulkEdit(false);
+      setBulkColor(null);
+      setBulkStatus(null);
+      setSelectedIds([]);
+      setSelectionMode(false);
+    } catch {
+      // noop
+    } finally {
+      setIsBulkWorking(false);
+    }
+  }, [bulkColor, bulkStatus, refetch, selectedIds]);
+
+  const deleteSelected = useCallback(async () => {
+    if (!selectedIds.length) return;
+    setIsBulkWorking(true);
+    setBulkProgress({ current: 0, total: selectedIds.length });
+    try {
+      const batchSize = 5;
+      let done = 0;
+      for (let i = 0; i < selectedIds.length; i += batchSize) {
+        const chunk = selectedIds.slice(i, i + batchSize);
+        await Promise.all(chunk.map((id) => userPointsApi.deletePoint(id)));
+        done += chunk.length;
+        setBulkProgress({ current: done, total: selectedIds.length });
+      }
+      await refetch();
+      setSelectedIds([]);
+      setSelectionMode(false);
+    } catch {
+      // noop
+    } finally {
+      setIsBulkWorking(false);
+      setBulkProgress(null);
+      setShowConfirmDeleteSelected(false);
+    }
+  }, [refetch, selectedIds]);
+
+  const deleteAll = useCallback(async () => {
+    const allIds = points.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
+    if (!allIds.length) return;
+    setIsBulkWorking(true);
+    setBulkProgress({ current: 0, total: allIds.length });
+    try {
+      const batchSize = 5;
+      let done = 0;
+      for (let i = 0; i < allIds.length; i += batchSize) {
+        const chunk = allIds.slice(i, i + batchSize);
+        await Promise.all(chunk.map((id) => userPointsApi.deletePoint(id)));
+        done += chunk.length;
+        setBulkProgress({ current: done, total: allIds.length });
+      }
+      await refetch();
+      exitSelectionMode();
+    } catch {
+      // noop
+    } finally {
+      setIsBulkWorking(false);
+      setBulkProgress(null);
+      setShowConfirmDeleteAll(false);
+    }
+  }, [exitSelectionMode, points, refetch]);
+
   const handleMapPress = useCallback(
     (coords: { lat: number; lng: number }) => {
       setViewMode('map');
@@ -199,14 +332,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const suggestManualName = useCallback((): string => {
     if (manualAutoName) return manualAutoName;
-    const firstSiteId = manualSiteCategories[0];
-    if (firstSiteId && siteCategoryTravelAddressOptions.length) {
-      const found = siteCategoryTravelAddressOptions.find((o: any) => String(o.value) === String(firstSiteId));
-      if (found?.label) return String(found.label);
-    }
-
     return 'Новая точка';
-  }, [manualAutoName, manualSiteCategories, siteCategoryTravelAddressOptions]);
+  }, [manualAutoName]);
 
   useEffect(() => {
     if (!showManualAdd) return;
@@ -257,16 +384,21 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
     setIsSavingManual(true);
     try {
-      await userPointsApi.createPoint({
+      const payload: any = {
         name,
         address: manualAddress || undefined,
         latitude: manualCoords.lat,
         longitude: manualCoords.lng,
         color: manualColor,
-        category: PointCategory.OTHER,
-        categoryTravelAddress: manualSiteCategories.length ? manualSiteCategories : undefined,
+        category: manualCategory,
         status: manualStatus,
-      } as any);
+      };
+
+      if (editingPointId) {
+        await userPointsApi.updatePoint(editingPointId, payload);
+      } else {
+        await userPointsApi.createPoint(payload);
+      }
 
       closeManualAdd();
       await refetch();
@@ -275,7 +407,26 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     } finally {
       setIsSavingManual(false);
     }
-  }, [closeManualAdd, manualAddress, manualColor, manualCoords, manualName, manualSiteCategories, manualStatus, refetch]);
+  }, [closeManualAdd, editingPointId, manualAddress, manualCategory, manualColor, manualCoords, manualName, manualStatus, refetch]);
+
+  const confirmDeletePoint = useCallback(async () => {
+    const id = Number(pointToDelete?.id);
+    if (!Number.isFinite(id)) {
+      setPointToDelete(null);
+      return;
+    }
+
+    setIsBulkWorking(true);
+    try {
+      await userPointsApi.deletePoint(id);
+      await refetch();
+    } catch {
+      // noop
+    } finally {
+      setIsBulkWorking(false);
+      setPointToDelete(null);
+    }
+  }, [pointToDelete, refetch]);
 
   const handleSearch = (text: string) => {
     setSearchQuery(text);
@@ -285,29 +436,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const handleFilterChange = (newFilters: PointFiltersType) => {
     setFilters({ ...newFilters, page: 1, perPage: filters.perPage ?? 50 });
   };
-
-  const page = useMemo(() => {
-    const fromData = (data as any)?.page
-    if (typeof fromData === 'number' && Number.isFinite(fromData) && fromData > 0) return fromData
-    const fromFilters = filters.page
-    if (typeof fromFilters === 'number' && Number.isFinite(fromFilters) && fromFilters > 0) return fromFilters
-    return 1
-  }, [data, filters.page])
-
-  const perPage = useMemo(() => {
-    const fromData = (data as any)?.perPage
-    if (typeof fromData === 'number' && Number.isFinite(fromData) && fromData > 0) return fromData
-    const fromFilters = filters.perPage
-    if (typeof fromFilters === 'number' && Number.isFinite(fromFilters) && fromFilters > 0) return fromFilters
-    return 50
-  }, [data, filters.perPage])
-
-  const handlePageChange = useCallback((nextPage: number) => {
-    setFilters((prev) => ({
-      ...prev,
-      page: Math.max(1, nextPage),
-    }))
-  }, [])
 
   const handleLocateMe = useCallback(async () => {
     setIsLocating(true);
@@ -358,7 +486,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       colors={{ text: colors.text, textMuted: colors.textMuted, textOnPrimary: colors.textOnPrimary }}
       isNarrow={isNarrow}
       isMobile={isMobile}
-      total={data?.total || 0}
+      total={filteredPoints.length}
       viewMode={viewMode}
       onViewModeChange={(mode) => setViewMode(mode)}
       showFilters={showFilters}
@@ -369,19 +497,51 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       onSearch={handleSearch}
       filters={filters}
       onFilterChange={handleFilterChange}
-      siteCategoryOptions={siteCategoryTravelAddressOptions.map((o: any) => ({
-        id: String(o.value),
-        name: String(o.label),
-      }))}
+      siteCategoryOptions={[]}
     />
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>Точки не найдены</Text>
-      <Text style={styles.emptySubtext}>
-        Импортируйте точки из Google Maps или OpenStreetMap
-      </Text>
+      {error ? (
+        <>
+          <Text style={styles.emptyText}>Не удалось загрузить точки</Text>
+          <Text style={styles.emptySubtext}>Проверьте подключение и попробуйте ещё раз</Text>
+          <View style={styles.emptyActionsRow}>
+            <TouchableOpacity
+              style={[styles.retryButton, styles.emptyActionButton]}
+              onPress={() => refetch()}
+              accessibilityRole="button"
+              accessibilityLabel="Повторить"
+            >
+              <Text style={styles.retryButtonText}>Повторить</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : (
+        <>
+          <Text style={styles.emptyText}>Точки не найдены</Text>
+          <Text style={styles.emptySubtext}>Импортируйте точки или добавьте вручную</Text>
+          <View style={styles.emptyActionsRow}>
+            <TouchableOpacity
+              style={[styles.retryButton, styles.emptyActionButton]}
+              onPress={() => onImportPress?.()}
+              accessibilityRole="button"
+              accessibilityLabel="Импорт"
+            >
+              <Text style={styles.retryButtonText}>Импорт</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.secondaryButton, styles.emptyActionButton]}
+              onPress={openManualAdd}
+              accessibilityRole="button"
+              accessibilityLabel="Добавить вручную"
+            >
+              <Text style={styles.secondaryButtonText}>Добавить вручную</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
     </View>
   );
 
@@ -401,29 +561,163 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, [points, recommendationsNonce]);
 
   const renderItem = useCallback(
-    ({ item }: { item: any }) => <PointsListItem point={item} siteCategoryLookup={siteCategoryLookup} />,
-    [siteCategoryLookup]
+    ({ item }: { item: any }) => (
+      <PointsListItem
+        point={item}
+        selectionMode={selectionMode && viewMode === 'list'}
+        selected={selectedIds.includes(Number(item?.id))}
+        onToggleSelect={toggleSelect}
+      />
+    ),
+    [selectedIds, selectionMode, toggleSelect, viewMode]
   );
 
   const renderFooter = useCallback(() => {
-    return (
-      <PointsListPagination
-        page={page}
-        perPage={perPage}
-        total={data?.total || 0}
-        onPageChange={handlePageChange}
-      />
-    )
-  }, [data?.total, handlePageChange, page, perPage])
+    return null
+  }, [])
 
   return (
     <View style={styles.container}>
+      {selectionMode && viewMode === 'list' ? (
+        <View style={styles.bulkBar}>
+          <Text style={styles.bulkBarText}>
+            {bulkProgress
+              ? `Удаляем: ${bulkProgress.current}/${bulkProgress.total}`
+              : `Выбрано: ${selectedIds.length}`}
+          </Text>
+          <View style={styles.bulkBarActions}>
+            <TouchableOpacity
+              style={[styles.bulkBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+              onPress={selectAllVisible}
+              disabled={isBulkWorking}
+              accessibilityRole="button"
+              accessibilityLabel="Выбрать всё"
+            >
+              <Text style={styles.bulkBarButtonText}>Все</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+              onPress={clearSelection}
+              disabled={isBulkWorking}
+              accessibilityRole="button"
+              accessibilityLabel="Снять"
+            >
+              <Text style={styles.bulkBarButtonText}>Снять</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkBarButtonPrimary, isBulkWorking && styles.bulkBarButtonDisabled]}
+              onPress={() => setShowBulkEdit(true)}
+              disabled={isBulkWorking || selectedIds.length === 0}
+              accessibilityRole="button"
+              accessibilityLabel="Изменить"
+            >
+              <Text style={styles.bulkBarButtonPrimaryText}>Изменить</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.bulkBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+              onPress={() => setViewMode('map')}
+              disabled={isBulkWorking || selectedIds.length === 0}
+              accessibilityRole="button"
+              accessibilityLabel="На карте"
+            >
+              <Text style={styles.bulkBarButtonText}>На карте</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkBarButtonDanger, isBulkWorking && styles.bulkBarButtonDisabled]}
+              onPress={() => setShowConfirmDeleteSelected(true)}
+              disabled={isBulkWorking || selectedIds.length === 0}
+              accessibilityRole="button"
+              accessibilityLabel="Удалить выбранные"
+            >
+              <Text style={styles.bulkBarButtonDangerText}>Удалить</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+              onPress={exitSelectionMode}
+              disabled={isBulkWorking}
+              accessibilityRole="button"
+              accessibilityLabel="Готово"
+            >
+              <Text style={styles.bulkBarButtonText}>Готово</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
+
+      {selectionMode && viewMode === 'map' ? (
+        <View style={styles.bulkMapBar}>
+          <View style={styles.bulkMapBarRow}>
+            <Text style={styles.bulkMapBarText}>
+              {bulkProgress
+                ? `Удаляем: ${bulkProgress.current}/${bulkProgress.total}`
+                : selectedIds.length > 0
+                  ? `Выбрано: ${selectedIds.length}`
+                  : 'Выберите точки в списке'}
+            </Text>
+            <View style={styles.bulkMapBarActions}>
+              <TouchableOpacity
+                style={[styles.bulkMapBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+                onPress={() => setViewMode('list')}
+                disabled={isBulkWorking}
+                accessibilityRole="button"
+                accessibilityLabel="Назад к списку"
+              >
+                <Text style={styles.bulkMapBarButtonText}>Список</Text>
+              </TouchableOpacity>
+
+              {selectedIds.length > 0 ? (
+                <>
+                  <TouchableOpacity
+                    style={[styles.bulkMapBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+                    onPress={clearSelection}
+                    disabled={isBulkWorking}
+                    accessibilityRole="button"
+                    accessibilityLabel="Снять"
+                  >
+                    <Text style={styles.bulkMapBarButtonText}>Снять</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.bulkMapBarButtonPrimary, isBulkWorking && styles.bulkBarButtonDisabled]}
+                    onPress={() => setShowBulkEdit(true)}
+                    disabled={isBulkWorking}
+                    accessibilityRole="button"
+                    accessibilityLabel="Изменить"
+                  >
+                    <Text style={styles.bulkMapBarButtonPrimaryText}>Изменить</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.bulkMapBarButtonDanger, isBulkWorking && styles.bulkBarButtonDisabled]}
+                    onPress={() => setShowConfirmDeleteSelected(true)}
+                    disabled={isBulkWorking}
+                    accessibilityRole="button"
+                    accessibilityLabel="Удалить выбранные"
+                  >
+                    <Text style={styles.bulkMapBarButtonDangerText}>Удалить</Text>
+                  </TouchableOpacity>
+                </>
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.bulkMapBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+                onPress={exitSelectionMode}
+                disabled={isBulkWorking}
+                accessibilityRole="button"
+                accessibilityLabel="Готово"
+              >
+                <Text style={styles.bulkMapBarButtonText}>Готово</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       <PointsListGrid
         styles={styles}
         colors={{ text: colors.text }}
         viewMode={viewMode}
         isLoading={isLoading}
-        filteredPoints={filteredPoints}
+        filteredPoints={viewMode === 'map' ? mapPoints : filteredPoints}
         renderHeader={renderHeader}
         renderItem={renderItem}
         renderEmpty={renderEmpty}
@@ -431,6 +725,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         onRefresh={refetch}
         currentLocation={currentLocation}
         onMapPress={handleMapPress}
+        onPointEdit={openEditPoint}
+        onPointDelete={requestDeletePoint}
         showManualAdd={showManualAdd}
         manualCoords={manualCoords}
         manualColor={manualColor}
@@ -477,8 +773,223 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={styles.actionsItem}
+              onPress={() => {
+                setShowActions(false);
+                setViewMode('list');
+                setSelectionMode(true);
+                setSelectedIds([]);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Выбрать точки"
+            >
+              <Text style={styles.actionsItemText}>Выбрать точки</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionsItem}
+              onPress={() => {
+                setShowActions(false);
+                setShowConfirmDeleteAll(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Удалить все точки"
+            >
+              <Text style={styles.actionsItemText}>Удалить все точки</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={[styles.actionsItem, styles.actionsItemCancel]}
               onPress={() => setShowActions(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Отмена"
+            >
+              <Text style={styles.actionsItemCancelText}>Отмена</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={Boolean(pointToDelete)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPointToDelete(null)}
+      >
+        <View style={styles.actionsOverlay}>
+          <Pressable
+            style={styles.actionsBackdrop}
+            onPress={() => setPointToDelete(null)}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть"
+          />
+
+          <View style={styles.actionsModal}>
+            <Text style={styles.actionsTitle}>Удалить точку?</Text>
+            <Text style={styles.emptySubtext}>{String(pointToDelete?.name ?? '')}</Text>
+
+            <TouchableOpacity
+              style={[
+                styles.manualSaveButton,
+                { backgroundColor: colors.danger } as any,
+                isBulkWorking && styles.manualSaveButtonDisabled,
+              ]}
+              onPress={confirmDeletePoint}
+              disabled={isBulkWorking}
+              accessibilityRole="button"
+              accessibilityLabel="Удалить"
+            >
+              <Text style={styles.manualSaveButtonText}>Удалить</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionsItem, styles.actionsItemCancel, { marginTop: DESIGN_TOKENS.spacing.sm } as any]}
+              onPress={() => setPointToDelete(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Отмена"
+            >
+              <Text style={styles.actionsItemCancelText}>Отмена</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showBulkEdit}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBulkEdit(false)}
+      >
+        <View style={styles.actionsOverlay}>
+          <Pressable
+            style={styles.actionsBackdrop}
+            onPress={() => setShowBulkEdit(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть"
+          />
+
+          <View style={styles.actionsModal}>
+            <Text style={styles.actionsTitle}>Изменить выбранные</Text>
+
+            <FormFieldWithValidation label="Цвет">
+              <SimpleMultiSelect
+                data={Object.entries(COLOR_CATEGORIES).map(([value, info]) => ({ value, label: (info as any).label }))}
+                value={bulkColor ? [bulkColor] : []}
+                onChange={(vals) => {
+                  const v = (vals[0] as PointColor | undefined) ?? undefined;
+                  setBulkColor(v ?? null);
+                }}
+                labelField="label"
+                valueField="value"
+                search={false}
+              />
+            </FormFieldWithValidation>
+
+            <FormFieldWithValidation label="Статус">
+              <SimpleMultiSelect
+                data={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+                value={bulkStatus ? [bulkStatus] : []}
+                onChange={(vals) => {
+                  const v = (vals[0] as PointStatus | undefined) ?? undefined;
+                  setBulkStatus(v ?? null);
+                }}
+                labelField="label"
+                valueField="value"
+                search={false}
+              />
+            </FormFieldWithValidation>
+
+            <TouchableOpacity
+              style={[styles.manualSaveButton, isBulkWorking && styles.manualSaveButtonDisabled]}
+              onPress={applyBulkEdit}
+              disabled={isBulkWorking || selectedIds.length === 0}
+              accessibilityRole="button"
+              accessibilityLabel="Применить"
+            >
+              <Text style={styles.manualSaveButtonText}>Применить</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionsItem, styles.actionsItemCancel, { marginTop: DESIGN_TOKENS.spacing.sm } as any]}
+              onPress={() => setShowBulkEdit(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Отмена"
+            >
+              <Text style={styles.actionsItemCancelText}>Отмена</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showConfirmDeleteSelected}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmDeleteSelected(false)}
+      >
+        <View style={styles.actionsOverlay}>
+          <Pressable
+            style={styles.actionsBackdrop}
+            onPress={() => setShowConfirmDeleteSelected(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть"
+          />
+          <View style={styles.actionsModal}>
+            <Text style={styles.actionsTitle}>Удалить выбранные?</Text>
+            <Text style={styles.emptySubtext}>Будут удалены: {selectedIds.length}</Text>
+
+            <TouchableOpacity
+              style={[styles.manualSaveButton, { backgroundColor: colors.danger } as any, isBulkWorking && styles.manualSaveButtonDisabled]}
+              onPress={deleteSelected}
+              disabled={isBulkWorking}
+              accessibilityRole="button"
+              accessibilityLabel="Удалить"
+            >
+              <Text style={styles.manualSaveButtonText}>Удалить</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionsItem, styles.actionsItemCancel, { marginTop: DESIGN_TOKENS.spacing.sm } as any]}
+              onPress={() => setShowConfirmDeleteSelected(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Отмена"
+            >
+              <Text style={styles.actionsItemCancelText}>Отмена</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showConfirmDeleteAll}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmDeleteAll(false)}
+      >
+        <View style={styles.actionsOverlay}>
+          <Pressable
+            style={styles.actionsBackdrop}
+            onPress={() => setShowConfirmDeleteAll(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть"
+          />
+          <View style={styles.actionsModal}>
+            <Text style={styles.actionsTitle}>Удалить все точки?</Text>
+            <Text style={styles.emptySubtext}>Это действие нельзя отменить</Text>
+
+            <TouchableOpacity
+              style={[styles.manualSaveButton, { backgroundColor: colors.danger } as any, isBulkWorking && styles.manualSaveButtonDisabled]}
+              onPress={deleteAll}
+              disabled={isBulkWorking}
+              accessibilityRole="button"
+              accessibilityLabel="Удалить все"
+            >
+              <Text style={styles.manualSaveButtonText}>Удалить все</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionsItem, styles.actionsItemCancel, { marginTop: DESIGN_TOKENS.spacing.sm } as any]}
+              onPress={() => setShowConfirmDeleteAll(false)}
               accessibilityRole="button"
               accessibilityLabel="Отмена"
             >
@@ -503,7 +1014,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
           />
           <View style={styles.manualModal}>
             <View style={styles.manualHeader}>
-              <Text style={styles.manualTitle}>Добавить точку вручную</Text>
+              <Text style={styles.manualTitle}>{editingPointId ? 'Редактировать точку' : 'Добавить точку вручную'}</Text>
               <TouchableOpacity
                 style={styles.manualHeaderButton}
                 onPress={closeManualAdd}
@@ -572,19 +1083,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
                   labelField="label"
                   valueField="value"
                   search={false}
-                />
-              </FormFieldWithValidation>
-
-              <FormFieldWithValidation label="Категория" required>
-                <SimpleMultiSelect
-                  data={siteCategoryTravelAddressOptions}
-                  value={manualSiteCategories}
-                  onChange={(vals) => {
-                    setManualSiteCategories(vals.map(String));
-                  }}
-                  labelField="label"
-                  valueField="value"
-                  search
                 />
               </FormFieldWithValidation>
 
@@ -694,6 +1192,130 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  bulkBar: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingTop: DESIGN_TOKENS.spacing.md,
+    paddingBottom: DESIGN_TOKENS.spacing.sm,
+    backgroundColor: colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  bulkBarText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '700' as any,
+    color: colors.text,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  bulkBarActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.sm,
+    alignItems: 'center',
+  },
+  bulkBarButton: {
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bulkBarButtonText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '700' as any,
+    color: colors.text,
+  },
+  bulkBarButtonPrimary: {
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.primary,
+  },
+  bulkBarButtonPrimaryText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '800' as any,
+    color: colors.textOnPrimary,
+  },
+  bulkBarButtonDanger: {
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.danger,
+  },
+  bulkBarButtonDangerText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '800' as any,
+    color: colors.textOnPrimary,
+  },
+  bulkBarButtonDisabled: {
+    opacity: 0.7,
+  },
+  bulkMapBar: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg,
+    left: DESIGN_TOKENS.spacing.lg,
+    right: DESIGN_TOKENS.spacing.lg,
+    zIndex: 10,
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: DESIGN_TOKENS.spacing.md,
+  },
+  bulkMapBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: DESIGN_TOKENS.spacing.sm,
+    flexWrap: 'wrap',
+  },
+  bulkMapBarText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '800' as any,
+    color: colors.text,
+  },
+  bulkMapBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.sm,
+    justifyContent: 'flex-end',
+  },
+  bulkMapBarButton: {
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bulkMapBarButtonText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '700' as any,
+    color: colors.text,
+  },
+  bulkMapBarButtonPrimary: {
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.primary,
+  },
+  bulkMapBarButtonPrimaryText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '800' as any,
+    color: colors.textOnPrimary,
+  },
+  bulkMapBarButtonDanger: {
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.danger,
+  },
+  bulkMapBarButtonDangerText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '800' as any,
+    color: colors.textOnPrimary,
   },
   listContent: {
     paddingBottom: DESIGN_TOKENS.spacing.xl,
@@ -1013,6 +1635,30 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   emptySubtext: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
+    textAlign: 'center',
+  },
+  emptyActionsRow: {
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    flexWrap: 'wrap',
+  },
+  emptyActionButton: {
+    minWidth: 160,
+  },
+  secondaryButton: {
+    backgroundColor: colors.backgroundSecondary,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  secondaryButtonText: {
+    color: colors.text,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '600' as any,
     textAlign: 'center',
   },
   errorContainer: {

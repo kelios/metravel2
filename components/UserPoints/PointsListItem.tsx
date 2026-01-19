@@ -4,7 +4,16 @@ import { PointCard } from '@/components/UserPoints/PointCard'
 
 export const PointsListItem: React.FC<{
   point: any
-  siteCategoryLookup: Map<string, string>
-}> = ({ point, siteCategoryLookup }) => {
-  return <PointCard point={point} siteCategoryLookup={siteCategoryLookup} />
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (point: any) => void
+}> = ({ point, selectionMode, selected, onToggleSelect }) => {
+  return (
+    <PointCard
+      point={point}
+      selectionMode={selectionMode}
+      selected={selected}
+      onToggleSelect={onToggleSelect}
+    />
+  )
 }

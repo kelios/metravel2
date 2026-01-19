@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import type { PointFilters as PointFiltersType, PointColor } from '@/types/userPoints';
-import { COLOR_CATEGORIES } from '@/types/userPoints';
+import type { PointFilters as PointFiltersType, PointColor, PointStatus } from '@/types/userPoints';
+import { COLOR_CATEGORIES, STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -30,6 +30,12 @@ export const PointFilters: React.FC<PointFiltersProps> = ({ filters, onChange, s
     onChange({ ...filters, siteCategories: next });
   };
 
+  const toggleStatus = (status: PointStatus) => {
+    const current = filters.statuses || [];
+    const next = current.includes(status) ? current.filter((s) => s !== status) : [...current, status];
+    onChange({ ...filters, statuses: next });
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>Фильтр по цветам:</Text>
@@ -49,6 +55,24 @@ export const PointFilters: React.FC<PointFiltersProps> = ({ filters, onChange, s
             >
               <Text style={[styles.chipText, isSelected && { fontWeight: '600' }]}>
                 {colorInfo.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      <Text style={[styles.label, { marginTop: DESIGN_TOKENS.spacing.md }]}>Статус:</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
+        {(Object.keys(STATUS_LABELS) as unknown as PointStatus[]).map((status) => {
+          const isSelected = filters.statuses?.includes(status);
+          return (
+            <TouchableOpacity
+              key={status}
+              style={[styles.chip, isSelected && styles.chipActive]}
+              onPress={() => toggleStatus(status)}
+            >
+              <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                {STATUS_LABELS[status]}
               </Text>
             </TouchableOpacity>
           );

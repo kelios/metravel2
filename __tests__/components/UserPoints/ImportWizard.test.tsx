@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
 
@@ -57,7 +56,7 @@ describe('ImportWizard', () => {
       },
     ]);
     mockOsmParse.mockRejectedValue(new Error('not osm'));
-    mockImportPoints.mockResolvedValue({ imported: 1, skipped: 0 });
+    mockImportPoints.mockResolvedValue({ created: 1, skipped: 0 });
   });
 
   it('should render intro step with single import button', () => {
@@ -113,7 +112,7 @@ describe('ImportWizard', () => {
     });
 
     expect(await screen.findByText('Импорт завершен!')).toBeTruthy();
-    expect(screen.getByText('Импортировано: 1 точек')).toBeTruthy();
+    expect(screen.getByText(/Создано:\s*1\s*точек/)).toBeTruthy();
   });
 
   it('should allow closing complete screen', async () => {
@@ -139,6 +138,10 @@ describe('ImportWizard', () => {
     const importBtns = screen.getAllByText('Импорт точек');
     fireEvent.press(importBtns[importBtns.length - 1]);
 
-    expect(await screen.findByText('Не удалось распознать формат файла. Поддерживаются: JSON (Google Takeout), GeoJSON, GPX, KML.')).toBeTruthy();
+    expect(
+      await screen.findByText(
+        'Не удалось распознать формат файла. Поддерживаются: JSON (Google Takeout), GeoJSON, GPX, KML, KMZ.'
+      )
+    ).toBeTruthy();
   });
 });

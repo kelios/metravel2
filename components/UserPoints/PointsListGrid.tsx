@@ -26,6 +26,8 @@ export const PointsListGrid: React.FC<{
 
   currentLocation: { lat: number; lng: number } | null
   onMapPress: (coords: { lat: number; lng: number }) => void
+  onPointEdit?: (point: any) => void
+  onPointDelete?: (point: any) => void
 
   showManualAdd: boolean
   manualCoords: { lat: number; lng: number } | null
@@ -46,6 +48,8 @@ export const PointsListGrid: React.FC<{
   onRefresh,
   currentLocation,
   onMapPress,
+  onPointEdit,
+  onPointDelete,
   showManualAdd,
   manualCoords,
   manualColor,
@@ -57,7 +61,7 @@ export const PointsListGrid: React.FC<{
       <FlatList
         data={filteredPoints}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={!isLoading ? renderEmpty : null}
         ListFooterComponent={renderFooter}
@@ -76,6 +80,8 @@ export const PointsListGrid: React.FC<{
           points={filteredPoints}
           center={currentLocation ?? undefined}
           onMapPress={onMapPress}
+          onEditPoint={onPointEdit}
+          onDeletePoint={onPointDelete}
           pendingMarker={showManualAdd ? manualCoords : null}
           pendingMarkerColor={manualColor}
         />
