@@ -122,6 +122,32 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [points]);
 
+  const filteredPointsWithoutCategory = useMemo(() => {
+    const q = String(searchQuery || '').trim().toLowerCase();
+    const selectedColors = filters.colors ?? [];
+    const selectedStatuses = filters.statuses ?? [];
+
+    return points.filter((p: any) => {
+      if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
+      if (!q) return true;
+
+      const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [filters.colors, filters.statuses, points, searchQuery]);
+
+  const availableCategoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of filteredPointsWithoutCategory as any[]) {
+      const c = String(p?.category ?? '').trim();
+      if (c) set.add(c);
+    }
+    return Array.from(set)
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({ id: name, name }));
+  }, [filteredPointsWithoutCategory]);
+
   const filteredPoints = useMemo(() => {
     const q = String(searchQuery || '').trim().toLowerCase();
     const selectedColors = filters.colors ?? [];
@@ -147,9 +173,14 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return filteredPoints.filter((p: any) => selected.has(Number(p.id)));
   }, [filteredPoints, selectedIds, selectionMode, viewMode]);
 
-  const siteCategoryOptions = useMemo(() => {
-    return Array.isArray(siteCategoryOptionsQuery.data) ? siteCategoryOptionsQuery.data : [];
-  }, [siteCategoryOptionsQuery.data]);
+  useEffect(() => {
+    const selected = filters.siteCategories ?? [];
+    if (!selected.length) return;
+    const available = new Set(availableCategoryOptions.map((c) => c.id));
+    const next = selected.filter((c) => available.has(c));
+    if (next.length === selected.length) return;
+    setFilters((prev) => ({ ...prev, siteCategories: next, page: 1 }));
+  }, [availableCategoryOptions, filters.siteCategories]);
 
   const handleSearch = useCallback((text: string) => {
     setSearchQuery(text);
@@ -545,12 +576,13 @@ const handleMapPress = useCallback(
         onSearch={handleSearch}
         filters={filters}
         onFilterChange={handleFilterChange}
-        siteCategoryOptions={siteCategoryOptions}
+        siteCategoryOptions={availableCategoryOptions}
         availableStatuses={availableStatuses}
       />
     );
   }, [
     availableStatuses,
+    availableCategoryOptions,
     colors.text,
     colors.textMuted,
     colors.textOnPrimary,
@@ -562,7 +594,6 @@ const handleMapPress = useCallback(
     isNarrow,
     searchQuery,
     showFilters,
-    siteCategoryOptions,
     styles,
     viewMode,
   ]);
