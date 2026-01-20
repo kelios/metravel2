@@ -17,6 +17,24 @@ type MockPoint = {
 };
 
 test.describe('User points import (mock API)', () => {
+  async function openFiltersPanelTab(page: any) {
+    const filtersTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
+    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await filtersTabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
+      await filtersTabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      await page.waitForTimeout(150);
+
+      if ((await searchBox.count()) > 0) {
+        await expect(searchBox).toBeVisible({ timeout: 5_000 });
+        return;
+      }
+    }
+
+    await expect(searchBox).toBeVisible({ timeout: 30_000 });
+  }
+
   async function openImportWizard(page: any) {
     // Open actions menu
     await page.keyboard.press('Escape').catch(() => undefined);
@@ -25,7 +43,7 @@ test.describe('User points import (mock API)', () => {
 
     // The userpoints screen is map-first; actions live in the list header.
     // The header is rendered inside the "Фильтры" tab of the side panel.
-    await page.getByRole('button', { name: 'Фильтры' }).click({ timeout: 30_000 }).catch(() => undefined);
+    await openFiltersPanelTab(page);
     await expect(page.getByTestId('userpoints-actions-open')).toBeVisible({ timeout: 30_000 });
     await page.getByTestId('userpoints-actions-open').click({ force: true });
 

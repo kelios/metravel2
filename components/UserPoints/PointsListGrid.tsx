@@ -54,6 +54,8 @@ export const PointsListGrid: React.FC<{
 
   hasFilters: boolean
   onResetFilters: () => void
+
+  showMapSettings?: boolean
 }> = ({
   styles,
   colors,
@@ -84,20 +86,39 @@ export const PointsListGrid: React.FC<{
   onSearch,
   hasFilters,
   onResetFilters,
+  showMapSettings = false,
 }) => {
   const { width: windowWidth } = useWindowDimensions()
   const isWeb = Platform.OS === 'web'
   const isWideScreen = isWeb && windowWidth >= 1024
   const themedColors = useThemedColors()
   const localStyles = useMemo(() => createLocalStyles(themedColors), [themedColors])
+  const removeClippedSubviews = Platform.OS !== 'web'
+  const listWindowSize = Platform.OS === 'web' ? 9 : 11
+  const listInitialNumToRender = Platform.OS === 'web' ? 8 : 12
+  const listMaxToRenderPerBatch = Platform.OS === 'web' ? 10 : 16
+  const listUpdateCellsBatchingPeriod = Platform.OS === 'web' ? 50 : 35
   const mapSettingsStyles = useMemo(
     () => getFiltersPanelStyles(themedColors as any, !isWideScreen, windowWidth),
     [themedColors, isWideScreen, windowWidth]
   )
+  const recommendedRouteLines = useMemo(() => {
+    if (!showingRecommendations) return [] as Array<{ id: number; line: Array<[number, number]> }>;
+    const entries = Object.entries(recommendedRoutes ?? {});
+    return entries
+      .map(([id, r]) => ({ id: Number(id), line: r?.line ?? [] }))
+      .filter((r) => Number.isFinite(r.id) && Array.isArray(r.line) && r.line.length > 1);
+  }, [recommendedRoutes, showingRecommendations]);
+  const handleMapPointPress = React.useCallback((p: any) => {
+    // allow marker click to focus the same way as list click
+    // (parent controls activePointId via list, this is a safe noop)
+    void p
+  }, [])
   const [panelTab, setPanelTab] = React.useState<'filters' | 'list'>('list')
   const [showMobilePanel, setShowMobilePanel] = React.useState(() => !isWideScreen)
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce)
   const [mapUiApi, setMapUiApi] = React.useState<MapUiApi | null>(null)
+  const didInitialFitRef = React.useRef(false)
   
   // Auto-switch to list tab when showing recommendations
   React.useEffect(() => {
@@ -113,6 +134,28 @@ export const PointsListGrid: React.FC<{
     }
   }, [toggleNonce, isWideScreen]);
 
+  // Initial viewport fit: after first load, auto-fit to currently visible points once.
+  React.useEffect(() => {
+    if (didInitialFitRef.current) return;
+    if (viewMode !== 'map') return;
+    if (isLoading) return;
+    if (showingRecommendations) return;
+    if (activePointId != null) return;
+    if (!mapUiApi?.fitToResults) return;
+    if (!Array.isArray(filteredPoints) || filteredPoints.length === 0) return;
+
+    didInitialFitRef.current = true;
+    const t = setTimeout(() => {
+      try {
+        mapUiApi.fitToResults();
+      } catch {
+        // noop
+      }
+    }, 0);
+
+    return () => clearTimeout(t);
+  }, [activePointId, filteredPoints, isLoading, mapUiApi, showingRecommendations, viewMode]);
+
   if (viewMode === 'list') {
     const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
     return (
@@ -127,6 +170,11 @@ export const PointsListGrid: React.FC<{
         key={String(columns)}
         contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}
         columnWrapperStyle={columns > 1 ? styles.gridColumnWrapper : undefined}
+        removeClippedSubviews={removeClippedSubviews}
+        initialNumToRender={listInitialNumToRender}
+        windowSize={listWindowSize}
+        maxToRenderPerBatch={listMaxToRenderPerBatch}
+        updateCellsBatchingPeriod={listUpdateCellsBatchingPeriod}
         refreshing={isLoading}
         onRefresh={onRefresh}
       />
@@ -142,24 +190,14 @@ export const PointsListGrid: React.FC<{
             <PointsMap
               points={filteredPoints}
               center={currentLocation ?? undefined}
-              routeLines={
-                showingRecommendations
-                  ? Object.entries(recommendedRoutes ?? {})
-                      .map(([id, r]) => ({ id: Number(id), line: r?.line ?? [] }))
-                      .filter((r) => Number.isFinite(r.id) && Array.isArray(r.line) && r.line.length > 1)
-                  : []
-              }
+              routeLines={recommendedRouteLines}
               onMapPress={onMapPress}
               onEditPoint={onPointEdit}
               onDeletePoint={onPointDelete}
               pendingMarker={showManualAdd ? manualCoords : null}
               pendingMarkerColor={manualColor}
               activePointId={activePointId ?? undefined}
-              onPointPress={(p: any) => {
-                // allow marker click to focus the same way as list click
-                // (parent controls activePointId via list, this is a safe noop)
-                void p;
-              }}
+              onPointPress={handleMapPointPress}
               onMapUiApiReady={setMapUiApi}
             />
 
@@ -208,7 +246,7 @@ export const PointsListGrid: React.FC<{
               showsVerticalScrollIndicator={true}
             >
               {renderHeader()}
-              {Platform.OS === 'web' ? (
+              {Platform.OS === 'web' && showMapSettings ? (
                 <FiltersPanelMapSettings
                   colors={themedColors as any}
                   styles={mapSettingsStyles}
@@ -221,6 +259,9 @@ export const PointsListGrid: React.FC<{
                   onReset={onResetFilters}
                   hideReset={!hasFilters}
                   showLegend={false}
+                  showBaseLayer={false}
+                  showOverlays={true}
+                  withContainer={false}
                 />
               ) : null}
             </ScrollView>
@@ -230,6 +271,12 @@ export const PointsListGrid: React.FC<{
               contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
               data={filteredPoints}
               keyExtractor={(item) => String((item as any)?.id)}
+              testID="userpoints-panel-content-list"
+              removeClippedSubviews={removeClippedSubviews}
+              initialNumToRender={listInitialNumToRender}
+              windowSize={listWindowSize}
+              maxToRenderPerBatch={listMaxToRenderPerBatch}
+              updateCellsBatchingPeriod={listUpdateCellsBatchingPeriod}
               renderItem={({ item }) => {
                 const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
                 return (
@@ -350,7 +397,7 @@ export const PointsListGrid: React.FC<{
               showsVerticalScrollIndicator={true}
             >
               {renderHeader()}
-              {Platform.OS === 'web' ? (
+              {Platform.OS === 'web' && showMapSettings ? (
                 <FiltersPanelMapSettings
                   colors={themedColors as any}
                   styles={mapSettingsStyles}
@@ -363,6 +410,9 @@ export const PointsListGrid: React.FC<{
                   onReset={onResetFilters}
                   hideReset={!hasFilters}
                   showLegend={false}
+                  showBaseLayer={false}
+                  showOverlays={true}
+                  withContainer={false}
                 />
               ) : null}
             </ScrollView>
@@ -372,6 +422,12 @@ export const PointsListGrid: React.FC<{
               contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
               data={filteredPoints}
               keyExtractor={(item) => String((item as any)?.id)}
+              testID="userpoints-panel-content-list"
+              removeClippedSubviews={removeClippedSubviews}
+              initialNumToRender={listInitialNumToRender}
+              windowSize={listWindowSize}
+              maxToRenderPerBatch={listMaxToRenderPerBatch}
+              updateCellsBatchingPeriod={listUpdateCellsBatchingPeriod}
               renderItem={({ item }) => {
                 const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
                 return (
@@ -456,12 +512,14 @@ export const PointsListGrid: React.FC<{
           <PointsMap
             points={filteredPoints}
             center={currentLocation ?? undefined}
+            routeLines={recommendedRouteLines}
             onMapPress={onMapPress}
             onEditPoint={onPointEdit}
             onDeletePoint={onPointDelete}
             pendingMarker={showManualAdd ? manualCoords : null}
             pendingMarkerColor={manualColor}
             activePointId={activePointId ?? undefined}
+            onPointPress={handleMapPointPress}
             onMapUiApiReady={setMapUiApi}
           />
 

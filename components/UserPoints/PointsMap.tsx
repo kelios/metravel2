@@ -37,6 +37,572 @@ const WebMapInstanceBinder = ({ useMap, onMapReady }: { useMap: any; onMapReady:
   return null;
 };
 
+const PointMarkerWeb = React.memo(
+  ({
+    mods,
+    point,
+    isActive,
+    colors,
+    mapInstance,
+    centerOverride,
+    driveInfo,
+    getMarkerIconCached,
+    onPointPress,
+    onEditPoint,
+    onDeletePoint,
+    requestDriveInfo,
+    onMarkerReady,
+  }: {
+    mods: any;
+    point: ImportedPoint;
+    isActive: boolean;
+    colors: ReturnType<typeof useThemedColors>;
+    mapInstance: any;
+    centerOverride?: { lat: number; lng: number };
+    driveInfo?:
+      | { status: 'loading' }
+      | { status: 'ok'; distanceKm: number; durationMin: number }
+      | { status: 'error' };
+    getMarkerIconCached: (color: any, opts?: { active?: boolean }) => any;
+    onPointPress?: (point: ImportedPoint) => void;
+    onEditPoint?: (point: ImportedPoint) => void;
+    onDeletePoint?: (point: ImportedPoint) => void;
+    requestDriveInfo: (args: { pointId: number; pointLat: number; pointLng: number }) => void;
+    onMarkerReady?: (args: { pointId: number; marker: any | null }) => void;
+  }) => {
+    const hasCoords =
+      Number.isFinite((point as any)?.latitude) &&
+      Number.isFinite((point as any)?.longitude);
+    const lat = Number((point as any)?.latitude);
+    const lng = Number((point as any)?.longitude);
+
+    const coordsText = React.useMemo(() => {
+      return Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '';
+    }, [lat, lng]);
+
+    const countryLabel = React.useMemo(() => {
+      try {
+        const direct = String((point as any)?.country ?? '').trim();
+        if (direct) return direct;
+        const address = String((point as any)?.address ?? '').trim();
+        if (!address) return '';
+        const parts = address
+          .split(',')
+          .map((p) => p.trim())
+          .filter(Boolean);
+        if (parts.length >= 2) return parts[parts.length - 1];
+        return '';
+      } catch {
+        return '';
+      }
+    }, [point]);
+
+    const categoryLabel = React.useMemo(() => String((point as any)?.category ?? '').trim(), [point]);
+    const colorLabel = React.useMemo(() => String((point as any)?.color ?? '').trim(), [point]);
+    const markerAccentColor = React.useMemo(
+      () => String((point as any)?.color ?? '').trim() || colors.backgroundTertiary,
+      [colors.backgroundTertiary, point]
+    );
+    const badgeLabel = hasCoords && categoryLabel ? categoryLabel : colorLabel;
+    const statusLabel = React.useMemo(() => String((STATUS_LABELS as any)?.[(point as any)?.status] ?? '').trim(), [point]);
+
+    const mapLinks = React.useMemo(
+      () =>
+        ([
+          { key: 'Google', url: `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}` },
+          { key: 'Apple', url: `https://maps.apple.com/?q=${encodeURIComponent(`${lat},${lng}`)}` },
+          { key: 'Яндекс', url: `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lng},${lat}`)}&z=16&l=map` },
+          {
+            key: 'OSM',
+            url: `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lng))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lng))}`,
+          },
+        ] as const),
+      [lat, lng]
+    );
+
+    const handleMarkerClick = React.useCallback(() => {
+      try {
+        const map = mapInstance;
+        if (map && typeof map.getZoom === 'function' && typeof map.setView === 'function') {
+          const currentZoom = map.getZoom();
+          const nextZoom = Math.max(14, Number.isFinite(currentZoom) ? currentZoom : 14);
+          map.setView([lat, lng], nextZoom, { animate: true } as any);
+        }
+      } catch {
+        // noop
+      }
+
+      try {
+        const pointId = Number((point as any)?.id);
+        const userLat = Number(centerOverride?.lat);
+        const userLng = Number(centerOverride?.lng);
+        if (!Number.isFinite(pointId)) return;
+        if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) return;
+        if (driveInfo?.status === 'ok' || driveInfo?.status === 'loading') return;
+        requestDriveInfo({ pointId, pointLat: lat, pointLng: lng });
+      } catch {
+        // noop
+      }
+
+      onPointPress?.(point);
+    }, [centerOverride?.lat, centerOverride?.lng, driveInfo?.status, lat, lng, mapInstance, onPointPress, point, requestDriveInfo]);
+
+    const markerPosition = React.useMemo(() => {
+      return [lat, lng] as [number, number];
+    }, [lat, lng]);
+
+    const markerIcon = React.useMemo(() => {
+      return getMarkerIconCached((point as any)?.color, { active: isActive });
+    }, [getMarkerIconCached, isActive, point]);
+
+    const markerEventHandlers = React.useMemo(() => {
+      return { click: handleMarkerClick } as any;
+    }, [handleMarkerClick]);
+
+    const pointId = React.useMemo(() => Number((point as any)?.id), [point]);
+    const markerRefCb = React.useCallback(
+      (marker: any | null) => {
+        if (!Number.isFinite(pointId)) return;
+        onMarkerReady?.({ pointId, marker });
+      },
+      [onMarkerReady, pointId]
+    );
+
+    return (
+      <mods.Marker
+        ref={markerRefCb as any}
+        position={markerPosition}
+        icon={markerIcon}
+        eventHandlers={markerEventHandlers}
+      >
+        <mods.Popup>
+          <div
+            style={{
+              width: 300,
+              maxWidth: '74vw',
+              maxHeight: '44vh',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              paddingRight: 6,
+              paddingLeft: 10,
+              boxSizing: 'border-box',
+              borderLeft: `4px solid ${markerAccentColor}`,
+              borderTopLeftRadius: 10,
+              borderBottomLeftRadius: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    lineHeight: '20px',
+                    color: colors.text,
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {(point as any)?.name}
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                  {statusLabel ? (
+                    <div
+                      style={{
+                        background: colors.primarySoft,
+                        border: `1px solid ${colors.borderAccent}`,
+                        borderRadius: 999,
+                        padding: '6px 10px',
+                        fontSize: 12,
+                        lineHeight: '14px',
+                        color: colors.text,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {statusLabel}
+                    </div>
+                  ) : null}
+                  {badgeLabel ? (
+                    <div
+                      style={{
+                        background: colors.backgroundTertiary,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: 999,
+                        padding: '6px 10px',
+                        fontSize: 12,
+                        lineHeight: '14px',
+                        color: colors.textMuted,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {badgeLabel}
+                    </div>
+                  ) : null}
+                  {countryLabel ? (
+                    <div
+                      style={{
+                        background: colors.backgroundTertiary,
+                        border: `1px solid ${colors.border}`,
+                        borderRadius: 999,
+                        padding: '6px 10px',
+                        fontSize: 12,
+                        lineHeight: '14px',
+                        color: colors.textMuted,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {countryLabel}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                {typeof onEditPoint === 'function' ? (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    title="Редактировать"
+                    aria-label="Редактировать"
+                    data-card-action="true"
+                    onClick={(e: any) => {
+                      try {
+                        e?.preventDefault?.();
+                        e?.stopPropagation?.();
+                      } catch {
+                        // noop
+                      }
+                      onEditPoint(point);
+                    }}
+                    onKeyDown={(e: any) => {
+                      if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                      try {
+                        e?.preventDefault?.();
+                        e?.stopPropagation?.();
+                      } catch {
+                        // noop
+                      }
+                      onEditPoint(point);
+                    }}
+                    style={{
+                      border: `1px solid ${colors.border}`,
+                      background: colors.surface,
+                      color: colors.text,
+                      borderRadius: 12,
+                      width: 34,
+                      height: 34,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Feather name="edit-2" size={16} color={colors.text} />
+                  </div>
+                ) : null}
+
+                {typeof onDeletePoint === 'function' ? (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    title="Удалить"
+                    aria-label="Удалить"
+                    data-card-action="true"
+                    onClick={(e: any) => {
+                      try {
+                        e?.preventDefault?.();
+                        e?.stopPropagation?.();
+                      } catch {
+                        // noop
+                      }
+                      onDeletePoint(point);
+                    }}
+                    onKeyDown={(e: any) => {
+                      if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                      try {
+                        e?.preventDefault?.();
+                        e?.stopPropagation?.();
+                      } catch {
+                        // noop
+                      }
+                      onDeletePoint(point);
+                    }}
+                    style={{
+                      border: `1px solid ${colors.border}`,
+                      background: colors.surface,
+                      color: colors.text,
+                      borderRadius: 12,
+                      width: 34,
+                      height: 34,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Feather name="trash-2" size={16} color={colors.text} />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            {(point as any)?.description ? (
+              <div style={{ marginTop: 10, color: colors.text, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                {(point as any)?.description}
+              </div>
+            ) : null}
+
+            {(point as any)?.address ? (
+              <div style={{ marginTop: 10, color: colors.textMuted, overflowWrap: 'anywhere' }}>
+                <span style={{ fontSize: 12, lineHeight: '16px' }}>{(point as any)?.address}</span>
+              </div>
+            ) : null}
+
+            {(Boolean((point as any)?.address) || Boolean(coordsText)) ? (
+              <div
+                style={{
+                  height: 1,
+                  background: colors.border,
+                  opacity: 0.8,
+                  marginTop: 12,
+                  marginBottom: 12,
+                }}
+              />
+            ) : null}
+
+            {coordsText ? (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                  <div
+                    style={{
+                      border: `1px solid ${colors.border}`,
+                      background: colors.surface,
+                      borderRadius: 12,
+                      padding: '10px 12px',
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: colors.textMuted,
+                        lineHeight: 1.2,
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                      }}
+                    >
+                      {coordsText}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      title="Копировать координаты"
+                      aria-label="Копировать координаты"
+                      data-card-action="true"
+                      onClick={(e: any) => {
+                        try {
+                          e?.preventDefault?.();
+                          e?.stopPropagation?.();
+                        } catch {
+                          // noop
+                        }
+                        try {
+                          ;(navigator as any)?.clipboard?.writeText?.(coordsText);
+                        } catch {
+                          // noop
+                        }
+                      }}
+                      onKeyDown={(e: any) => {
+                        if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                        try {
+                          e?.preventDefault?.();
+                          e?.stopPropagation?.();
+                        } catch {
+                          // noop
+                        }
+                        try {
+                          ;(navigator as any)?.clipboard?.writeText?.(coordsText);
+                        } catch {
+                          // noop
+                        }
+                      }}
+                      style={{
+                        border: `1px solid ${colors.border}`,
+                        background: colors.surface,
+                        color: colors.text,
+                        borderRadius: 12,
+                        width: 34,
+                        height: 34,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Feather name="copy" size={16} color={colors.text} />
+                    </div>
+
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      title="Поделиться в Telegram"
+                      aria-label="Поделиться в Telegram"
+                      data-card-action="true"
+                      onClick={(e: any) => {
+                        try {
+                          e?.preventDefault?.();
+                          e?.stopPropagation?.();
+                        } catch {
+                          // noop
+                        }
+
+                        try {
+                          const text = String((point as any)?.name ?? '') || coordsText;
+                          const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+                          const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+                          window.open(tg, '_blank', 'noopener,noreferrer');
+                        } catch {
+                          // noop
+                        }
+                      }}
+                      onKeyDown={(e: any) => {
+                        if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                        try {
+                          e?.preventDefault?.();
+                          e?.stopPropagation?.();
+                        } catch {
+                          // noop
+                        }
+
+                        try {
+                          const text = String((point as any)?.name ?? '') || coordsText;
+                          const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+                          const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+                          window.open(tg, '_blank', 'noopener,noreferrer');
+                        } catch {
+                          // noop
+                        }
+                      }}
+                      style={{
+                        border: `1px solid ${colors.border}`,
+                        background: colors.surface,
+                        color: colors.text,
+                        borderRadius: 12,
+                        width: 34,
+                        height: 34,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Feather name="send" size={16} color={colors.text} />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                    {mapLinks.map((p) => (
+                      <div
+                        key={p.key}
+                        role="button"
+                        tabIndex={0}
+                        title={p.key}
+                        aria-label={p.key}
+                        data-card-action="true"
+                        onClick={(e: any) => {
+                          try {
+                            e?.preventDefault?.();
+                            e?.stopPropagation?.();
+                          } catch {
+                            // noop
+                          }
+                          try {
+                            window.open(p.url, '_blank', 'noopener,noreferrer');
+                          } catch {
+                            // noop
+                          }
+                        }}
+                        onKeyDown={(e: any) => {
+                          if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                          try {
+                            e?.preventDefault?.();
+                            e?.stopPropagation?.();
+                          } catch {
+                            // noop
+                          }
+                          try {
+                            window.open(p.url, '_blank', 'noopener,noreferrer');
+                          } catch {
+                            // noop
+                          }
+                        }}
+                        style={{
+                          border: `1px solid ${colors.border}`,
+                          background: colors.surface,
+                          color: colors.text,
+                          borderRadius: 999,
+                          padding: '6px 12px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          lineHeight: '14px',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {p.key}
+                      </div>
+                    ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {Number.isFinite((driveInfo as any)?.distanceKm) ? (
+              <div style={{ marginTop: 12 }}>
+                <div
+                  style={{
+                    height: 1,
+                    background: colors.border,
+                    opacity: 0.8,
+                    marginBottom: 10,
+                  }}
+                />
+                <div style={{ fontSize: 12, color: colors.textMuted }}>
+                  На машине: {(driveInfo as any).distanceKm} км · ~{(driveInfo as any).durationMin} мин
+                </div>
+              </div>
+            ) : driveInfo?.status === 'loading' ? (
+              <div style={{ marginTop: 12 }}>
+                <div
+                  style={{
+                    height: 1,
+                    background: colors.border,
+                    opacity: 0.8,
+                    marginBottom: 10,
+                  }}
+                />
+                <div style={{ fontSize: 12, color: colors.textMuted }}>Считаю маршрут…</div>
+              </div>
+            ) : null}
+          </div>
+        </mods.Popup>
+      </mods.Marker>
+    );
+  }
+);
+
 const WebMapFixSize = ({ useMap }: { useMap: any }) => {
   const map = useMap?.();
   React.useEffect(() => {
@@ -320,6 +886,20 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
       .filter((p: any): p is ImportedPoint => p != null);
   }, [points]);
 
+  const markerByIdRef = React.useRef<Map<number, any>>(new Map());
+  const handleMarkerReady = React.useCallback(({ pointId, marker }: { pointId: number; marker: any | null }) => {
+    try {
+      if (!Number.isFinite(pointId)) return;
+      if (marker) {
+        markerByIdRef.current.set(pointId, marker);
+      } else {
+        markerByIdRef.current.delete(pointId);
+      }
+    } catch {
+      // noop
+    }
+  }, []);
+
   const travelData = React.useMemo(() => {
     return (safePoints ?? []).map((p: any) => ({
       id: Number(p?.id),
@@ -550,6 +1130,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     if (!mapInstance) return;
     if (!effectiveCenterOverride) return;
     if (Number.isFinite(Number(activePointId))) return;
+    if (safePoints.length > 0) return;
     const lat = effectiveCenterOverride?.lat;
     const lng = effectiveCenterOverride?.lng;
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
@@ -561,7 +1142,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     } catch {
       // noop
     }
-  }, [activePointId, effectiveCenterOverride, mapInstance]);
+  }, [activePointId, effectiveCenterOverride, mapInstance, safePoints.length]);
 
   React.useEffect(() => {
     if (!mapInstance) return;
@@ -580,10 +1161,26 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   }, [activePointId, mapInstance, safePoints]);
 
   React.useEffect(() => {
+    const id = Number(activePointId);
+    if (!Number.isFinite(id)) return;
+    const marker = markerByIdRef.current.get(id);
+    if (!marker || typeof marker.openPopup !== 'function') return;
+
+    const t = setTimeout(() => {
+      try {
+        marker.openPopup();
+      } catch {
+        // noop
+      }
+    }, 0);
+
+    return () => clearTimeout(t);
+  }, [activePointId]);
+
+  React.useEffect(() => {
     if (!mapInstance) return;
     const L = mods?.L;
     if (!L) return;
-    if (effectiveCenterOverride) return;
     if (Number.isFinite(Number(activePointId))) return;
     if (!safePoints.length) return;
 
@@ -598,7 +1195,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     } catch {
       // noop
     }
-  }, [activePointId, effectiveCenterOverride, mapInstance, mods?.L, safePoints]);
+  }, [activePointId, mapInstance, mods?.L, safePoints]);
 
   // Hooks must run unconditionally (before any return).
   const center = React.useMemo(() => {
@@ -627,6 +1224,65 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   const polylinePathOptions = React.useMemo(() => {
     return { color: colors.primary, weight: 4, opacity: 0.85 } as any;
   }, [colors.primary]);
+
+  const requestDriveInfo = React.useCallback(
+    ({ pointId, pointLat, pointLng }: { pointId: number; pointLat: number; pointLng: number }) => {
+      try {
+        const userLat = Number(centerOverride?.lat);
+        const userLng = Number(centerOverride?.lng);
+        if (!Number.isFinite(pointId)) return;
+        if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) return;
+        if (!Number.isFinite(pointLat) || !Number.isFinite(pointLng)) return;
+
+        setDriveInfoById((prev) => ({ ...prev, [pointId]: { status: 'loading' } }));
+
+        const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${pointLng},${pointLat}?overview=false`;
+
+        try {
+          driveAbortByIdRef.current.get(pointId)?.abort();
+        } catch {
+          // noop
+        }
+        const controller = new AbortController();
+        driveAbortByIdRef.current.set(pointId, controller);
+
+        fetch(url, { signal: controller.signal })
+          .then((r) => r.json())
+          .then((data) => {
+            const route = Array.isArray(data?.routes) ? data.routes[0] : null;
+            const distanceM = Number(route?.distance);
+            const durationS = Number(route?.duration);
+            if (!Number.isFinite(distanceM) || !Number.isFinite(durationS)) {
+              setDriveInfoById((prev) => ({ ...prev, [pointId]: { status: 'error' } }));
+              return;
+            }
+
+            const distanceKm = Math.round((distanceM / 1000) * 10) / 10;
+            const durationMin = Math.max(1, Math.round(durationS / 60));
+            setDriveInfoById((prev) => ({
+              ...prev,
+              [pointId]: { status: 'ok', distanceKm, durationMin },
+            }));
+          })
+          .catch((e) => {
+            if ((e as any)?.name === 'AbortError') return;
+            setDriveInfoById((prev) => ({ ...prev, [pointId]: { status: 'error' } }));
+          })
+          .finally(() => {
+            try {
+              if (driveAbortByIdRef.current.get(pointId) === controller) {
+                driveAbortByIdRef.current.delete(pointId);
+              }
+            } catch {
+              // noop
+            }
+          });
+      } catch {
+        // noop
+      }
+    },
+    [centerOverride?.lat, centerOverride?.lng]
+  );
 
   if (!mods?.MapContainer) {
     return <View style={styles.container} />;
@@ -679,542 +1335,25 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
         )}
 
         {safePoints.map((point) => {
-          const hasCoords =
-            Number.isFinite((point as any)?.latitude) &&
-            Number.isFinite((point as any)?.longitude);
-          const lat = Number((point as any)?.latitude);
-          const lng = Number((point as any)?.longitude);
-          const coordsText =
-            Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '';
-          const categoryLabel = String((point as any)?.category ?? '').trim();
-          const countryLabel = (() => {
-            try {
-              const direct = String((point as any)?.country ?? '').trim();
-              if (direct) return direct;
-              const address = String((point as any)?.address ?? '').trim();
-              if (!address) return '';
-              const parts = address
-                .split(',')
-                .map((p) => p.trim())
-                .filter(Boolean);
-              if (parts.length >= 2) return parts[parts.length - 1];
-              return '';
-            } catch {
-              return '';
-            }
-          })();
-          const colorLabel = String((point as any)?.color ?? '').trim();
-          const markerAccentColor = String((point as any)?.color ?? '').trim() || colors.backgroundTertiary;
-          const badgeLabel = hasCoords && categoryLabel ? categoryLabel : colorLabel;
-          const statusLabel = String((STATUS_LABELS as any)?.[(point as any)?.status] ?? '').trim();
+          const id = Number((point as any)?.id);
+          const driveInfo = Number.isFinite(id) ? driveInfoById[id] : undefined;
           return (
-            <mods.Marker
-              key={point.id}
-              position={[point.latitude, point.longitude]}
-              icon={getMarkerIconCached(point.color, { active: Number(activePointId) === Number(point.id) })}
-              eventHandlers={{
-                click: () => {
-                  try {
-                    const map = mapInstance;
-                    if (map && typeof map.getZoom === 'function' && typeof map.setView === 'function') {
-                      const currentZoom = map.getZoom();
-                      const nextZoom = Math.max(14, Number.isFinite(currentZoom) ? currentZoom : 14);
-                      map.setView([point.latitude, point.longitude], nextZoom, { animate: true } as any);
-                    }
-                  } catch {
-                    // noop
-                  }
-
-                  try {
-                    const id = Number(point.id);
-                    const userLat = Number(centerOverride?.lat);
-                    const userLng = Number(centerOverride?.lng);
-                    if (!Number.isFinite(id)) return;
-                    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) return;
-
-                    const cached = driveInfoById[id];
-                    if (cached?.status === 'ok' || cached?.status === 'loading') return;
-
-                    setDriveInfoById((prev) => ({ ...prev, [id]: { status: 'loading' } }));
-
-                    const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lng},${lat}?overview=false`;
-
-                    try {
-                      driveAbortByIdRef.current.get(id)?.abort();
-                    } catch {
-                      // noop
-                    }
-                    const controller = new AbortController();
-                    driveAbortByIdRef.current.set(id, controller);
-
-                    fetch(url, { signal: controller.signal })
-                      .then((r) => r.json())
-                      .then((data) => {
-                        const route = Array.isArray(data?.routes) ? data.routes[0] : null;
-                        const distanceM = Number(route?.distance);
-                        const durationS = Number(route?.duration);
-                        if (!Number.isFinite(distanceM) || !Number.isFinite(durationS)) {
-                          setDriveInfoById((prev) => ({ ...prev, [id]: { status: 'error' } }));
-                          return;
-                        }
-
-                        const distanceKm = Math.round((distanceM / 1000) * 10) / 10;
-                        const durationMin = Math.max(1, Math.round(durationS / 60));
-                        setDriveInfoById((prev) => ({
-                          ...prev,
-                          [id]: { status: 'ok', distanceKm, durationMin },
-                        }));
-                      })
-                      .catch((e) => {
-                        if ((e as any)?.name === 'AbortError') return;
-                        setDriveInfoById((prev) => ({ ...prev, [id]: { status: 'error' } }));
-                      })
-                      .finally(() => {
-                        try {
-                          if (driveAbortByIdRef.current.get(id) === controller) {
-                            driveAbortByIdRef.current.delete(id);
-                          }
-                        } catch {
-                          // noop
-                        }
-                      });
-                  } catch {
-                    // noop
-                  }
-
-                  onPointPress?.(point);
-                },
-              }}
-            >
-              <mods.Popup>
-                <div
-                  style={{
-                    width: 300,
-                    maxWidth: '74vw',
-                    maxHeight: '44vh',
-                    overflowY: 'auto',
-                    overflowX: 'hidden',
-                    paddingRight: 6,
-                    paddingLeft: 10,
-                    boxSizing: 'border-box',
-                    borderLeft: `4px solid ${markerAccentColor}`,
-                    borderTopLeftRadius: 10,
-                    borderBottomLeftRadius: 10,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 700,
-                          lineHeight: '20px',
-                          color: colors.text,
-                          overflowWrap: 'anywhere',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {point.name}
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                        {statusLabel ? (
-                          <div
-                            style={{
-                              background: colors.primarySoft,
-                              border: `1px solid ${colors.borderAccent}`,
-                              borderRadius: 999,
-                              padding: '6px 10px',
-                              fontSize: 12,
-                              lineHeight: '14px',
-                              color: colors.text,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {statusLabel}
-                          </div>
-                        ) : null}
-                        {badgeLabel ? (
-                          <div
-                            style={{
-                              background: colors.backgroundTertiary,
-                              border: `1px solid ${colors.border}`,
-                              borderRadius: 999,
-                              padding: '6px 10px',
-                              fontSize: 12,
-                              lineHeight: '14px',
-                              color: colors.textMuted,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {badgeLabel}
-                          </div>
-                        ) : null}
-                        {countryLabel ? (
-                          <div
-                            style={{
-                              background: colors.backgroundTertiary,
-                              border: `1px solid ${colors.border}`,
-                              borderRadius: 999,
-                              padding: '6px 10px',
-                              fontSize: 12,
-                              lineHeight: '14px',
-                              color: colors.textMuted,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {countryLabel}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {typeof onEditPoint === 'function' ? (
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          title="Редактировать"
-                          aria-label="Редактировать"
-                          data-card-action="true"
-                          onClick={(e: any) => {
-                            try {
-                              e?.preventDefault?.();
-                              e?.stopPropagation?.();
-                            } catch {
-                              // noop
-                            }
-                            onEditPoint(point);
-                          }}
-                          onKeyDown={(e: any) => {
-                            if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                            try {
-                              e?.preventDefault?.();
-                              e?.stopPropagation?.();
-                            } catch {
-                              // noop
-                            }
-                            onEditPoint(point);
-                          }}
-                          style={{
-                            border: `1px solid ${colors.border}`,
-                            background: colors.surface,
-                            color: colors.text,
-                            borderRadius: 12,
-                            width: 34,
-                            height: 34,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Feather name="edit-2" size={16} color={colors.text} />
-                        </div>
-                      ) : null}
-
-                      {typeof onDeletePoint === 'function' ? (
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          title="Удалить"
-                          aria-label="Удалить"
-                          data-card-action="true"
-                          onClick={(e: any) => {
-                            try {
-                              e?.preventDefault?.();
-                              e?.stopPropagation?.();
-                            } catch {
-                              // noop
-                            }
-                            onDeletePoint(point);
-                          }}
-                          onKeyDown={(e: any) => {
-                            if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                            try {
-                              e?.preventDefault?.();
-                              e?.stopPropagation?.();
-                            } catch {
-                              // noop
-                            }
-                            onDeletePoint(point);
-                          }}
-                          style={{
-                            border: `1px solid ${colors.border}`,
-                            background: colors.surface,
-                            color: colors.text,
-                            borderRadius: 12,
-                            width: 34,
-                            height: 34,
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <Feather name="trash-2" size={16} color={colors.text} />
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {point.description ? (
-                    <div style={{ marginTop: 10, color: colors.text, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                      {point.description}
-                    </div>
-                  ) : null}
-
-                  {point.address ? (
-                    <div style={{ marginTop: 10, color: colors.textMuted, overflowWrap: 'anywhere' }}>
-                      <span style={{ fontSize: 12, lineHeight: '16px' }}>{point.address}</span>
-                    </div>
-                  ) : null}
-
-                  {point.address || coordsText ? (
-                    <div
-                      style={{
-                        height: 1,
-                        background: colors.border,
-                        opacity: 0.8,
-                        marginTop: 12,
-                        marginBottom: 12,
-                      }}
-                    />
-                  ) : null}
-
-                  {coordsText ? (
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                        <div
-                          style={{
-                            border: `1px solid ${colors.border}`,
-                            background: colors.surface,
-                            borderRadius: 12,
-                            padding: '10px 12px',
-                            flex: 1,
-                            minWidth: 0,
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: colors.textMuted,
-                              lineHeight: 1.2,
-                              overflowWrap: 'anywhere',
-                              wordBreak: 'break-word',
-                              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                            }}
-                          >
-                            {coordsText}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            title="Копировать координаты"
-                            aria-label="Копировать координаты"
-                            data-card-action="true"
-                            onClick={(e: any) => {
-                              try {
-                                e?.preventDefault?.();
-                                e?.stopPropagation?.();
-                              } catch {
-                                // noop
-                              }
-                              try {
-                                ;(navigator as any)?.clipboard?.writeText?.(coordsText);
-                              } catch {
-                                // noop
-                              }
-                            }}
-                            onKeyDown={(e: any) => {
-                              if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                              try {
-                                e?.preventDefault?.();
-                                e?.stopPropagation?.();
-                              } catch {
-                                // noop
-                              }
-                              try {
-                                ;(navigator as any)?.clipboard?.writeText?.(coordsText);
-                              } catch {
-                                // noop
-                              }
-                            }}
-                            style={{
-                              border: `1px solid ${colors.border}`,
-                              background: colors.surface,
-                              color: colors.text,
-                              borderRadius: 12,
-                              width: 34,
-                              height: 34,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <Feather name="copy" size={16} color={colors.text} />
-                          </div>
-
-                          <div
-                            role="button"
-                            tabIndex={0}
-                            title="Поделиться в Telegram"
-                            aria-label="Поделиться в Telegram"
-                            data-card-action="true"
-                            onClick={(e: any) => {
-                              try {
-                                e?.preventDefault?.();
-                                e?.stopPropagation?.();
-                              } catch {
-                                // noop
-                              }
-
-                              try {
-                                const text = String(point?.name ?? '') || coordsText;
-                                const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
-                                const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-                                window.open(tg, '_blank', 'noopener,noreferrer');
-                              } catch {
-                                // noop
-                              }
-                            }}
-                            onKeyDown={(e: any) => {
-                              if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                              try {
-                                e?.preventDefault?.();
-                                e?.stopPropagation?.();
-                              } catch {
-                                // noop
-                              }
-
-                              try {
-                                const text = String(point?.name ?? '') || coordsText;
-                                const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
-                                const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-                                window.open(tg, '_blank', 'noopener,noreferrer');
-                              } catch {
-                                // noop
-                              }
-                            }}
-                            style={{
-                              border: `1px solid ${colors.border}`,
-                              background: colors.surface,
-                              color: colors.text,
-                              borderRadius: 12,
-                              width: 34,
-                              height: 34,
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <Feather name="send" size={16} color={colors.text} />
-                          </div>
-                        </div>
-                      </div>
-
-                      <div style={{ marginTop: 10 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          {([
-                            { key: 'Google', url: `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}` },
-                            { key: 'Apple', url: `https://maps.apple.com/?q=${encodeURIComponent(`${lat},${lng}`)}` },
-                            { key: 'Яндекс', url: `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lng},${lat}`)}&z=16&l=map` },
-                            {
-                              key: 'OSM',
-                              url: `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lng))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lng))}`,
-                            },
-                          ] as const).map((p) => (
-                            <div
-                              key={p.key}
-                              role="button"
-                              tabIndex={0}
-                              title={p.key}
-                              aria-label={p.key}
-                              data-card-action="true"
-                              onClick={(e: any) => {
-                                try {
-                                  e?.preventDefault?.();
-                                  e?.stopPropagation?.();
-                                } catch {
-                                  // noop
-                                }
-                                try {
-                                  window.open(p.url, '_blank', 'noopener,noreferrer');
-                                } catch {
-                                  // noop
-                                }
-                              }}
-                              onKeyDown={(e: any) => {
-                                if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                                try {
-                                  e?.preventDefault?.();
-                                  e?.stopPropagation?.();
-                                } catch {
-                                  // noop
-                                }
-                                try {
-                                  window.open(p.url, '_blank', 'noopener,noreferrer');
-                                } catch {
-                                  // noop
-                                }
-                              }}
-                              style={{
-                                border: `1px solid ${colors.border}`,
-                                background: colors.surface,
-                                color: colors.text,
-                                borderRadius: 999,
-                                padding: '6px 12px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                fontSize: 12,
-                                lineHeight: '14px',
-                              }}
-                            >
-                              {p.key}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {Number.isFinite((driveInfoById as any)?.[Number(point.id)]?.distanceKm) ? (
-                    <div style={{ marginTop: 12 }}>
-                      <div
-                        style={{
-                          height: 1,
-                          background: colors.border,
-                          opacity: 0.8,
-                          marginBottom: 10,
-                        }}
-                      />
-                      <div style={{ fontSize: 12, color: colors.textMuted }}>
-                        На машине: {(driveInfoById as any)[Number(point.id)].distanceKm} км · ~{(driveInfoById as any)[Number(point.id)].durationMin} мин
-                      </div>
-                    </div>
-                  ) : (driveInfoById as any)?.[Number(point.id)]?.status === 'loading' ? (
-                    <div style={{ marginTop: 12 }}>
-                      <div
-                        style={{
-                          height: 1,
-                          background: colors.border,
-                          opacity: 0.8,
-                          marginBottom: 10,
-                        }}
-                      />
-                      <div style={{ fontSize: 12, color: colors.textMuted }}>Считаю маршрут…</div>
-                    </div>
-                  ) : null}
-                </div>
-              </mods.Popup>
-            </mods.Marker>
+            <PointMarkerWeb
+              key={String((point as any)?.id)}
+              mods={mods}
+              point={point}
+              isActive={Number(activePointId) === Number((point as any)?.id)}
+              colors={colors}
+              mapInstance={mapInstance}
+              centerOverride={centerOverride}
+              driveInfo={driveInfo}
+              getMarkerIconCached={getMarkerIconCached}
+              onPointPress={onPointPress}
+              onEditPoint={onEditPoint}
+              onDeletePoint={onDeletePoint}
+              requestDriveInfo={requestDriveInfo}
+              onMarkerReady={handleMarkerReady}
+            />
           );
         })}
       </mods.MapContainer>

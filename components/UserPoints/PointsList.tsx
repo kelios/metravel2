@@ -76,8 +76,10 @@ type PointsListProps = {
 };
 
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
-  const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: 50, radiusKm: 100 });
+  const defaultPerPage = Platform.OS === 'web' ? 5000 : 200;
+  const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: defaultPerPage, radiusKm: 100 });
   const [showFilters, setShowFilters] = useState(true);
+  const [showMapSettings, setShowMapSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const viewMode: ViewMode = 'map'; // Fixed to map view only
   const [showActions, setShowActions] = useState(false);
@@ -428,9 +430,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const handleFilterChange = useCallback(
     (newFilters: PointFiltersType) => {
-      setFilters({ ...newFilters, page: 1, perPage: filters.perPage ?? 50 });
+      setFilters({ ...newFilters, page: 1, perPage: filters.perPage ?? defaultPerPage });
     },
-    [filters.perPage]
+    [defaultPerPage, filters.perPage]
   );
 
   const hasActiveFilters = useMemo(() => {
@@ -475,14 +477,18 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return chips;
   }, [filters.colors, filters.radiusKm, filters.siteCategories, filters.statuses, searchQuery]);
 
-  const handleResetFilters = useCallback(() => {
-    setSearchQuery('');
-    setFilters({ page: 1, perPage: filters.perPage ?? 50, radiusKm: 100 });
+  const handleCloseRecommendations = useCallback(() => {
     setShowingRecommendations(false);
     setRecommendedPointIds([]);
     setRecommendedRoutes({});
+  }, []);
+
+  const handleResetFilters = useCallback(() => {
+    setSearchQuery('');
+    setFilters({ page: 1, perPage: filters.perPage ?? 50, radiusKm: 100 });
+    handleCloseRecommendations();
     setActivePointId(null);
-  }, [filters.perPage]);
+  }, [filters.perPage, handleCloseRecommendations]);
 
   const handleRemoveFilterChip = useCallback((key: string) => {
     if (key === 'search') {
@@ -994,6 +1000,8 @@ const deleteAll = useCallback(async () => {
         onViewModeChange={() => {}} // No-op since view is fixed to map
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((v) => !v)}
+        showMapSettings={showMapSettings}
+        onToggleMapSettings={() => setShowMapSettings((v) => !v)}
         onOpenActions={() => {
           blurActiveElementForModal();
           setShowActions(true);
@@ -1026,6 +1034,7 @@ const deleteAll = useCallback(async () => {
     points.length,
     searchQuery,
     showFilters,
+    showMapSettings,
     styles,
     viewMode,
   ]);
@@ -1206,17 +1215,14 @@ useEffect(() => {
         onLocateMe={handleLocateMe}
         showingRecommendations={showingRecommendations}
         onRefreshRecommendations={handleOpenRecommendations}
-        onCloseRecommendations={() => {
-          setShowingRecommendations(false);
-          setRecommendedPointIds([]);
-          setRecommendedRoutes({});
-        }}
+        onCloseRecommendations={handleCloseRecommendations}
         activePointId={activePointId}
         recommendedRoutes={recommendedRoutes}
         searchQuery={searchQuery}
         onSearch={handleSearch}
         hasFilters={hasActiveFilters}
         onResetFilters={handleResetFilters}
+        showMapSettings={showMapSettings}
       />
 
       <Modal

@@ -43,6 +43,9 @@ type PointsListHeaderProps = {
   showFilters: boolean
   onToggleFilters: () => void
 
+  showMapSettings: boolean
+  onToggleMapSettings: () => void
+
   onOpenActions: () => void
   onOpenRecommendations: () => void
 
@@ -74,6 +77,8 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   hideViewToggle: _hideViewToggle,
   showFilters,
   onToggleFilters,
+  showMapSettings,
+  onToggleMapSettings,
   onOpenActions,
   onOpenRecommendations,
   searchQuery,
@@ -115,6 +120,15 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             accessibilityLabel={showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
           >
             <Feather name={showFilters ? 'eye-off' : 'filter'} size={18} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.headerButton, styles.headerIconButton]}
+            onPress={onToggleMapSettings}
+            accessibilityRole="button"
+            accessibilityLabel={showMapSettings ? 'Скрыть настройки карты' : 'Показать настройки карты'}
+          >
+            <Feather name="sliders" size={18} color={colors.text} />
           </TouchableOpacity>
         </View>
       </View>
