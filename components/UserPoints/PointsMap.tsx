@@ -1293,6 +1293,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
       <mods.MapContainer
         center={[center.lat, center.lng]}
         zoom={safePoints.length > 0 ? 10 : 5}
+        whenCreated={handleMapReady as any}
         style={{ height: '100%', width: '100%' }}
       >
         <WebMapInstanceBinder useMap={mods.useMap} onMapReady={handleMapReady} />
