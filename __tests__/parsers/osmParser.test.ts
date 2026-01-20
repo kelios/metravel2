@@ -29,7 +29,7 @@ describe('OSM Parser', () => {
       expect(result[0].latitude).toBe(50.4501);
       expect(result[0].longitude).toBe(30.5234);
       expect(result[0].color).toBeDefined();
-      expect(result[0].category).toBe('');
+      expect(result[0].categoryIds).toEqual([]);
     });
 
     it('should preserve status and color from GeoJSON properties when provided', () => {
@@ -76,7 +76,7 @@ describe('OSM Parser', () => {
       };
 
       const result = (OSMParser as any).parseGeoJSON(JSON.stringify(geoJSON));
-      expect(result[0].category).toBe('');
+      expect(result[0].categoryIds).toEqual([]);
     });
 
     it('should handle features without Point geometry', () => {
@@ -178,7 +178,7 @@ describe('OSM Parser', () => {
         </gpx>`;
 
       const result = (OSMParser as any).parseGPX(gpxData);
-      expect(result[0].category).toBe('');
+      expect(result[0].categoryIds).toEqual([]);
     });
   });
 });

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, Pressable, useWindowDimensions } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { userPointsApi } from '@/src/api/userPoints';
 import { fetchFiltersMap } from '@/src/api/map';
@@ -75,6 +75,26 @@ type PointsListProps = {
   onImportPress?: () => void;
 };
 
+const normalizeCategoryIdsFromPoint = (p: any): string[] => {
+  const multiAlt = (p as any)?.categories ?? (p as any)?.categories_ids;
+  if (Array.isArray(multiAlt)) {
+    return multiAlt.map((v: any) => String(v)).map((v) => v.trim()).filter(Boolean);
+  }
+
+  const direct = (p as any)?.categoryIds ?? (p as any)?.category_ids;
+  if (Array.isArray(direct)) {
+    return direct.map((v: any) => String(v)).map((v) => v.trim()).filter(Boolean);
+  }
+
+  const single = (p as any)?.categoryId ?? (p as any)?.category_id;
+  if (single != null && String(single).trim()) return [String(single).trim()];
+
+  const legacy = (p as any)?.category;
+  if (legacy != null && String(legacy).trim()) return [String(legacy).trim()];
+
+  return [];
+};
+
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const defaultPerPage = Platform.OS === 'web' ? 5000 : 200;
   const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: defaultPerPage, radiusKm: 100 });
@@ -118,7 +138,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [manualLng, setManualLng] = useState('');
   const [manualColor, setManualColor] = useState<string>('#2196F3');
   const [manualStatus, setManualStatus] = useState<PointStatus>(PointStatus.PLANNING);
-  const [manualCategory, setManualCategory] = useState('');
+  const [manualCategoryIds, setManualCategoryIds] = useState<string[]>([]);
   const [isSavingManual, setIsSavingManual] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
 
@@ -129,6 +149,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const showPointTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeDriveAbortRef = useRef<AbortController | null>(null);
   const recommendationsAbortRef = useRef<AbortController | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     return () => {
@@ -218,21 +239,37 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         .map((cat: any) => {
           if (cat == null) return null;
 
-          const name = typeof cat === 'string' ? cat : cat?.name;
-          const normalizedName = String(name ?? cat ?? '').trim();
-          if (!normalizedName) return null;
+          if (typeof cat === 'string') {
+            const normalized = String(cat).trim();
+            if (!normalized) return null;
+            return { id: normalized, name: normalized };
+          }
 
-          // Use the backend category name as the filter value to match point.category.
-          return { id: normalizedName, name: normalizedName };
+          const id = String(cat?.id ?? cat?.value ?? '').trim();
+          const name = String(cat?.name ?? cat?.label ?? id).trim();
+          if (!id) return null;
+          return { id, name: name || id };
         })
         .filter((v: any): v is { id: string; name: string } => v != null);
     },
     staleTime: 10 * 60 * 1000,
   });
 
+  const categoryIdToName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of siteCategoryOptionsQuery.data ?? []) {
+      const id = String((c as any)?.id ?? '').trim();
+      const name = String((c as any)?.name ?? id).trim();
+      if (!id) continue;
+      map.set(id, name || id);
+    }
+    return map;
+  }, [siteCategoryOptionsQuery.data]);
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['userPoints', filters],
-    queryFn: () => userPointsApi.getPoints(filters),
+    queryKey: ['userPointsAll'],
+    queryFn: () => userPointsApi.getPoints({ page: 1, perPage: defaultPerPage }),
+    staleTime: 10 * 60 * 1000,
   });
 
   // If backend errors (or not ready) — treat as empty list.
@@ -240,6 +277,77 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     if (error) return [];
     return Array.isArray(data) ? data : [];
   }, [data, error]);
+
+  const pointsWithDerivedCategories = useMemo(() => {
+    return (points as any[]).map((p) => {
+      const categoryIds = normalizeCategoryIdsFromPoint(p);
+      const categoryNames = categoryIds
+        .map((id) => categoryIdToName.get(id) ?? id)
+        .map((v) => String(v).trim())
+        .filter(Boolean);
+      return { ...p, categoryIds, categoryNames };
+    });
+  }, [categoryIdToName, points]);
+
+  const pointsVisibleWithinRadius = useMemo(() => {
+    const q = String(searchQuery || '').trim().toLowerCase();
+    const selectedColors = filters.colors ?? [];
+    const selectedStatuses = filters.statuses ?? [];
+    const radiusKm = filters.radiusKm;
+
+    const radiusFilterEnabled = radiusKm !== null && radiusKm !== undefined && currentLocation;
+    const userLat = Number(currentLocation?.lat);
+    const userLng = Number(currentLocation?.lng);
+    const radius = Number(radiusKm);
+    const canDoRadius =
+      Boolean(radiusFilterEnabled) &&
+      Number.isFinite(userLat) &&
+      Number.isFinite(userLng) &&
+      Number.isFinite(radius) &&
+      radius > 0;
+
+    const latDelta = canDoRadius ? radius / 111 : 0;
+    const lngDelta = canDoRadius ? radius / (111 * Math.max(0.2, Math.cos((userLat * Math.PI) / 180))) : 0;
+    const minLat = canDoRadius ? userLat - latDelta : 0;
+    const maxLat = canDoRadius ? userLat + latDelta : 0;
+    const minLng = canDoRadius ? userLng - lngDelta : 0;
+    const maxLng = canDoRadius ? userLng + lngDelta : 0;
+
+    return pointsWithDerivedCategories.filter((p: any) => {
+      if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
+      if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
+
+      if (canDoRadius) {
+        const pointLat = Number(p.latitude);
+        const pointLng = Number(p.longitude);
+        if (Number.isFinite(pointLat) && Number.isFinite(pointLng)) {
+          if (pointLat < minLat || pointLat > maxLat || pointLng < minLng || pointLng > maxLng) return false;
+          const distance = haversineKm(userLat, userLng, pointLat, pointLng);
+          if (distance > radius) return false;
+        }
+      }
+
+      if (!q) return true;
+      const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [currentLocation, filters.colors, filters.radiusKm, filters.statuses, pointsWithDerivedCategories, searchQuery]);
+
+  const availableCategoryOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of pointsVisibleWithinRadius as any[]) {
+      const ids = Array.isArray(p?.categoryIds) ? p.categoryIds : [];
+      for (const id of ids) {
+        const norm = String(id).trim();
+        if (!norm) continue;
+        counts.set(norm, (counts.get(norm) || 0) + 1);
+      }
+    }
+
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([id]) => ({ id, name: categoryIdToName.get(id) ?? id }));
+  }, [categoryIdToName, pointsVisibleWithinRadius]);
 
   const availableColors = useMemo(() => {
     const colorMap = new Map<string, number>();
@@ -270,37 +378,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return merged;
   }, [points]);
 
-  const filteredPointsWithoutCategory = useMemo(() => {
-    const q = String(searchQuery || '').trim().toLowerCase();
-    const selectedColors = filters.colors ?? [];
-    const selectedStatuses = filters.statuses ?? [];
-
-    return points.filter((p: any) => {
-      if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
-      if (!q) return true;
-
-      const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [filters.colors, filters.statuses, points, searchQuery]);
-
-  const availableCategoryOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of filteredPointsWithoutCategory as any[]) {
-      const c = String(p?.category ?? '').trim();
-      if (c) set.add(c);
-    }
-    return Array.from(set)
-      .sort((a, b) => a.localeCompare(b))
-      .map((name) => ({ id: name, name }));
-  }, [filteredPointsWithoutCategory]);
-
   const filteredPoints = useMemo(() => {
     const q = String(searchQuery || '').trim().toLowerCase();
     const selectedColors = filters.colors ?? [];
     const selectedStatuses = filters.statuses ?? [];
-    const selectedCategories = filters.siteCategories ?? [];
+    const selectedCategoryIds = filters.categoryIds ?? [];
     const radiusKm = filters.radiusKm;
 
     const radiusFilterEnabled = radiusKm !== null && radiusKm !== undefined && currentLocation;
@@ -322,10 +404,14 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     const minLng = canDoRadius ? userLng - lngDelta : 0;
     const maxLng = canDoRadius ? userLng + lngDelta : 0;
 
-    return points.filter((p: any) => {
+    return pointsWithDerivedCategories.filter((p: any) => {
       if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
       if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
-      if (selectedCategories.length > 0 && !selectedCategories.includes(String(p.category ?? ''))) return false;
+      if (selectedCategoryIds.length > 0) {
+        const ids = Array.isArray(p?.categoryIds) ? p.categoryIds : [];
+        const hasAny = selectedCategoryIds.some((id) => ids.includes(id));
+        if (!hasAny) return false;
+      }
       
       // Radius filter - only apply if radiusKm is set and currentLocation exists
       if (canDoRadius) {
@@ -343,7 +429,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [filters.colors, filters.siteCategories, filters.statuses, filters.radiusKm, points, searchQuery, currentLocation]);
+  }, [filters.categoryIds, filters.colors, filters.statuses, filters.radiusKm, pointsWithDerivedCategories, searchQuery, currentLocation]);
 
   const visibleFilteredPoints = useMemo(() => {
     // Show only recommended points when in recommendations mode
@@ -415,13 +501,13 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, [activePointId, currentLocation?.lat, currentLocation?.lng, visibleFilteredPoints]);
 
   useEffect(() => {
-    const selected = filters.siteCategories ?? [];
+    const selected = filters.categoryIds ?? [];
     if (!selected.length) return;
     const available = new Set(availableCategoryOptions.map((c) => c.id));
     const next = selected.filter((c) => available.has(c));
     if (next.length === selected.length) return;
-    setFilters((prev) => ({ ...prev, siteCategories: next, page: 1 }));
-  }, [availableCategoryOptions, filters.siteCategories]);
+    setFilters((prev) => ({ ...prev, categoryIds: next, page: 1 }));
+  }, [availableCategoryOptions, filters.categoryIds]);
 
   const handleSearch = useCallback((text: string) => {
     setSearchQuery(text);
@@ -441,12 +527,12 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     const hasRadius = radiusKm != null && Number.isFinite(Number(radiusKm)) && Number(radiusKm) !== 100;
     return (
       (filters.statuses?.length ?? 0) > 0 ||
-      (filters.siteCategories?.length ?? 0) > 0 ||
+      (filters.categoryIds?.length ?? 0) > 0 ||
       (filters.colors?.length ?? 0) > 0 ||
       hasSearch ||
       hasRadius
     );
-  }, [filters.colors, filters.radiusKm, filters.siteCategories, filters.statuses, searchQuery]);
+  }, [filters.categoryIds, filters.colors, filters.radiusKm, filters.statuses, searchQuery]);
 
   const activeFilterChips = useMemo(() => {
     const chips: Array<{ key: string; label: string }> = [];
@@ -466,8 +552,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       chips.push({ key: `status-${status}`, label: `Статус: ${label}` });
     });
     
-    (filters.siteCategories ?? []).forEach((cat) => {
-      chips.push({ key: `category-${cat}`, label: `Категория: ${cat}` });
+    (filters.categoryIds ?? []).forEach((catId) => {
+      const label = categoryIdToName.get(catId) ?? catId;
+      chips.push({ key: `category-${catId}`, label: `Категория: ${label}` });
     });
     
     (filters.colors ?? []).forEach((color) => {
@@ -475,7 +562,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     });
     
     return chips;
-  }, [filters.colors, filters.radiusKm, filters.siteCategories, filters.statuses, searchQuery]);
+  }, [categoryIdToName, filters.categoryIds, filters.colors, filters.radiusKm, filters.statuses, searchQuery]);
 
   const handleCloseRecommendations = useCallback(() => {
     setShowingRecommendations(false);
@@ -508,14 +595,14 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setFilters((prev) => ({ ...prev, statuses: next, page: 1 }));
     } else if (key.startsWith('category-')) {
       const category = key.replace('category-', '');
-      const next = (filters.siteCategories ?? []).filter((c) => c !== category);
-      setFilters((prev) => ({ ...prev, siteCategories: next, page: 1 }));
+      const next = (filters.categoryIds ?? []).filter((c) => c !== category);
+      setFilters((prev) => ({ ...prev, categoryIds: next, page: 1 }));
     } else if (key.startsWith('color-')) {
       const color = key.replace('color-', '');
       const next = (filters.colors ?? []).filter((c) => c !== color);
       setFilters((prev) => ({ ...prev, colors: next, page: 1 }));
     }
-  }, [filters.colors, filters.siteCategories, filters.statuses]);
+  }, [filters.categoryIds, filters.colors, filters.statuses]);
 
   useEffect(() => {
     if (!selectionMode) return;
@@ -533,7 +620,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setManualLng('');
     setManualColor('#2196F3');
     setManualStatus(PointStatus.PLANNING);
-    setManualCategory('');
+    setManualCategoryIds([]);
     setManualError(null);
     setEditingPointId(null);
   }, []);
@@ -642,7 +729,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setManualColor(String(point?.color ?? '#2196F3'));
       const nextStatus = ((point?.status as any) ?? PointStatus.PLANNING) as PointStatus;
       setManualStatus(nextStatus);
-      setManualCategory(String((point as any)?.category ?? ''));
+      setManualCategoryIds(normalizeCategoryIdsFromPoint(point));
       setManualError(null);
       setShowManualAdd(true);
     },
@@ -681,7 +768,11 @@ const applyBulkEdit = useCallback(async () => {
   setIsBulkWorking(true);
   try {
     await userPointsApi.bulkUpdatePoints(selectedIds, updates);
-    await refetch();
+    const selectedSet = new Set(selectedIds);
+    queryClient.setQueryData(['userPointsAll'], (prev: any) => {
+      const arr = Array.isArray(prev) ? prev : [];
+      return arr.map((p: any) => (selectedSet.has(Number(p?.id)) ? { ...p, ...updates } : p));
+    });
     setShowBulkEdit(false);
     setBulkColor(null);
     setBulkStatus(null);
@@ -692,7 +783,7 @@ const applyBulkEdit = useCallback(async () => {
   } finally {
     setIsBulkWorking(false);
   }
-}, [bulkColor, bulkStatus, refetch, selectedIds]);
+}, [bulkColor, bulkStatus, queryClient, selectedIds]);
 
 const deleteSelected = useCallback(async () => {
   if (!selectedIds.length) return;
@@ -707,7 +798,11 @@ const deleteSelected = useCallback(async () => {
       done += chunk.length;
       setBulkProgress({ current: done, total: selectedIds.length });
     }
-    await refetch();
+    const selectedSet = new Set(selectedIds);
+    queryClient.setQueryData(['userPointsAll'], (prev: any) => {
+      const arr = Array.isArray(prev) ? prev : [];
+      return arr.filter((p: any) => !selectedSet.has(Number(p?.id)));
+    });
     setSelectedIds([]);
     setSelectionMode(false);
   } catch {
@@ -717,7 +812,7 @@ const deleteSelected = useCallback(async () => {
     setBulkProgress(null);
     setShowConfirmDeleteSelected(false);
   }
-}, [refetch, selectedIds]);
+}, [queryClient, selectedIds]);
 
 const deleteAll = useCallback(async () => {
   const allIds = points.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
@@ -733,7 +828,7 @@ const deleteAll = useCallback(async () => {
       done += chunk.length;
       setBulkProgress({ current: done, total: allIds.length });
     }
-    await refetch();
+    queryClient.setQueryData(['userPointsAll'], []);
     exitSelectionMode();
   } catch {
     // noop
@@ -742,7 +837,7 @@ const deleteAll = useCallback(async () => {
     setBulkProgress(null);
     setShowConfirmDeleteAll(false);
   }
-}, [exitSelectionMode, points, refetch]);
+}, [exitSelectionMode, points, queryClient]);
 
   const handleMapPress = useCallback(
     (coords: { lat: number; lng: number }) => {
@@ -784,7 +879,7 @@ const deleteAll = useCallback(async () => {
       setManualError('Укажите координаты');
       return;
     }
-    if (!manualCategory) {
+    if ((manualCategoryIds || []).length === 0) {
       setManualError('Выберите категорию');
       return;
     }
@@ -797,24 +892,31 @@ const deleteAll = useCallback(async () => {
         latitude: manualCoords.lat,
         longitude: manualCoords.lng,
         color: manualColor,
-        category: manualCategory,
+        categoryIds: manualCategoryIds,
         status: manualStatus,
       };
 
       if (editingPointId) {
-        await userPointsApi.updatePoint(editingPointId, payload);
+        const updated = await userPointsApi.updatePoint(editingPointId, payload);
+        queryClient.setQueryData(['userPointsAll'], (prev: any) => {
+          const arr = Array.isArray(prev) ? prev : [];
+          return arr.map((p: any) => (Number(p?.id) === Number(editingPointId) ? updated : p));
+        });
       } else {
-        await userPointsApi.createPoint(payload);
+        const created = await userPointsApi.createPoint(payload);
+        queryClient.setQueryData(['userPointsAll'], (prev: any) => {
+          const arr = Array.isArray(prev) ? prev : [];
+          return [created, ...arr];
+        });
       }
 
       closeManualAdd();
-      await refetch();
     } catch (e) {
       setManualError(e instanceof Error ? e.message : 'Не удалось сохранить точку');
     } finally {
       setIsSavingManual(false);
     }
-  }, [closeManualAdd, editingPointId, manualAddress, manualCategory, manualColor, manualCoords, manualName, manualStatus, refetch]);
+  }, [closeManualAdd, editingPointId, manualAddress, manualCategoryIds, manualColor, manualCoords, manualName, manualStatus, queryClient]);
 
   const confirmDeletePoint = useCallback(async () => {
     const id = Number(pointToDelete?.id);
@@ -826,14 +928,17 @@ const deleteAll = useCallback(async () => {
     setIsBulkWorking(true);
     try {
       await userPointsApi.deletePoint(id);
-      await refetch();
+      queryClient.setQueryData(['userPointsAll'], (prev: any) => {
+        const arr = Array.isArray(prev) ? prev : [];
+        return arr.filter((p: any) => Number(p?.id) !== id);
+      });
     } catch {
       // noop
     } finally {
       setIsBulkWorking(false);
       setPointToDelete(null);
     }
-  }, [pointToDelete, refetch]);
+  }, [pointToDelete, queryClient]);
 
   const handleOpenRecommendations = useCallback(async () => {
     recommendationsAbortRef.current?.abort();
@@ -991,15 +1096,15 @@ const deleteAll = useCallback(async () => {
         isNarrow={isNarrow}
         isMobile={isMobile}
         total={points.length}
-        found={filteredPoints.length}
+        found={visibleFilteredPoints.length}
         hasActiveFilters={hasActiveFilters}
         onResetFilters={handleResetFilters}
         activeFilterChips={activeFilterChips}
         onRemoveFilterChip={handleRemoveFilterChip}
         viewMode={viewMode}
-        onViewModeChange={() => {}} // No-op since view is fixed to map
+        onViewModeChange={() => {}}
         showFilters={showFilters}
-        onToggleFilters={() => setShowFilters((v) => !v)}
+        onToggleFilters={() => setShowFilters((prev) => !prev)}
         showMapSettings={showMapSettings}
         onToggleMapSettings={() => setShowMapSettings((v) => !v)}
         onOpenActions={() => {
@@ -1051,50 +1156,6 @@ useEffect(() => {
 }, [manualNameTouched, showManualAdd, suggestManualName]);
 
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      {error ? (
-        <>
-          <Text style={styles.emptyText}>Не удалось загрузить точки</Text>
-          <Text style={styles.emptySubtext}>Проверьте подключение и попробуйте ещё раз</Text>
-          <View style={styles.emptyActionsRow}>
-            <TouchableOpacity
-              style={[styles.retryButton, styles.emptyActionButton]}
-              onPress={() => refetch()}
-              accessibilityRole="button"
-              accessibilityLabel="Повторить"
-            >
-              <Text style={styles.retryButtonText}>Повторить</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      ) : (
-        <>
-          <Text style={styles.emptyText}>Точки не найдены</Text>
-          <Text style={styles.emptySubtext}>Импортируйте точки или добавьте вручную</Text>
-          <View style={styles.emptyActionsRow}>
-            <TouchableOpacity
-              style={[styles.retryButton, styles.emptyActionButton]}
-              onPress={() => onImportPress?.()}
-              accessibilityRole="button"
-              accessibilityLabel="Импорт"
-            >
-              <Text style={styles.retryButtonText}>Импорт</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.secondaryButton, styles.emptyActionButton]}
-              onPress={openManualAdd}
-              accessibilityRole="button"
-              accessibilityLabel="Добавить вручную"
-            >
-              <Text style={styles.secondaryButtonText}>Добавить вручную</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
-    </View>
-  );
-
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
       <PointsListItem
@@ -1110,12 +1171,30 @@ useEffect(() => {
         onToggleSelect={toggleSelect}
       />
     ),
-    [activeDriveInfo, activePointId, listColumns, handleShowPointOnMap, openEditPoint, requestDeletePoint, selectedIdSet, selectionMode, toggleSelect]
+    [
+      activeDriveInfo, 
+      activePointId, 
+      listColumns, 
+      handleShowPointOnMap, 
+      openEditPoint, 
+      requestDeletePoint, 
+      selectedIdSet, 
+      selectionMode, 
+      toggleSelect
+    ]
   );
 
   const renderFooter = useCallback(() => {
     return null
   }, [])
+
+  const renderEmpty = useCallback(() => {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>Нет точек</Text>
+      </View>
+    );
+  }, [styles.emptyContainer, styles.emptyText]);
 
   return (
     <View style={styles.container}>
@@ -1552,14 +1631,11 @@ useEffect(() => {
               <FormFieldWithValidation label="Категория" required>
                 <SimpleMultiSelect
                   data={(siteCategoryOptionsQuery.data ?? []).map((cat) => ({
-                    value: cat.name,
+                    value: cat.id,
                     label: cat.name,
                   }))}
-                  value={manualCategory ? [manualCategory] : []}
-                  onChange={(vals) => {
-                    const v = vals[vals.length - 1];
-                    if (typeof v === 'string') setManualCategory(v);
-                  }}
+                  value={manualCategoryIds}
+                  onChange={(vals) => setManualCategoryIds(vals.filter((v): v is string => typeof v === 'string'))}
                   labelField="label"
                   valueField="value"
                   search={false}

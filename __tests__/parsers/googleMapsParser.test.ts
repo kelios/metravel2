@@ -62,7 +62,7 @@ describe('Google Maps Parser', () => {
       };
 
       const result = (GoogleMapsParser as any).parseJSON(JSON.stringify(jsonData));
-      expect(result[0].category).toBe('');
+      expect(result[0].categoryIds).toEqual([]);
     });
 
     it('should handle invalid JSON gracefully', () => {

@@ -43,7 +43,17 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   const coordsText = hasCoords
     ? `${Number(point.latitude).toFixed(6)}, ${Number(point.longitude).toFixed(6)}`
     : '';
-  const categoryLabel = String((point as any)?.category ?? '').trim();
+  const categoryLabel = React.useMemo(() => {
+    const names = (point as any)?.categoryNames;
+    if (Array.isArray(names) && names.length > 0) {
+      return names.map((v: any) => String(v).trim()).filter(Boolean).join(', ');
+    }
+    const ids = (point as any)?.categoryIds;
+    if (Array.isArray(ids) && ids.length > 0) {
+      return ids.map((v: any) => String(v).trim()).filter(Boolean).join(', ');
+    }
+    return String((point as any)?.category ?? '').trim();
+  }, [point]);
   const countryLabel = React.useMemo(() => {
     try {
       const direct = String((point as any)?.country ?? '').trim();
@@ -470,11 +480,29 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
             {Platform.OS === 'web' && mapUrls ? (
               <View style={{ marginTop: 10 } as any}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' } as any}>
-                  <WebChip label="Google" onActivate={() => void openExternalUrl(mapUrls.google)} />
-                  <WebChip label="Apple" onActivate={() => void openExternalUrl(mapUrls.apple)} />
-                  <WebChip label="Яндекс" onActivate={() => void openExternalUrl(mapUrls.yandex)} />
-                  <WebChip label="OSM" onActivate={() => void openExternalUrl(mapUrls.osm)} />
+                <View
+                  style={
+                    {
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      marginTop: 6,
+                      flexWrap: 'nowrap',
+                    } as any
+                  }
+                >
+                  <View style={{ flexShrink: 0 } as any}>
+                    <WebChip label="Google" onActivate={() => void openExternalUrl(mapUrls.google)} />
+                  </View>
+                  <View style={{ flexShrink: 0 } as any}>
+                    <WebChip label="Apple" onActivate={() => void openExternalUrl(mapUrls.apple)} />
+                  </View>
+                  <View style={{ flexShrink: 0 } as any}>
+                    <WebChip label="Яндекс" onActivate={() => void openExternalUrl(mapUrls.yandex)} />
+                  </View>
+                  <View style={{ flexShrink: 0 } as any}>
+                    <WebChip label="OSM" onActivate={() => void openExternalUrl(mapUrls.osm)} />
+                  </View>
                 </View>
               </View>
             ) : null}
@@ -704,12 +732,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.border,
     backgroundColor: colors.surface,
     borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
   },
   webChipText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
     color: colors.text,
   },
   rating: {

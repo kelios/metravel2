@@ -97,7 +97,17 @@ const PointMarkerWeb = React.memo(
       }
     }, [point]);
 
-    const categoryLabel = React.useMemo(() => String((point as any)?.category ?? '').trim(), [point]);
+    const categoryLabel = React.useMemo(() => {
+      const names = (point as any)?.categoryNames;
+      if (Array.isArray(names) && names.length > 0) {
+        return names.map((v: any) => String(v).trim()).filter(Boolean).join(', ');
+      }
+      const ids = (point as any)?.categoryIds;
+      if (Array.isArray(ids) && ids.length > 0) {
+        return ids.map((v: any) => String(v).trim()).filter(Boolean).join(', ');
+      }
+      return String((point as any)?.category ?? '').trim();
+    }, [point]);
     const colorLabel = React.useMemo(() => String((point as any)?.color ?? '').trim(), [point]);
     const markerAccentColor = React.useMemo(
       () => String((point as any)?.color ?? '').trim() || colors.backgroundTertiary,
@@ -508,8 +518,7 @@ const PointMarkerWeb = React.memo(
                 </div>
 
                 <div style={{ marginTop: 10 }}>
-                  <div style={{ overflowX: 'auto', overflowY: 'hidden' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
                     {mapLinks.map((p) => (
                       <div
                         key={p.key}
@@ -550,20 +559,19 @@ const PointMarkerWeb = React.memo(
                           background: colors.surface,
                           color: colors.text,
                           borderRadius: 999,
-                          padding: '6px 12px',
+                          padding: '4px 8px',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           cursor: 'pointer',
-                          fontSize: 12,
-                          lineHeight: '14px',
+                          fontSize: 11,
+                          lineHeight: '13px',
                           flexShrink: 0,
                         }}
                       >
                         {p.key}
                       </div>
                     ))}
-                    </div>
                   </div>
                 </div>
               </div>

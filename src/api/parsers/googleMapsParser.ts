@@ -73,8 +73,9 @@ export class GoogleMapsParser {
         longitude: coords[0],
         address,
         color: this.mapGoogleCategoryToColor(props.Category),
-        category: '',
+        categoryIds: [],
         status: this.mapGoogleStatusToStatus(props.Category),
+        source: 'google_maps',
         originalId: props['Google Maps URL'],
         importedAt: new Date().toISOString(),
         rating: props.rating,
@@ -166,8 +167,9 @@ export class GoogleMapsParser {
       latitude: lat,
       longitude: lng,
       color,
-      category: '',
+      categoryIds: [],
       status,
+      source: 'google_maps',
       importedAt: new Date().toISOString(),
     };
   }

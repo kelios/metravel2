@@ -77,9 +77,9 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const toggleSiteCategory = (id: string) => {
-    const current = filters.siteCategories || [];
+    const current = filters.categoryIds || [];
     const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id];
-    onChange({ ...filters, siteCategories: next });
+    onChange({ ...filters, categoryIds: next });
   };
 
   const toggleColor = (color: string) => {
@@ -88,7 +88,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
     onChange({ ...filters, colors: next });
   };
 
-  const activeCategoryCount = (filters.siteCategories || []).length;
+  const activeCategoryCount = (filters.categoryIds || []).length;
   const activeColorCount = (filters.colors || []).length;
 
   const radiusOptions = [100, 150, 200, 300, 500, null]; // null = all points
@@ -199,7 +199,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
           {Platform.OS === 'web' ? (
             <View style={styles.chipWrapRow}>
               {siteCategoryOptions.map((cat) => {
-                const isSelected = filters.siteCategories?.includes(cat.id);
+                const isSelected = filters.categoryIds?.includes(cat.id);
                 return (
                   <TouchableOpacity
                     key={cat.id}
@@ -219,7 +219,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
               contentContainerStyle={styles.chipRow}
             >
               {siteCategoryOptions.map((cat) => {
-                const isSelected = filters.siteCategories?.includes(cat.id);
+                const isSelected = filters.categoryIds?.includes(cat.id);
                 return (
                   <TouchableOpacity
                     key={cat.id}

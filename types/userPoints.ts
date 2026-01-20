@@ -15,7 +15,11 @@ export interface ImportedPoint {
   longitude: number;
   address?: string | null;
   color: string;
-  category: string;
+  categoryIds?: string[];
+  category_ids?: string[];
+  categoryId?: string | number | null;
+  category_id?: string | number | null;
+  category?: string | null;
   status: PointStatus;
   source: 'google_maps' | 'osm';
   original_id?: string | null;
@@ -49,7 +53,7 @@ export interface ParsedPoint {
   longitude: number;
   address?: string;
   color: string;
-  category: string;
+  categoryIds?: string[];
   status: PointStatus;
   source: 'google_maps' | 'osm';
   originalId?: string;
@@ -59,6 +63,7 @@ export interface ParsedPoint {
 
 export interface PointFilters {
   colors?: string[];
+  categoryIds?: string[];
   siteCategories?: string[];
   statuses?: PointStatus[];
   radiusKm?: number | null; // null = all points, number = radius in km
@@ -131,7 +136,7 @@ export interface RecommendationRequest {
   maxDistance?: number;
   maxDuration?: number;
   preferredColors?: string[];
-  preferredCategories?: string[];
+  preferredCategoryIds?: string[];
   excludeVisited?: boolean;
   currentLocation?: { lat: number; lng: number };
   timeOfDay?: 'morning' | 'afternoon' | 'evening';
@@ -151,7 +156,7 @@ export interface RecommendationResponse {
 export interface UserPointsStats {
   total: number;
   byColor: Record<string, number>;
-  byCategory: Record<string, number>;
+  byCategoryId: Record<string, number>;
   byStatus: Record<PointStatus, number>;
   visited: number;
   toVisit: number;

@@ -8,7 +8,7 @@ type MockPoint = {
   longitude: number;
   color: string;
   status: string;
-  category: string;
+  categoryIds: string[];
   address?: string;
 };
 
@@ -145,7 +145,7 @@ test.describe('User points', () => {
       longitude: 19.93658,
       color: 'red',
       status: 'planned',
-      category: 'other',
+      categoryIds: ['other'],
       address: 'Kraków',
     });
 
@@ -237,16 +237,16 @@ test.describe('User points', () => {
       longitude: 19.95,
       color: 'red',
       status: 'planned',
-      category: 'other',
+      categoryIds: ['other'],
       address: 'A',
     });
     api.addPoint({
       name: uniqueName('Point B'),
-      latitude: 50.32,
+      latitude: 50.12,
       longitude: 20.12,
       color: 'green',
       status: 'planned',
-      category: 'other',
+      categoryIds: ['other'],
       address: 'B',
     });
 
@@ -301,7 +301,7 @@ test.describe('User points', () => {
       longitude: 19.93658,
       color: 'red',
       status: 'planned',
-      category: 'other',
+      categoryIds: ['other'],
       address: 'Kraków',
     });
 
@@ -375,7 +375,13 @@ test.describe('User points', () => {
           longitude: Number(body?.longitude),
           color: String(body?.color ?? 'blue'),
           status: String(body?.status ?? 'planning'),
-          category: String(body?.category ?? 'other'),
+          categoryIds: Array.isArray(body?.categoryIds)
+            ? body.categoryIds.map((v: any) => String(v))
+            : Array.isArray(body?.category_ids)
+              ? body.category_ids.map((v: any) => String(v))
+              : body?.category
+                ? [String(body.category)]
+                : ['other'],
           address: body?.address ? String(body.address) : undefined,
         };
 
@@ -520,7 +526,7 @@ test.describe('User points', () => {
           longitude: 21.0122,
           color: 'blue',
           status: 'planning',
-          category: 'other',
+          categoryIds: ['other'],
         });
         api.addPoint({
           name: pointNameB,
@@ -528,7 +534,7 @@ test.describe('User points', () => {
           longitude: 19.945,
           color: 'blue',
           status: 'planning',
-          category: 'other',
+          categoryIds: ['other'],
         });
 
         // Ensure UI refetches after seeding (React Query won't auto-update from in-memory mock).
@@ -579,7 +585,7 @@ test.describe('User points', () => {
       longitude: 37.6,
       color: 'blue',
       status: 'planning',
-      category: 'other',
+      categoryIds: ['other'],
     });
     api.addPoint({
       name: pointNameB,
@@ -587,7 +593,7 @@ test.describe('User points', () => {
       longitude: 37.61,
       color: 'blue',
       status: 'planning',
-      category: 'other',
+      categoryIds: ['other'],
     });
     api.addPoint({
       name: pointNameC,
@@ -595,7 +601,7 @@ test.describe('User points', () => {
       longitude: 37.62,
       color: 'blue',
       status: 'planning',
-      category: 'other',
+      categoryIds: ['other'],
     });
 
     await page.addInitScript(seedNecessaryConsent);

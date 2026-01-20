@@ -133,6 +133,6 @@ describe('PointsList (manual create)', () => {
     });
 
     const payload = mockCreatePoint.mock.calls[0][0];
-    expect(payload.category).toBe('Food');
+    expect(payload.categoryIds).toEqual(['Food']);
   });
 });

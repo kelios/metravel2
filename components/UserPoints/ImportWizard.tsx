@@ -153,7 +153,10 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
           <View key={index} style={styles.previewItem}>
             <Text style={styles.previewName}>{point.name}</Text>
             <Text style={styles.previewDetails}>
-              {point.category} • {point.color}
+              {Array.isArray((point as any)?.categoryIds) && (point as any).categoryIds.length > 0
+                ? (point as any).categoryIds.join(', ')
+                : ''}{' '}
+              • {point.color}
             </Text>
           </View>
         ))}
