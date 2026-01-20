@@ -10,8 +10,9 @@ export const PointsListItem: React.FC<{
   layout?: 'list' | 'grid'
   selectionMode?: boolean
   selected?: boolean
+  active?: boolean
   onToggleSelect?: (point: any) => void
-}> = ({ point, onPress, onEdit, onDelete, layout, selectionMode, selected, onToggleSelect }) => {
+}> = ({ point, onPress, onEdit, onDelete, layout, selectionMode, selected, active, onToggleSelect }) => {
   return (
     <PointCard
       point={point}
@@ -21,6 +22,7 @@ export const PointsListItem: React.FC<{
       layout={layout}
       selectionMode={selectionMode}
       selected={selected}
+      active={active}
       onToggleSelect={onToggleSelect}
     />
   )

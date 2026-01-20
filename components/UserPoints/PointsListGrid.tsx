@@ -1,8 +1,10 @@
-import React from 'react'
-import { FlatList, TouchableOpacity, View } from 'react-native'
+import React, { useMemo } from 'react'
+import { FlatList, Platform, StyleSheet, View, TouchableOpacity, useWindowDimensions, ScrollView, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { PointsMap } from '@/components/UserPoints/PointsMap'
+import { useThemedColors } from '@/hooks/useTheme'
+import { useMapPanelStore } from '@/stores/mapPanelStore'
 
 import type { PointsListStyles } from './PointsList'
 
@@ -37,6 +39,11 @@ export const PointsListGrid: React.FC<{
 
   isLocating: boolean
   onLocateMe: () => void
+
+  showingRecommendations: boolean
+  onCloseRecommendations: () => void
+  activePointId?: number | null
+  recommendedRoutes?: Record<number, { distance: number; duration: number }>
 }> = ({
   styles,
   colors,
@@ -58,7 +65,34 @@ export const PointsListGrid: React.FC<{
   manualColor,
   isLocating,
   onLocateMe,
+  showingRecommendations,
+  onCloseRecommendations,
+  activePointId,
+  recommendedRoutes,
 }) => {
+  const { width: windowWidth } = useWindowDimensions()
+  const isWeb = Platform.OS === 'web'
+  const isWideScreen = isWeb && windowWidth >= 1024
+  const themedColors = useThemedColors()
+  const localStyles = useMemo(() => createLocalStyles(themedColors), [themedColors])
+  const [panelTab, setPanelTab] = React.useState<'filters' | 'list'>('list')
+  const [showMobilePanel, setShowMobilePanel] = React.useState(false)
+  const toggleNonce = useMapPanelStore((s) => s.toggleNonce)
+  
+  // Auto-switch to list tab when showing recommendations
+  React.useEffect(() => {
+    if (showingRecommendations) {
+      setPanelTab('list');
+    }
+  }, [showingRecommendations]);
+  
+  // Listen to map panel toggle for mobile
+  React.useEffect(() => {
+    if (toggleNonce > 0 && !isWideScreen) {
+      setShowMobilePanel((prev) => !prev);
+    }
+  }, [toggleNonce, isWideScreen]);
+
   if (viewMode === 'list') {
     const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
     return (
@@ -79,22 +113,196 @@ export const PointsListGrid: React.FC<{
     )
   }
 
+  // Map mode with right panel for wide screens
+  if (isWideScreen) {
+    return (
+      <View style={localStyles.mapLayoutContainer}>
+        <View style={localStyles.mapMainContent}>
+          <View style={styles.mapInner}>
+            <PointsMap
+              points={filteredPoints}
+              center={currentLocation ?? undefined}
+              onMapPress={onMapPress}
+              onEditPoint={onPointEdit}
+              onDeletePoint={onPointDelete}
+              pendingMarker={showManualAdd ? manualCoords : null}
+              pendingMarkerColor={manualColor}
+              activePointId={activePointId ?? undefined}
+            />
+
+            <TouchableOpacity
+              style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
+              onPress={onLocateMe}
+              disabled={isLocating}
+              accessibilityRole="button"
+              accessibilityLabel="Моё местоположение"
+            >
+              <Feather name="crosshair" size={20} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={localStyles.mapRightPanel}>
+          <View style={localStyles.panelTabs}>
+            <TouchableOpacity
+              style={[localStyles.panelTab, panelTab === 'filters' && localStyles.panelTabActive]}
+              onPress={() => setPanelTab('filters')}
+              accessibilityRole="button"
+              accessibilityLabel="Фильтры"
+            >
+              <RNText style={[localStyles.panelTabText, panelTab === 'filters' && localStyles.panelTabTextActive]}>
+                Фильтры
+              </RNText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[localStyles.panelTab, panelTab === 'list' && localStyles.panelTabActive]}
+              onPress={() => setPanelTab('list')}
+              accessibilityRole="button"
+              accessibilityLabel="Список"
+            >
+              <RNText style={[localStyles.panelTabText, panelTab === 'list' && localStyles.panelTabTextActive]}>
+                Список ({filteredPoints.length})
+              </RNText>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView 
+            style={localStyles.rightPanelScroll}
+            contentContainerStyle={localStyles.rightPanelContent}
+            showsVerticalScrollIndicator={true}
+          >
+            {panelTab === 'filters' && renderHeader()}
+            
+            {panelTab === 'list' && (
+              <View style={localStyles.pointsList}>
+                {showingRecommendations && (
+                  <View style={localStyles.recommendationsHeader}>
+                    <RNText style={localStyles.recommendationsTitle}>
+                      Куда поехать сегодня
+                    </RNText>
+                    <TouchableOpacity
+                      style={localStyles.closeRecommendationsButton}
+                      onPress={onCloseRecommendations}
+                      accessibilityRole="button"
+                      accessibilityLabel="Закрыть рекомендации"
+                    >
+                      <RNText style={localStyles.closeRecommendationsText}>
+                        Показать все
+                      </RNText>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {filteredPoints.map((point) => {
+                  const routeInfo = recommendedRoutes?.[Number(point.id)];
+                  return (
+                    <View key={point.id} style={localStyles.pointsListItem}>
+                      {renderItem({ item: point })}
+                      {showingRecommendations && routeInfo && (
+                        <View style={localStyles.routeInfo}>
+                          <RNText style={localStyles.routeInfoText}>
+                            {routeInfo.distance} км · ~{routeInfo.duration} мин
+                          </RNText>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    )
+  }
+
+  // Map mode for mobile/narrow screens
   return (
     <View style={styles.mapContainer}>
-      {renderHeader()}
-      <View style={styles.mapInner}>
-        <PointsMap
-          points={filteredPoints}
-          center={currentLocation ?? undefined}
-          onMapPress={onMapPress}
-          onEditPoint={onPointEdit}
-          onDeletePoint={onPointDelete}
-          pendingMarker={showManualAdd ? manualCoords : null}
-          pendingMarkerColor={manualColor}
-        />
+      {showMobilePanel ? (
+        <View style={localStyles.mobilePanelContainer}>
+          <View style={localStyles.panelTabs}>
+            <TouchableOpacity
+              style={[localStyles.panelTab, panelTab === 'filters' && localStyles.panelTabActive]}
+              onPress={() => setPanelTab('filters')}
+              accessibilityRole="button"
+              accessibilityLabel="Фильтры"
+            >
+              <RNText style={[localStyles.panelTabText, panelTab === 'filters' && localStyles.panelTabTextActive]}>
+                Фильтры
+              </RNText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[localStyles.panelTab, panelTab === 'list' && localStyles.panelTabActive]}
+              onPress={() => setPanelTab('list')}
+              accessibilityRole="button"
+              accessibilityLabel="Список"
+            >
+              <RNText style={[localStyles.panelTabText, panelTab === 'list' && localStyles.panelTabTextActive]}>
+                Список ({filteredPoints.length})
+              </RNText>
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView 
+            style={localStyles.rightPanelScroll}
+            contentContainerStyle={localStyles.rightPanelContent}
+            showsVerticalScrollIndicator={true}
+          >
+            {panelTab === 'filters' && renderHeader()}
+            
+            {panelTab === 'list' && (
+              <View style={localStyles.pointsList}>
+                {showingRecommendations && (
+                  <View style={localStyles.recommendationsHeader}>
+                    <RNText style={localStyles.recommendationsTitle}>
+                      Куда поехать сегодня
+                    </RNText>
+                    <TouchableOpacity
+                      style={localStyles.closeRecommendationsButton}
+                      onPress={onCloseRecommendations}
+                      accessibilityRole="button"
+                      accessibilityLabel="Закрыть рекомендации"
+                    >
+                      <RNText style={localStyles.closeRecommendationsText}>
+                        Показать все
+                      </RNText>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {filteredPoints.map((point) => {
+                  const routeInfo = recommendedRoutes?.[Number(point.id)];
+                  return (
+                    <View key={point.id} style={localStyles.pointsListItem}>
+                      {renderItem({ item: point })}
+                      {showingRecommendations && routeInfo && (
+                        <View style={localStyles.routeInfo}>
+                          <RNText style={localStyles.routeInfoText}>
+                            {routeInfo.distance} км · ~{routeInfo.duration} мин
+                          </RNText>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      ) : (
+        <View style={styles.mapInner}>
+          <PointsMap
+            points={filteredPoints}
+            center={currentLocation ?? undefined}
+            onMapPress={onMapPress}
+            onEditPoint={onPointEdit}
+            onDeletePoint={onPointDelete}
+            pendingMarker={showManualAdd ? manualCoords : null}
+            pendingMarkerColor={manualColor}
+            activePointId={activePointId ?? undefined}
+          />
 
-        <TouchableOpacity
-          style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
+          <TouchableOpacity
+            style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
           onPress={onLocateMe}
           disabled={isLocating}
           accessibilityRole="button"
@@ -102,7 +310,109 @@ export const PointsListGrid: React.FC<{
         >
           <Feather name="crosshair" size={20} color={colors.text} />
         </TouchableOpacity>
-      </View>
+        </View>
+      )}
     </View>
   )
 }
+
+const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+  mapLayoutContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  mapMainContent: {
+    flex: 1,
+  },
+  mapRightPanel: {
+    width: 420,
+    borderLeftWidth: 1,
+    borderLeftColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  mobilePanelContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  panelTabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  panelTab: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  panelTabActive: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  panelTabText: {
+    fontSize: 14,
+    fontWeight: '600' as any,
+    color: colors.textMuted,
+  },
+  panelTabTextActive: {
+    color: colors.primary,
+    fontWeight: '700' as any,
+  },
+  rightPanelScroll: {
+    flex: 1,
+  },
+  rightPanelContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  pointsList: {
+    gap: 12,
+  },
+  pointsListItem: {
+    marginBottom: 8,
+  },
+  recommendationsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  recommendationsTitle: {
+    fontSize: 16,
+    fontWeight: '700' as any,
+    color: colors.text,
+  },
+  closeRecommendationsButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 6,
+  },
+  closeRecommendationsText: {
+    fontSize: 14,
+    fontWeight: '600' as any,
+    color: colors.textOnPrimary,
+  },
+  routeInfo: {
+    marginTop: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primary,
+  },
+  routeInfoText: {
+    fontSize: 13,
+    fontWeight: '600' as any,
+    color: colors.text,
+  },
+});

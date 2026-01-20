@@ -9,6 +9,11 @@ import type { PointsListStyles } from './PointsList'
 
 type ViewMode = 'list' | 'map'
 
+type ActiveFilterChip = {
+  key: string
+  label: string
+}
+
 type PointsListHeaderProps = {
   styles: PointsListStyles
   colors: {
@@ -19,9 +24,21 @@ type PointsListHeaderProps = {
   isNarrow: boolean
   isMobile: boolean
   total: number
+  found: number
+
+  hasActiveFilters: boolean
+  onResetFilters: () => void
+
+  activeFilterChips: ActiveFilterChip[]
+  onRemoveFilterChip: (key: string) => void
 
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
+
+  /** Web desktop layout: right panel tabs (filters/list) */
+  panelTab?: 'filters' | 'list'
+  onPanelTabChange?: (tab: 'filters' | 'list') => void
+  hideViewToggle?: boolean
 
   showFilters: boolean
   onToggleFilters: () => void
@@ -37,6 +54,7 @@ type PointsListHeaderProps = {
 
   siteCategoryOptions: Array<{ id: string; name: string }>
   availableStatuses?: string[]
+  availableColors?: string[]
 }
 
 export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
@@ -45,8 +63,16 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   isNarrow,
   isMobile,
   total,
+  found,
+  hasActiveFilters,
+  onResetFilters,
+  activeFilterChips,
+  onRemoveFilterChip,
   viewMode,
   onViewModeChange,
+  panelTab,
+  onPanelTabChange,
+  hideViewToggle,
   showFilters,
   onToggleFilters,
   onOpenActions,
@@ -57,108 +83,50 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   onFilterChange,
   siteCategoryOptions,
   availableStatuses,
+  availableColors,
 }) => {
   return (
     <View style={styles.header}>
-      <View style={[styles.titleRow, isNarrow && styles.titleRowNarrow]}>
-        <View>
-          <Text style={styles.title}>Мои точки</Text>
-          <Text style={styles.subtitle}>Всего: {total || 0} точек</Text>
-        </View>
+      <View style={styles.titleContainer}>
+        <Text style={styles.title}>Мои точки</Text>
+        <Text style={styles.subtitle}>
+          Всего: {total || 0} точек · Найдено: {found || 0}
+        </Text>
+      </View>
 
-        <View style={isNarrow ? styles.headerActionsNarrow : styles.headerActions}>
+      <View style={styles.headerActionsRow}>
+        <View style={styles.buttonRow}>
           <TouchableOpacity
-            style={[styles.headerButton, isMobile && styles.headerIconButton]}
+            style={[styles.headerButton, styles.headerIconButton]}
             onPress={onOpenActions}
             accessibilityRole="button"
-            accessibilityLabel="Добавить"
+            accessibilityLabel="Управление точками"
           >
-            {isMobile ? (
-              <Feather name="plus" size={18} color={colors.text} />
-            ) : (
-              <Text style={styles.headerButtonText}>Добавить</Text>
-            )}
+            <Feather name="settings" size={18} color={colors.text} />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.headerButton, isMobile && styles.headerIconButton]}
+            style={[styles.headerButton, styles.headerIconButton]}
             onPress={onToggleFilters}
             accessibilityRole="button"
             accessibilityLabel={showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
           >
-            {isMobile ? (
-              <Feather name="filter" size={18} color={colors.text} />
-            ) : (
-              <Text style={styles.headerButtonText}>
-                {showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
-              </Text>
-            )}
+            <Feather name={showFilters ? 'eye-off' : 'eye'} size={18} color={colors.text} />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.recoOpenButton, isMobile && styles.headerIconButtonPrimary]}
-            onPress={onOpenRecommendations}
-            accessibilityRole="button"
-            accessibilityLabel="Куда поехать сегодня"
-          >
-            {isMobile ? (
-              <Feather name="compass" size={18} color={colors.textOnPrimary} />
-            ) : (
-              <Text style={styles.recoOpenButtonText}>Куда поехать сегодня</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.viewToggle}>
-            <TouchableOpacity
-              style={[
-                styles.viewButton,
-                isMobile && styles.viewIconButton,
-                viewMode === 'list' && styles.viewButtonActive,
-              ]}
-              onPress={() => onViewModeChange('list')}
-              accessibilityRole="button"
-              accessibilityLabel="Список"
-            >
-              {isMobile ? (
-                <Feather
-                  name="list"
-                  size={18}
-                  color={viewMode === 'list' ? colors.textOnPrimary : colors.textMuted}
-                />
-              ) : (
-                <Text
-                  style={[styles.viewButtonText, viewMode === 'list' && styles.viewButtonTextActive]}
-                >
-                  Список
-                </Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.viewButton,
-                isMobile && styles.viewIconButton,
-                viewMode === 'map' && styles.viewButtonActive,
-              ]}
-              onPress={() => onViewModeChange('map')}
-              accessibilityRole="button"
-              accessibilityLabel="Карта"
-            >
-              {isMobile ? (
-                <Feather
-                  name="map"
-                  size={18}
-                  color={viewMode === 'map' ? colors.textOnPrimary : colors.textMuted}
-                />
-              ) : (
-                <Text
-                  style={[styles.viewButtonText, viewMode === 'map' && styles.viewButtonTextActive]}
-                >
-                  Карта
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
         </View>
+
+        <TouchableOpacity
+          style={[styles.recoOpenButton, isMobile && styles.headerIconButtonPrimary]}
+          onPress={onOpenRecommendations}
+          accessibilityRole="button"
+          accessibilityLabel="3 случайные точки"
+        >
+          {isMobile ? (
+            <Feather name="compass" size={18} color={colors.textOnPrimary} />
+          ) : (
+            <Text style={styles.recoOpenButtonText}>3 случайные точки</Text>
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchContainer}>
@@ -171,14 +139,49 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
         />
       </View>
 
-      {showFilters && (
+      {hasActiveFilters ? (
+        <View style={{ marginBottom: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={[styles.subtitle, { marginBottom: 6 } as any]}>Активные фильтры</Text>
+            <TouchableOpacity
+              style={[styles.headerButton, isMobile && styles.headerIconButton]}
+              onPress={onResetFilters}
+              accessibilityRole="button"
+              accessibilityLabel="Сбросить фильтры"
+            >
+              {isMobile ? (
+                <Feather name="x" size={18} color={colors.text} />
+              ) : (
+                <Text style={styles.headerButtonText}>Сбросить</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+            {activeFilterChips.map((chip) => (
+              <TouchableOpacity
+                key={chip.key}
+                style={[styles.webChip, { marginRight: 8, marginBottom: 8 } as any]}
+                onPress={() => onRemoveFilterChip(chip.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`Убрать фильтр: ${chip.label}`}
+              >
+                <Text style={styles.webChipText}>{chip.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {showFilters ? (
         <PointFilters
           filters={filters}
           onChange={onFilterChange}
           siteCategoryOptions={siteCategoryOptions}
           availableStatuses={availableStatuses}
+          availableColors={availableColors}
         />
-      )}
+      ) : null}
     </View>
   )
 }

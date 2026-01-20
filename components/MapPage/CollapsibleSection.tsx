@@ -1,7 +1,7 @@
 // components/MapPage/CollapsibleSection.tsx
 import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, LayoutAnimation, Platform, UIManager } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -60,7 +60,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
       >
         <View style={styles.collapsibleTitle}>
           {icon && (
-            <MaterialIcons name={icon as any} size={18} color={colors.text} style={styles.titleIcon} />
+            <Feather name={icon as any} size={18} color={colors.text} style={styles.titleIcon} />
           )}
           <Text style={styles.sectionLabel}>{title}</Text>
           {badge !== undefined && badge !== null && badge !== '' && (
@@ -69,11 +69,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
             </View>
           )}
         </View>
-        <MaterialIcons
-          name={open ? 'expand-less' : 'expand-more'}
-          size={20}
-          color={colors.textMuted}
-        />
+        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
       </Pressable>
       {open && (
         <View style={styles.collapsibleContent} testID={`collapsible-content-${title}`}>

@@ -38,6 +38,7 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
 
   if (isMobile) {
     const isMap = pathname === '/map';
+    const isUserPoints = pathname === '/userpoints';
     const canOpenSections = typeof pathname === 'string' && pathname.startsWith('/travels/');
     return (
       <View testID={testID ?? 'header-context-bar'} style={containerStyle}>
@@ -61,11 +62,11 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
             {model.currentTitle}
           </Text>
 
-          {isMap ? (
+          {isMap || isUserPoints ? (
             <Pressable
               onPress={requestToggleMapPanel}
               accessibilityRole="button"
-              accessibilityLabel="Открыть или закрыть панель карты"
+              accessibilityLabel="Открыть или закрыть панель"
               style={[styles.mobileSectionsButton, globalFocusStyles.focusable]}
               testID="map-panel-open"
             >

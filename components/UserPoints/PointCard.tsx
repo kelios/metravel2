@@ -15,6 +15,7 @@ interface PointCardProps {
   layout?: 'list' | 'grid';
   selectionMode?: boolean;
   selected?: boolean;
+  active?: boolean;
   onToggleSelect?: (point: ImportedPoint) => void;
 }
 
@@ -26,6 +27,7 @@ export const PointCard: React.FC<PointCardProps> = ({
   layout = 'list',
   selectionMode,
   selected,
+  active,
   onToggleSelect,
 }) => {
   const colors = useThemedColors();
@@ -96,7 +98,11 @@ export const PointCard: React.FC<PointCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.container, layout === 'grid' ? styles.containerGrid : null]}
+      style={[
+        styles.container,
+        layout === 'grid' ? styles.containerGrid : null,
+        active ? styles.containerActive : null,
+      ]}
       onPress={() => {
         if (selectionMode) {
           onToggleSelect?.(point);
@@ -236,6 +242,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  containerActive: {
+    borderColor: colors.primary,
+    borderWidth: 2,
   },
   containerGrid: {
     marginHorizontal: 0,

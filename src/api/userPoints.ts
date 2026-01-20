@@ -56,8 +56,7 @@ const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
     (typeof raw.imported === 'number' && typeof raw.skipped === 'number'
       ? raw.imported + raw.skipped
       : undefined) ??
-    (created + skipped)
-    0;
+    (created + skipped);
 
   const importId =
     (typeof raw.importId === 'string' ? raw.importId : undefined) ??
@@ -202,8 +201,16 @@ export const userPointsApi = {
     
     const queryString = params.toString();
     const endpoint = queryString ? `/user-points/?${queryString}` : '/user-points/';
-    
-    return apiClient.get<ImportedPoint[]>(endpoint);
+
+    const raw = await apiClient.get<any>(endpoint);
+    if (Array.isArray(raw)) return raw as ImportedPoint[];
+    if (raw && typeof raw === 'object') {
+      const data = (raw as any).data;
+      if (Array.isArray(data)) return data as ImportedPoint[];
+      const results = (raw as any).results;
+      if (Array.isArray(results)) return results as ImportedPoint[];
+    }
+    return [] as ImportedPoint[];
   },
   
   async getPoint(id: number) {

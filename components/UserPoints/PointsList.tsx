@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import * as Location from 'expo-location';
 import { userPointsApi } from '@/src/api/userPoints';
 import { fetchFiltersMap } from '@/src/api/map';
-import { PointCard } from '@/components/UserPoints/PointCard';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
 import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
@@ -30,17 +30,19 @@ type PointsListProps = {
 };
 
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
-  const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: 50 });
-  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: 50, radiusKm: 100 });
+  const [showFilters, setShowFilters] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('map');
+  const viewMode: ViewMode = 'map'; // Fixed to map view only
   const [showActions, setShowActions] = useState(false);
-  const [showRecommendations, setShowRecommendations] = useState(false);
-  const [recommendationsNonce, setRecommendationsNonce] = useState(0);
+  const [recommendedPointIds, setRecommendedPointIds] = useState<number[]>([]);
+  const [showingRecommendations, setShowingRecommendations] = useState(false);
+  const [recommendedRoutes, setRecommendedRoutes] = useState<Record<number, { distance: number; duration: number }>>({});
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [activePointId, setActivePointId] = useState<number | null>(null);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkColor, setBulkColor] = useState<string | null>(null);
   const [bulkStatus, setBulkStatus] = useState<PointStatus | null>(null);
@@ -68,13 +70,48 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const isNarrow = windowWidth < 420;
   const isMobile = Platform.OS !== 'web';
 
-  const listColumns = useMemo(() => {
-    if (viewMode !== 'list') return 1;
-    if (Platform.OS !== 'web') return 1;
-    if (windowWidth >= 1100) return 3;
-    if (windowWidth >= 740) return 2;
-    return 1;
-  }, [viewMode, windowWidth]);
+  // Auto-request geolocation on mount for default 100km radius filter
+  useEffect(() => {
+    const requestLocation = async () => {
+      try {
+        if (Platform.OS === 'web') {
+          if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            return;
+          }
+
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0,
+            });
+          });
+
+          setCurrentLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+        } else {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') {
+            return;
+          }
+
+          const pos = await Location.getCurrentPositionAsync({});
+          setCurrentLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          });
+        }
+      } catch {
+        // If location fails, user can still see all points or manually enable location
+      }
+    };
+
+    requestLocation();
+  }, []);
+
+  const listColumns = 1;
 
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -122,6 +159,19 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [points]);
 
+  const availableColors = useMemo(() => {
+    const colorMap = new Map<string, number>();
+    for (const p of points as any[]) {
+      const c = String(p?.color ?? '').trim();
+      if (c) {
+        colorMap.set(c, (colorMap.get(c) || 0) + 1);
+      }
+    }
+    return Array.from(colorMap.entries())
+      .sort((a, b) => b[1] - a[1]) // Sort by count descending
+      .map(([color]) => color);
+  }, [points]);
+
   const filteredPointsWithoutCategory = useMemo(() => {
     const q = String(searchQuery || '').trim().toLowerCase();
     const selectedColors = filters.colors ?? [];
@@ -153,25 +203,60 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     const selectedColors = filters.colors ?? [];
     const selectedStatuses = filters.statuses ?? [];
     const selectedCategories = filters.siteCategories ?? [];
+    const radiusKm = filters.radiusKm;
+
+    // Helper function to calculate distance in km using Haversine formula
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const R = 6371; // Earth's radius in km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
 
     return points.filter((p: any) => {
       if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
       if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
       if (selectedCategories.length > 0 && !selectedCategories.includes(String(p.category ?? ''))) return false;
+      
+      // Radius filter - only apply if radiusKm is set and currentLocation exists
+      if (radiusKm !== null && radiusKm !== undefined && currentLocation) {
+        const pointLat = Number(p.latitude);
+        const pointLng = Number(p.longitude);
+        if (Number.isFinite(pointLat) && Number.isFinite(pointLng)) {
+          const distance = calculateDistance(
+            currentLocation.lat,
+            currentLocation.lng,
+            pointLat,
+            pointLng
+          );
+          if (distance > radiusKm) return false;
+        }
+      }
+      
       if (!q) return true;
 
       const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [filters.colors, filters.siteCategories, filters.statuses, points, searchQuery]);
+  }, [filters.colors, filters.siteCategories, filters.statuses, filters.radiusKm, points, searchQuery, currentLocation]);
 
   const mapPoints = useMemo(() => {
+    // Show only recommended points when in recommendations mode
+    if (showingRecommendations && recommendedPointIds.length > 0) {
+      const recommended = new Set(recommendedPointIds);
+      return filteredPoints.filter((p: any) => recommended.has(Number(p.id)));
+    }
+    
     if (!selectionMode) return filteredPoints;
-    if (viewMode !== 'map') return filteredPoints;
-    if (!selectedIds.length) return [];
+    if (!selectedIds.length) return filteredPoints;
     const selected = new Set(selectedIds);
     return filteredPoints.filter((p: any) => selected.has(Number(p.id)));
-  }, [filteredPoints, selectedIds, selectionMode, viewMode]);
+  }, [filteredPoints, selectedIds, selectionMode, showingRecommendations, recommendedPointIds]);
 
   useEffect(() => {
     const selected = filters.siteCategories ?? [];
@@ -193,6 +278,53 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     },
     [filters.perPage]
   );
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      (filters.statuses?.length ?? 0) > 0 ||
+      (filters.siteCategories?.length ?? 0) > 0 ||
+      (filters.colors?.length ?? 0) > 0
+    );
+  }, [filters.colors, filters.siteCategories, filters.statuses]);
+
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string }> = [];
+    
+    (filters.statuses ?? []).forEach((status) => {
+      const label = (STATUS_LABELS as Record<string, string>)[status as unknown as string] || String(status);
+      chips.push({ key: `status-${status}`, label: `Статус: ${label}` });
+    });
+    
+    (filters.siteCategories ?? []).forEach((cat) => {
+      chips.push({ key: `category-${cat}`, label: `Категория: ${cat}` });
+    });
+    
+    (filters.colors ?? []).forEach((color) => {
+      chips.push({ key: `color-${color}`, label: `Цвет: ${color}` });
+    });
+    
+    return chips;
+  }, [filters.colors, filters.siteCategories, filters.statuses]);
+
+  const handleResetFilters = useCallback(() => {
+    setFilters({ page: 1, perPage: filters.perPage ?? 50 });
+  }, [filters.perPage]);
+
+  const handleRemoveFilterChip = useCallback((key: string) => {
+    if (key.startsWith('status-')) {
+      const status = key.replace('status-', '') as PointStatus;
+      const next = (filters.statuses ?? []).filter((s) => s !== status);
+      setFilters((prev) => ({ ...prev, statuses: next, page: 1 }));
+    } else if (key.startsWith('category-')) {
+      const category = key.replace('category-', '');
+      const next = (filters.siteCategories ?? []).filter((c) => c !== category);
+      setFilters((prev) => ({ ...prev, siteCategories: next, page: 1 }));
+    } else if (key.startsWith('color-')) {
+      const color = key.replace('color-', '');
+      const next = (filters.colors ?? []).filter((c) => c !== color);
+      setFilters((prev) => ({ ...prev, colors: next, page: 1 }));
+    }
+  }, [filters.colors, filters.siteCategories, filters.statuses]);
 
   useEffect(() => {
     if (!selectionMode) return;
@@ -334,11 +466,6 @@ const toggleSelect = useCallback((point: any) => {
   setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 }, []);
 
-const selectAllVisible = useCallback(() => {
-  const all = filteredPoints.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
-  setSelectedIds(Array.from(new Set(all)));
-}, [filteredPoints]);
-
 const clearSelection = useCallback(() => {
   setSelectedIds([]);
 }, []);
@@ -424,15 +551,15 @@ const deleteAll = useCallback(async () => {
   }
 }, [exitSelectionMode, points, refetch]);
 
-const handleMapPress = useCallback(
-  (coords: { lat: number; lng: number }) => {
-    setViewMode('map');
-    setShowActions(false);
-    resetManualForm();
-    setManualCoords(coords);
-    setManualLat(coords.lat.toFixed(6));
-    setManualLng(coords.lng.toFixed(6));
-    setManualName('Новая точка');
+  const handleMapPress = useCallback(
+    (coords: { lat: number; lng: number }) => {
+      setShowActions(false);
+      resetManualForm();
+      setManualCoords(coords);
+      setManualLat(coords.lat.toFixed(6));
+      setManualLng(coords.lng.toFixed(6));
+      setManualName('Новая точка');
+      setShowManualAdd(true);
     setShowManualAdd(true);
 
     void (async () => {
@@ -515,9 +642,59 @@ const handleMapPress = useCallback(
     }
   }, [pointToDelete, refetch]);
 
+  const handleOpenRecommendations = useCallback(async () => {
+    // Get 3 random points from filtered points (respects all active filters)
+    const shuffled = [...filteredPoints].sort(() => Math.random() - 0.5);
+    const recommended = shuffled.slice(0, 3);
+    const recommendedIds = recommended.map((p: any) => Number(p.id));
+    
+    setRecommendedPointIds(recommendedIds);
+    setShowingRecommendations(true);
+    
+    // Calculate routes if we have current location
+    if (currentLocation && recommended.length > 0) {
+      const routes: Record<number, { distance: number; duration: number }> = {};
+      
+      // Calculate route to each recommended point
+      for (const point of recommended) {
+        try {
+          // Use OSRM public API for car routing
+          const url = `https://router.project-osrm.org/route/v1/driving/${currentLocation.lng},${currentLocation.lat};${point.longitude},${point.latitude}?overview=false`;
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (data.code === 'Ok' && data.routes && data.routes[0]) {
+            const route = data.routes[0];
+            routes[Number(point.id)] = {
+              distance: Math.round(route.distance / 1000), // Convert meters to km
+              duration: Math.round(route.duration / 60), // Convert seconds to minutes
+            };
+          }
+        } catch (error) {
+          // If route calculation fails, skip this point
+          console.warn('Failed to calculate route for point', point.id, error);
+        }
+      }
+      
+      setRecommendedRoutes(routes);
+      setActivePointId(null); // Clear any active point to trigger auto-fit
+    }
+  }, [filteredPoints, currentLocation]);
+
+  const handleShowPointOnMap = useCallback((point: any) => {
+    if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude)) return;
+    
+    // Set active point to center map on it
+    setActivePointId(Number(point.id));
+    
+    // Clear active point after a short delay so user can click again
+    setTimeout(() => {
+      setActivePointId(null);
+    }, 1000);
+  }, []);
+
   const handleLocateMe = useCallback(async () => {
     setIsLocating(true);
-    setViewMode('map');
 
     try {
       if (Platform.OS === 'web') {
@@ -565,22 +742,30 @@ const handleMapPress = useCallback(
         colors={{ text: colors.text, textMuted: colors.textMuted, textOnPrimary: colors.textOnPrimary }}
         isNarrow={isNarrow}
         isMobile={isMobile}
-        total={filteredPoints.length}
+        total={points.length}
+        found={filteredPoints.length}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={handleResetFilters}
+        activeFilterChips={activeFilterChips}
+        onRemoveFilterChip={handleRemoveFilterChip}
         viewMode={viewMode}
-        onViewModeChange={(mode) => setViewMode(mode)}
+        onViewModeChange={() => {}} // No-op since view is fixed to map
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((v) => !v)}
         onOpenActions={() => setShowActions(true)}
-        onOpenRecommendations={() => setShowRecommendations(true)}
+        onOpenRecommendations={handleOpenRecommendations}
         searchQuery={searchQuery}
         onSearch={handleSearch}
         filters={filters}
         onFilterChange={handleFilterChange}
         siteCategoryOptions={availableCategoryOptions}
         availableStatuses={availableStatuses}
+        availableColors={availableColors}
       />
     );
   }, [
+    activeFilterChips,
+    availableColors,
     availableStatuses,
     availableCategoryOptions,
     colors.text,
@@ -589,9 +774,13 @@ const handleMapPress = useCallback(
     filters,
     filteredPoints.length,
     handleFilterChange,
+    handleRemoveFilterChip,
+    handleResetFilters,
     handleSearch,
+    hasActiveFilters,
     isMobile,
     isNarrow,
+    points.length,
     searchQuery,
     showFilters,
     styles,
@@ -654,35 +843,20 @@ useEffect(() => {
     </View>
   );
 
-  const recommendations = useMemo(() => {
-    // include nonce so clicking "Обновить" reshuffles
-    void recommendationsNonce;
-    if (!points.length) return [];
-
-    const copy = [...points];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const tmp = copy[i];
-      copy[i] = copy[j];
-      copy[j] = tmp;
-    }
-    return copy.slice(0, 3);
-  }, [points, recommendationsNonce]);
-
   const renderItem = useCallback(
     ({ item }: { item: any }) => (
       <PointsListItem
         point={item}
         layout={listColumns > 1 ? 'grid' : 'list'}
-        onPress={selectionMode && viewMode === 'list' ? undefined : openEditPoint}
-        onEdit={selectionMode && viewMode === 'list' ? undefined : openEditPoint}
-        onDelete={selectionMode && viewMode === 'list' ? undefined : requestDeletePoint}
-        selectionMode={selectionMode && viewMode === 'list'}
+        onPress={selectionMode ? undefined : handleShowPointOnMap}
+        onEdit={selectionMode ? undefined : openEditPoint}
+        onDelete={selectionMode ? undefined : requestDeletePoint}
+        selectionMode={selectionMode}
         selected={selectedIds.includes(Number(item?.id))}
         onToggleSelect={toggleSelect}
       />
     ),
-    [listColumns, openEditPoint, requestDeletePoint, selectedIds, selectionMode, toggleSelect, viewMode]
+    [listColumns, handleShowPointOnMap, openEditPoint, requestDeletePoint, selectedIds, selectionMode, toggleSelect]
   );
 
   const renderFooter = useCallback(() => {
@@ -691,74 +865,7 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      {selectionMode && viewMode === 'list' ? (
-        <View style={styles.bulkBar}>
-          <Text style={styles.bulkBarText}>
-            {bulkProgress
-              ? `Удаляем: ${bulkProgress.current}/${bulkProgress.total}`
-              : `Выбрано: ${selectedIds.length}`}
-          </Text>
-          <View style={styles.bulkBarActions}>
-            <TouchableOpacity
-              style={[styles.bulkBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
-              onPress={selectAllVisible}
-              disabled={isBulkWorking}
-              accessibilityRole="button"
-              accessibilityLabel="Выбрать всё"
-            >
-              <Text style={styles.bulkBarButtonText}>Все</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.bulkBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
-              onPress={clearSelection}
-              disabled={isBulkWorking}
-              accessibilityRole="button"
-              accessibilityLabel="Снять"
-            >
-              <Text style={styles.bulkBarButtonText}>Снять</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.bulkBarButtonPrimary, isBulkWorking && styles.bulkBarButtonDisabled]}
-              onPress={() => setShowBulkEdit(true)}
-              disabled={isBulkWorking || selectedIds.length === 0}
-              accessibilityRole="button"
-              accessibilityLabel="Изменить"
-            >
-              <Text style={styles.bulkBarButtonText}>Изменить</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.bulkBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
-              onPress={() => setViewMode('map')}
-              disabled={isBulkWorking || selectedIds.length === 0}
-              accessibilityRole="button"
-              accessibilityLabel="На карте"
-            >
-              <Text style={styles.bulkBarButtonText}>На карте</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.bulkBarButtonDanger, isBulkWorking && styles.bulkBarButtonDisabled]}
-              onPress={() => setShowConfirmDeleteSelected(true)}
-              disabled={isBulkWorking || selectedIds.length === 0}
-              accessibilityRole="button"
-              accessibilityLabel="Удалить выбранные"
-            >
-              <Text style={styles.bulkBarButtonDangerText}>Удалить</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.bulkBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
-              onPress={exitSelectionMode}
-              disabled={isBulkWorking}
-              accessibilityRole="button"
-              accessibilityLabel="Готово"
-            >
-              <Text style={styles.bulkBarButtonText}>Готово</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : null}
-
-      {selectionMode && viewMode === 'map' ? (
+      {selectionMode ? (
         <View style={styles.bulkMapBar}>
           <View style={styles.bulkMapBarRow}>
             <Text style={styles.bulkMapBarText}>
@@ -771,7 +878,7 @@ useEffect(() => {
             <View style={styles.bulkMapBarActions}>
               <TouchableOpacity
                 style={[styles.bulkMapBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
-                onPress={() => setViewMode('list')}
+                onPress={() => {}}
                 disabled={isBulkWorking}
                 accessibilityRole="button"
                 accessibilityLabel="Назад к списку"
@@ -846,6 +953,14 @@ useEffect(() => {
         manualColor={manualColor}
         isLocating={isLocating}
         onLocateMe={handleLocateMe}
+        showingRecommendations={showingRecommendations}
+        onCloseRecommendations={() => {
+          setShowingRecommendations(false);
+          setRecommendedPointIds([]);
+          setRecommendedRoutes({});
+        }}
+        activePointId={activePointId}
+        recommendedRoutes={recommendedRoutes}
       />
 
       <Modal
@@ -890,7 +1005,6 @@ useEffect(() => {
               style={styles.actionsItem}
               onPress={() => {
                 setShowActions(false);
-                setViewMode('list');
                 setSelectionMode(true);
                 setSelectedIds([]);
               }}
@@ -1226,67 +1340,6 @@ useEffect(() => {
           </View>
         </View>
       </Modal>
-
-      <Modal
-        visible={showRecommendations}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowRecommendations(false)}
-      >
-        <View style={styles.recoOverlay}>
-          <TouchableOpacity
-            style={styles.recoBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowRecommendations(false)}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть рекомендации"
-          />
-
-          <View style={styles.recoModal}>
-            <View style={styles.recoHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.recoTitle}>Куда поехать сегодня</Text>
-                <Text style={styles.recoSubtitle}>3 случайные точки</Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.recoHeaderButton}
-                onPress={() => setRecommendationsNonce((v) => v + 1)}
-                accessibilityRole="button"
-                accessibilityLabel="Обновить рекомендации"
-              >
-                <Text style={styles.recoHeaderButtonText}>Обновить</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.recoHeaderButton}
-                onPress={() => setShowRecommendations(false)}
-                accessibilityRole="button"
-                accessibilityLabel="Закрыть"
-              >
-                <Text style={styles.recoHeaderButtonText}>Закрыть</Text>
-              </TouchableOpacity>
-            </View>
-
-            {!points.length ? (
-              <View style={styles.recoEmpty}>
-                <Text style={styles.recoEmptyText}>Нет точек</Text>
-                <Text style={styles.recoEmptySubtext}>
-                  Импортируйте или добавьте точки вручную, чтобы получить рекомендации
-                </Text>
-              </View>
-            ) : (
-              <ScrollView
-                style={styles.recoScroll}
-                contentContainerStyle={styles.recoScrollContent}
-              >
-                {recommendations.map((p) => (
-                  <PointCard key={p.id} point={p} />
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
@@ -1438,6 +1491,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.md,
     paddingBottom: DESIGN_TOKENS.spacing.md,
   },
+  titleContainer: {
+    marginBottom: DESIGN_TOKENS.spacing.md,
+  },
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1447,6 +1503,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   titleRowNarrow: {
     flexDirection: 'column',
     alignItems: 'stretch',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  headerActionsRow: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
   },
   headerActions: {
@@ -1796,75 +1862,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600' as any,
   },
-  recoOverlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: DESIGN_TOKENS.spacing.lg,
-  },
-  recoBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlay,
-  },
-  recoModal: {
-    width: '100%',
-    maxWidth: 560,
-    maxHeight: '80%',
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    overflow: 'hidden',
-  },
-  recoHeader: {
-    padding: DESIGN_TOKENS.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-  },
-  recoTitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: '700' as any,
-    color: colors.text,
-  },
-  recoSubtitle: {
-    marginTop: 2,
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-  },
-  recoHeaderButton: {
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
+  webChip: {
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.backgroundSecondary,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    backgroundColor: colors.backgroundTertiary,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary,
   },
-  recoHeaderButtonText: {
+  webChipText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '600' as any,
     color: colors.text,
-  },
-  recoScroll: {
-    flex: 1,
-  },
-  recoScrollContent: {
-    paddingVertical: DESIGN_TOKENS.spacing.lg,
-  },
-  recoEmpty: {
-    padding: DESIGN_TOKENS.spacing.xl,
-    alignItems: 'center',
-  },
-  recoEmptyText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
-    fontWeight: '700' as any,
-    color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
-  },
-  recoEmptySubtext: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
 });

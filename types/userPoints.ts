@@ -61,6 +61,7 @@ export interface PointFilters {
   colors?: string[];
   siteCategories?: string[];
   statuses?: PointStatus[];
+  radiusKm?: number | null; // null = all points, number = radius in km
   page?: number;
   perPage?: number;
   bounds?: {

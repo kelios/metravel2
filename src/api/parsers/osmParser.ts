@@ -90,34 +90,76 @@ export class OSMParser {
   }
   
   private static parseGPX(text: string): ParsedPoint[] {
-    if (typeof DOMParser === 'undefined') {
-      throw new Error('GPX парсинг доступен только в web окружении');
+    if (typeof DOMParser !== 'undefined') {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/xml');
+        const waypoints = doc.getElementsByTagName('wpt');
+        const points: ParsedPoint[] = [];
+
+        for (let i = 0; i < waypoints.length; i++) {
+          const wpt = waypoints[i];
+          const latRaw = wpt.getAttribute('lat');
+          const lonRaw = wpt.getAttribute('lon');
+          if (!latRaw || !lonRaw) continue;
+
+          const lat = parseFloat(latRaw);
+          const lon = parseFloat(lonRaw);
+          const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Без названия';
+          const desc = wpt.getElementsByTagName('desc')[0]?.textContent;
+          const statusRaw = wpt.getElementsByTagName('status')[0]?.textContent;
+          const colorRaw = wpt.getElementsByTagName('color')[0]?.textContent;
+
+          if (isNaN(lat) || isNaN(lon)) continue;
+
+          const status = this.normalizeStatus(statusRaw) ?? PointStatus.PLANNING;
+          const color = this.normalizeColor(colorRaw) ?? '#2196F3';
+
+          const point: ParsedPoint = {
+            id: this.generateId(),
+            name,
+            description: desc || undefined,
+            latitude: lat,
+            longitude: lon,
+            color,
+            category: '',
+            status,
+            source: 'osm',
+            importedAt: new Date().toISOString(),
+          };
+
+          points.push(point);
+        }
+
+        return points;
+      } catch {
+        // fallback below
+      }
     }
-    
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/xml');
-    const waypoints = doc.getElementsByTagName('wpt');
+
+    // Fallback parser for native environments where DOMParser is not available.
+    // It extracts <wpt ...>...</wpt> blocks with minimal tag parsing.
     const points: ParsedPoint[] = [];
-    
-    for (let i = 0; i < waypoints.length; i++) {
-      const wpt = waypoints[i];
-      const latRaw = wpt.getAttribute('lat');
-      const lonRaw = wpt.getAttribute('lon');
+    const waypoints = text.match(/<wpt\b[\s\S]*?<\/wpt>/gi) ?? [];
+
+    for (const wptXml of waypoints) {
+      const latRaw = this.extractAttr(wptXml, 'lat');
+      const lonRaw = this.extractAttr(wptXml, 'lon');
       if (!latRaw || !lonRaw) continue;
 
       const lat = parseFloat(latRaw);
       const lon = parseFloat(lonRaw);
-      const name = wpt.getElementsByTagName('name')[0]?.textContent || 'Без названия';
-      const desc = wpt.getElementsByTagName('desc')[0]?.textContent;
-      const statusRaw = wpt.getElementsByTagName('status')[0]?.textContent;
-      const colorRaw = wpt.getElementsByTagName('color')[0]?.textContent;
-      
-      if (isNaN(lat) || isNaN(lon)) continue;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+      const name = this.extractTagText(wptXml, 'name') || 'Без названия';
+      const desc = this.extractTagText(wptXml, 'desc');
+      const statusRaw = this.extractTagText(wptXml, 'status');
+      const colorRaw = this.extractTagText(wptXml, 'color');
 
       const status = this.normalizeStatus(statusRaw) ?? PointStatus.PLANNING;
       const color = this.normalizeColor(colorRaw) ?? '#2196F3';
 
-      const point: ParsedPoint = {
+      points.push({
         id: this.generateId(),
         name,
         description: desc || undefined,
@@ -128,12 +170,23 @@ export class OSMParser {
         status,
         source: 'osm',
         importedAt: new Date().toISOString(),
-      };
-      
-      points.push(point);
+      });
     }
-    
+
     return points;
+  }
+
+  private static extractAttr(xml: string, attrName: string): string | null {
+    const re = new RegExp(`${attrName}="([^"]+)"|${attrName}='([^']+)'`, 'i');
+    const m = xml.match(re);
+    return (m?.[1] ?? m?.[2] ?? null) ? String(m?.[1] ?? m?.[2]).trim() : null;
+  }
+
+  private static extractTagText(xml: string, tagName: string): string | null {
+    const re = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)</${tagName}>`, 'i');
+    const m = xml.match(re);
+    if (!m?.[1]) return null;
+    return m[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1').trim();
   }
   
   private static generateId(): string {

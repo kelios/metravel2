@@ -10,10 +10,12 @@ import { useThemedColors } from '@/hooks/useTheme';
 interface PointsMapProps {
   points: ImportedPoint[];
   center?: { lat: number; lng: number };
+  activePointId?: number | null;
   onPointPress?: (point: ImportedPoint) => void;
   onEditPoint?: (point: ImportedPoint) => void;
   onDeletePoint?: (point: ImportedPoint) => void;
   onMapPress?: (coords: { lat: number; lng: number }) => void;
+  onCenterChange?: (coords: { lat: number; lng: number }) => void;
   pendingMarker?: { lat: number; lng: number } | null;
   pendingMarkerColor?: PointColor;
 }
@@ -21,10 +23,12 @@ interface PointsMapProps {
 export const PointsMap: React.FC<PointsMapProps> = ({
   points,
   center,
+  activePointId,
   onPointPress,
   onEditPoint,
   onDeletePoint,
   onMapPress,
+  onCenterChange,
   pendingMarker,
   pendingMarkerColor,
 }) => {
@@ -34,10 +38,12 @@ export const PointsMap: React.FC<PointsMapProps> = ({
       <PointsMapWeb
         points={points}
         center={center}
+        activePointId={activePointId}
         onPointPress={onPointPress}
         onEditPoint={onEditPoint}
         onDeletePoint={onDeletePoint}
         onMapPress={onMapPress}
+        onCenterChange={onCenterChange}
         pendingMarker={pendingMarker}
         pendingMarkerColor={pendingMarkerColor}
       />
@@ -48,10 +54,12 @@ export const PointsMap: React.FC<PointsMapProps> = ({
     <PointsMapNative
       points={points}
       center={center}
+      activePointId={activePointId}
       onPointPress={onPointPress}
       onEditPoint={onEditPoint}
       onDeletePoint={onDeletePoint}
       onMapPress={onMapPress}
+      onCenterChange={onCenterChange}
       pendingMarker={pendingMarker}
       pendingMarkerColor={pendingMarkerColor}
     />
@@ -62,10 +70,12 @@ export const PointsMap: React.FC<PointsMapProps> = ({
 const PointsMapWeb: React.FC<PointsMapProps> = ({
   points,
   center: centerOverride,
+  activePointId,
   onPointPress,
   onEditPoint,
   onDeletePoint,
   onMapPress,
+  onCenterChange,
   pendingMarker,
   pendingMarkerColor,
 }) => {
@@ -121,16 +131,20 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   }, []);
 
   const getMarkerIcon = React.useCallback(
-    (color: PointColor | string | undefined) => {
+    (color: PointColor | string | undefined, opts?: { active?: boolean }) => {
       const L = mods?.L;
       if (!L) return undefined;
 
       const fill = String(color || '').trim() || colors.primary;
+      const isActive = Boolean(opts?.active);
+      const size = isActive ? 34 : 28;
+      const anchor = isActive ? 17 : 14;
+      const strokeW = isActive ? 2 : 1;
 
       const html = `
-        <div style="width:28px;height:28px;position:relative;transform:translate(-14px,-28px);">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M12 22s7-4.5 7-12a7 7 0 0 0-14 0c0 7.5 7 12 7 12Z" fill="${fill}" stroke="${colors.border}" stroke-width="1" />
+        <div style="width:${size}px;height:${size}px;position:relative;transform:translate(-${anchor}px,-${size}px);">
+          <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 22s7-4.5 7-12a7 7 0 0 0-14 0c0 7.5 7 12 7 12Z" fill="${fill}" stroke="${colors.border}" stroke-width="${strokeW}" />
             <circle cx="12" cy="10" r="3" fill="${colors.surface}" opacity="0.95" />
           </svg>
         </div>
@@ -139,9 +153,9 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
       return L.divIcon({
         html,
         className: '',
-        iconSize: [28, 28],
-        iconAnchor: [14, 28],
-        popupAnchor: [0, -26],
+        iconSize: [size, size],
+        iconAnchor: [anchor, size],
+        popupAnchor: [0, -(size - 2)],
       });
     },
     [colors.border, colors.primary, colors.surface, mods?.L]
@@ -226,6 +240,48 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     return null;
   };
 
+  const MapCenterReporter = () => {
+    const map = mods.useMap?.();
+    mods.useMapEvents?.({
+      moveend: () => {
+        try {
+          const c = map?.getCenter?.();
+          const lat = c?.lat;
+          const lng = c?.lng;
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+          onCenterChange?.({ lat, lng });
+        } catch {
+          // noop
+        }
+      },
+      zoomend: () => {
+        try {
+          const c = map?.getCenter?.();
+          const lat = c?.lat;
+          const lng = c?.lng;
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+          onCenterChange?.({ lat, lng });
+        } catch {
+          // noop
+        }
+      },
+    });
+
+    React.useEffect(() => {
+      try {
+        const c = map?.getCenter?.();
+        const lat = c?.lat;
+        const lng = c?.lng;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        onCenterChange?.({ lat, lng });
+      } catch {
+        // noop
+      }
+    }, [map]);
+
+    return null;
+  };
+
   const CenterOn = ({ nextCenter }: { nextCenter?: { lat: number; lng: number } }) => {
     const map = mods.useMap?.();
 
@@ -267,6 +323,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
         <CenterOn nextCenter={centerOverride} />
         <FitOnPoints nextPoints={points} centerOverride={centerOverride} />
         <MapClickHandler />
+        <MapCenterReporter />
         <mods.TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -292,7 +349,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
             <mods.Marker
               key={point.id}
               position={[point.latitude, point.longitude]}
-              icon={getMarkerIcon(point.color)}
+              icon={getMarkerIcon(point.color, { active: Number(activePointId) === Number(point.id) })}
               eventHandlers={{
                 click: () => onPointPress?.(point),
               }}
@@ -324,11 +381,23 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                       {point.name}
                     </strong>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <button
-                        type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         title="Редактировать"
                         aria-label="Редактировать"
+                        data-card-action="true"
                         onClick={(e: any) => {
+                          try {
+                            e?.preventDefault?.();
+                            e?.stopPropagation?.();
+                          } catch {
+                            // noop
+                          }
+                          onEditPoint?.(point);
+                        }}
+                        onKeyDown={(e: any) => {
+                          if (e?.key !== 'Enter' && e?.key !== ' ') return;
                           try {
                             e?.preventDefault?.();
                             e?.stopPropagation?.();
@@ -351,12 +420,24 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                         }}
                       >
                         <Feather name="edit-2" size={16} color={colors.text} />
-                      </button>
-                      <button
-                        type="button"
+                      </div>
+                      <div
+                        role="button"
+                        tabIndex={0}
                         title="Удалить"
                         aria-label="Удалить"
+                        data-card-action="true"
                         onClick={(e: any) => {
+                          try {
+                            e?.preventDefault?.();
+                            e?.stopPropagation?.();
+                          } catch {
+                            // noop
+                          }
+                          onDeletePoint?.(point);
+                        }}
+                        onKeyDown={(e: any) => {
+                          if (e?.key !== 'Enter' && e?.key !== ' ') return;
                           try {
                             e?.preventDefault?.();
                             e?.stopPropagation?.();
@@ -379,7 +460,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                         }}
                       >
                         <Feather name="trash-2" size={16} color={colors.text} />
-                      </button>
+                      </div>
                     </div>
                   </div>
 

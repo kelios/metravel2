@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Modal } from 'react-native';
 import { PointsList } from '@/components/UserPoints/PointsList';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';

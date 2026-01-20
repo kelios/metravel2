@@ -51,6 +51,7 @@ const pageTranslations: Record<string, string> = {
   accountconfirmation: 'Подтверждение аккаунта',
   'set-password': 'Установка пароля',
   new: 'Новое путешествие',
+  userpoints: 'Мои точки',
 };
 
 function normalizePathname(pathname: string | null | undefined) {

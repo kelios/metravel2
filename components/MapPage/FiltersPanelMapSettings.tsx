@@ -104,7 +104,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
     <CollapsibleSection
       key={isMobile ? 'map-settings-mobile' : 'map-settings-desktop'}
       title="Настройки карты"
-      icon="tune"
+      icon="sliders"
       defaultOpen={!isMobile}
     >
       <Pressable

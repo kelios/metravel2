@@ -116,7 +116,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           title="Категории"
           badge={filterValue.categories.length || undefined}
           defaultOpen={filterValue.categories.length > 0}
-          icon="category"
+          icon="grid"
         >
           <Text style={styles.sectionHint}>Выберите подходящие тематики, чтобы сузить выдачу.</Text>
           <MultiSelectField
@@ -190,7 +190,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           title="Радиус поиска"
           badge={`${filterValue.radius || '60'} км`}
           defaultOpen={true}
-          icon="radio-button-unchecked"
+          icon="radio"
         >
           <View style={styles.radiusQuickOptions}>
             {filters.radius.map((opt) => {
