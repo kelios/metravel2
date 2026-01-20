@@ -85,7 +85,8 @@ export function useTravelDetailsPerformance({
         import('@/components/travel/PointList'),
         import('@/components/travel/NearTravelList'),
         import('@/components/travel/PopularTravelList'),
-        import('@/components/travel/ToggleableMapSection'),
+        // Removed ToggleableMapSection from eager prefetch to keep map bundles lazy
+        // import('@/components/travel/ToggleableMapSection'),
       ])
     }, 1200)
   }, [lcpLoaded])

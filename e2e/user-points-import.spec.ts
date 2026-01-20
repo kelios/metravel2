@@ -24,8 +24,8 @@ test.describe('User points import (mock API)', () => {
     await page.waitForTimeout(150);
 
     // The userpoints screen is map-first; actions live in the list header.
-    // Switch to list view before trying to open the actions menu.
-    await page.getByRole('button', { name: 'Список' }).click({ timeout: 30_000 }).catch(() => undefined);
+    // The header is rendered inside the "Фильтры" tab of the side panel.
+    await page.getByRole('button', { name: 'Фильтры' }).click({ timeout: 30_000 }).catch(() => undefined);
     await expect(page.getByTestId('userpoints-actions-open')).toBeVisible({ timeout: 30_000 });
     await page.getByTestId('userpoints-actions-open').click({ force: true });
 

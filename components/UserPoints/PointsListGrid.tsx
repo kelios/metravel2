@@ -177,6 +177,7 @@ export const PointsListGrid: React.FC<{
               onPress={() => setPanelTab('filters')}
               accessibilityRole="button"
               accessibilityLabel="Фильтры"
+              testID="userpoints-panel-tab-filters"
             >
               <RNText style={[localStyles.panelTabText, panelTab === 'filters' && localStyles.panelTabTextActive]}>
                 Фильтры
@@ -187,6 +188,7 @@ export const PointsListGrid: React.FC<{
               onPress={() => setPanelTab('list')}
               accessibilityRole="button"
               accessibilityLabel="Список"
+              testID="userpoints-panel-tab-list"
             >
               <RNText style={[localStyles.panelTabText, panelTab === 'list' && localStyles.panelTabTextActive]}>
                 Список ({filteredPoints.length})
@@ -221,6 +223,7 @@ export const PointsListGrid: React.FC<{
             
             {panelTab === 'list' && (
               <View style={localStyles.pointsList}>
+                {renderHeader()}
                 {showingRecommendations && (
                   <View style={localStyles.recommendationsHeader}>
                     <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
@@ -278,6 +281,7 @@ export const PointsListGrid: React.FC<{
               onPress={() => setPanelTab('filters')}
               accessibilityRole="button"
               accessibilityLabel="Фильтры"
+              testID="userpoints-panel-tab-filters"
             >
               <RNText style={[localStyles.panelTabText, panelTab === 'filters' && localStyles.panelTabTextActive]}>
                 Фильтры
@@ -288,6 +292,7 @@ export const PointsListGrid: React.FC<{
               onPress={() => setPanelTab('list')}
               accessibilityRole="button"
               accessibilityLabel="Список"
+              testID="userpoints-panel-tab-list"
             >
               <RNText style={[localStyles.panelTabText, panelTab === 'list' && localStyles.panelTabTextActive]}>
                 Список ({filteredPoints.length})
@@ -322,6 +327,7 @@ export const PointsListGrid: React.FC<{
             
             {panelTab === 'list' && (
               <View style={localStyles.pointsList}>
+                {renderHeader()}
                 {showingRecommendations && (
                   <View style={localStyles.recommendationsHeader}>
                     <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>

@@ -238,3 +238,5 @@ export const TravelDetailsMapSection: React.FC<{
     </>
   )
 }
+
+export default React.memo(TravelDetailsMapSection)

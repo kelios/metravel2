@@ -201,21 +201,77 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     const L = mods?.L;
     if (!map || !L) return;
 
+    const canInitializeNow = () => {
+      try {
+        const center = map.getCenter?.();
+        if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return false;
+
+        const zoom = map.getZoom?.();
+        if (!Number.isFinite(zoom)) return false;
+
+        const size = map.getSize?.();
+        const x = size?.x;
+        const y = size?.y;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+        if (x <= 0 || y <= 0) return false;
+
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const ensureBaseLayer = () => {
+      try {
+        if (!canInitializeNow()) return;
+
+        const current = leafletBaseLayerRef.current;
+        if (current && map.hasLayer?.(current)) return;
+
+        const baseDef = WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled) || WEB_MAP_BASE_LAYERS[0];
+        if (!baseDef) return;
+
+        const baseLayer = createLeafletLayer(L, baseDef);
+        if (!baseLayer) return;
+
+        leafletBaseLayerRef.current = baseLayer;
+        baseLayer.addTo(map);
+      } catch (e: any) {
+        // noop
+        try {
+          if (typeof e?.message === 'string' && e.message.includes('infinite number of tiles')) {
+            const current = leafletBaseLayerRef.current;
+            if (current && map.hasLayer?.(current)) map.removeLayer(current);
+            leafletBaseLayerRef.current = null;
+          }
+        } catch {
+          // noop
+        }
+      }
+    };
+
+    ensureBaseLayer();
+
+    const onTry = () => ensureBaseLayer();
     try {
-      const current = leafletBaseLayerRef.current;
-      if (current && map.hasLayer?.(current)) return;
-
-      const baseDef = WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled) || WEB_MAP_BASE_LAYERS[0];
-      if (!baseDef) return;
-
-      const baseLayer = createLeafletLayer(L, baseDef);
-      if (!baseLayer) return;
-
-      leafletBaseLayerRef.current = baseLayer;
-      baseLayer.addTo(map);
+      map.on?.('load', onTry);
+      map.on?.('resize', onTry);
+      map.on?.('moveend', onTry);
+      map.on?.('zoomend', onTry);
     } catch {
       // noop
     }
+
+    return () => {
+      try {
+        map.off?.('load', onTry);
+        map.off?.('resize', onTry);
+        map.off?.('moveend', onTry);
+        map.off?.('zoomend', onTry);
+      } catch {
+        // noop
+      }
+    };
   }, [leafletBaseLayerRef, mapInstance, mods?.L]);
 
   React.useEffect(() => {
@@ -226,7 +282,11 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     const fallbackUrls = [
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+      'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+      'https://{s}.tile.openstreetmap.de/{z}/{x}/{y}.png',
     ];
+
+    const attachedLayerRef = { current: null as any };
 
     const attach = (layer: any) => {
       if (!layer || typeof layer.on !== 'function') return () => {};
@@ -291,10 +351,47 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
       };
     };
 
-    const initialLayer: any = leafletBaseLayerRef.current as any;
-    const detach = attach(initialLayer);
+    let detach: (() => void) | null = null;
+
+    const ensureAttached = () => {
+      const nextLayer: any = leafletBaseLayerRef.current as any;
+      if (!nextLayer || nextLayer === attachedLayerRef.current) return;
+
+      try {
+        detach?.();
+      } catch {
+        // noop
+      }
+
+      attachedLayerRef.current = nextLayer;
+      detach = attach(nextLayer);
+    };
+
+    ensureAttached();
+
+    const onTry = () => ensureAttached();
+    try {
+      map.on?.('layeradd', onTry);
+      map.on?.('load', onTry);
+      map.on?.('resize', onTry);
+    } catch {
+      // noop
+    }
+
     return () => {
-      detach?.();
+      try {
+        map.off?.('layeradd', onTry);
+        map.off?.('load', onTry);
+        map.off?.('resize', onTry);
+      } catch {
+        // noop
+      }
+
+      try {
+        detach?.();
+      } catch {
+        // noop
+      }
     };
   }, [leafletBaseLayerRef, mapInstance, mods?.L]);
 
@@ -490,16 +587,23 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     return null;
   };
 
+  const MapInstanceBinder = () => {
+    const map = mods.useMap?.();
+    React.useEffect(() => {
+      if (!map) return;
+      setMapInstance((prev: any) => (prev === map ? prev : map));
+    }, [map]);
+    return null;
+  };
+
   return (
     <View style={styles.container}>
       <mods.MapContainer
         center={[center.lat, center.lng]}
         zoom={safePoints.length > 0 ? 10 : 5}
         style={{ height: '100%', width: '100%' }}
-        whenCreated={(map: any) => {
-          setMapInstance(map);
-        }}
       >
+        <MapInstanceBinder />
         <FixSize />
         <CenterOn nextCenter={effectiveCenterOverride} />
         <CenterOnActive activeId={activePointId} />

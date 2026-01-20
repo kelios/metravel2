@@ -72,6 +72,16 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const isNarrow = windowWidth < 420;
   const isMobile = Platform.OS !== 'web';
 
+  const blurActiveElementForModal = useCallback(() => {
+    if (Platform.OS !== 'web') return;
+    try {
+      const el = (globalThis as any)?.document?.activeElement as any;
+      if (el && typeof el.blur === 'function') el.blur();
+    } catch {
+      // noop
+    }
+  }, []);
+
   // Auto-request geolocation on mount for default 100km radius filter
   useEffect(() => {
     const requestLocation = async () => {
@@ -427,10 +437,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, [resetManualForm]);
 
   const openManualAdd = useCallback(() => {
+    blurActiveElementForModal();
     setShowActions(false);
     resetManualForm();
     setShowManualAdd(true);
-  }, [resetManualForm]);
+  }, [blurActiveElementForModal, resetManualForm]);
 
   const parseCoordinate = useCallback((value: string): number | null => {
     const trimmed = value.trim().replace(',', '.');
@@ -460,6 +471,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const openEditPoint = useCallback(
     (point: any) => {
       if (!point) return;
+      blurActiveElementForModal();
       setShowActions(false);
       resetManualForm();
 
@@ -486,7 +498,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setManualError(null);
       setShowManualAdd(true);
     },
-    [resetManualForm]
+    [blurActiveElementForModal, resetManualForm]
   );
 
   const requestDeletePoint = useCallback((point: any) => {
@@ -586,6 +598,7 @@ const deleteAll = useCallback(async () => {
 
   const handleMapPress = useCallback(
     (coords: { lat: number; lng: number }) => {
+      blurActiveElementForModal();
       setShowActions(false);
       resetManualForm();
       setManualCoords(coords);
@@ -593,7 +606,6 @@ const deleteAll = useCallback(async () => {
       setManualLng(coords.lng.toFixed(6));
       setManualName('Новая точка');
       setShowManualAdd(true);
-    setShowManualAdd(true);
 
     void (async () => {
       const geocodeData = await reverseGeocode(coords.lat, coords.lng);
@@ -610,7 +622,7 @@ const deleteAll = useCallback(async () => {
       }
     })();
   },
-  [getPrimaryPlaceName, manualNameTouched, resetManualForm, reverseGeocode]
+  [blurActiveElementForModal, getPrimaryPlaceName, manualNameTouched, resetManualForm, reverseGeocode]
 );
 
   const handleSaveManual = useCallback(async () => {
@@ -825,7 +837,10 @@ const deleteAll = useCallback(async () => {
         onViewModeChange={() => {}} // No-op since view is fixed to map
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((v) => !v)}
-        onOpenActions={() => setShowActions(true)}
+        onOpenActions={() => {
+          blurActiveElementForModal();
+          setShowActions(true);
+        }}
         onOpenRecommendations={handleOpenRecommendations}
         searchQuery={searchQuery}
         onSearch={handleSearch}
@@ -841,6 +856,7 @@ const deleteAll = useCallback(async () => {
     availableColors,
     availableStatuses,
     availableCategoryOptions,
+    blurActiveElementForModal,
     colors.text,
     colors.textMuted,
     colors.textOnPrimary,
@@ -973,7 +989,10 @@ useEffect(() => {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.bulkMapBarButtonPrimary, isBulkWorking && styles.bulkBarButtonDisabled]}
-                    onPress={() => setShowBulkEdit(true)}
+                    onPress={() => {
+                      blurActiveElementForModal();
+                      setShowBulkEdit(true);
+                    }}
                     disabled={isBulkWorking}
                     accessibilityRole="button"
                     accessibilityLabel="Изменить"
@@ -982,7 +1001,10 @@ useEffect(() => {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.bulkMapBarButtonDanger, isBulkWorking && styles.bulkBarButtonDisabled]}
-                    onPress={() => setShowConfirmDeleteSelected(true)}
+                    onPress={() => {
+                      blurActiveElementForModal();
+                      setShowConfirmDeleteSelected(true);
+                    }}
                     disabled={isBulkWorking}
                     accessibilityRole="button"
                     accessibilityLabel="Удалить выбранные"
@@ -1095,6 +1117,7 @@ useEffect(() => {
               style={styles.actionsItem}
               onPress={() => {
                 setShowActions(false);
+                blurActiveElementForModal();
                 setShowConfirmDeleteAll(true);
               }}
               accessibilityRole="button"

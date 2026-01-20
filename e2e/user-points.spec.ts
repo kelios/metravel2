@@ -17,9 +17,51 @@ function uniqueName(prefix: string) {
 }
 
 test.describe('User points', () => {
+  async function openListPanelTab(page: any) {
+    // On this screen there can be multiple "Список"-related buttons (e.g. selection-mode header "Назад к списку").
+    // Use a stable testID on the panel tab.
+    const listTabButton = page.getByTestId('userpoints-panel-tab-list').first();
+
+    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
+    const filtersHeaderTitle = page.getByText('Мои точки', { exact: true });
+
+    // RN-web overlays/animations can occasionally swallow the first click.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await listTabButton.click({ timeout: 30_000, force: true });
+      await page.waitForTimeout(250);
+
+      if ((await searchBox.count()) === 0 && (await filtersHeaderTitle.count()) === 0) {
+        return;
+      }
+    }
+
+    // In Filters tab we render the header search box; in List tab it's not present.
+    await expect(searchBox).toHaveCount(0, { timeout: 30_000 });
+    await expect(filtersHeaderTitle).toHaveCount(0, { timeout: 30_000 });
+  }
+
   async function installUserPointsApiMock(page: any) {
     const points: MockPoint[] = [];
     let nextId = 1;
+
+    // Categories for manual add (fetchFiltersMap -> /api/filterformap/)
+    await page.route('**/api/filterformap/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          countries: [],
+          categories: ['other', 'Food'],
+          categoryTravelAddress: [],
+          companions: [],
+          complexity: [],
+          month: [],
+          over_nights_stay: [],
+          transports: [],
+          year: '',
+        }),
+      });
+    });
 
     await page.route('**/api/user-points/**', async (route: any) => {
       const req = route.request();
@@ -148,8 +190,8 @@ test.describe('User points', () => {
     await page.waitForTimeout(150);
 
     // The userpoints screen is map-first; actions live in the list header.
-    // Switch to list view before trying to open the actions menu.
-    await page.getByRole('button', { name: 'Список' }).click({ timeout: 30_000 }).catch(() => undefined);
+    // The header is rendered inside the "Фильтры" tab of the side panel.
+    await page.getByRole('button', { name: 'Фильтры' }).click({ timeout: 30_000 }).catch(() => undefined);
     await expect(page.getByTestId('userpoints-actions-open')).toBeVisible({ timeout: 30_000 });
     await page.getByTestId('userpoints-actions-open').click({ force: true });
 
@@ -172,7 +214,23 @@ test.describe('User points', () => {
     await page.getByPlaceholder('Например: Любимое кафе').fill(name);
     await page.getByPlaceholder('55.755800').fill(lat);
     await page.getByPlaceholder('37.617300').fill(lng);
-    await page.getByRole('button', { name: 'Сохранить точку' }).click();
+
+    // Category is required by current UI.
+    // Open the first SimpleMultiSelect (Category) and choose the first available item.
+    const triggers = page.getByRole('button', { name: 'Открыть выбор', exact: true });
+    await triggers.first().click({ timeout: 30_000 });
+    await expect(page.locator('[data-testid^="simple-multiselect.item."]').first()).toBeVisible({ timeout: 30_000 });
+    await page.locator('[data-testid^="simple-multiselect.item."]').first().click({ timeout: 30_000 });
+
+    // Close the multiselect modal explicitly (RN-web overlays can intercept clicks).
+    await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click({ force: true }).catch(() => undefined);
+    await page.keyboard.press('Escape').catch(() => undefined);
+    await page.waitForTimeout(200);
+
+    await page.getByRole('button', { name: 'Сохранить точку' }).click({ force: true });
+
+    // Newly created points are visible in the "Список" tab.
+    await openListPanelTab(page);
     await expect(page.getByText(name).first()).toBeVisible({ timeout: 30_000 });
   }
 
@@ -202,10 +260,11 @@ test.describe('User points', () => {
       await test.step('Enter selection mode via actions menu', async () => {
         const actionsDialog = await openActionsMenu(page);
         await actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
-        await expect(page.getByText(/Выбрано:/)).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
       });
 
       await test.step('Select 2 points and go to map view', async () => {
+        await openListPanelTab(page);
         await page.getByText(pointNameA).first().click();
         await page.getByText(pointNameB).first().click();
 
@@ -269,9 +328,10 @@ test.describe('User points', () => {
     // Enter selection mode
     const actionsDialog = await openActionsMenu(page);
     await actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
-    await expect(page.getByText(/Выбрано:/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
 
     // Select A + B
+    await openListPanelTab(page);
     await page.getByText(pointNameA).first().click();
     await page.getByText(pointNameB).first().click();
     await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });

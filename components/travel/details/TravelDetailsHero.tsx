@@ -197,7 +197,7 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
   )
 }
 
-export const OptimizedLCPHero: React.FC<{
+const OptimizedLCPHeroInner: React.FC<{
   img: ImgLike
   alt?: string
   onLoad?: () => void
@@ -388,7 +388,7 @@ export const OptimizedLCPHero: React.FC<{
   )
 }
 
-export function TravelHeroSection({
+function TravelHeroSectionInner({
   travel,
   anchors,
   isMobile,
@@ -505,7 +505,7 @@ export function TravelHeroSection({
           {!firstImg ? (
             <NeutralHeroPlaceholder height={heroHeight} />
           ) : shouldShowOptimizedHero && !canShowSlider ? (
-            <OptimizedLCPHero
+            <OptimizedLCPHeroInner
               img={{
                 url: firstImg.url,
                 width: firstImg.width,
@@ -634,6 +634,10 @@ export function TravelHeroSection({
     </>
   )
 }
+
+// Re-export memoized versions under original names
+export const OptimizedLCPHero = React.memo(OptimizedLCPHeroInner)
+export const TravelHeroSection = React.memo(TravelHeroSectionInner as React.FC<any>)
 
 export const __testables = {
   OptimizedLCPHero,
