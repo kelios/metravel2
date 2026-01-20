@@ -31,7 +31,7 @@ export default function UserPointsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="userpoints-screen">
       <PointsList onImportPress={() => setShowImportWizard(true)} />
 
       <Modal

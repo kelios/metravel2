@@ -5,6 +5,9 @@ import Feather from '@expo/vector-icons/Feather'
 import { PointsMap } from '@/components/UserPoints/PointsMap'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
+import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
+import { getFiltersPanelStyles } from '@/components/MapPage/filtersPanelStyles'
+import type { MapUiApi } from '@/src/types/mapUi'
 
 import type { PointsListStyles } from './PointsList'
 
@@ -42,8 +45,12 @@ export const PointsListGrid: React.FC<{
 
   showingRecommendations: boolean
   onCloseRecommendations: () => void
+  onRefreshRecommendations: () => void
   activePointId?: number | null
-  recommendedRoutes?: Record<number, { distance: number; duration: number }>
+  recommendedRoutes?: Record<number, { distance: number; duration: number; line?: Array<[number, number]> }>
+
+  hasFilters: boolean
+  onResetFilters: () => void
 }> = ({
   styles,
   colors,
@@ -67,17 +74,25 @@ export const PointsListGrid: React.FC<{
   onLocateMe,
   showingRecommendations,
   onCloseRecommendations,
+  onRefreshRecommendations,
   activePointId,
   recommendedRoutes,
+  hasFilters,
+  onResetFilters,
 }) => {
   const { width: windowWidth } = useWindowDimensions()
   const isWeb = Platform.OS === 'web'
   const isWideScreen = isWeb && windowWidth >= 1024
   const themedColors = useThemedColors()
   const localStyles = useMemo(() => createLocalStyles(themedColors), [themedColors])
+  const mapSettingsStyles = useMemo(
+    () => getFiltersPanelStyles(themedColors as any, !isWideScreen, windowWidth),
+    [themedColors, isWideScreen, windowWidth]
+  )
   const [panelTab, setPanelTab] = React.useState<'filters' | 'list'>('list')
-  const [showMobilePanel, setShowMobilePanel] = React.useState(false)
+  const [showMobilePanel, setShowMobilePanel] = React.useState(() => !isWideScreen)
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce)
+  const [mapUiApi, setMapUiApi] = React.useState<MapUiApi | null>(null)
   
   // Auto-switch to list tab when showing recommendations
   React.useEffect(() => {
@@ -122,12 +137,25 @@ export const PointsListGrid: React.FC<{
             <PointsMap
               points={filteredPoints}
               center={currentLocation ?? undefined}
+              routeLines={
+                showingRecommendations
+                  ? Object.entries(recommendedRoutes ?? {})
+                      .map(([id, r]) => ({ id: Number(id), line: r?.line ?? [] }))
+                      .filter((r) => Number.isFinite(r.id) && Array.isArray(r.line) && r.line.length > 1)
+                  : []
+              }
               onMapPress={onMapPress}
               onEditPoint={onPointEdit}
               onDeletePoint={onPointDelete}
               pendingMarker={showManualAdd ? manualCoords : null}
               pendingMarkerColor={manualColor}
               activePointId={activePointId ?? undefined}
+              onPointPress={(p: any) => {
+                // allow marker click to focus the same way as list click
+                // (parent controls activePointId via list, this is a safe noop)
+                void p;
+              }}
+              onMapUiApiReady={setMapUiApi}
             />
 
             <TouchableOpacity
@@ -171,25 +199,49 @@ export const PointsListGrid: React.FC<{
             contentContainerStyle={localStyles.rightPanelContent}
             showsVerticalScrollIndicator={true}
           >
-            {panelTab === 'filters' && renderHeader()}
+            {panelTab === 'filters' && (
+              <>
+                {renderHeader()}
+                {Platform.OS === 'web' ? (
+                  <FiltersPanelMapSettings
+                    colors={themedColors as any}
+                    styles={mapSettingsStyles}
+                    isMobile={false}
+                    mode="radius"
+                    mapUiApi={mapUiApi}
+                    totalPoints={filteredPoints.length}
+                    hasFilters={hasFilters}
+                    canBuildRoute={false}
+                    onReset={onResetFilters}
+                    hideReset={!hasFilters}
+                  />
+                ) : null}
+              </>
+            )}
             
             {panelTab === 'list' && (
               <View style={localStyles.pointsList}>
                 {showingRecommendations && (
                   <View style={localStyles.recommendationsHeader}>
-                    <RNText style={localStyles.recommendationsTitle}>
-                      Куда поехать сегодня
-                    </RNText>
-                    <TouchableOpacity
-                      style={localStyles.closeRecommendationsButton}
-                      onPress={onCloseRecommendations}
-                      accessibilityRole="button"
-                      accessibilityLabel="Закрыть рекомендации"
-                    >
-                      <RNText style={localStyles.closeRecommendationsText}>
-                        Показать все
-                      </RNText>
-                    </TouchableOpacity>
+                    <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
+                    <View style={localStyles.recommendationsActions}>
+                      <TouchableOpacity
+                        style={localStyles.recommendationsRefreshButton}
+                        onPress={onRefreshRecommendations}
+                        accessibilityRole="button"
+                        accessibilityLabel="3 случайные точки"
+                      >
+                        <Feather name="refresh-cw" size={16} color={themedColors.text} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={localStyles.closeRecommendationsButton}
+                        onPress={onCloseRecommendations}
+                        accessibilityRole="button"
+                        accessibilityLabel="Показать все"
+                      >
+                        <Feather name="x" size={16} color={themedColors.textOnPrimary} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
                 {filteredPoints.map((point) => {
@@ -248,25 +300,49 @@ export const PointsListGrid: React.FC<{
             contentContainerStyle={localStyles.rightPanelContent}
             showsVerticalScrollIndicator={true}
           >
-            {panelTab === 'filters' && renderHeader()}
+            {panelTab === 'filters' && (
+              <>
+                {renderHeader()}
+                {Platform.OS === 'web' ? (
+                  <FiltersPanelMapSettings
+                    colors={themedColors as any}
+                    styles={mapSettingsStyles}
+                    isMobile={true}
+                    mode="radius"
+                    mapUiApi={mapUiApi}
+                    totalPoints={filteredPoints.length}
+                    hasFilters={hasFilters}
+                    canBuildRoute={false}
+                    onReset={onResetFilters}
+                    hideReset={!hasFilters}
+                  />
+                ) : null}
+              </>
+            )}
             
             {panelTab === 'list' && (
               <View style={localStyles.pointsList}>
                 {showingRecommendations && (
                   <View style={localStyles.recommendationsHeader}>
-                    <RNText style={localStyles.recommendationsTitle}>
-                      Куда поехать сегодня
-                    </RNText>
-                    <TouchableOpacity
-                      style={localStyles.closeRecommendationsButton}
-                      onPress={onCloseRecommendations}
-                      accessibilityRole="button"
-                      accessibilityLabel="Закрыть рекомендации"
-                    >
-                      <RNText style={localStyles.closeRecommendationsText}>
-                        Показать все
-                      </RNText>
-                    </TouchableOpacity>
+                    <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
+                    <View style={localStyles.recommendationsActions}>
+                      <TouchableOpacity
+                        style={localStyles.recommendationsRefreshButton}
+                        onPress={onRefreshRecommendations}
+                        accessibilityRole="button"
+                        accessibilityLabel="3 случайные точки"
+                      >
+                        <Feather name="refresh-cw" size={16} color={themedColors.text} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={localStyles.closeRecommendationsButton}
+                        onPress={onCloseRecommendations}
+                        accessibilityRole="button"
+                        accessibilityLabel="Показать все"
+                      >
+                        <Feather name="x" size={16} color={themedColors.textOnPrimary} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
                 {filteredPoints.map((point) => {
@@ -299,6 +375,7 @@ export const PointsListGrid: React.FC<{
             pendingMarker={showManualAdd ? manualCoords : null}
             pendingMarkerColor={manualColor}
             activePointId={activePointId ?? undefined}
+            onMapUiApiReady={setMapUiApi}
           />
 
           <TouchableOpacity
@@ -384,10 +461,31 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     backgroundColor: colors.backgroundTertiary,
     borderRadius: 8,
     marginBottom: 16,
+    gap: 12,
+  },
+  recommendationsActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
   },
   recommendationsTitle: {
     fontSize: 16,
     fontWeight: '700' as any,
+    color: colors.text,
+    flex: 1,
+  },
+  recommendationsRefreshButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: colors.background,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  recommendationsRefreshText: {
+    fontSize: 14,
+    fontWeight: '600' as any,
     color: colors.text,
   },
   closeRecommendationsButton: {

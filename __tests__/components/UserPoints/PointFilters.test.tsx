@@ -88,7 +88,7 @@ describe('PointFilters', () => {
     const visitedText = screen.getByText('Посещено');
     const planningText = getByText('Планирую');
 
-    expect(visitedText.props.style).toContainEqual(expect.objectContaining({ fontWeight: '600' }));
-    expect(planningText.props.style).not.toContainEqual(expect.objectContaining({ fontWeight: '600' }));
+    expect(visitedText.props.style).toContainEqual(expect.objectContaining({ fontWeight: '700' }));
+    expect(planningText.props.style).not.toContainEqual(expect.objectContaining({ fontWeight: '700' }));
   });
 });

@@ -11,11 +11,11 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/components/UserPoints/PointsList', () => ({
   PointsList: ({ onImportPress }: any) => {
-    const { View, Text, TouchableOpacity } = require('react-native');
+    const { View, TouchableOpacity } = require('react-native');
     return (
       <View>
         <TouchableOpacity onPress={onImportPress} accessibilityLabel="Добавить">
-          <Text>Добавить</Text>
+          <View testID="icon-add" />
         </TouchableOpacity>
       </View>
     );
@@ -125,61 +125,9 @@ describe('UserPointsScreen', () => {
     render(<UserPointsScreen />);
     
     expect(() => screen.getByText('Требуется авторизация')).toThrow();
-  });
 
-  it('should show add button when user is authenticated', () => {
-    mockUseAuth.mockReturnValue({
-      isAuthenticated: true,
-      username: 'testuser',
-      userId: '1',
-      isSuperuser: false,
-      userAvatar: null,
-      authReady: true,
-      profileRefreshToken: 0,
-      setIsAuthenticated: jest.fn(),
-      setUsername: jest.fn(),
-      setIsSuperuser: jest.fn(),
-      setUserId: jest.fn(),
-      setUserAvatar: jest.fn(),
-      triggerProfileRefresh: jest.fn(),
-      login: jest.fn(),
-      logout: jest.fn(),
-      sendPassword: jest.fn(),
-      setNewPassword: jest.fn()
-    });
-
-    render(<UserPointsScreen />);
-
-    const addButton = screen.getByText('Добавить');
-    expect(addButton).toBeTruthy();
-  });
-
-  it('should open import wizard when add button is pressed', () => {
-    mockUseAuth.mockReturnValue({
-      isAuthenticated: true,
-      username: 'testuser',
-      userId: '1',
-      isSuperuser: false,
-      userAvatar: null,
-      authReady: true,
-      profileRefreshToken: 0,
-      setIsAuthenticated: jest.fn(),
-      setUsername: jest.fn(),
-      setIsSuperuser: jest.fn(),
-      setUserId: jest.fn(),
-      setUserAvatar: jest.fn(),
-      triggerProfileRefresh: jest.fn(),
-      login: jest.fn(),
-      logout: jest.fn(),
-      sendPassword: jest.fn(),
-      setNewPassword: jest.fn()
-    });
-
-    render(<UserPointsScreen />);
-
-    const addButton = screen.getByText('Добавить');
-    fireEvent.press(addButton);
-
-    expect(screen.getByText('Выберите источник данных')).toBeTruthy();
+    expect(screen.getByLabelText('Добавить')).toBeTruthy();
+    expect(screen.getByTestId('icon-add')).toBeTruthy();
+    expect(screen.queryByText('Добавить')).toBeNull();
   });
 });

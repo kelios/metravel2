@@ -37,7 +37,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [showActions, setShowActions] = useState(false);
   const [recommendedPointIds, setRecommendedPointIds] = useState<number[]>([]);
   const [showingRecommendations, setShowingRecommendations] = useState(false);
-  const [recommendedRoutes, setRecommendedRoutes] = useState<Record<number, { distance: number; duration: number }>>({});
+  const [recommendedRoutes, setRecommendedRoutes] = useState<
+    Record<number, { distance: number; duration: number; line?: Array<[number, number]> }>
+  >({});
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -280,15 +282,30 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   );
 
   const hasActiveFilters = useMemo(() => {
+    const hasSearch = String(searchQuery || '').trim().length > 0;
+    const radiusKm = filters.radiusKm;
+    const hasRadius = radiusKm != null && Number.isFinite(Number(radiusKm)) && Number(radiusKm) !== 100;
     return (
       (filters.statuses?.length ?? 0) > 0 ||
       (filters.siteCategories?.length ?? 0) > 0 ||
-      (filters.colors?.length ?? 0) > 0
+      (filters.colors?.length ?? 0) > 0 ||
+      hasSearch ||
+      hasRadius
     );
-  }, [filters.colors, filters.siteCategories, filters.statuses]);
+  }, [filters.colors, filters.radiusKm, filters.siteCategories, filters.statuses, searchQuery]);
 
   const activeFilterChips = useMemo(() => {
     const chips: Array<{ key: string; label: string }> = [];
+
+    const q = String(searchQuery || '').trim();
+    if (q) {
+      chips.push({ key: 'search', label: `Поиск: ${q}` });
+    }
+
+    const radiusKm = filters.radiusKm;
+    if (radiusKm != null && Number.isFinite(Number(radiusKm)) && Number(radiusKm) !== 100) {
+      chips.push({ key: 'radius', label: `Радиус: ${Number(radiusKm)} км` });
+    }
     
     (filters.statuses ?? []).forEach((status) => {
       const label = (STATUS_LABELS as Record<string, string>)[status as unknown as string] || String(status);
@@ -304,13 +321,29 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     });
     
     return chips;
-  }, [filters.colors, filters.siteCategories, filters.statuses]);
+  }, [filters.colors, filters.radiusKm, filters.siteCategories, filters.statuses, searchQuery]);
 
   const handleResetFilters = useCallback(() => {
-    setFilters({ page: 1, perPage: filters.perPage ?? 50 });
+    setSearchQuery('');
+    setFilters({ page: 1, perPage: filters.perPage ?? 50, radiusKm: 100 });
+    setShowingRecommendations(false);
+    setRecommendedPointIds([]);
+    setRecommendedRoutes({});
+    setActivePointId(null);
   }, [filters.perPage]);
 
   const handleRemoveFilterChip = useCallback((key: string) => {
+    if (key === 'search') {
+      setSearchQuery('');
+      setFilters((prev) => ({ ...prev, search: '', page: 1 }));
+      return;
+    }
+
+    if (key === 'radius') {
+      setFilters((prev) => ({ ...prev, radiusKm: 100, page: 1 }));
+      return;
+    }
+
     if (key.startsWith('status-')) {
       const status = key.replace('status-', '') as PointStatus;
       const next = (filters.statuses ?? []).filter((s) => s !== status);
@@ -651,23 +684,61 @@ const deleteAll = useCallback(async () => {
     setRecommendedPointIds(recommendedIds);
     setShowingRecommendations(true);
     
+    let loc = currentLocation;
+    if (!loc) {
+      try {
+        if (Platform.OS === 'web') {
+          if (typeof navigator !== 'undefined' && navigator.geolocation) {
+            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 5000,
+              });
+            });
+            loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            setCurrentLocation(loc);
+          }
+        }
+      } catch {
+        // noop
+      }
+    }
+
     // Calculate routes if we have current location
-    if (currentLocation && recommended.length > 0) {
-      const routes: Record<number, { distance: number; duration: number }> = {};
+    if (loc && recommended.length > 0) {
+      const routes: Record<number, { distance: number; duration: number; line?: Array<[number, number]> }> = {};
       
       // Calculate route to each recommended point
       for (const point of recommended) {
         try {
           // Use OSRM public API for car routing
-          const url = `https://router.project-osrm.org/route/v1/driving/${currentLocation.lng},${currentLocation.lat};${point.longitude},${point.latitude}?overview=false`;
+          const toLng = Number((point as any)?.longitude);
+          const toLat = Number((point as any)?.latitude);
+          if (!Number.isFinite(toLng) || !Number.isFinite(toLat)) continue;
+
+          const url = `https://router.project-osrm.org/route/v1/driving/${loc.lng},${loc.lat};${toLng},${toLat}?overview=full&geometries=geojson`;
           const response = await fetch(url);
           const data = await response.json();
           
           if (data.code === 'Ok' && data.routes && data.routes[0]) {
             const route = data.routes[0];
+            const coords = route?.geometry?.coordinates;
+            const line = Array.isArray(coords)
+              ? (coords
+                  .map((c: any) => {
+                    const lng = Number(c?.[0]);
+                    const lat = Number(c?.[1]);
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+                    return [lat, lng] as [number, number];
+                  })
+                  .filter((v: any): v is [number, number] => v != null))
+              : undefined;
+
             routes[Number(point.id)] = {
               distance: Math.round(route.distance / 1000), // Convert meters to km
               duration: Math.round(route.duration / 60), // Convert seconds to minutes
+              line,
             };
           }
         } catch (error) {
@@ -682,7 +753,9 @@ const deleteAll = useCallback(async () => {
   }, [filteredPoints, currentLocation]);
 
   const handleShowPointOnMap = useCallback((point: any) => {
-    if (!Number.isFinite(point.latitude) || !Number.isFinite(point.longitude)) return;
+    const lat = Number((point as any)?.latitude);
+    const lng = Number((point as any)?.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     
     // Set active point to center map on it
     setActivePointId(Number(point.id));
@@ -773,6 +846,7 @@ const deleteAll = useCallback(async () => {
     colors.textOnPrimary,
     filters,
     filteredPoints.length,
+    handleOpenRecommendations,
     handleFilterChange,
     handleRemoveFilterChip,
     handleResetFilters,
@@ -954,6 +1028,7 @@ useEffect(() => {
         isLocating={isLocating}
         onLocateMe={handleLocateMe}
         showingRecommendations={showingRecommendations}
+        onRefreshRecommendations={handleOpenRecommendations}
         onCloseRecommendations={() => {
           setShowingRecommendations(false);
           setRecommendedPointIds([]);
@@ -961,6 +1036,8 @@ useEffect(() => {
         }}
         activePointId={activePointId}
         recommendedRoutes={recommendedRoutes}
+        hasFilters={hasActiveFilters}
+        onResetFilters={handleResetFilters}
       />
 
       <Modal

@@ -22,7 +22,12 @@ test.describe('User points import (mock API)', () => {
     await page.keyboard.press('Escape').catch(() => undefined);
     await page.keyboard.press('Escape').catch(() => undefined);
     await page.waitForTimeout(150);
-    await page.getByRole('button', { name: 'Добавить', exact: true }).first().click({ force: true });
+
+    // The userpoints screen is map-first; actions live in the list header.
+    // Switch to list view before trying to open the actions menu.
+    await page.getByRole('button', { name: 'Список' }).click({ timeout: 30_000 }).catch(() => undefined);
+    await expect(page.getByTestId('userpoints-actions-open')).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId('userpoints-actions-open').click({ force: true });
 
     const actionsDialog = page
       .getByRole('dialog')
@@ -105,7 +110,7 @@ test.describe('User points import (mock API)', () => {
 
       await page.addInitScript(seedNecessaryConsent);
       await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
-      await expect(page.getByText('Мои точки', { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
 
       await openImportWizard(page);
 

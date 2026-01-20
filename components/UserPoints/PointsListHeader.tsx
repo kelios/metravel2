@@ -60,7 +60,7 @@ type PointsListHeaderProps = {
 export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   styles,
   colors,
-  isNarrow,
+  isNarrow: _isNarrow,
   isMobile,
   total,
   found,
@@ -68,11 +68,11 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   onResetFilters,
   activeFilterChips,
   onRemoveFilterChip,
-  viewMode,
-  onViewModeChange,
-  panelTab,
-  onPanelTabChange,
-  hideViewToggle,
+  viewMode: _viewMode,
+  onViewModeChange: _onViewModeChange,
+  panelTab: _panelTab,
+  onPanelTabChange: _onPanelTabChange,
+  hideViewToggle: _hideViewToggle,
   showFilters,
   onToggleFilters,
   onOpenActions,
@@ -99,6 +99,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           <TouchableOpacity
             style={[styles.headerButton, styles.headerIconButton]}
             onPress={onOpenActions}
+            testID="userpoints-actions-open"
             accessibilityRole="button"
             accessibilityLabel="Управление точками"
           >
@@ -111,22 +112,21 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             accessibilityRole="button"
             accessibilityLabel={showFilters ? 'Скрыть фильтры' : 'Показать фильтры'}
           >
-            <Feather name={showFilters ? 'eye-off' : 'eye'} size={18} color={colors.text} />
+            <Feather name={showFilters ? 'eye-off' : 'filter'} size={18} color={colors.text} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.recoOpenButton, styles.headerIconButtonPrimary]}
+            onPress={onOpenRecommendations}
+            accessibilityRole="button"
+            accessibilityLabel="3 случайные точки"
+          >
+            <Feather name="compass" size={18} color={colors.textOnPrimary} />
+            {!isMobile ? (
+              <Text style={[styles.recoOpenButtonText, { marginLeft: 8 } as any]}>3 случайные точки</Text>
+            ) : null}
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={[styles.recoOpenButton, isMobile && styles.headerIconButtonPrimary]}
-          onPress={onOpenRecommendations}
-          accessibilityRole="button"
-          accessibilityLabel="3 случайные точки"
-        >
-          {isMobile ? (
-            <Feather name="compass" size={18} color={colors.textOnPrimary} />
-          ) : (
-            <Text style={styles.recoOpenButtonText}>3 случайные точки</Text>
-          )}
-        </TouchableOpacity>
       </View>
 
       <View style={styles.searchContainer}>

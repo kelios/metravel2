@@ -6,6 +6,11 @@ import type { PointColor } from '@/types/userPoints';
 import { STATUS_LABELS } from '@/types/userPoints';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import { useThemedColors } from '@/hooks/useTheme';
+import type { MapUiApi } from '@/src/types/mapUi';
+import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
+import { useMapApi } from '@/components/MapPage/Map/useMapApi';
+import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
+import { createLeafletLayer } from '@/src/utils/mapWebLayers';
 
 interface PointsMapProps {
   points: ImportedPoint[];
@@ -18,6 +23,8 @@ interface PointsMapProps {
   onCenterChange?: (coords: { lat: number; lng: number }) => void;
   pendingMarker?: { lat: number; lng: number } | null;
   pendingMarkerColor?: PointColor;
+  onMapUiApiReady?: (api: MapUiApi | null) => void;
+  routeLines?: Array<{ id: number; line: Array<[number, number]> }>;
 }
 
 export const PointsMap: React.FC<PointsMapProps> = ({
@@ -31,6 +38,8 @@ export const PointsMap: React.FC<PointsMapProps> = ({
   onCenterChange,
   pendingMarker,
   pendingMarkerColor,
+  onMapUiApiReady,
+  routeLines,
 }) => {
   // Для web используем react-leaflet, для mobile - react-native-maps
   if (Platform.OS === 'web') {
@@ -46,6 +55,8 @@ export const PointsMap: React.FC<PointsMapProps> = ({
         onCenterChange={onCenterChange}
         pendingMarker={pendingMarker}
         pendingMarkerColor={pendingMarkerColor}
+        onMapUiApiReady={onMapUiApiReady}
+        routeLines={routeLines}
       />
     );
   }
@@ -62,6 +73,8 @@ export const PointsMap: React.FC<PointsMapProps> = ({
       onCenterChange={onCenterChange}
       pendingMarker={pendingMarker}
       pendingMarkerColor={pendingMarkerColor}
+      onMapUiApiReady={onMapUiApiReady}
+      routeLines={routeLines}
     />
   );
 };
@@ -78,16 +91,22 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   onCenterChange,
   pendingMarker,
   pendingMarkerColor,
+  onMapUiApiReady,
+  routeLines,
 }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
+  const [mapInstance, setMapInstance] = React.useState<any>(null);
+  const baseLayerFallbackIndexRef = React.useRef(0);
+  const baseLayerFallbackSwitchingRef = React.useRef(false);
+
   const [mods, setMods] = React.useState<{
     L: any;
     MapContainer: any;
-    TileLayer: any;
     Marker: any;
     Popup: any;
+    Polyline: any;
     useMap: any;
     useMapEvents: any;
   } | null>(null);
@@ -117,9 +136,9 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
       setMods({
         L,
         MapContainer: (rl as any).MapContainer,
-        TileLayer: (rl as any).TileLayer,
         Marker: (rl as any).Marker,
         Popup: (rl as any).Popup,
+        Polyline: (rl as any).Polyline,
         useMap: (rl as any).useMap,
         useMapEvents: (rl as any).useMapEvents,
       });
@@ -161,17 +180,153 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     [colors.border, colors.primary, colors.surface, mods?.L]
   );
 
-  if (!mods?.MapContainer || !mods?.TileLayer) {
+  const safePoints = React.useMemo(() => {
+    return (points ?? [])
+      .map((p: any) => {
+        const lat = Number(p?.latitude);
+        const lng = Number(p?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { ...(p as any), latitude: lat, longitude: lng } as ImportedPoint;
+      })
+      .filter((p: any): p is ImportedPoint => p != null);
+  }, [points]);
+
+  const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
+    map: mapInstance,
+    L: mods?.L,
+  });
+
+  React.useEffect(() => {
+    const map = mapInstance;
+    const L = mods?.L;
+    if (!map || !L) return;
+
+    try {
+      const current = leafletBaseLayerRef.current;
+      if (current && map.hasLayer?.(current)) return;
+
+      const baseDef = WEB_MAP_BASE_LAYERS.find((l) => l.defaultEnabled) || WEB_MAP_BASE_LAYERS[0];
+      if (!baseDef) return;
+
+      const baseLayer = createLeafletLayer(L, baseDef);
+      if (!baseLayer) return;
+
+      leafletBaseLayerRef.current = baseLayer;
+      baseLayer.addTo(map);
+    } catch {
+      // noop
+    }
+  }, [leafletBaseLayerRef, mapInstance, mods?.L]);
+
+  React.useEffect(() => {
+    const map = mapInstance;
+    const L = mods?.L;
+    if (!map || !L) return;
+
+    const fallbackUrls = [
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+    ];
+
+    const attach = (layer: any) => {
+      if (!layer || typeof layer.on !== 'function') return () => {};
+
+      const onTileError = () => {
+        try {
+          if (baseLayerFallbackSwitchingRef.current) return;
+          baseLayerFallbackSwitchingRef.current = true;
+
+          const idx = baseLayerFallbackIndexRef.current;
+          const nextUrl = fallbackUrls[idx];
+          if (!nextUrl) {
+            baseLayerFallbackSwitchingRef.current = false;
+            return;
+          }
+
+          baseLayerFallbackIndexRef.current = idx + 1;
+
+          const nextDef = {
+            id: `__fallback_osm_${idx}`,
+            title: 'OpenStreetMap (fallback)',
+            kind: 'tile',
+            url: nextUrl,
+            attribution: '&copy; OpenStreetMap contributors',
+            defaultEnabled: true,
+          } as any;
+
+          const nextLayer = createLeafletLayer(L, nextDef);
+          if (!nextLayer) {
+            baseLayerFallbackSwitchingRef.current = false;
+            return;
+          }
+
+          const current = leafletBaseLayerRef.current as any;
+          if (current && map.hasLayer?.(current)) {
+            map.removeLayer(current);
+          }
+
+          leafletBaseLayerRef.current = nextLayer;
+          nextLayer.addTo(map);
+
+          try {
+            layer.off?.('tileerror', onTileError);
+          } catch {
+            // noop
+          }
+
+          attach(nextLayer);
+          baseLayerFallbackSwitchingRef.current = false;
+        } catch {
+          baseLayerFallbackSwitchingRef.current = false;
+        }
+      };
+
+      layer.on('tileerror', onTileError);
+      return () => {
+        try {
+          layer.off?.('tileerror', onTileError);
+        } catch {
+          // noop
+        }
+      };
+    };
+
+    const initialLayer: any = leafletBaseLayerRef.current as any;
+    const detach = attach(initialLayer);
+    return () => {
+      detach?.();
+    };
+  }, [leafletBaseLayerRef, mapInstance, mods?.L]);
+
+  useMapApi({
+    map: mapInstance,
+    L: mods?.L,
+    onMapUiApiReady,
+    travelData: (safePoints ?? []).map((p: any) => ({
+      id: Number(p?.id),
+      coord: `${Number(p?.latitude)},${Number(p?.longitude)}`,
+      address: String(p?.address ?? ''),
+    })),
+    userLocation: centerOverride ? { lat: centerOverride.lat, lng: centerOverride.lng } : null,
+    routePoints: [],
+    leafletBaseLayerRef,
+    leafletOverlayLayersRef,
+    leafletControlRef,
+  });
+
+  if (!mods?.MapContainer) {
     return <View style={styles.container} />;
   }
 
+  const effectiveCenterOverride = safePoints.length > 0 ? undefined : centerOverride;
+
   // Вычисляем центр карты
-  const center = centerOverride
-    ? centerOverride
-    : points.length > 0
+  const center = effectiveCenterOverride
+    ? effectiveCenterOverride
+    : safePoints.length > 0
       ? {
-          lat: points.reduce((sum, p) => sum + p.latitude, 0) / points.length,
-          lng: points.reduce((sum, p) => sum + p.longitude, 0) / points.length,
+          lat: safePoints.reduce((sum, p) => sum + p.latitude, 0) / safePoints.length,
+          lng: safePoints.reduce((sum, p) => sum + p.longitude, 0) / safePoints.length,
         }
       : { lat: 55.7558, lng: 37.6173 }; // Москва по умолчанию
 
@@ -187,6 +342,29 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
         }
       });
     }, [map]);
+    return null;
+  };
+
+  const CenterOnActive = ({ activeId }: { activeId?: number | null }) => {
+    const map = mods.useMap?.();
+
+    React.useEffect(() => {
+      if (!map) return;
+      const id = Number(activeId);
+      if (!Number.isFinite(id)) return;
+
+      const target = safePoints.find((p: any) => Number(p?.id) === id);
+      if (!target) return;
+
+      try {
+        const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : 12;
+        const nextZoom = Math.max(14, Number.isFinite(currentZoom) ? currentZoom : 14);
+        map.setView([target.latitude, target.longitude], nextZoom, { animate: true } as any);
+      } catch {
+        // noop
+      }
+    }, [activeId, map]);
+
     return null;
   };
 
@@ -316,18 +494,38 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     <View style={styles.container}>
       <mods.MapContainer
         center={[center.lat, center.lng]}
-        zoom={points.length > 0 ? 10 : 5}
+        zoom={safePoints.length > 0 ? 10 : 5}
         style={{ height: '100%', width: '100%' }}
+        whenCreated={(map: any) => {
+          setMapInstance(map);
+        }}
       >
         <FixSize />
-        <CenterOn nextCenter={centerOverride} />
-        <FitOnPoints nextPoints={points} centerOverride={centerOverride} />
+        <CenterOn nextCenter={effectiveCenterOverride} />
+        <CenterOnActive activeId={activePointId} />
+        <FitOnPoints nextPoints={safePoints} centerOverride={effectiveCenterOverride} />
         <MapClickHandler />
         <MapCenterReporter />
-        <mods.TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+
+        {centerOverride && Number.isFinite(centerOverride.lat) && Number.isFinite(centerOverride.lng) ? (
+          <mods.Marker
+            key="__user__"
+            position={[centerOverride.lat, centerOverride.lng]}
+            icon={getMarkerIcon(colors.primary, { active: true })}
+          />
+        ) : null}
+
+        {(routeLines ?? []).map((r) => {
+          if (!mods?.Polyline) return null;
+          if (!Array.isArray(r?.line) || r.line.length < 2) return null;
+          return (
+            <mods.Polyline
+              key={`route-${r.id}`}
+              positions={r.line}
+              pathOptions={{ color: colors.primary, weight: 4, opacity: 0.85 } as any}
+            />
+          );
+        })}
 
         {pendingMarker && (
           <mods.Marker
@@ -337,7 +535,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
           />
         )}
 
-        {points.map((point) => {
+        {safePoints.map((point) => {
           const badgeColor = String(point.color || '').trim() || colors.backgroundTertiary;
           const hasCoords =
             Number.isFinite((point as any)?.latitude) &&
