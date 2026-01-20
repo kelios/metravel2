@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable, Linking, Share } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -47,7 +47,7 @@ export const PointCard: React.FC<PointCardProps> = ({
     onActivate,
   }: {
     label: string;
-    icon: 'edit-2' | 'trash-2' | 'copy';
+    icon: 'edit-2' | 'trash-2' | 'copy' | 'map' | 'send';
     onActivate?: () => void;
   }) => {
     return (
@@ -95,6 +95,53 @@ export const PointCard: React.FC<PointCardProps> = ({
       // ignore
     }
   }, [coordsText, hasCoords]);
+
+  const openInMaps = React.useCallback(async () => {
+    if (!hasCoords) return;
+
+    const apple = `https://maps.apple.com/?q=${encodeURIComponent(coordsText)}`;
+    const google = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+
+    try {
+      if (Platform.OS === 'web') {
+        const isApple = /Mac|iPhone|iPad|iPod/i.test((navigator as any)?.userAgent ?? '');
+        window.open(isApple ? apple : google, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      const url = Platform.OS === 'ios' ? apple : google;
+      await Linking.openURL(url);
+    } catch {
+      // ignore
+    }
+  }, [coordsText, hasCoords]);
+
+  const shareToTelegram = React.useCallback(async () => {
+    if (!hasCoords) return;
+
+    const text = String(point?.name ?? '') || coordsText;
+    const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+    const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+
+    try {
+      if (Platform.OS === 'web') {
+        window.open(tg, '_blank', 'noopener,noreferrer');
+        return;
+      }
+
+      // Try native share first; fall back to opening Telegram share URL.
+      try {
+        await Share.share({ message: `${text}\n${url}` });
+        return;
+      } catch {
+        // noop
+      }
+
+      await Linking.openURL(tg);
+    } catch {
+      // ignore
+    }
+  }, [coordsText, hasCoords, point?.name]);
 
   return (
     <TouchableOpacity
@@ -200,24 +247,62 @@ export const PointCard: React.FC<PointCardProps> = ({
               {coordsText}
             </Text>
             {Platform.OS === 'web' ? (
-              <WebAction label="Копировать координаты" icon="copy" onActivate={copyCoords} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 } as any}>
+                <WebAction label="Копировать координаты" icon="copy" onActivate={copyCoords} />
+                <WebAction label="Открыть в картах" icon="map" onActivate={() => void openInMaps()} />
+                <WebAction label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
+              </View>
             ) : (
-              <TouchableOpacity
-                style={styles.copyButton}
-                accessibilityRole="button"
-                accessibilityLabel="Копировать координаты"
-                onPress={(e) => {
-                  try {
-                    (e as any)?.preventDefault?.();
-                    (e as any)?.stopPropagation?.();
-                  } catch {
-                    // noop
-                  }
-                  void copyCoords();
-                }}
-              >
-                <Feather name="copy" size={16} color={colors.textMuted} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Копировать координаты"
+                  onPress={(e) => {
+                    try {
+                      (e as any)?.preventDefault?.();
+                      (e as any)?.stopPropagation?.();
+                    } catch {
+                      // noop
+                    }
+                    void copyCoords();
+                  }}
+                >
+                  <Feather name="copy" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Открыть в картах"
+                  onPress={(e) => {
+                    try {
+                      (e as any)?.preventDefault?.();
+                      (e as any)?.stopPropagation?.();
+                    } catch {
+                      // noop
+                    }
+                    void openInMaps();
+                  }}
+                >
+                  <Feather name="map" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Поделиться в Telegram"
+                  onPress={(e) => {
+                    try {
+                      (e as any)?.preventDefault?.();
+                      (e as any)?.stopPropagation?.();
+                    } catch {
+                      // noop
+                    }
+                    void shareToTelegram();
+                  }}
+                >
+                  <Feather name="send" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         ) : null}

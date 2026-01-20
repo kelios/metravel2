@@ -163,6 +163,18 @@ export default function CustomHeaderMobileMenu({
                 </Pressable>
 
                 <Pressable
+                  onPress={() => onUserAction('/userpoints')}
+                  style={styles.modalNavItem}
+                  accessibilityRole="button"
+                  accessibilityLabel="Мои точки"
+                >
+                  <View style={styles.iconSlot20}>
+                    <Feather name="map-pin" size={20} color={colors.textMuted} />
+                  </View>
+                  <Text style={styles.modalNavLabel}>Мои точки</Text>
+                </Pressable>
+
+                <Pressable
                   onPress={onCreate}
                   style={styles.modalNavItem}
                   accessibilityRole="button"

@@ -7,12 +7,12 @@ import {
   Platform,
   Pressable,
   Text,
-  FlatList,
   ListRenderItemInfo,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Feather from '@expo/vector-icons/Feather';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { FlashList } from '@shopify/flash-list';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -582,17 +582,13 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
       </Pressable>
 
       {showList && (
-        <FlatList
-          key={`cols-${numColumns}`}            // ← фикс "Changing numColumns..."
+        <FlashList
+          key={`cols-${numColumns}`}
           data={safePoints}
-          keyExtractor={keyExtractor}
+          estimatedItemSize={300}
           renderItem={renderItem}
           numColumns={numColumns}
-          removeClippedSubviews={Platform.OS !== 'web'}
-          windowSize={7}
-          initialNumToRender={numColumns * 3}
-          maxToRenderPerBatch={numColumns * 3}
-          updateCellsBatchingPeriod={16}
+          keyExtractor={keyExtractor}
           contentContainerStyle={styles.listContent}
           columnWrapperStyle={numColumns > 1 ? styles.columnWrap : undefined}
         />

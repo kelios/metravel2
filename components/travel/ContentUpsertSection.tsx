@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense } from 'react';
 import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, Dimensions } from 'react-native';
 import { TravelFormData } from '@/src/types/types';
 import TextInputComponent from '@/components/TextInputComponent';
@@ -254,14 +254,15 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                         </TouchableOpacity>
                                     </View>
                                     <View style={styles.modalBody}>
-                                        <ArticleEditor
-                                            key={`description-fullscreen-${idTravelStr ?? 'new'}`}
-                                            label={title}
-                                            content={content ?? ''}
-                                            onChange={onChange}
-                                            idTravel={idTravelStr}
-                                            variant="default"
-                                        />
+                                        <Suspense fallback={<View style={{ padding: 20 }}><Text>Загрузка редактора...</Text></View>}>
+                                            <ArticleEditor
+                                                key={`description-fullscreen-${idTravelStr ?? 'new'}`}
+                                                label={title}
+                                                content={content ?? ''}
+                                                onChange={onChange}
+                                                placeholder={hint}
+                                            />
+                                        </Suspense>
                                     </View>
                                 </SafeAreaView>
                             </Modal>

@@ -61,6 +61,10 @@ const buildApiPrefixedUrl = (value: string): string | null => {
 export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
   useEffect(() => {
     if (Platform.OS !== 'web') return
+    // global dedupe set to avoid creating duplicate preload/prefetch tags
+    if (!(window as any).__metravel_lcp_preloaded) {
+      (window as any).__metravel_lcp_preloaded = new Set<string>()
+    }
     const createdLinks: HTMLLinkElement[] = []
     const first = travel?.gallery?.[0]
     if (!first) return
@@ -99,7 +103,10 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
 
     const rel = document.readyState === 'complete' ? 'prefetch' : 'preload'
     const preloadHref = buildApiPrefixedUrl(_optimizedHref) ?? _optimizedHref
-    if (preloadHref && !document.querySelector(`link[rel="${rel}"][href="${preloadHref}"]`)) {
+    const preloadKey = preloadHref
+    const already = (window as any).__metravel_lcp_preloaded.has(preloadKey)
+    if (preloadHref && !already && !document.querySelector(`link[rel="${rel}"][href="${preloadHref}"]`)) {
+      (window as any).__metravel_lcp_preloaded.add(preloadKey)
       const preload = document.createElement('link')
       preload.rel = rel
       preload.as = 'image'

@@ -17,18 +17,46 @@ function uniqueName(prefix: string) {
 }
 
 test.describe('User points', () => {
+  async function openFiltersPanelTab(page: any) {
+    const filtersTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
+    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await filtersTabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
+      await filtersTabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      await page.waitForTimeout(150);
+
+      if ((await searchBox.count()) > 0) {
+        await expect(searchBox).toBeVisible({ timeout: 5_000 });
+        return;
+      }
+    }
+
+    await expect(searchBox).toBeVisible({ timeout: 30_000 });
+  }
+
   async function openListPanelTab(page: any) {
     // On this screen there can be multiple "Список"-related buttons (e.g. selection-mode header "Назад к списку").
     // Use a stable testID on the panel tab.
     const listTabButton = page.getByTestId('userpoints-panel-tab-list').first();
+    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
     const listContent = page.getByTestId('userpoints-panel-content-list');
 
     // RN-web overlays/animations can occasionally swallow the first click.
     for (let attempt = 0; attempt < 3; attempt++) {
-      await listTabButton.click({ timeout: 30_000, force: true });
-      await expect(listContent).toBeVisible({ timeout: 5_000 });
-      return;
+      await listTabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
+      // Fallback: sometimes Playwright click doesn't trigger RN-web onPress reliably.
+      await listTabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      await page.waitForTimeout(150);
+
+      if ((await listContent.count()) > 0 && (await searchBox.count()) === 0) {
+        await expect(listContent).toBeVisible({ timeout: 5_000 });
+        return;
+      }
     }
+
+    await expect(listContent).toBeVisible({ timeout: 30_000 });
+    await expect(searchBox).toHaveCount(0, { timeout: 30_000 });
   }
 
   async function installTileMock(page: any) {
@@ -54,11 +82,41 @@ test.describe('User points', () => {
 
   test('renders map tiles on /userpoints and shows search + recommendations in list panel', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(() => {
+      try {
+        const coords = {
+          latitude: 50.06143,
+          longitude: 19.93658,
+          accuracy: 10,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        };
+
+        const makePosition = () => ({
+          coords,
+          timestamp: Date.now(),
+        });
+
+        (navigator as any).geolocation = {
+          getCurrentPosition: (success: any) => success(makePosition()),
+          watchPosition: (success: any) => {
+            success(makePosition());
+            return 1;
+          },
+          clearWatch: () => undefined,
+        };
+      } catch {
+        // noop
+      }
+    });
     await installTileMock(page);
     const api = await installUserPointsApiMock(page);
 
+    const pointName = uniqueName('Point');
     api.addPoint({
-      name: uniqueName('Point'),
+      name: pointName,
       latitude: 50.06143,
       longitude: 19.93658,
       color: 'red',
@@ -75,10 +133,29 @@ test.describe('User points', () => {
     // Verify that at least one tile image has been loaded.
     await expect(page.locator('img.leaflet-tile-loaded').first()).toBeVisible({ timeout: 30_000 });
 
-    // Verify that list tab contains search and the recommendations button.
-    await openListPanelTab(page);
+    // Locate-me should zoom in (>= 12)
+    await page.getByRole('button', { name: 'Моё местоположение' }).click({ timeout: 30_000 });
+    await expect(page.locator('img.leaflet-tile-loaded[src*="/12/"]').first()).toBeVisible({ timeout: 30_000 });
+
+    // Clicking a marker should zoom in further (>= 14)
+    await page.locator('.leaflet-marker-icon').first().click({ timeout: 30_000 });
+    await expect(page.locator('img.leaflet-tile-loaded[src*="/14/"]').first()).toBeVisible({ timeout: 30_000 });
+
+    // Popup should expose coordinates actions.
+    await expect(page.getByRole('button', { name: 'Копировать координаты' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Открыть в картах' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Поделиться в Telegram' })).toBeVisible({ timeout: 30_000 });
+
+    // Search + recommendations live in the Filters tab.
+    await openFiltersPanelTab(page);
     await expect(page.getByRole('textbox', { name: 'Поиск по названию...' })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('button', { name: '3 случайные точки' })).toBeVisible({ timeout: 30_000 });
+
+    // List item card should also expose the same coordinate actions.
+    await expect(page.getByText(pointName).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Копировать координаты' }).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Открыть в картах' }).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Поделиться в Telegram' }).first()).toBeVisible({ timeout: 30_000 });
   });
 
   async function installUserPointsApiMock(page: any) {
@@ -268,7 +345,29 @@ test.describe('User points', () => {
     await page.keyboard.press('Escape').catch(() => undefined);
     await page.waitForTimeout(200);
 
-    await page.getByRole('button', { name: 'Сохранить точку' }).click({ force: true });
+    const saveButton = page.getByRole('button', { name: 'Сохранить точку' }).first();
+
+    // Saving can be flaky on RN-web (click swallowed / modal overlay). We retry the click and wait for network.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const createResponsePromise = page.waitForResponse(
+        (r: any) =>
+          ['POST', 'PATCH'].includes(String(r.request()?.method?.() || '')) && /\/api\/user-points\//.test(String(r.url() || '')),
+        { timeout: 10_000 }
+      );
+      const refetchResponsePromise = page.waitForResponse(
+        (r: any) => String(r.request()?.method?.() || '') === 'GET' && /\/api\/user-points\//.test(String(r.url() || '')),
+        { timeout: 10_000 }
+      );
+
+      await saveButton.click({ force: true }).catch(() => undefined);
+      await saveButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+
+      const created = await createResponsePromise.then(() => true).catch(() => false);
+      const refetched = await refetchResponsePromise.then(() => true).catch(() => false);
+
+      if (created || refetched) break;
+      await page.waitForTimeout(250);
+    }
 
     // Newly created points are visible in the "Список" tab.
     await openListPanelTab(page);
@@ -311,7 +410,8 @@ test.describe('User points', () => {
 
         await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
 
-        await page.getByRole('button', { name: 'На карте' }).click();
+        // Map-first UI: the map is already visible during selection mode.
+        await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
         await expect(page.getByRole('button', { name: 'Назад к списку' })).toBeVisible({ timeout: 30_000 });
       });
 
@@ -373,8 +473,10 @@ test.describe('User points', () => {
 
     // Select A + B
     await openListPanelTab(page);
-    await page.getByText(pointNameA).first().click();
-    await page.getByText(pointNameB).first().click();
+    await expect(page.getByText(pointNameA).first()).toBeVisible({ timeout: 30_000 });
+    await page.getByText(pointNameA).first().click({ force: true });
+    await expect(page.getByText(pointNameB).first()).toBeVisible({ timeout: 30_000 });
+    await page.getByText(pointNameB).first().click({ force: true });
     await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
 
     // Bulk edit: set status to visited
@@ -384,7 +486,7 @@ test.describe('User points', () => {
     // Open Status select (2nd SimpleMultiSelect trigger) and choose 'visited'
     const bulkDialog = page.getByRole('dialog').filter({ has: page.getByText('Изменить выбранные', { exact: true }) }).first();
     const triggers = bulkDialog.getByRole('button', { name: 'Открыть выбор', exact: true });
-    await triggers.nth(1).click();
+    await triggers.last().click({ force: true });
     await page.locator('[data-testid="simple-multiselect.item.visited"]').click();
 
     // Close SimpleMultiSelect modal: on RN-web the "Готово" footer can be unclickable due to overlay layers.
@@ -411,7 +513,8 @@ test.describe('User points', () => {
     // Both selected points should display status label "Посещено"
     await expect(page.getByText(pointNameA).first()).toBeVisible();
     await expect(page.getByText(pointNameB).first()).toBeVisible();
-    await expect(page.getByText('Посещено').first()).toBeVisible({ timeout: 30_000 });
+    // Current UI label for visited status is "Архив".
+    await expect(page.getByText('Архив').first()).toBeVisible({ timeout: 30_000 });
 
     // App exits selection mode after bulk apply; re-enter selection mode to delete selected.
     const actionsDialogAfterEdit = await openActionsMenu(page);

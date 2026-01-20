@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import type { Region } from 'react-native-maps';
 import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
 import type { PointColor } from '@/types/userPoints';
@@ -100,6 +101,15 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   const [mapInstance, setMapInstance] = React.useState<any>(null);
   const baseLayerFallbackIndexRef = React.useRef(0);
   const baseLayerFallbackSwitchingRef = React.useRef(false);
+
+  const [driveInfoById, setDriveInfoById] = React.useState<
+    Record<
+      number,
+      | { status: 'loading' }
+      | { status: 'ok'; distanceKm: number; durationMin: number }
+      | { status: 'error' }
+    >
+  >({});
 
   const [mods, setMods] = React.useState<{
     L: any;
@@ -415,7 +425,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     return <View style={styles.container} />;
   }
 
-  const effectiveCenterOverride = safePoints.length > 0 ? undefined : centerOverride;
+  const effectiveCenterOverride = centerOverride;
 
   // Вычисляем центр карты
   const center = effectiveCenterOverride
@@ -644,6 +654,10 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
           const hasCoords =
             Number.isFinite((point as any)?.latitude) &&
             Number.isFinite((point as any)?.longitude);
+          const lat = Number((point as any)?.latitude);
+          const lng = Number((point as any)?.longitude);
+          const coordsText =
+            Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '';
           const categoryLabel = String((point as any)?.category ?? '').trim();
           const colorLabel = String((point as any)?.color ?? '').trim();
           const badgeLabel = hasCoords && categoryLabel ? categoryLabel : colorLabel;
@@ -653,7 +667,59 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
               position={[point.latitude, point.longitude]}
               icon={getMarkerIcon(point.color, { active: Number(activePointId) === Number(point.id) })}
               eventHandlers={{
-                click: () => onPointPress?.(point),
+                click: () => {
+                  try {
+                    const map = mapInstance;
+                    if (map && typeof map.getZoom === 'function' && typeof map.setView === 'function') {
+                      const currentZoom = map.getZoom();
+                      const nextZoom = Math.max(14, Number.isFinite(currentZoom) ? currentZoom : 14);
+                      map.setView([point.latitude, point.longitude], nextZoom, { animate: true } as any);
+                    }
+                  } catch {
+                    // noop
+                  }
+
+                  try {
+                    const id = Number(point.id);
+                    const userLat = Number(centerOverride?.lat);
+                    const userLng = Number(centerOverride?.lng);
+                    if (!Number.isFinite(id)) return;
+                    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) return;
+
+                    const cached = driveInfoById[id];
+                    if (cached?.status === 'ok' || cached?.status === 'loading') return;
+
+                    setDriveInfoById((prev) => ({ ...prev, [id]: { status: 'loading' } }));
+
+                    const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lng},${lat}?overview=false`;
+
+                    fetch(url)
+                      .then((r) => r.json())
+                      .then((data) => {
+                        const route = Array.isArray(data?.routes) ? data.routes[0] : null;
+                        const distanceM = Number(route?.distance);
+                        const durationS = Number(route?.duration);
+                        if (!Number.isFinite(distanceM) || !Number.isFinite(durationS)) {
+                          setDriveInfoById((prev) => ({ ...prev, [id]: { status: 'error' } }));
+                          return;
+                        }
+
+                        const distanceKm = Math.round((distanceM / 1000) * 10) / 10;
+                        const durationMin = Math.max(1, Math.round(durationS / 60));
+                        setDriveInfoById((prev) => ({
+                          ...prev,
+                          [id]: { status: 'ok', distanceKm, durationMin },
+                        }));
+                      })
+                      .catch(() => {
+                        setDriveInfoById((prev) => ({ ...prev, [id]: { status: 'error' } }));
+                      });
+                  } catch {
+                    // noop
+                  }
+
+                  onPointPress?.(point);
+                },
               }}
             >
               <mods.Popup>
@@ -791,6 +857,218 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                     </p>
                   ) : null}
 
+                  {coordsText ? (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: colors.textMuted,
+                              lineHeight: 1.2,
+                              overflowWrap: 'anywhere',
+                              wordBreak: 'break-word',
+                            }}
+                          >
+                            {coordsText}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            title="Копировать координаты"
+                            aria-label="Копировать координаты"
+                            data-card-action="true"
+                            onClick={(e: any) => {
+                              try {
+                                e?.preventDefault?.();
+                                e?.stopPropagation?.();
+                              } catch {
+                                // noop
+                              }
+                              try {
+                                ;(navigator as any)?.clipboard?.writeText?.(coordsText);
+                              } catch {
+                                // noop
+                              }
+                            }}
+                            onKeyDown={(e: any) => {
+                              if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                              try {
+                                e?.preventDefault?.();
+                                e?.stopPropagation?.();
+                              } catch {
+                                // noop
+                              }
+                              try {
+                                ;(navigator as any)?.clipboard?.writeText?.(coordsText);
+                              } catch {
+                                // noop
+                              }
+                            }}
+                            style={{
+                              border: `1px solid ${colors.border}`,
+                              background: colors.surface,
+                              color: colors.text,
+                              borderRadius: 10,
+                              width: 34,
+                              height: 34,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Feather name="copy" size={16} color={colors.text} />
+                          </div>
+
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            title="Открыть в картах"
+                            aria-label="Открыть в картах"
+                            data-card-action="true"
+                            onClick={(e: any) => {
+                              try {
+                                e?.preventDefault?.();
+                                e?.stopPropagation?.();
+                              } catch {
+                                // noop
+                              }
+
+                              try {
+                                const apple = `https://maps.apple.com/?q=${encodeURIComponent(coordsText)}`;
+                                const google = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+                                const isApple = /Mac|iPhone|iPad|iPod/i.test((navigator as any)?.userAgent ?? '');
+                                window.open(isApple ? apple : google, '_blank', 'noopener,noreferrer');
+                              } catch {
+                                // noop
+                              }
+                            }}
+                            onKeyDown={(e: any) => {
+                              if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                              try {
+                                e?.preventDefault?.();
+                                e?.stopPropagation?.();
+                              } catch {
+                                // noop
+                              }
+                              try {
+                                const apple = `https://maps.apple.com/?q=${encodeURIComponent(coordsText)}`;
+                                const google = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+                                const isApple = /Mac|iPhone|iPad|iPod/i.test((navigator as any)?.userAgent ?? '');
+                                window.open(isApple ? apple : google, '_blank', 'noopener,noreferrer');
+                              } catch {
+                                // noop
+                              }
+                            }}
+                            style={{
+                              border: `1px solid ${colors.border}`,
+                              background: colors.surface,
+                              color: colors.text,
+                              borderRadius: 10,
+                              width: 34,
+                              height: 34,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Feather name="map" size={16} color={colors.text} />
+                          </div>
+
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            title="Поделиться в Telegram"
+                            aria-label="Поделиться в Telegram"
+                            data-card-action="true"
+                            onClick={(e: any) => {
+                              try {
+                                e?.preventDefault?.();
+                                e?.stopPropagation?.();
+                              } catch {
+                                // noop
+                              }
+
+                              try {
+                                const text = String(point?.name ?? '') || coordsText;
+                                const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+                                const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+                                window.open(tg, '_blank', 'noopener,noreferrer');
+                              } catch {
+                                // noop
+                              }
+                            }}
+                            onKeyDown={(e: any) => {
+                              if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                              try {
+                                e?.preventDefault?.();
+                                e?.stopPropagation?.();
+                              } catch {
+                                // noop
+                              }
+
+                              try {
+                                const text = String(point?.name ?? '') || coordsText;
+                                const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+                                const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+                                window.open(tg, '_blank', 'noopener,noreferrer');
+                              } catch {
+                                // noop
+                              }
+                            }}
+                            style={{
+                              border: `1px solid ${colors.border}`,
+                              background: colors.surface,
+                              color: colors.text,
+                              borderRadius: 10,
+                              width: 34,
+                              height: 34,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <Feather name="send" size={16} color={colors.text} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {(() => {
+                    const id = Number(point.id);
+                    const info = Number.isFinite(id) ? driveInfoById[id] : undefined;
+                    if (!info) return null;
+
+                    if (info.status === 'loading') {
+                      return (
+                        <div style={{ marginTop: 8, fontSize: 12, color: colors.textMuted }}>
+                          На машине: расчёт...
+                        </div>
+                      );
+                    }
+
+                    if (info.status === 'error') {
+                      return (
+                        <div style={{ marginTop: 8, fontSize: 12, color: colors.textMuted }}>
+                          На машине: не удалось рассчитать
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ marginTop: 8, fontSize: 12, color: colors.textMuted }}>
+                        На машине: {info.distanceKm} км · ~{info.durationMin} мин
+                      </div>
+                    );
+                  })()}
+
                   <div
                     style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}
                   >
@@ -830,14 +1108,189 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
 };
 
 // Native версия (заглушка, можно добавить react-native-maps позже)
-const PointsMapNative: React.FC<PointsMapProps> = ({ points: _points }) => {
+const PointsMapNative: React.FC<PointsMapProps> = ({
+  points,
+  center,
+  activePointId,
+  onPointPress,
+  onMapPress,
+  pendingMarker,
+  pendingMarkerColor,
+  routeLines,
+}) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
+
+  const mapRef = React.useRef<any>(null);
+
+  const nativeMaps = React.useMemo(() => {
+    if (Platform.OS === 'web') return null;
+    try {
+      const m = require('react-native-maps');
+      return {
+        MapView: m?.default ?? m,
+        Marker: m?.Marker,
+        Polyline: m?.Polyline,
+      } as any;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const safePoints = React.useMemo(() => {
+    return (points ?? [])
+      .map((p: any) => {
+        const lat = Number(p?.latitude);
+        const lng = Number(p?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        return { ...(p as any), latitude: lat, longitude: lng } as ImportedPoint;
+      })
+      .filter((p: any): p is ImportedPoint => p != null);
+  }, [points]);
+
+  const defaultCenter = React.useMemo(() => {
+    if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
+      return { lat: center.lat, lng: center.lng };
+    }
+
+    if (safePoints.length > 0) {
+      return {
+        lat: safePoints.reduce((sum, p) => sum + p.latitude, 0) / safePoints.length,
+        lng: safePoints.reduce((sum, p) => sum + p.longitude, 0) / safePoints.length,
+      };
+    }
+
+    return { lat: 55.7558, lng: 37.6173 };
+  }, [center, safePoints]);
+
+  const initialRegion: Region = React.useMemo(
+    () => ({
+      latitude: defaultCenter.lat,
+      longitude: defaultCenter.lng,
+      latitudeDelta: 0.25,
+      longitudeDelta: 0.25,
+    }),
+    [defaultCenter.lat, defaultCenter.lng]
+  );
+
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
+      map.animateToRegion(
+        {
+          latitude: center.lat,
+          longitude: center.lng,
+          latitudeDelta: 0.2,
+          longitudeDelta: 0.2,
+        },
+        400
+      );
+      return;
+    }
+
+    if (safePoints.length === 1) {
+      const p = safePoints[0];
+      map.animateToRegion(
+        {
+          latitude: p.latitude,
+          longitude: p.longitude,
+          latitudeDelta: 0.15,
+          longitudeDelta: 0.15,
+        },
+        400
+      );
+      return;
+    }
+
+    if (safePoints.length > 1) {
+      try {
+        map.fitToCoordinates(
+          safePoints.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+          {
+            edgePadding: { top: 60, right: 60, bottom: 60, left: 60 },
+            animated: true,
+          }
+        );
+      } catch {
+        // noop
+      }
+    }
+  }, [center, safePoints]);
+
+  if (!nativeMaps?.MapView || !nativeMaps?.Marker || !nativeMaps?.Polyline) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.placeholder} />
+      </View>
+    );
+  }
+
+  const MapView = nativeMaps.MapView as any;
+  const Marker = nativeMaps.Marker as any;
+  const Polyline = nativeMaps.Polyline as any;
 
   return (
     <View style={styles.container}>
       <View style={styles.placeholder}>
-        {/* Здесь можно добавить react-native-maps */}
+        <MapView
+          ref={(r: any) => {
+            mapRef.current = r;
+          }}
+          style={StyleSheet.absoluteFillObject}
+          initialRegion={initialRegion}
+          onPress={(e: any) => {
+            const coord = e?.nativeEvent?.coordinate;
+            const lat = coord?.latitude;
+            const lng = coord?.longitude;
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+            onMapPress?.({ lat, lng });
+          }}
+        >
+          {(routeLines ?? []).map((r) => {
+            const coords = Array.isArray(r?.line) ? r.line : [];
+            if (coords.length < 2) return null;
+            const line = coords
+              .map((c: any) => {
+                const lat = Number(c?.[0]);
+                const lng = Number(c?.[1]);
+                if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+                return { latitude: lat, longitude: lng };
+              })
+              .filter((v: any) => v != null);
+            if (line.length < 2) return null;
+
+            return (
+              <Polyline
+                key={`route-${r.id}`}
+                coordinates={line as any}
+                strokeColor={colors.primary}
+                strokeWidth={4}
+              />
+            );
+          })}
+
+          {pendingMarker && Number.isFinite(pendingMarker.lat) && Number.isFinite(pendingMarker.lng) ? (
+            <Marker
+              key="__pending__"
+              coordinate={{ latitude: pendingMarker.lat, longitude: pendingMarker.lng }}
+              pinColor={String(pendingMarkerColor || colors.primary)}
+            />
+          ) : null}
+
+          {safePoints.map((p) => {
+            const isActive = Number(activePointId) === Number(p.id);
+            return (
+              <Marker
+                key={String(p.id)}
+                coordinate={{ latitude: p.latitude, longitude: p.longitude }}
+                pinColor={isActive ? colors.primary : String(p.color || colors.backgroundTertiary)}
+                onPress={() => onPointPress?.(p)}
+              />
+            );
+          })}
+        </MapView>
       </View>
     </View>
   );
@@ -850,7 +1303,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   placeholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.background,
   },
 });

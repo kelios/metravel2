@@ -257,18 +257,17 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     });
   }, [filters.colors, filters.siteCategories, filters.statuses, filters.radiusKm, points, searchQuery, currentLocation]);
 
-  const mapPoints = useMemo(() => {
+  const visibleFilteredPoints = useMemo(() => {
     // Show only recommended points when in recommendations mode
     if (showingRecommendations && recommendedPointIds.length > 0) {
       const recommended = new Set(recommendedPointIds);
       return filteredPoints.filter((p: any) => recommended.has(Number(p.id)));
     }
-    
-    if (!selectionMode) return filteredPoints;
-    if (!selectedIds.length) return filteredPoints;
-    const selected = new Set(selectedIds);
-    return filteredPoints.filter((p: any) => selected.has(Number(p.id)));
-  }, [filteredPoints, selectedIds, selectionMode, showingRecommendations, recommendedPointIds]);
+
+    // In selection mode we still show the full filtered list; selection is tracked via checkboxes.
+    // Filtering down to only selected points makes it impossible to select multiple items.
+    return filteredPoints;
+  }, [filteredPoints, showingRecommendations, recommendedPointIds]);
 
   useEffect(() => {
     const selected = filters.siteCategories ?? [];
@@ -1033,7 +1032,7 @@ useEffect(() => {
         colors={{ text: colors.text }}
         viewMode={viewMode}
         isLoading={isLoading}
-        filteredPoints={viewMode === 'map' ? mapPoints : filteredPoints}
+        filteredPoints={visibleFilteredPoints}
         numColumns={listColumns}
         renderHeader={renderHeader}
         renderItem={renderItem}
