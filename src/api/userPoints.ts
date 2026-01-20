@@ -109,22 +109,45 @@ export const userPointsApi = {
       const zip = await JSZip.loadAsync(buffer);
 
       const fileNames = Object.keys(zip.files);
-      const kmlName =
-        fileNames.find((n) => n.toLowerCase().endsWith('/doc.kml')) ??
-        fileNames.find((n) => n.toLowerCase().endsWith('doc.kml')) ??
-        fileNames.find((n) => n.toLowerCase().endsWith('.kml'));
+      const kmlNames = fileNames
+        .filter((n) => n.toLowerCase().endsWith('.kml'))
+        .filter((n) => !zip.files[n]?.dir);
 
-      if (!kmlName) {
+      if (kmlNames.length === 0) {
         throw new Error('KMZ не содержит KML файла');
       }
 
-      const kmlFile = zip.file(kmlName);
-      if (!kmlFile) {
+      const preferDoc = (name: string) => {
+        const lower = name.toLowerCase();
+        return lower.endsWith('/doc.kml') || lower.endsWith('doc.kml');
+      };
+
+      let bestName: string | null = null;
+      let bestText: string | null = null;
+      let bestScore = -1;
+
+      for (const name of kmlNames) {
+        const kmlFile = zip.file(name);
+        if (!kmlFile) continue;
+        const kmlText = await kmlFile.async('string');
+        const score = (kmlText.match(/<Placemark\b/gi) ?? []).length;
+
+        if (
+          score > bestScore ||
+          (score === bestScore && bestName != null && preferDoc(name) && !preferDoc(bestName)) ||
+          (bestName == null)
+        ) {
+          bestName = name;
+          bestText = kmlText;
+          bestScore = score;
+        }
+      }
+
+      if (!bestText) {
         throw new Error('KMZ не содержит KML файла');
       }
 
-      const kmlText = await kmlFile.async('string');
-      return kmlText;
+      return bestText;
     };
 
     const toKmlName = (originalName: string) => {
