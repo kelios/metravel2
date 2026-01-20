@@ -82,7 +82,6 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   filters,
   onFilterChange,
   siteCategoryOptions,
-  availableStatuses,
   availableColors,
 }) => {
   return (

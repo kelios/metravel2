@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -103,7 +103,12 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
   return (
     <View style={styles.container}>
       <CollapsibleSection title="Радиус" defaultOpen icon="map-pin">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipRow}
+        >
           {radiusOptions.map((km) => {
             const isSelected = filters.radiusKm === km;
             return (
@@ -122,7 +127,12 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
       </CollapsibleSection>
 
       <CollapsibleSection title="Цвет" defaultOpen badge={activeColorCount} icon="circle">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipRow}
+        >
           {(availableColors ?? []).map((color) => {
             const isSelected = filters.colors?.includes(color);
             const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
@@ -147,7 +157,12 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
           badge={activeCategoryCount > 0 ? activeCategoryCount : undefined}
           icon="grid"
         >
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipScroll}
+            contentContainerStyle={styles.chipRow}
+          >
             {siteCategoryOptions.map((cat) => {
               const isSelected = filters.siteCategories?.includes(cat.id);
               return (
@@ -177,8 +192,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginBottom: DESIGN_TOKENS.spacing.sm,
     color: colors.text,
   },
-  chipContainer: {
+  chipScroll: {
+    flexGrow: 0,
+    ...(Platform.OS === 'web'
+      ? ({
+          overflowX: 'auto',
+          overflowY: 'hidden',
+        } as any)
+      : null),
+  },
+  chipRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: DESIGN_TOKENS.spacing.md,
   },
   chip: {
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,

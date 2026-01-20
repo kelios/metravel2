@@ -904,7 +904,6 @@ const deleteAll = useCallback(async () => {
   }, [
     activeFilterChips,
     availableColors,
-    availableStatuses,
     availableCategoryOptions,
     blurActiveElementForModal,
     colors.text,
