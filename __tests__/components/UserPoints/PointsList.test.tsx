@@ -37,14 +37,14 @@ jest.mock('@/src/api/userPoints', () => ({
   },
 }));
 
-jest.mock('@/src/api/map', () => ({
-  fetchFiltersMap: jest.fn(),
+jest.mock('@/src/api/misc', () => ({
+  fetchFilters: jest.fn(),
 }));
 
 describe('PointsList (manual create)', () => {
   const mockGetPoints = require('@/src/api/userPoints').userPointsApi.getPoints as jest.Mock;
   const mockCreatePoint = require('@/src/api/userPoints').userPointsApi.createPoint as jest.Mock;
-  const mockFetchFiltersMap = require('@/src/api/map').fetchFiltersMap as jest.Mock;
+  const mockFetchFilters = require('@/src/api/misc').fetchFilters as jest.Mock;
 
   const renderWithClient = () => {
     const client = new QueryClient({
@@ -79,7 +79,7 @@ describe('PointsList (manual create)', () => {
       created_at: new Date(0).toISOString(),
       updated_at: new Date(0).toISOString(),
     });
-    mockFetchFiltersMap.mockResolvedValue({ categories: ['Food', 'Hike'] });
+    mockFetchFilters.mockResolvedValue({ categoryTravelAddress: [{ id: '39', name: 'Food' }, { id: '69', name: 'Hike' }] });
   });
 
   const openManualAdd = async () => {
@@ -96,12 +96,12 @@ describe('PointsList (manual create)', () => {
     fireEvent.changeText(screen.getByPlaceholderText('37.617300'), '37.6173');
   };
 
-  const selectCategory = async (name: string) => {
+  const selectCategory = async (id: string) => {
     const triggers = screen.getAllByLabelText('Открыть выбор');
     // order: Color, Category, Status
     fireEvent.press(triggers[0]);
 
-    const item = await screen.findByTestId(`simple-multiselect.item.${name}`);
+    const item = await screen.findByTestId(`simple-multiselect.item.${id}`);
     fireEvent.press(item);
 
     fireEvent.press(screen.getByText('Готово'));
@@ -119,12 +119,12 @@ describe('PointsList (manual create)', () => {
     expect(mockCreatePoint).not.toHaveBeenCalled();
   });
 
-  it('should create point with category (string)', async () => {
+  it('should create point with categoryId', async () => {
     renderWithClient();
     await openManualAdd();
 
     fillBasics();
-    await selectCategory('Food');
+    await selectCategory('39');
 
     fireEvent.press(screen.getByText('Сохранить'));
 
@@ -133,6 +133,6 @@ describe('PointsList (manual create)', () => {
     });
 
     const payload = mockCreatePoint.mock.calls[0][0];
-    expect(payload.categoryIds).toEqual(['Food']);
+    expect(payload.categoryIds).toEqual(['39']);
   });
 });

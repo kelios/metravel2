@@ -16,7 +16,7 @@ export class GoogleMapsParser {
     } else {
       // React Native DocumentPickerAsset
       const asset = file as DocumentPickerAsset;
-      fileName = asset.name;
+      fileName = String(asset.name || '').trim() || String(asset.uri || '').split('?')[0].split('#')[0].split('/').pop() || '';
     }
 
     const extension = fileName.split('.').pop()?.toLowerCase();

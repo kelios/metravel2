@@ -142,10 +142,14 @@ export const userPointsApi = {
 
       const isKmz = String(asset.name || '').toLowerCase().endsWith('.kmz');
       if (isKmz) {
-        const buffer = await blob.arrayBuffer();
-        const kmlText = await extractKmlFromKmz(buffer);
-        const kmlBlob = new Blob([kmlText], { type: 'application/vnd.google-earth.kml+xml' });
-        formData.append('file', kmlBlob, toKmlName(asset.name));
+        try {
+          const buffer = await blob.arrayBuffer();
+          const kmlText = await extractKmlFromKmz(buffer);
+          const kmlBlob = new Blob([kmlText], { type: 'application/vnd.google-earth.kml+xml' });
+          formData.append('file', kmlBlob, toKmlName(asset.name));
+        } catch {
+          formData.append('file', blob, asset.name);
+        }
       } else {
         formData.append('file', blob, asset.name);
       }
@@ -154,12 +158,16 @@ export const userPointsApi = {
       const isKmz = String(webFile.name || '').toLowerCase().endsWith('.kmz');
 
       if (isKmz) {
-        const buffer = await webFile.arrayBuffer();
-        const kmlText = await extractKmlFromKmz(buffer);
-        const kmlFile = new File([kmlText], toKmlName(webFile.name), {
-          type: 'application/vnd.google-earth.kml+xml',
-        });
-        formData.append('file', kmlFile);
+        try {
+          const buffer = await webFile.arrayBuffer();
+          const kmlText = await extractKmlFromKmz(buffer);
+          const kmlFile = new File([kmlText], toKmlName(webFile.name), {
+            type: 'application/vnd.google-earth.kml+xml',
+          });
+          formData.append('file', kmlFile);
+        } catch {
+          formData.append('file', webFile);
+        }
       } else {
         formData.append('file', webFile);
       }

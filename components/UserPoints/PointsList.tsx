@@ -3,7 +3,7 @@ import { Platform, View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, S
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { userPointsApi } from '@/src/api/userPoints';
-import { fetchFiltersMap } from '@/src/api/map';
+import { fetchFilters } from '@/src/api/misc';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
 import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
@@ -93,6 +93,28 @@ const normalizeCategoryIdsFromPoint = (p: any): string[] => {
   if (legacy != null && String(legacy).trim()) return [String(legacy).trim()];
 
   return [];
+};
+
+const normalizeCategoryDictionary = (raw: any): Array<{ id: string; name: string }> => {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item, idx) => {
+      if (item && typeof item === 'object') {
+        const id = (item as any).id ?? (item as any).value ?? (item as any).category_id ?? (item as any).pk ?? idx;
+        const name =
+          (item as any).name ??
+          (item as any).name_ru ??
+          (item as any).title_ru ??
+          (item as any).title ??
+          (item as any).text ??
+          String(id);
+        return { id: String(id).trim(), name: String(name).trim() };
+      }
+      const text = String(item ?? '').trim();
+      if (!text) return null;
+      return { id: text, name: text };
+    })
+    .filter((v: any): v is { id: string; name: string } => Boolean(v?.id));
 };
 
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
@@ -229,30 +251,13 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const gridColors = useMemo(() => ({ text: colors.text }), [colors.text]);
 
   const siteCategoryOptionsQuery = useQuery({
-    queryKey: ['userPointsSiteCategories'],
+    queryKey: ['userPointsCategoryDictionary'],
     queryFn: async () => {
-      const data = await fetchFiltersMap();
-      const raw = (data as any)?.categories;
-      if (!Array.isArray(raw)) return [] as Array<{ id: string; name: string }>;
-
-      return raw
-        .map((cat: any) => {
-          if (cat == null) return null;
-
-          if (typeof cat === 'string') {
-            const normalized = String(cat).trim();
-            if (!normalized) return null;
-            return { id: normalized, name: normalized };
-          }
-
-          const id = String(cat?.id ?? cat?.value ?? '').trim();
-          const name = String(cat?.name ?? cat?.label ?? id).trim();
-          if (!id) return null;
-          return { id, name: name || id };
-        })
-        .filter((v: any): v is { id: string; name: string } => v != null);
+      const data = await fetchFilters();
+      const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
+      return normalizeCategoryDictionary(raw);
     },
-    staleTime: 10 * 60 * 1000,
+    staleTime: 24 * 60 * 60 * 1000,
   });
 
   const categoryIdToName = useMemo(() => {
@@ -1127,7 +1132,6 @@ const deleteAll = useCallback(async () => {
     blurActiveElementForModal,
     headerColors,
     filters,
-    filteredPoints.length,
     handleOpenRecommendations,
     handleFilterChange,
     handleRemoveFilterChip,
@@ -1137,6 +1141,7 @@ const deleteAll = useCallback(async () => {
     isMobile,
     isNarrow,
     points.length,
+    visibleFilteredPoints.length,
     searchQuery,
     showFilters,
     showMapSettings,

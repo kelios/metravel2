@@ -163,7 +163,7 @@ describe('ImportWizard', () => {
     });
 
     await waitFor(() => {
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['userPoints'] });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['userPointsAll'] });
     });
   });
 
@@ -191,9 +191,7 @@ describe('ImportWizard', () => {
     fireEvent.press(importBtns[importBtns.length - 1]);
 
     expect(
-      await screen.findByText(
-        'Не удалось распознать формат файла. Поддерживаются: JSON (Google Takeout), GeoJSON, GPX, KML, KMZ.'
-      )
+      await screen.findByText(/Не удалось распознать формат файла/)
     ).toBeTruthy();
   });
 });

@@ -27,21 +27,30 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const detectAndParse = async (selectedFile: DocumentPicker.DocumentPickerAsset) => {
+    let googleError: unknown = null;
+    let osmError: unknown = null;
     try {
       const points = await GoogleMapsParser.parse(selectedFile);
       return { points };
-    } catch {
-      // noop
+    } catch (err) {
+      googleError = err;
     }
 
     try {
       const points = await OSMParser.parse(selectedFile);
       return { points };
-    } catch {
-      // noop
+    } catch (err) {
+      osmError = err;
     }
 
-    throw new Error('Не удалось распознать формат файла. Поддерживаются: JSON (Google Takeout), GeoJSON, GPX, KML, KMZ.');
+    const baseMessage =
+      'Не удалось распознать формат файла. Поддерживаются: JSON (Google Takeout), GeoJSON, GPX, KML, KMZ.';
+
+    const googleMsg = googleError instanceof Error ? googleError.message : '';
+    const osmMsg = osmError instanceof Error ? osmError.message : '';
+    const details = [googleMsg && `Google: ${googleMsg}`, osmMsg && `OSM: ${osmMsg}`].filter(Boolean).join(' | ');
+
+    throw new Error(details ? `${baseMessage} (${details})` : baseMessage);
   };
 
   const handleFileSelect = async (selectedFile: DocumentPicker.DocumentPickerAsset) => {
@@ -72,7 +81,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       setImportResult(result);
       setStep('complete');
 
-      await queryClient.invalidateQueries({ queryKey: ['userPoints'] });
+      await queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
 
       const importedCount = (result?.created ?? 0) + (result?.updated ?? 0);
       if (parsedPoints.length > 0 && importedCount === 0) {
