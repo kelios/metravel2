@@ -45,6 +45,12 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [activePointId, setActivePointId] = useState<number | null>(null);
+  const [activeDriveInfo, setActiveDriveInfo] = useState<
+    | null
+    | { status: 'loading' }
+    | { status: 'ok'; distanceKm: number; durationMin: number }
+    | { status: 'error' }
+  >(null);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [bulkColor, setBulkColor] = useState<string | null>(null);
   const [bulkStatus, setBulkStatus] = useState<PointStatus | null>(null);
@@ -268,6 +274,56 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     // Filtering down to only selected points makes it impossible to select multiple items.
     return filteredPoints;
   }, [filteredPoints, showingRecommendations, recommendedPointIds]);
+
+  useEffect(() => {
+    const id = Number(activePointId);
+    const userLat = Number(currentLocation?.lat);
+    const userLng = Number(currentLocation?.lng);
+    if (!Number.isFinite(id)) {
+      setActiveDriveInfo(null);
+      return;
+    }
+    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) {
+      setActiveDriveInfo(null);
+      return;
+    }
+
+    const target = (visibleFilteredPoints as any[]).find((p: any) => Number(p?.id) === id);
+    const toLat = Number((target as any)?.latitude);
+    const toLng = Number((target as any)?.longitude);
+    if (!Number.isFinite(toLat) || !Number.isFinite(toLng)) {
+      setActiveDriveInfo(null);
+      return;
+    }
+
+    let cancelled = false;
+    setActiveDriveInfo({ status: 'loading' });
+
+    const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${toLng},${toLat}?overview=false`;
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const route = Array.isArray(data?.routes) ? data.routes[0] : null;
+        const distanceM = Number(route?.distance);
+        const durationS = Number(route?.duration);
+        if (!Number.isFinite(distanceM) || !Number.isFinite(durationS)) {
+          setActiveDriveInfo({ status: 'error' });
+          return;
+        }
+        const distanceKm = Math.round((distanceM / 1000) * 10) / 10;
+        const durationMin = Math.max(1, Math.round(durationS / 60));
+        setActiveDriveInfo({ status: 'ok', distanceKm, durationMin });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setActiveDriveInfo({ status: 'error' });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePointId, currentLocation?.lat, currentLocation?.lng, visibleFilteredPoints]);
 
   useEffect(() => {
     const selected = filters.siteCategories ?? [];
@@ -767,14 +823,19 @@ const deleteAll = useCallback(async () => {
     const lat = Number((point as any)?.latitude);
     const lng = Number((point as any)?.longitude);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    
-    // Set active point to center map on it
-    setActivePointId(Number(point.id));
-    
-    // Clear active point after a short delay so user can click again
+
+    // Important: do NOT clear activePointId with a timeout.
+    // Clearing it causes PointsMap to re-run its auto-centering (user location / fitBounds)
+    // which overrides the zoom-to-point behavior.
+    //
+    // Instead, force a re-trigger even when the user clicks the same card again.
+    const id = Number((point as any)?.id);
+    if (!Number.isFinite(id)) return;
+
+    setActivePointId(null);
     setTimeout(() => {
-      setActivePointId(null);
-    }, 1000);
+      setActivePointId(id);
+    }, 0);
   }, []);
 
   const handleLocateMe = useCallback(async () => {
@@ -942,10 +1003,12 @@ useEffect(() => {
         onDelete={selectionMode ? undefined : requestDeletePoint}
         selectionMode={selectionMode}
         selected={selectedIds.includes(Number(item?.id))}
+        active={Number(item?.id) === Number(activePointId)}
+        driveInfo={Number(item?.id) === Number(activePointId) ? activeDriveInfo : null}
         onToggleSelect={toggleSelect}
       />
     ),
-    [listColumns, handleShowPointOnMap, openEditPoint, requestDeletePoint, selectedIds, selectionMode, toggleSelect]
+    [activeDriveInfo, activePointId, listColumns, handleShowPointOnMap, openEditPoint, requestDeletePoint, selectedIds, selectionMode, toggleSelect]
   );
 
   const renderFooter = useCallback(() => {
@@ -1057,6 +1120,8 @@ useEffect(() => {
         }}
         activePointId={activePointId}
         recommendedRoutes={recommendedRoutes}
+        searchQuery={searchQuery}
+        onSearch={handleSearch}
         hasFilters={hasActiveFilters}
         onResetFilters={handleResetFilters}
       />

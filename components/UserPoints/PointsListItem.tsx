@@ -11,8 +11,13 @@ export const PointsListItem: React.FC<{
   selectionMode?: boolean
   selected?: boolean
   active?: boolean
+  driveInfo?:
+    | null
+    | { status: 'loading' }
+    | { status: 'ok'; distanceKm: number; durationMin: number }
+    | { status: 'error' }
   onToggleSelect?: (point: any) => void
-}> = ({ point, onPress, onEdit, onDelete, layout, selectionMode, selected, active, onToggleSelect }) => {
+}> = ({ point, onPress, onEdit, onDelete, layout, selectionMode, selected, active, driveInfo, onToggleSelect }) => {
   return (
     <PointCard
       point={point}
@@ -23,6 +28,7 @@ export const PointsListItem: React.FC<{
       selectionMode={selectionMode}
       selected={selected}
       active={active}
+      driveInfo={driveInfo}
       onToggleSelect={onToggleSelect}
     />
   )

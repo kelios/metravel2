@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { FlatList, Platform, StyleSheet, View, TouchableOpacity, useWindowDimensions, ScrollView, Text as RNText } from 'react-native'
+import { FlatList, Platform, StyleSheet, View, TouchableOpacity, useWindowDimensions, ScrollView, TextInput, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { PointsMap } from '@/components/UserPoints/PointsMap'
@@ -49,6 +49,9 @@ export const PointsListGrid: React.FC<{
   activePointId?: number | null
   recommendedRoutes?: Record<number, { distance: number; duration: number; line?: Array<[number, number]> }>
 
+  searchQuery: string
+  onSearch: (text: string) => void
+
   hasFilters: boolean
   onResetFilters: () => void
 }> = ({
@@ -77,6 +80,8 @@ export const PointsListGrid: React.FC<{
   onRefreshRecommendations,
   activePointId,
   recommendedRoutes,
+  searchQuery,
+  onSearch,
   hasFilters,
   onResetFilters,
 }) => {
@@ -223,6 +228,39 @@ export const PointsListGrid: React.FC<{
             
             {panelTab === 'list' && (
               <View style={localStyles.pointsList} testID="userpoints-panel-content-list">
+                <View style={localStyles.listControlsRow}>
+                  <TextInput
+                    style={localStyles.listSearchInput as any}
+                    value={searchQuery}
+                    onChangeText={onSearch}
+                    placeholder="Поиск по названию..."
+                    placeholderTextColor={themedColors.textMuted}
+                    accessibilityLabel="Поиск по названию..."
+                    testID="userpoints-list-search"
+                  />
+
+                  <TouchableOpacity
+                    style={localStyles.listControlButton}
+                    onPress={() => setPanelTab('filters')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Фильтры"
+                    testID="userpoints-list-open-filters"
+                  >
+                    <Feather name="sliders" size={16} color={themedColors.text} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[localStyles.listControlButton, !hasFilters && localStyles.listControlButtonDisabled]}
+                    onPress={onResetFilters}
+                    disabled={!hasFilters}
+                    accessibilityRole="button"
+                    accessibilityLabel="Сбросить фильтры"
+                    testID="userpoints-list-reset-filters"
+                  >
+                    <Feather name="rotate-ccw" size={16} color={themedColors.text} />
+                  </TouchableOpacity>
+                </View>
+
                 {showingRecommendations && (
                   <View style={localStyles.recommendationsHeader}>
                     <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
@@ -326,6 +364,39 @@ export const PointsListGrid: React.FC<{
             
             {panelTab === 'list' && (
               <View style={localStyles.pointsList} testID="userpoints-panel-content-list">
+                <View style={localStyles.listControlsRow}>
+                  <TextInput
+                    style={localStyles.listSearchInput as any}
+                    value={searchQuery}
+                    onChangeText={onSearch}
+                    placeholder="Поиск по названию..."
+                    placeholderTextColor={themedColors.textMuted}
+                    accessibilityLabel="Поиск по названию..."
+                    testID="userpoints-list-search"
+                  />
+
+                  <TouchableOpacity
+                    style={localStyles.listControlButton}
+                    onPress={() => setPanelTab('filters')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Фильтры"
+                    testID="userpoints-list-open-filters"
+                  >
+                    <Feather name="sliders" size={16} color={themedColors.text} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[localStyles.listControlButton, !hasFilters && localStyles.listControlButtonDisabled]}
+                    onPress={onResetFilters}
+                    disabled={!hasFilters}
+                    accessibilityRole="button"
+                    accessibilityLabel="Сбросить фильтры"
+                    testID="userpoints-list-reset-filters"
+                  >
+                    <Feather name="rotate-ccw" size={16} color={themedColors.text} />
+                  </TouchableOpacity>
+                </View>
+
                 {showingRecommendations && (
                   <View style={localStyles.recommendationsHeader}>
                     <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
@@ -451,10 +522,39 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     paddingBottom: 40,
   },
   pointsList: {
-    gap: 12,
+    padding: 16,
+  },
+  listControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  listSearchInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    backgroundColor: colors.surface,
+    color: colors.text,
+  },
+  listControlButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listControlButtonDisabled: {
+    opacity: 0.5,
   },
   pointsListItem: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
   recommendationsHeader: {
     flexDirection: 'row',

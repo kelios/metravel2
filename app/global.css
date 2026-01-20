@@ -345,6 +345,45 @@ html[data-theme="dark"] .leaflet-tile {
   z-index: 600 !important;
 }
 
+/* Leaflet popup styling: make it look like an in-app card */
+.leaflet-popup-content-wrapper {
+  border-radius: 16px !important;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-modal) !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 14px !important;
+  color: var(--color-text) !important;
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-medium) !important;
+}
+
+.leaflet-popup-close-button {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 999px !important;
+  margin: 6px !important;
+  color: var(--color-textMuted) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.leaflet-popup-close-button:hover {
+  background: var(--color-backgroundTertiary) !important;
+  color: var(--color-text) !important;
+}
+
 /* Контролы карты (зум и т.д.) */
 .leaflet-control {
   z-index: 800 !important;

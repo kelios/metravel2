@@ -116,14 +116,18 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.recoOpenButton, isMobile && styles.headerIconButtonPrimary]}
+            style={[
+              styles.recoOpenButton,
+              !isMobile && ({ flexDirection: 'row', alignItems: 'center' } as any),
+              isMobile && styles.headerIconButtonPrimary,
+            ]}
             onPress={onOpenRecommendations}
             accessibilityRole="button"
             accessibilityLabel="3 случайные точки"
           >
             <Feather name="compass" size={18} color={colors.textOnPrimary} />
             {!isMobile ? (
-              <Text numberOfLines={1} style={[styles.recoOpenButtonText, { marginLeft: 8 } as any]}>
+              <Text numberOfLines={1} style={[styles.recoOpenButtonText, { marginLeft: 8, flexShrink: 1 } as any]}>
                 3 случайные точки
               </Text>
             ) : null}
