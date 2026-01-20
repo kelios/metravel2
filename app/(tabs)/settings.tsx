@@ -18,7 +18,7 @@ import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 
 export default function SettingsScreen() {
     const router = useRouter();
-    const { isAuthenticated, logout, username, userId, triggerProfileRefresh, setUserAvatar } = useAuth();
+    const { isAuthenticated, authReady, logout, username, userId, triggerProfileRefresh, setUserAvatar } = useAuth();
     const isWeb = Platform.OS === 'web';
     const favoritesContext = useFavorites();
     const { theme, setTheme } = useTheme();
@@ -285,6 +285,16 @@ export default function SettingsScreen() {
             console.error('Error clearing favorites:', error);
         }
     }, [clearFavorites]);
+
+    if (!authReady) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     if (!isAuthenticated) {
         return (

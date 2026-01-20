@@ -184,7 +184,6 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           filters={filters}
           onChange={onFilterChange}
           siteCategoryOptions={siteCategoryOptions}
-          availableStatuses={availableStatuses}
           availableColors={availableColors}
         />
       ) : null}

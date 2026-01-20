@@ -168,15 +168,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return Array.isArray(data) ? data : [];
   }, [data, error]);
 
-  const availableStatuses = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of points as any[]) {
-      const s = String(p?.status ?? '').trim();
-      if (s) set.add(s);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [points]);
-
   const availableColors = useMemo(() => {
     const colorMap = new Map<string, number>();
     for (const p of points as any[]) {
@@ -907,7 +898,6 @@ const deleteAll = useCallback(async () => {
         filters={filters}
         onFilterChange={handleFilterChange}
         siteCategoryOptions={availableCategoryOptions}
-        availableStatuses={availableStatuses}
         availableColors={availableColors}
       />
     );

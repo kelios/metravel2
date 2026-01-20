@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -17,7 +17,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 export default function FavoritesScreen() {
     const router = useRouter();
     const { width } = useResponsive();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, authReady } = useAuth();
     const { favorites, removeFavorite, clearFavorites } = useFavorites() as any;
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
@@ -170,6 +170,20 @@ export default function FavoritesScreen() {
     const numColumns = Math.min(computedColumns, 3);
 
     const data = useMemo(() => (Array.isArray(favorites) ? favorites : []), [favorites]);
+
+    if (!authReady) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.listContent}>
+                    {Array.from({ length: 3 }).map((_, index) => (
+                        <View key={index} style={styles.cardWrap}>
+                            <SkeletonLoader width="100%" height={280} borderRadius={12} style={styles.card} />
+                        </View>
+                    ))}
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     if (!isAuthenticated) {
         return (

@@ -42,6 +42,33 @@ describe('UserPointsScreen', () => {
     jest.clearAllMocks();
   });
 
+  it('should not show auth required message while auth is not ready', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      username: '',
+      userId: null,
+      isSuperuser: false,
+      userAvatar: null,
+      authReady: false,
+      profileRefreshToken: 0,
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      setUserAvatar: jest.fn(),
+      triggerProfileRefresh: jest.fn(),
+      login: jest.fn(),
+      logout: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn()
+    });
+
+    render(<UserPointsScreen />);
+
+    expect(screen.queryByText('Требуется авторизация')).toBeNull();
+    expect(screen.getByTestId('userpoints-auth-loading')).toBeTruthy();
+  });
+
   it('should show auth required message when user is not authenticated', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,

@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import type { PointFilters as PointFiltersType, PointStatus } from '@/types/userPoints';
-import { STATUS_LABELS } from '@/types/userPoints';
+import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
@@ -10,7 +9,6 @@ interface PointFiltersProps {
   filters: PointFiltersType;
   onChange: (filters: PointFiltersType) => void;
   siteCategoryOptions?: Array<{ id: string; name: string }>;
-  availableStatuses?: string[];
   availableColors?: string[];
 }
 
@@ -18,22 +16,69 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
   filters,
   onChange,
   siteCategoryOptions,
-  availableStatuses,
   availableColors,
 }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
+  const parseHex = (hex: string) => {
+    const raw = String(hex).trim().replace('#', '');
+    if (raw.length === 3) {
+      const r = parseInt(raw[0] + raw[0], 16);
+      const g = parseInt(raw[1] + raw[1], 16);
+      const b = parseInt(raw[2] + raw[2], 16);
+      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
+      return { r, g, b };
+    }
+    if (raw.length === 6) {
+      const r = parseInt(raw.slice(0, 2), 16);
+      const g = parseInt(raw.slice(2, 4), 16);
+      const b = parseInt(raw.slice(4, 6), 16);
+      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
+      return { r, g, b };
+    }
+    return null;
+  };
+
+  const parseRgb = (value: string) => {
+    const m = String(value)
+      .trim()
+      .match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+)\s*)?\)$/i);
+    if (!m) return null;
+    const r = Number(m[1]);
+    const g = Number(m[2]);
+    const b = Number(m[3]);
+    if ([r, g, b].some((n) => !Number.isFinite(n))) return null;
+    return { r, g, b };
+  };
+
+  const isLightColor = (value: string) => {
+    const v = String(value ?? '').trim().toLowerCase();
+    const named: Record<string, string> = {
+      gray: '#9e9e9e',
+      grey: '#9e9e9e',
+      lightgray: '#d3d3d3',
+      lightgrey: '#d3d3d3',
+      pink: '#ffc0cb',
+      lightpink: '#ffb6c1',
+      white: '#ffffff',
+      silver: '#c0c0c0',
+    };
+    const normalized = named[v] ?? v;
+    const rgb =
+      normalized.startsWith('#') ? parseHex(normalized) : normalized.startsWith('rgb') ? parseRgb(normalized) : null;
+    if (!rgb) return false;
+    const r = Math.min(255, Math.max(0, rgb.r)) / 255;
+    const g = Math.min(255, Math.max(0, rgb.g)) / 255;
+    const b = Math.min(255, Math.max(0, rgb.b)) / 255;
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luminance > 0.72;
+  };
+
   const toggleSiteCategory = (id: string) => {
     const current = filters.siteCategories || [];
     const next = current.includes(id) ? current.filter((v) => v !== id) : [...current, id];
     onChange({ ...filters, siteCategories: next });
-  };
-
-  const toggleStatus = (status: PointStatus) => {
-    const current = filters.statuses || [];
-    const next = current.includes(status) ? current.filter((s) => s !== status) : [...current, status];
-    onChange({ ...filters, statuses: next });
   };
 
   const toggleColor = (color: string) => {
@@ -42,12 +87,6 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
     onChange({ ...filters, colors: next });
   };
 
-  const statusLabel = (status: PointStatus) => {
-    const label = (STATUS_LABELS as Record<string, string>)[status as unknown as string];
-    return label || String(status);
-  };
-
-  const activeStatusCount = (filters.statuses || []).length;
   const activeCategoryCount = (filters.siteCategories || []).length;
   const activeColorCount = (filters.colors || []).length;
 
@@ -86,6 +125,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
           {(availableColors ?? []).map((color) => {
             const isSelected = filters.colors?.includes(color);
+            const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
             return (
               <TouchableOpacity
                 key={color}
@@ -93,32 +133,7 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
                 onPress={() => toggleColor(color)}
                 accessibilityLabel={`Цвет ${color}`}
               >
-                <View style={[styles.colorDot, { backgroundColor: color }]} />
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </CollapsibleSection>
-
-      <CollapsibleSection 
-        title="Статус" 
-        defaultOpen={true}
-        badge={activeStatusCount > 0 ? activeStatusCount : undefined}
-        icon="tag"
-      >
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipContainer}>
-          {(availableStatuses ?? []).map((statusValue) => {
-            const status = statusValue as unknown as PointStatus;
-            const isSelected = filters.statuses?.includes(status);
-            return (
-              <TouchableOpacity
-                key={statusValue}
-                style={[styles.chip, isSelected && styles.chipActive]}
-                onPress={() => toggleStatus(status)}
-              >
-                <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                  {statusLabel(status)}
-                </Text>
+                <View style={[styles.colorDot, { backgroundColor: color, borderColor }]} />
               </TouchableOpacity>
             );
           })}

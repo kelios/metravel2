@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -17,7 +17,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 export default function HistoryScreen() {
     const router = useRouter();
     const { width } = useResponsive();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, authReady } = useAuth();
     const { viewHistory, clearHistory } = useFavorites() as any;
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
@@ -146,6 +146,25 @@ export default function HistoryScreen() {
     }, [clearHistory]);
 
     const data = useMemo(() => (Array.isArray(viewHistory) ? viewHistory : []), [viewHistory]);
+
+    if (!authReady) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <View style={styles.headerTitleBlock}>
+                        <Text style={styles.title}>История</Text>
+                    </View>
+                </View>
+                <View style={styles.gridContent}>
+                    {Array.from({ length: numColumns > 1 ? numColumns * 2 : 3 }).map((_, index) => (
+                        <View key={index} style={styles.gridItem}>
+                            <SkeletonLoader width="100%" height={280} borderRadius={12} style={styles.card} />
+                        </View>
+                    ))}
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     if (!isAuthenticated) {
         return (

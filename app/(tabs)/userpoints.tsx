@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Modal } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, Modal, ActivityIndicator } from 'react-native';
 import { PointsList } from '@/components/UserPoints/PointsList';
 import { ImportWizard } from '@/components/UserPoints/ImportWizard';
 import { useAuth } from '@/context/AuthContext';
@@ -8,10 +8,18 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 export default function UserPointsScreen() {
   const [showImportWizard, setShowImportWizard] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, authReady } = useAuth();
   const colors = useThemedColors();
 
   const styles = createStyles(colors);
+
+  if (!authReady) {
+    return (
+      <View style={styles.authContainer} testID="userpoints-auth-loading">
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

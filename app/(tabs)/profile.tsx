@@ -1,5 +1,5 @@
 // Страница профиля пользователя
-import React, { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Pressable,
   Platform,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -33,7 +34,7 @@ interface UserStats {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, logout, userId, setUserAvatar, triggerProfileRefresh: _triggerProfileRefresh } = useAuth();
+  const { isAuthenticated, authReady, logout, userId, setUserAvatar, triggerProfileRefresh: _triggerProfileRefresh } = useAuth();
   const favoritesContext = useFavorites();
   const { favorites = [], viewHistory = [] } = favoritesContext ?? { favorites: [], viewHistory: [] };
   const colors = useThemedColors();
@@ -515,6 +516,16 @@ export default function ProfileScreen() {
       color: colors.danger,
     },
   }), [colors]);
+
+  if (!authReady) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
