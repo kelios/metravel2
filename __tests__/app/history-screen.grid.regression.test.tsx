@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, act } from '@testing-library/react-native';
 import { FlatList } from 'react-native';
 
@@ -39,7 +38,7 @@ describe('HistoryScreen grid regression', () => {
     jest.useFakeTimers();
     tabTravelCardProps.length = 0;
 
-    mockUseAuth.mockReturnValue({ isAuthenticated: true });
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true });
     mockUseFavorites.mockReturnValue({
       viewHistory: [
         {

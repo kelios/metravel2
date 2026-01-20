@@ -17,7 +17,7 @@ export const PointsListItem: React.FC<{
     | { status: 'ok'; distanceKm: number; durationMin: number }
     | { status: 'error' }
   onToggleSelect?: (point: any) => void
-}> = ({ point, onPress, onEdit, onDelete, layout, selectionMode, selected, active, driveInfo, onToggleSelect }) => {
+}> = React.memo(({ point, onPress, onEdit, onDelete, layout, selectionMode, selected, active, driveInfo, onToggleSelect }) => {
   return (
     <PointCard
       point={point}
@@ -32,4 +32,4 @@ export const PointsListItem: React.FC<{
       onToggleSelect={onToggleSelect}
     />
   )
-}
+})

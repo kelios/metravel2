@@ -53,7 +53,6 @@ type PointsListHeaderProps = {
   onFilterChange: (newFilters: PointFiltersType) => void
 
   siteCategoryOptions: Array<{ id: string; name: string }>
-  availableStatuses?: string[]
   availableColors?: string[]
 }
 
@@ -86,15 +85,19 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 }) => {
   return (
     <View style={styles.header}>
-      <View style={styles.titleContainer}>
-        <Text style={styles.title}>Мои точки</Text>
-        <Text style={styles.subtitle}>
-          Всего: {total || 0} точек · Найдено: {found || 0}
-        </Text>
-      </View>
+      <View style={styles.headerTopRow}>
+        <View style={styles.statsRow}>
+          <View style={styles.statPill}>
+            <Text style={styles.statPillLabel}>Всего</Text>
+            <Text style={styles.statPillValue}>{total || 0}</Text>
+          </View>
+          <View style={styles.statPill}>
+            <Text style={styles.statPillLabel}>Найдено</Text>
+            <Text style={styles.statPillValue}>{found || 0}</Text>
+          </View>
+        </View>
 
-      <View style={styles.headerActionsRow}>
-        <View style={styles.buttonRow}>
+        <View style={styles.actionsTopRow}>
           <TouchableOpacity
             style={[styles.headerButton, styles.headerIconButton]}
             onPress={onOpenActions}
@@ -113,25 +116,25 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           >
             <Feather name={showFilters ? 'eye-off' : 'filter'} size={18} color={colors.text} />
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.recoOpenButton,
-              !isMobile && ({ flexDirection: 'row', alignItems: 'center' } as any),
-              isMobile && styles.headerIconButtonPrimary,
-            ]}
-            onPress={onOpenRecommendations}
-            accessibilityRole="button"
-            accessibilityLabel="3 случайные точки"
-          >
-            <Feather name="compass" size={18} color={colors.textOnPrimary} />
-            {!isMobile ? (
-              <Text numberOfLines={1} style={[styles.recoOpenButtonText, { marginLeft: 8, flexShrink: 1 } as any]}>
-                3 случайные точки
-              </Text>
-            ) : null}
-          </TouchableOpacity>
         </View>
+      </View>
+
+      <View style={styles.headerActionsRow}>
+        <TouchableOpacity
+          style={[
+            styles.recoOpenButton,
+            styles.recoOpenButtonFull,
+            !isMobile && ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' } as any),
+          ]}
+          onPress={onOpenRecommendations}
+          accessibilityRole="button"
+          accessibilityLabel="3 случайные точки"
+        >
+          <Feather name="compass" size={18} color={colors.textOnPrimary} />
+          <Text numberOfLines={1} style={[styles.recoOpenButtonText, styles.recoOpenButtonTextFull]}>
+            3 случайные точки
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchContainer}>
@@ -143,6 +146,8 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           placeholderTextColor={colors.textMuted}
         />
       </View>
+
+      <View style={styles.headerDivider} />
 
       {hasActiveFilters ? (
         <View style={{ marginBottom: 10 }}>

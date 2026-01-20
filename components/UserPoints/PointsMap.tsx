@@ -28,6 +28,93 @@ interface PointsMapProps {
   routeLines?: Array<{ id: number; line: Array<[number, number]> }>;
 }
 
+const WebMapInstanceBinder = ({ useMap, onMapReady }: { useMap: any; onMapReady: (map: any) => void }) => {
+  const map = useMap?.();
+  React.useEffect(() => {
+    if (!map) return;
+    onMapReady(map);
+  }, [map, onMapReady]);
+  return null;
+};
+
+const WebMapFixSize = ({ useMap }: { useMap: any }) => {
+  const map = useMap?.();
+  React.useEffect(() => {
+    if (!map) return;
+    requestAnimationFrame(() => {
+      try {
+        map.invalidateSize();
+      } catch {
+        // noop
+      }
+    });
+  }, [map]);
+  return null;
+};
+
+const WebMapClickHandler = ({ useMapEvents, onMapPress }: { useMapEvents: any; onMapPress?: (c: any) => void }) => {
+  useMapEvents?.({
+    click: (e: any) => {
+      const lat = e?.latlng?.lat;
+      const lng = e?.latlng?.lng;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      onMapPress?.({ lat, lng });
+    },
+  });
+  return null;
+};
+
+const WebMapCenterReporter = ({
+  useMap,
+  useMapEvents,
+  onCenterChange,
+}: {
+  useMap: any;
+  useMapEvents: any;
+  onCenterChange?: (c: any) => void;
+}) => {
+  const map = useMap?.();
+
+  useMapEvents?.({
+    moveend: () => {
+      try {
+        const c = map?.getCenter?.();
+        const lat = c?.lat;
+        const lng = c?.lng;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        onCenterChange?.({ lat, lng });
+      } catch {
+        // noop
+      }
+    },
+    zoomend: () => {
+      try {
+        const c = map?.getCenter?.();
+        const lat = c?.lat;
+        const lng = c?.lng;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        onCenterChange?.({ lat, lng });
+      } catch {
+        // noop
+      }
+    },
+  });
+
+  React.useEffect(() => {
+    try {
+      const c = map?.getCenter?.();
+      const lat = c?.lat;
+      const lng = c?.lng;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      onCenterChange?.({ lat, lng });
+    } catch {
+      // noop
+    }
+  }, [map, onCenterChange]);
+
+  return null;
+};
+
 export const PointsMap: React.FC<PointsMapProps> = ({
   points,
   center,
@@ -111,6 +198,19 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     >
   >({});
 
+  const driveAbortByIdRef = React.useRef<Map<number, AbortController>>(new Map());
+  React.useEffect(() => {
+    const controllersById = driveAbortByIdRef.current;
+    return () => {
+      try {
+        for (const c of controllersById.values()) c.abort();
+      } catch {
+        // noop
+      }
+      controllersById.clear();
+    };
+  }, []);
+
   const [mods, setMods] = React.useState<{
     L: any;
     MapContainer: any;
@@ -190,6 +290,25 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     [colors.border, colors.primary, colors.surface, mods?.L]
   );
 
+  const markerIconCacheRef = React.useRef<Map<string, any>>(new Map());
+  React.useEffect(() => {
+    markerIconCacheRef.current.clear();
+  }, [colors.border, colors.primary, colors.surface, mods?.L]);
+
+  const getMarkerIconCached = React.useCallback(
+    (color: PointColor | string | undefined, opts?: { active?: boolean }) => {
+      const fill = String(color || '').trim() || colors.primary;
+      const active = Boolean(opts?.active);
+      const key = `${fill}|${active ? '1' : '0'}`;
+      const cached = markerIconCacheRef.current.get(key);
+      if (cached) return cached;
+      const icon = getMarkerIcon(color, opts);
+      if (icon) markerIconCacheRef.current.set(key, icon);
+      return icon;
+    },
+    [colors.primary, getMarkerIcon]
+  );
+
   const safePoints = React.useMemo(() => {
     return (points ?? [])
       .map((p: any) => {
@@ -200,6 +319,14 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
       })
       .filter((p: any): p is ImportedPoint => p != null);
   }, [points]);
+
+  const travelData = React.useMemo(() => {
+    return (safePoints ?? []).map((p: any) => ({
+      id: Number(p?.id),
+      coord: `${Number(p?.latitude)},${Number(p?.longitude)}`,
+      address: String(p?.address ?? ''),
+    }));
+  }, [safePoints]);
 
   const { leafletBaseLayerRef, leafletOverlayLayersRef, leafletControlRef } = useMapInstance({
     map: mapInstance,
@@ -409,11 +536,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     map: mapInstance,
     L: mods?.L,
     onMapUiApiReady,
-    travelData: (safePoints ?? []).map((p: any) => ({
-      id: Number(p?.id),
-      coord: `${Number(p?.latitude)},${Number(p?.longitude)}`,
-      address: String(p?.address ?? ''),
-    })),
+    travelData,
     userLocation: centerOverride ? { lat: centerOverride.lat, lng: centerOverride.lng } : null,
     routePoints: [],
     leafletBaseLayerRef,
@@ -477,97 +600,37 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     }
   }, [activePointId, effectiveCenterOverride, mapInstance, mods?.L, safePoints]);
 
+  // Hooks must run unconditionally (before any return).
+  const center = React.useMemo(() => {
+    if (effectiveCenterOverride) return effectiveCenterOverride;
+    if (safePoints.length > 0) {
+      const sum = safePoints.reduce(
+        (acc, p) => {
+          acc.lat += p.latitude;
+          acc.lng += p.longitude;
+          return acc;
+        },
+        { lat: 0, lng: 0 }
+      );
+      return { lat: sum.lat / safePoints.length, lng: sum.lng / safePoints.length };
+    }
+    return { lat: 55.7558, lng: 37.6173 };
+  }, [effectiveCenterOverride, safePoints]);
+
+  const handleMapReady = React.useCallback(
+    (map: any) => {
+      setMapInstance((prev: any) => (prev === map ? prev : map));
+    },
+    [setMapInstance]
+  );
+
+  const polylinePathOptions = React.useMemo(() => {
+    return { color: colors.primary, weight: 4, opacity: 0.85 } as any;
+  }, [colors.primary]);
+
   if (!mods?.MapContainer) {
     return <View style={styles.container} />;
   }
-
-  // Вычисляем центр карты
-  const center = effectiveCenterOverride
-    ? effectiveCenterOverride
-    : safePoints.length > 0
-      ? {
-          lat: safePoints.reduce((sum, p) => sum + p.latitude, 0) / safePoints.length,
-          lng: safePoints.reduce((sum, p) => sum + p.longitude, 0) / safePoints.length,
-        }
-      : { lat: 55.7558, lng: 37.6173 }; // Москва по умолчанию
-
-  const FixSize = () => {
-    const map = mods.useMap?.();
-    React.useEffect(() => {
-      if (!map) return;
-      requestAnimationFrame(() => {
-        try {
-          map.invalidateSize();
-        } catch {
-          // noop
-        }
-      });
-    }, [map]);
-    return null;
-  };
-
-  const MapClickHandler = () => {
-    mods.useMapEvents?.({
-      click: (e: any) => {
-        const lat = e?.latlng?.lat;
-        const lng = e?.latlng?.lng;
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-        onMapPress?.({ lat, lng });
-      },
-    });
-    return null;
-  };
-
-  const MapCenterReporter = () => {
-    const map = mods.useMap?.();
-    mods.useMapEvents?.({
-      moveend: () => {
-        try {
-          const c = map?.getCenter?.();
-          const lat = c?.lat;
-          const lng = c?.lng;
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-          onCenterChange?.({ lat, lng });
-        } catch {
-          // noop
-        }
-      },
-      zoomend: () => {
-        try {
-          const c = map?.getCenter?.();
-          const lat = c?.lat;
-          const lng = c?.lng;
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-          onCenterChange?.({ lat, lng });
-        } catch {
-          // noop
-        }
-      },
-    });
-
-    React.useEffect(() => {
-      try {
-        const c = map?.getCenter?.();
-        const lat = c?.lat;
-        const lng = c?.lng;
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-        onCenterChange?.({ lat, lng });
-      } catch {
-        // noop
-      }
-    }, [map]);
-
-    return null;
-  };
-
-  const MapInstanceBinder = () => {
-    const map = mods.useMap?.();
-    React.useEffect(() => {
-      if (!map) return;
-      setMapInstance((prev: any) => (prev === map ? prev : map));
-    }, [map]);
-    return null;
-  };
 
   return (
     <View style={styles.container}>
@@ -576,16 +639,16 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
         zoom={safePoints.length > 0 ? 10 : 5}
         style={{ height: '100%', width: '100%' }}
       >
-        <MapInstanceBinder />
-        <FixSize />
-        <MapClickHandler />
-        <MapCenterReporter />
+        <WebMapInstanceBinder useMap={mods.useMap} onMapReady={handleMapReady} />
+        <WebMapFixSize useMap={mods.useMap} />
+        <WebMapClickHandler useMapEvents={mods.useMapEvents} onMapPress={onMapPress} />
+        <WebMapCenterReporter useMap={mods.useMap} useMapEvents={mods.useMapEvents} onCenterChange={onCenterChange} />
 
         {centerOverride && Number.isFinite(centerOverride.lat) && Number.isFinite(centerOverride.lng) ? (
           <mods.Marker
             key="__user__"
             position={[centerOverride.lat, centerOverride.lng]}
-            icon={getMarkerIcon(colors.primary, { active: true })}
+            icon={getMarkerIconCached(colors.primary, { active: true })}
           >
             <mods.Popup>
               <div style={{ fontSize: 12, color: colors.text }}>
@@ -602,7 +665,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
             <mods.Polyline
               key={`route-${r.id}`}
               positions={r.line}
-              pathOptions={{ color: colors.primary, weight: 4, opacity: 0.85 } as any}
+              pathOptions={polylinePathOptions}
             />
           );
         })}
@@ -611,7 +674,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
           <mods.Marker
             key="__pending__"
             position={[pendingMarker.lat, pendingMarker.lng]}
-            icon={getMarkerIcon(pendingMarkerColor)}
+            icon={getMarkerIconCached(pendingMarkerColor)}
           />
         )}
 
@@ -648,7 +711,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
             <mods.Marker
               key={point.id}
               position={[point.latitude, point.longitude]}
-              icon={getMarkerIcon(point.color, { active: Number(activePointId) === Number(point.id) })}
+              icon={getMarkerIconCached(point.color, { active: Number(activePointId) === Number(point.id) })}
               eventHandlers={{
                 click: () => {
                   try {
@@ -676,7 +739,15 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
 
                     const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${lng},${lat}?overview=false`;
 
-                    fetch(url)
+                    try {
+                      driveAbortByIdRef.current.get(id)?.abort();
+                    } catch {
+                      // noop
+                    }
+                    const controller = new AbortController();
+                    driveAbortByIdRef.current.set(id, controller);
+
+                    fetch(url, { signal: controller.signal })
                       .then((r) => r.json())
                       .then((data) => {
                         const route = Array.isArray(data?.routes) ? data.routes[0] : null;
@@ -694,8 +765,18 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                           [id]: { status: 'ok', distanceKm, durationMin },
                         }));
                       })
-                      .catch(() => {
+                      .catch((e) => {
+                        if ((e as any)?.name === 'AbortError') return;
                         setDriveInfoById((prev) => ({ ...prev, [id]: { status: 'error' } }));
+                      })
+                      .finally(() => {
+                        try {
+                          if (driveAbortByIdRef.current.get(id) === controller) {
+                            driveAbortByIdRef.current.delete(id);
+                          }
+                        } catch {
+                          // noop
+                        }
                       });
                   } catch {
                     // noop

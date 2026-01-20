@@ -104,7 +104,10 @@ function truncateLabel(label: string) {
 
 function getRootTitle(pathname: string) {
   const root = HEADER_NAV_ITEMS.find((i) => i.path === pathname);
-  return root?.label || 'Путешествия';
+  if (root?.label) return root.label;
+  const segment = pathname.replace(/^\//, '').split('/').filter(Boolean)[0] || '';
+  if (segment) return toTitleFromSegment(segment);
+  return 'Путешествия';
 }
 
 export function useBreadcrumbModel(): BreadcrumbModel {

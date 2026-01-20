@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -52,6 +51,7 @@ const mockUseFavorites = useFavorites as jest.MockedFunction<typeof useFavorites
 const setupAuth = (overrides?: Partial<ReturnType<typeof useAuth>>) => {
   mockUseAuth.mockReturnValue({
     isAuthenticated: true,
+    authReady: true,
     logout: jest.fn().mockResolvedValue(undefined),
     userId: '123',
     username: 'Test User',

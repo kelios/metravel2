@@ -200,108 +200,114 @@ export const PointsListGrid: React.FC<{
               </RNText>
             </TouchableOpacity>
           </View>
-          
-          <ScrollView 
-            style={localStyles.rightPanelScroll}
-            contentContainerStyle={localStyles.rightPanelContent}
-            showsVerticalScrollIndicator={true}
-          >
-            {panelTab === 'filters' && (
-              <>
-                {renderHeader()}
-                {Platform.OS === 'web' ? (
-                  <FiltersPanelMapSettings
-                    colors={themedColors as any}
-                    styles={mapSettingsStyles}
-                    isMobile={false}
-                    mode="radius"
-                    mapUiApi={mapUiApi}
-                    totalPoints={filteredPoints.length}
-                    hasFilters={hasFilters}
-                    canBuildRoute={false}
-                    onReset={onResetFilters}
-                    hideReset={!hasFilters}
-                  />
-                ) : null}
-              </>
-            )}
-            
-            {panelTab === 'list' && (
-              <View style={localStyles.pointsList} testID="userpoints-panel-content-list">
-                <View style={localStyles.listControlsRow}>
-                  <TextInput
-                    style={localStyles.listSearchInput as any}
-                    value={searchQuery}
-                    onChangeText={onSearch}
-                    placeholder="Поиск по названию..."
-                    placeholderTextColor={themedColors.textMuted}
-                    accessibilityLabel="Поиск по названию..."
-                    testID="userpoints-list-search"
-                  />
 
-                  <TouchableOpacity
-                    style={localStyles.listControlButton}
-                    onPress={() => setPanelTab('filters')}
-                    accessibilityRole="button"
-                    accessibilityLabel="Фильтры"
-                    testID="userpoints-list-open-filters"
-                  >
-                    <Feather name="sliders" size={16} color={themedColors.text} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[localStyles.listControlButton, !hasFilters && localStyles.listControlButtonDisabled]}
-                    onPress={onResetFilters}
-                    disabled={!hasFilters}
-                    accessibilityRole="button"
-                    accessibilityLabel="Сбросить фильтры"
-                    testID="userpoints-list-reset-filters"
-                  >
-                    <Feather name="rotate-ccw" size={16} color={themedColors.text} />
-                  </TouchableOpacity>
-                </View>
-
-                {showingRecommendations && (
-                  <View style={localStyles.recommendationsHeader}>
-                    <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
-                    <View style={localStyles.recommendationsActions}>
-                      <TouchableOpacity
-                        style={localStyles.recommendationsRefreshButton}
-                        onPress={onRefreshRecommendations}
-                        accessibilityRole="button"
-                        accessibilityLabel="3 случайные точки"
-                      >
-                        <Feather name="refresh-cw" size={16} color={themedColors.text} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={localStyles.closeRecommendationsButton}
-                        onPress={onCloseRecommendations}
-                        accessibilityRole="button"
-                        accessibilityLabel="Показать все"
-                      >
-                        <Feather name="x" size={16} color={themedColors.textOnPrimary} />
-                      </TouchableOpacity>
-                    </View>
+          {panelTab === 'filters' ? (
+            <ScrollView
+              style={localStyles.rightPanelScroll}
+              contentContainerStyle={localStyles.rightPanelContent}
+              showsVerticalScrollIndicator={true}
+            >
+              {renderHeader()}
+              {Platform.OS === 'web' ? (
+                <FiltersPanelMapSettings
+                  colors={themedColors as any}
+                  styles={mapSettingsStyles}
+                  isMobile={false}
+                  mode="radius"
+                  mapUiApi={mapUiApi}
+                  totalPoints={filteredPoints.length}
+                  hasFilters={hasFilters}
+                  canBuildRoute={false}
+                  onReset={onResetFilters}
+                  hideReset={!hasFilters}
+                  showLegend={false}
+                />
+              ) : null}
+            </ScrollView>
+          ) : (
+            <FlatList
+              style={localStyles.rightPanelScroll}
+              contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
+              data={filteredPoints}
+              keyExtractor={(item) => String((item as any)?.id)}
+              renderItem={({ item }) => {
+                const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
+                return (
+                  <View style={localStyles.pointsListItem}>
+                    {renderItem({ item })}
+                    {showingRecommendations && routeInfo ? (
+                      <View style={localStyles.routeInfo}>
+                        <RNText style={localStyles.routeInfoText}>
+                          {routeInfo.distance} км · ~{routeInfo.duration} мин
+                        </RNText>
+                      </View>
+                    ) : null}
                   </View>
-                )}
-                {filteredPoints.map((point) => {
-                  const routeInfo = recommendedRoutes?.[Number(point.id)];
-                  return (
-                    <View key={point.id} style={localStyles.pointsListItem}>
-                      {renderItem({ item: point })}
-                      {showingRecommendations && routeInfo && (
-                        <View style={localStyles.routeInfo}>
-                          <RNText style={localStyles.routeInfoText}>
-                            {routeInfo.distance} км · ~{routeInfo.duration} мин
-                          </RNText>
-                        </View>
-                      )}
+                )
+              }}
+              ListHeaderComponent={
+                <>
+                  <View style={localStyles.listControlsRow}>
+                    <TextInput
+                      style={localStyles.listSearchInput as any}
+                      value={searchQuery}
+                      onChangeText={onSearch}
+                      placeholder="Поиск по названию..."
+                      placeholderTextColor={themedColors.textMuted}
+                      accessibilityLabel="Поиск по названию..."
+                      testID="userpoints-list-search"
+                    />
+
+                    <TouchableOpacity
+                      style={localStyles.listControlButton}
+                      onPress={() => setPanelTab('filters')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Фильтры"
+                      testID="userpoints-list-open-filters"
+                    >
+                      <Feather name="sliders" size={16} color={themedColors.text} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[localStyles.listControlButton, !hasFilters && localStyles.listControlButtonDisabled]}
+                      onPress={onResetFilters}
+                      disabled={!hasFilters}
+                      accessibilityRole="button"
+                      accessibilityLabel="Сбросить фильтры"
+                      testID="userpoints-list-reset-filters"
+                    >
+                      <Feather name="rotate-ccw" size={16} color={themedColors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {showingRecommendations ? (
+                    <View style={localStyles.recommendationsHeader}>
+                      <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
+                      <View style={localStyles.recommendationsActions}>
+                        <TouchableOpacity
+                          style={localStyles.recommendationsRefreshButton}
+                          onPress={onRefreshRecommendations}
+                          accessibilityRole="button"
+                          accessibilityLabel="3 случайные точки"
+                        >
+                          <Feather name="refresh-cw" size={16} color={themedColors.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={localStyles.closeRecommendationsButton}
+                          onPress={onCloseRecommendations}
+                          accessibilityRole="button"
+                          accessibilityLabel="Показать все"
+                        >
+                          <Feather name="x" size={16} color={themedColors.textOnPrimary} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  );
-                })}
-              </View>
-            )}
-          </ScrollView>
+                  ) : null}
+                </>
+              }
+              showsVerticalScrollIndicator={true}
+            />
+          )}
         </View>
       </View>
     )
@@ -336,108 +342,114 @@ export const PointsListGrid: React.FC<{
               </RNText>
             </TouchableOpacity>
           </View>
-          
-          <ScrollView 
-            style={localStyles.rightPanelScroll}
-            contentContainerStyle={localStyles.rightPanelContent}
-            showsVerticalScrollIndicator={true}
-          >
-            {panelTab === 'filters' && (
-              <>
-                {renderHeader()}
-                {Platform.OS === 'web' ? (
-                  <FiltersPanelMapSettings
-                    colors={themedColors as any}
-                    styles={mapSettingsStyles}
-                    isMobile={true}
-                    mode="radius"
-                    mapUiApi={mapUiApi}
-                    totalPoints={filteredPoints.length}
-                    hasFilters={hasFilters}
-                    canBuildRoute={false}
-                    onReset={onResetFilters}
-                    hideReset={!hasFilters}
-                  />
-                ) : null}
-              </>
-            )}
-            
-            {panelTab === 'list' && (
-              <View style={localStyles.pointsList} testID="userpoints-panel-content-list">
-                <View style={localStyles.listControlsRow}>
-                  <TextInput
-                    style={localStyles.listSearchInput as any}
-                    value={searchQuery}
-                    onChangeText={onSearch}
-                    placeholder="Поиск по названию..."
-                    placeholderTextColor={themedColors.textMuted}
-                    accessibilityLabel="Поиск по названию..."
-                    testID="userpoints-list-search"
-                  />
 
-                  <TouchableOpacity
-                    style={localStyles.listControlButton}
-                    onPress={() => setPanelTab('filters')}
-                    accessibilityRole="button"
-                    accessibilityLabel="Фильтры"
-                    testID="userpoints-list-open-filters"
-                  >
-                    <Feather name="sliders" size={16} color={themedColors.text} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[localStyles.listControlButton, !hasFilters && localStyles.listControlButtonDisabled]}
-                    onPress={onResetFilters}
-                    disabled={!hasFilters}
-                    accessibilityRole="button"
-                    accessibilityLabel="Сбросить фильтры"
-                    testID="userpoints-list-reset-filters"
-                  >
-                    <Feather name="rotate-ccw" size={16} color={themedColors.text} />
-                  </TouchableOpacity>
-                </View>
-
-                {showingRecommendations && (
-                  <View style={localStyles.recommendationsHeader}>
-                    <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
-                    <View style={localStyles.recommendationsActions}>
-                      <TouchableOpacity
-                        style={localStyles.recommendationsRefreshButton}
-                        onPress={onRefreshRecommendations}
-                        accessibilityRole="button"
-                        accessibilityLabel="3 случайные точки"
-                      >
-                        <Feather name="refresh-cw" size={16} color={themedColors.text} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={localStyles.closeRecommendationsButton}
-                        onPress={onCloseRecommendations}
-                        accessibilityRole="button"
-                        accessibilityLabel="Показать все"
-                      >
-                        <Feather name="x" size={16} color={themedColors.textOnPrimary} />
-                      </TouchableOpacity>
-                    </View>
+          {panelTab === 'filters' ? (
+            <ScrollView
+              style={localStyles.rightPanelScroll}
+              contentContainerStyle={localStyles.rightPanelContent}
+              showsVerticalScrollIndicator={true}
+            >
+              {renderHeader()}
+              {Platform.OS === 'web' ? (
+                <FiltersPanelMapSettings
+                  colors={themedColors as any}
+                  styles={mapSettingsStyles}
+                  isMobile={true}
+                  mode="radius"
+                  mapUiApi={mapUiApi}
+                  totalPoints={filteredPoints.length}
+                  hasFilters={hasFilters}
+                  canBuildRoute={false}
+                  onReset={onResetFilters}
+                  hideReset={!hasFilters}
+                  showLegend={false}
+                />
+              ) : null}
+            </ScrollView>
+          ) : (
+            <FlatList
+              style={localStyles.rightPanelScroll}
+              contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
+              data={filteredPoints}
+              keyExtractor={(item) => String((item as any)?.id)}
+              renderItem={({ item }) => {
+                const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
+                return (
+                  <View style={localStyles.pointsListItem}>
+                    {renderItem({ item })}
+                    {showingRecommendations && routeInfo ? (
+                      <View style={localStyles.routeInfo}>
+                        <RNText style={localStyles.routeInfoText}>
+                          {routeInfo.distance} км · ~{routeInfo.duration} мин
+                        </RNText>
+                      </View>
+                    ) : null}
                   </View>
-                )}
-                {filteredPoints.map((point) => {
-                  const routeInfo = recommendedRoutes?.[Number(point.id)];
-                  return (
-                    <View key={point.id} style={localStyles.pointsListItem}>
-                      {renderItem({ item: point })}
-                      {showingRecommendations && routeInfo && (
-                        <View style={localStyles.routeInfo}>
-                          <RNText style={localStyles.routeInfoText}>
-                            {routeInfo.distance} км · ~{routeInfo.duration} мин
-                          </RNText>
-                        </View>
-                      )}
+                )
+              }}
+              ListHeaderComponent={
+                <>
+                  <View style={localStyles.listControlsRow}>
+                    <TextInput
+                      style={localStyles.listSearchInput as any}
+                      value={searchQuery}
+                      onChangeText={onSearch}
+                      placeholder="Поиск по названию..."
+                      placeholderTextColor={themedColors.textMuted}
+                      accessibilityLabel="Поиск по названию..."
+                      testID="userpoints-list-search"
+                    />
+
+                    <TouchableOpacity
+                      style={localStyles.listControlButton}
+                      onPress={() => setPanelTab('filters')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Фильтры"
+                      testID="userpoints-list-open-filters"
+                    >
+                      <Feather name="sliders" size={16} color={themedColors.text} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[localStyles.listControlButton, !hasFilters && localStyles.listControlButtonDisabled]}
+                      onPress={onResetFilters}
+                      disabled={!hasFilters}
+                      accessibilityRole="button"
+                      accessibilityLabel="Сбросить фильтры"
+                      testID="userpoints-list-reset-filters"
+                    >
+                      <Feather name="rotate-ccw" size={16} color={themedColors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  {showingRecommendations ? (
+                    <View style={localStyles.recommendationsHeader}>
+                      <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
+                      <View style={localStyles.recommendationsActions}>
+                        <TouchableOpacity
+                          style={localStyles.recommendationsRefreshButton}
+                          onPress={onRefreshRecommendations}
+                          accessibilityRole="button"
+                          accessibilityLabel="3 случайные точки"
+                        >
+                          <Feather name="refresh-cw" size={16} color={themedColors.text} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={localStyles.closeRecommendationsButton}
+                          onPress={onCloseRecommendations}
+                          accessibilityRole="button"
+                          accessibilityLabel="Показать все"
+                        >
+                          <Feather name="x" size={16} color={themedColors.textOnPrimary} />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  );
-                })}
-              </View>
-            )}
-          </ScrollView>
+                  ) : null}
+                </>
+              }
+              showsVerticalScrollIndicator={true}
+            />
+          )}
         </View>
       ) : (
         <View style={styles.mapInner}>

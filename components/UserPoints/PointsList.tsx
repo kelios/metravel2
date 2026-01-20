@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
@@ -22,6 +22,52 @@ const STATUS_TO_COLOR: Record<PointStatus, string> = {
   [PointStatus.PLANNING]: 'blue',
   [PointStatus.ARCHIVED]: 'gray',
 }
+
+const DEFAULT_POINT_COLORS: string[] = [
+  'red',
+  'green',
+  'purple',
+  'brown',
+  'blue',
+  'yellow',
+  'pink',
+  'gray',
+  '#ff6b6b',
+  '#f06595',
+  '#845ef7',
+  '#339af0',
+  '#22b8cf',
+  '#51cf66',
+  '#fcc419',
+  '#ff922b',
+];
+
+const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const pickRandomDistinct = <T,>(items: T[], count: number): T[] => {
+  const n = items.length;
+  if (count <= 0 || n === 0) return [];
+  if (count >= n) return items.slice();
+
+  const result: T[] = [];
+  const picked = new Set<number>();
+  while (result.length < count) {
+    const idx = Math.floor(Math.random() * n);
+    if (picked.has(idx)) continue;
+    picked.add(idx);
+    result.push(items[idx]);
+  }
+  return result;
+};
 
 type ViewMode = 'list' | 'map';
 
@@ -77,6 +123,25 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const { width: windowWidth } = useWindowDimensions();
   const isNarrow = windowWidth < 420;
   const isMobile = Platform.OS !== 'web';
+
+  const showPointTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeDriveAbortRef = useRef<AbortController | null>(null);
+  const recommendationsAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (showPointTimeoutRef.current) {
+        clearTimeout(showPointTimeoutRef.current);
+        showPointTimeoutRef.current = null;
+      }
+
+      activeDriveAbortRef.current?.abort();
+      activeDriveAbortRef.current = null;
+
+      recommendationsAbortRef.current?.abort();
+      recommendationsAbortRef.current = null;
+    };
+  }, []);
 
   const blurActiveElementForModal = useCallback(() => {
     if (Platform.OS !== 'web') return;
@@ -134,6 +199,12 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  const headerColors = useMemo(
+    () => ({ text: colors.text, textMuted: colors.textMuted, textOnPrimary: colors.textOnPrimary }),
+    [colors.text, colors.textMuted, colors.textOnPrimary]
+  );
+  const gridColors = useMemo(() => ({ text: colors.text }), [colors.text]);
+
   const siteCategoryOptionsQuery = useQuery({
     queryKey: ['userPointsSiteCategories'],
     queryFn: async () => {
@@ -176,9 +247,25 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         colorMap.set(c, (colorMap.get(c) || 0) + 1);
       }
     }
-    return Array.from(colorMap.entries())
-      .sort((a, b) => b[1] - a[1]) // Sort by count descending
+
+    const observed = Array.from(colorMap.entries())
+      .sort((a, b) => b[1] - a[1])
       .map(([color]) => color);
+
+    const seen = new Set<string>();
+    const merged: string[] = [];
+    for (const c of observed) {
+      if (!c || seen.has(c)) continue;
+      seen.add(c);
+      merged.push(c);
+    }
+    for (const c of DEFAULT_POINT_COLORS) {
+      if (!c || seen.has(c)) continue;
+      seen.add(c);
+      merged.push(c);
+    }
+
+    return merged;
   }, [points]);
 
   const filteredPointsWithoutCategory = useMemo(() => {
@@ -214,18 +301,24 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     const selectedCategories = filters.siteCategories ?? [];
     const radiusKm = filters.radiusKm;
 
-    // Helper function to calculate distance in km using Haversine formula
-    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-      const R = 6371; // Earth's radius in km
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = 
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    };
+    const radiusFilterEnabled = radiusKm !== null && radiusKm !== undefined && currentLocation;
+    const userLat = Number(currentLocation?.lat);
+    const userLng = Number(currentLocation?.lng);
+    const radius = Number(radiusKm);
+    const canDoRadius =
+      Boolean(radiusFilterEnabled) &&
+      Number.isFinite(userLat) &&
+      Number.isFinite(userLng) &&
+      Number.isFinite(radius) &&
+      radius > 0;
+
+    // Cheap bounding box pre-filter to avoid Haversine trig for clearly-outside points.
+    const latDelta = canDoRadius ? radius / 111 : 0;
+    const lngDelta = canDoRadius ? radius / (111 * Math.max(0.2, Math.cos((userLat * Math.PI) / 180))) : 0;
+    const minLat = canDoRadius ? userLat - latDelta : 0;
+    const maxLat = canDoRadius ? userLat + latDelta : 0;
+    const minLng = canDoRadius ? userLng - lngDelta : 0;
+    const maxLng = canDoRadius ? userLng + lngDelta : 0;
 
     return points.filter((p: any) => {
       if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
@@ -233,17 +326,13 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       if (selectedCategories.length > 0 && !selectedCategories.includes(String(p.category ?? ''))) return false;
       
       // Radius filter - only apply if radiusKm is set and currentLocation exists
-      if (radiusKm !== null && radiusKm !== undefined && currentLocation) {
+      if (canDoRadius) {
         const pointLat = Number(p.latitude);
         const pointLng = Number(p.longitude);
         if (Number.isFinite(pointLat) && Number.isFinite(pointLng)) {
-          const distance = calculateDistance(
-            currentLocation.lat,
-            currentLocation.lng,
-            pointLat,
-            pointLng
-          );
-          if (distance > radiusKm) return false;
+          if (pointLat < minLat || pointLat > maxLat || pointLng < minLng || pointLng > maxLng) return false;
+          const distance = haversineKm(userLat, userLng, pointLat, pointLng);
+          if (distance > radius) return false;
         }
       }
       
@@ -266,6 +355,10 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return filteredPoints;
   }, [filteredPoints, showingRecommendations, recommendedPointIds]);
 
+  const selectedIdSet = useMemo(() => {
+    return new Set(selectedIds);
+  }, [selectedIds]);
+
   useEffect(() => {
     const id = Number(activePointId);
     const userLat = Number(currentLocation?.lat);
@@ -287,14 +380,17 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       return;
     }
 
-    let cancelled = false;
+    activeDriveAbortRef.current?.abort();
+    const controller = new AbortController();
+    activeDriveAbortRef.current = controller;
     setActiveDriveInfo({ status: 'loading' });
 
     const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${toLng},${toLat}?overview=false`;
-    fetch(url)
+
+    fetch(url, { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         const route = Array.isArray(data?.routes) ? data.routes[0] : null;
         const distanceM = Number(route?.distance);
         const durationS = Number(route?.duration);
@@ -307,12 +403,12 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         setActiveDriveInfo({ status: 'ok', distanceKm, durationMin });
       })
       .catch(() => {
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
         setActiveDriveInfo({ status: 'error' });
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
   }, [activePointId, currentLocation?.lat, currentLocation?.lng, visibleFilteredPoints]);
 
@@ -734,9 +830,12 @@ const deleteAll = useCallback(async () => {
   }, [pointToDelete, refetch]);
 
   const handleOpenRecommendations = useCallback(async () => {
+    recommendationsAbortRef.current?.abort();
+    const controller = new AbortController();
+    recommendationsAbortRef.current = controller;
+
     // Get 3 random points from filtered points (respects all active filters)
-    const shuffled = [...filteredPoints].sort(() => Math.random() - 0.5);
-    const recommended = shuffled.slice(0, 3);
+    const recommended = pickRandomDistinct(filteredPoints as any[], 3);
     const recommendedIds = recommended.map((p: any) => Number(p.id));
     
     setRecommendedPointIds(recommendedIds);
@@ -764,6 +863,8 @@ const deleteAll = useCallback(async () => {
     }
 
     // Calculate routes if we have current location
+    if (controller.signal.aborted) return;
+
     if (loc && recommended.length > 0) {
       const routes: Record<number, { distance: number; duration: number; line?: Array<[number, number]> }> = {};
       
@@ -776,7 +877,7 @@ const deleteAll = useCallback(async () => {
           if (!Number.isFinite(toLng) || !Number.isFinite(toLat)) continue;
 
           const url = `https://router.project-osrm.org/route/v1/driving/${loc.lng},${loc.lat};${toLng},${toLat}?overview=full&geometries=geojson`;
-          const response = await fetch(url);
+          const response = await fetch(url, { signal: controller.signal });
           const data = await response.json();
           
           if (data.code === 'Ok' && data.routes && data.routes[0]) {
@@ -800,11 +901,13 @@ const deleteAll = useCallback(async () => {
             };
           }
         } catch (error) {
+          if (controller.signal.aborted) return;
           // If route calculation fails, skip this point
           console.warn('Failed to calculate route for point', point.id, error);
         }
       }
       
+      if (controller.signal.aborted) return;
       setRecommendedRoutes(routes);
       setActivePointId(null); // Clear any active point to trigger auto-fit
     }
@@ -824,7 +927,10 @@ const deleteAll = useCallback(async () => {
     if (!Number.isFinite(id)) return;
 
     setActivePointId(null);
-    setTimeout(() => {
+    if (showPointTimeoutRef.current) {
+      clearTimeout(showPointTimeoutRef.current);
+    }
+    showPointTimeoutRef.current = setTimeout(() => {
       setActivePointId(id);
     }, 0);
   }, []);
@@ -875,7 +981,7 @@ const deleteAll = useCallback(async () => {
     return (
       <PointsListHeader
         styles={styles}
-        colors={{ text: colors.text, textMuted: colors.textMuted, textOnPrimary: colors.textOnPrimary }}
+        colors={headerColors}
         isNarrow={isNarrow}
         isMobile={isMobile}
         total={points.length}
@@ -906,9 +1012,7 @@ const deleteAll = useCallback(async () => {
     availableColors,
     availableCategoryOptions,
     blurActiveElementForModal,
-    colors.text,
-    colors.textMuted,
-    colors.textOnPrimary,
+    headerColors,
     filters,
     filteredPoints.length,
     handleOpenRecommendations,
@@ -991,13 +1095,13 @@ useEffect(() => {
         onEdit={selectionMode ? undefined : openEditPoint}
         onDelete={selectionMode ? undefined : requestDeletePoint}
         selectionMode={selectionMode}
-        selected={selectedIds.includes(Number(item?.id))}
+        selected={selectedIdSet.has(Number(item?.id))}
         active={Number(item?.id) === Number(activePointId)}
         driveInfo={Number(item?.id) === Number(activePointId) ? activeDriveInfo : null}
         onToggleSelect={toggleSelect}
       />
     ),
-    [activeDriveInfo, activePointId, listColumns, handleShowPointOnMap, openEditPoint, requestDeletePoint, selectedIds, selectionMode, toggleSelect]
+    [activeDriveInfo, activePointId, listColumns, handleShowPointOnMap, openEditPoint, requestDeletePoint, selectedIdSet, selectionMode, toggleSelect]
   );
 
   const renderFooter = useCallback(() => {
@@ -1081,7 +1185,7 @@ useEffect(() => {
 
       <PointsListGrid
         styles={styles}
-        colors={{ text: colors.text }}
+        colors={gridColors}
         viewMode={viewMode}
         isLoading={isLoading}
         filteredPoints={visibleFilteredPoints}
@@ -1497,7 +1601,8 @@ useEffect(() => {
   );
 };
 
-export type PointsListStyles = ReturnType<typeof createStyles>;
+export type PointsListStyles = Record<string, any>;
+
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
@@ -1505,9 +1610,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.background,
   },
   header: {
-    padding: DESIGN_TOKENS.spacing.lg,
-    paddingBottom: 0,
-    gap: DESIGN_TOKENS.spacing.md,
+    padding: 0,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   bulkBar: {
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
@@ -1578,6 +1682,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderWidth: 1,
     borderColor: colors.border,
     padding: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   bulkMapBarRow: {
     flexDirection: 'row',
@@ -1645,7 +1750,40 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingBottom: DESIGN_TOKENS.spacing.md,
   },
   titleContainer: {
-    marginBottom: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    flexShrink: 1,
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  statPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  statPillLabel: {
+    fontSize: 12,
+    fontWeight: '700' as any,
+    color: colors.textMuted,
+  },
+  statPillValue: {
+    fontSize: 12,
+    fontWeight: '800' as any,
+    color: colors.text,
   },
   titleRow: {
     flexDirection: 'row',
@@ -1662,6 +1800,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'column',
     alignItems: 'stretch',
     gap: DESIGN_TOKENS.spacing.sm,
+  },
+  actionsTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    flexShrink: 0,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -1718,10 +1862,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderWidth: 1,
     borderColor: colors.primaryDark,
   },
+  recoOpenButtonFull: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    justifyContent: 'center',
+  },
   recoOpenButtonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '700' as any,
     color: colors.textOnPrimary,
+  },
+  recoOpenButtonTextFull: {
+    marginLeft: 8,
+    flexShrink: 1,
   },
   title: {
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
@@ -1932,7 +2086,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '600' as any,
   },
   searchContainer: {
-    marginBottom: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   searchInput: {
     backgroundColor: colors.surface,
@@ -1942,6 +2096,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   filterButton: {
     backgroundColor: colors.backgroundSecondary,

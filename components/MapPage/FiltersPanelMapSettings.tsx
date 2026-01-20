@@ -36,6 +36,7 @@ interface FiltersPanelMapSettingsProps {
   onReset?: () => void;
   hideReset?: boolean;
   onOpenList?: () => void;
+  showLegend?: boolean;
 }
 
 const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
@@ -50,6 +51,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   onReset,
   hideReset,
   onOpenList,
+  showLegend = true,
 }) => {
   const [legendOpen, setLegendOpen] = useState(false);
   const [selectedBaseLayerId, setSelectedBaseLayerId] = useState<string>(
@@ -107,17 +109,21 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       icon="sliders"
       defaultOpen={!isMobile}
     >
-      <Pressable
-        style={[styles.accordionHeader, globalFocusStyles.focusable]}
-        onPress={() => setLegendOpen((v) => !v)}
-        accessibilityRole="button"
-        accessibilityLabel="Легенда карты"
-        accessibilityState={{ expanded: legendOpen }}
-      >
-        <Text style={styles.accordionTitle}>Легенда карты</Text>
-        <MapIcon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
-      </Pressable>
-      {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
+      {showLegend ? (
+        <>
+          <Pressable
+            style={[styles.accordionHeader, globalFocusStyles.focusable]}
+            onPress={() => setLegendOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel="Легенда карты"
+            accessibilityState={{ expanded: legendOpen }}
+          >
+            <Text style={styles.accordionTitle}>Легенда карты</Text>
+            <MapIcon name={legendOpen ? 'expand-less' : 'expand-more'} size={20} color={colors.textMuted} />
+          </Pressable>
+          {legendOpen && <MapLegend showRouteMode={mode === 'route'} />}
+        </>
+      ) : null}
 
       <View style={styles.mapControlsRow}>
         <Pressable

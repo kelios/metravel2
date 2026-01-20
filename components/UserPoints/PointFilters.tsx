@@ -5,6 +5,61 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 
+const NAMED_COLORS: Record<string, string> = {
+  gray: '#9e9e9e',
+  grey: '#9e9e9e',
+  lightgray: '#d3d3d3',
+  lightgrey: '#d3d3d3',
+  pink: '#ffc0cb',
+  lightpink: '#ffb6c1',
+  white: '#ffffff',
+  silver: '#c0c0c0',
+};
+
+const parseHex = (hex: string) => {
+  const raw = String(hex).trim().replace('#', '');
+  if (raw.length === 3) {
+    const r = parseInt(raw[0] + raw[0], 16);
+    const g = parseInt(raw[1] + raw[1], 16);
+    const b = parseInt(raw[2] + raw[2], 16);
+    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
+    return { r, g, b };
+  }
+  if (raw.length === 6) {
+    const r = parseInt(raw.slice(0, 2), 16);
+    const g = parseInt(raw.slice(2, 4), 16);
+    const b = parseInt(raw.slice(4, 6), 16);
+    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
+    return { r, g, b };
+  }
+  return null;
+};
+
+const parseRgb = (value: string) => {
+  const m = String(value)
+    .trim()
+    .match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+)\s*)?\)$/i);
+  if (!m) return null;
+  const r = Number(m[1]);
+  const g = Number(m[2]);
+  const b = Number(m[3]);
+  if ([r, g, b].some((n) => !Number.isFinite(n))) return null;
+  return { r, g, b };
+};
+
+const isLightColor = (value: string) => {
+  const v = String(value ?? '').trim().toLowerCase();
+  const normalized = NAMED_COLORS[v] ?? v;
+  const rgb =
+    normalized.startsWith('#') ? parseHex(normalized) : normalized.startsWith('rgb') ? parseRgb(normalized) : null;
+  if (!rgb) return false;
+  const r = Math.min(255, Math.max(0, rgb.r)) / 255;
+  const g = Math.min(255, Math.max(0, rgb.g)) / 255;
+  const b = Math.min(255, Math.max(0, rgb.b)) / 255;
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.72;
+};
+
 interface PointFiltersProps {
   filters: PointFiltersType;
   onChange: (filters: PointFiltersType) => void;
@@ -20,60 +75,6 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
 }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
-
-  const parseHex = (hex: string) => {
-    const raw = String(hex).trim().replace('#', '');
-    if (raw.length === 3) {
-      const r = parseInt(raw[0] + raw[0], 16);
-      const g = parseInt(raw[1] + raw[1], 16);
-      const b = parseInt(raw[2] + raw[2], 16);
-      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
-      return { r, g, b };
-    }
-    if (raw.length === 6) {
-      const r = parseInt(raw.slice(0, 2), 16);
-      const g = parseInt(raw.slice(2, 4), 16);
-      const b = parseInt(raw.slice(4, 6), 16);
-      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
-      return { r, g, b };
-    }
-    return null;
-  };
-
-  const parseRgb = (value: string) => {
-    const m = String(value)
-      .trim()
-      .match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+)\s*)?\)$/i);
-    if (!m) return null;
-    const r = Number(m[1]);
-    const g = Number(m[2]);
-    const b = Number(m[3]);
-    if ([r, g, b].some((n) => !Number.isFinite(n))) return null;
-    return { r, g, b };
-  };
-
-  const isLightColor = (value: string) => {
-    const v = String(value ?? '').trim().toLowerCase();
-    const named: Record<string, string> = {
-      gray: '#9e9e9e',
-      grey: '#9e9e9e',
-      lightgray: '#d3d3d3',
-      lightgrey: '#d3d3d3',
-      pink: '#ffc0cb',
-      lightpink: '#ffb6c1',
-      white: '#ffffff',
-      silver: '#c0c0c0',
-    };
-    const normalized = named[v] ?? v;
-    const rgb =
-      normalized.startsWith('#') ? parseHex(normalized) : normalized.startsWith('rgb') ? parseRgb(normalized) : null;
-    if (!rgb) return false;
-    const r = Math.min(255, Math.max(0, rgb.r)) / 255;
-    const g = Math.min(255, Math.max(0, rgb.g)) / 255;
-    const b = Math.min(255, Math.max(0, rgb.b)) / 255;
-    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-    return luminance > 0.72;
-  };
 
   const toggleSiteCategory = (id: string) => {
     const current = filters.siteCategories || [];
@@ -103,51 +104,89 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
   return (
     <View style={styles.container}>
       <CollapsibleSection title="Радиус" defaultOpen icon="map-pin">
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipScroll}
-          contentContainerStyle={styles.chipRow}
-        >
-          {radiusOptions.map((km) => {
-            const isSelected = filters.radiusKm === km;
-            return (
-              <TouchableOpacity
-                key={km === null ? 'all' : km}
-                style={[styles.chip, isSelected && styles.chipActive]}
-                onPress={() => setRadius(km)}
-              >
-                <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                  {getRadiusLabel(km)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {Platform.OS === 'web' ? (
+          <View style={styles.chipWrapRow}>
+            {radiusOptions.map((km) => {
+              const isSelected = filters.radiusKm === km;
+              return (
+                <TouchableOpacity
+                  key={km === null ? 'all' : km}
+                  style={[styles.chip, isSelected && styles.chipActive]}
+                  onPress={() => setRadius(km)}
+                >
+                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                    {getRadiusLabel(km)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipScroll}
+            contentContainerStyle={styles.chipRow}
+          >
+            {radiusOptions.map((km) => {
+              const isSelected = filters.radiusKm === km;
+              return (
+                <TouchableOpacity
+                  key={km === null ? 'all' : km}
+                  style={[styles.chip, isSelected && styles.chipActive]}
+                  onPress={() => setRadius(km)}
+                >
+                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
+                    {getRadiusLabel(km)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection title="Цвет" defaultOpen badge={activeColorCount} icon="circle">
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipScroll}
-          contentContainerStyle={styles.chipRow}
-        >
-          {(availableColors ?? []).map((color) => {
-            const isSelected = filters.colors?.includes(color);
-            const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
-            return (
-              <TouchableOpacity
-                key={color}
-                style={[styles.colorChip, isSelected && styles.colorChipActive]}
-                onPress={() => toggleColor(color)}
-                accessibilityLabel={`Цвет ${color}`}
-              >
-                <View style={[styles.colorDot, { backgroundColor: color, borderColor }]} />
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {Platform.OS === 'web' ? (
+          <View style={styles.chipWrapRow}>
+            {(availableColors ?? []).map((color) => {
+              const isSelected = filters.colors?.includes(color);
+              const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
+              return (
+                <TouchableOpacity
+                  key={color}
+                  style={[styles.colorChip, isSelected && styles.colorChipActive]}
+                  onPress={() => toggleColor(color)}
+                  accessibilityLabel={`Цвет ${color}`}
+                >
+                  <View style={[styles.colorDot, { backgroundColor: color, borderColor }]} />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipScroll}
+            contentContainerStyle={styles.chipRow}
+          >
+            {(availableColors ?? []).map((color) => {
+              const isSelected = filters.colors?.includes(color);
+              const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
+              return (
+                <TouchableOpacity
+                  key={color}
+                  style={[styles.colorChip, isSelected && styles.colorChipActive]}
+                  onPress={() => toggleColor(color)}
+                  accessibilityLabel={`Цвет ${color}`}
+                >
+                  <View style={[styles.colorDot, { backgroundColor: color, borderColor }]} />
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
       </CollapsibleSection>
 
       {siteCategoryOptions?.length ? (
@@ -157,25 +196,42 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
           badge={activeCategoryCount > 0 ? activeCategoryCount : undefined}
           icon="grid"
         >
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.chipScroll}
-            contentContainerStyle={styles.chipRow}
-          >
-            {siteCategoryOptions.map((cat) => {
-              const isSelected = filters.siteCategories?.includes(cat.id);
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.chip, isSelected && styles.chipActive]}
-                  onPress={() => toggleSiteCategory(cat.id)}
-                >
-                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{cat.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          {Platform.OS === 'web' ? (
+            <View style={styles.chipWrapRow}>
+              {siteCategoryOptions.map((cat) => {
+                const isSelected = filters.siteCategories?.includes(cat.id);
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.chip, isSelected && styles.chipActive]}
+                    onPress={() => toggleSiteCategory(cat.id)}
+                  >
+                    <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{cat.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.chipScroll}
+              contentContainerStyle={styles.chipRow}
+            >
+              {siteCategoryOptions.map((cat) => {
+                const isSelected = filters.siteCategories?.includes(cat.id);
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[styles.chip, isSelected && styles.chipActive]}
+                    onPress={() => toggleSiteCategory(cat.id)}
+                  >
+                    <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{cat.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
         </CollapsibleSection>
       ) : null}
     </View>
@@ -206,6 +262,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     paddingRight: DESIGN_TOKENS.spacing.md,
   },
+  chipWrapRow: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
   chip: {
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
@@ -214,6 +276,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.border,
     backgroundColor: colors.surface,
     marginRight: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   chipActive: {
     backgroundColor: colors.primary,
@@ -242,6 +305,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: 'transparent',
     backgroundColor: colors.surface,
     marginRight: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   colorChipActive: {
     borderColor: colors.primary,

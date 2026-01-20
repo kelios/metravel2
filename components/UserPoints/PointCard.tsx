@@ -24,7 +24,7 @@ interface PointCardProps {
   onToggleSelect?: (point: ImportedPoint) => void;
 }
 
-export const PointCard: React.FC<PointCardProps> = ({
+export const PointCard: React.FC<PointCardProps> = React.memo(({
   point,
   onPress,
   onEdit,
@@ -522,7 +522,7 @@ export const PointCard: React.FC<PointCardProps> = ({
       </View>
     </TouchableOpacity>
   );
-};
+});
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {

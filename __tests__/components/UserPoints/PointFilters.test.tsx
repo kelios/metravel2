@@ -1,4 +1,4 @@
-import { render, fireEvent, screen } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
 import { PointFilters } from '@/components/UserPoints/PointFilters';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 
