@@ -1038,6 +1038,164 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
                           </div>
                         </div>
                       </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          title="Открыть в Google Maps"
+                          aria-label="Открыть в Google Maps"
+                          data-card-action="true"
+                          onClick={(e: any) => {
+                            try {
+                              e?.preventDefault?.();
+                              e?.stopPropagation?.();
+                            } catch {
+                              // noop
+                            }
+                            try {
+                              const url = `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`;
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            } catch {
+                              // noop
+                            }
+                          }}
+                          onKeyDown={(e: any) => {
+                            if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                            try {
+                              e?.preventDefault?.();
+                              e?.stopPropagation?.();
+                            } catch {
+                              // noop
+                            }
+                            try {
+                              const url = `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`;
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            } catch {
+                              // noop
+                            }
+                          }}
+                          style={{
+                            border: `1px solid ${colors.border}`,
+                            background: colors.surface,
+                            color: colors.text,
+                            borderRadius: 10,
+                            padding: '6px 10px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            lineHeight: '14px',
+                          }}
+                        >
+                          Google
+                        </div>
+
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          title="Открыть в Яндекс.Картах"
+                          aria-label="Открыть в Яндекс.Картах"
+                          data-card-action="true"
+                          onClick={(e: any) => {
+                            try {
+                              e?.preventDefault?.();
+                              e?.stopPropagation?.();
+                            } catch {
+                              // noop
+                            }
+                            try {
+                              const url = `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lng},${lat}`)}&z=16&l=map`;
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            } catch {
+                              // noop
+                            }
+                          }}
+                          onKeyDown={(e: any) => {
+                            if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                            try {
+                              e?.preventDefault?.();
+                              e?.stopPropagation?.();
+                            } catch {
+                              // noop
+                            }
+                            try {
+                              const url = `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lng},${lat}`)}&z=16&l=map`;
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            } catch {
+                              // noop
+                            }
+                          }}
+                          style={{
+                            border: `1px solid ${colors.border}`,
+                            background: colors.surface,
+                            color: colors.text,
+                            borderRadius: 10,
+                            padding: '6px 10px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            lineHeight: '14px',
+                          }}
+                        >
+                          Яндекс
+                        </div>
+
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          title="Открыть в OpenStreetMap"
+                          aria-label="Открыть в OpenStreetMap"
+                          data-card-action="true"
+                          onClick={(e: any) => {
+                            try {
+                              e?.preventDefault?.();
+                              e?.stopPropagation?.();
+                            } catch {
+                              // noop
+                            }
+                            try {
+                              const url = `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lng))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lng))}`;
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            } catch {
+                              // noop
+                            }
+                          }}
+                          onKeyDown={(e: any) => {
+                            if (e?.key !== 'Enter' && e?.key !== ' ') return;
+                            try {
+                              e?.preventDefault?.();
+                              e?.stopPropagation?.();
+                            } catch {
+                              // noop
+                            }
+                            try {
+                              const url = `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lng))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lng))}`;
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            } catch {
+                              // noop
+                            }
+                          }}
+                          style={{
+                            border: `1px solid ${colors.border}`,
+                            background: colors.surface,
+                            color: colors.text,
+                            borderRadius: 10,
+                            padding: '6px 10px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            lineHeight: '14px',
+                          }}
+                        >
+                          OSM
+                        </div>
+                      </div>
                     </div>
                   ) : null}
 
@@ -1112,7 +1270,6 @@ const PointsMapNative: React.FC<PointsMapProps> = ({
   points,
   center,
   activePointId,
-  onPointPress,
   onMapPress,
   pendingMarker,
   pendingMarkerColor,
@@ -1281,12 +1438,17 @@ const PointsMapNative: React.FC<PointsMapProps> = ({
 
           {safePoints.map((p) => {
             const isActive = Number(activePointId) === Number(p.id);
+            const coordsText =
+              Number.isFinite(p.latitude) && Number.isFinite(p.longitude)
+                ? `${Number(p.latitude).toFixed(6)}, ${Number(p.longitude).toFixed(6)}`
+                : '';
             return (
               <Marker
                 key={String(p.id)}
                 coordinate={{ latitude: p.latitude, longitude: p.longitude }}
                 pinColor={isActive ? colors.primary : String(p.color || colors.backgroundTertiary)}
-                onPress={() => onPointPress?.(p)}
+                title={String(p?.name ?? '')}
+                description={coordsText}
               />
             );
           })}

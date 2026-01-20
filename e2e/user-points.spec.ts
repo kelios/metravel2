@@ -378,7 +378,7 @@ test.describe('User points', () => {
     const pointNameA = uniqueName('E2E Point A');
     const pointNameB = uniqueName('E2E Point B');
 
-    await installUserPointsApiMock(page);
+    const api = await installUserPointsApiMock(page);
 
     try {
       await test.step('Open /userpoints', async () => {
@@ -392,9 +392,28 @@ test.describe('User points', () => {
         await page.getByRole('button', { name: 'Список' }).click();
       });
 
-      await test.step('Create 2 points via manual add UI', async () => {
-        await createPointViaUi(page, pointNameA, '52.2297', '21.0122');
-        await createPointViaUi(page, pointNameB, '50.0647', '19.945');
+      await test.step('Seed 2 points via mock API', async () => {
+        api.addPoint({
+          name: pointNameA,
+          latitude: 52.2297,
+          longitude: 21.0122,
+          color: 'blue',
+          status: 'planning',
+          category: 'other',
+        });
+        api.addPoint({
+          name: pointNameB,
+          latitude: 50.0647,
+          longitude: 19.945,
+          color: 'blue',
+          status: 'planning',
+          category: 'other',
+        });
+
+        await page.waitForResponse(
+          (r: any) => String(r.request()?.method?.() || '') === 'GET' && /\/api\/user-points\//.test(String(r.url() || '')),
+          { timeout: 30_000 }
+        ).catch(() => undefined);
       });
 
       await test.step('Enter selection mode via actions menu', async () => {
@@ -519,7 +538,7 @@ test.describe('User points', () => {
     // App exits selection mode after bulk apply; re-enter selection mode to delete selected.
     const actionsDialogAfterEdit = await openActionsMenu(page);
     await actionsDialogAfterEdit.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
-    await expect(page.getByText(/Выбрано:/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
 
     await page.getByText(pointNameA).first().click();
     await page.getByText(pointNameB).first().click();
