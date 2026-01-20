@@ -21,24 +21,65 @@ test.describe('User points', () => {
     // On this screen there can be multiple "Список"-related buttons (e.g. selection-mode header "Назад к списку").
     // Use a stable testID on the panel tab.
     const listTabButton = page.getByTestId('userpoints-panel-tab-list').first();
-
-    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
-    const filtersHeaderTitle = page.getByText('Мои точки', { exact: true });
+    const listContent = page.getByTestId('userpoints-panel-content-list');
 
     // RN-web overlays/animations can occasionally swallow the first click.
     for (let attempt = 0; attempt < 3; attempt++) {
       await listTabButton.click({ timeout: 30_000, force: true });
-      await page.waitForTimeout(250);
-
-      if ((await searchBox.count()) === 0 && (await filtersHeaderTitle.count()) === 0) {
-        return;
-      }
+      await expect(listContent).toBeVisible({ timeout: 5_000 });
+      return;
     }
-
-    // In Filters tab we render the header search box; in List tab it's not present.
-    await expect(searchBox).toHaveCount(0, { timeout: 30_000 });
-    await expect(filtersHeaderTitle).toHaveCount(0, { timeout: 30_000 });
   }
+
+  async function installTileMock(page: any) {
+    // Return a tiny transparent 1x1 PNG for any tile request.
+    const pngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8m2p8AAAAASUVORK5CYII=';
+    const png = Buffer.from(pngBase64, 'base64');
+
+    const routeTile = async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: png,
+      });
+    };
+
+    // Match common OSM tile hosts used by our base layer + fallbacks.
+    await page.route('**://tile.openstreetmap.org/**', routeTile);
+    await page.route('**://*.tile.openstreetmap.org/**', routeTile);
+    await page.route('**://*.tile.openstreetmap.fr/**', routeTile);
+    await page.route('**://*.tile.openstreetmap.de/**', routeTile);
+  }
+
+  test('renders map tiles on /userpoints and shows search + recommendations in list panel', async ({ page }) => {
+    await page.addInitScript(seedNecessaryConsent);
+    await installTileMock(page);
+    const api = await installUserPointsApiMock(page);
+
+    api.addPoint({
+      name: uniqueName('Point'),
+      latitude: 50.06143,
+      longitude: 19.93658,
+      color: 'red',
+      status: 'planned',
+      category: 'other',
+      address: 'Kraków',
+    });
+
+    await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
+
+    // Wait for Leaflet container.
+    await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
+
+    // Verify that at least one tile image has been loaded.
+    await expect(page.locator('img.leaflet-tile-loaded').first()).toBeVisible({ timeout: 30_000 });
+
+    // Verify that list tab contains search and the recommendations button.
+    await openListPanelTab(page);
+    await expect(page.getByRole('textbox', { name: 'Поиск по названию...' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: '3 случайные точки' })).toBeVisible({ timeout: 30_000 });
+  });
 
   async function installUserPointsApiMock(page: any) {
     const points: MockPoint[] = [];

@@ -200,7 +200,7 @@ export const TravelDetailsMapSection: React.FC<{
           {hasMapData ? (
             <ToggleableMap
               initiallyOpen={!isMobileWeb}
-              keepMounted
+              keepMounted={false}
               isLoading={!shouldRenderMap}
               loadingLabel="Подгружаем карту маршрута..."
             >

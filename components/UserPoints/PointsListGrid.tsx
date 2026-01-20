@@ -222,8 +222,7 @@ export const PointsListGrid: React.FC<{
             )}
             
             {panelTab === 'list' && (
-              <View style={localStyles.pointsList}>
-                {renderHeader()}
+              <View style={localStyles.pointsList} testID="userpoints-panel-content-list">
                 {showingRecommendations && (
                   <View style={localStyles.recommendationsHeader}>
                     <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
@@ -326,8 +325,7 @@ export const PointsListGrid: React.FC<{
             )}
             
             {panelTab === 'list' && (
-              <View style={localStyles.pointsList}>
-                {renderHeader()}
+              <View style={localStyles.pointsList} testID="userpoints-panel-content-list">
                 {showingRecommendations && (
                   <View style={localStyles.recommendationsHeader}>
                     <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
