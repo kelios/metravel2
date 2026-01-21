@@ -65,6 +65,9 @@ interface PointFiltersProps {
   onChange: (filters: PointFiltersType) => void;
   siteCategoryOptions?: Array<{ id: string; name: string }>;
   availableColors?: string[];
+  presets?: Array<{ id: string; label: string }>;
+  activePresetId?: string | null;
+  onPresetChange?: (presetId: string | null) => void;
 }
 
 export const PointFilters: React.FC<PointFiltersProps> = ({
@@ -72,6 +75,9 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
   onChange,
   siteCategoryOptions,
   availableColors,
+  presets,
+  activePresetId,
+  onPresetChange,
 }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
@@ -103,6 +109,26 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
 
   return (
     <View style={styles.container}>
+      {presets?.length ? (
+        <CollapsibleSection title="Подборки" defaultOpen={false} icon="star">
+          <View style={styles.chipWrapRow}>
+            {presets.map((p) => {
+              const isSelected = String(activePresetId ?? '') === p.id;
+              return (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[styles.chip, isSelected && styles.chipActive]}
+                  onPress={() => onPresetChange?.(isSelected ? null : p.id)}
+                  accessibilityLabel={p.label}
+                >
+                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{p.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </CollapsibleSection>
+      ) : null}
+
       <CollapsibleSection title="Радиус" defaultOpen icon="map-pin">
         {Platform.OS === 'web' ? (
           <View style={styles.chipWrapRow}>
