@@ -16,6 +16,7 @@ import { createLeafletLayer } from '@/src/utils/mapWebLayers';
 interface PointsMapProps {
   points: ImportedPoint[];
   center?: { lat: number; lng: number };
+  searchMarker?: { lat: number; lng: number; label?: string } | null;
   activePointId?: number | null;
   onPointPress?: (point: ImportedPoint) => void;
   onEditPoint?: (point: ImportedPoint) => void;
@@ -692,6 +693,7 @@ const WebMapCenterReporter = ({
 export const PointsMap: React.FC<PointsMapProps> = ({
   points,
   center,
+  searchMarker,
   activePointId,
   onPointPress,
   onEditPoint,
@@ -709,6 +711,7 @@ export const PointsMap: React.FC<PointsMapProps> = ({
       <PointsMapWeb
         points={points}
         center={center}
+        searchMarker={searchMarker}
         activePointId={activePointId}
         onPointPress={onPointPress}
         onEditPoint={onEditPoint}
@@ -727,6 +730,7 @@ export const PointsMap: React.FC<PointsMapProps> = ({
     <PointsMapNative
       points={points}
       center={center}
+      searchMarker={searchMarker}
       activePointId={activePointId}
       onPointPress={onPointPress}
       onEditPoint={onEditPoint}
@@ -745,6 +749,7 @@ export const PointsMap: React.FC<PointsMapProps> = ({
 const PointsMapWeb: React.FC<PointsMapProps> = ({
   points,
   center: centerOverride,
+  searchMarker,
   activePointId,
   onPointPress,
   onEditPoint,
@@ -1323,6 +1328,22 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
           </mods.Marker>
         ) : null}
 
+        {searchMarker && Number.isFinite(searchMarker.lat) && Number.isFinite(searchMarker.lng) ? (
+          <mods.Marker
+            key="__search__"
+            position={[searchMarker.lat, searchMarker.lng]}
+            icon={getMarkerIconCached(colors.primarySoft, { active: true })}
+          >
+            {String(searchMarker.label || '').trim() ? (
+              <mods.Popup>
+                <div style={{ fontSize: 12, color: colors.text }}>
+                  <strong>{String(searchMarker.label)}</strong>
+                </div>
+              </mods.Popup>
+            ) : null}
+          </mods.Marker>
+        ) : null}
+
         {(routeLines ?? []).map((r) => {
           if (!mods?.Polyline) return null;
           if (!Array.isArray(r?.line) || r.line.length < 2) return null;
@@ -1374,6 +1395,7 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
 const PointsMapNative: React.FC<PointsMapProps> = ({
   points,
   center,
+  searchMarker,
   activePointId,
   onMapPress,
   pendingMarker,
@@ -1568,6 +1590,15 @@ const PointsMapNative: React.FC<PointsMapProps> = ({
               pinColor={colors.primary}
               title="Моё местоположение"
               description="Текущее положение"
+            />
+          ) : null}
+
+          {searchMarker && Number.isFinite(searchMarker.lat) && Number.isFinite(searchMarker.lng) ? (
+            <Marker
+              key="__search__"
+              coordinate={{ latitude: Number(searchMarker.lat), longitude: Number(searchMarker.lng) }}
+              pinColor={colors.primary}
+              title={String(searchMarker.label || 'Результат поиска')}
             />
           ) : null}
 

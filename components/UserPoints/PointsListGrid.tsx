@@ -119,6 +119,10 @@ export const PointsListGrid: React.FC<{
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce)
   const [mapUiApi, setMapUiApi] = React.useState<MapUiApi | null>(null)
   const didInitialFitRef = React.useRef(false)
+  const [searchMarker, setSearchMarker] = React.useState<null | { lat: number; lng: number; label?: string }>(null)
+  const geocodeAbortRef = React.useRef<AbortController | null>(null)
+  const geocodeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastGeocodedQueryRef = React.useRef<string>('')
   
   // Auto-switch to list tab when showing recommendations
   React.useEffect(() => {
@@ -156,6 +160,80 @@ export const PointsListGrid: React.FC<{
     return () => clearTimeout(t);
   }, [activePointId, filteredPoints, isLoading, mapUiApi, showingRecommendations, viewMode]);
 
+  React.useEffect(() => {
+    const q = String(searchQuery || '').trim();
+    if (!q) {
+      setSearchMarker(null)
+      lastGeocodedQueryRef.current = ''
+      geocodeAbortRef.current?.abort()
+      geocodeAbortRef.current = null
+      if (geocodeTimerRef.current) {
+        clearTimeout(geocodeTimerRef.current)
+        geocodeTimerRef.current = null
+      }
+      return
+    }
+
+    if (Array.isArray(filteredPoints) && filteredPoints.length > 0) {
+      setSearchMarker(null)
+      lastGeocodedQueryRef.current = ''
+      geocodeAbortRef.current?.abort()
+      geocodeAbortRef.current = null
+      if (geocodeTimerRef.current) {
+        clearTimeout(geocodeTimerRef.current)
+        geocodeTimerRef.current = null
+      }
+      return
+    }
+
+    if (!mapUiApi?.focusOnCoord) return
+    if (lastGeocodedQueryRef.current === q) return
+
+    if (geocodeTimerRef.current) clearTimeout(geocodeTimerRef.current)
+    geocodeTimerRef.current = setTimeout(() => {
+      geocodeTimerRef.current = null
+      geocodeAbortRef.current?.abort()
+
+      const controller = new AbortController()
+      geocodeAbortRef.current = controller
+
+      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&addressdetails=1&accept-language=ru`
+
+      fetch(url, {
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+        },
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (controller.signal.aborted) return
+          const item = Array.isArray(data) ? data[0] : null
+          const lat = Number(item?.lat)
+          const lng = Number(item?.lon)
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+
+          lastGeocodedQueryRef.current = q
+          setSearchMarker({ lat, lng, label: String(item?.display_name ?? '') })
+          try {
+            mapUiApi.focusOnCoord?.(`${lat},${lng}`, { zoom: 13 })
+          } catch {
+            // noop
+          }
+        })
+        .catch(() => {
+          if (controller.signal.aborted) return
+        })
+    }, 450)
+
+    return () => {
+      if (geocodeTimerRef.current) {
+        clearTimeout(geocodeTimerRef.current)
+        geocodeTimerRef.current = null
+      }
+    }
+  }, [filteredPoints, mapUiApi, searchQuery])
+
   if (viewMode === 'list') {
     const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
     return (
@@ -190,6 +268,7 @@ export const PointsListGrid: React.FC<{
             <PointsMap
               points={filteredPoints}
               center={currentLocation ?? undefined}
+              searchMarker={searchMarker}
               routeLines={recommendedRouteLines}
               onMapPress={onMapPress}
               onEditPoint={onPointEdit}
@@ -512,6 +591,7 @@ export const PointsListGrid: React.FC<{
           <PointsMap
             points={filteredPoints}
             center={currentLocation ?? undefined}
+            searchMarker={searchMarker}
             routeLines={recommendedRouteLines}
             onMapPress={onMapPress}
             onEditPoint={onPointEdit}

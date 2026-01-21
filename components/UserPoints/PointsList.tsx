@@ -71,6 +71,109 @@ const pickRandomDistinct = <T,>(items: T[], count: number): T[] => {
 
 type ViewMode = 'list' | 'map';
 
+type PointsPreset = {
+  id: string;
+  label: string;
+  baseCategoryNames: string[];
+  nearbyCategoryNames: string[];
+  proximityKm: number;
+};
+
+const POINTS_PRESETS: PointsPreset[] = [
+  {
+    id: 'hike_mountains',
+    label: 'Поход в горы',
+    baseCategoryNames: ['Гора', 'Горный хребет', 'Перевал', 'Треккинговый маршрут'],
+    nearbyCategoryNames: [
+      'Приют',
+      'Заповедник',
+      'Национальный парк',
+      'Озеро',
+      'Родник',
+      'Река',
+      'Ручей',
+      'Водопад',
+      'Скала',
+      'Утес',
+      'Ущелье',
+      'Долина',
+      'Каньон',
+      'Пещера',
+      'Ледник',
+      'Экологическая тропа',
+      'Обзорная точка',
+      'Кемпинг',
+      'Парковка',
+      'Горячий источник',
+    ],
+    proximityKm: 10,
+  },
+  {
+    id: 'history_ruins',
+    label: 'Руины',
+    baseCategoryNames: [
+      'Руины',
+      'Руины замка',
+      'Руины усадьбы',
+      'Руины мельницы',
+      'Руины дворца',
+      'Руины моста',
+      'Руины церкви',
+      'Замок',
+      'Крепость',
+      'Форт',
+      'Усадьба',
+      'Древний город',
+      'Археологическая достопримечательность',
+      'Акведук',
+      'Амфитеатр',
+      'Арка',
+      'Башня',
+      'Бункер',
+      'Дот',
+    ],
+    nearbyCategoryNames: [
+      'Музей',
+      'Музей под открытым небом',
+      'Памятник',
+      'Религиозная достопримечательность',
+      'Церковь',
+      'Собор',
+      'Часовня',
+      'Монастырь',
+      'Дворец',
+      'Обзорная точка',
+      'Парк',
+      'Рынок',
+      'Кафе',
+      'Ресторан',
+      'Парковка',
+    ],
+    proximityKm: 8,
+  },
+  {
+    id: 'lakes',
+    label: 'Озёра',
+    baseCategoryNames: ['Озеро'],
+    nearbyCategoryNames: ['Родник', 'Водопад', 'Парк', 'Лес', 'Место отдыха', 'Пляж', 'Скала'],
+    proximityKm: 6,
+  },
+  {
+    id: 'with_kids',
+    label: 'С детьми',
+    baseCategoryNames: ['Парк развлечений', 'Парк', 'Место отдыха'],
+    nearbyCategoryNames: ['Кафе', 'Ресторан', 'Туалет', 'Остановка', 'Музей', 'Пляж', 'Озеро'],
+    proximityKm: 4,
+  },
+  {
+    id: 'nature',
+    label: 'Природа',
+    baseCategoryNames: ['Заповедник', 'Лес', 'Парк', 'Водопад', 'Озеро'],
+    nearbyCategoryNames: ['Родник', 'Скала', 'Пещера', 'Гора', 'Место отдыха'],
+    proximityKm: 10,
+  },
+];
+
 type PointsListProps = {
   onImportPress?: () => void;
 };
@@ -120,6 +223,7 @@ const normalizeCategoryDictionary = (raw: any): Array<{ id: string; name: string
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const defaultPerPage = Platform.OS === 'web' ? 5000 : 200;
   const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: defaultPerPage, radiusKm: 100 });
+  const [activePresetId, setActivePresetId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(true);
   const [showMapSettings, setShowMapSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -172,6 +276,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const activeDriveAbortRef = useRef<AbortController | null>(null);
   const recommendationsAbortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
+
+  const presetPrevCategoryIdsRef = useRef<string[] | null>(null);
 
   useEffect(() => {
     return () => {
@@ -270,6 +376,61 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     }
     return map;
   }, [siteCategoryOptionsQuery.data]);
+
+  const categoryNameToIds = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const [id, name] of categoryIdToName.entries()) {
+      const key = String(name || '').trim().toLowerCase();
+      if (!key) continue;
+      const prev = map.get(key) ?? [];
+      map.set(key, prev.includes(id) ? prev : [...prev, id]);
+    }
+    return map;
+  }, [categoryIdToName]);
+
+  const activePreset = useMemo(() => {
+    if (!activePresetId) return null;
+    return POINTS_PRESETS.find((p) => p.id === activePresetId) ?? null;
+  }, [activePresetId]);
+
+  const resolveCategoryIdsByNames = useCallback(
+    (names: string[]) => {
+      const out: string[] = [];
+      for (const n of names) {
+        const key = String(n || '').trim().toLowerCase();
+        if (!key) continue;
+        const ids = categoryNameToIds.get(key) ?? [];
+        for (const id of ids) {
+          if (!out.includes(id)) out.push(id);
+        }
+      }
+      return out;
+    },
+    [categoryNameToIds]
+  );
+
+  const handlePresetChange = useCallback(
+    (nextPresetId: string | null) => {
+      setActivePresetId(nextPresetId);
+
+      if (!nextPresetId) {
+        const prev = presetPrevCategoryIdsRef.current;
+        presetPrevCategoryIdsRef.current = null;
+        if (prev) {
+          setFilters((f) => ({ ...f, categoryIds: prev, page: 1 }));
+        }
+        return;
+      }
+
+      const preset = POINTS_PRESETS.find((p) => p.id === nextPresetId);
+      if (!preset) return;
+
+      presetPrevCategoryIdsRef.current = (filters.categoryIds ?? []).slice();
+      const baseIds = resolveCategoryIdsByNames(preset.baseCategoryNames);
+      setFilters((f) => ({ ...f, categoryIds: baseIds, page: 1 }));
+    },
+    [filters.categoryIds, resolveCategoryIdsByNames]
+  );
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['userPointsAll'],
@@ -437,16 +598,89 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, [filters.categoryIds, filters.colors, filters.statuses, filters.radiusKm, pointsWithDerivedCategories, searchQuery, currentLocation]);
 
   const visibleFilteredPoints = useMemo(() => {
+    const applyPresetSorting = (list: any[]) => {
+      if (!activePreset) return list;
+
+      const proximityKm = Number(activePreset.proximityKm);
+      if (!Number.isFinite(proximityKm) || proximityKm <= 0) return list;
+
+      const wantedIds = resolveCategoryIdsByNames(activePreset.nearbyCategoryNames);
+      if (wantedIds.length === 0) return list;
+
+      const cellSizeKm = proximityKm;
+      const cellSizeDeg = cellSizeKm / 111;
+
+      const toCell = (lat: number, lng: number) => {
+        const cx = Math.floor(lng / cellSizeDeg);
+        const cy = Math.floor(lat / cellSizeDeg);
+        return `${cx}:${cy}`;
+      };
+
+      const grid = new Map<string, any[]>();
+      for (const p of list) {
+        const lat = Number(p?.latitude);
+        const lng = Number(p?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+        const key = toCell(lat, lng);
+        const bucket = grid.get(key);
+        if (bucket) bucket.push(p);
+        else grid.set(key, [p]);
+      }
+
+      const wantedSet = new Set(wantedIds);
+
+      const scorePoint = (p: any) => {
+        const lat = Number(p?.latitude);
+        const lng = Number(p?.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { score: 0 };
+
+        const cx = Math.floor(lng / cellSizeDeg);
+        const cy = Math.floor(lat / cellSizeDeg);
+        const found = new Set<string>();
+
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const key = `${cx + dx}:${cy + dy}`;
+            const bucket = grid.get(key);
+            if (!bucket) continue;
+            for (const q of bucket) {
+              if (q === p) continue;
+              const qLat = Number(q?.latitude);
+              const qLng = Number(q?.longitude);
+              if (!Number.isFinite(qLat) || !Number.isFinite(qLng)) continue;
+              if (haversineKm(lat, lng, qLat, qLng) > proximityKm) continue;
+              const ids = Array.isArray(q?.categoryIds) ? q.categoryIds : [];
+              for (const id of ids) {
+                if (wantedSet.has(id)) found.add(id);
+              }
+            }
+          }
+        }
+
+        return { score: found.size };
+      };
+
+      return list
+        .map((p) => {
+          const s = scorePoint(p);
+          return { ...p, __presetScore: s.score };
+        })
+        .sort((a: any, b: any) => {
+          const sa = Number(a.__presetScore) || 0;
+          const sb = Number(b.__presetScore) || 0;
+          if (sb !== sa) return sb - sa;
+          return String(a?.name ?? '').localeCompare(String(b?.name ?? ''));
+        });
+    };
+
     // Show only recommended points when in recommendations mode
     if (showingRecommendations && recommendedPointIds.length > 0) {
       const recommended = new Set(recommendedPointIds);
       return filteredPoints.filter((p: any) => recommended.has(Number(p.id)));
     }
 
-    // In selection mode we still show the full filtered list; selection is tracked via checkboxes.
-    // Filtering down to only selected points makes it impossible to select multiple items.
-    return filteredPoints;
-  }, [filteredPoints, showingRecommendations, recommendedPointIds]);
+    return applyPresetSorting(filteredPoints);
+  }, [activePreset, filteredPoints, recommendedPointIds, resolveCategoryIdsByNames, showingRecommendations]);
 
   const selectedIdSet = useMemo(() => {
     return new Set(selectedIds);
@@ -535,12 +769,17 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       (filters.categoryIds?.length ?? 0) > 0 ||
       (filters.colors?.length ?? 0) > 0 ||
       hasSearch ||
-      hasRadius
+      hasRadius ||
+      Boolean(activePresetId)
     );
-  }, [filters.categoryIds, filters.colors, filters.radiusKm, filters.statuses, searchQuery]);
+  }, [activePresetId, filters.categoryIds, filters.colors, filters.radiusKm, filters.statuses, searchQuery]);
 
   const activeFilterChips = useMemo(() => {
     const chips: Array<{ key: string; label: string }> = [];
+
+    if (activePreset) {
+      chips.push({ key: 'preset', label: `Подборка: ${activePreset.label}` });
+    }
 
     const q = String(searchQuery || '').trim();
     if (q) {
@@ -567,7 +806,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     });
     
     return chips;
-  }, [categoryIdToName, filters.categoryIds, filters.colors, filters.radiusKm, filters.statuses, searchQuery]);
+  }, [activePreset, categoryIdToName, filters.categoryIds, filters.colors, filters.radiusKm, filters.statuses, searchQuery]);
 
   const handleCloseRecommendations = useCallback(() => {
     setShowingRecommendations(false);
@@ -578,11 +817,18 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const handleResetFilters = useCallback(() => {
     setSearchQuery('');
     setFilters({ page: 1, perPage: filters.perPage ?? 50, radiusKm: 100 });
+    setActivePresetId(null);
+    presetPrevCategoryIdsRef.current = null;
     handleCloseRecommendations();
     setActivePointId(null);
   }, [filters.perPage, handleCloseRecommendations]);
 
   const handleRemoveFilterChip = useCallback((key: string) => {
+    if (key === 'preset') {
+      handlePresetChange(null);
+      return;
+    }
+
     if (key === 'search') {
       setSearchQuery('');
       setFilters((prev) => ({ ...prev, search: '', page: 1 }));
@@ -607,7 +853,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       const next = (filters.colors ?? []).filter((c) => c !== color);
       setFilters((prev) => ({ ...prev, colors: next, page: 1 }));
     }
-  }, [filters.categoryIds, filters.colors, filters.statuses]);
+  }, [filters.categoryIds, filters.colors, filters.statuses, handlePresetChange]);
 
   useEffect(() => {
     if (!selectionMode) return;
@@ -1121,12 +1367,16 @@ const deleteAll = useCallback(async () => {
         onSearch={handleSearch}
         filters={filters}
         onFilterChange={handleFilterChange}
+        presets={POINTS_PRESETS.map((p) => ({ id: p.id, label: p.label }))}
+        activePresetId={activePresetId}
+        onPresetChange={handlePresetChange}
         siteCategoryOptions={availableCategoryOptions}
         availableColors={availableColors}
       />
     );
   }, [
     activeFilterChips,
+    activePresetId,
     availableColors,
     availableCategoryOptions,
     blurActiveElementForModal,
@@ -1134,6 +1384,7 @@ const deleteAll = useCallback(async () => {
     filters,
     handleOpenRecommendations,
     handleFilterChange,
+    handlePresetChange,
     handleRemoveFilterChip,
     handleResetFilters,
     handleSearch,

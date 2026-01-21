@@ -104,6 +104,26 @@ test.describe('User points', () => {
     await page.route('**://*.tile.openstreetmap.de/**', routeTile);
   }
 
+  async function installNominatimMock(page: any, result?: { lat: number; lon: number; display_name?: string }) {
+    const payload = result
+      ? [
+          {
+            lat: String(result.lat),
+            lon: String(result.lon),
+            display_name: String(result.display_name ?? 'Search result'),
+          },
+        ]
+      : [];
+
+    await page.route('**://nominatim.openstreetmap.org/search**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(payload),
+      });
+    });
+  }
+
   test('renders map tiles on /userpoints and shows search + recommendations in list panel', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(() => {
@@ -318,6 +338,56 @@ test.describe('User points', () => {
     const popup = page.locator('.leaflet-popup').first();
     await expect(popup).toBeVisible({ timeout: 30_000 });
     await expect(popup.getByText(pointName).first()).toBeVisible({ timeout: 30_000 });
+  });
+
+  test('search falls back to map geocoding when no points match', async ({ page }) => {
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(() => {
+      try {
+        const coords = {
+          latitude: 50.06143,
+          longitude: 19.93658,
+          accuracy: 10,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        };
+
+        const makePosition = () => ({
+          coords,
+          timestamp: Date.now(),
+        });
+
+        (navigator as any).geolocation = {
+          getCurrentPosition: (success: any) => success(makePosition()),
+          watchPosition: (success: any) => {
+            success(makePosition());
+            return 1;
+          },
+          clearWatch: () => undefined,
+        };
+      } catch {
+        // noop
+      }
+    });
+
+    await installTileMock(page);
+    await installNominatimMock(page, { lat: 52.2297, lon: 21.0122, display_name: 'Warsaw, Poland' });
+    await installUserPointsApiMock(page);
+
+    await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
+
+    await openFiltersPanelTab(page);
+    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
+    await searchBox.fill('Warsaw');
+
+    // Wait for debounce + fetch.
+    await page.waitForTimeout(900);
+
+    // Search marker should appear even though points list is empty.
+    await expect(page.locator('.leaflet-marker-icon')).toHaveCount(1, { timeout: 30_000 });
   });
 
   async function installUserPointsApiMock(page: any) {

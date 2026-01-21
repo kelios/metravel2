@@ -55,6 +55,10 @@ type PointsListHeaderProps = {
   filters: PointFiltersType
   onFilterChange: (newFilters: PointFiltersType) => void
 
+  presets?: Array<{ id: string; label: string }>
+  activePresetId?: string | null
+  onPresetChange?: (presetId: string | null) => void
+
   siteCategoryOptions: Array<{ id: string; name: string }>
   availableColors?: string[]
 }
@@ -85,6 +89,9 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   onSearch,
   filters,
   onFilterChange,
+  presets,
+  activePresetId,
+  onPresetChange,
   siteCategoryOptions,
   availableColors,
 }) => {
@@ -203,6 +210,9 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           onChange={onFilterChange}
           siteCategoryOptions={siteCategoryOptions}
           availableColors={availableColors}
+          presets={presets}
+          activePresetId={activePresetId}
+          onPresetChange={onPresetChange}
         />
       ) : null}
     </View>
