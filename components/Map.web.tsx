@@ -110,6 +110,19 @@ const normalizeCoordKey = (coord?: string | null) => {
 const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
+const stripCountryFromCategoryNames = (names: string[], address?: string | null) => {
+  const addr = String(address ?? '').trim();
+  const countryCandidate = addr
+    ? addr
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .slice(-1)[0]
+    : '';
+  if (!countryCandidate) return names;
+  return names.filter((p) => p.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0);
+};
+
 // Используем UnifiedTravelCard для попапов
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 
@@ -566,7 +579,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
     const coord = String(point.coord ?? '').trim();
     const normalizedLatLng = useMemo(() => (coord ? getLatLng(coord) : null), [coord]);
-    const categoryNames = useMemo(() => getPointCategoryNames(point), [point]);
+    const categoryNames = useMemo(() => stripCountryFromCategoryNames(getPointCategoryNames(point), point.address), [point]);
     const categoryLabel = useMemo(() => categoryNames.join(', '), [categoryNames]);
     /* eslint-disable react-hooks/exhaustive-deps */
     const resolvedCategoryIdsFromNames = useMemo(() => {

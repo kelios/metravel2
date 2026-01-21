@@ -80,6 +80,28 @@ const openExternal = async (url?: string) => {
 const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
+const stripCountryFromCategoryString = (raw: string | null | undefined, address?: string | null) => {
+  const category = String(raw ?? '').trim();
+  if (!category) return '';
+  const addr = String(address ?? '').trim();
+  const countryCandidate = addr
+    ? addr
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .slice(-1)[0]
+    : '';
+  if (!countryCandidate) return category;
+
+  const filtered = category
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => p.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0);
+
+  return filtered.join(', ');
+};
+
 const AddressListItem: React.FC<Props> = ({
                                               travel,
                                               isMobile: isMobileProp,
@@ -117,10 +139,10 @@ const AddressListItem: React.FC<Props> = ({
     const titleFontSize = isSmallScreen ? 16 : isTablet ? 17 : 18;
     const coordFontSize = isSmallScreen ? 12 : 13;
 
-    const categories = useMemo(
-      () => categoryName?.split(',').map((c) => c.trim()).filter(Boolean) ?? [],
-      [categoryName]
-    );
+    const categories = useMemo(() => {
+      const cleaned = stripCountryFromCategoryString(categoryName, address);
+      return cleaned ? cleaned.split(',').map((c) => c.trim()).filter(Boolean) : [];
+    }, [address, categoryName]);
 
     const showToastInfo = useCallback((msg: string) => {
         void showToast({ type: 'info', text1: msg, position: 'bottom' });
@@ -209,8 +231,8 @@ const AddressListItem: React.FC<Props> = ({
             return;
         }
 
-        const trimmedCategory = String(categoryName ?? '').trim();
-        const categoryString = trimmedCategory || undefined;
+        const cleanedCategory = stripCountryFromCategoryString(categoryName, address);
+        const categoryString = cleanedCategory || undefined;
 
         const payload: Record<string, unknown> = {
             name: address || 'Точка маршрута',

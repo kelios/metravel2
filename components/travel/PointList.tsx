@@ -7,7 +7,6 @@ import {
   Platform,
   Pressable,
   Text,
-  ListRenderItemInfo,
   ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
@@ -116,6 +115,35 @@ const buildOrganicMapsUrl = (coordStr: string) => {
 const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
+const normalizeCategoryNameToString = (
+  raw: Point['categoryName'] | null | undefined
+): string => {
+  if (Array.isArray(raw)) {
+    return raw
+      .map((v) => (typeof v === 'object' ? String((v as any)?.name ?? '') : String(v ?? '')))
+      .map((v) => v.trim())
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (raw && typeof raw === 'object') {
+    return String((raw as any)?.name ?? '').trim();
+  }
+  return String(raw ?? '').trim();
+};
+
+const stripCountryFromCategoryNames = (names: string[], address?: string | null) => {
+  const addr = String(address ?? '').trim();
+  const countryCandidate = addr
+    ? addr
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .slice(-1)[0]
+    : '';
+  if (!countryCandidate) return names;
+  return names.filter((p) => p.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0);
+};
+
 const openExternal = async (url: string) => {
   if (!url) return;
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -148,6 +176,7 @@ const PointCard = React.memo(function PointCard({
                                                   onOpenOrganic,
                                                   onAddPoint,
                                                   addButtonLoading,
+                                                  addButtonDisabled,
                                                   colors,
                                                   styles,
                                                   onCardPress,
@@ -320,7 +349,7 @@ const PointCard = React.memo(function PointCard({
               <View style={styles.overlayCategoryRow}>
                 <View style={styles.overlayCategoryChip}>
                   <Text style={styles.overlayCategoryText} numberOfLines={1}>
-                    {point.categoryName.split(',')[0]?.trim()}
+                    {normalizeCategoryNameToString(point.categoryName).split(',')[0]?.trim()}
                   </Text>
                 </View>
               </View>
@@ -329,7 +358,7 @@ const PointCard = React.memo(function PointCard({
           {onAddPoint && (
             <AddToPointsButton
               onPress={(e) => {
-                e.stopPropagation();
+                e?.stopPropagation?.();
                 onAddPoint();
               }}
               loading={Boolean(addButtonLoading)}
@@ -346,7 +375,7 @@ const PointCard = React.memo(function PointCard({
 });
 
 type AddToPointsButtonProps = {
-  onPress: () => void;
+  onPress: (e?: any) => void;
   loading: boolean;
   disabled: boolean;
   colors: ReturnType<typeof useThemedColors>;
@@ -573,10 +602,9 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       }
 
       const categoryIdsFromPoint = getPointCategoryIds(point);
-      const categoryIdsFromNames = mapResolveCategoryIds(
-        getPointCategoryNames(point),
-        categoryNameToIds
-      );
+      const rawNames = getPointCategoryNames(point);
+      const cleanedNames = stripCountryFromCategoryNames(rawNames, point.address);
+      const categoryIdsFromNames = mapResolveCategoryIds(cleanedNames, categoryNameToIds);
       const combinedIds = Array.from(
         new Set<string>([...categoryIdsFromPoint, ...categoryIdsFromNames])
       );
@@ -586,7 +614,16 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         : typeof point.categoryName === 'object'
         ? String((point.categoryName as any).name ?? '')
         : String(point.categoryName ?? '').trim();
-      const categoryNameString = rawCategoryName || undefined;
+      const cleanedCategoryName = stripCountryFromCategoryNames(
+        rawCategoryName
+          ? rawCategoryName
+              .split(',')
+              .map((p) => p.trim())
+              .filter(Boolean)
+          : [],
+        point.address
+      ).join(', ');
+      const categoryNameString = cleanedCategoryName || undefined;
 
       const payload: Partial<ImportedPoint> = {
         name: point.address || travelName || 'Точка маршрута',
@@ -597,7 +634,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         color: DEFAULT_TRAVEL_POINT_COLOR,
         status: DEFAULT_TRAVEL_POINT_STATUS,
         category: categoryNameString,
-        categoryName: categoryNameString,
       };
 
       if (combinedIds.length > 0) {
@@ -660,12 +696,12 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
 
   const keyExtractor = useCallback((item: Point) => item.id, []);
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Point>) => {
+    ({ item }: { item: Point }) => {
       const isAdding = addingPointId === item.id;
       const addDisabled = !authReady;
       const handleAddPointClick = (event?: any) => {
         event?.stopPropagation?.();
-        handleAddPoint(item);
+        void handleAddPoint(item);
       };
 
       return (
@@ -674,21 +710,21 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
             styles.col,
             numColumns === 2 ? styles.col2 : styles.col1,
           ]}
-      >
-        {Platform.OS === 'web' ? (
+        >
+          {Platform.OS === 'web' ? (
             <UnifiedTravelCard
               title={item.address}
               imageUrl={getOptimizedImageUrl(item.travelImageThumbUrl, item.updated_at)}
-              metaText={item.categoryName}
-              onPress={onPointCardPress ? () => onPointCardPress(item) : undefined}
-            onMediaPress={() => onOpenArticle(item)}
-            imageHeight={180}
-            width={300}
-            contentSlot={
-              <View style={{ gap: 8 }}>
-                <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-                  {item.address}
-                </Text>
+              metaText={normalizeCategoryNameToString(item.categoryName) || undefined}
+              onPress={onPointCardPress ? () => onPointCardPress(item) : () => onOpenMap(item.coord)}
+              onMediaPress={() => onOpenArticle(item)}
+              imageHeight={180}
+              width={300}
+              contentSlot={
+                <View style={{ gap: 8 }}>
+                  <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+                    {item.address}
+                  </Text>
 
                 {!!item.coord && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -732,7 +768,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     {!!item.categoryName && (
                       <Text style={{ fontSize: 12, color: colors.textMuted }} numberOfLines={1}>
-                        {item.categoryName}
+                        {normalizeCategoryNameToString(item.categoryName)}
                       </Text>
                     )}
 
@@ -785,17 +821,17 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
                   styles={styles}
                   isWide
                 />
-              </View>
-            }
-            mediaProps={{
-              blurBackground: true,
-              blurRadius: 16,
-              loading: 'lazy',
-              priority: 'low',
-            }}
-            style={{ margin: DESIGN_TOKENS.spacing.sm }}
-          />
-        ) : (
+                </View>
+              }
+              mediaProps={{
+                blurBackground: true,
+                blurRadius: 16,
+                loading: 'lazy',
+                priority: 'low',
+              }}
+              style={{ margin: DESIGN_TOKENS.spacing.sm }}
+            />
+          ) : (
             <PointCard
               point={item}
               isMobile={isMobile}
@@ -807,10 +843,12 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
               colors={colors}
               styles={styles}
               onCardPress={onPointCardPress ? () => onPointCardPress(item) : undefined}
-              onAddPoint={() => handleAddPoint(item)}
-            addButtonLoading={isAdding}
-            addButtonDisabled={addDisabled}
-          />
+              onAddPoint={() => {
+                void handleAddPoint(item);
+              }}
+              addButtonLoading={isAdding}
+              addButtonDisabled={addDisabled}
+            />
           )}
         </View>
       );
@@ -861,13 +899,12 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       {showList && (
         <FlashList
           key={`cols-${numColumns}`}
-          data={safePoints}
-          estimatedItemSize={300}
-          renderItem={renderItem}
-          numColumns={numColumns}
-          keyExtractor={keyExtractor}
-          contentContainerStyle={styles.listContent}
-          columnWrapperStyle={numColumns > 1 ? styles.columnWrap : undefined}
+          data={safePoints as any}
+          renderItem={renderItem as any}
+          numColumns={numColumns as any}
+          keyExtractor={keyExtractor as any}
+          contentContainerStyle={styles.listContent as any}
+          {...(numColumns > 1 ? ({ columnWrapperStyle: styles.columnWrap } as any) : null)}
         />
       )}
     </View>

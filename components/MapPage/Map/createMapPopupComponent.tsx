@@ -18,6 +18,26 @@ interface CreatePopupComponentArgs {
   colors: ThemedColors;
 }
 
+const stripCountryFromCategoryString = (raw: unknown, address?: string | null) => {
+  const category = String(raw ?? '').trim();
+  if (!category) return '';
+  const addr = String(address ?? '').trim();
+  const countryCandidate = addr
+    ? addr
+        .split(',')
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .slice(-1)[0]
+    : '';
+  if (!countryCandidate) return category;
+  const filtered = category
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => p.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0);
+  return filtered.join(', ');
+};
+
 export const createMapPopupComponent = ({ useMap, colors }: CreatePopupComponentArgs) => {
   const PopupComponent: React.FC<{ point: Point }> = ({ point }) => {
     const [isAdding, setIsAdding] = useState(false);
@@ -120,7 +140,7 @@ export const createMapPopupComponent = ({ useMap, colors }: CreatePopupComponent
         : typeof point.categoryName === 'object'
         ? String((point.categoryName as any).name ?? '')
         : String(point.categoryName ?? '').trim();
-      const categoryNameString = rawCategoryName || undefined;
+      const categoryNameString = stripCountryFromCategoryString(rawCategoryName, point.address) || undefined;
 
       const payload: Partial<{ [key: string]: any }> = {
         name: point.address || 'Точка маршрута',
