@@ -46,9 +46,9 @@ describe('PointCard', () => {
     expect(screen.getByText('50.450100, 30.523400')).toBeTruthy();
   });
 
-  it('should render status label', () => {
+  it('should not render status label', () => {
     render(<PointCard point={mockPoint} />);
-    expect(screen.getByText('Посещено')).toBeTruthy();
+    expect(screen.queryByText('Посещено')).toBeNull();
   });
 
   it('should render category when coordinates are present', () => {

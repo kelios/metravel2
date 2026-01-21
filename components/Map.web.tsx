@@ -1,11 +1,28 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
 import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, ActivityIndicator } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Feather from '@expo/vector-icons/Feather';
 
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+import { buildDropMarkerHtml } from '@/src/utils/markerSvg';
+import { useAuth } from '@/context/AuthContext';
+import { showToast } from '@/src/utils/toast';
+import { userPointsApi } from '@/src/api/userPoints';
+import { PointStatus } from '@/types/userPoints';
+import { fetchFilters } from '@/src/api/misc';
+import {
+  CategoryDictionaryItem,
+  createCategoryNameToIdsMap,
+  normalizeCategoryDictionary,
+  resolveCategoryIdsByNames,
+} from '@/src/utils/userPointsCategories';
+import { getPointCategoryIds, getPointCategoryNames } from '@/src/utils/travelPointMeta';
+
+const LEAFLET_MAP_CONTAINER_ID_PREFIX = 'metravel-leaflet-map';
+const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 export type Point = {
   id: string;
@@ -13,7 +30,13 @@ export type Point = {
   address: string;
   travelImageThumbUrl?: string;
   updated_at?: string;
-  categoryName?: string;
+  categoryName?: string | { name?: string } | Array<string | { name?: string }>;
+  category?: string | number | Array<string | { name?: string }>;
+  categoryId?: string | number;
+  category_id?: string | number;
+  categoryIds?: Array<string | number>;
+  category_ids?: Array<string | number>;
+  categories?: Array<string | number | Record<string, unknown>>;
   articleUrl?: string;
   urlTravel?: string;
 };
@@ -52,6 +75,12 @@ const normalizePoint = (input: any, index: number): Point => {
     travelImageThumbUrl: raw.travelImageThumbUrl ?? raw.travel_image_thumb_url ?? raw.image ?? undefined,
     updated_at: raw.updated_at,
     categoryName: raw.categoryName ?? raw.category_name,
+    category: raw.category,
+    categoryId: raw.categoryId ?? raw.category_id,
+    category_id: raw.category_id ?? raw.categoryId,
+    categoryIds: raw.categoryIds ?? raw.category_ids,
+    category_ids: raw.category_ids ?? raw.categoryIds,
+    categories: raw.categories ?? raw.categoryIds ?? raw.category_ids,
     articleUrl: raw.articleUrl ?? raw.article_url,
     urlTravel: raw.urlTravel ?? raw.url_travel ?? raw.url,
   };
@@ -70,7 +99,16 @@ interface MapClientSideProps {
   travel?: TravelPropsType;
   coordinates?: Coordinates | null;
   showRoute?: boolean;
+  highlightedPointRequest?: { coord: string; key: string };
 }
+
+const normalizeCoordKey = (coord?: string | null) => {
+  if (!coord) return '';
+  return coord.replace(/;/g, ',').replace(/\s+/g, '').trim();
+};
+
+const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
+const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 // Используем UnifiedTravelCard для попапов
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
@@ -90,17 +128,96 @@ const hasMapPane = (map: any) => !!map && !!(map as any)._mapPane;
 const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                                                                 travel = { data: [] },
                                                                 coordinates = { latitude: 53.8828449, longitude: 27.7273595 },
+                                                                highlightedPointRequest,
                                                               }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const queryClient = useQueryClient();
 
   const [L, setL] = useState<LeafletNS | null>(null);
   const [rl, setRl] = useState<RL | null>(null);
 
   const rootRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
-  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
-  const mapContainerIdRef = useRef<string>(`metravel-leaflet-map-${Math.random().toString(36).slice(2)}`);
+  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${generateUniqueId()}`);
+  const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${generateUniqueId()}`);
+  const markersRef = useRef<Map<string, any>>(new Map());
+  const siteCategoryDictionaryRef = useRef<CategoryDictionaryItem[]>([]);
+  const [categoryDictionaryVersion, setCategoryDictionaryVersion] = useState(0);
+
+  useEffect(() => {
+    if (!isWeb || typeof document === 'undefined') return;
+
+    try {
+      const allContainers = Array.from(
+        document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`)
+      );
+      allContainers.forEach((el: any) => {
+        if (el.id === mapContainerIdRef.current) return;
+        if (el && typeof el.isConnected === 'boolean' && el.isConnected) return;
+
+        try {
+          if (el._leaflet_map && typeof el._leaflet_map.remove === 'function') {
+            el._leaflet_map.remove();
+          }
+        } catch {
+          // noop
+        }
+
+        try {
+          if (el._leaflet_id) {
+            delete el._leaflet_id;
+          }
+        } catch {
+          // noop
+        }
+      });
+    } catch (error) {
+      console.warn('[Map] Failed to clean orphaned containers', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadDictionary = async () => {
+      try {
+        const data = await fetchFilters();
+        const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
+        if (!active) return;
+        siteCategoryDictionaryRef.current = normalizeCategoryDictionary(raw);
+        setCategoryDictionaryVersion((prev) => prev + 1);
+      } catch {
+        if (active) {
+          siteCategoryDictionaryRef.current = [];
+          setCategoryDictionaryVersion((prev) => prev + 1);
+        }
+      }
+    };
+    loadDictionary();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!highlightedPointRequest) return;
+    const normalizedKey = normalizeCoordKey(highlightedPointRequest.coord);
+    if (!normalizedKey) return;
+    const marker = markersRef.current.get(normalizedKey);
+    if (!marker) return;
+    try {
+      marker.openPopup();
+      const latLng = marker.getLatLng ? marker.getLatLng() : null;
+      const mapInstance = mapRef.current;
+      if (mapInstance && latLng) {
+        const currentZoom =
+          typeof mapInstance.getZoom === 'function' ? mapInstance.getZoom() : 13;
+        mapInstance.flyTo(latLng, Math.max(currentZoom, 13), { animate: true, duration: 0.35 } as any);
+      }
+    } catch {
+      // noop
+    }
+  }, [highlightedPointRequest]);
 
   const buildGoogleMapsUrl = useCallback((coord: string) => {
     const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
@@ -225,19 +342,24 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     coordinates?.longitude ?? 27.7273595,
   ];
 
-  // ✅ ИСПРАВЛЕНИЕ: Используем стандартный оранжевый маркер (как в MapPage/Map.web.tsx)
-  const meTravelIcon = useMemo(() => {
+  // ✅ УЛУЧШЕНИЕ: Используем нашу фирменную каплевидную иконку
+  const siteMarkerIcon = useMemo(() => {
     if (!L) return null;
-    return new L.Icon({
-      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
-      iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
-      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [0, -41],
-      shadowSize: [41, 41],
-      shadowAnchor: [12, 41],
-      crossOrigin: true,
+    const size = 46;
+    const html = buildDropMarkerHtml({
+      size,
+      fill: '#c9772f',
+      stroke: '#a05d2b',
+      strokeWidth: 2,
+      innerColor: '#ffffff',
+      innerRadius: 4,
+    });
+    return L.divIcon({
+      html,
+      className: '',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size],
+      popupAnchor: [0, -size + 8],
     });
   }, [L]);
 
@@ -251,7 +373,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     return <Text style={{ padding: 20 }}>Карта доступна только в браузере</Text>;
   }
 
-  if (!L || !rl || !meTravelIcon) {
+  if (!L || !rl || !siteMarkerIcon) {
     return renderPlaceholder();
   }
 
@@ -312,6 +434,17 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   const MarkerWithPopup: React.FC<{ point: Point; latLng: [number, number] }> = ({ point, latLng }) => {
     const map = useMap();
+    const markerRef = useRef<any>(null);
+    const normalizedKey = useMemo(() => normalizeCoordKey(point.coord), [point.coord]);
+
+    useEffect(() => {
+      const marker = markerRef.current;
+      if (!marker || !normalizedKey) return;
+      markersRef.current.set(normalizedKey, marker);
+      return () => {
+        markersRef.current.delete(normalizedKey);
+      };
+    }, [normalizedKey]);
 
     const handleMarkerClick = useCallback(() => {
       if (!hasMapPane(map)) return;
@@ -331,10 +464,11 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       <Marker
         key={`${point.id}`}
         position={latLng}
-        icon={meTravelIcon}
+        icon={siteMarkerIcon}
         eventHandlers={{
           click: handleMarkerClick,
         }}
+        ref={markerRef}
       >
         <PopupWithClose point={point} />
       </Marker>
@@ -427,8 +561,19 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   // Компонент для управления закрытием попапа
   const PopupWithClose: React.FC<{ point: Point }> = ({ point }) => {
     const map = useMap();
+    const { isAuthenticated, authReady } = useAuth();
+    const [isAddingPoint, setIsAddingPoint] = useState(false);
 
     const coord = String(point.coord ?? '').trim();
+    const normalizedLatLng = useMemo(() => (coord ? getLatLng(coord) : null), [coord]);
+    const categoryNames = useMemo(() => getPointCategoryNames(point), [point]);
+    const categoryLabel = useMemo(() => categoryNames.join(', '), [categoryNames]);
+    /* eslint-disable react-hooks/exhaustive-deps */
+    const resolvedCategoryIdsFromNames = useMemo(() => {
+      const map = createCategoryNameToIdsMap(siteCategoryDictionaryRef.current);
+      return resolveCategoryIdsByNames(categoryNames, map);
+    }, [categoryNames, categoryDictionaryVersion]);
+    /* eslint-enable react-hooks/exhaustive-deps */
 
     const handleClose = useCallback(() => {
       map.closePopup();
@@ -497,6 +642,81 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       }
     }, [coord]);
 
+    const handleAddPoint = useCallback(async () => {
+      if (!authReady) return;
+      if (!isAuthenticated) {
+        void showToast({ type: 'info', text1: 'Войдите, чтобы сохранить точку', position: 'bottom' });
+        return;
+      }
+      if (isAddingPoint) return;
+      if (!normalizedLatLng) {
+        void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
+        return;
+      }
+      const [lat, lng] = normalizedLatLng;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
+        return;
+      }
+
+      const idsFromPoint = getPointCategoryIds(point);
+      const idsFromNames = resolvedCategoryIdsFromNames;
+      const combinedIds = Array.from(new Set([...idsFromPoint, ...idsFromNames]));
+      const categoryNameString = categoryLabel || undefined;
+      const payload: Record<string, unknown> = {
+        name: point.address || 'Точка маршрута',
+        address: point.address,
+        latitude: lat,
+        longitude: lng,
+        color: DEFAULT_TRAVEL_POINT_COLOR,
+        status: DEFAULT_TRAVEL_POINT_STATUS,
+        category: categoryNameString,
+        categoryName: categoryNameString,
+      };
+      if (combinedIds.length > 0) {
+        payload.categoryIds = combinedIds;
+      }
+      const tags: Record<string, unknown> = {};
+      if (point.urlTravel) {
+        tags.travelUrl = point.urlTravel;
+      }
+      if (point.articleUrl) {
+        tags.articleUrl = point.articleUrl;
+      }
+      if (Object.keys(tags).length > 0) {
+        payload.tags = tags;
+      }
+
+      setIsAddingPoint(true);
+      try {
+        await userPointsApi.createPoint(payload);
+        void showToast({
+          type: 'success',
+          text1: 'Точка добавлена в «Мои точки»',
+          position: 'bottom',
+        });
+        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+        handleClose();
+      } catch {
+        void showToast({
+          type: 'error',
+          text1: 'Не удалось сохранить точку',
+          position: 'bottom',
+        });
+      } finally {
+        setIsAddingPoint(false);
+      }
+    }, [
+      authReady,
+      categoryLabel,
+      handleClose,
+      isAddingPoint,
+      isAuthenticated,
+      normalizedLatLng,
+      point,
+      resolvedCategoryIdsFromNames,
+    ]);
+
     return (
       <Popup
         autoPan
@@ -509,14 +729,29 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         <UnifiedTravelCard
           title={point.address || ''}
           imageUrl={point.travelImageThumbUrl}
-          metaText={point.categoryName}
+          metaText={categoryLabel || undefined}
           onPress={handleClose}
           onMediaPress={handleOpenArticle}
           imageHeight={180}
           width={300}
           contentSlot={
             <View style={{ gap: 8 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: (colors as any).text ?? undefined }} numberOfLines={1}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '600',
+                  color: (colors as any).text ?? undefined,
+                  ...(Platform.OS === 'web'
+                    ? ({
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      } as any)
+                    : null),
+                }}
+                numberOfLines={2}
+              >
                 {point.address || ''}
               </Text>
               {!!coord && (
@@ -557,11 +792,11 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                   </Pressable>
                 </View>
               )}
-              {(!!point.categoryName || !!coord) && (
+              {(!!categoryLabel || !!coord) && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  {!!point.categoryName && (
+                  {!!categoryLabel && (
                     <Text style={{ fontSize: 12, color: (colors as any).textMuted ?? undefined }} numberOfLines={1}>
-                      {point.categoryName}
+                      {categoryLabel}
                     </Text>
                   )}
 
@@ -611,6 +846,53 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                   )}
                 </View>
               )}
+              <View style={{ marginTop: 6, alignItems: 'flex-end' }}>
+                <Pressable
+                  accessibilityLabel="Добавить в мои точки"
+                  onPress={(e) => {
+                    (e as any)?.stopPropagation?.();
+                    void handleAddPoint();
+                  }}
+                  disabled={!authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint}
+                  {...(Platform.OS === 'web'
+                    ? ({
+                        title: 'Добавить в мои точки',
+                        'aria-label': 'Добавить в мои точки',
+                      } as any)
+                    : ({ accessibilityRole: 'button' } as any))}
+                  {...({ 'data-card-action': 'true' } as any)}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                    paddingVertical: 6,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    backgroundColor:
+                      !authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint
+                        ? 'rgba(0,0,0,0.08)'
+                        : (colors as any).primary,
+                    opacity: pressed ? 0.9 : 1,
+                    cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+                  })}
+                >
+                  {isAddingPoint ? (
+                    <ActivityIndicator size="small" color={(colors as any).textOnPrimary ?? '#fff'} />
+                  ) : (
+                    <Feather name="map-pin" size={16} color={(colors as any).textOnPrimary ?? '#fff'} />
+                  )}
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '600',
+                      color: (colors as any).textOnPrimary ?? '#fff',
+                      letterSpacing: -0.2,
+                    }}
+                  >
+                    Добавить в мои точки
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           }
           mediaProps={{

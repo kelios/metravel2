@@ -190,7 +190,15 @@ function AccountMenu() {
   const handleNavigate = useCallback(
     (path: string, extraAction?: () => void) => {
       extraAction?.();
-      router.push(path as any);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const url =
+          path.startsWith('http') || path.startsWith('https')
+            ? path
+            : `${window.location.origin}${path}`;
+        window.open(url, '_blank', 'noopener');
+      } else {
+        router.push(path as any);
+      }
       closeMenu();
     },
     [closeMenu]

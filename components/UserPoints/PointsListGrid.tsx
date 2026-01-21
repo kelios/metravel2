@@ -189,6 +189,20 @@ export const PointsListGrid: React.FC<{
     if (!mapUiApi?.focusOnCoord) return
     if (lastGeocodedQueryRef.current === q) return
 
+    const focusWith = (coords: { lat: number; lng: number; label?: string; zoom?: number }) => {
+      setSearchMarker({ lat: coords.lat, lng: coords.lng, label: coords.label })
+      lastGeocodedQueryRef.current = q
+      try {
+        mapUiApi.focusOnCoord?.(`${coords.lat},${coords.lng}`, { zoom: coords.zoom ?? 11 })
+      } catch {
+        // noop
+      }
+    }
+
+    const focusFallback = () => {
+      focusWith({ lat: 53.902496, lng: 27.561481, label: 'Минск', zoom: 10 })
+    }
+
     if (geocodeTimerRef.current) clearTimeout(geocodeTimerRef.current)
     geocodeTimerRef.current = setTimeout(() => {
       geocodeTimerRef.current = null
@@ -211,18 +225,16 @@ export const PointsListGrid: React.FC<{
           const item = Array.isArray(data) ? data[0] : null
           const lat = Number(item?.lat)
           const lng = Number(item?.lon)
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
-
-          lastGeocodedQueryRef.current = q
-          setSearchMarker({ lat, lng, label: String(item?.display_name ?? '') })
-          try {
-            mapUiApi.focusOnCoord?.(`${lat},${lng}`, { zoom: 13 })
-          } catch {
-            // noop
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            focusFallback()
+            return
           }
+
+          focusWith({ lat, lng, label: String(item?.display_name ?? ''), zoom: 13 })
         })
         .catch(() => {
           if (controller.signal.aborted) return
+          focusFallback()
         })
     }, 450)
 

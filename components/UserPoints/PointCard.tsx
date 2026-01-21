@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable, Linking,
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
-import { STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -73,8 +72,6 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const showActions = !selectionMode && (typeof onEdit === 'function' || typeof onDelete === 'function');
-
-  const statusLabel = String((STATUS_LABELS as any)?.[point.status] ?? '').trim();
 
   const WebAction = ({
     label,
@@ -356,11 +353,6 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
             <Text style={styles.name} numberOfLines={2}>
               {point.name}
             </Text>
-            {statusLabel ? (
-              <View style={styles.statusPill}>
-                <Text style={styles.statusPillText}>{statusLabel}</Text>
-              </View>
-            ) : null}
           </View>
 
           {showActions ? (
@@ -646,21 +638,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '700' as any,
     color: colors.text,
     lineHeight: 24,
-  },
-  statusPill: {
-    alignSelf: 'flex-start',
-    marginTop: 6,
-    backgroundColor: colors.primarySoft,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.borderAccent,
-  },
-  statusPillText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    fontWeight: '600' as any,
-    color: colors.text,
   },
   description: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

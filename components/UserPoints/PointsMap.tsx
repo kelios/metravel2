@@ -4,7 +4,7 @@ import type { Region } from 'react-native-maps';
 import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
 import type { PointColor } from '@/types/userPoints';
-import { STATUS_LABELS } from '@/types/userPoints';
+import { buildDropMarkerHtml } from '@/src/utils/markerSvg';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { MapUiApi } from '@/src/types/mapUi';
@@ -64,7 +64,7 @@ const PointMarkerWeb = React.memo(
       | { status: 'loading' }
       | { status: 'ok'; distanceKm: number; durationMin: number }
       | { status: 'error' };
-    getMarkerIconCached: (color: any, opts?: { active?: boolean }) => any;
+    getMarkerIconCached: (color: any, opts?: { active?: boolean; emphasize?: boolean }) => any;
     onPointPress?: (point: ImportedPoint) => void;
     onEditPoint?: (point: ImportedPoint) => void;
     onDeletePoint?: (point: ImportedPoint) => void;
@@ -115,7 +115,6 @@ const PointMarkerWeb = React.memo(
       [colors.backgroundTertiary, point]
     );
     const badgeLabel = hasCoords && categoryLabel ? categoryLabel : colorLabel;
-    const statusLabel = React.useMemo(() => String((STATUS_LABELS as any)?.[(point as any)?.status] ?? '').trim(), [point]);
 
     const mapLinks = React.useMemo(
       () =>
@@ -162,9 +161,16 @@ const PointMarkerWeb = React.memo(
       return [lat, lng] as [number, number];
     }, [lat, lng]);
 
+    const isSitePoint = React.useMemo(() => {
+      const tags = (point as any)?.tags;
+      return Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
+    }, [point]);
+
     const markerIcon = React.useMemo(() => {
-      return getMarkerIconCached((point as any)?.color, { active: isActive });
-    }, [getMarkerIconCached, isActive, point]);
+      const fallback = colors.backgroundTertiary;
+      const fill = isSitePoint ? colors.primary : (point as any)?.color;
+      return getMarkerIconCached(String(fill || '').trim() || fallback, { active: isActive, emphasize: isSitePoint });
+    }, [colors.backgroundTertiary, colors.primary, getMarkerIconCached, isActive, isSitePoint, point]);
 
     const markerEventHandlers = React.useMemo(() => {
       return { click: handleMarkerClick } as any;
@@ -210,6 +216,10 @@ const PointMarkerWeb = React.memo(
                     fontWeight: 700,
                     lineHeight: '20px',
                     color: colors.text,
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
                     overflowWrap: 'anywhere',
                     wordBreak: 'break-word',
                   }}
@@ -218,22 +228,6 @@ const PointMarkerWeb = React.memo(
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
-                  {statusLabel ? (
-                    <div
-                      style={{
-                        background: colors.primarySoft,
-                        border: `1px solid ${colors.borderAccent}`,
-                        borderRadius: 999,
-                        padding: '6px 10px',
-                        fontSize: 12,
-                        lineHeight: '14px',
-                        color: colors.text,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {statusLabel}
-                    </div>
-                  ) : null}
                   {badgeLabel ? (
                     <div
                       style={{
@@ -839,35 +833,35 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   }, []);
 
   const getMarkerIcon = React.useCallback(
-    (color: PointColor | string | undefined, opts?: { active?: boolean }) => {
+    (color: PointColor | string | undefined, opts?: { active?: boolean; emphasize?: boolean }) => {
       const L = mods?.L;
       if (!L) return undefined;
 
       const fill = String(color || '').trim() || colors.primary;
       const isActive = Boolean(opts?.active);
-      const size = isActive ? 34 : 28;
-      const anchor = isActive ? 17 : 14;
-      const strokeW = isActive ? 2 : 1;
+    const sizeBase = isActive ? 42 : 34;
+    const size = (opts?.emphasize ? sizeBase * 2 : sizeBase);
+    const anchor = size / 2;
+    const strokeW = isActive ? 2 : 1;
+    const html = buildDropMarkerHtml({
+      size,
+      fill,
+      stroke: colors.border,
+      strokeWidth: strokeW,
+      innerColor: colors.surface,
+      innerRadius: isActive ? 4 : 3,
+    });
 
-      const html = `
-        <div style="width:${size}px;height:${size}px;position:relative;transform:translate(-${anchor}px,-${size}px);">
-          <svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path d="M12 22s7-4.5 7-12a7 7 0 0 0-14 0c0 7.5 7 12 7 12Z" fill="${fill}" stroke="${colors.border}" stroke-width="${strokeW}" />
-            <circle cx="12" cy="10" r="3" fill="${colors.surface}" opacity="0.95" />
-          </svg>
-        </div>
-      `;
-
-      return L.divIcon({
-        html,
-        className: '',
-        iconSize: [size, size],
-        iconAnchor: [anchor, size],
-        popupAnchor: [0, -(size - 2)],
-      });
-    },
-    [colors.border, colors.primary, colors.surface, mods?.L]
-  );
+    return L.divIcon({
+      html,
+      className: '',
+      iconSize: [size, size],
+      iconAnchor: [anchor, size],
+      popupAnchor: [0, -(size - 6)],
+    });
+  },
+  [colors.border, colors.primary, colors.surface, mods?.L]
+);
 
   const markerIconCacheRef = React.useRef<Map<string, any>>(new Map());
   React.useEffect(() => {
@@ -875,10 +869,11 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   }, [colors.border, colors.primary, colors.surface, mods?.L]);
 
   const getMarkerIconCached = React.useCallback(
-    (color: PointColor | string | undefined, opts?: { active?: boolean }) => {
+    (color: PointColor | string | undefined, opts?: { active?: boolean; emphasize?: boolean }) => {
       const fill = String(color || '').trim() || colors.primary;
       const active = Boolean(opts?.active);
-      const key = `${fill}|${active ? '1' : '0'}`;
+      const emphasize = Boolean(opts?.emphasize);
+      const key = `${fill}|${active ? '1' : '0'}|${emphasize ? '1' : '0'}`;
       const cached = markerIconCacheRef.current.get(key);
       if (cached) return cached;
       const icon = getMarkerIcon(color, opts);
@@ -1602,17 +1597,22 @@ const PointsMapNative: React.FC<PointsMapProps> = ({
             />
           ) : null}
 
-          {safePoints.map((p) => {
-            const isActive = Number(activePointId) === Number(p.id);
-            const coordsText =
-              Number.isFinite(p.latitude) && Number.isFinite(p.longitude)
-                ? `${Number(p.latitude).toFixed(6)}, ${Number(p.longitude).toFixed(6)}`
-                : '';
+          {safePoints.map((p: any) => {
+            const isActive = Number(activePointId) === Number(p?.id);
+            const coordsText = `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`;
+            const tags = (p as any)?.tags;
+            const isSitePoint = Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
             return (
               <Marker
                 key={String(p.id)}
                 coordinate={{ latitude: p.latitude, longitude: p.longitude }}
-                pinColor={isActive ? colors.primary : String(p.color || colors.backgroundTertiary)}
+                pinColor={
+                  isSitePoint
+                    ? colors.primary
+                    : isActive
+                      ? colors.primary
+                      : String(p.color || colors.backgroundTertiary)
+                }
                 title={String(p?.name ?? '')}
                 description={coordsText}
               />

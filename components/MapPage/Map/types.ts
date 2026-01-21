@@ -6,6 +6,8 @@ export type Point = {
   address: string;
   travelImageThumbUrl: string;
   categoryName: string;
+  categoryId?: string | number;
+  category_ids?: Array<string | number>;
   articleUrl?: string;
   urlTravel?: string;
 };

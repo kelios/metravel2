@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react-native';
 import MapClientSideComponent from '@/components/Map.web';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock leaflet modules
 const mockLeaflet = {
@@ -87,7 +88,6 @@ jest.mock('react-native', () => {
 
 // Mock UnifiedTravelCard
 jest.mock('@/components/ui/UnifiedTravelCard', () => {
-  const React = require('react')
   const RN = require('react-native')
   const View = RN.View
   return function UnifiedTravelCard() {
@@ -96,6 +96,17 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => {
 })
 
 describe('MapClientSideComponent (Map.web.tsx)', () => {
+  const renderWithQueryClient = (ui: React.ReactElement) => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  };
+
   const defaultProps = {
     travel: { data: [] },
     coordinates: { latitude: 53.8828449, longitude: 27.7273595 },
@@ -127,7 +138,7 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
   it('renders placeholder when not on web', () => {
     mockPlatform.OS = 'ios';
     
-    const { getByText } = render(<MapClientSideComponent {...defaultProps} />);
+    const { getByText } = renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
     expect(getByText('Карта доступна только в браузере')).toBeTruthy();
     
     mockPlatform.OS = 'web';
@@ -136,11 +147,11 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
   it('renders loading state initially on web', () => {
     mockPlatform.OS = 'web';
     
-    const rendered = render(<MapClientSideComponent {...defaultProps} />);
+    const rendered = renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
     expect(rendered.toJSON()).toBeTruthy();
   });
 
-  it('uses public URL path for marker icon', () => {
+  it('uses expected tile layer URL', () => {
     const fs = require('fs');
     const path = require('path');
     const filePath = path.join(__dirname, '../../components/Map.web.tsx');
@@ -151,15 +162,14 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
     
     const fileContent = fs.readFileSync(filePath, 'utf8');
     
-    expect(fileContent).toContain('marker-icon-orange.png');
-    expect(fileContent).toContain('raw.githubusercontent.com/pointhi/leaflet-color-markers');
+    expect(fileContent).toContain('basemaps.cartocdn.com/rastertiles/voyager');
   });
 
   it('handles travel data correctly', async () => {
     const travelData = {
       data: [
         {
-          id: 1,
+          id: '1',
           coord: '53.9,27.5667',
           address: 'Test Address',
           travelImageThumbUrl: 'test.jpg',
@@ -168,7 +178,7 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
       ],
     };
 
-    const rendered = render(
+    const rendered = renderWithQueryClient(
       <MapClientSideComponent {...defaultProps} travel={travelData} />
     );
     
@@ -176,12 +186,12 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
   });
 
   it('uses default coordinates when not provided', () => {
-    const rendered = render(<MapClientSideComponent travel={{ data: [] }} />);
+    const rendered = renderWithQueryClient(<MapClientSideComponent travel={{ data: [] }} />);
     expect(rendered.toJSON()).toBeTruthy();
   });
 
   it('handles null coordinates gracefully', () => {
-    const rendered = render(
+    const rendered = renderWithQueryClient(
       <MapClientSideComponent travel={{ data: [] }} coordinates={null} />
     );
     expect(rendered.toJSON()).toBeTruthy();
@@ -191,14 +201,14 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
     const travelData = {
       data: [
         {
-          id: 1,
+          id: '1',
           coord: 'invalid,coord',
           address: 'Test',
           travelImageThumbUrl: 'test.jpg',
           categoryName: 'Test',
         },
         {
-          id: 2,
+          id: '2',
           coord: '53.9,27.5667',
           address: 'Test',
           travelImageThumbUrl: 'test.jpg',
@@ -207,7 +217,7 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
       ],
     };
 
-    const rendered = render(
+    const rendered = renderWithQueryClient(
       <MapClientSideComponent {...defaultProps} travel={travelData} />
     );
     

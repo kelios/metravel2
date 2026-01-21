@@ -1,4 +1,3 @@
-import React from 'react';
 import { Platform, View, Text, Linking } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
@@ -13,6 +12,27 @@ const mockUnifiedCard = jest.fn((props: any) => (
 jest.mock('@/components/ui/UnifiedTravelCard', () => ({
   __esModule: true,
   default: (props: any) => mockUnifiedCard(props),
+}));
+
+jest.mock('@/context/AuthContext', () => ({
+  __esModule: true,
+  useAuth: () => ({
+    isAuthenticated: true,
+    authReady: true,
+  }),
+}));
+
+const mockInvalidate = jest.fn();
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({
+    invalidateQueries: mockInvalidate,
+  }),
+}));
+
+jest.mock('@/src/api/misc', () => ({
+  fetchFilters: jest.fn(async () => ({
+    categoryTravelAddress: [],
+  })),
 }));
 
 import PointList from '@/components/travel/PointList';
@@ -36,13 +56,17 @@ describe('PointList (web coordinates list uses popup template)', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
+    const openSpy = jest.fn();
+    (globalThis as any).window = (globalThis as any).window || {};
+    (globalThis as any).window.open = openSpy;
+
     const writeText = jest.fn(() => Promise.resolve());
     Object.defineProperty(global, 'navigator', {
       value: { clipboard: { writeText } },
       writable: true,
     });
 
-    jest.spyOn(Linking, 'canOpenURL').mockResolvedValue(true as any);
+    jest.spyOn(Linking, 'canOpenURL').mockResolvedValue(false as any);
     jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined as any);
 
     const baseUrl = 'https://example.com/travel-page';
@@ -62,13 +86,15 @@ describe('PointList (web coordinates list uses popup template)', () => {
 
     fireEvent.press(getByLabelText('Открыть в Google Maps'));
     return waitFor(() => {
-      expect(Linking.openURL).toHaveBeenCalledWith(
-        'https://www.google.com/maps/search/?api=1&query=50,20'
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://www.google.com/maps/search/?api=1&query=50,20',
+        '_blank',
+        'noopener,noreferrer'
       );
     }).then(() => {
       fireEvent.press(getByLabelText('Открыть в Organic Maps'));
       return waitFor(() => {
-        expect(Linking.openURL).toHaveBeenCalledWith('https://omaps.app/50,20');
+        expect(openSpy).toHaveBeenCalledWith('https://omaps.app/50,20', '_blank', 'noopener,noreferrer');
       });
     }).then(() => {
       fireEvent.press(getByLabelText('Скопировать координаты'));
@@ -78,12 +104,12 @@ describe('PointList (web coordinates list uses popup template)', () => {
     }).then(() => {
       fireEvent.press(getByLabelText('Поделиться в Telegram'));
       return waitFor(() => {
-        const calls = (Linking.openURL as any).mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
+        const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
         expect(calls.some((v: string) => /^(tg:\/\/|https:\/\/t\.me\/share\/url\?url=)/.test(v))).toBe(true);
       }).then(() => {
         fireEvent.press(getByLabelText('Открыть статью'));
         return waitFor(() => {
-          expect(Linking.openURL).toHaveBeenCalledWith(baseUrl);
+          expect(openSpy).toHaveBeenCalledWith(baseUrl, '_blank', 'noopener,noreferrer');
         }).then(() => {
           (Platform as any).OS = prevOs;
         });

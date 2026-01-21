@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useRef, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Platform, Text, View, useWindowDimensions } from 'react-native'
 
 import { METRICS } from '@/constants/layout'
@@ -132,6 +132,12 @@ export const TravelDetailsMapSection: React.FC<{
   })
   const shouldRenderMap = canRenderHeavy && (Platform.OS !== 'web' || shouldLoadMap) && hasMapData
   const [hasMountedMap, setHasMountedMap] = useState(false)
+  const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
+  const handlePointCardPress = useCallback((point: any) => {
+    const coord = String(point?.coord ?? '').trim()
+    if (!coord) return
+    setHighlightedPoint({ coord, key: `${coord}-${Date.now()}` })
+  }, [])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -206,7 +212,10 @@ export const TravelDetailsMapSection: React.FC<{
             >
               {shouldMountMap ? (
                 <Suspense fallback={<MapFallback />}>
-                  <MapClientSide travel={{ data: travel.travelAddress as any }} />
+                  <MapClientSide
+                    travel={{ data: travel.travelAddress as any }}
+                    highlightedPointRequest={highlightedPoint}
+                  />
                 </Suspense>
               ) : null}
             </ToggleableMap>
@@ -230,7 +239,12 @@ export const TravelDetailsMapSection: React.FC<{
         <View style={{ marginTop: 12 }}>
           {travel.travelAddress && (
             <Suspense fallback={<PointListFallback />}>
-              <PointList points={travel.travelAddress as any} baseUrl={travel.url} />
+            <PointList
+              points={travel.travelAddress as any}
+              baseUrl={travel.url}
+              travelName={travel.name}
+              onPointCardPress={handlePointCardPress}
+            />
             </Suspense>
           )}
         </View>

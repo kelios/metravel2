@@ -1,5 +1,5 @@
 // components/travel/PointList.tsx
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
   Pressable,
   Text,
   ListRenderItemInfo,
+  ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Feather from '@expo/vector-icons/Feather';
@@ -21,6 +22,20 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+import { useAuth } from '@/context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { userPointsApi } from '@/src/api/userPoints';
+import { fetchFilters } from '@/src/api/misc';
+import { showToast } from '@/src/utils/toast';
+import type { ImportedPoint } from '@/types/userPoints';
+import { PointStatus } from '@/types/userPoints';
+import {
+  createCategoryNameToIdsMap,
+  normalizeCategoryDictionary,
+  resolveCategoryIdsByNames as mapResolveCategoryIds,
+  CategoryDictionaryItem,
+} from '@/src/utils/userPointsCategories';
+import { getPointCategoryIds, getPointCategoryNames } from '@/src/utils/travelPointMeta';
 
 type Point = {
   id: string;
@@ -28,13 +43,23 @@ type Point = {
   updated_at?: string;
   address: string;
   coord: string;
-  categoryName?: string;
+  categoryName?: string | { name?: string } | Array<string | { name?: string }>;
+  category?: string | number;
+  category_id?: string | number;
+  categoryIds?: Array<string | number>;
+  category_ids?: Array<string | number>;
+  categories?: Array<string | number | Record<string, unknown>>;
   description?: string;
   articleUrl?: string;
   urlTravel?: string;
 };
 
-type PointListProps = { points: Point[]; baseUrl?: string };
+type PointListProps = {
+  points: Point[];
+  baseUrl?: string;
+  travelName?: string;
+  onPointCardPress?: (point: Point) => void;
+};
 
 type Responsive = {
   imageMinHeight: number;
@@ -88,7 +113,15 @@ const buildOrganicMapsUrl = (coordStr: string) => {
   return `https://omaps.app/${lat},${lon}`;
 };
 
+const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
+const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
+
 const openExternal = async (url: string) => {
+  if (!url) return;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.open(url, '_blank', 'noopener,noreferrer');
+    return;
+  }
   try {
     const can = await Linking.canOpenURL(url);
     if (can) await Linking.openURL(url);
@@ -113,8 +146,11 @@ const PointCard = React.memo(function PointCard({
                                                   onShare,
                                                   onOpenMap,
                                                   onOpenOrganic,
+                                                  onAddPoint,
+                                                  addButtonLoading,
                                                   colors,
                                                   styles,
+                                                  onCardPress,
                                                 }: {
   point: Point;
   isMobile: boolean;
@@ -123,6 +159,10 @@ const PointCard = React.memo(function PointCard({
   onShare: (coordStr: string) => void;
   onOpenMap: (coordStr: string) => void;
   onOpenOrganic: (coordStr: string) => void;
+  onAddPoint?: () => void;
+  addButtonLoading?: boolean;
+  addButtonDisabled?: boolean;
+  onCardPress?: () => void;
   colors: ReturnType<typeof useThemedColors>;
   styles: ReturnType<typeof createStyles>;
 }) {
@@ -148,7 +188,7 @@ const PointCard = React.memo(function PointCard({
         : null)}
     >
       <Pressable 
-        onPress={openMapFromLink} 
+        onPress={onCardPress ?? openMapFromLink} 
         style={[styles.cardPressable, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         accessibilityRole="button"
         accessibilityLabel={`Открыть место: ${point.address}`}
@@ -286,7 +326,66 @@ const PointCard = React.memo(function PointCard({
               </View>
             )}
           </View>
+          {onAddPoint && (
+            <AddToPointsButton
+              onPress={(e) => {
+                e.stopPropagation();
+                onAddPoint();
+              }}
+              loading={Boolean(addButtonLoading)}
+              disabled={Boolean(addButtonDisabled)}
+              colors={colors}
+              styles={styles}
+              isWide={false}
+            />
+          )}
         </View>
+      </Pressable>
+    </View>
+  );
+});
+
+type AddToPointsButtonProps = {
+  onPress: () => void;
+  loading: boolean;
+  disabled: boolean;
+  colors: ReturnType<typeof useThemedColors>;
+  styles: ReturnType<typeof createStyles>;
+  isWide?: boolean;
+};
+
+const AddToPointsButton = React.memo(function AddToPointsButton({
+  onPress,
+  loading,
+  disabled,
+  colors,
+  styles,
+  isWide = false,
+}: AddToPointsButtonProps) {
+  return (
+    <View style={[styles.addButtonContainer, isWide && styles.addButtonContainerWide]}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled || loading}
+        accessibilityLabel="Добавить в мои точки"
+        style={({ pressed }) => [
+          styles.addButton,
+          pressed && !disabled && !loading && styles.addButtonPressed,
+          (disabled || loading) && styles.addButtonDisabled,
+          isWide && styles.addButtonFullWidth,
+        ]}
+        {...globalFocusStyles.focusable}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={colors.textOnPrimary} />
+        ) : (
+          <View style={styles.addButtonRow}>
+            <Feather name="plus-circle" size={16} color={colors.textOnPrimary} />
+            <Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>
+              Добавить в мои точки
+            </Text>
+          </View>
+        )}
       </Pressable>
     </View>
   );
@@ -294,7 +393,7 @@ const PointCard = React.memo(function PointCard({
 
 /* ---------------- list ---------------- */
 
-const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
+const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPointCardPress }) => {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
   const { width, isPhone, isLargePhone, isTablet } = useResponsive();
@@ -302,6 +401,10 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
   const isLargeDesktop = width >= 1440;
 
   const [showList, setShowList] = useState(false);
+  const [siteCategoryDictionary, setSiteCategoryDictionary] = useState<CategoryDictionaryItem[]>([]);
+  const [addingPointId, setAddingPointId] = useState<string | null>(null);
+  const { isAuthenticated, authReady } = useAuth();
+  const queryClient = useQueryClient();
 
   // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -351,6 +454,31 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
       };
     },
     [isMobile, isTablet, isLargeDesktop, width]
+  );
+
+  useEffect(() => {
+    let active = true;
+    const loadDictionary = async () => {
+      try {
+        const data = await fetchFilters();
+        const raw = (data as any)?.categoryTravelAddress ?? (data as any)?.category_travel_address;
+        if (!active) return;
+        setSiteCategoryDictionary(normalizeCategoryDictionary(raw));
+      } catch {
+        if (active) {
+          setSiteCategoryDictionary([]);
+        }
+      }
+    };
+    loadDictionary();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const categoryNameToIds = useMemo(
+    () => createCategoryNameToIdsMap(siteCategoryDictionary),
+    [siteCategoryDictionary]
   );
 
   const onCopy = useCallback(async (coordStr: string) => {
@@ -412,6 +540,117 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
     [baseUrl]
   );
 
+  const handleAddPoint = useCallback(
+    async (point: Point) => {
+      if (!authReady) return;
+      if (addingPointId === point.id) return;
+      if (!isAuthenticated) {
+        void showToast({
+          type: 'info',
+          text1: 'Авторизуйтесь, чтобы сохранять точки',
+          position: 'bottom',
+        });
+        return;
+      }
+
+      if (!point.coord) {
+        void showToast({
+          type: 'info',
+          text1: 'У точки нет координат',
+          position: 'bottom',
+        });
+        return;
+      }
+
+      const coords = parseCoord(point.coord);
+      if (!coords) {
+        void showToast({
+          type: 'info',
+          text1: 'Невозможно распознать координаты',
+          position: 'bottom',
+        });
+        return;
+      }
+
+      const categoryIdsFromPoint = getPointCategoryIds(point);
+      const categoryIdsFromNames = mapResolveCategoryIds(
+        getPointCategoryNames(point),
+        categoryNameToIds
+      );
+      const combinedIds = Array.from(
+        new Set<string>([...categoryIdsFromPoint, ...categoryIdsFromNames])
+      );
+
+      const rawCategoryName = Array.isArray(point.categoryName)
+        ? point.categoryName.join(', ')
+        : typeof point.categoryName === 'object'
+        ? String((point.categoryName as any).name ?? '')
+        : String(point.categoryName ?? '').trim();
+      const categoryNameString = rawCategoryName || undefined;
+
+      const payload: Partial<ImportedPoint> = {
+        name: point.address || travelName || 'Точка маршрута',
+        address: point.address,
+        description: point.description,
+        latitude: coords.lat,
+        longitude: coords.lon,
+        color: DEFAULT_TRAVEL_POINT_COLOR,
+        status: DEFAULT_TRAVEL_POINT_STATUS,
+        category: categoryNameString,
+        categoryName: categoryNameString,
+      };
+
+      if (combinedIds.length > 0) {
+        payload.categoryIds = combinedIds;
+      }
+
+      const tags: Record<string, unknown> = {};
+      if (baseUrl) {
+        tags.travelUrl = baseUrl;
+      }
+      if (point.articleUrl) {
+        tags.articleUrl = point.articleUrl;
+      }
+      if (travelName) {
+        tags.travelName = travelName;
+      }
+      if (Object.keys(tags).length > 0) {
+        payload.tags = tags;
+      }
+
+      setAddingPointId(point.id);
+      try {
+        await userPointsApi.createPoint(payload);
+        void showToast({
+          type: 'success',
+          text1: 'Точка добавлена в «Мои точки»',
+          position: 'bottom',
+        });
+        void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Не удалось добавить точку из маршрута в мои точки', error);
+        }
+        void showToast({
+          type: 'error',
+          text1: 'Не удалось сохранить точку',
+          position: 'bottom',
+        });
+      } finally {
+        setAddingPointId(null);
+      }
+    },
+    [
+      addingPointId,
+      authReady,
+      baseUrl,
+      categoryNameToIds,
+      isAuthenticated,
+      queryClient,
+      travelName,
+    ]
+  );
+
   // ✅ УЛУЧШЕНИЕ: Более плавные переходы между количеством колонок
   const numColumns = useMemo(() => {
     if (width >= 1024) return 2; // Десктопы и большие экраны: 2 колонки, чтобы карточки были крупнее
@@ -421,19 +660,27 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
 
   const keyExtractor = useCallback((item: Point) => item.id, []);
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Point>) => (
-      <View
-        style={[
-          styles.col,
-          numColumns === 2 ? styles.col2 : styles.col1,
-        ]}
+    ({ item }: ListRenderItemInfo<Point>) => {
+      const isAdding = addingPointId === item.id;
+      const addDisabled = !authReady;
+      const handleAddPointClick = (event?: any) => {
+        event?.stopPropagation?.();
+        handleAddPoint(item);
+      };
+
+      return (
+        <View
+          style={[
+            styles.col,
+            numColumns === 2 ? styles.col2 : styles.col1,
+          ]}
       >
         {Platform.OS === 'web' ? (
-          <UnifiedTravelCard
-            title={item.address}
-            imageUrl={getOptimizedImageUrl(item.travelImageThumbUrl, item.updated_at)}
-            metaText={item.categoryName}
-            onPress={() => {}}
+            <UnifiedTravelCard
+              title={item.address}
+              imageUrl={getOptimizedImageUrl(item.travelImageThumbUrl, item.updated_at)}
+              metaText={item.categoryName}
+              onPress={onPointCardPress ? () => onPointCardPress(item) : undefined}
             onMediaPress={() => onOpenArticle(item)}
             imageHeight={180}
             width={300}
@@ -529,6 +776,15 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
                     )}
                   </View>
                 )}
+
+                <AddToPointsButton
+                  onPress={handleAddPointClick}
+                  loading={isAdding}
+                  disabled={addDisabled}
+                  colors={colors}
+                  styles={styles}
+                  isWide
+                />
               </View>
             }
             mediaProps={{
@@ -540,21 +796,42 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl }) => {
             style={{ margin: DESIGN_TOKENS.spacing.sm }}
           />
         ) : (
-          <PointCard
-            point={item}
-            isMobile={isMobile}
-            responsive={responsive}
-            onCopy={onCopy}
-            onShare={onShare}
-            onOpenMap={onOpenMap}
-            onOpenOrganic={onOpenOrganic}
-            colors={colors}
-            styles={styles}
+            <PointCard
+              point={item}
+              isMobile={isMobile}
+              responsive={responsive}
+              onCopy={onCopy}
+              onShare={onShare}
+              onOpenMap={onOpenMap}
+              onOpenOrganic={onOpenOrganic}
+              colors={colors}
+              styles={styles}
+              onCardPress={onPointCardPress ? () => onPointCardPress(item) : undefined}
+              onAddPoint={() => handleAddPoint(item)}
+            addButtonLoading={isAdding}
+            addButtonDisabled={addDisabled}
           />
-        )}
-      </View>
-    ),
-    [baseUrl, colors, isMobile, numColumns, onCopy, onOpenArticle, onOpenMap, onOpenOrganic, onShare, responsive, styles]
+          )}
+        </View>
+      );
+    },
+    [
+      addingPointId,
+      authReady,
+      baseUrl,
+      colors,
+      handleAddPoint,
+      isMobile,
+      numColumns,
+      onCopy,
+      onOpenArticle,
+      onOpenMap,
+      onOpenOrganic,
+      onPointCardPress,
+      onShare,
+      responsive,
+      styles,
+    ]
   );
 
   return (
@@ -919,5 +1196,46 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textOnDark,
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
     fontWeight: '600',
+  },
+  addButtonContainer: {
+    marginTop: DESIGN_TOKENS.spacing.md,
+  },
+  addButtonContainerWide: {
+    width: '100%',
+  },
+  addButton: {
+    backgroundColor: colors.primary,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'all 0.2s ease',
+      },
+    }),
+  },
+  addButtonPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  addButtonDisabled: {
+    opacity: 0.65,
+  },
+  addButtonFullWidth: {
+    width: '100%',
+  },
+  addButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
+  addButtonText: {
+    fontWeight: '600',
+    letterSpacing: -0.2,
+    color: colors.textOnPrimary,
   },
 });

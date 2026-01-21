@@ -1,5 +1,7 @@
  const { render, act, fireEvent, waitFor } = require('@testing-library/react-native')
 
+const { QueryClient, QueryClientProvider } = require('@tanstack/react-query')
+
  const RN = require('react-native')
  const originalPlatformOS = RN.Platform.OS
  RN.Platform.OS = 'web'
@@ -272,6 +274,29 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => {
   }
 })
 
+jest.mock('@/context/AuthContext', () => {
+  return {
+    __esModule: true,
+    useAuth: () => ({ isAuthenticated: true, authReady: true }),
+  }
+})
+
+const renderWithProviders = (ui: any) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+
+  const rendered = render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+  return {
+    ...rendered,
+    rerender: (nextUi: any) =>
+      rendered.rerender(<QueryClientProvider client={queryClient}>{nextUi}</QueryClientProvider>),
+  }
+}
+
 MapPageComponent = require('@/components/MapPage/Map.web').default
 
 afterAll(() => {
@@ -309,7 +334,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
   })
 
   it('renders loading state initially', async () => {
-    const { getByText } = render(<MapPageComponent {...defaultProps} />)
+    const { getByText } = renderWithProviders(<MapPageComponent {...defaultProps} />)
     expect(getByText(/(Loading map|Загрузка карты)/i)).toBeTruthy()
     await act(async () => {})
   })
@@ -320,7 +345,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     const Location = require('expo-location')
 
-    const { queryAllByTestId } = render(<MapPageComponent {...defaultProps} />)
+    const { queryAllByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
     await act(async () => {})
 
     await waitFor(() => {
@@ -342,7 +367,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     const Location = require('expo-location')
     Location.requestForegroundPermissionsAsync.mockResolvedValueOnce({ status: 'denied' })
 
-    const { queryAllByTestId } = render(<MapPageComponent {...defaultProps} />)
+    const { queryAllByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
     await act(async () => {})
 
     await waitFor(() => {
@@ -361,7 +386,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     const Location = require('expo-location')
     Location.getCurrentPositionAsync.mockRejectedValueOnce(new Error('boom'))
 
-    const { queryAllByTestId } = render(<MapPageComponent {...defaultProps} />)
+    const { queryAllByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
     await act(async () => {})
 
     await waitFor(() => {
@@ -394,7 +419,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       ],
     }
 
-    const { getByTestId } = render(
+    const { getByTestId } = renderWithProviders(
       <MapPageComponent
         {...defaultProps}
         mode="radius"
@@ -466,7 +491,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     const leafletLoader = require('@/src/utils/leafletWebLoader')
     leafletLoader.ensureLeafletAndReactLeaflet.mockRejectedValueOnce(new Error('boom'))
 
-    const { getByText } = render(<MapPageComponent {...defaultProps} />)
+    const { getByText } = renderWithProviders(<MapPageComponent {...defaultProps} />)
     await act(async () => {})
 
     await waitFor(() => {
@@ -482,7 +507,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       coordinates: { latitude: 53.9, longitude: 27.5667, zoom: 7 } as any,
     }
 
-    const { getByTestId, rerender } = render(<MapPageComponent {...initialProps} />)
+    const { getByTestId, rerender } = renderWithProviders(<MapPageComponent {...initialProps} />)
 
     await act(async () => {})
 
@@ -517,7 +542,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       routePoints: [[27.5667, 53.9], [27.5767, 53.91]] as [number, number][],
     }
 
-    const { getByTestId } = render(<MapPageComponent {...props} />)
+    const { getByTestId } = renderWithProviders(<MapPageComponent {...props} />)
 
     await act(async () => {})
 
@@ -547,7 +572,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       off: jest.fn(),
     })
     
-    render(<MapPageComponent {...props} />)
+    renderWithProviders(<MapPageComponent {...props} />)
     await act(async () => {})
     
     // В режиме route не должно быть автоматического зума
@@ -583,7 +608,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       routePoints: [] as [number, number][],
     }
     
-    const { rerender } = render(<MapPageComponent {...props} />)
+    const { rerender } = renderWithProviders(<MapPageComponent {...props} />)
     await act(async () => {})
     
     // Добавляем старт
@@ -615,7 +640,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       off: jest.fn(),
     })
     
-    render(<MapPageComponent {...props} />)
+    renderWithProviders(<MapPageComponent {...props} />)
     await act(async () => {})
     
     // Проверяем, что обработчики событий установлены для маркеров
@@ -700,7 +725,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         routePoints: [] as [number, number][],
       }
       
-      const { rerender } = render(<MapPageComponent {...props} />);
+      const { rerender } = renderWithProviders(<MapPageComponent {...props} />);
       await act(async () => {})
       
       // Очищаем моки перед переключением
@@ -734,7 +759,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         routePoints: [] as [number, number][],
       }
       
-      render(<MapPageComponent {...props} />)
+      renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
       
       // Проверяем, что setView вызывался только для coordinates, а не для userLocation
@@ -771,7 +796,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         routePoints: [] as [number, number][],
       }
       
-      const { rerender } = render(<MapPageComponent {...props} />)
+      const { rerender } = renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
       
       // Сохраняем текущую позицию
@@ -814,7 +839,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       }
       
       // Первый рендер (симуляция открытия вкладки)
-      const { unmount } = render(<MapPageComponent {...props} />)
+      const { unmount } = renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
       
       // Очищаем моки
@@ -825,7 +850,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       unmount()
       
       // Снова монтируем (симуляция возврата на вкладку)
-      render(<MapPageComponent {...props} />)
+      renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
       
       // В режиме route не должно быть автоматического зума при возврате на вкладку
@@ -923,7 +948,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         routePoints: [] as [number, number][],
       }
       
-      const { rerender } = render(<MapPageComponent {...props} />)
+      const { rerender } = renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
       
       const _initialSetViewCalls = mockSetView.mock.calls.length
@@ -951,7 +976,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         // radius не передаем, должен использоваться дефолт 60км -> 60000м
       }
 
-      render(<MapPageComponent {...props} />)
+      renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
 
       // Проверяем радиус через пропсы, сохранённые в моке Circle
@@ -970,7 +995,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         radius: '10',
       }
 
-      render(<MapPageComponent {...props} />)
+      renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
 
       const circleProps = (globalThis as any).lastCircleProps
@@ -991,7 +1016,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         ],
       }
 
-      const { queryAllByTestId } = render(
+      const { queryAllByTestId } = renderWithProviders(
         <MapPageComponent
           {...defaultProps}
           mode="radius"
@@ -1027,7 +1052,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         })),
       }
 
-      render(
+      renderWithProviders(
         <MapPageComponent
           {...defaultProps}
           mode="radius"
@@ -1066,7 +1091,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         mode: 'radius' as const,
       }
 
-      const { getByLabelText } = render(<MapPageComponent {...props} />)
+      const { getByLabelText } = renderWithProviders(<MapPageComponent {...props} />)
 
       // Ждём, пока будет получена геолокация и появится кнопка (aria-label на кнопке)
       const myLocationButton = await waitFor(() => getByLabelText('Вернуться к моему местоположению'))
@@ -1090,7 +1115,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
         mode: 'radius' as const,
       }
 
-      const result = render(<MapPageComponent {...props} />)
+      const result = renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
 
       // Достаточно того, что компонент отрендерился без ошибок

@@ -15,6 +15,11 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { PointsListHeader } from './PointsListHeader'
 import { PointsListGrid } from './PointsListGrid'
 import { PointsListItem } from './PointsListItem'
+import {
+  createCategoryNameToIdsMap,
+  normalizeCategoryDictionary,
+  resolveCategoryIdsByNames as mapNamesToIds,
+} from '@/src/utils/userPointsCategories';
 
 const STATUS_TO_COLOR: Record<PointStatus, string> = {
   [PointStatus.VISITED]: 'green',
@@ -174,10 +179,6 @@ const POINTS_PRESETS: PointsPreset[] = [
   },
 ];
 
-type PointsListProps = {
-  onImportPress?: () => void;
-};
-
 const normalizeCategoryIdsFromPoint = (p: any): string[] => {
   const multiAlt = (p as any)?.categories ?? (p as any)?.categories_ids;
   if (Array.isArray(multiAlt)) {
@@ -198,26 +199,8 @@ const normalizeCategoryIdsFromPoint = (p: any): string[] => {
   return [];
 };
 
-const normalizeCategoryDictionary = (raw: any): Array<{ id: string; name: string }> => {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((item, idx) => {
-      if (item && typeof item === 'object') {
-        const id = (item as any).id ?? (item as any).value ?? (item as any).category_id ?? (item as any).pk ?? idx;
-        const name =
-          (item as any).name ??
-          (item as any).name_ru ??
-          (item as any).title_ru ??
-          (item as any).title ??
-          (item as any).text ??
-          String(id);
-        return { id: String(id).trim(), name: String(name).trim() };
-      }
-      const text = String(item ?? '').trim();
-      if (!text) return null;
-      return { id: text, name: text };
-    })
-    .filter((v: any): v is { id: string; name: string } => Boolean(v?.id));
+type PointsListProps = {
+  onImportPress?: () => void;
 };
 
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
@@ -366,27 +349,20 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     staleTime: 24 * 60 * 60 * 1000,
   });
 
+  const categoryData = useMemo(() => siteCategoryOptionsQuery.data ?? [], [siteCategoryOptionsQuery.data]);
+
   const categoryIdToName = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of siteCategoryOptionsQuery.data ?? []) {
+    for (const c of categoryData) {
       const id = String((c as any)?.id ?? '').trim();
       const name = String((c as any)?.name ?? id).trim();
       if (!id) continue;
       map.set(id, name || id);
     }
     return map;
-  }, [siteCategoryOptionsQuery.data]);
+  }, [categoryData]);
 
-  const categoryNameToIds = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const [id, name] of categoryIdToName.entries()) {
-      const key = String(name || '').trim().toLowerCase();
-      if (!key) continue;
-      const prev = map.get(key) ?? [];
-      map.set(key, prev.includes(id) ? prev : [...prev, id]);
-    }
-    return map;
-  }, [categoryIdToName]);
+  const categoryNameToIds = useMemo(() => createCategoryNameToIdsMap(categoryData), [categoryData]);
 
   const activePreset = useMemo(() => {
     if (!activePresetId) return null;
@@ -394,18 +370,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, [activePresetId]);
 
   const resolveCategoryIdsByNames = useCallback(
-    (names: string[]) => {
-      const out: string[] = [];
-      for (const n of names) {
-        const key = String(n || '').trim().toLowerCase();
-        if (!key) continue;
-        const ids = categoryNameToIds.get(key) ?? [];
-        for (const id of ids) {
-          if (!out.includes(id)) out.push(id);
-        }
-      }
-      return out;
-    },
+    (names: string[]) => mapNamesToIds(names, categoryNameToIds),
     [categoryNameToIds]
   );
 

@@ -1,6 +1,12 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Platform, View, Text } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+jest.mock('@/context/AuthContext', () => ({
+  __esModule: true,
+  useAuth: () => ({ isAuthenticated: true, authReady: true }),
+}));
 
 const mockUnifiedCard = jest.fn((props: any) => (
   <View testID="unified-card-mock">
@@ -20,6 +26,16 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => {
 
 import AddressListItem from '@/components/MapPage/AddressListItem';
 
+const renderWithProviders = (ui: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
+
 const baseTravel: any = {
   id: 1,
   address: 'Kraków, Poland',
@@ -36,9 +52,7 @@ describe('AddressListItem (web right panel)', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
-    const { getByTestId } = render(
-      <AddressListItem travel={baseTravel} isMobile={false} />
-    );
+    const { getByTestId } = renderWithProviders(<AddressListItem travel={baseTravel} isMobile={false} />);
 
     const card = getByTestId('unified-card-mock');
     expect(card).toBeTruthy();
@@ -64,6 +78,10 @@ describe('AddressListItem (web right panel)', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
+    const openSpy = jest.fn();
+    (globalThis as any).window = (globalThis as any).window || {};
+    (globalThis as any).window.open = openSpy;
+
     const writeText = jest.fn(() => Promise.resolve());
     Object.defineProperty(global, 'navigator', {
       value: { clipboard: { writeText } },
@@ -71,10 +89,10 @@ describe('AddressListItem (web right panel)', () => {
     });
 
     const RN = require('react-native');
-    jest.spyOn(RN.Linking, 'canOpenURL').mockResolvedValue(true);
-    const openURL = jest.spyOn(RN.Linking, 'openURL').mockResolvedValue(undefined);
+    jest.spyOn(RN.Linking, 'canOpenURL').mockResolvedValue(false);
+    jest.spyOn(RN.Linking, 'openURL').mockResolvedValue(undefined);
 
-    const { getByText, getAllByLabelText } = render(
+    const { getByText, getAllByLabelText } = renderWithProviders(
       <AddressListItem travel={baseTravel} isMobile={false} />
     );
 
@@ -87,25 +105,25 @@ describe('AddressListItem (web right panel)', () => {
 
     fireEvent.press(getAllByLabelText('Открыть в Google Maps')[0]);
     await waitFor(() => {
-      const calls = openURL.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
+      const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('google.com/maps/search'))).toBe(true);
     });
 
     fireEvent.press(getAllByLabelText('Открыть в Organic Maps')[0]);
     await waitFor(() => {
-      const calls = openURL.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
+      const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('omaps.app'))).toBe(true);
     });
 
     fireEvent.press(getAllByLabelText('Поделиться в Telegram')[0]);
     await waitFor(() => {
-      const calls = openURL.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
+      const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => /^(tg:\/\/|https:\/\/t\.me\/share\/url)/.test(v))).toBe(true);
     });
 
     fireEvent.press(getAllByLabelText('Открыть статью')[0]);
     await waitFor(() => {
-      const calls = openURL.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
+      const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v === baseTravel.articleUrl || v === baseTravel.urlTravel)).toBe(true);
     });
 

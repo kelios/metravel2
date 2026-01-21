@@ -13,6 +13,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import * as Clipboard from 'expo-clipboard';
 import { TravelCoords } from '@/src/types/types';
 import { METRICS } from '@/constants/layout';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -21,6 +22,10 @@ import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { showToast } from '@/src/utils/toast';
+import { useAuth } from '@/context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { userPointsApi } from '@/src/api/userPoints';
+import { PointStatus } from '@/types/userPoints';
 
 type Props = {
     travel: TravelCoords;
@@ -59,14 +64,21 @@ const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
 const openExternal = async (url?: string) => {
     const safeUrl = getSafeExternalUrl(url, { allowRelative: true, baseUrl: SITE_URL });
     if (!safeUrl) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.open(safeUrl, '_blank', 'noopener,noreferrer');
+        return;
+    }
     try {
         const can = await Linking.canOpenURL(safeUrl);
         if (can) await Linking.openURL(safeUrl);
         else await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
-    } catch {
-        await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
-    }
+  } catch {
+    await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
+  }
 };
+
+const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
+const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 const AddressListItem: React.FC<Props> = ({
                                               travel,
@@ -87,6 +99,7 @@ const AddressListItem: React.FC<Props> = ({
 
     const [imgLoaded, setImgLoaded] = useState(false);
     const [hovered, setHovered] = useState(false);
+    const [isAddingPoint, setIsAddingPoint] = useState(false);
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
 
@@ -179,6 +192,75 @@ const AddressListItem: React.FC<Props> = ({
         };
     }, []);
 
+    const { isAuthenticated, authReady } = useAuth();
+    const queryClient = useQueryClient();
+
+    const handleAddPoint = useCallback(async () => {
+        if (!authReady) return;
+        if (!isAuthenticated) {
+            void showToast({ type: 'info', text1: 'Войдите, чтобы сохранить точку', position: 'bottom' });
+            return;
+        }
+        if (isAddingPoint) return;
+        const lat = Number(travel.lat);
+        const lng = Number(travel.lng);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+            void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
+            return;
+        }
+
+        const trimmedCategory = String(categoryName ?? '').trim();
+        const categoryString = trimmedCategory || undefined;
+
+        const payload: Record<string, unknown> = {
+            name: address || 'Точка маршрута',
+            address,
+            latitude: lat,
+            longitude: lng,
+            color: DEFAULT_TRAVEL_POINT_COLOR,
+            status: DEFAULT_TRAVEL_POINT_STATUS,
+            category: categoryString,
+            categoryName: categoryString,
+        };
+
+        const tags: Record<string, unknown> = {};
+        if (urlTravel) tags.travelUrl = urlTravel;
+        if (articleUrl) tags.articleUrl = articleUrl;
+        if (Object.keys(tags).length > 0) {
+            payload.tags = tags;
+        }
+
+        setIsAddingPoint(true);
+        try {
+            await userPointsApi.createPoint(payload);
+            void showToast({
+                type: 'success',
+                text1: 'Точка добавлена в «Мои точки»',
+                position: 'bottom',
+            });
+            void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+        } catch {
+            void showToast({
+                type: 'error',
+                text1: 'Не удалось сохранить точку',
+                position: 'bottom',
+            });
+        } finally {
+            setIsAddingPoint(false);
+        }
+    }, [
+        address,
+        articleUrl,
+        authReady,
+        categoryName,
+        isAddingPoint,
+        isAuthenticated,
+        queryClient,
+        travel.lat,
+        travel.lng,
+        urlTravel,
+    ]);
+
     // Адаптивная высота в зависимости от размера экрана
     const getCardHeight = () => {
         if (width <= 480) return 240;      // Малые мобильные
@@ -227,7 +309,7 @@ const AddressListItem: React.FC<Props> = ({
             contentSlot={
               <View style={{ gap: 8 }}>
                 {!!address && (
-                  <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+                  <Text numberOfLines={2} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
                     {address}
                   </Text>
                 )}
@@ -356,7 +438,7 @@ const AddressListItem: React.FC<Props> = ({
         name: keyof typeof Feather.glyphMap;
         size: number;
         color: string;
-        onPress?: () => void;
+        onPress?: (e: any) => void;
         style?: any;
         accessibilityLabel: string;
     }) => (
@@ -506,6 +588,39 @@ const AddressListItem: React.FC<Props> = ({
                           ))}
                       </View>
                     )}
+
+                    <View style={styles.addButtonRow}>
+                      <Pressable
+                        accessibilityLabel="Добавить в мои точки"
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
+                          void handleAddPoint();
+                        }}
+                        disabled={!authReady || !isAuthenticated || isAddingPoint}
+                        style={({ pressed }) => [
+                          styles.addButton,
+                          (pressed || isAddingPoint) && styles.addButtonPressed,
+                          (!authReady || !isAuthenticated || isAddingPoint) && styles.addButtonDisabled,
+                        ]}
+                        {...((Platform.OS as any) === 'web'
+                          ? ({
+                              title: 'Добавить в мои точки',
+                              'aria-label': 'Добавить в мои точки',
+                            } as any)
+                          : ({ accessibilityRole: 'button' } as any))}
+                      >
+                        {isAddingPoint ? (
+                          <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                        ) : (
+                          <>
+                            <Feather name="map-pin" size={14} color={colors.textOnPrimary} />
+                            <Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>
+                              Добавить в мои точки
+                            </Text>
+                          </>
+                        )}
+                      </Pressable>
+                    </View>
                 </View>
               )}
         </View>
@@ -713,6 +828,37 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         textShadowColor: colors.overlay,
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 3,
+    },
+    addButtonRow: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+    },
+    addButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: DESIGN_TOKENS.spacing.xs,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        backgroundColor: colors.primary,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer' as any,
+                transition: 'all 0.2s ease',
+            },
+        }),
+    },
+    addButtonPressed: {
+        opacity: 0.95,
+        transform: [{ scale: 0.98 }],
+    },
+    addButtonDisabled: {
+        opacity: 0.6,
+    },
+    addButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
+        letterSpacing: -0.2,
     },
 });
 
