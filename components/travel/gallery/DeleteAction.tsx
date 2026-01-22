@@ -36,8 +36,6 @@ export const DeleteAction: React.FC<{
     return (
       <ButtonComponent
         onClick={makeActivate}
-        onPress={makeActivate}
-        testID={testID}
         data-testid={testID}
         style={{
           ...flatStyle,

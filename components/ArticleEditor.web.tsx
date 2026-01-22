@@ -124,7 +124,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const editorViewportRef = useRef<any>(null);
 
-    const prevFullscreenRef = useRef(false);
+    const lastFullscreenRef = useRef<boolean | null>(null);
 
     const lastExternalContentRef = useRef<string>('');
 
@@ -772,55 +772,53 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         }
     }, [fullscreen, showHtml]);
 
-    useEffect(() => {
-        if (!isWeb) return;
+    const ensureQuillContent = useCallback(() => {
+        const editor = quillRef.current?.getEditor?.();
+        if (!editor) return;
 
-        // Track transitions to avoid repeated work (and visual blinking).
-        if (!fullscreen) {
-            prevFullscreenRef.current = false;
-            return;
+        // Force Quill to recalc layout after container changes.
+        editor.update?.('silent');
+        editor.scroll?.update?.('silent');
+
+        const nextHtml = typeof html === 'string' ? html : '';
+        if (nextHtml.trim().length === 0) return;
+
+        const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
+        const isEditorEmpty = text.replace(/\s+/g, '').length === 0;
+        if (!isEditorEmpty) return;
+
+        // Quill sometimes mounts inside a Modal and renders blank even though value prop is non-empty.
+        try {
+            const clean = sanitizeHtml(nextHtml);
+            editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
+            editor.setSelection?.(0, 0, 'silent');
+        } catch {
+            // noop
         }
-        if (prevFullscreenRef.current) return;
-        prevFullscreenRef.current = true;
 
+        // If it still looks empty after paste, remount once as a last resort.
+        try {
+            const textAfter = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
+            const stillEmpty = textAfter.replace(/\s+/g, '').length === 0;
+            if (stillEmpty) setQuillMountKey(v => v + 1);
+        } catch {
+            setQuillMountKey(v => v + 1);
+        }
+    }, [html]);
+
+    useEffect(() => {
+        if (!isWeb || !win) return;
         if (showHtml) return;
         if (!shouldLoadQuill) return;
+
+        const prev = lastFullscreenRef.current;
+        lastFullscreenRef.current = fullscreen;
+        if (prev === null || prev === fullscreen) return;
 
         let raf = 0;
         raf = (win as any)?.requestAnimationFrame?.(() => {
             try {
-                const editor = quillRef.current?.getEditor?.();
-                if (!editor) return;
-
-                // Force Quill to recalc layout in the new fullscreen container.
-                editor.update?.('silent');
-                editor.scroll?.update?.('silent');
-
-                // Fallback: if Quill still renders empty while html is non-empty, remount once.
-                const nextHtml = typeof html === 'string' ? html : '';
-                if (nextHtml.trim().length === 0) return;
-                const text = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
-                const isEditorEmpty = text.replace(/\s+/g, '').length === 0;
-                if (!isEditorEmpty) return;
-
-                // Quill sometimes mounts inside a Modal and renders blank even though value prop is non-empty.
-                // Force-set the HTML to ensure the user sees the existing description.
-                try {
-                    const clean = sanitizeHtml(nextHtml);
-                    editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
-                    editor.setSelection?.(0, 0, 'silent');
-                } catch {
-                    // noop
-                }
-
-                // If it still looks empty after paste, remount once as a last resort.
-                try {
-                    const textAfter = typeof editor.getText === 'function' ? String(editor.getText() ?? '') : '';
-                    const stillEmpty = textAfter.replace(/\s+/g, '').length === 0;
-                    if (stillEmpty) setQuillMountKey(v => v + 1);
-                } catch {
-                    setQuillMountKey(v => v + 1);
-                }
+                ensureQuillContent();
             } catch {
                 // noop
             }
@@ -833,7 +831,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 // noop
             }
         };
-    }, [fullscreen, showHtml, shouldLoadQuill, html]);
+    }, [fullscreen, showHtml, shouldLoadQuill, ensureQuillContent]);
 
     const Loader = () => (
         <View style={dynamicStyles.loadBox}>
