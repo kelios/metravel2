@@ -8,6 +8,7 @@ import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import IconButton from '@/components/ui/IconButton';
 
 interface MapBottomSheetProps {
   children: React.ReactNode;
@@ -164,18 +165,17 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
               </View>
 
               <View style={styles.headerActions}>
-                <Pressable
-                  style={styles.headerButton}
+                <IconButton
+                  icon={<MaterialIcons name="close" size={20} color={colors.textMuted} />}
+                  label="Закрыть панель"
+                  size="sm"
                   onPress={() => {
                     setSheetIndex(-1);
                     onStateChange?.('collapsed');
                   }}
-                  hitSlop={8}
                   testID="map-panel-close"
-                  accessibilityLabel="Закрыть панель"
-                >
-                  <MaterialIcons name="close" size={20} color={colors.textMuted} />
-                </Pressable>
+                  style={styles.headerButton}
+                />
               </View>
             </View>
           )}
@@ -213,15 +213,14 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
 
           {/* Quick actions */}
           <View style={styles.headerActions}>
-            <Pressable
-              style={styles.headerButton}
+            <IconButton
+              icon={<MaterialIcons name="close" size={20} color={colors.textMuted} />}
+              label="Закрыть панель"
+              size="sm"
               onPress={() => bottomSheetRef.current?.close()}
-              hitSlop={8}
               testID="map-panel-close"
-              accessibilityLabel="Закрыть панель"
-            >
-              <MaterialIcons name="close" size={20} color={colors.textMuted} />
-            </Pressable>
+              style={styles.headerButton}
+            />
           </View>
         </View>
 
@@ -326,6 +325,12 @@ const getStyles = (colors: ThemedColors) =>
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',
+      marginHorizontal: 0,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
     },
     peekContent: {
       paddingHorizontal: 20,

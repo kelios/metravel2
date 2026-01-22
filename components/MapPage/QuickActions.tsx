@@ -1,8 +1,9 @@
 // components/MapPage/QuickActions.tsx
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
+import Button from '@/components/ui/Button';
 
 interface QuickAction {
   icon: string;
@@ -75,20 +76,16 @@ const QuickActions: React.FC<QuickActionsProps> = ({
   return (
     <View style={styles.quickActions}>
       {actions.map((action, index) => (
-        <Pressable
+        <Button
           key={index}
           testID={`quick-action-${action.icon}`}
-          style={({ pressed }) => [
-            styles.quickAction,
-            pressed && styles.quickActionPressed,
-          ]}
+          label={action.label}
+          icon={<MapIcon name={action.icon} size={18} color={colors.text} />}
           onPress={action.onPress}
-          accessibilityRole="button"
           accessibilityLabel={action.accessibilityLabel || action.label}
-        >
-          <MapIcon name={action.icon} size={18} color={colors.text} />
-          <Text style={styles.quickActionText}>{action.label}</Text>
-        </Pressable>
+          size="sm"
+          variant="secondary"
+        />
       ))}
     </View>
   );
@@ -103,26 +100,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.surface,
     flexWrap: 'wrap',
-  },
-  quickAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  quickActionPressed: {
-    opacity: 0.7,
-    transform: [{ scale: 0.98 }],
-  },
-  quickActionText: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '500',
   },
 });
 

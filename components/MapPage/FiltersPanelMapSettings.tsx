@@ -8,6 +8,8 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/src/config/mapWebLayers';
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { ThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
+import Chip from '@/components/ui/Chip';
 
 const OSM_POI_CATEGORIES = [
   'Достопримечательности',
@@ -133,95 +135,67 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       ) : null}
 
       <View style={styles.mapControlsRow}>
-        <Pressable
-          style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
+        <Button
+          label="Zoom +"
+          icon={<MapIcon name="add" size={18} color={colors.text} />}
           onPress={() => safeMapUiCall(mapUiApi?.zoomIn)}
           disabled={!mapUiApi}
-          accessibilityRole="button"
           accessibilityLabel="Увеличить масштаб"
-          accessibilityState={{ disabled: !mapUiApi }}
-        >
-          <MapIcon name="add" size={18} color={colors.text} />
-          <Text style={styles.mapControlText}>Zoom +</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.mapControlButton, globalFocusStyles.focusable, !mapUiApi && styles.mapControlDisabled]}
+          size="sm"
+          variant="secondary"
+        />
+        <Button
+          label="Zoom -"
+          icon={<MapIcon name="remove" size={18} color={colors.text} />}
           onPress={() => safeMapUiCall(mapUiApi?.zoomOut)}
           disabled={!mapUiApi}
-          accessibilityRole="button"
           accessibilityLabel="Уменьшить масштаб"
-          accessibilityState={{ disabled: !mapUiApi }}
-        >
-          <MapIcon name="remove" size={18} color={colors.text} />
-          <Text style={styles.mapControlText}>Zoom -</Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.mapControlButton,
-            globalFocusStyles.focusable,
-            (!mapUiApi || !canCenterOnUser) && styles.mapControlDisabled,
-          ]}
+          size="sm"
+          variant="secondary"
+        />
+        <Button
+          label="Я"
+          icon={<MapIcon name="my-location" size={18} color={colors.text} />}
           onPress={() => {
             if (!mapUiApi || !canCenterOnUser) return;
             safeMapUiCall(mapUiApi?.centerOnUser);
           }}
           disabled={!mapUiApi || !canCenterOnUser}
-          accessibilityRole="button"
           accessibilityLabel="Моё местоположение"
-          accessibilityState={{ disabled: !mapUiApi || !canCenterOnUser }}
-        >
-          <MapIcon name="my-location" size={18} color={colors.text} />
-          <Text style={styles.mapControlText}>Я</Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.mapControlButton,
-            globalFocusStyles.focusable,
-            (!mapUiApi || !canFitToResults) && styles.mapControlDisabled,
-          ]}
+          size="sm"
+          variant="secondary"
+        />
+        <Button
+          label="Все"
+          icon={<MapIcon name="zoom-out-map" size={18} color={colors.text} />}
           onPress={() => safeMapUiCall(mapUiApi?.fitToResults)}
           disabled={!mapUiApi || !canFitToResults}
-          accessibilityRole="button"
           accessibilityLabel="Показать все результаты на карте"
-          accessibilityState={{ disabled: !mapUiApi || !canFitToResults }}
-        >
-          <MapIcon name="zoom-out-map" size={18} color={colors.text} />
-          <Text style={styles.mapControlText}>Все</Text>
-        </Pressable>
+          size="sm"
+          variant="secondary"
+        />
       </View>
 
       {mode === 'route' ? (
         <View style={styles.mapControlsRow}>
-          <Pressable
-            style={[
-              styles.mapControlButton,
-              globalFocusStyles.focusable,
-              (!mapUiApi || !canBuildRoute || !canExportRoute) && styles.mapControlDisabled,
-            ]}
+          <Button
+            label="GPX"
+            icon={<MapIcon name="download" size={18} color={colors.text} />}
             onPress={() => safeMapUiCall(mapUiApi?.exportGpx)}
             disabled={!mapUiApi || !canBuildRoute || !canExportRoute}
-            accessibilityRole="button"
             accessibilityLabel="Скачать маршрут в формате GPX"
-            accessibilityState={{ disabled: !mapUiApi || !canBuildRoute || !canExportRoute }}
-          >
-            <MapIcon name="download" size={18} color={colors.text} />
-            <Text style={styles.mapControlText}>GPX</Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.mapControlButton,
-              globalFocusStyles.focusable,
-              (!mapUiApi || !canBuildRoute || !canExportRoute) && styles.mapControlDisabled,
-            ]}
+            size="sm"
+            variant="secondary"
+          />
+          <Button
+            label="KML"
+            icon={<MapIcon name="download" size={18} color={colors.text} />}
             onPress={() => safeMapUiCall(mapUiApi?.exportKml)}
             disabled={!mapUiApi || !canBuildRoute || !canExportRoute}
-            accessibilityRole="button"
             accessibilityLabel="Скачать маршрут в формате KML"
-            accessibilityState={{ disabled: !mapUiApi || !canBuildRoute || !canExportRoute }}
-          >
-            <MapIcon name="download" size={18} color={colors.text} />
-            <Text style={styles.mapControlText}>KML</Text>
-          </Pressable>
+            size="sm"
+            variant="secondary"
+          />
         </View>
       ) : null}
 
@@ -233,24 +207,17 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
               {WEB_MAP_BASE_LAYERS.map((l) => {
                 const active = selectedBaseLayerId === l.id;
                 return (
-                  <Pressable
+                  <Chip
                     key={l.id}
-                    style={[
-                      styles.layerChip,
-                      active && styles.layerChipActive,
-                      globalFocusStyles.focusable,
-                      !mapUiApi && styles.mapControlDisabled,
-                    ]}
+                    label={l.title}
+                    selected={active}
+                    disabled={!mapUiApi}
                     onPress={() => {
                       setSelectedBaseLayerId(l.id);
                       safeMapUiCall(() => mapUiApi?.setBaseLayer?.(l.id));
                     }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Выбрать базовый слой: ${l.title}`}
-                    accessibilityState={{ selected: active }}
-                  >
-                    <Text style={[styles.layerChipText, active && styles.layerChipTextActive]}>{l.title}</Text>
-                  </Pressable>
+                    testID={`map-layer-${l.id}`}
+                  />
                 );
               })}
             </View>
@@ -266,25 +233,18 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
               {availableOverlays.map((o) => {
                 const enabled = Boolean(enabledOverlays[o.id]);
                 return (
-                  <Pressable
+                  <Chip
                     key={o.id}
-                    style={[
-                      styles.layerChip,
-                      enabled && styles.layerChipActive,
-                      globalFocusStyles.focusable,
-                    ]}
+                    label={o.title}
+                    selected={enabled}
+                    disabled={!mapUiApi}
                     onPress={() => {
                       const next = !enabled;
                       console.info('[FiltersPanel] Toggle overlay:', o.id, 'to', next);
                       setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
                       safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(o.id, next));
                     }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${enabled ? 'Выключить' : 'Включить'} оверлей: ${o.title}`}
-                    accessibilityState={{ selected: enabled }}
-                  >
-                    <Text style={[styles.layerChipText, enabled && styles.layerChipTextActive]}>{o.title}</Text>
-                  </Pressable>
+                  />
                 );
               })}
             </View>
@@ -297,9 +257,11 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                 {OSM_POI_CATEGORIES.map((cat) => {
                   const enabled = osmPoiCategories.includes(cat);
                   return (
-                    <Pressable
+                    <Chip
                       key={cat}
-                      style={[styles.layerChip, enabled && styles.layerChipActive, globalFocusStyles.focusable]}
+                      label={cat}
+                      selected={enabled}
+                      disabled={!mapUiApi}
                       onPress={() => {
                         setOsmPoiCategories((prev) => {
                           const next = prev.includes(cat) ? prev.filter((x) => x !== cat) : [...prev, cat];
@@ -307,12 +269,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                           return next;
                         });
                       }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${enabled ? 'Скрыть' : 'Показывать'}: ${cat}`}
-                      accessibilityState={{ selected: enabled }}
-                    >
-                      <Text style={[styles.layerChipText, enabled && styles.layerChipTextActive]}>{cat}</Text>
-                    </Pressable>
+                    />
                   );
                 })}
               </View>

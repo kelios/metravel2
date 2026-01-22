@@ -5,6 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import IconButton from '@/components/ui/IconButton';
 import { showToast } from '@/src/utils/toast';
 
 interface PointCardProps {
@@ -381,14 +382,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
                 Platform.OS === 'web' ? (
                   <WebAction label="Редактировать" icon="edit-2" onActivate={() => onEdit(point)} />
                 ) : (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Редактировать"
+                  <IconButton
+                    icon={<Feather name="edit-2" size={16} color={colors.text} />}
+                    label="Редактировать"
                     onPress={() => onEdit(point)}
-                  >
-                    <Feather name="edit-2" size={16} color={colors.text} />
-                  </TouchableOpacity>
+                    size="sm"
+                  />
                 )
               ) : null}
 
@@ -396,14 +395,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
                 Platform.OS === 'web' ? (
                   <WebAction label="Удалить" icon="trash-2" onActivate={() => onDelete(point)} />
                 ) : (
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Удалить"
+                  <IconButton
+                    icon={<Feather name="trash-2" size={16} color={colors.text} />}
+                    label="Удалить"
                     onPress={() => onDelete(point)}
-                  >
-                    <Feather name="trash-2" size={16} color={colors.text} />
-                  </TouchableOpacity>
+                    size="sm"
+                  />
                 )
               ) : null}
             </View>
@@ -452,40 +449,19 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
                   <WebAction label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
                 </View>
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Копировать координаты"
-                    onPress={(e) => {
-                      try {
-                        (e as any)?.preventDefault?.();
-                        (e as any)?.stopPropagation?.();
-                      } catch {
-                        // noop
-                      }
-                      void copyCoords();
-                    }}
-                  >
-                    <Feather name="copy" size={16} color={colors.textMuted} />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Поделиться в Telegram"
-                    onPress={(e) => {
-                      try {
-                        (e as any)?.preventDefault?.();
-                        (e as any)?.stopPropagation?.();
-                      } catch {
-                        // noop
-                      }
-                      void shareToTelegram();
-                    }}
-                  >
-                    <Feather name="send" size={16} color={colors.textMuted} />
-                  </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 } as any}>
+                  <IconButton
+                    icon={<Feather name="copy" size={16} color={colors.textMuted} />}
+                    label="Копировать координаты"
+                    onPress={() => void copyCoords()}
+                    size="sm"
+                  />
+                  <IconButton
+                    icon={<Feather name="send" size={16} color={colors.textMuted} />}
+                    label="Поделиться в Telegram"
+                    onPress={() => void shareToTelegram()}
+                    size="sm"
+                  />
                 </View>
               )}
             </View>
@@ -521,22 +497,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
             {Platform.OS !== 'web' && mapUrls ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <TouchableOpacity
-                  style={styles.copyButton}
-                  accessibilityRole="button"
-                  accessibilityLabel="Открыть в картах"
-                  onPress={(e) => {
-                    try {
-                      (e as any)?.preventDefault?.();
-                      (e as any)?.stopPropagation?.();
-                    } catch {
-                      // noop
-                    }
-                    void openInMaps();
-                  }}
-                >
-                  <Feather name="map-pin" size={16} color={colors.textMuted} />
-                </TouchableOpacity>
+                <IconButton
+                  icon={<Feather name="map-pin" size={16} color={colors.textMuted} />}
+                  label="Открыть в картах"
+                  onPress={() => void openInMaps()}
+                  size="sm"
+                />
               </View>
             ) : null}
           </View>
@@ -612,16 +578,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 6,
     marginTop: 2,
     flexShrink: 0,
-  },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
   },
   webActionButton: {
     width: 32,
@@ -715,14 +671,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
     flexShrink: 1,
-  },
-  copyButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: DESIGN_TOKENS.spacing.xs,
   },
   webChipButton: {
     borderWidth: 1,

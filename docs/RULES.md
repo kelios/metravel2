@@ -21,6 +21,11 @@ npm run test:run
 
 ## UI rules
 
+### Component reuse
+
+- Before creating new UI components or styles, check `components/ui` and existing feature components and reuse them.
+- Add new components only when no existing component can be reasonably extended or composed.
+
 ### Images and placeholders
 
 - Show a placeholder when `imageUrl` is missing or image load fails.

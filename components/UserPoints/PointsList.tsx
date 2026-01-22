@@ -6,6 +6,7 @@ import { userPointsApi } from '@/src/api/userPoints';
 import { fetchFilters } from '@/src/api/misc';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
+import Button from '@/components/ui/Button';
 import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { PointStatus, STATUS_LABELS } from '@/types/userPoints';
@@ -1484,63 +1485,57 @@ useEffect(() => {
                   : 'Выберите точки в списке'}
             </Text>
             <View style={styles.bulkMapBarActions}>
-              <TouchableOpacity
-                style={[styles.bulkMapBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+              <Button
+                label="Список"
                 onPress={() => {}}
                 disabled={isBulkWorking}
-                accessibilityRole="button"
+                size="sm"
+                variant="secondary"
                 accessibilityLabel="Назад к списку"
-              >
-                <Text style={styles.bulkMapBarButtonText}>Список</Text>
-              </TouchableOpacity>
+              />
 
               {selectedIds.length > 0 ? (
                 <>
-                  <TouchableOpacity
-                    style={[styles.bulkMapBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+                  <Button
+                    label="Снять"
                     onPress={clearSelection}
                     disabled={isBulkWorking}
-                    accessibilityRole="button"
+                    size="sm"
+                    variant="secondary"
                     accessibilityLabel="Снять"
-                  >
-                    <Text style={styles.bulkMapBarButtonText}>Снять</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.bulkMapBarButtonPrimary, isBulkWorking && styles.bulkBarButtonDisabled]}
+                  />
+                  <Button
+                    label="Изменить"
                     onPress={() => {
                       blurActiveElementForModal();
                       setShowBulkEdit(true);
                     }}
                     disabled={isBulkWorking}
-                    accessibilityRole="button"
+                    size="sm"
                     accessibilityLabel="Изменить"
-                  >
-                    <Text style={styles.bulkMapBarButtonPrimaryText}>Изменить</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.bulkMapBarButtonDanger, isBulkWorking && styles.bulkBarButtonDisabled]}
+                  />
+                  <Button
+                    label="Удалить"
                     onPress={() => {
                       blurActiveElementForModal();
                       setShowConfirmDeleteSelected(true);
                     }}
                     disabled={isBulkWorking}
-                    accessibilityRole="button"
+                    size="sm"
+                    variant="danger"
                     accessibilityLabel="Удалить выбранные"
-                  >
-                    <Text style={styles.bulkMapBarButtonDangerText}>Удалить</Text>
-                  </TouchableOpacity>
+                  />
                 </>
               ) : null}
 
-              <TouchableOpacity
-                style={[styles.bulkMapBarButton, isBulkWorking && styles.bulkBarButtonDisabled]}
+              <Button
+                label="Готово"
                 onPress={exitSelectionMode}
                 disabled={isBulkWorking}
-                accessibilityRole="button"
+                size="sm"
+                variant="secondary"
                 accessibilityLabel="Готово"
-              >
-                <Text style={styles.bulkMapBarButtonText}>Готово</Text>
-              </TouchableOpacity>
+              />
             </View>
           </View>
         </View>
@@ -1596,61 +1591,57 @@ useEffect(() => {
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>Действия</Text>
 
-            <TouchableOpacity
-              style={styles.actionsItem}
+            <Button
+              label="Импорт"
               onPress={() => {
                 setShowActions(false);
                 onImportPress?.();
               }}
-              accessibilityRole="button"
               accessibilityLabel="Импорт"
-            >
-              <Text style={styles.actionsItemText}>Импорт</Text>
-            </TouchableOpacity>
+              fullWidth
+              style={styles.actionsButton}
+            />
 
-            <TouchableOpacity
-              style={styles.actionsItem}
+            <Button
+              label="Добавить вручную"
               onPress={openManualAdd}
-              accessibilityRole="button"
               accessibilityLabel="Добавить вручную"
-            >
-              <Text style={styles.actionsItemText}>Добавить вручную</Text>
-            </TouchableOpacity>
+              fullWidth
+              style={styles.actionsButton}
+            />
 
-            <TouchableOpacity
-              style={styles.actionsItem}
+            <Button
+              label="Выбрать точки"
               onPress={() => {
                 setShowActions(false);
                 setSelectionMode(true);
                 setSelectedIds([]);
               }}
-              accessibilityRole="button"
               accessibilityLabel="Выбрать точки"
-            >
-              <Text style={styles.actionsItemText}>Выбрать точки</Text>
-            </TouchableOpacity>
+              fullWidth
+              style={styles.actionsButton}
+            />
 
-            <TouchableOpacity
-              style={styles.actionsItem}
+            <Button
+              label="Удалить все точки"
               onPress={() => {
                 setShowActions(false);
                 blurActiveElementForModal();
                 setShowConfirmDeleteAll(true);
               }}
-              accessibilityRole="button"
               accessibilityLabel="Удалить все точки"
-            >
-              <Text style={styles.actionsItemText}>Удалить все точки</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="danger"
+              style={styles.actionsButton}
+            />
 
-            <TouchableOpacity
-              style={[styles.actionsItem, styles.actionsItemCancel]}
+            <Button
+              label="Отмена"
               onPress={() => setShowActions(false)}
-              accessibilityRole="button"
               accessibilityLabel="Отмена"
-            >
-              <Text style={styles.actionsItemCancelText}>Отмена</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="ghost"
+            />
           </View>
         </View>
       </Modal>
@@ -1673,28 +1664,24 @@ useEffect(() => {
             <Text style={styles.actionsTitle}>Удалить точку?</Text>
             <Text style={styles.emptySubtext}>{String(pointToDelete?.name ?? '')}</Text>
 
-            <TouchableOpacity
-              style={[
-                styles.manualSaveButton,
-                { backgroundColor: colors.danger } as any,
-                isBulkWorking && styles.manualSaveButtonDisabled,
-              ]}
+            <Button
+              label="Удалить"
               onPress={confirmDeletePoint}
               disabled={isBulkWorking}
-              accessibilityRole="button"
+              loading={isBulkWorking}
               accessibilityLabel="Удалить"
-            >
-              <Text style={styles.manualSaveButtonText}>Удалить</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="danger"
+            />
 
-            <TouchableOpacity
-              style={[styles.actionsItem, styles.actionsItemCancel, { marginTop: DESIGN_TOKENS.spacing.sm } as any]}
+            <Button
+              label="Отмена"
               onPress={() => setPointToDelete(null)}
-              accessibilityRole="button"
               accessibilityLabel="Отмена"
-            >
-              <Text style={styles.actionsItemCancelText}>Отмена</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="ghost"
+              style={styles.modalSpacing}
+            />
           </View>
         </View>
       </Modal>
@@ -1730,24 +1717,23 @@ useEffect(() => {
               />
             </FormFieldWithValidation>
 
-            <TouchableOpacity
-              style={[styles.manualSaveButton, isBulkWorking && styles.manualSaveButtonDisabled]}
+            <Button
+              label="Применить"
               onPress={applyBulkEdit}
               disabled={isBulkWorking || selectedIds.length === 0}
-              accessibilityRole="button"
+              loading={isBulkWorking}
               accessibilityLabel="Применить"
-            >
-              <Text style={styles.manualSaveButtonText}>Применить</Text>
-            </TouchableOpacity>
+              fullWidth
+            />
 
-            <TouchableOpacity
-              style={[styles.actionsItem, styles.actionsItemCancel, { marginTop: DESIGN_TOKENS.spacing.sm } as any]}
+            <Button
+              label="Отмена"
               onPress={() => setShowBulkEdit(false)}
-              accessibilityRole="button"
               accessibilityLabel="Отмена"
-            >
-              <Text style={styles.actionsItemCancelText}>Отмена</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="ghost"
+              style={styles.modalSpacing}
+            />
           </View>
         </View>
       </Modal>
@@ -1769,24 +1755,24 @@ useEffect(() => {
             <Text style={styles.actionsTitle}>Удалить выбранные?</Text>
             <Text style={styles.emptySubtext}>Будут удалены: {selectedIds.length}</Text>
 
-            <TouchableOpacity
-              style={[styles.manualSaveButton, { backgroundColor: colors.danger } as any, isBulkWorking && styles.manualSaveButtonDisabled]}
+            <Button
+              label="Удалить"
               onPress={deleteSelected}
               disabled={isBulkWorking}
-              accessibilityRole="button"
+              loading={isBulkWorking}
               accessibilityLabel="Удалить"
-            >
-              <Text style={styles.manualSaveButtonText}>Удалить</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="danger"
+            />
 
-            <TouchableOpacity
-              style={[styles.actionsItem, styles.actionsItemCancel, { marginTop: DESIGN_TOKENS.spacing.sm } as any]}
+            <Button
+              label="Отмена"
               onPress={() => setShowConfirmDeleteSelected(false)}
-              accessibilityRole="button"
               accessibilityLabel="Отмена"
-            >
-              <Text style={styles.actionsItemCancelText}>Отмена</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="ghost"
+              style={styles.modalSpacing}
+            />
           </View>
         </View>
       </Modal>
@@ -1808,24 +1794,24 @@ useEffect(() => {
             <Text style={styles.actionsTitle}>Удалить все точки?</Text>
             <Text style={styles.emptySubtext}>Это действие нельзя отменить</Text>
 
-            <TouchableOpacity
-              style={[styles.manualSaveButton, { backgroundColor: colors.danger } as any, isBulkWorking && styles.manualSaveButtonDisabled]}
+            <Button
+              label="Удалить все"
               onPress={deleteAll}
               disabled={isBulkWorking}
-              accessibilityRole="button"
+              loading={isBulkWorking}
               accessibilityLabel="Удалить все"
-            >
-              <Text style={styles.manualSaveButtonText}>Удалить все</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="danger"
+            />
 
-            <TouchableOpacity
-              style={[styles.actionsItem, styles.actionsItemCancel, { marginTop: DESIGN_TOKENS.spacing.sm } as any]}
+            <Button
+              label="Отмена"
               onPress={() => setShowConfirmDeleteAll(false)}
-              accessibilityRole="button"
               accessibilityLabel="Отмена"
-            >
-              <Text style={styles.actionsItemCancelText}>Отмена</Text>
-            </TouchableOpacity>
+              fullWidth
+              variant="ghost"
+              style={styles.modalSpacing}
+            />
           </View>
         </View>
       </Modal>
@@ -1846,14 +1832,13 @@ useEffect(() => {
           <View style={styles.manualModal}>
             <View style={styles.manualHeader}>
               <Text style={styles.manualTitle}>{editingPointId ? 'Редактировать точку' : 'Добавить точку вручную'}</Text>
-              <TouchableOpacity
-                style={styles.manualHeaderButton}
+              <Button
+                label="Закрыть"
                 onPress={closeManualAdd}
-                accessibilityRole="button"
                 accessibilityLabel="Закрыть"
-              >
-                <Text style={styles.manualHeaderButtonText}>Закрыть</Text>
-              </TouchableOpacity>
+                size="sm"
+                variant="secondary"
+              />
             </View>
 
             <ScrollView style={styles.manualScroll} contentContainerStyle={styles.manualScrollContent}>
@@ -1943,17 +1928,14 @@ useEffect(() => {
             </ScrollView>
 
             <View style={styles.manualFooter}>
-              <TouchableOpacity
-                style={[styles.manualSaveButton, isSavingManual && styles.manualSaveButtonDisabled]}
+              <Button
+                label={isSavingManual ? 'Сохранение…' : 'Сохранить'}
                 onPress={handleSaveManual}
                 disabled={isSavingManual}
-                accessibilityRole="button"
+                loading={isSavingManual}
                 accessibilityLabel="Сохранить точку"
-              >
-                <Text style={styles.manualSaveButtonText}>
-                  {isSavingManual ? 'Сохранение…' : 'Сохранить'}
-                </Text>
-              </TouchableOpacity>
+                fullWidth
+              />
             </View>
           </View>
         </View>
@@ -1973,64 +1955,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   header: {
     padding: 0,
     gap: DESIGN_TOKENS.spacing.sm,
-  },
-  bulkBar: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingTop: DESIGN_TOKENS.spacing.md,
-    paddingBottom: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: colors.backgroundSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  bulkBarText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '700' as any,
-    color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  bulkBarActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.sm,
-    alignItems: 'center',
-  },
-  bulkBarButton: {
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  bulkBarButtonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '700' as any,
-    color: colors.text,
-  },
-  bulkBarButtonPrimary: {
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.primary,
-  },
-  bulkBarButtonPrimaryText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '800' as any,
-    color: colors.textOnPrimary,
-  },
-  bulkBarButtonDanger: {
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.danger,
-  },
-  bulkBarButtonDangerText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '800' as any,
-    color: colors.textOnPrimary,
-  },
-  bulkBarButtonDisabled: {
-    opacity: 0.7,
   },
   bulkMapBar: {
     position: 'absolute',
@@ -2063,41 +1987,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexWrap: 'wrap',
     gap: DESIGN_TOKENS.spacing.sm,
     justifyContent: 'flex-end',
-  },
-  bulkMapBarButton: {
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  bulkMapBarButtonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '700' as any,
-    color: colors.text,
-  },
-  bulkMapBarButtonPrimary: {
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.primary,
-  },
-  bulkMapBarButtonPrimaryText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '800' as any,
-    color: colors.textOnPrimary,
-  },
-  bulkMapBarButtonDanger: {
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.danger,
-  },
-  bulkMapBarButtonDangerText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '800' as any,
-    color: colors.textOnPrimary,
   },
   listContent: {
     paddingBottom: DESIGN_TOKENS.spacing.xl,
@@ -2185,58 +2074,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     flexWrap: 'wrap',
     gap: DESIGN_TOKENS.spacing.sm,
-  },
-  headerButton: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-    minHeight: DESIGN_TOKENS.touchTarget.minHeight,
-    justifyContent: 'center',
-  },
-  headerIconButton: {
-    width: DESIGN_TOKENS.touchTarget.minHeight,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerIconButtonPrimary: {
-    width: DESIGN_TOKENS.touchTarget.minHeight,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerButtonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '700' as any,
-    color: colors.text,
-  },
-  recoOpenButton: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.primary,
-    borderWidth: 1,
-    borderColor: colors.primaryDark,
-  },
-  recoOpenButtonFull: {
-    width: '100%',
-    paddingVertical: 12,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    justifyContent: 'center',
-  },
-  recoOpenButtonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '700' as any,
-    color: colors.textOnPrimary,
-  },
-  recoOpenButtonTextFull: {
-    marginLeft: 8,
-    flexShrink: 1,
   },
   title: {
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
@@ -2326,29 +2163,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.md,
   },
-  actionsItem: {
-    paddingVertical: DESIGN_TOKENS.spacing.md,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
+  actionsButton: {
     marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  actionsItemText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '700' as any,
-    color: colors.text,
-  },
-  actionsItemCancel: {
-    backgroundColor: 'transparent',
-    borderColor: colors.border,
-  },
-  actionsItemCancelText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '700' as any,
-    color: colors.textMuted,
-    textAlign: 'center',
   },
   manualOverlay: {
     flex: 1,
@@ -2384,19 +2200,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '800' as any,
     color: colors.text,
     flex: 1,
-  },
-  manualHeaderButton: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  manualHeaderButtonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '700' as any,
-    color: colors.text,
   },
   manualScroll: {
     flex: 1,
@@ -2452,19 +2255,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  manualSaveButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    alignItems: 'center',
-  },
-  manualSaveButtonDisabled: {
-    opacity: 0.7,
-  },
-  manualSaveButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '800' as any,
+  modalSpacing: {
+    marginTop: DESIGN_TOKENS.spacing.sm,
   },
   manualErrorText: {
     marginTop: DESIGN_TOKENS.spacing.sm,
@@ -2561,18 +2353,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textOnPrimary,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600' as any,
-  },
-  webChip: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    backgroundColor: colors.backgroundTertiary,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  webChipText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: '600' as any,
-    color: colors.text,
   },
 });

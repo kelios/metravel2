@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
+import Chip from '@/components/ui/Chip';
 
 const NAMED_COLORS: Record<string, string> = {
   gray: '#9e9e9e',
@@ -115,14 +116,13 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
             {presets.map((p) => {
               const isSelected = String(activePresetId ?? '') === p.id;
               return (
-                <TouchableOpacity
-                  key={p.id}
-                  style={[styles.chip, isSelected && styles.chipActive]}
-                  onPress={() => onPresetChange?.(isSelected ? null : p.id)}
-                  accessibilityLabel={p.label}
-                >
-                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{p.label}</Text>
-                </TouchableOpacity>
+                <View key={p.id} style={styles.chipItem}>
+                  <Chip
+                    label={p.label}
+                    selected={isSelected}
+                    onPress={() => onPresetChange?.(isSelected ? null : p.id)}
+                  />
+                </View>
               );
             })}
           </View>
@@ -135,15 +135,9 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
             {radiusOptions.map((km) => {
               const isSelected = filters.radiusKm === km;
               return (
-                <TouchableOpacity
-                  key={km === null ? 'all' : km}
-                  style={[styles.chip, isSelected && styles.chipActive]}
-                  onPress={() => setRadius(km)}
-                >
-                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                    {getRadiusLabel(km)}
-                  </Text>
-                </TouchableOpacity>
+                <View key={km === null ? 'all' : km} style={styles.chipItem}>
+                  <Chip label={getRadiusLabel(km)} selected={isSelected} onPress={() => setRadius(km)} />
+                </View>
               );
             })}
           </View>
@@ -157,15 +151,9 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
             {radiusOptions.map((km) => {
               const isSelected = filters.radiusKm === km;
               return (
-                <TouchableOpacity
-                  key={km === null ? 'all' : km}
-                  style={[styles.chip, isSelected && styles.chipActive]}
-                  onPress={() => setRadius(km)}
-                >
-                  <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>
-                    {getRadiusLabel(km)}
-                  </Text>
-                </TouchableOpacity>
+                <View key={km === null ? 'all' : km} style={styles.chipItem}>
+                  <Chip label={getRadiusLabel(km)} selected={isSelected} onPress={() => setRadius(km)} />
+                </View>
               );
             })}
           </ScrollView>
@@ -227,13 +215,9 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
               {siteCategoryOptions.map((cat) => {
                 const isSelected = filters.categoryIds?.includes(cat.id);
                 return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[styles.chip, isSelected && styles.chipActive]}
-                    onPress={() => toggleSiteCategory(cat.id)}
-                  >
-                    <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{cat.name}</Text>
-                  </TouchableOpacity>
+                  <View key={cat.id} style={styles.chipItem}>
+                    <Chip label={cat.name} selected={isSelected} onPress={() => toggleSiteCategory(cat.id)} />
+                  </View>
                 );
               })}
             </View>
@@ -247,13 +231,9 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
               {siteCategoryOptions.map((cat) => {
                 const isSelected = filters.categoryIds?.includes(cat.id);
                 return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[styles.chip, isSelected && styles.chipActive]}
-                    onPress={() => toggleSiteCategory(cat.id)}
-                  >
-                    <Text style={[styles.chipText, isSelected && styles.chipTextActive]}>{cat.name}</Text>
-                  </TouchableOpacity>
+                  <View key={cat.id} style={styles.chipItem}>
+                    <Chip label={cat.name} selected={isSelected} onPress={() => toggleSiteCategory(cat.id)} />
+                  </View>
                 );
               })}
             </ScrollView>
@@ -294,28 +274,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexWrap: 'wrap',
     alignItems: 'center',
   },
-  chip: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.full,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+  chipItem: {
     marginRight: DESIGN_TOKENS.spacing.xs,
     marginBottom: DESIGN_TOKENS.spacing.xs,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primaryDark,
-  },
-  chipText: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '600' as any,
-  },
-  chipTextActive: {
-    color: colors.textOnPrimary,
-    fontWeight: '700' as any,
   },
   colorDot: {
     width: 24,

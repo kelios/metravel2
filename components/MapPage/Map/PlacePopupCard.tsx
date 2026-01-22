@@ -35,8 +35,8 @@ const PlacePopupCard: React.FC<Props> = ({
   onAddPoint,
   addDisabled = false,
   isAdding = false,
-  addLabel = 'Добавить в мои точки',
-  width = 320,
+  addLabel = 'Мои точки',
+  width = 380,
   imageHeight = 86,
 }) => {
   const colors = useThemedColors();
@@ -46,9 +46,10 @@ const PlacePopupCard: React.FC<Props> = ({
   const isCompactPopup = viewportWidth <= 640;
   const isNarrowPopup = viewportWidth <= 480;
   const compactLabel = isNarrowPopup ? 'В мои точки' : addLabel;
+  const maxPopupWidth = Math.min(width, Math.max(280, viewportWidth - (isNarrowPopup ? 32 : 64)));
 
   return (
-    <View style={{ width: '100%', maxWidth: width, gap: isCompactPopup ? 6 : 10 }}>
+    <View style={{ width: '100%', maxWidth: maxPopupWidth, gap: isCompactPopup ? 6 : 10 }}>
       <View style={{ flexDirection: 'row', gap: isCompactPopup ? 8 : 12 }}>
         <View
           style={{
@@ -136,15 +137,13 @@ const PlacePopupCard: React.FC<Props> = ({
           )}
 
           {hasCoord && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               <Text
                 style={{
                   fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
                   color: colors.text,
                   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
-                  flex: 1,
                 }}
-                numberOfLines={1}
               >
                 {coord}
               </Text>
@@ -159,7 +158,6 @@ const PlacePopupCard: React.FC<Props> = ({
                   style={({ pressed }) => ({
                     flexDirection: 'row',
                     alignItems: 'center',
-                    gap: 6,
                     paddingVertical: isNarrowPopup ? 2 : isCompactPopup ? 3 : 4,
                     paddingHorizontal: isNarrowPopup ? 5 : isCompactPopup ? 6 : 8,
                     borderRadius: isNarrowPopup ? 6 : isCompactPopup ? 7 : 8,
@@ -171,14 +169,6 @@ const PlacePopupCard: React.FC<Props> = ({
                   })}
                 >
                   <Feather name="clipboard" size={13} color={colors.textMuted} />
-                  <Text
-                    style={{
-                      fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-                      color: colors.textMuted,
-                    }}
-                  >
-                    Копировать
-                  </Text>
                 </Pressable>
               )}
             </View>
@@ -284,7 +274,7 @@ const PlacePopupCard: React.FC<Props> = ({
                 color: colors.text,
               }}
             >
-              Поделиться
+              Телеграм
             </Text>
           </Pressable>
         )}

@@ -3,7 +3,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState, useEffect, useTransition } from 'react';
-import { View, StyleSheet, Pressable, Text, Platform, InteractionManager } from 'react-native';
+import { View, StyleSheet, Platform, InteractionManager } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
@@ -11,6 +11,8 @@ import { MapPeekPreview } from './MapPeekPreview';
 import TravelListPanel from './TravelListPanel';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
+import IconButton from '@/components/ui/IconButton';
+import Button from '@/components/ui/Button';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import { LAYOUT } from '@/constants/layout';
 
@@ -162,19 +164,17 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
         {showRouteCta && (
           <View style={styles.filtersPeekCtaRow}>
-            <Pressable
-              style={[styles.primaryCta, (!canBuildRoute || routingLoading) && styles.primaryCtaDisabled]}
+            <Button
+              label={routeCtaLabel}
               onPress={() => {
                 if (!canBuildRoute || routingLoading) return;
                 filtersPanelProps?.props?.onBuildRoute?.();
               }}
               disabled={!canBuildRoute || routingLoading}
-              accessibilityRole="button"
               accessibilityLabel="Построить маршрут"
-              accessibilityState={{ disabled: !canBuildRoute || routingLoading }}
-            >
-              <Text style={styles.primaryCtaText}>{routeCtaLabel}</Text>
-            </Pressable>
+              variant="primary"
+              fullWidth
+            />
           </View>
         )}
       </View>
@@ -190,9 +190,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     filtersPanelProps,
     styles.filtersPeek,
     styles.filtersPeekCtaRow,
-    styles.primaryCta,
-    styles.primaryCtaDisabled,
-    styles.primaryCtaText,
     canBuildRoute,
     routingLoading,
     routeCtaLabel,
@@ -256,18 +253,16 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             </View>
 
             {uiTab === 'filters' && typeof filtersPanelProps?.props?.resetFilters === 'function' && (
-              <Pressable
+              <IconButton
                 testID="map-panel-reset"
-                style={styles.sheetIconButton}
+                icon={<MaterialIcons name="refresh" size={20} color={colors.textMuted} />}
+                label="Сбросить фильтры"
+                size="sm"
                 onPress={() => {
                   filtersPanelProps?.props?.resetFilters?.();
                 }}
-                hitSlop={10}
-                accessibilityRole="button"
-                accessibilityLabel="Сбросить фильтры"
-              >
-                <MaterialIcons name="refresh" size={20} color={colors.textMuted} />
-              </Pressable>
+                style={styles.sheetIconButton}
+              />
             )}
           </View>
 
@@ -376,6 +371,12 @@ const getStyles = (colors: ThemedColors) =>
       borderColor: colors.border,
       backgroundColor: colors.surface,
       flexShrink: 0,
+      marginHorizontal: 0,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
     },
     sheetBody: {
       flex: 1,
@@ -386,20 +387,5 @@ const getStyles = (colors: ThemedColors) =>
     filtersPeekCtaRow: {
       paddingHorizontal: 12,
       paddingBottom: 4,
-    },
-    primaryCta: {
-      minHeight: 44,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primary,
-    },
-    primaryCtaDisabled: {
-      opacity: 0.5,
-    },
-    primaryCtaText: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.textOnPrimary,
     },
   });

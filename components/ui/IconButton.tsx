@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { Pressable, StyleSheet, View, Platform } from 'react-native';
+import { Pressable, StyleSheet, View, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -12,10 +12,16 @@ interface IconButtonProps {
   disabled?: boolean;
   size?: 'sm' | 'md';
   testID?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
+
+const getBoxShadows = (colors: ThemedColors) => {
+  const themed = colors as unknown as { boxShadows?: typeof DESIGN_TOKENS.shadows };
+  return themed.boxShadows ?? DESIGN_TOKENS.shadows;
+};
 
 function IconButton({
   icon,
@@ -25,6 +31,7 @@ function IconButton({
   disabled = false,
   size = 'md',
   testID,
+  style,
 }: IconButtonProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -51,6 +58,7 @@ function IconButton({
           backgroundColor: active ? colors.primary : colors.surface,
           // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
         },
+        style,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
       ]}
@@ -60,30 +68,33 @@ function IconButton({
   );
 }
 
-const getStyles = (colors: ThemedColors) => StyleSheet.create({
-  base: {
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: spacing.xs / 2,
-    shadowColor: colors.text,
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 6,
-    elevation: 2,
-    ...Platform.select({
-      web: {
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-        boxShadow: colors.boxShadows.light,
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: colors.primarySoft,
-          transform: 'scale(1.05)',
+const getStyles = (colors: ThemedColors) => {
+  const boxShadows = getBoxShadows(colors);
+
+  return StyleSheet.create({
+    base: {
+      // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginHorizontal: spacing.xs / 2,
+      shadowColor: colors.text,
+      shadowOpacity: 0.08,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 6,
+      elevation: 2,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+          boxShadow: boxShadows.light,
+          // @ts-ignore
+          ':hover': {
+            backgroundColor: colors.primarySoft,
+            transform: 'scale(1.05)',
+          },
         },
-      },
-    }),
-  },
+      }),
+    },
   icon: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -94,6 +105,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   pressed: {
     transform: [{ scale: 0.97 }],
   },
-});
+  });
+};
 
 export default memo(IconButton);

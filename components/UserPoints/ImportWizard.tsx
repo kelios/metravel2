@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { GoogleMapsParser } from '@/src/api/parsers/googleMapsParser';
@@ -8,6 +8,7 @@ import { userPointsApi } from '@/src/api/userPoints';
 import type { ImportPointsResult, ParsedPoint } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 type ImportStep = 'intro' | 'preview' | 'progress' | 'complete';
 
@@ -127,15 +128,12 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
         OpenStreetMap: GeoJSON, GPX
       </Text>
 
-      <TouchableOpacity
-        style={styles.importButton}
+      <Button
+        label={isLoading ? 'Открываем…' : 'Импорт точек'}
         onPress={pickDocument}
         disabled={isLoading}
-      >
-        <Text style={styles.importButtonText}>
-          {isLoading ? 'Открываем…' : 'Импорт точек'}
-        </Text>
-      </TouchableOpacity>
+        fullWidth
+      />
 
       {file ? (
         <Text style={[styles.subtitle, { marginTop: DESIGN_TOKENS.spacing.md }]}>Выбран: {file.name}</Text>
@@ -144,9 +142,13 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       {isLoading && <ActivityIndicator size="large" style={styles.loader} />}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-        <Text style={styles.cancelButtonText}>Отмена</Text>
-      </TouchableOpacity>
+      <Button
+        label="Отмена"
+        onPress={onCancel}
+        variant="ghost"
+        fullWidth
+        style={styles.cancelButton}
+      />
     </View>
   );
 
@@ -179,18 +181,18 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       {error && <Text style={styles.errorText}>{error}</Text>}
 
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setStep('intro')}>
-          <Text style={styles.backButtonText}>Назад</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.importButton} 
+        <Button
+          label="Назад"
+          onPress={() => setStep('intro')}
+          variant="secondary"
+          style={styles.buttonFlex}
+        />
+        <Button
+          label={isLoading ? 'Импорт...' : 'Импортировать'}
           onPress={handleImport}
           disabled={isLoading}
-        >
-          <Text style={styles.importButtonText}>
-            {isLoading ? 'Импорт...' : 'Импортировать'}
-          </Text>
-        </TouchableOpacity>
+          style={styles.buttonFlex}
+        />
       </View>
     </View>
   );
@@ -218,9 +220,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
         <Text style={styles.errorText}>Ошибки: {importResult.errors.length}</Text>
       ) : null}
 
-      <TouchableOpacity style={styles.importButton} onPress={onComplete}>
-        <Text style={styles.importButtonText}>Готово</Text>
-      </TouchableOpacity>
+      <Button label="Готово" onPress={onComplete} fullWidth />
     </View>
   );
 
@@ -304,44 +304,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: DESIGN_TOKENS.spacing.md,
     marginTop: DESIGN_TOKENS.spacing.lg,
   },
-  importButton: {
-    backgroundColor: colors.primary,
-    padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
+  buttonFlex: {
     flex: 1,
-    alignItems: 'center',
-  },
-  importButtonText: {
-    color: colors.textOnPrimary,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '600' as any,
-  },
-  backButton: {
-    backgroundColor: colors.backgroundSecondary,
-    padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    marginRight: DESIGN_TOKENS.spacing.md,
-    flex: 1,
-    alignItems: 'center',
-  },
-  backButtonText: {
-    color: colors.text,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '600' as any,
   },
   cancelButton: {
-    backgroundColor: 'transparent',
-    padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    alignItems: 'center',
     marginTop: DESIGN_TOKENS.spacing.md,
-  },
-  cancelButtonText: {
-    color: colors.textMuted,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
   },
   uploadButton: {
     padding: DESIGN_TOKENS.spacing.xl,

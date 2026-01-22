@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import MapIcon from './MapIcon';
 import RoutingStatus from '@/components/MapPage/RoutingStatus';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
+import IconButton from '@/components/ui/IconButton';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 interface FiltersPanelHeaderProps {
@@ -44,14 +45,12 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
               {totalPoints} {mode === 'radius' ? `мест • ${radiusValue || '60'} км` : 'мест'}
             </Text>
           </View>
-          <Pressable
-            style={styles.closeButton}
+          <IconButton
+            icon={<MapIcon name="close" size={20} color={colors.textMuted} />}
+            label="Закрыть"
             onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Закрыть"
-          >
-            <MapIcon name="close" size={20} color={colors.textMuted} />
-          </Pressable>
+            size="sm"
+          />
         </View>
       )}
       <SegmentedControl

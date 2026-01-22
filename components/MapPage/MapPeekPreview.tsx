@@ -7,6 +7,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-n
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import MapIcon from './MapIcon';
+import Button from '@/components/ui/Button';
 
 interface MapPeekPreviewProps {
   places: any[];
@@ -66,10 +67,14 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
     return (
       <View style={styles.container}>
         <Text style={styles.emptyText}>Мест не найдено</Text>
-        <Pressable style={styles.expandButton} onPress={onExpandPress}>
-          <Text style={styles.expandText}>Изменить фильтры</Text>
-          <MapIcon name="expand-less" size={20} color={colors.primary} />
-        </Pressable>
+        <Button
+          label="Изменить фильтры"
+          icon={<MapIcon name="expand-less" size={20} color={colors.primary} />}
+          onPress={onExpandPress}
+          variant="ghost"
+          size="sm"
+          style={styles.expandButton}
+        />
       </View>
     );
   }
@@ -140,10 +145,14 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
       </ScrollView>
 
       {places.length > 3 && (
-        <Pressable style={styles.moreButton} onPress={onExpandPress}>
-          <Text style={styles.moreText}>Ещё {places.length - 3}</Text>
-          <MapIcon name="expand-less" size={20} color={colors.primary} />
-        </Pressable>
+        <Button
+          label={`Ещё ${places.length - 3}`}
+          icon={<MapIcon name="expand-less" size={20} color={colors.primary} />}
+          onPress={onExpandPress}
+          variant="ghost"
+          size="sm"
+          style={styles.moreButton}
+        />
       )}
     </View>
   );
@@ -173,15 +182,7 @@ const getStyles = (colors: ThemedColors) =>
       marginBottom: 12,
     },
     expandButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
-    },
-    expandText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.primary,
+      alignSelf: 'center',
     },
     placeCard: {
       backgroundColor: colors.backgroundSecondary,
@@ -248,16 +249,7 @@ const getStyles = (colors: ThemedColors) =>
       color: colors.accent,
     },
     moreButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 4,
+      alignSelf: 'center',
       marginTop: 12,
-      paddingVertical: 8,
-    },
-    moreText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.primary,
     },
   });

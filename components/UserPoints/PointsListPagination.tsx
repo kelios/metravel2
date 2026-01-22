@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react'
-import { Text, TouchableOpacity, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
+import Button from '@/components/ui/Button'
 
 export const PointsListPagination: React.FC<{
   page: number
@@ -37,45 +38,27 @@ export const PointsListPagination: React.FC<{
         gap: DESIGN_TOKENS.spacing.md,
       }}
     >
-      <TouchableOpacity
+      <Button
+        label="Назад"
         onPress={() => onPageChange(page - 1)}
         disabled={!canPrev}
-        accessibilityRole="button"
+        size="sm"
+        variant="secondary"
         accessibilityLabel="Предыдущая страница"
-        style={{
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          paddingVertical: DESIGN_TOKENS.spacing.sm,
-          borderRadius: DESIGN_TOKENS.radii.md,
-          backgroundColor: colors.backgroundSecondary,
-          borderWidth: 1,
-          borderColor: colors.border,
-          opacity: canPrev ? 1 : 0.5,
-        }}
-      >
-        <Text style={{ color: colors.text, fontWeight: '700' as any }}>Назад</Text>
-      </TouchableOpacity>
+      />
 
       <Text style={{ color: colors.textMuted, fontWeight: '600' as any }}>
         Страница {page} из {totalPages}
       </Text>
 
-      <TouchableOpacity
+      <Button
+        label="Вперёд"
         onPress={() => onPageChange(page + 1)}
         disabled={!canNext}
-        accessibilityRole="button"
+        size="sm"
+        variant="secondary"
         accessibilityLabel="Следующая страница"
-        style={{
-          paddingHorizontal: DESIGN_TOKENS.spacing.md,
-          paddingVertical: DESIGN_TOKENS.spacing.sm,
-          borderRadius: DESIGN_TOKENS.radii.md,
-          backgroundColor: colors.backgroundSecondary,
-          borderWidth: 1,
-          borderColor: colors.border,
-          opacity: canNext ? 1 : 0.5,
-        }}
-      >
-        <Text style={{ color: colors.text, fontWeight: '700' as any }}>Вперёд</Text>
-      </TouchableOpacity>
+      />
     </View>
   )
 }

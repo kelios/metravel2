@@ -419,7 +419,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       ],
     }
 
-    const { getByTestId } = renderWithProviders(
+    const { getAllByLabelText } = renderWithProviders(
       <MapPageComponent
         {...defaultProps}
         mode="radius"
@@ -429,7 +429,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
 
     await act(async () => {})
 
-    fireEvent.press(getByTestId('unified-travel-card-media'))
+    fireEvent.press(getAllByLabelText('Открыть статью')[0])
     expect(openSpy).toHaveBeenCalledWith('https://example.com/article', '_blank', 'noopener,noreferrer')
 
     ;(process.env as any).NODE_ENV = prevNodeEnv

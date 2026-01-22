@@ -530,7 +530,7 @@ const AddToPointsButton = React.memo(function AddToPointsButton({
       <Pressable
         onPress={onPress}
         disabled={disabled || loading}
-        accessibilityLabel="Добавить в мои точки"
+        accessibilityLabel="Мои точки"
         style={({ pressed }) => [
           styles.addButton,
           pressed && !disabled && !loading && styles.addButtonPressed,
@@ -545,7 +545,7 @@ const AddToPointsButton = React.memo(function AddToPointsButton({
           <View style={styles.addButtonRow}>
             <Feather name="plus-circle" size={16} color={colors.textOnPrimary} />
             <Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>
-              Добавить в мои точки
+              Мои точки
             </Text>
           </View>
         )}
@@ -905,7 +905,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
                   : []
               }
               inlineActions={
-                !!(item.articleUrl || item.urlTravel || baseUrl)
+                item.articleUrl || item.urlTravel || baseUrl
                   ? [
                       {
                         key: 'article',

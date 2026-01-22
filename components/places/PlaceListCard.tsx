@@ -60,7 +60,7 @@ const PlaceListCard: React.FC<Props> = ({
   onAddPoint,
   addDisabled = false,
   isAdding = false,
-  addLabel = 'Добавить в мои точки',
+  addLabel = 'Мои точки',
   width = 300,
   imageHeight = 180,
   testID,
@@ -73,6 +73,7 @@ const PlaceListCard: React.FC<Props> = ({
   const showBadges = badges.length > 0;
   const hasMapActions = mapActions.length > 0;
   const hasInlineActions = inlineActions.length > 0;
+  const showBottomRow = Boolean(onAddPoint);
 
   return (
     <UnifiedTravelCard
@@ -93,6 +94,7 @@ const PlaceListCard: React.FC<Props> = ({
             </Text>
             {!!categoryLabel && (
               <View style={styles.categoryChip}>
+                <Feather name="tag" size={12} color={colors.textMuted} />
                 <Text style={styles.categoryText} numberOfLines={1}>
                   {categoryLabel}
                 </Text>
@@ -112,9 +114,8 @@ const PlaceListCard: React.FC<Props> = ({
 
           {hasCoord && (
             <View style={styles.section}>
-              <Text style={styles.sectionLabel}>Координаты</Text>
               <View style={styles.coordRow}>
-                <Text style={styles.coordText} numberOfLines={1}>
+                <Text style={styles.coordText}>
                   {coord}
                 </Text>
                 {onCopyCoord && (
@@ -128,7 +129,6 @@ const PlaceListCard: React.FC<Props> = ({
                     style={styles.inlineAction}
                   >
                     <Feather name="copy" size={14} color={colors.textMuted} />
-                    <Text style={styles.inlineActionText}>Копировать</Text>
                   </Pressable>
                 )}
                 {onShare && (
@@ -142,7 +142,7 @@ const PlaceListCard: React.FC<Props> = ({
                     style={styles.inlineAction}
                   >
                     <Feather name="send" size={14} color={colors.textMuted} />
-                    <Text style={styles.inlineActionText}>Поделиться</Text>
+                    <Text style={styles.inlineActionText}>Телеграм</Text>
                   </Pressable>
                 )}
               </View>
@@ -151,13 +151,12 @@ const PlaceListCard: React.FC<Props> = ({
 
           {(hasMapActions || hasInlineActions) && (
             <View style={styles.section}>
-              {hasMapActions && <Text style={styles.sectionLabel}>Открыть на карте</Text>}
               {hasMapActions && (
                 <View style={styles.mapActionsRow}>
                   {mapActions.map((action) => (
                     <Pressable
                       key={action.key}
-                      accessibilityLabel={action.accessibilityLabel ?? action.label}
+                      accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
                       onPress={(e) => {
                         e?.stopPropagation?.();
                         action.onPress();
@@ -174,13 +173,17 @@ const PlaceListCard: React.FC<Props> = ({
                   ))}
                 </View>
               )}
+            </View>
+          )}
 
+          {showBottomRow ? (
+            <View style={styles.bottomRow}>
               {hasInlineActions && (
-                <View style={styles.inlineActionsRow}>
+                <View style={styles.bottomInlineActions}>
                   {inlineActions.map((action) => (
                     <Pressable
                       key={action.key}
-                      accessibilityLabel={action.accessibilityLabel ?? action.label}
+                      accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
                       onPress={(e) => {
                         e?.stopPropagation?.();
                         action.onPress();
@@ -189,7 +192,7 @@ const PlaceListCard: React.FC<Props> = ({
                         'data-card-action': 'true',
                         title: action.title ?? action.label,
                       } as any)}
-                      style={styles.inlineAction}
+                      style={styles.bottomInlineAction}
                     >
                       <Feather name={action.icon} size={14} color={colors.textMuted} />
                       <Text style={styles.inlineActionText}>{action.label}</Text>
@@ -197,37 +200,62 @@ const PlaceListCard: React.FC<Props> = ({
                   ))}
                 </View>
               )}
-            </View>
-          )}
 
-          {onAddPoint && (
-            <View style={styles.addButtonContainer}>
-              <Pressable
-                onPress={(e) => {
-                  e?.stopPropagation?.();
-                  void onAddPoint();
-                }}
-                disabled={addDisabled || isAdding}
-                accessibilityLabel={addLabel}
-                style={({ pressed }) => [
-                  styles.addButton,
-                  pressed && !addDisabled && !isAdding && styles.addButtonPressed,
-                  (addDisabled || isAdding) && styles.addButtonDisabled,
-                ]}
-                {...(Platform.OS === 'web'
-                  ? ({ title: addLabel, 'aria-label': addLabel } as any)
-                  : ({ accessibilityRole: 'button' } as any))}
-              >
-                {isAdding ? (
-                  <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                ) : (
-                  <View style={styles.addButtonRow}>
-                    <Feather name="plus-circle" size={16} color={colors.textOnPrimary} />
-                    <Text style={styles.addButtonText}>{addLabel}</Text>
-                  </View>
-                )}
-              </Pressable>
+              {onAddPoint && (
+                <View style={styles.addButtonContainerInline}>
+                  <Pressable
+                    onPress={(e) => {
+                      e?.stopPropagation?.();
+                      void onAddPoint();
+                    }}
+                    disabled={addDisabled || isAdding}
+                    accessibilityLabel={addLabel}
+                    style={({ pressed }) => [
+                      styles.addButton,
+                      pressed && !addDisabled && !isAdding && styles.addButtonPressed,
+                      (addDisabled || isAdding) && styles.addButtonDisabled,
+                    ]}
+                    {...(Platform.OS === 'web'
+                      ? ({ title: addLabel, 'aria-label': addLabel } as any)
+                      : ({ accessibilityRole: 'button' } as any))}
+                  >
+                    {isAdding ? (
+                      <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                    ) : (
+                      <View style={styles.addButtonRow}>
+                        <Feather name="plus-circle" size={16} color={colors.textOnPrimary} />
+                        <Text style={styles.addButtonText} numberOfLines={1}>
+                          {addLabel}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+                </View>
+              )}
             </View>
+          ) : (
+            hasInlineActions && (
+              <View style={[styles.section, styles.inlineActionsRow]}>
+                {inlineActions.map((action) => (
+                  <Pressable
+                    key={action.key}
+                    accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+                    onPress={(e) => {
+                      e?.stopPropagation?.();
+                      action.onPress();
+                    }}
+                    {...({
+                      'data-card-action': 'true',
+                      title: action.title ?? action.label,
+                    } as any)}
+                    style={styles.inlineAction}
+                  >
+                    <Feather name={action.icon} size={14} color={colors.textMuted} />
+                    <Text style={styles.inlineActionText}>{action.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )
           )}
         </View>
       }
@@ -264,16 +292,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexShrink: 1,
     },
     categoryChip: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
       borderRadius: 999,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
     },
     categoryText: {
-      fontSize: 12,
-      fontWeight: '600',
+      fontSize: 11,
+      fontWeight: '500',
       color: colors.textMuted,
     },
     badgesRow: {
@@ -354,12 +385,44 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     inlineActionsRow: {
       flexDirection: 'row',
-      alignItems: 'center',
       flexWrap: 'wrap',
-      gap: 12,
+      gap: 8,
+    },
+    bottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+      marginTop: 4,
+    },
+    bottomInlineActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      flexShrink: 0,
+    },
+    bottomInlineAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 999,
+      backgroundColor: colors.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          cursor: 'pointer' as any,
+        },
+      }),
     },
     addButtonContainer: {
-      marginTop: DESIGN_TOKENS.spacing.sm,
+      marginTop: 4,
+    },
+    addButtonContainerInline: {
+      flex: 1,
+      minWidth: 160,
     },
     addButton: {
       backgroundColor: colors.primary,

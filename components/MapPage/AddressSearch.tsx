@@ -12,6 +12,7 @@ import {
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';
 import MapIcon from './MapIcon';
+import IconButton from '@/components/ui/IconButton';
 
 interface AddressSearchProps {
   placeholder?: string;
@@ -195,9 +196,13 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         )}
 
         {query.length > 0 && !loading && (
-          <Pressable onPress={handleClear} hitSlop={8} style={styles.clearButton}>
-            <MapIcon name="close" size={20} color={colors.textMuted} />
-          </Pressable>
+          <IconButton
+            icon={<MapIcon name="close" size={20} color={colors.textMuted} />}
+            label="Очистить поиск"
+            size="sm"
+            onPress={handleClear}
+            style={styles.clearButton}
+          />
         )}
       </View>
 
@@ -266,7 +271,17 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   clearButton: {
     marginLeft: 8,
-    padding: 4,
+    padding: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
+    marginHorizontal: 0,
   },
   resultsContainer: {
     position: 'absolute',

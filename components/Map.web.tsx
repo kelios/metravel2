@@ -1,6 +1,6 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
 import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -181,6 +181,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const siteCategoryDictionaryRef = useRef<CategoryDictionaryItem[]>([]);
   const [categoryDictionaryVersion, setCategoryDictionaryVersion] = useState(0);
   const categoryIdToName = useMemo(() => {
+    if (categoryDictionaryVersion === -1) return new Map<string, string>();
     const map = new Map<string, string>();
     for (const entry of siteCategoryDictionaryRef.current) {
       const id = String(entry.id ?? '').trim();
@@ -783,7 +784,6 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     }, [
       authReady,
       categoryLabel,
-      categoryIdToName,
       handleClose,
       isAddingPoint,
       isAuthenticated,

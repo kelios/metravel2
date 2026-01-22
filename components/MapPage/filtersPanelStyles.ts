@@ -64,15 +64,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontWeight: '600',
       color: colors.text,
     },
-    closeButton: {
-      width: 32,
-      height: 32,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: 16,
-      backgroundColor: colors.surface,
-      flexShrink: 0,
-    },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -83,68 +74,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       fontSize: 16,
       fontWeight: '700',
       color: colors.text,
-    },
-    headerActions: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    headerActionButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
-      minHeight: 36,
-    },
-    headerActionText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    modeTabs: {
-      flexDirection: 'row',
-      backgroundColor: colors.surfaceMuted,
-      borderRadius: 10,
-      padding: 4,
-      marginBottom: 12,
-    },
-    modeTab: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 10,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      paddingHorizontal: 12,
-      marginHorizontal: 2,
-      minHeight: 44,
-    },
-    modeTabActive: {
-      backgroundColor: colors.primary,
-    },
-    modeTabTextCol: {
-      marginLeft: 6,
-      flex: 1,
-    },
-    modeTabText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    modeTabTextActive: {
-      color: colors.textOnPrimary,
-    },
-    modeTabHint: {
-      fontSize: 11,
-      color: colors.textMuted,
-      marginTop: 2,
-    },
-    modeTabHintActive: {
-      color: colors.textOnPrimary,
     },
     counterRow: {
       flexDirection: 'row',
@@ -249,6 +178,12 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
+      marginHorizontal: 0,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
     },
     routePointRemoveBtnDisabled: {
       opacity: 0.4,
@@ -299,6 +234,18 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexShrink: 1,
       marginRight: 4,
     },
+    categoryChipIconButton: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      marginHorizontal: 0,
+      backgroundColor: 'transparent',
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
+    },
     moreChip: {
       backgroundColor: colors.primarySoft,
       paddingHorizontal: 10,
@@ -316,53 +263,14 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 6,
       marginTop: 8,
     },
-    radiusChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
-      minHeight: 36,
-    },
-    radiusChipActive: {
-      backgroundColor: colors.primarySoft,
-    },
-    radiusChipText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.text,
-    },
     transportTabs: {
       flexDirection: 'row',
       backgroundColor: colors.surfaceMuted,
       borderRadius: 10,
       padding: 2,
     },
-    transportTab: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 10,
-      paddingHorizontal: 10,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      marginHorizontal: 2,
-      gap: 6,
-      minHeight: 44,
-    },
-    transportTabActive: {
-      backgroundColor: colors.primary,
-    },
-    transportIcon: {
-      marginBottom: 4,
-    },
-    transportTabText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    transportTabTextActive: {
-      color: colors.textOnPrimary,
-      fontWeight: '800',
+    transportTabsDisabled: {
+      opacity: 0.5,
     },
     routeInfo: {
       backgroundColor: colors.mutedBackground ?? colors.backgroundSecondary,
@@ -635,12 +543,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     sectionDisabled: {
       opacity: 0.6,
     },
-    transportTabDisabled: {
-      opacity: 0.5,
-    },
-    transportTabTextDisabled: {
-      color: colors.textMuted,
-    },
     actionRow: {
       flexDirection: 'row',
       gap: 8,
@@ -706,25 +608,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       gap: 8,
       marginTop: 8,
     },
-    mapControlButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingVertical: 8,
-      paddingHorizontal: 10,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-    },
-    mapControlDisabled: {
-      opacity: 0.45,
-    },
-    mapControlText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.text,
-    },
     mapLayersSection: {
       marginTop: 12,
     },
@@ -733,27 +616,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexWrap: 'wrap',
       gap: 8,
       marginTop: 8,
-    },
-    layerChip: {
-      paddingVertical: 6,
-      paddingHorizontal: 10,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
-      maxWidth: '100%',
-    },
-    layerChipActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    layerChipText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    layerChipTextActive: {
-      color: colors.textOnPrimary,
     },
     stickyFooter: {
       ...(Platform.OS === 'web'
@@ -783,27 +645,6 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       alignItems: 'center',
       justifyContent: 'center',
       flex: Platform.OS === 'web' ? undefined : 1,
-    },
-    ctaOutline: {
-      borderWidth: 1,
-      borderColor: colors.primary,
-      backgroundColor: 'transparent',
-    },
-    ctaOutlineText: {
-      color: colors.primary,
-      fontWeight: '700',
-      fontSize: 14,
-    },
-    ctaPrimary: {
-      backgroundColor: colors.primary,
-    },
-    ctaPrimaryText: {
-      color: colors.textOnPrimary,
-      fontWeight: '700',
-      fontSize: 14,
-    },
-    ctaDisabled: {
-      opacity: 0.6,
     },
     helperText: {
       fontSize: 12,

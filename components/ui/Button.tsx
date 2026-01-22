@@ -34,6 +34,11 @@ export interface ButtonProps {
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
+const getBoxShadows = (colors: ThemedColors) => {
+  const themed = colors as unknown as { boxShadows?: typeof DESIGN_TOKENS.shadows };
+  return themed.boxShadows ?? DESIGN_TOKENS.shadows;
+};
+
 const ButtonComponent = ({
   label,
   onPress,
@@ -165,150 +170,162 @@ const sizeStyles: Record<ButtonSize, ViewStyle> = {
   },
 };
 
-const getVariantStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => ({
-  primary: {
-    backgroundColor: colors.primary,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.medium,
-      },
-      default: {
-        shadowColor: colors.text,
-        shadowOpacity: 0.12,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 8,
-        elevation: 3,
-      },
-    }),
-  },
-  secondary: {
-    backgroundColor: colors.surface,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      },
-      default: {
-        shadowColor: colors.text,
-        shadowOpacity: 0.08,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 6,
-        elevation: 2,
-      },
-    }),
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-  },
-  danger: {
-    backgroundColor: colors.danger,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.medium,
-      },
-      default: {
-        shadowColor: colors.text,
-        shadowOpacity: 0.12,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 8,
-        elevation: 3,
-      },
-    }),
-  },
-  outline: {
-    backgroundColor: 'transparent',
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
-});
+const getVariantStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => {
+  const boxShadows = getBoxShadows(colors);
 
-const getVariantHoverStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => ({
-  primary: {
-    backgroundColor: colors.primaryDark,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.heavy,
-      },
-    }),
-  },
-  secondary: {
-    backgroundColor: colors.primaryLight,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.hover,
-      },
-    }),
-  },
-  ghost: {
-    backgroundColor: colors.primarySoft,
-    ...Platform.select({
-      web: {},
-    }),
-  },
-  danger: {
-    backgroundColor: colors.dangerDark,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.heavy,
-      },
-    }),
-  },
-  outline: {
-    backgroundColor: colors.primarySoft,
-    ...Platform.select({
-      web: {},
-    }),
-  },
-});
+  return {
+    primary: {
+      backgroundColor: colors.primary,
+      ...Platform.select({
+        web: {
+          boxShadow: boxShadows.medium,
+        },
+        default: {
+          shadowColor: colors.text,
+          shadowOpacity: 0.12,
+          shadowOffset: { width: 0, height: 2 },
+          shadowRadius: 8,
+          elevation: 3,
+        },
+      }),
+    },
+    secondary: {
+      backgroundColor: colors.surface,
+      ...Platform.select({
+        web: {
+          boxShadow: boxShadows.light,
+        },
+        default: {
+          shadowColor: colors.text,
+          shadowOpacity: 0.08,
+          shadowOffset: { width: 0, height: 2 },
+          shadowRadius: 6,
+          elevation: 2,
+        },
+      }),
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+    },
+    danger: {
+      backgroundColor: colors.danger,
+      ...Platform.select({
+        web: {
+          boxShadow: boxShadows.medium,
+        },
+        default: {
+          shadowColor: colors.text,
+          shadowOpacity: 0.12,
+          shadowOffset: { width: 0, height: 2 },
+          shadowRadius: 8,
+          elevation: 3,
+        },
+      }),
+    },
+    outline: {
+      backgroundColor: 'transparent',
+      borderColor: colors.primary,
+      borderWidth: 2,
+    },
+  };
+};
 
-const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => ({
-  primary: {
-    transform: [{ scale: 0.99 }],
-    ...Platform.select({
-      web: {
-        // @ts-ignore
-        transform: 'translateY(0)',
-        boxShadow: colors.boxShadows.light,
-      },
-    }),
-  },
-  secondary: {
-    transform: [{ scale: 0.99 }],
-    ...Platform.select({
-      web: {
-        // @ts-ignore
-        transform: 'translateY(0)',
-      },
-    }),
-  },
-  ghost: {
-    transform: [{ scale: 0.99 }],
-    ...Platform.select({
-      web: {
-        // @ts-ignore
-        transform: 'translateY(0)',
-      },
-    }),
-  },
-  danger: {
-    transform: [{ scale: 0.99 }],
-    ...Platform.select({
-      web: {
-        // @ts-ignore
-        transform: 'translateY(0)',
-        boxShadow: colors.boxShadows.light,
-      },
-    }),
-  },
-  outline: {
-    transform: [{ scale: 0.99 }],
-    ...Platform.select({
-      web: {
-        // @ts-ignore
-        transform: 'translateY(0)',
-      },
-    }),
-  },
-});
+const getVariantHoverStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => {
+  const boxShadows = getBoxShadows(colors);
+
+  return {
+    primary: {
+      backgroundColor: colors.primaryDark,
+      ...Platform.select({
+        web: {
+          boxShadow: boxShadows.heavy,
+        },
+      }),
+    },
+    secondary: {
+      backgroundColor: colors.primaryLight,
+      ...Platform.select({
+        web: {
+          boxShadow: boxShadows.hover,
+        },
+      }),
+    },
+    ghost: {
+      backgroundColor: colors.primarySoft,
+      ...Platform.select({
+        web: {},
+      }),
+    },
+    danger: {
+      backgroundColor: colors.dangerDark,
+      ...Platform.select({
+        web: {
+          boxShadow: boxShadows.heavy,
+        },
+      }),
+    },
+    outline: {
+      backgroundColor: colors.primarySoft,
+      ...Platform.select({
+        web: {},
+      }),
+    },
+  };
+};
+
+const getVariantPressedStyles = (colors: ThemedColors): Record<ButtonVariant, ViewStyle> => {
+  const boxShadows = getBoxShadows(colors);
+
+  return {
+    primary: {
+      transform: [{ scale: 0.99 }],
+      ...Platform.select({
+        web: {
+          // @ts-ignore
+          transform: 'translateY(0)',
+          boxShadow: boxShadows.light,
+        },
+      }),
+    },
+    secondary: {
+      transform: [{ scale: 0.99 }],
+      ...Platform.select({
+        web: {
+          // @ts-ignore
+          transform: 'translateY(0)',
+        },
+      }),
+    },
+    ghost: {
+      transform: [{ scale: 0.99 }],
+      ...Platform.select({
+        web: {
+          // @ts-ignore
+          transform: 'translateY(0)',
+        },
+      }),
+    },
+    danger: {
+      transform: [{ scale: 0.99 }],
+      ...Platform.select({
+        web: {
+          // @ts-ignore
+          transform: 'translateY(0)',
+          boxShadow: boxShadows.light,
+        },
+      }),
+    },
+    outline: {
+      transform: [{ scale: 0.99 }],
+      ...Platform.select({
+        web: {
+          // @ts-ignore
+          transform: 'translateY(0)',
+        },
+      }),
+    },
+  };
+};
 
 export default memo(ButtonComponent);

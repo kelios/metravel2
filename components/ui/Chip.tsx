@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -11,12 +11,14 @@ interface ChipProps {
   icon?: React.ReactNode;
   onPress?: () => void;
   testID?: string;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
 const radii = DESIGN_TOKENS.radii;
 const spacing = DESIGN_TOKENS.spacing;
 
-function Chip({ label, selected = false, count, icon, onPress, testID }: ChipProps) {
+function Chip({ label, selected = false, count, icon, onPress, testID, disabled = false, style }: ChipProps) {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
 
   const styles = useMemo(() => StyleSheet.create({
@@ -55,6 +57,9 @@ function Chip({ label, selected = false, count, icon, onPress, testID }: ChipPro
     pressed: {
       transform: [{ scale: 0.98 }],
     },
+    disabled: {
+      opacity: 0.5,
+    },
     label: {
       color: colors.text,
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -80,14 +85,17 @@ function Chip({ label, selected = false, count, icon, onPress, testID }: ChipPro
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
       onPress={onPress}
+      disabled={disabled}
       testID={testID}
       style={({ pressed }) => [
         styles.base,
         globalFocusStyles.focusable, // ✅ УЛУЧШЕНИЕ: Добавлен focus-индикатор
         selected && styles.selected,
-        pressed && !selected && styles.pressed,
+        pressed && !selected && !disabled && styles.pressed,
+        disabled && styles.disabled,
+        style,
       ]}
     >
       {icon ? <View style={styles.icon}>{icon}</View> : null}

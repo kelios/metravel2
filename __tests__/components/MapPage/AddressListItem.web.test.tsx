@@ -109,10 +109,22 @@ describe('AddressListItem (web right panel)', () => {
       expect(calls.some((v) => v.includes('google.com/maps/search'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Открыть в Organic Maps')[0]);
+    fireEvent.press(getAllByLabelText('Открыть в Apple Maps')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
-      expect(calls.some((v) => v.includes('omaps.app'))).toBe(true);
+      expect(calls.some((v) => v.includes('maps.apple.com'))).toBe(true);
+    });
+
+    fireEvent.press(getAllByLabelText('Открыть в Яндекс Картах')[0]);
+    await waitFor(() => {
+      const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
+      expect(calls.some((v) => v.includes('yandex.ru/maps'))).toBe(true);
+    });
+
+    fireEvent.press(getAllByLabelText('Открыть в OpenStreetMap')[0]);
+    await waitFor(() => {
+      const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
+      expect(calls.some((v) => v.includes('openstreetmap.org'))).toBe(true);
     });
 
     fireEvent.press(getAllByLabelText('Поделиться в Telegram')[0]);

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { FlatList, Platform, StyleSheet, View, TouchableOpacity, useWindowDimensions, ScrollView, TextInput, Text as RNText } from 'react-native'
+import { FlatList, Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { PointsMap } from '@/components/UserPoints/PointsMap'
@@ -7,6 +7,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import { getFiltersPanelStyles } from '@/components/MapPage/filtersPanelStyles'
+import SegmentedControl from '@/components/MapPage/SegmentedControl'
+import IconButton from '@/components/ui/IconButton'
 import type { MapUiApi } from '@/src/types/mapUi'
 
 import type { PointsListStyles } from './PointsList'
@@ -123,6 +125,13 @@ export const PointsListGrid: React.FC<{
   const geocodeAbortRef = React.useRef<AbortController | null>(null)
   const geocodeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastGeocodedQueryRef = React.useRef<string>('')
+  const panelOptions = React.useMemo(
+    () => [
+      { key: 'filters', label: 'Фильтры' },
+      { key: 'list', label: `Список (${filteredPoints.length})` },
+    ],
+    [filteredPoints.length]
+  )
   
   // Auto-switch to list tab when showing recommendations
   React.useEffect(() => {
@@ -292,42 +301,25 @@ export const PointsListGrid: React.FC<{
               onMapUiApiReady={setMapUiApi}
             />
 
-            <TouchableOpacity
-              style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
+            <IconButton
+              icon={<Feather name="crosshair" size={20} color={colors.text} />}
+              label="Моё местоположение"
               onPress={onLocateMe}
               disabled={isLocating}
-              accessibilityRole="button"
-              accessibilityLabel="Моё местоположение"
-            >
-              <Feather name="crosshair" size={20} color={colors.text} />
-            </TouchableOpacity>
+              style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
+            />
           </View>
         </View>
 
         <View style={localStyles.mapRightPanel}>
           <View style={localStyles.panelTabs}>
-            <TouchableOpacity
-              style={[localStyles.panelTab, panelTab === 'filters' && localStyles.panelTabActive]}
-              onPress={() => setPanelTab('filters')}
-              accessibilityRole="button"
-              accessibilityLabel="Фильтры"
-              testID="userpoints-panel-tab-filters"
-            >
-              <RNText style={[localStyles.panelTabText, panelTab === 'filters' && localStyles.panelTabTextActive]}>
-                Фильтры
-              </RNText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[localStyles.panelTab, panelTab === 'list' && localStyles.panelTabActive]}
-              onPress={() => setPanelTab('list')}
-              accessibilityRole="button"
-              accessibilityLabel="Список"
-              testID="userpoints-panel-tab-list"
-            >
-              <RNText style={[localStyles.panelTabText, panelTab === 'list' && localStyles.panelTabTextActive]}>
-                Список ({filteredPoints.length})
-              </RNText>
-            </TouchableOpacity>
+            <SegmentedControl
+              options={panelOptions}
+              value={panelTab}
+              onChange={(key) => setPanelTab(key as 'filters' | 'list')}
+              accessibilityLabel="Панель"
+              compact
+            />
           </View>
 
           {panelTab === 'filters' ? (
@@ -396,48 +388,41 @@ export const PointsListGrid: React.FC<{
                       testID="userpoints-list-search"
                     />
 
-                    <TouchableOpacity
-                      style={localStyles.listControlButton}
+                    <IconButton
+                      icon={<Feather name="sliders" size={16} color={themedColors.text} />}
+                      label="Фильтры"
                       onPress={() => setPanelTab('filters')}
-                      accessibilityRole="button"
-                      accessibilityLabel="Фильтры"
+                      size="sm"
                       testID="userpoints-list-open-filters"
-                    >
-                      <Feather name="sliders" size={16} color={themedColors.text} />
-                    </TouchableOpacity>
+                    />
 
-                    <TouchableOpacity
-                      style={[localStyles.listControlButton, !hasFilters && localStyles.listControlButtonDisabled]}
+                    <IconButton
+                      icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
+                      label="Сбросить фильтры"
                       onPress={onResetFilters}
                       disabled={!hasFilters}
-                      accessibilityRole="button"
-                      accessibilityLabel="Сбросить фильтры"
+                      size="sm"
                       testID="userpoints-list-reset-filters"
-                    >
-                      <Feather name="rotate-ccw" size={16} color={themedColors.text} />
-                    </TouchableOpacity>
+                    />
                   </View>
 
                   {showingRecommendations ? (
                     <View style={localStyles.recommendationsHeader}>
                       <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
                       <View style={localStyles.recommendationsActions}>
-                        <TouchableOpacity
-                          style={localStyles.recommendationsRefreshButton}
+                        <IconButton
+                          icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}
+                          label="3 случайные точки"
                           onPress={onRefreshRecommendations}
-                          accessibilityRole="button"
-                          accessibilityLabel="3 случайные точки"
-                        >
-                          <Feather name="refresh-cw" size={16} color={themedColors.text} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={localStyles.closeRecommendationsButton}
+                          size="sm"
+                        />
+                        <IconButton
+                          icon={<Feather name="x" size={16} color={themedColors.textOnPrimary} />}
+                          label="Показать все"
                           onPress={onCloseRecommendations}
-                          accessibilityRole="button"
-                          accessibilityLabel="Показать все"
-                        >
-                          <Feather name="x" size={16} color={themedColors.textOnPrimary} />
-                        </TouchableOpacity>
+                          size="sm"
+                          active
+                        />
                       </View>
                     </View>
                   ) : null}
@@ -457,28 +442,13 @@ export const PointsListGrid: React.FC<{
       {showMobilePanel ? (
         <View style={localStyles.mobilePanelContainer}>
           <View style={localStyles.panelTabs}>
-            <TouchableOpacity
-              style={[localStyles.panelTab, panelTab === 'filters' && localStyles.panelTabActive]}
-              onPress={() => setPanelTab('filters')}
-              accessibilityRole="button"
-              accessibilityLabel="Фильтры"
-              testID="userpoints-panel-tab-filters"
-            >
-              <RNText style={[localStyles.panelTabText, panelTab === 'filters' && localStyles.panelTabTextActive]}>
-                Фильтры
-              </RNText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[localStyles.panelTab, panelTab === 'list' && localStyles.panelTabActive]}
-              onPress={() => setPanelTab('list')}
-              accessibilityRole="button"
-              accessibilityLabel="Список"
-              testID="userpoints-panel-tab-list"
-            >
-              <RNText style={[localStyles.panelTabText, panelTab === 'list' && localStyles.panelTabTextActive]}>
-                Список ({filteredPoints.length})
-              </RNText>
-            </TouchableOpacity>
+            <SegmentedControl
+              options={panelOptions}
+              value={panelTab}
+              onChange={(key) => setPanelTab(key as 'filters' | 'list')}
+              accessibilityLabel="Панель"
+              compact
+            />
           </View>
 
           {panelTab === 'filters' ? (
@@ -547,48 +517,41 @@ export const PointsListGrid: React.FC<{
                       testID="userpoints-list-search"
                     />
 
-                    <TouchableOpacity
-                      style={localStyles.listControlButton}
+                    <IconButton
+                      icon={<Feather name="sliders" size={16} color={themedColors.text} />}
+                      label="Фильтры"
                       onPress={() => setPanelTab('filters')}
-                      accessibilityRole="button"
-                      accessibilityLabel="Фильтры"
+                      size="sm"
                       testID="userpoints-list-open-filters"
-                    >
-                      <Feather name="sliders" size={16} color={themedColors.text} />
-                    </TouchableOpacity>
+                    />
 
-                    <TouchableOpacity
-                      style={[localStyles.listControlButton, !hasFilters && localStyles.listControlButtonDisabled]}
+                    <IconButton
+                      icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
+                      label="Сбросить фильтры"
                       onPress={onResetFilters}
                       disabled={!hasFilters}
-                      accessibilityRole="button"
-                      accessibilityLabel="Сбросить фильтры"
+                      size="sm"
                       testID="userpoints-list-reset-filters"
-                    >
-                      <Feather name="rotate-ccw" size={16} color={themedColors.text} />
-                    </TouchableOpacity>
+                    />
                   </View>
 
                   {showingRecommendations ? (
                     <View style={localStyles.recommendationsHeader}>
                       <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
                       <View style={localStyles.recommendationsActions}>
-                        <TouchableOpacity
-                          style={localStyles.recommendationsRefreshButton}
+                        <IconButton
+                          icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}
+                          label="3 случайные точки"
                           onPress={onRefreshRecommendations}
-                          accessibilityRole="button"
-                          accessibilityLabel="3 случайные точки"
-                        >
-                          <Feather name="refresh-cw" size={16} color={themedColors.text} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={localStyles.closeRecommendationsButton}
+                          size="sm"
+                        />
+                        <IconButton
+                          icon={<Feather name="x" size={16} color={themedColors.textOnPrimary} />}
+                          label="Показать все"
                           onPress={onCloseRecommendations}
-                          accessibilityRole="button"
-                          accessibilityLabel="Показать все"
-                        >
-                          <Feather name="x" size={16} color={themedColors.textOnPrimary} />
-                        </TouchableOpacity>
+                          size="sm"
+                          active
+                        />
                       </View>
                     </View>
                   ) : null}
@@ -615,15 +578,13 @@ export const PointsListGrid: React.FC<{
             onMapUiApiReady={setMapUiApi}
           />
 
-          <TouchableOpacity
+          <IconButton
+            icon={<Feather name="crosshair" size={20} color={colors.text} />}
+            label="Моё местоположение"
+            onPress={onLocateMe}
+            disabled={isLocating}
             style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
-          onPress={onLocateMe}
-          disabled={isLocating}
-          accessibilityRole="button"
-          accessibilityLabel="Моё местоположение"
-        >
-          <Feather name="crosshair" size={20} color={colors.text} />
-        </TouchableOpacity>
+          />
         </View>
       )}
     </View>
@@ -649,31 +610,11 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     backgroundColor: colors.background,
   },
   panelTabs: {
-    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.backgroundSecondary,
-  },
-  panelTab: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  panelTabActive: {
-    backgroundColor: colors.background,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
-  },
-  panelTabText: {
-    fontSize: 14,
-    fontWeight: '600' as any,
-    color: colors.textMuted,
-  },
-  panelTabTextActive: {
-    color: colors.primary,
-    fontWeight: '700' as any,
   },
   rightPanelScroll: {
     flex: 1,
@@ -702,19 +643,6 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     backgroundColor: colors.surface,
     color: colors.text,
   },
-  listControlButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  listControlButtonDisabled: {
-    opacity: 0.5,
-  },
   pointsListItem: {
     marginBottom: 16,
   },
@@ -740,30 +668,6 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     fontWeight: '700' as any,
     color: colors.text,
     flex: 1,
-  },
-  recommendationsRefreshButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.background,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  recommendationsRefreshText: {
-    fontSize: 14,
-    fontWeight: '600' as any,
-    color: colors.text,
-  },
-  closeRecommendationsButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 6,
-  },
-  closeRecommendationsText: {
-    fontSize: 14,
-    fontWeight: '600' as any,
-    color: colors.textOnPrimary,
   },
   routeInfo: {
     marginTop: 8,

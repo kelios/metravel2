@@ -1,8 +1,9 @@
 // MapErrorBoundary.tsx
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { ThemeContext, getThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 interface Props {
   children: ReactNode;
@@ -107,16 +108,12 @@ class MapErrorBoundary extends Component<Props, State> {
             <Text style={styles.message}>
               {this.state.error?.message || 'Произошла непредвиденная ошибка'}
             </Text>
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                pressed && styles.buttonPressed,
-              ]}
+            <Button
+              label="Попробовать снова"
+              icon={<MaterialIcons name="refresh" size={20} color={colors.textOnPrimary} />}
               onPress={this.handleReset}
-            >
-              <MaterialIcons name="refresh" size={20} color={colors.textOnPrimary} />
-              <Text style={styles.buttonText}>Попробовать снова</Text>
-            </Pressable>
+              variant="primary"
+            />
           </View>
         </View>
       );
@@ -151,23 +148,6 @@ const createStyles = (colors: ReturnType<typeof getThemedColors>) => StyleSheet.
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 20,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  buttonPressed: {
-    opacity: 0.8,
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textOnPrimary,
   },
 });
 

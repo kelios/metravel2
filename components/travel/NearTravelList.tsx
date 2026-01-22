@@ -28,6 +28,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+import SegmentedControl from '@/components/MapPage/SegmentedControl';
 
 type Segment = 'list' | 'map';
 
@@ -37,107 +38,6 @@ type NearTravelListProps = {
   onTravelsLoaded?: (travels: Travel[]) => void;
   showHeader?: boolean;
   embedded?: boolean;
-};
-
-const SegmentSwitch = ({
-                         value,
-                         onChange,
-                         colors,
-                       }: {
-  value: Segment;
-  onChange: (val: Segment) => void;
-  colors: ReturnType<typeof useThemedColors>;
-}) => {
-  // ✅ РЕДИЗАЙН: Стили с поддержкой темной темы
-  const segmentStyles = useMemo(() => StyleSheet.create({
-    container: {
-      flexDirection: 'row',
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      padding: 4,
-      gap: 4,
-      shadowColor: colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.05,
-      shadowRadius: 4,
-      elevation: 2,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    button: {
-      flex: 1,
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 44,
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s ease',
-          cursor: 'pointer',
-        },
-      }),
-    },
-    activeButton: {
-      backgroundColor: colors.primary,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    pressedButton: {
-      opacity: 0.8,
-      transform: [{ scale: 0.98 }],
-    },
-    text: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
-    activeText: {
-      color: colors.surface,
-      fontWeight: '700',
-    },
-  }), [colors]);
-
-  return (
-  <View style={segmentStyles.container}>
-    <Pressable
-      onPress={() => onChange('list')}
-      style={({ pressed }) => [
-        segmentStyles.button,
-        value === 'list' && segmentStyles.activeButton,
-        pressed && segmentStyles.pressedButton,
-        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel="Показать списком"
-      accessibilityState={{ selected: value === 'list' }}
-    >
-      <Text style={[segmentStyles.text, value === 'list' && segmentStyles.activeText]}>
-        Список
-      </Text>
-    </Pressable>
-    <Pressable
-      onPress={() => onChange('map')}
-      style={({ pressed }) => [
-        segmentStyles.button,
-        value === 'map' && segmentStyles.activeButton,
-        pressed && segmentStyles.pressedButton,
-        globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel="Показать на карте"
-      accessibilityState={{ selected: value === 'map' }}
-    >
-      <Text style={[segmentStyles.text, value === 'map' && segmentStyles.activeText]}>
-        Карта
-      </Text>
-    </Pressable>
-  </View>
-  );
 };
 
 const TravelCardSkeleton = ({ colors }: { colors: ReturnType<typeof useThemedColors> }) => {
@@ -327,6 +227,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
     const { isPhone, isLargePhone, isTablet, width } = useResponsive();
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const scrollViewRef = useRef<ScrollView>(null);
+    const segmentOptions = useMemo(
+      () => [
+        { key: 'list', label: 'Список' },
+        { key: 'map', label: 'Карта' },
+      ],
+      []
+    );
 
     const isMobile = isPhone || isLargePhone;
 
@@ -829,7 +736,12 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
         {!isMobile ? (
           <>
-            <SegmentSwitch value={viewMode} onChange={setViewMode} colors={colors} />
+            <SegmentedControl
+              options={segmentOptions}
+              value={viewMode}
+              onChange={(key) => setViewMode(key as Segment)}
+              accessibilityLabel="Переключатель вида"
+            />
 
             {viewMode === 'map' ? (
               <View style={styles.mobileMapColumn}>
@@ -883,7 +795,12 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           </>
         ) : (
           <>
-            <SegmentSwitch value={viewMode} onChange={setViewMode} colors={colors} />
+            <SegmentedControl
+              options={segmentOptions}
+              value={viewMode}
+              onChange={(key) => setViewMode(key as Segment)}
+              accessibilityLabel="Переключатель вида"
+            />
 
             {viewMode === 'list' ? (
               <FlatList

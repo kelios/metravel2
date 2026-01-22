@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import Button from '@/components/ui/Button';
 
 interface FiltersPanelFooterProps {
   styles: any;
@@ -33,41 +34,32 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
       )}
       <View style={styles.footerButtons}>
         {!hideFooterReset && (
-          <Pressable
+          <Button
+            label="Сбросить"
             testID="filters-reset-button"
-            style={[
-              styles.ctaButton,
-              styles.ctaOutline,
-              mode === 'route' && !routePointsLength && styles.ctaDisabled,
-            ]}
             onPress={() => {
               if (mode === 'route' && !routePointsLength) return;
               onReset();
             }}
             disabled={mode === 'route' && !routePointsLength}
-            accessibilityRole="button"
             accessibilityLabel="Сбросить"
-            accessibilityState={{ disabled: mode === 'route' && !routePointsLength }}
-          >
-            <Text style={styles.ctaOutlineText}>Сбросить</Text>
-          </Pressable>
+            variant="outline"
+            style={styles.ctaButton}
+          />
         )}
 
         {onBuildRoute && mode === 'route' && (
-          <Pressable
+          <Button
+            label={ctaLabel}
             testID="filters-build-route-button"
-            style={[styles.ctaButton, styles.ctaPrimary, (!canBuildRoute || routingLoading) && styles.ctaDisabled]}
             onPress={() => {
               if (!canBuildRoute || routingLoading) return;
               onBuildRoute();
             }}
             disabled={!canBuildRoute || routingLoading}
-            accessibilityRole="button"
             accessibilityLabel="Построить маршрут"
-            accessibilityState={{ disabled: !canBuildRoute || routingLoading }}
-          >
-            <Text style={styles.ctaPrimaryText}>{ctaLabel}</Text>
-          </Pressable>
+            style={styles.ctaButton}
+          />
         )}
       </View>
     </View>

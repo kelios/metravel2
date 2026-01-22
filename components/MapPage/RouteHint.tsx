@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import IconButton from '@/components/ui/IconButton';
 
 interface RouteHintProps {
   onDismiss: () => void;
@@ -28,14 +29,13 @@ export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProp
           </Text>
         </View>
       </View>
-      <Pressable
+      <IconButton
+        icon={<Feather name="x" size={16} color={colors.textMuted} />}
+        label="Закрыть подсказку"
+        size="sm"
         onPress={onDismiss}
         style={styles.closeButton}
-        accessibilityRole="button"
-        accessibilityLabel="Закрыть подсказку"
-      >
-        <Feather name="x" size={16} color={colors.textMuted} />
-      </Pressable>
+      />
     </View>
   );
 }
@@ -75,7 +75,17 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     lineHeight: 18,
   },
   closeButton: {
-    padding: 4,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    padding: 0,
     marginLeft: 8,
+    marginHorizontal: 0,
+    backgroundColor: 'transparent',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
 });

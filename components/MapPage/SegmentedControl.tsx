@@ -2,6 +2,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { globalFocusStyles } from '@/styles/globalFocus';
 import MapIcon from './MapIcon';
 
 interface SegmentedControlOption {
@@ -16,6 +17,9 @@ interface SegmentedControlProps {
   onChange: (key: string) => void;
   accessibilityLabel?: string;
   compact?: boolean;
+  disabled?: boolean;
+  disabledKeys?: string[];
+  role?: 'radio' | 'button';
 }
 
 const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -24,6 +28,9 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   onChange,
   accessibilityLabel,
   compact = false,
+  disabled = false,
+  disabledKeys = [],
+  role = 'radio',
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors, compact), [colors, compact]);
@@ -36,6 +43,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
     >
       {options.map(({ key, label, icon }) => {
         const active = value === key;
+        const isDisabled = disabled || disabledKeys.includes(key);
         return (
           <Pressable
             key={key}
@@ -44,10 +52,20 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
               styles.segment,
               active && styles.segmentActive,
               pressed && styles.segmentPressed,
+              isDisabled && styles.segmentDisabled,
+              globalFocusStyles.focusable,
             ]}
-            onPress={() => onChange(key)}
-            accessibilityRole="radio"
-            accessibilityState={{ checked: active }}
+            onPress={() => {
+              if (isDisabled) return;
+              onChange(key);
+            }}
+            disabled={isDisabled}
+            accessibilityRole={role}
+            accessibilityState={
+              role === 'radio'
+                ? ({ checked: active, disabled: isDisabled } as any)
+                : ({ selected: active, disabled: isDisabled } as any)
+            }
             accessibilityLabel={label}
           >
             {icon && (
@@ -96,6 +114,9 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   },
   segmentPressed: {
     opacity: 0.8,
+  },
+  segmentDisabled: {
+    opacity: 0.5,
   },
   segmentText: {
     fontSize: 13,

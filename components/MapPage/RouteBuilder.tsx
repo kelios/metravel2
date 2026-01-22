@@ -1,10 +1,11 @@
 // components/MapPage/RouteBuilder.tsx
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import AddressSearch from '@/components/MapPage/AddressSearch';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { LatLng } from '@/types/coordinates';
 import MapIcon from './MapIcon';
+import IconButton from '@/components/ui/IconButton';
 
 const SafeView: React.FC<React.ComponentProps<typeof View>> = ({ children, ...props }) => {
   return (
@@ -58,15 +59,14 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
           <Text style={styles.progressText}>Маршрут {progress}</Text>
         </SafeView>
         {onClear && hasAnyAddress && (
-          <Pressable
+          <IconButton
             testID="route-clear"
+            icon={<MapIcon name="refresh" size={18} color={colors.text} />}
+            label="Очистить маршрут"
+            size={compact ? 'sm' : 'md'}
             onPress={onClear}
             style={styles.iconButton}
-            accessibilityRole="button"
-            accessibilityLabel="Очистить маршрут"
-          >
-            <MapIcon name="refresh" size={18} color={colors.text} />
-          </Pressable>
+          />
         )}
       </SafeView>
 
@@ -90,15 +90,14 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
         {/* Swap button */}
         {onSwap && hasRoute && (
           <SafeView style={styles.swapContainer}>
-            <Pressable
+            <IconButton
               testID="route-swap"
+              icon={<MapIcon name="swap-vert" size={20} color={colors.primary} />}
+              label="Поменять старт и финиш местами"
+              size={compact ? 'sm' : 'md'}
               onPress={onSwap}
               style={styles.swapButton}
-              accessibilityRole="button"
-              accessibilityLabel="Поменять старт и финиш местами"
-            >
-              <MapIcon name="swap-vert" size={20} color={colors.primary} />
-            </Pressable>
+            />
           </SafeView>
         )}
 
@@ -164,6 +163,12 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    marginHorizontal: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
   addressContainer: {
     gap: compact ? 8 : 12,
@@ -199,6 +204,12 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: colors.primary,
+    marginHorizontal: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
   hint: {
     fontSize: 13,

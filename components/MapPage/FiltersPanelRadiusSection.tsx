@@ -1,10 +1,11 @@
 import React, { useMemo, useCallback } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import MultiSelectField from '../MultiSelectField';
 import MapIcon from './MapIcon';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
-import { globalFocusStyles } from '@/styles/globalFocus';
 import type { ThemedColors } from '@/hooks/useTheme';
+import Chip from '@/components/ui/Chip';
+import IconButton from '@/components/ui/IconButton';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 
@@ -163,15 +164,13 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                     <Text style={styles.categoryChipText} numberOfLines={1}>
                       {displayText}
                     </Text>
-                    <Pressable
+                    <IconButton
+                      icon={<MapIcon name="close" size={16} color={colors.primary} />}
+                      label="Удалить категорию"
+                      size="sm"
                       onPress={() => handleCategoryRemove(cat)}
-                      hitSlop={8}
-                      style={globalFocusStyles.focusable}
-                      accessibilityRole="button"
-                      accessibilityLabel="Удалить категорию"
-                    >
-                      <MapIcon name="close" size={16} color={colors.primary} />
-                    </Pressable>
+                      style={styles.categoryChipIconButton}
+                    />
                   </View>
                 );
               })}
@@ -196,17 +195,14 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
             {filters.radius.map((opt) => {
               const selected = String(opt.id) === String(filterValue.radius);
               return (
-                <Pressable
-                  key={opt.id}
-                  testID={`radius-option-${String(opt.id)}`}
-                  onPress={() => safeOnFilterChange('radius', opt.id)}
-                  style={[styles.radiusChip, selected && styles.radiusChipActive, globalFocusStyles.focusable]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Выбрать радиус: ${opt.name}`}
-                  accessibilityState={{ selected }}
-                >
-                  <Text style={styles.radiusChipText}>{opt.name}</Text>
-                </Pressable>
+                <View key={opt.id}>
+                  <Chip
+                    label={opt.name}
+                    selected={selected}
+                    onPress={() => safeOnFilterChange('radius', opt.id)}
+                    testID={`radius-option-${String(opt.id)}`}
+                  />
+                </View>
               );
             })}
           </View>

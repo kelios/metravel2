@@ -54,11 +54,6 @@ const buildMapUrl = (coord?: string) => {
     return p ? `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}` : '';
 };
 
-const buildOrganicMapsUrl = (coord?: string) => {
-    const p = parseCoord(coord);
-    return p ? `https://omaps.app/${p.lat},${p.lon}` : '';
-};
-
 const buildAppleMapsUrl = (coord?: string) => {
   const p = parseCoord(coord);
   return p ? `https://maps.apple.com/?q=${encodeURIComponent(`${p.lat},${p.lon}`)}` : '';
@@ -124,7 +119,7 @@ const AddressListItem: React.FC<Props> = ({
                                               onPress,
                                               onHidePress,
                                               userLocation,
-                                              transportMode = 'car',
+                                              transportMode: _transportMode = 'car',
                                           }) => {
     const {
         address,
@@ -155,10 +150,26 @@ const AddressListItem: React.FC<Props> = ({
     const titleFontSize = isSmallScreen ? 16 : isTablet ? 17 : 18;
     const coordFontSize = isSmallScreen ? 12 : 13;
 
+    const rawCategoryName = useMemo(() => {
+      if (categoryName) return String(categoryName);
+      const legacy = (travel as any).category_name ?? (travel as any).category ?? (travel as any).categories;
+      if (Array.isArray(legacy)) {
+        return legacy
+          .map((item) => (typeof item === 'object' ? String((item as any)?.name ?? '') : String(item ?? '')))
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .join(', ');
+      }
+      if (legacy && typeof legacy === 'object') {
+        return String((legacy as any).name ?? '');
+      }
+      return String(legacy ?? '').trim();
+    }, [categoryName, travel]);
+
     const categories = useMemo(() => {
-      const cleaned = stripCountryFromCategoryString(categoryName, address);
+      const cleaned = stripCountryFromCategoryString(rawCategoryName, address);
       return cleaned ? cleaned.split(',').map((c) => c.trim()).filter(Boolean) : [];
-    }, [address, categoryName]);
+    }, [address, rawCategoryName]);
 
     const showToastInfo = useCallback((msg: string) => {
         void showToast({ type: 'info', text1: msg, position: 'bottom' });
@@ -208,11 +219,6 @@ const AddressListItem: React.FC<Props> = ({
         openExternal(buildMapUrl(coord));
     }, [coord]);
 
-    const openOrganicMaps = useCallback((e: any) => {
-        e?.stopPropagation();
-        openExternal(buildOrganicMapsUrl(coord));
-    }, [coord]);
-
     const openArticle = useCallback((e?: any) => {
         e?.stopPropagation();
         openExternal(articleUrl || urlTravel);
@@ -247,7 +253,7 @@ const AddressListItem: React.FC<Props> = ({
             return;
         }
 
-        const cleanedCategory = stripCountryFromCategoryString(categoryName, address);
+        const cleanedCategory = stripCountryFromCategoryString(rawCategoryName, address);
         const categoryString = cleanedCategory || undefined;
 
         const payload: Record<string, unknown> = {
@@ -290,7 +296,7 @@ const AddressListItem: React.FC<Props> = ({
         address,
         articleUrl,
         authReady,
-        categoryName,
+        rawCategoryName,
         isAddingPoint,
         isAuthenticated,
         queryClient,
@@ -323,6 +329,8 @@ const AddressListItem: React.FC<Props> = ({
         }
     }, [isNoImage]);
 
+    const listTransportMode: 'car' = 'car';
+
     // Расчет расстояния и времени в пути
     const distanceInfo = useMemo(() => {
         const parsed = parseCoord(coord);
@@ -331,14 +339,13 @@ const AddressListItem: React.FC<Props> = ({
         return getDistanceInfo(
             { lat: userLocation.latitude, lng: userLocation.longitude },
             { lat: parsed.lat, lng: parsed.lon },
-            transportMode
+            listTransportMode
         );
-    }, [coord, userLocation, transportMode]);
+    }, [coord, userLocation, listTransportMode]);
 
     if (Platform.OS === 'web') {
         const categoryLabel = categories.join(', ');
-        const travelModeLabel =
-          transportMode === 'car' ? 'Авто' : transportMode === 'bike' ? 'Велосипед' : 'Пешком';
+        const travelModeLabel = 'Авто';
         const badges = distanceInfo
           ? [distanceInfo.distanceText, `${travelModeLabel} ${distanceInfo.travelTimeText}`]
           : [];
@@ -542,9 +549,9 @@ const AddressListItem: React.FC<Props> = ({
                           </View>
                           <View style={styles.timeBadge}>
                               <Text style={styles.timeText}>
-                                  {transportMode === 'car'
+                                  {listTransportMode === 'car'
                                     ? 'Авто'
-                                    : transportMode === 'bike'
+                                    : listTransportMode === 'bike'
                                       ? 'Велосипед'
                                       : 'Пешком'}{' '}
                                   {distanceInfo.travelTimeText}
@@ -576,7 +583,7 @@ const AddressListItem: React.FC<Props> = ({
 
                     <View style={styles.addButtonRow}>
                       <Pressable
-                        accessibilityLabel="Добавить в мои точки"
+                        accessibilityLabel="Мои точки"
                         onPress={(e) => {
                           e?.stopPropagation?.();
                           void handleAddPoint();
@@ -589,8 +596,8 @@ const AddressListItem: React.FC<Props> = ({
                         ]}
                         {...((Platform.OS as any) === 'web'
                           ? ({
-                              title: 'Добавить в мои точки',
-                              'aria-label': 'Добавить в мои точки',
+                              title: 'Мои точки',
+                              'aria-label': 'Мои точки',
                             } as any)
                           : ({ accessibilityRole: 'button' } as any))}
                       >
@@ -600,7 +607,7 @@ const AddressListItem: React.FC<Props> = ({
                           <>
                             <Feather name="map-pin" size={14} color={colors.textOnPrimary} />
                             <Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>
-                              Добавить в мои точки
+                              Мои точки
                             </Text>
                           </>
                         )}
