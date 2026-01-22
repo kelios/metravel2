@@ -12,6 +12,8 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
   if (!isProdHost) return;
 
   var CONSENT_KEY = 'metravel_consent_v1';
+  window.__metravelMetrikaId = ${metrikaId};
+  window.__metravelGaId = '${gaId}';
 
   function hasAnalyticsConsent(){
     try {
@@ -59,8 +61,11 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
     // SPA-хиты для Метрики и GA
     function trackPage(){
       try {
+        var url = window.location.href;
+        if (window.__metravelLastTrackedUrl === url) return;
+        window.__metravelLastTrackedUrl = url;
         if (window.ym) {
-          window.ym(${metrikaId}, 'hit', window.location.href, {
+          window.ym(${metrikaId}, 'hit', url, {
             title: document.title,
             referer: document.referrer
           });
@@ -68,17 +73,19 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
         if (window.gtag) {
           window.gtag('event', 'page_view', {
             page_title: document.title,
-            page_location: window.location.href
+            page_location: url
           });
         }
       } catch(_){}
     }
 
     // Патчим history
-    var _ps = history.pushState;
-    var _rs = history.replaceState;
-    history.pushState = function(){ var r=_ps.apply(this, arguments); setTimeout(trackPage, 10); return r; };
-    history.replaceState = function(){ var r=_rs.apply(this, arguments); setTimeout(trackPage, 10); return r; };
+    var _ps = window.history && window.history.pushState;
+    var _rs = window.history && window.history.replaceState;
+    if (_ps && _rs) {
+      window.history.pushState = function(){ var r=_ps.apply(this, arguments); trackPage(); return r; };
+      window.history.replaceState = function(){ var r=_rs.apply(this, arguments); trackPage(); return r; };
+    }
     window.addEventListener('popstate', trackPage);
 
     // Первичный хит после загрузки
@@ -87,7 +94,9 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
 
     // ---------- Google Analytics (GA4) ----------
     window.dataLayer = window.dataLayer || [];
-    window.gtag = function(){ window.dataLayer.push(arguments); };
+    window.gtag = function(){
+      window.dataLayer.push(Array.prototype.slice.call(arguments));
+    };
     window.gtag('js', new Date());
     window.gtag('config', '${gaId}', { transport_type: 'beacon' });
 

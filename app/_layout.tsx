@@ -149,6 +149,34 @@ function RootLayoutNav() {
       return () => window.removeEventListener('resize', update);
     }, []);
 
+    useEffect(() => {
+      if (!isWeb) return;
+      if (typeof window === 'undefined') return;
+      const metrikaId = (window as any).__metravelMetrikaId;
+      if (!metrikaId || typeof (window as any).ym !== 'function') return;
+      const url = window.location.href;
+      if ((window as any).__metravelLastTrackedUrl === url) return;
+      (window as any).__metravelLastTrackedUrl = url;
+      try {
+        (window as any).ym(metrikaId, 'hit', url, {
+          title: document.title,
+          referer: document.referrer,
+        });
+      } catch {
+        // noop
+      }
+      try {
+        if ((window as any).gtag && (window as any).__metravelGaId) {
+          (window as any).gtag('event', 'page_view', {
+            page_title: document.title,
+            page_location: url,
+          });
+        }
+      } catch {
+        // noop
+      }
+    }, [pathname]);
+
     // ✅ ИСПРАВЛЕНИЕ: Детерминированная ширина на SSR и первом клиентском рендере.
     // На web `useResponsive()` может сразу вернуть реальную ширину на клиенте,
     // но на SSR она всегда 0, что приводит к разному дереву и hydration mismatch.

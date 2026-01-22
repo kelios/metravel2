@@ -473,7 +473,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       return () => {
         markersRef.current.delete(normalizedKey);
       };
-    }, [map, normalizedKey, openMarkerPopup]);
+    }, [map, normalizedKey]);
 
     const handleMarkerClick = useCallback(() => {
       if (!hasMapPane(map)) return;

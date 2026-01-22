@@ -90,6 +90,7 @@ export default function ExportScreen() {
                     canonical={canonical}
                     image={`${SITE}/og-preview.jpg`}
                     ogType="website"
+                    robots="noindex, nofollow"
                 />
             )}
 

@@ -428,12 +428,16 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
   const { width, isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const isLargeDesktop = width >= 1440;
-
   const [showList, setShowList] = useState(false);
   const [siteCategoryDictionary, setSiteCategoryDictionary] = useState<CategoryDictionaryItem[]>([]);
   const [addingPointId, setAddingPointId] = useState<string | null>(null);
   const { isAuthenticated, authReady } = useAuth();
   const queryClient = useQueryClient();
+  const pointsCount = safePoints.length;
+  const countLabel = pointsCount > 0 ? ` (${pointsCount})` : '';
+  const toggleLabel = showList
+    ? `Скрыть координаты мест${countLabel}`
+    : `Показать координаты мест${countLabel}`;
 
   // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -717,9 +721,10 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
               imageUrl={getOptimizedImageUrl(item.travelImageThumbUrl, item.updated_at)}
               metaText={normalizeCategoryNameToString(item.categoryName) || undefined}
               onPress={onPointCardPress ? () => onPointCardPress(item) : () => onOpenMap(item.coord)}
-              onMediaPress={() => onOpenArticle(item)}
+              onMediaPress={onPointCardPress ? undefined : () => onOpenArticle(item)}
               imageHeight={180}
               width={300}
+              testID={`travel-point-card-${item.id}`}
               contentSlot={
                 <View style={{ gap: 8 }}>
                   <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
@@ -878,14 +883,14 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         onPress={() => setShowList((p) => !p)}
         style={({ pressed }) => [styles.toggle, pressed && styles.togglePressed, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         accessibilityRole="button"
-        accessibilityLabel={showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
+        accessibilityLabel={toggleLabel}
         accessibilityState={{ expanded: showList }}
       >
         <View style={styles.toggleRow}>
           {[
             <Feather key="icon" name="map-pin" size={22} color={colors.text} />,
             <Text key="text" style={[styles.toggleText, isMobile && styles.toggleTextSm]}>
-              {showList ? 'Скрыть координаты мест' : 'Показать координаты мест'}
+              {toggleLabel}
             </Text>,
             showList ? (
               <Feather key="chevron" name="chevron-up" size={18} color={colors.text} />

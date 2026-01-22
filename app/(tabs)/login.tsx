@@ -129,6 +129,7 @@ export default function Login() {
                     canonical={canonical}
                     image={`${SITE}/og-preview.jpg`}
                     ogType="website"
+                    robots="noindex, nofollow"
                 />
             )}
 

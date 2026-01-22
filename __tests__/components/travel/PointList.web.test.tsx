@@ -75,7 +75,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
       <PointList points={[basePoint as any]} baseUrl={baseUrl} />
     );
 
-    const toggleButton = getByLabelText('Показать координаты мест');
+    const toggleButton = getByLabelText(/Показать координаты мест/);
     fireEvent.press(toggleButton);
 
     expect(getByLabelText('Скопировать координаты')).toBeTruthy();

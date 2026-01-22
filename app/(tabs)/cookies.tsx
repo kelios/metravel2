@@ -94,6 +94,7 @@ export default function CookieSettingsScreen() {
         description={description}
         canonical={canonical}
         ogType="website"
+        robots="noindex, nofollow"
       />
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.heading}>Настройки cookies и аналитики</Text>

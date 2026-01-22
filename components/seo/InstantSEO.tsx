@@ -9,6 +9,7 @@ type Props = {
     canonical?: string;
     image?: string;
     ogType?: 'website' | 'article';
+    robots?: string;
     additionalTags?: React.ReactNode;
     children?: React.ReactNode;
 };
@@ -54,6 +55,7 @@ const InstantSEO: React.FC<Props> = ({
                                          canonical,
                                          image,
                                          ogType = 'website',
+                                         robots,
                                          additionalTags,
                                          children,
                                      }) => {
@@ -70,6 +72,9 @@ const InstantSEO: React.FC<Props> = ({
                 upsertMeta({ name: 'description' }, description);
                 upsertMeta({ name: 'twitter:description' }, description);
                 upsertMeta({ property: 'og:description' }, description);
+            }
+            if (robots) {
+                upsertMeta({ name: 'robots' }, robots);
             }
 
             upsertMeta({ property: 'og:type' }, ogType);
@@ -93,7 +98,7 @@ const InstantSEO: React.FC<Props> = ({
              
             console.warn('InstantSEO: failed to update meta tags', error);
         }
-    }, [title, description, canonical, image, ogType]);
+    }, [title, description, canonical, image, ogType, robots]);
 
     // 2) При возвращении «назад» из bfcache браузера — ещё раз фиксируем тайтл
     React.useEffect(() => {
@@ -120,6 +125,7 @@ const InstantSEO: React.FC<Props> = ({
         <Head key={headKey ?? 'instant-seo'}>
             <title key="title">{title}</title>
             {description && <meta key="description" name="description" content={description} />}
+            {robots && <meta key="robots" name="robots" content={robots} />}
             {canonical && <link key="canonical" rel="canonical" href={canonical} />}
 
             {/* Open Graph */}

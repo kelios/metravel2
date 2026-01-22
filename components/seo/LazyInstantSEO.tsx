@@ -9,6 +9,7 @@ type Props = {
   canonical?: string;
   image?: string;
   ogType?: 'website' | 'article';
+  robots?: string;
   additionalTags?: React.ReactNode;
   children?: React.ReactNode;
 };
@@ -20,6 +21,7 @@ function StaticHead({
   canonical,
   image,
   ogType = 'website',
+  robots,
   additionalTags,
   children,
 }: Props) {
@@ -27,6 +29,7 @@ function StaticHead({
     <Head key={headKey ?? 'instant-seo'}>
       <title key="title">{title}</title>
       {description && <meta key="description" name="description" content={description} />}
+      {robots && <meta key="robots" name="robots" content={robots} />}
       {canonical && <link key="canonical" rel="canonical" href={canonical} />}
 
       {/* Open Graph */}

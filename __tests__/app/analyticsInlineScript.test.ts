@@ -108,6 +108,8 @@ describe('analytics inline script', () => {
     runAnalyticsSnippet()
 
     expect(typeof windowMock.metravelLoadAnalytics).toBe('function')
+    expect(windowMock.__metravelMetrikaId).toBe(TEST_METRIKA_ID)
+    expect(windowMock.__metravelGaId).toBe(TEST_GA_ID)
     expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
     expect(windowMock.ym).toHaveBeenCalledWith(
       TEST_METRIKA_ID,
@@ -126,6 +128,8 @@ describe('analytics inline script', () => {
     runAnalyticsSnippet()
 
     expect(typeof windowMock.metravelLoadAnalytics).toBe('function')
+    expect(windowMock.__metravelMetrikaId).toBe(TEST_METRIKA_ID)
+    expect(windowMock.__metravelGaId).toBe(TEST_GA_ID)
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
     expect(windowMock.gtag).toBeUndefined()
     expect(windowMock.dataLayer).toHaveLength(0)
@@ -144,5 +148,42 @@ describe('analytics inline script', () => {
 
     expect(windowMock.metravelLoadAnalytics).toBeUndefined()
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+  })
+
+  it('tracks pageviews for Metrika and GA on SPA navigation', () => {
+    jest.useFakeTimers()
+    const { windowMock } = setupDomEnv()
+
+    runAnalyticsSnippet()
+    jest.runOnlyPendingTimers()
+
+    const ymHitCalls = () =>
+      (windowMock.ym as jest.Mock).mock.calls.filter((call) => call[1] === 'hit')
+
+    expect(ymHitCalls().length).toBeGreaterThanOrEqual(1)
+    expect(ymHitCalls()[0][2]).toBe(`https://${windowMock.location.hostname}`)
+
+    const pageViewEvents = () =>
+      (windowMock.dataLayer || []).filter(
+        (entry: any[]) => Array.isArray(entry) && entry[0] === 'event' && entry[1] === 'page_view'
+      )
+
+    expect(pageViewEvents().length).toBeGreaterThanOrEqual(1)
+
+    windowMock.location.href = `https://${windowMock.location.hostname}/new-page`
+    windowMock.history.pushState({}, '', '/new-page')
+    jest.runOnlyPendingTimers()
+
+    expect(ymHitCalls().length).toBeGreaterThanOrEqual(2)
+    expect(ymHitCalls()[ymHitCalls().length - 1][2]).toBe(windowMock.location.href)
+    expect(pageViewEvents().length).toBeGreaterThanOrEqual(2)
+
+    windowMock.history.replaceState({}, '', '/new-page')
+    jest.runOnlyPendingTimers()
+
+    expect(ymHitCalls().length).toBeGreaterThanOrEqual(2)
+    expect(ymHitCalls()[ymHitCalls().length - 1][2]).toBe(windowMock.location.href)
+
+    jest.useRealTimers()
   })
 })

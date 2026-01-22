@@ -14,6 +14,7 @@ import { useBreadcrumbModel } from '@/hooks/useBreadcrumbModel';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useTravelSectionsStore } from '@/stores/travelSectionsStore';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
+import BreadcrumbsJsonLd from '@/components/seo/BreadcrumbsJsonLd';
 
 type HeaderContextBarProps = {
   testID?: string;
@@ -41,8 +42,10 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
     const isUserPoints = pathname === '/userpoints';
     const canOpenSections = typeof pathname === 'string' && pathname.startsWith('/travels/');
     return (
-      <View testID={testID ?? 'header-context-bar'} style={containerStyle}>
-        <View style={styles.mobileRow}>
+      <>
+        <BreadcrumbsJsonLd model={model} pathname={pathname} />
+        <View testID={testID ?? 'header-context-bar'} style={containerStyle}>
+          <View style={styles.mobileRow}>
           <Pressable
             onPress={() => {
               if (model.backToPath) {
@@ -85,19 +88,22 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
           ) : (
             <View style={styles.mobileRightSpacer} />
           )}
+          </View>
         </View>
-      </View>
+      </>
     );
   }
 
   return (
-    <View
-      testID={testID ?? 'header-context-bar'}
-      style={containerStyle}
-      {...(Platform.OS === 'web' ? ({ role: 'navigation', 'aria-label': 'Breadcrumb' } as any) : {})}
-    >
-      {model.showBreadcrumbs ? (
-        <View style={styles.crumbRow}>
+    <>
+      <BreadcrumbsJsonLd model={model} pathname={pathname} />
+      <View
+        testID={testID ?? 'header-context-bar'}
+        style={containerStyle}
+        {...(Platform.OS === 'web' ? ({ role: 'navigation', 'aria-label': 'Breadcrumb' } as any) : {})}
+      >
+        {model.showBreadcrumbs ? (
+          <View style={styles.crumbRow}>
           <Pressable
             onPress={() => router.push('/' as any)}
             accessibilityRole="button"
@@ -137,13 +143,14 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
               </React.Fragment>
             );
           })}
-        </View>
-      ) : (
-        <Text style={styles.pageContext} numberOfLines={1}>
-          {model.pageContextTitle}
-        </Text>
-      )}
-    </View>
+          </View>
+        ) : (
+          <Text style={styles.pageContext} numberOfLines={1}>
+            {model.pageContextTitle}
+          </Text>
+        )}
+      </View>
+    </>
   );
 }
 
