@@ -5,6 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { showToast } from '@/src/utils/toast';
 
 interface PointCardProps {
   point: ImportedPoint;
@@ -37,22 +38,15 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 }) => {
   const colors = useThemedColors();
   const WebClickable = View as any;
+  const isSitePoint = React.useMemo(() => {
+    const tags = (point as any)?.tags;
+    return Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
+  }, [point]);
   const markerColor = String(point.color || '').trim() || colors.backgroundTertiary;
   const hasCoords = Number.isFinite(point.latitude) && Number.isFinite(point.longitude);
   const coordsText = hasCoords
     ? `${Number(point.latitude).toFixed(6)}, ${Number(point.longitude).toFixed(6)}`
     : '';
-  const categoryLabel = React.useMemo(() => {
-    const names = (point as any)?.categoryNames;
-    if (Array.isArray(names) && names.length > 0) {
-      return names.map((v: any) => String(v).trim()).filter(Boolean).join(', ');
-    }
-    const ids = (point as any)?.categoryIds;
-    if (Array.isArray(ids) && ids.length > 0) {
-      return ids.map((v: any) => String(v).trim()).filter(Boolean).join(', ');
-    }
-    return String((point as any)?.category ?? '').trim();
-  }, [point]);
   const countryLabel = React.useMemo(() => {
     try {
       const direct = String((point as any)?.country ?? '').trim();
@@ -69,6 +63,30 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       return '';
     }
   }, [point]);
+  const categoryLabel = React.useMemo(() => {
+    const names = (point as any)?.categoryNames;
+    if (Array.isArray(names) && names.length > 0) {
+      const cleaned = names
+        .map((v: any) => String(v).trim())
+        .filter(Boolean)
+        .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0);
+      return cleaned.join(', ');
+    }
+    const ids = (point as any)?.categoryIds;
+    if (Array.isArray(ids) && ids.length > 0) {
+      const cleaned = ids
+        .map((v: any) => String(v).trim())
+        .filter(Boolean)
+        .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0);
+      return cleaned.join(', ');
+    }
+    const legacy = String((point as any)?.category ?? '').trim();
+    if (!legacy) return '';
+    if (countryLabel && legacy.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) === 0) {
+      return '';
+    }
+    return legacy;
+  }, [countryLabel, point]);
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const showActions = !selectionMode && (typeof onEdit === 'function' || typeof onDelete === 'function');
@@ -220,10 +238,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         (window as any).navigator?.clipboard?.writeText
       ) {
         await (window as any).navigator.clipboard.writeText(text);
+        void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
         return;
       }
 
       await Clipboard.setStringAsync(text);
+      void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
     } catch {
       // ignore
     }
@@ -402,7 +422,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
               <Text style={styles.badgeText}>{categoryLabel}</Text>
             </View>
           ) : null}
-          {countryLabel ? (
+          {!isSitePoint && countryLabel ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{countryLabel}</Text>
             </View>

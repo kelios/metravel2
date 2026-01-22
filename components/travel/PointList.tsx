@@ -11,13 +11,12 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Feather from '@expo/vector-icons/Feather';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { FlashList } from '@shopify/flash-list';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import PlaceListCard from '@/components/places/PlaceListCard';
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
@@ -105,11 +104,25 @@ const buildMapUrl = (coordStr: string) => {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
 };
 
-const buildOrganicMapsUrl = (coordStr: string) => {
+const buildAppleMapsUrl = (coordStr: string) => {
   const p = parseCoord(coordStr);
   if (!p) return '';
   const { lat, lon } = p;
-  return `https://omaps.app/${lat},${lon}`;
+  return `https://maps.apple.com/?q=${encodeURIComponent(`${lat},${lon}`)}`;
+};
+
+const buildYandexMapsUrl = (coordStr: string) => {
+  const p = parseCoord(coordStr);
+  if (!p) return '';
+  const { lat, lon } = p;
+  return `https://yandex.ru/maps/?pt=${encodeURIComponent(`${lon},${lat}`)}&z=16&l=map`;
+};
+
+const buildOsmUrl = (coordStr: string) => {
+  const p = parseCoord(coordStr);
+  if (!p) return '';
+  const { lat, lon } = p;
+  return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lon))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lon))}`;
 };
 
 const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
@@ -131,17 +144,40 @@ const normalizeCategoryNameToString = (
   return String(raw ?? '').trim();
 };
 
-const stripCountryFromCategoryNames = (names: string[], address?: string | null) => {
+const getCountryFromAddress = (address?: string | null) => {
   const addr = String(address ?? '').trim();
-  const countryCandidate = addr
-    ? addr
-        .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .slice(-1)[0]
-    : '';
+  if (!addr) return '';
+  return (
+    addr
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .slice(-1)[0] ?? ''
+  );
+};
+
+const stripCountryFromCategoryNames = (names: string[], address?: string | null) => {
+  const countryCandidate = getCountryFromAddress(address);
   if (!countryCandidate) return names;
   return names.filter((p) => p.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0);
+};
+
+const stripCountryFromCategoryIds = (
+  ids: string[],
+  address: string | null | undefined,
+  idToNameMap: Map<string, string>
+) => {
+  const countryCandidate = getCountryFromAddress(address);
+  if (!countryCandidate) return ids;
+  return ids.filter((id) => {
+    const idText = String(id ?? '').trim();
+    const name = String(idToNameMap.get(idText) ?? '').trim();
+    if (!name) {
+      if (!idText) return true;
+      return idText.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0;
+    }
+    return name.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0;
+  });
 };
 
 const openExternal = async (url: string) => {
@@ -173,7 +209,6 @@ const PointCard = React.memo(function PointCard({
                                                   onCopy,
                                                   onShare,
                                                   onOpenMap,
-                                                  onOpenOrganic,
                                                   onAddPoint,
                                                   addButtonLoading,
                                                   addButtonDisabled,
@@ -187,7 +222,6 @@ const PointCard = React.memo(function PointCard({
   onCopy: (coordStr: string) => void;
   onShare: (coordStr: string) => void;
   onOpenMap: (coordStr: string) => void;
-  onOpenOrganic: (coordStr: string) => void;
   onAddPoint?: () => void;
   addButtonLoading?: boolean;
   addButtonDisabled?: boolean;
@@ -205,6 +239,144 @@ const PointCard = React.memo(function PointCard({
   const handleImageError = useCallback(() => {
     setImageError(true);
   }, []);
+
+  const ActionIcon = useCallback(
+    ({
+      accessibilityLabel,
+      title,
+      onPress,
+      icon,
+    }: {
+      accessibilityLabel: string;
+      title?: string;
+      onPress: (e?: any) => void;
+      icon: React.ReactNode;
+    }) => {
+      if (Platform.OS === 'web') {
+        return (
+          <View
+            style={styles.actionBtn}
+            accessibilityRole="button"
+            accessibilityLabel={accessibilityLabel}
+            {...({
+              role: 'button',
+              tabIndex: 0,
+              title: title ?? accessibilityLabel,
+              'data-card-action': 'true',
+            } as any)}
+            onClick={(e: any) => {
+              try {
+                e?.preventDefault?.();
+                e?.stopPropagation?.();
+              } catch {
+                // noop
+              }
+              onPress(e);
+            }}
+            onKeyDown={(e: any) => {
+              if (e?.key !== 'Enter' && e?.key !== ' ') return;
+              try {
+                e?.preventDefault?.();
+                e?.stopPropagation?.();
+              } catch {
+                // noop
+              }
+              onPress(e);
+            }}
+          >
+            {icon}
+          </View>
+        );
+      }
+
+      return (
+        <Pressable
+          style={styles.actionBtn}
+          onPress={(e) => {
+            try {
+              e?.stopPropagation?.();
+            } catch {
+              // noop
+            }
+            onPress(e);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
+        >
+          {icon}
+        </Pressable>
+      );
+    },
+    [styles.actionBtn]
+  );
+
+  const ActionChip = useCallback(
+    ({
+      label,
+      title,
+      onPress,
+    }: {
+      label: string;
+      title?: string;
+      onPress: (e?: any) => void;
+    }) => {
+      if (Platform.OS === 'web') {
+        return (
+          <View
+            style={styles.mapChip}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            {...({
+              role: 'button',
+              tabIndex: 0,
+              title: title ?? label,
+              'data-card-action': 'true',
+            } as any)}
+            onClick={(e: any) => {
+              try {
+                e?.preventDefault?.();
+                e?.stopPropagation?.();
+              } catch {
+                // noop
+              }
+              onPress(e);
+            }}
+            onKeyDown={(e: any) => {
+              if (e?.key !== 'Enter' && e?.key !== ' ') return;
+              try {
+                e?.preventDefault?.();
+                e?.stopPropagation?.();
+              } catch {
+                // noop
+              }
+              onPress(e);
+            }}
+          >
+            <Text style={styles.mapChipText}>{label}</Text>
+          </View>
+        );
+      }
+
+      return (
+        <Pressable
+          style={styles.mapChip}
+          onPress={(e) => {
+            try {
+              e?.stopPropagation?.();
+            } catch {
+              // noop
+            }
+            onPress(e);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+        >
+          <Text style={styles.mapChipText}>{label}</Text>
+        </Pressable>
+      );
+    },
+    [styles.mapChip, styles.mapChipText]
+  );
 
   return (
     <View
@@ -243,12 +415,7 @@ const PointCard = React.memo(function PointCard({
               style={StyleSheet.absoluteFill}
             />
           ) : (
-            <View style={[styles.noImage, { minHeight: responsive.imageMinHeight }]}>
-              <Feather name="map" size={48} color={colors.textOnPrimary} />
-              <Text style={styles.noImageText} numberOfLines={3}>
-                {point.address}
-              </Text>
-            </View>
+            <View style={[styles.noImage, { minHeight: responsive.imageMinHeight }]} />
           )}
 
           {/* ✅ РЕДИЗАЙН: Современные кнопки действий */}
@@ -260,58 +427,18 @@ const PointCard = React.memo(function PointCard({
               ]}
             >
               <View style={styles.actionsRow}>
-                <Pressable
-                  style={styles.actionBtn}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    openMapFromLink();
-                  }}
-                  accessibilityLabel="Открыть в картах"
-                  {...(Platform.OS === 'web'
-                    ? ({ title: 'Открыть в Google Maps' } as any)
-                    : ({ accessibilityRole: 'button' } as any))}
-                >
-                  <Feather name="map-pin" size={18} color={colors.textOnDark} />
-                </Pressable>
-                <Pressable
-                  style={styles.actionBtn}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onOpenOrganic(point.coord);
-                  }}
-                  accessibilityLabel="Открыть в Organic Maps"
-                  {...(Platform.OS === 'web'
-                    ? ({ title: 'Открыть в Organic Maps' } as any)
-                    : ({ accessibilityRole: 'button' } as any))}
-                >
-                  <Feather name="navigation" size={18} color={colors.textOnDark} />
-                </Pressable>
-                <Pressable
-                  style={styles.actionBtn}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onCopy(point.coord);
-                  }}
+                <ActionIcon
                   accessibilityLabel="Скопировать координаты"
-                  {...(Platform.OS === 'web'
-                    ? ({ title: 'Скопировать координаты' } as any)
-                    : ({ accessibilityRole: 'button' } as any))}
-                >
-                  <Feather name="clipboard" size={18} color={colors.textOnDark} />
-                </Pressable>
-                <Pressable
-                  style={styles.actionBtn}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    onShare(point.coord);
-                  }}
+                  title="Скопировать координаты"
+                  onPress={() => onCopy(point.coord)}
+                  icon={<Feather name="clipboard" size={18} color={colors.textOnDark} />}
+                />
+                <ActionIcon
                   accessibilityLabel="Поделиться"
-                  {...(Platform.OS === 'web'
-                    ? ({ title: 'Поделиться в Telegram' } as any)
-                    : ({ accessibilityRole: 'button' } as any))}
-                >
-                  <Feather name="send" size={18} color={colors.textOnDark} />
-                </Pressable>
+                  title="Поделиться в Telegram"
+                  onPress={() => onShare(point.coord)}
+                  icon={<Feather name="send" size={18} color={colors.textOnDark} />}
+                />
               </View>
             </View>
           )}
@@ -344,6 +471,13 @@ const PointCard = React.memo(function PointCard({
                 {point.coord}
               </Text>
             </Pressable>
+
+            <View style={styles.overlayMapChipsRow}>
+              <ActionChip label="Google" title="Открыть в Google Maps" onPress={() => void openExternal(buildMapUrl(point.coord))} />
+              <ActionChip label="Apple" title="Открыть в Apple Maps" onPress={() => void openExternal(buildAppleMapsUrl(point.coord))} />
+              <ActionChip label="Яндекс" title="Открыть в Яндекс Картах" onPress={() => void openExternal(buildYandexMapsUrl(point.coord))} />
+              <ActionChip label="OSM" title="Открыть в OpenStreetMap" onPress={() => void openExternal(buildOsmUrl(point.coord))} />
+            </View>
 
             {!!point.categoryName && (
               <View style={styles.overlayCategoryRow}>
@@ -513,6 +647,16 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
     () => createCategoryNameToIdsMap(siteCategoryDictionary),
     [siteCategoryDictionary]
   );
+  const categoryIdToName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of siteCategoryDictionary) {
+      const id = String(entry.id ?? '').trim();
+      const name = String(entry.name ?? '').trim();
+      if (!id || !name) continue;
+      map.set(id, name);
+    }
+    return map;
+  }, [siteCategoryDictionary]);
 
   const onCopy = useCallback(async (coordStr: string) => {
     try {
@@ -556,11 +700,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
 
   const onOpenMap = useCallback((coordStr: string) => {
     const url = buildMapUrl(coordStr);
-    if (url) openExternal(url);
-  }, []);
-
-  const onOpenOrganic = useCallback((coordStr: string) => {
-    const url = buildOrganicMapsUrl(coordStr);
     if (url) openExternal(url);
   }, []);
 
@@ -612,6 +751,11 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       const combinedIds = Array.from(
         new Set<string>([...categoryIdsFromPoint, ...categoryIdsFromNames])
       );
+      const filteredIds = stripCountryFromCategoryIds(
+        combinedIds,
+        point.address,
+        categoryIdToName
+      );
 
       const rawCategoryName = Array.isArray(point.categoryName)
         ? point.categoryName.join(', ')
@@ -640,8 +784,8 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         category: categoryNameString,
       };
 
-      if (combinedIds.length > 0) {
-        payload.categoryIds = combinedIds;
+      if (filteredIds.length > 0) {
+        payload.categoryIds = filteredIds;
       }
 
       const tags: Record<string, unknown> = {};
@@ -684,6 +828,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       addingPointId,
       authReady,
       baseUrl,
+      categoryIdToName,
       categoryNameToIds,
       isAuthenticated,
       queryClient,
@@ -716,125 +861,69 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           ]}
         >
           {Platform.OS === 'web' ? (
-            <UnifiedTravelCard
+            <PlaceListCard
               title={item.address}
               imageUrl={getOptimizedImageUrl(item.travelImageThumbUrl, item.updated_at)}
-              metaText={normalizeCategoryNameToString(item.categoryName) || undefined}
-              onPress={onPointCardPress ? () => onPointCardPress(item) : () => onOpenMap(item.coord)}
+              categoryLabel={normalizeCategoryNameToString(item.categoryName) || undefined}
+              coord={item.coord}
+              onCardPress={onPointCardPress ? () => onPointCardPress(item) : () => onOpenMap(item.coord)}
               onMediaPress={onPointCardPress ? undefined : () => onOpenArticle(item)}
+              onCopyCoord={item.coord ? () => onCopy(item.coord) : undefined}
+              onShare={item.coord ? () => onShare(item.coord) : undefined}
+              mapActions={
+                item.coord
+                  ? [
+                      {
+                        key: 'google',
+                        label: 'Google',
+                        icon: 'map-pin',
+                        onPress: () => void openExternal(buildMapUrl(item.coord)),
+                        title: 'Открыть в Google Maps',
+                      },
+                      {
+                        key: 'apple',
+                        label: 'Apple',
+                        icon: 'map',
+                        onPress: () => void openExternal(buildAppleMapsUrl(item.coord)),
+                        title: 'Открыть в Apple Maps',
+                      },
+                      {
+                        key: 'yandex',
+                        label: 'Яндекс',
+                        icon: 'navigation',
+                        onPress: () => void openExternal(buildYandexMapsUrl(item.coord)),
+                        title: 'Открыть в Яндекс Картах',
+                      },
+                      {
+                        key: 'osm',
+                        label: 'OSM',
+                        icon: 'map',
+                        onPress: () => void openExternal(buildOsmUrl(item.coord)),
+                        title: 'Открыть в OpenStreetMap',
+                      },
+                    ]
+                  : []
+              }
+              inlineActions={
+                !!(item.articleUrl || item.urlTravel || baseUrl)
+                  ? [
+                      {
+                        key: 'article',
+                        label: 'Статья',
+                        icon: 'book-open',
+                        onPress: () => onOpenArticle(item),
+                        title: 'Открыть статью',
+                      },
+                    ]
+                  : []
+              }
+              onAddPoint={handleAddPointClick}
+              addDisabled={addDisabled}
+              isAdding={isAdding}
               imageHeight={180}
               width={300}
-              testID={`travel-point-card-${item.id}`}
-              contentSlot={
-                <View style={{ gap: 8 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-                    {item.address}
-                  </Text>
-
-                {!!item.coord && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 12,
-                        fontWeight: '600',
-                        color: colors.textMuted,
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
-                      }}
-                    >
-                      {item.coord}
-                    </Text>
-
-                    <Pressable
-                      accessibilityLabel="Скопировать координаты"
-                      onPress={(e) => {
-                        e?.stopPropagation?.();
-                        void onCopy(item.coord);
-                      }}
-                      {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
-                    >
-                      <Feather name="clipboard" size={16} color={colors.textMuted} />
-                    </Pressable>
-
-                    <Pressable
-                      accessibilityLabel="Поделиться в Telegram"
-                      onPress={(e) => {
-                        e?.stopPropagation?.();
-                        void onShare(item.coord);
-                      }}
-                      {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
-                    >
-                      <Feather name="send" size={16} color={colors.textMuted} />
-                    </Pressable>
-                  </View>
-                )}
-
-                {(!!item.categoryName || !!item.articleUrl || !!item.urlTravel || !!baseUrl) && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    {!!item.categoryName && (
-                      <Text style={{ fontSize: 12, color: colors.textMuted }} numberOfLines={1}>
-                        {normalizeCategoryNameToString(item.categoryName)}
-                      </Text>
-                    )}
-
-                    {!!item.coord && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                        <Pressable
-                          accessibilityLabel="Открыть в Google Maps"
-                          onPress={(e) => {
-                            e?.stopPropagation?.();
-                            onOpenMap(item.coord);
-                          }}
-                          {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
-                        >
-                          <FontAwesome5 name="google" brand size={16} color={colors.textMuted} />
-                        </Pressable>
-
-                        <Pressable
-                          accessibilityLabel="Открыть в Organic Maps"
-                          onPress={(e) => {
-                            e?.stopPropagation?.();
-                            onOpenOrganic(item.coord);
-                          }}
-                          {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
-                        >
-                          <Feather name="navigation" size={16} color={colors.textMuted} />
-                        </Pressable>
-
-                        {(!!item.articleUrl || !!item.urlTravel || !!baseUrl) && (
-                          <Pressable
-                            accessibilityLabel="Открыть статью"
-                            onPress={(e) => {
-                              e?.stopPropagation?.();
-                              onOpenArticle(item);
-                            }}
-                            {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
-                          >
-                            <Feather name="book-open" size={16} color={colors.textMuted} />
-                          </Pressable>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                <AddToPointsButton
-                  onPress={handleAddPointClick}
-                  loading={isAdding}
-                  disabled={addDisabled}
-                  colors={colors}
-                  styles={styles}
-                  isWide
-                />
-                </View>
-              }
-              mediaProps={{
-                blurBackground: true,
-                blurRadius: 16,
-                loading: 'lazy',
-                priority: 'low',
-              }}
               style={{ margin: DESIGN_TOKENS.spacing.sm }}
+              testID={`travel-point-card-${item.id}`}
             />
           ) : (
             <PointCard
@@ -844,7 +933,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
               onCopy={onCopy}
               onShare={onShare}
               onOpenMap={onOpenMap}
-              onOpenOrganic={onOpenOrganic}
               colors={colors}
               styles={styles}
               onCardPress={onPointCardPress ? () => onPointCardPress(item) : undefined}
@@ -869,7 +957,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       onCopy,
       onOpenArticle,
       onOpenMap,
-      onOpenOrganic,
       onPointCardPress,
       onShare,
       responsive,
@@ -917,29 +1004,6 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
 };
 
 export default React.memo(PointList);
-
-// ✅ УЛУЧШЕНИЕ: CSS анимация для градиента placeholder (только для web)
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const styleId = 'point-list-gradient-animation';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-      @keyframes gradientShift {
-        0% {
-          background-position: 0% 50%;
-        }
-        50% {
-          background-position: 100% 50%;
-        }
-        100% {
-          background-position: 0% 50%;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-}
 
 /* ============================= styles ============================= */
 
@@ -1107,36 +1171,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   // ✅ УЛУЧШЕНИЕ: Улучшенный placeholder с градиентом и лучшей типографикой
   noImage: {
     width: '100%',
-    ...Platform.select({
-      default: {
-        backgroundColor: colors.primary,
-      },
-      web: {
-        backgroundColor: 'transparent',
-        backgroundImage:
-          (colors.gradients as any)?.primary ??
-          `linear-gradient(135deg, ${colors.primary} 0%, ${colors.primaryDark} 50%, ${colors.primary} 100%)` as any,
-        backgroundSize: '200% 200%',
-        // ✅ ИСПРАВЛЕНИЕ: animation убрано из StyleSheet, используется CSS через style элемент
-      },
-    }),
+    backgroundColor: colors.backgroundTertiary,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    paddingVertical: 40,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
     minHeight: 240,
-  },
-  noImageText: {
-    marginTop: DESIGN_TOKENS.spacing.lg,
-    maxWidth: '85%',
-    textAlign: 'center',
-    color: colors.textOnPrimary,
-    fontWeight: '700',
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    lineHeight: 22,
-    textShadow: '0 2px 8px rgba(0,0,0,0.2)',
-    letterSpacing: -0.2,
   },
 
   // ✅ УЛУЧШЕНИЕ: Современные кнопки действий с улучшенной видимостью
@@ -1151,33 +1192,35 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.xs,
     backgroundColor: colors.overlay,
     borderRadius: 14,
-    padding: 5,
+    padding: 4,
     ...Platform.select({
       web: {
         backdropFilter: 'blur(12px) saturate(180%)',
         WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        boxShadow: '0 4px 10px rgba(0,0,0,0.12)',
       },
     }),
   },
   actionBtn: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.overlayLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer' as any,
         ':hover': {
-          backgroundColor: colors.primary,
-          transform: 'scale(1.15) rotate(5deg)',
-          boxShadow: (colors.boxShadows as any)?.medium ?? '0 4px 12px rgba(0,0,0,0.2)',
+          backgroundColor: colors.surface,
+          transform: 'scale(1.06)',
+          boxShadow: (colors.boxShadows as any)?.medium ?? '0 4px 10px rgba(0,0,0,0.16)',
         } as any,
         ':active': {
-          transform: 'scale(1.05)',
+          transform: 'scale(1.02)',
         } as any,
       },
     }),
@@ -1192,6 +1235,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: 12,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     backgroundColor: colors.overlay,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderLight,
     flexDirection: 'column',
     gap: DESIGN_TOKENS.spacing.xs,
   },
@@ -1210,15 +1255,47 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingVertical: 5,
     borderRadius: 999,
     backgroundColor: colors.overlayLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
   },
   overlayCoordText: {
     color: colors.textOnDark,
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: Platform.select({
       web: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace',
       default: undefined,
     }),
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+  },
+  overlayMapChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginTop: DESIGN_TOKENS.spacing.xxs,
+  },
+  mapChip: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+        transition: 'all 0.2s ease',
+        ':hover': {
+          borderColor: colors.border,
+          backgroundColor: colors.backgroundSecondary,
+        } as any,
+      },
+    }),
+  },
+  mapChipText: {
+    color: colors.text,
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    fontWeight: '600',
+    letterSpacing: -0.2,
   },
   overlayCategoryRow: {
     flexDirection: 'row',
@@ -1237,7 +1314,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   overlayCategoryText: {
     color: colors.textOnDark,
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   addButtonContainer: {
     marginTop: DESIGN_TOKENS.spacing.md,

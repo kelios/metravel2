@@ -81,7 +81,9 @@ describe('PointList (web coordinates list uses popup template)', () => {
     expect(getByLabelText('Скопировать координаты')).toBeTruthy();
     expect(getByLabelText('Поделиться в Telegram')).toBeTruthy();
     expect(getByLabelText('Открыть в Google Maps')).toBeTruthy();
-    expect(getByLabelText('Открыть в Organic Maps')).toBeTruthy();
+    expect(getByLabelText('Открыть в Apple Maps')).toBeTruthy();
+    expect(getByLabelText('Открыть в Яндекс Картах')).toBeTruthy();
+    expect(getByLabelText('Открыть в OpenStreetMap')).toBeTruthy();
     expect(getByLabelText('Открыть статью')).toBeTruthy();
 
     fireEvent.press(getByLabelText('Открыть в Google Maps'));
@@ -92,9 +94,27 @@ describe('PointList (web coordinates list uses popup template)', () => {
         'noopener,noreferrer'
       );
     }).then(() => {
-      fireEvent.press(getByLabelText('Открыть в Organic Maps'));
+      fireEvent.press(getByLabelText('Открыть в Apple Maps'));
       return waitFor(() => {
-        expect(openSpy).toHaveBeenCalledWith('https://omaps.app/50,20', '_blank', 'noopener,noreferrer');
+        expect(openSpy).toHaveBeenCalledWith('https://maps.apple.com/?q=50%2C20', '_blank', 'noopener,noreferrer');
+      });
+    }).then(() => {
+      fireEvent.press(getByLabelText('Открыть в Яндекс Картах'));
+      return waitFor(() => {
+        expect(openSpy).toHaveBeenCalledWith(
+          'https://yandex.ru/maps/?pt=20%2C50&z=16&l=map',
+          '_blank',
+          'noopener,noreferrer'
+        );
+      });
+    }).then(() => {
+      fireEvent.press(getByLabelText('Открыть в OpenStreetMap'));
+      return waitFor(() => {
+        expect(openSpy).toHaveBeenCalledWith(
+          'https://www.openstreetmap.org/?mlat=50&mlon=20#map=16/50/20',
+          '_blank',
+          'noopener,noreferrer'
+        );
       });
     }).then(() => {
       fireEvent.press(getByLabelText('Скопировать координаты'));

@@ -7,11 +7,14 @@ import type { PointColor } from '@/types/userPoints';
 import { buildDropMarkerHtml } from '@/src/utils/markerSvg';
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import { useThemedColors } from '@/hooks/useTheme';
+import { showToast } from '@/src/utils/toast';
 import type { MapUiApi } from '@/src/types/mapUi';
 import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
 import { useMapApi } from '@/components/MapPage/Map/useMapApi';
 import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
 import { createLeafletLayer } from '@/src/utils/mapWebLayers';
+
+const DEFAULT_SITE_POINT_COLOR = '#ff922b';
 
 interface PointsMapProps {
   points: ImportedPoint[];
@@ -101,14 +104,27 @@ const PointMarkerWeb = React.memo(
     const categoryLabel = React.useMemo(() => {
       const names = (point as any)?.categoryNames;
       if (Array.isArray(names) && names.length > 0) {
-        return names.map((v: any) => String(v).trim()).filter(Boolean).join(', ');
+        const cleaned = names
+          .map((v: any) => String(v).trim())
+          .filter(Boolean)
+          .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0);
+        return cleaned.join(', ');
       }
       const ids = (point as any)?.categoryIds;
       if (Array.isArray(ids) && ids.length > 0) {
-        return ids.map((v: any) => String(v).trim()).filter(Boolean).join(', ');
+        const cleaned = ids
+          .map((v: any) => String(v).trim())
+          .filter(Boolean)
+          .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0);
+        return cleaned.join(', ');
       }
-      return String((point as any)?.category ?? '').trim();
-    }, [point]);
+      const legacy = String((point as any)?.category ?? '').trim();
+      if (!legacy) return '';
+      if (countryLabel && legacy.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) === 0) {
+        return '';
+      }
+      return legacy;
+    }, [countryLabel, point]);
     const colorLabel = React.useMemo(() => String((point as any)?.color ?? '').trim(), [point]);
     const markerAccentColor = React.useMemo(
       () => String((point as any)?.color ?? '').trim() || colors.backgroundTertiary,
@@ -168,9 +184,10 @@ const PointMarkerWeb = React.memo(
 
     const markerIcon = React.useMemo(() => {
       const fallback = colors.backgroundTertiary;
-      const fill = isSitePoint ? colors.primary : (point as any)?.color;
+      const baseColor = String((point as any)?.color ?? '').trim();
+      const fill = isSitePoint ? (baseColor || DEFAULT_SITE_POINT_COLOR) : baseColor;
       return getMarkerIconCached(String(fill || '').trim() || fallback, { active: isActive, emphasize: isSitePoint });
-    }, [colors.backgroundTertiary, colors.primary, getMarkerIconCached, isActive, isSitePoint, point]);
+    }, [colors.backgroundTertiary, getMarkerIconCached, isActive, isSitePoint, point]);
 
     const markerEventHandlers = React.useMemo(() => {
       return { click: handleMarkerClick } as any;
@@ -244,7 +261,7 @@ const PointMarkerWeb = React.memo(
                       {badgeLabel}
                     </div>
                   ) : null}
-                  {countryLabel ? (
+                  {!isSitePoint && countryLabel ? (
                     <div
                       style={{
                         background: colors.backgroundTertiary,
@@ -403,14 +420,18 @@ const PointMarkerWeb = React.memo(
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      title="Копировать координаты"
-                      aria-label="Копировать координаты"
-                      data-card-action="true"
-                      onClick={(e: any) => {
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  {/*
+                    We use an inline handler here to keep clipboard access tied to the user gesture.
+                    Toast provides immediate feedback after a successful copy.
+                  */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    title="Копировать координаты"
+                    aria-label="Копировать координаты"
+                    data-card-action="true"
+                    onClick={(e: any) => {
                         try {
                           e?.preventDefault?.();
                           e?.stopPropagation?.();
@@ -419,6 +440,7 @@ const PointMarkerWeb = React.memo(
                         }
                         try {
                           ;(navigator as any)?.clipboard?.writeText?.(coordsText);
+                          void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
                         } catch {
                           // noop
                         }
@@ -433,6 +455,7 @@ const PointMarkerWeb = React.memo(
                         }
                         try {
                           ;(navigator as any)?.clipboard?.writeText?.(coordsText);
+                          void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
                         } catch {
                           // noop
                         }
@@ -1602,16 +1625,18 @@ const PointsMapNative: React.FC<PointsMapProps> = ({
             const coordsText = `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`;
             const tags = (p as any)?.tags;
             const isSitePoint = Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
+            const baseColor = String(p.color || '').trim();
+            const siteColor = baseColor || DEFAULT_SITE_POINT_COLOR;
             return (
               <Marker
                 key={String(p.id)}
                 coordinate={{ latitude: p.latitude, longitude: p.longitude }}
                 pinColor={
                   isSitePoint
-                    ? colors.primary
+                    ? siteColor
                     : isActive
                       ? colors.primary
-                      : String(p.color || colors.backgroundTertiary)
+                      : String(baseColor || colors.backgroundTertiary)
                 }
                 title={String(p?.name ?? '')}
                 description={coordsText}

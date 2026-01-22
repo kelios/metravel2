@@ -1,8 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Text, View, Pressable } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
-import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
-import type { ThemedColors } from '@/hooks/useTheme';
+import PlacePopupCard from './PlacePopupCard';
 import type { Point } from './types';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl } from './mapLinks';
 import { useAuth } from '@/context/AuthContext';
@@ -15,7 +12,6 @@ type UseMap = () => any;
 
 interface CreatePopupComponentArgs {
   useMap: UseMap;
-  colors: ThemedColors;
 }
 
 const stripCountryFromCategoryString = (raw: unknown, address?: string | null) => {
@@ -38,7 +34,7 @@ const stripCountryFromCategoryString = (raw: unknown, address?: string | null) =
   return filtered.join(', ');
 };
 
-export const createMapPopupComponent = ({ useMap, colors }: CreatePopupComponentArgs) => {
+export const createMapPopupComponent = ({ useMap }: CreatePopupComponentArgs) => {
   const PopupComponent: React.FC<{ point: Point }> = ({ point }) => {
     const [isAdding, setIsAdding] = useState(false);
     const map = useMap();
@@ -124,6 +120,19 @@ export const createMapPopupComponent = ({ useMap, colors }: CreatePopupComponent
       return { lat, lng };
     }, [coord]);
 
+    const rawCategoryName = useMemo(() => {
+      if (Array.isArray(point.categoryName)) return point.categoryName.join(', ');
+      if (typeof point.categoryName === 'object' && point.categoryName !== null) {
+        return String((point.categoryName as any).name ?? '');
+      }
+      return String(point.categoryName ?? '').trim();
+    }, [point.categoryName]);
+
+    const categoryLabel = useMemo(
+      () => stripCountryFromCategoryString(rawCategoryName, point.address),
+      [rawCategoryName, point.address],
+    );
+
     const handleAddPoint = useCallback(async () => {
       if (!authReady) return;
       if (!isAuthenticated) {
@@ -135,12 +144,7 @@ export const createMapPopupComponent = ({ useMap, colors }: CreatePopupComponent
         void showToast({ type: 'info', text1: 'Не удалось распознать координаты', position: 'bottom' });
         return;
       }
-      const rawCategoryName = Array.isArray(point.categoryName)
-        ? point.categoryName.join(', ')
-        : typeof point.categoryName === 'object'
-        ? String((point.categoryName as any).name ?? '')
-        : String(point.categoryName ?? '').trim();
-      const categoryNameString = stripCountryFromCategoryString(rawCategoryName, point.address) || undefined;
+      const categoryNameString = categoryLabel || undefined;
 
       const payload: Partial<{ [key: string]: any }> = {
         name: point.address || 'Точка маршрута',
@@ -179,229 +183,31 @@ export const createMapPopupComponent = ({ useMap, colors }: CreatePopupComponent
       authReady,
       isAuthenticated,
       isAdding,
+      categoryLabel,
       normalizedCoord,
       point.address,
-      point.categoryId,
-      point.categoryName,
       point.category_ids,
+      point.categoryId,
       queryClient,
       handlePress,
     ]);
 
     return (
-      <UnifiedTravelCard
+      <PlacePopupCard
         title={point.address || ''}
         imageUrl={point.travelImageThumbUrl}
-        metaText={point.categoryName}
-        onPress={handlePress}
-        onMediaPress={handleOpenArticle}
-        imageHeight={180}
-        width={300}
-        contentSlot={
-          <View style={{ gap: 8 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={2}>
-              {point.address || ''}
-            </Text>
-            {!!coord && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: colors.textMuted,
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
-                  }}
-                  numberOfLines={1}
-                >
-                  {coord}
-                </Text>
-                <View
-                  {...({
-                    role: 'button',
-                    tabIndex: 0,
-                    title: 'Скопировать координаты',
-                    'aria-label': 'Скопировать координаты',
-                    'data-card-action': 'true',
-                    onClick: (e: any) => {
-                      e?.preventDefault?.();
-                      e?.stopPropagation?.();
-                      void handleCopyCoord();
-                    },
-                    onKeyDown: (e: any) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e?.stopPropagation?.();
-                        void handleCopyCoord();
-                      }
-                    },
-                    style: { cursor: 'pointer' },
-                  } as any)}
-                >
-                  <Feather name="clipboard" size={16} color={colors.textMuted} />
-                </View>
-                <View
-                  {...({
-                    role: 'button',
-                    tabIndex: 0,
-                    title: 'Поделиться в Telegram',
-                    'aria-label': 'Поделиться в Telegram',
-                    'data-card-action': 'true',
-                    onClick: (e: any) => {
-                      e?.preventDefault?.();
-                      e?.stopPropagation?.();
-                      handleShareTelegram();
-                    },
-                    onKeyDown: (e: any) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        e?.stopPropagation?.();
-                        handleShareTelegram();
-                      }
-                    },
-                    style: { cursor: 'pointer' },
-                  } as any)}
-                >
-                  <Feather name="send" size={16} color={colors.textMuted} />
-                </View>
-              </View>
-            )}
-            {(!!point.categoryName || !!coord) && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                {!!point.categoryName && (
-                  <Text style={{ fontSize: 12, color: colors.textMuted }} numberOfLines={1}>
-                    {point.categoryName}
-                  </Text>
-                )}
-
-                {!!coord && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <View
-                      {...({
-                        role: 'button',
-                        tabIndex: 0,
-                        title: 'Открыть в Google Maps',
-                        'aria-label': 'Открыть в Google Maps',
-                        'data-card-action': 'true',
-                        onClick: (e: any) => {
-                          e?.preventDefault?.();
-                          e?.stopPropagation?.();
-                          handleOpenGoogleMaps();
-                        },
-                        onKeyDown: (e: any) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e?.stopPropagation?.();
-                            handleOpenGoogleMaps();
-                          }
-                        },
-                        style: { cursor: 'pointer' },
-                      } as any)}
-                    >
-                      <Feather name="external-link" size={16} color={colors.textMuted} />
-                    </View>
-
-                    <View
-                      {...({
-                        role: 'button',
-                        tabIndex: 0,
-                        title: 'Открыть в Organic Maps',
-                        'aria-label': 'Открыть в Organic Maps',
-                        'data-card-action': 'true',
-                        onClick: (e: any) => {
-                          e?.preventDefault?.();
-                          e?.stopPropagation?.();
-                          handleOpenOrganicMaps();
-                        },
-                        onKeyDown: (e: any) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e?.stopPropagation?.();
-                            handleOpenOrganicMaps();
-                          }
-                        },
-                        style: { cursor: 'pointer' },
-                      } as any)}
-                    >
-                      <Feather name="navigation" size={16} color={colors.textMuted} />
-                    </View>
-
-                    {!!String(point.articleUrl || point.urlTravel || '').trim() && (
-                      <View
-                        {...({
-                          role: 'button',
-                          tabIndex: 0,
-                          title: 'Открыть статью',
-                          'aria-label': 'Открыть статью',
-                          'data-card-action': 'true',
-                          onClick: (e: any) => {
-                            e?.preventDefault?.();
-                            e?.stopPropagation?.();
-                            handleOpenArticle();
-                          },
-                          onKeyDown: (e: any) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              e?.stopPropagation?.();
-                              handleOpenArticle();
-                            }
-                          },
-                          style: { cursor: 'pointer' },
-                        } as any)}
-                      >
-                        <Feather name="book-open" size={16} color={colors.textMuted} />
-                      </View>
-                    )}
-                  </View>
-                )}
-            </View>
-            )}
-            <View style={{ marginTop: 6, alignItems: 'flex-end' }}>
-              <Pressable
-                onPress={(e: any) => {
-                  e?.preventDefault?.();
-                  e?.stopPropagation?.();
-                  void handleAddPoint();
-                }}
-                disabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
-                style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  paddingVertical: 4,
-                  paddingHorizontal: 8,
-                  borderRadius: 8,
-                  backgroundColor:
-                    !authReady || !isAuthenticated || !normalizedCoord || isAdding
-                      ? 'rgba(0,0,0,0.08)'
-                      : colors.primary,
-                  opacity: pressed ? 0.85 : 1,
-                  cursor: 'pointer',
-                })}
-              >
-                <Feather
-                  name="map-pin"
-                  size={16}
-                  color={colors.textOnPrimary}
-                  style={{ marginTop: -1 }}
-                />
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: colors.textOnPrimary,
-                    fontWeight: '600',
-                  }}
-                >
-                  Добавить в мои точки
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        }
-        mediaProps={{
-          blurBackground: true,
-          blurRadius: 16,
-          loading: 'lazy',
-          priority: 'low',
-        }}
+        categoryLabel={categoryLabel}
+        coord={coord}
+        onCardPress={handlePress}
+        enableCardPress={true}
+        onOpenArticle={handleOpenArticle}
+        onCopyCoord={handleCopyCoord}
+        onShareTelegram={handleShareTelegram}
+        onOpenGoogleMaps={handleOpenGoogleMaps}
+        onOpenOrganicMaps={handleOpenOrganicMaps}
+        onAddPoint={handleAddPoint}
+        addDisabled={!authReady || !isAuthenticated || !normalizedCoord || isAdding}
+        isAdding={isAdding}
       />
     );
   };

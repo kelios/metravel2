@@ -14,7 +14,7 @@ import * as Clipboard from 'expo-clipboard';
 import { TravelCoords } from '@/src/types/types';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import PlaceListCard from '@/components/places/PlaceListCard';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
@@ -57,6 +57,22 @@ const buildMapUrl = (coord?: string) => {
 const buildOrganicMapsUrl = (coord?: string) => {
     const p = parseCoord(coord);
     return p ? `https://omaps.app/${p.lat},${p.lon}` : '';
+};
+
+const buildAppleMapsUrl = (coord?: string) => {
+  const p = parseCoord(coord);
+  return p ? `https://maps.apple.com/?q=${encodeURIComponent(`${p.lat},${p.lon}`)}` : '';
+};
+
+const buildYandexMapsUrl = (coord?: string) => {
+  const p = parseCoord(coord);
+  return p ? `https://yandex.ru/maps/?pt=${encodeURIComponent(`${p.lon},${p.lat}`)}&z=16&l=map` : '';
+};
+
+const buildOsmUrl = (coord?: string) => {
+  const p = parseCoord(coord);
+  if (!p) return '';
+  return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(p.lat))}&mlon=${encodeURIComponent(String(p.lon))}#map=16/${encodeURIComponent(String(p.lat))}/${encodeURIComponent(String(p.lon))}`;
 };
 
 const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
@@ -320,129 +336,76 @@ const AddressListItem: React.FC<Props> = ({
     }, [coord, userLocation, transportMode]);
 
     if (Platform.OS === 'web') {
+        const categoryLabel = categories.join(', ');
+        const travelModeLabel =
+          transportMode === 'car' ? 'Авто' : transportMode === 'bike' ? 'Велосипед' : 'Пешком';
+        const badges = distanceInfo
+          ? [distanceInfo.distanceText, `${travelModeLabel} ${distanceInfo.travelTimeText}`]
+          : [];
+
         return (
-          <UnifiedTravelCard
+          <PlaceListCard
             title={address ?? ''}
             imageUrl={imgUri}
-            metaText={categoryName}
-            onPress={handleMainPress}
+            categoryLabel={categoryLabel || undefined}
+            coord={coord}
+            badges={badges}
+            onCardPress={handleMainPress}
+            onMediaPress={articleUrl || urlTravel ? () => openArticle() : undefined}
+            onCopyCoord={coord ? copyCoords : undefined}
+            onShare={coord ? openTelegram : undefined}
+            mapActions={
+              coord
+                ? [
+                    {
+                      key: 'google',
+                      label: 'Google',
+                      icon: 'map-pin',
+                      onPress: () => openExternal(buildMapUrl(coord)),
+                      title: 'Открыть в Google Maps',
+                    },
+                    {
+                      key: 'apple',
+                      label: 'Apple',
+                      icon: 'map',
+                      onPress: () => openExternal(buildAppleMapsUrl(coord)),
+                      title: 'Открыть в Apple Maps',
+                    },
+                    {
+                      key: 'yandex',
+                      label: 'Яндекс',
+                      icon: 'navigation',
+                      onPress: () => openExternal(buildYandexMapsUrl(coord)),
+                      title: 'Открыть в Яндекс Картах',
+                    },
+                    {
+                      key: 'osm',
+                      label: 'OSM',
+                      icon: 'map',
+                      onPress: () => openExternal(buildOsmUrl(coord)),
+                      title: 'Открыть в OpenStreetMap',
+                    },
+                  ]
+                : []
+            }
+            inlineActions={
+              articleUrl || urlTravel
+                ? [
+                    {
+                      key: 'article',
+                      label: 'Статья',
+                      icon: 'book-open',
+                      onPress: () => openArticle(),
+                      title: 'Открыть статью',
+                    },
+                  ]
+                : []
+            }
+            onAddPoint={handleAddPoint}
+            addDisabled={!authReady || !isAuthenticated || isAddingPoint}
+            isAdding={isAddingPoint}
             imageHeight={180}
             width={300}
-            contentSlot={
-              <View style={{ gap: 8 }}>
-                {!!address && (
-                  <Text numberOfLines={2} style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-                    {address}
-                  </Text>
-                )}
-
-                {!!coord && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Text
-                      numberOfLines={1}
-                      style={{
-                        fontSize: 12,
-                        fontWeight: '600',
-                        color: colors.textMuted,
-                        fontFamily:
-                          Platform.OS === 'web'
-                            ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)
-                            : 'monospace',
-                      }}
-                    >
-                      {coord}
-                    </Text>
-
-                    <Pressable
-                      accessibilityLabel="Скопировать координаты"
-                      onPress={(e) => {
-                        e?.stopPropagation?.();
-                        void copyCoords();
-                      }}
-                      {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
-                    >
-                      <View {...({ title: 'Скопировать координаты', 'aria-label': 'Скопировать координаты' } as any)}>
-                        <Feather name="clipboard" size={16} color={colors.textMuted} />
-                      </View>
-                    </Pressable>
-
-                    <Pressable
-                      accessibilityLabel="Поделиться в Telegram"
-                      onPress={(e) => {
-                        e?.stopPropagation?.();
-                        void openTelegram();
-                      }}
-                      {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
-                    >
-                      <View {...({ title: 'Поделиться в Telegram', 'aria-label': 'Поделиться в Telegram' } as any)}>
-                        <Feather name="send" size={16} color={colors.textMuted} />
-                      </View>
-                    </Pressable>
-                  </View>
-                )}
-
-                {(!!categoryName || !!coord) && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    {!!categoryName && (
-                      <Text numberOfLines={1} style={{ fontSize: 12, color: colors.textMuted }}>
-                        {categoryName}
-                      </Text>
-                    )}
-
-                    {!!coord && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                        <Pressable
-                          accessibilityLabel="Открыть в Google Maps"
-                          onPress={(e) => {
-                            e?.stopPropagation?.();
-                            openMap(e);
-                          }}
-                          {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
-                        >
-                          <View {...({ title: 'Открыть в Google Maps', 'aria-label': 'Открыть в Google Maps' } as any)}>
-                            <Feather name="map" size={16} color={colors.textMuted} />
-                          </View>
-                        </Pressable>
-
-                        <Pressable
-                          accessibilityLabel="Открыть в Organic Maps"
-                          onPress={(e) => {
-                            e?.stopPropagation?.();
-                            openOrganicMaps(e);
-                          }}
-                          {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
-                        >
-                          <View {...({ title: 'Открыть в Organic Maps', 'aria-label': 'Открыть в Organic Maps' } as any)}>
-                            <Feather name="navigation" size={16} color={colors.textMuted} />
-                          </View>
-                        </Pressable>
-
-                        {(!!articleUrl || !!urlTravel) && (
-                          <Pressable
-                            accessibilityLabel="Открыть статью"
-                            onPress={(e) => {
-                              e?.stopPropagation?.();
-                              openArticle(e);
-                            }}
-                            {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
-                          >
-                            <View {...({ title: 'Открыть статью', 'aria-label': 'Открыть статью' } as any)}>
-                              <Feather name="book-open" size={16} color={colors.textMuted} />
-                            </View>
-                          </Pressable>
-                        )}
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            }
-            mediaProps={{
-              blurBackground: true,
-              blurRadius: 16,
-              loading: 'lazy',
-              priority: 'low',
-            }}
             style={{ margin: 8 }}
             testID="map-travel-card"
           />

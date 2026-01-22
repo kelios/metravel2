@@ -1,13 +1,13 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
 import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import Feather from '@expo/vector-icons/Feather';
 
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 import { buildDropMarkerHtml } from '@/src/utils/markerSvg';
+import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard';
 import { useAuth } from '@/context/AuthContext';
 import { showToast } from '@/src/utils/toast';
 import { userPointsApi } from '@/src/api/userPoints';
@@ -110,21 +110,43 @@ const normalizeCoordKey = (coord?: string | null) => {
 const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
-const stripCountryFromCategoryNames = (names: string[], address?: string | null) => {
+const getCountryFromAddress = (address?: string | null) => {
   const addr = String(address ?? '').trim();
-  const countryCandidate = addr
-    ? addr
-        .split(',')
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .slice(-1)[0]
-    : '';
+  if (!addr) return '';
+  return (
+    addr
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .slice(-1)[0] ?? ''
+  );
+};
+
+const stripCountryFromCategoryNames = (names: string[], address?: string | null) => {
+  const countryCandidate = getCountryFromAddress(address);
   if (!countryCandidate) return names;
   return names.filter((p) => p.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0);
 };
 
-// Используем UnifiedTravelCard для попапов
-import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+const stripCountryFromCategoryIds = (
+  ids: string[],
+  address: string | null | undefined,
+  idToNameMap: Map<string, string>
+) => {
+  const countryCandidate = getCountryFromAddress(address);
+  if (!countryCandidate) return ids;
+  return ids.filter((id) => {
+    const idText = String(id ?? '').trim();
+    const name = String(idToNameMap.get(idText) ?? '').trim();
+    if (!name) {
+      if (!idText) return true;
+      return idText.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0;
+    }
+    return name.localeCompare(countryCandidate, undefined, { sensitivity: 'accent' }) !== 0;
+  });
+};
+
+// Карточка попапа на карте
 
 const isWeb = Platform.OS === 'web';
 const getLatLng = (latlng: string): [number, number] | null => {
@@ -158,6 +180,24 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const pendingHighlightRef = useRef<{ coordKey: string; requestKey: string } | null>(null);
   const siteCategoryDictionaryRef = useRef<CategoryDictionaryItem[]>([]);
   const [categoryDictionaryVersion, setCategoryDictionaryVersion] = useState(0);
+  const categoryIdToName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of siteCategoryDictionaryRef.current) {
+      const id = String(entry.id ?? '').trim();
+      const name = String(entry.name ?? '').trim();
+      if (!id || !name) continue;
+      map.set(id, name);
+    }
+    return map;
+  }, [categoryDictionaryVersion]);
+
+  if (isWeb && typeof document !== 'undefined') {
+    const existing = document.getElementById(mapContainerIdRef.current) as any;
+    if (!mapRef.current && existing && existing._leaflet_id) {
+      mapContainerIdRef.current = `${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${generateUniqueId()}`;
+      mapInstanceKeyRef.current = `leaflet-map-${generateUniqueId()}`;
+    }
+  }
 
   useEffect(() => {
     if (!isWeb || typeof document === 'undefined') return;
@@ -691,6 +731,11 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       const idsFromPoint = getPointCategoryIds(point);
       const idsFromNames = resolvedCategoryIdsFromNames;
       const combinedIds = Array.from(new Set([...idsFromPoint, ...idsFromNames]));
+      const filteredIds = stripCountryFromCategoryIds(
+        combinedIds,
+        point.address,
+        categoryIdToName
+      );
       const categoryNameString = categoryLabel || undefined;
       const payload: Record<string, unknown> = {
         name: point.address || 'Точка маршрута',
@@ -702,8 +747,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         category: categoryNameString,
         categoryName: categoryNameString,
       };
-      if (combinedIds.length > 0) {
-        payload.categoryIds = combinedIds;
+      if (filteredIds.length > 0) {
+        payload.categoryIds = filteredIds;
       }
       const tags: Record<string, unknown> = {};
       if (point.urlTravel) {
@@ -738,6 +783,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     }, [
       authReady,
       categoryLabel,
+      categoryIdToName,
       handleClose,
       isAddingPoint,
       isAuthenticated,
@@ -746,292 +792,28 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       resolvedCategoryIdsFromNames,
     ]);
 
-    const hasArticle = !!String(point.articleUrl || point.urlTravel || '').trim();
-    const hasCoord = !!coord;
-
     return (
       <Popup
         autoPan
         keepInView
         autoPanPadding={[16, 16] as any}
-        autoPanPaddingTopLeft={[16, 96] as any}
-        autoPanPaddingBottomRight={[16, 120] as any}
+        autoPanPaddingTopLeft={[16, 120] as any}
+        autoPanPaddingBottomRight={[16, 280] as any}
         closeButton
       >
-        <UnifiedTravelCard
+        <PlacePopupCard
           title={point.address || ''}
           imageUrl={point.travelImageThumbUrl}
-          metaText={categoryLabel || undefined}
-          onPress={handleClose}
-          onMediaPress={handleOpenArticle}
-          imageHeight={180}
-          width={300}
-          contentSlot={
-            <View style={{ gap: 12 }}>
-              <View style={{ gap: 6 }}>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: '700',
-                    color: (colors as any).text ?? undefined,
-                    ...(Platform.OS === 'web'
-                      ? ({
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                        } as any)
-                      : null),
-                  }}
-                  numberOfLines={2}
-                >
-                  {point.address || ''}
-                </Text>
-                {!!categoryLabel && (
-                  <View
-                    style={{
-                      alignSelf: 'flex-start',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingVertical: 4,
-                      paddingHorizontal: 8,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: (colors as any).borderLight ?? (colors as any).border,
-                      backgroundColor: (colors as any).backgroundSecondary ?? (colors as any).surface,
-                    }}
-                  >
-                    <Feather name="tag" size={12} color={(colors as any).textMuted ?? undefined} />
-                    <Text style={{ fontSize: 12, color: (colors as any).textMuted ?? undefined }} numberOfLines={1}>
-                      {categoryLabel}
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              {hasCoord && (
-                <View
-                  style={{
-                    padding: 10,
-                    borderRadius: 12,
-                    backgroundColor: (colors as any).backgroundSecondary ?? (colors as any).surface,
-                    borderWidth: 1,
-                    borderColor: (colors as any).borderLight ?? (colors as any).border,
-                    gap: 6,
-                  }}
-                >
-                  <Text style={{ fontSize: 11, color: (colors as any).textMuted ?? undefined, letterSpacing: 0.3 }}>
-                    Координаты
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                    <Text
-                      style={{
-                        fontSize: 12,
-                        color: (colors as any).text ?? undefined,
-                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
-                      }}
-                      numberOfLines={1}
-                    >
-                      {coord}
-                    </Text>
-                    <Pressable
-                      accessibilityLabel="Скопировать координаты"
-                      onPress={(e) => {
-                        (e as any)?.stopPropagation?.();
-                        void handleCopyCoord();
-                      }}
-                      {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
-                      style={({ pressed }) => ({
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingVertical: 6,
-                        paddingHorizontal: 10,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: (colors as any).border,
-                        backgroundColor: (colors as any).surface,
-                        opacity: pressed ? 0.9 : 1,
-                        cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-                      })}
-                    >
-                      <Feather name="clipboard" size={14} color={(colors as any).textMuted ?? undefined} />
-                      <Text style={{ fontSize: 12, color: (colors as any).textMuted ?? undefined }}>Скопировать</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              )}
-
-              {hasCoord && (
-                <View style={{ gap: 8 }}>
-                  <Text style={{ fontSize: 11, color: (colors as any).textMuted ?? undefined, letterSpacing: 0.3 }}>
-                    Открыть в
-                  </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    <Pressable
-                      accessibilityLabel="Открыть в Google Maps"
-                      onPress={(e) => {
-                        (e as any)?.stopPropagation?.();
-                        handleOpenGoogleMaps();
-                      }}
-                      {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
-                      style={({ pressed }) => ({
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingVertical: 8,
-                        paddingHorizontal: 10,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: (colors as any).border,
-                        backgroundColor: (colors as any).surface,
-                        opacity: pressed ? 0.9 : 1,
-                        cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-                      })}
-                    >
-                      <Feather name="external-link" size={14} color={(colors as any).textMuted ?? undefined} />
-                      <Text style={{ fontSize: 12, color: (colors as any).text ?? undefined }}>Google Maps</Text>
-                    </Pressable>
-
-                    <Pressable
-                      accessibilityLabel="Открыть в Organic Maps"
-                      onPress={(e) => {
-                        (e as any)?.stopPropagation?.();
-                        handleOpenOrganicMaps();
-                      }}
-                      {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
-                      style={({ pressed }) => ({
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        paddingVertical: 8,
-                        paddingHorizontal: 10,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: (colors as any).border,
-                        backgroundColor: (colors as any).surface,
-                        opacity: pressed ? 0.9 : 1,
-                        cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-                      })}
-                    >
-                      <Feather name="navigation" size={14} color={(colors as any).textMuted ?? undefined} />
-                      <Text style={{ fontSize: 12, color: (colors as any).text ?? undefined }}>Organic Maps</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              )}
-
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {hasCoord && (
-                  <Pressable
-                    accessibilityLabel="Поделиться в Telegram"
-                    onPress={(e) => {
-                      (e as any)?.stopPropagation?.();
-                      handleShareTelegram();
-                    }}
-                    {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
-                    style={({ pressed }) => ({
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingVertical: 8,
-                      paddingHorizontal: 10,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: (colors as any).border,
-                      backgroundColor: (colors as any).surface,
-                      opacity: pressed ? 0.9 : 1,
-                      cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-                    })}
-                  >
-                    <Feather name="send" size={14} color={(colors as any).textMuted ?? undefined} />
-                    <Text style={{ fontSize: 12, color: (colors as any).text ?? undefined }}>Поделиться</Text>
-                  </Pressable>
-                )}
-
-                {hasArticle && (
-                  <Pressable
-                    accessibilityLabel="Открыть статью"
-                    onPress={(e) => {
-                      (e as any)?.stopPropagation?.();
-                      handleOpenArticle();
-                    }}
-                    {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
-                    style={({ pressed }) => ({
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      paddingVertical: 8,
-                      paddingHorizontal: 10,
-                      borderRadius: 10,
-                      borderWidth: 1,
-                      borderColor: (colors as any).border,
-                      backgroundColor: (colors as any).surface,
-                      opacity: pressed ? 0.9 : 1,
-                      cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-                    })}
-                  >
-                    <Feather name="book-open" size={14} color={(colors as any).textMuted ?? undefined} />
-                    <Text style={{ fontSize: 12, color: (colors as any).text ?? undefined }}>Статья</Text>
-                  </Pressable>
-                )}
-              </View>
-
-              <Pressable
-                accessibilityLabel="Добавить в мои точки"
-                onPress={(e) => {
-                  (e as any)?.stopPropagation?.();
-                  void handleAddPoint();
-                }}
-                disabled={!authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint}
-                {...(Platform.OS === 'web'
-                  ? ({
-                      title: 'Добавить в мои точки',
-                      'aria-label': 'Добавить в мои точки',
-                    } as any)
-                  : ({ accessibilityRole: 'button' } as any))}
-                {...({ 'data-card-action': 'true' } as any)}
-                style={({ pressed }) => ({
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 12,
-                  backgroundColor:
-                    !authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint
-                      ? 'rgba(0,0,0,0.08)'
-                      : (colors as any).primary,
-                  opacity: pressed ? 0.92 : 1,
-                  cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-                })}
-              >
-                {isAddingPoint ? (
-                  <ActivityIndicator size="small" color={(colors as any).textOnPrimary ?? '#fff'} />
-                ) : (
-                  <Feather name="map-pin" size={16} color={(colors as any).textOnPrimary ?? '#fff'} />
-                )}
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: '700',
-                    color: (colors as any).textOnPrimary ?? '#fff',
-                    letterSpacing: -0.2,
-                  }}
-                >
-                  Добавить в мои точки
-                </Text>
-              </Pressable>
-            </View>
-          }
-          mediaProps={{
-            blurBackground: true,
-            blurRadius: 16,
-            loading: 'lazy',
-            priority: 'low',
-          }}
+          categoryLabel={categoryLabel}
+          coord={coord}
+          onOpenArticle={handleOpenArticle}
+          onCopyCoord={handleCopyCoord}
+          onShareTelegram={handleShareTelegram}
+          onOpenGoogleMaps={handleOpenGoogleMaps}
+          onOpenOrganicMaps={handleOpenOrganicMaps}
+          onAddPoint={handleAddPoint}
+          addDisabled={!authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint}
+          isAdding={isAddingPoint}
         />
       </Popup>
     );
@@ -1055,17 +837,54 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           border-radius: ${DESIGN_TOKENS.radii.md}px !important;
           box-shadow: ${DESIGN_TOKENS.shadows.modal} !important;
           border: 1px solid ${(colors as any).border} !important;
+          max-height: 260px !important;
+          overflow: hidden !important;
         }
         .metravel-travel-map .leaflet-popup-content {
           margin: ${DESIGN_TOKENS.spacing.md}px !important;
           color: ${(colors as any).text} !important;
+          max-height: 240px !important;
+          overflow-y: auto !important;
+          width: 320px !important;
         }
         .metravel-travel-map .leaflet-popup-close-button {
           display: block !important;
+          width: 28px !important;
+          height: 28px !important;
+          line-height: 26px !important;
+          text-align: center !important;
+          border-radius: 999px !important;
+          border: 1px solid ${(colors as any).border} !important;
+          background: ${(colors as any).surface} !important;
+          top: 8px !important;
+          right: 8px !important;
+          z-index: 2 !important;
           color: ${(colors as any).textMuted} !important;
+          cursor: pointer !important;
         }
         .metravel-travel-map .leaflet-popup-close-button:hover {
           color: ${(colors as any).text} !important;
+        }
+        @media (max-width: 640px) {
+          .metravel-travel-map .leaflet-popup {
+            max-width: 92vw !important;
+          }
+          .metravel-travel-map .leaflet-popup-content-wrapper {
+            max-height: 40vh !important;
+          }
+          .metravel-travel-map .leaflet-popup-content {
+            width: min(92vw, 320px) !important;
+            max-height: calc(40vh - 16px) !important;
+            margin: ${DESIGN_TOKENS.spacing.xs}px !important;
+          }
+        }
+        @media (max-width: 420px) {
+          .metravel-travel-map .leaflet-popup-content-wrapper {
+            max-height: 36vh !important;
+          }
+          .metravel-travel-map .leaflet-popup-content {
+            max-height: calc(36vh - 12px) !important;
+          }
         }
         `}
       </style>

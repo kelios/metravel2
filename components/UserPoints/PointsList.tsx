@@ -21,13 +21,6 @@ import {
   resolveCategoryIdsByNames as mapNamesToIds,
 } from '@/src/utils/userPointsCategories';
 
-const STATUS_TO_COLOR: Record<PointStatus, string> = {
-  [PointStatus.VISITED]: 'green',
-  [PointStatus.WANT_TO_VISIT]: 'purple',
-  [PointStatus.PLANNING]: 'blue',
-  [PointStatus.ARCHIVED]: 'gray',
-}
-
 const DEFAULT_POINT_COLORS: string[] = [
   'red',
   'green',
@@ -46,6 +39,61 @@ const DEFAULT_POINT_COLORS: string[] = [
   '#fcc419',
   '#ff922b',
 ];
+
+const NAMED_COLORS: Record<string, string> = {
+  gray: '#9e9e9e',
+  grey: '#9e9e9e',
+  lightgray: '#d3d3d3',
+  lightgrey: '#d3d3d3',
+  pink: '#ffc0cb',
+  lightpink: '#ffb6c1',
+  white: '#ffffff',
+  silver: '#c0c0c0',
+};
+
+const parseHex = (hex: string) => {
+  const raw = String(hex).trim().replace('#', '');
+  if (raw.length === 3) {
+    const r = parseInt(raw[0] + raw[0], 16);
+    const g = parseInt(raw[1] + raw[1], 16);
+    const b = parseInt(raw[2] + raw[2], 16);
+    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
+    return { r, g, b };
+  }
+  if (raw.length === 6) {
+    const r = parseInt(raw.slice(0, 2), 16);
+    const g = parseInt(raw.slice(2, 4), 16);
+    const b = parseInt(raw.slice(4, 6), 16);
+    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
+    return { r, g, b };
+  }
+  return null;
+};
+
+const parseRgb = (value: string) => {
+  const m = String(value)
+    .trim()
+    .match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+)\s*)?\)$/i);
+  if (!m) return null;
+  const r = Number(m[1]);
+  const g = Number(m[2]);
+  const b = Number(m[3]);
+  if ([r, g, b].some((n) => !Number.isFinite(n))) return null;
+  return { r, g, b };
+};
+
+const isLightColor = (value: string) => {
+  const v = String(value ?? '').trim().toLowerCase();
+  const normalized = NAMED_COLORS[v] ?? v;
+  const rgb =
+    normalized.startsWith('#') ? parseHex(normalized) : normalized.startsWith('rgb') ? parseRgb(normalized) : null;
+  if (!rgb) return false;
+  const r = Math.min(255, Math.max(0, rgb.r)) / 255;
+  const g = Math.min(255, Math.max(0, rgb.g)) / 255;
+  const b = Math.min(255, Math.max(0, rgb.b)) / 255;
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.72;
+};
 
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371;
@@ -508,6 +556,12 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
     return merged;
   }, [points]);
+
+  const manualColorOptions = useMemo(() => {
+    const base = [...DEFAULT_POINT_COLORS, ...(availableColors ?? [])];
+    const unique = Array.from(new Set(base.map((c) => String(c).trim()).filter(Boolean)));
+    return unique.length ? unique : DEFAULT_POINT_COLORS.slice();
+  }, [availableColors]);
 
   const filteredPoints = useMemo(() => {
     const q = String(searchQuery || '').trim().toLowerCase();
@@ -1863,20 +1917,24 @@ useEffect(() => {
                 />
               </FormFieldWithValidation>
 
-              <FormFieldWithValidation label="Статус" required>
-                <SimpleMultiSelect
-                  data={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-                  value={[manualStatus]}
-                  onChange={(vals) => {
-                    const v = vals[vals.length - 1] as PointStatus | undefined;
-                    if (!v) return;
-                    setManualStatus(v);
-                    if (!editingPointId) setManualColor(STATUS_TO_COLOR[v]);
-                  }}
-                  labelField="label"
-                  valueField="value"
-                  search={false}
-                />
+              <FormFieldWithValidation label="Цвет">
+                <View style={styles.manualColorRow}>
+                  {manualColorOptions.map((color) => {
+                    const isSelected = manualColor === color;
+                    const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
+                    return (
+                      <TouchableOpacity
+                        key={color}
+                        style={[styles.manualColorChip, isSelected && styles.manualColorChipActive]}
+                        onPress={() => setManualColor(color)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Цвет ${color}`}
+                      >
+                        <View style={[styles.manualColorDot, { backgroundColor: color, borderColor }]} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </FormFieldWithValidation>
 
               {manualError && manualName.trim() && manualCoords ? (
@@ -2345,6 +2403,32 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   manualScrollContent: {
     padding: DESIGN_TOKENS.spacing.lg,
+  },
+  manualColorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  manualColorChip: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualColorChipActive: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  manualColorDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   manualInput: {
     backgroundColor: colors.surface,

@@ -38,7 +38,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const lastProgrammaticOpenTsRef = useRef(0);
     const [sheetIndex, setSheetIndex] = useState(-1);
 
-    const contentBottomPadding = (Platform.OS === 'web' ? 12 : 40) + bottomInset;
+    const contentBottomPadding = Platform.OS === 'web' ? 12 : 40 + bottomInset;
 
     const snapPoints = useMemo(
       () => (Platform.OS === 'web' ? ['70%', '80%'] : ['55%', '80%']),

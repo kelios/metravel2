@@ -86,6 +86,19 @@ test.describe('Travel points -> map popup', () => {
     await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector(tid('travel-details-page'), { timeout: 20_000 });
 
+    const scrollContainer = page.locator(tid('travel-details-scroll')).first();
+    if (await scrollContainer.isVisible()) {
+      await scrollContainer.evaluate((node: Element) => {
+        const el = node as HTMLElement;
+        el.scrollTop = el.scrollHeight;
+      });
+    } else {
+      await page.evaluate(() => {
+        const el = document.scrollingElement || document.documentElement;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    }
+
     const pointsSection = page.locator(tid('travel-details-points')).first();
     await pointsSection.scrollIntoViewIfNeeded();
     await expect(pointsSection).toBeVisible();
