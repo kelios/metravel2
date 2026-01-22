@@ -559,18 +559,6 @@ test.describe('User points', () => {
     return actionsDialog;
   }
 
-  async function _openManualAddFromActions(page: any) {
-    const dialog = await openActionsMenu(page);
-    await dialog.getByRole('button', { name: 'Добавить вручную', exact: true }).click();
-    await expect(page.getByText(/Добавить точку вручную|Редактировать точку/)).toBeVisible({ timeout: 30_000 });
-  }
-
-  async function _setSelectionMode(page: any, enabled: boolean) {
-    await openActionsMenu(page);
-    const toggleButton = page.getByRole('button', { name: enabled ? 'Выбрать точки' : 'Выйти из выбора', exact: true });
-    await toggleButton.click({ timeout: 30_000 });
-  }
-
   test('list + selection mode + map view (smoke)', async ({ page }) => {
     const pointNameA = uniqueName('E2E Point A');
     const pointNameB = uniqueName('E2E Point B');
@@ -696,42 +684,54 @@ test.describe('User points', () => {
     await page.getByText(pointNameB).first().click({ force: true });
     await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
 
-    // Bulk edit: set status to visited
+    // Bulk edit: set status to archived
     await page.getByRole('button', { name: 'Изменить' }).click();
     await expect(page.getByText('Изменить выбранные', { exact: true })).toBeVisible({ timeout: 30_000 });
 
-    // Open Status select (2nd SimpleMultiSelect trigger) and choose 'visited'
+    // Open Status select (2nd SimpleMultiSelect trigger) and choose 'archived'
     const bulkDialog = page.getByRole('dialog').filter({ has: page.getByText('Изменить выбранные', { exact: true }) }).first();
     const triggers = bulkDialog.getByRole('button', { name: 'Открыть выбор', exact: true });
     await triggers.last().click({ force: true });
-    await page.locator('[data-testid="simple-multiselect.item.visited"]').click();
-
     // Close SimpleMultiSelect modal: on RN-web the "Готово" footer can be unclickable due to overlay layers.
     // We close via the dialog close/backdrop button (accessibilityLabel="Закрыть").
+    // IMPORTANT: scope all interactions to the same visible dialog instance to avoid hitting a hidden/other modal.
     const selectDialog = page
       .getByRole('dialog')
       .filter({ has: page.getByText(/Выбрано:\s*\d+/, { exact: false }) })
       .first();
     await selectDialog.waitFor({ state: 'visible', timeout: 30_000 });
-    // Try multiple close strategies (RN-web Modal/backdrop can be flaky).
-    await selectDialog.getByRole('button', { name: 'Закрыть', exact: true }).first().click({ force: true }).catch(() => undefined);
+    await selectDialog.locator('[data-testid="simple-multiselect.item.archived"]').click({ force: true });
+    await expect(selectDialog.getByText(/Выбрано:\s*1/, { exact: false })).toBeVisible({ timeout: 15_000 });
+
+    // Close the select modal via Escape (avoid ambiguity between multiple RN-web "Закрыть" backdrops).
     await page.keyboard.press('Escape').catch(() => undefined);
+    await page.keyboard.press('Escape').catch(() => undefined);
+    await selectDialog.waitFor({ state: 'hidden', timeout: 30_000 }).catch(() => undefined);
     await page.waitForTimeout(150);
 
-    // If still visible, click the first visible "Закрыть" button globally (backdrop).
-    if (await selectDialog.isVisible().catch(() => false)) {
-      await page.getByRole('button', { name: 'Закрыть', exact: true }).first().click({ force: true }).catch(() => undefined);
-      await page.keyboard.press('Escape').catch(() => undefined);
-      await page.waitForTimeout(150);
-    }
+    // Ensure selection propagated back to the bulk dialog trigger (placeholder should disappear).
+    await expect(triggers.last().getByText('Выберите...', { exact: true })).toHaveCount(0, { timeout: 15_000 });
 
-    await bulkDialog.getByRole('button', { name: 'Применить', exact: true }).click({ force: true });
+    const bulkUpdateRequest = page.waitForRequest((req: any) => {
+      try {
+        return req.method() === 'PATCH' && /\/api\/user-points\/bulk-update\/?(\?.*)?$/.test(req.url());
+      } catch {
+        return false;
+      }
+    });
 
-    // Both selected points should display status label "Посещено"
+    const applyButton = bulkDialog.getByRole('button', { name: 'Применить', exact: true });
+    await applyButton.click({ force: true }).catch(() => undefined);
+    // Fallback for RN-web: direct DOM click
+    await applyButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+    await bulkUpdateRequest;
+
+    // The card UI does not necessarily render status label text.
+    // Assert through the in-memory mock API storage that bulk update applied.
     await expect(page.getByText(pointNameA).first()).toBeVisible();
     await expect(page.getByText(pointNameB).first()).toBeVisible();
-    // Current UI label for visited status is "Архив".
-    await expect(page.getByText('Архив').first()).toBeVisible({ timeout: 30_000 });
+    await expect.poll(() => api.points.find((p) => p.name === pointNameA)?.status, { timeout: 30_000 }).toBe('archived');
+    await expect.poll(() => api.points.find((p) => p.name === pointNameB)?.status, { timeout: 30_000 }).toBe('archived');
 
     // App exits selection mode after bulk apply; re-enter selection mode to delete selected.
     const actionsDialogAfterEdit = await openActionsMenu(page);

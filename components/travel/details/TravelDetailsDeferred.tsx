@@ -26,6 +26,7 @@ export const TravelDeferredSections: React.FC<{
   scrollY: Animated.Value
   viewportHeight: number
   scrollRef: any
+  scrollToMapSection: () => void
 }> = ({
   travel,
   isMobile,
@@ -36,6 +37,7 @@ export const TravelDeferredSections: React.FC<{
   scrollY,
   viewportHeight,
   scrollRef,
+  scrollToMapSection,
 }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false)
 
@@ -63,7 +65,12 @@ export const TravelDeferredSections: React.FC<{
         scrollRef={scrollRef}
       />
 
-      <TravelDetailsMapSection travel={travel} anchors={anchors} canRenderHeavy={canRenderHeavy} />
+      <TravelDetailsMapSection
+        travel={travel}
+        anchors={anchors}
+        canRenderHeavy={canRenderHeavy}
+        scrollToMapSection={scrollToMapSection}
+      />
 
       <TravelDetailsSidebarSection
         travel={travel}

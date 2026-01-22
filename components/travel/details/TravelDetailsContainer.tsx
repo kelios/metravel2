@@ -240,6 +240,10 @@ export default function TravelDetailsContainer() {
     [scrollTo, isMobile, closeMenu, setActiveSection]
   );
 
+  const scrollToMapSection = useCallback(() => {
+    scrollToWithMenuClose('map');
+  }, [scrollToWithMenuClose]);
+
   /* ---- prefetch near travels ---- */
   // ✅ ИСПРАВЛЕНИЕ: Убираем prefetch, чтобы избежать дублирующихся запросов
   // Компонент NearTravelList сам загружает данные при монтировании
@@ -483,6 +487,7 @@ export default function TravelDetailsContainer() {
                           scrollY={scrollY}
                           viewportHeight={viewportHeight}
                           scrollRef={scrollRef}
+                          scrollToMapSection={scrollToMapSection}
                         />
                       </Suspense>
                     ) : (
@@ -501,6 +506,7 @@ export default function TravelDetailsContainer() {
                             scrollY={scrollY}
                             viewportHeight={viewportHeight}
                             scrollRef={scrollRef}
+                            scrollToMapSection={scrollToMapSection}
                           />
                         </Suspense>
                       </ProgressiveWrapper>

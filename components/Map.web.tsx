@@ -155,6 +155,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const mapInstanceKeyRef = useRef<string>(`leaflet-map-${generateUniqueId()}`);
   const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${generateUniqueId()}`);
   const markersRef = useRef<Map<string, any>>(new Map());
+  const pendingHighlightRef = useRef<{ coordKey: string; requestKey: string } | null>(null);
   const siteCategoryDictionaryRef = useRef<CategoryDictionaryItem[]>([]);
   const [categoryDictionaryVersion, setCategoryDictionaryVersion] = useState(0);
 
@@ -212,25 +213,35 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     };
   }, []);
 
+  const openMarkerPopup = useCallback((marker: any, mapInstance?: any) => {
+    try {
+      marker.openPopup();
+      const latLng = marker.getLatLng ? marker.getLatLng() : null;
+      const map = mapInstance ?? mapRef.current;
+      if (map && latLng) {
+        const currentZoom = typeof map.getZoom === 'function' ? map.getZoom() : 13;
+        map.flyTo(latLng, Math.max(currentZoom, 13), { animate: true, duration: 0.35 } as any);
+      }
+    } catch {
+      // noop
+    }
+  }, []);
+
   useEffect(() => {
     if (!highlightedPointRequest) return;
     const normalizedKey = normalizeCoordKey(highlightedPointRequest.coord);
     if (!normalizedKey) return;
     const marker = markersRef.current.get(normalizedKey);
-    if (!marker) return;
-    try {
-      marker.openPopup();
-      const latLng = marker.getLatLng ? marker.getLatLng() : null;
-      const mapInstance = mapRef.current;
-      if (mapInstance && latLng) {
-        const currentZoom =
-          typeof mapInstance.getZoom === 'function' ? mapInstance.getZoom() : 13;
-        mapInstance.flyTo(latLng, Math.max(currentZoom, 13), { animate: true, duration: 0.35 } as any);
-      }
-    } catch {
-      // noop
+    if (!marker) {
+      pendingHighlightRef.current = {
+        coordKey: normalizedKey,
+        requestKey: highlightedPointRequest.key,
+      };
+      return;
     }
-  }, [highlightedPointRequest]);
+    pendingHighlightRef.current = null;
+    openMarkerPopup(marker);
+  }, [highlightedPointRequest, openMarkerPopup]);
 
   const buildGoogleMapsUrl = useCallback((coord: string) => {
     const cleaned = String(coord || '').replace(/;/g, ',').replace(/\s+/g, '');
@@ -454,10 +465,15 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       const marker = markerRef.current;
       if (!marker || !normalizedKey) return;
       markersRef.current.set(normalizedKey, marker);
+      const pending = pendingHighlightRef.current;
+      if (pending && pending.coordKey === normalizedKey) {
+        pendingHighlightRef.current = null;
+        openMarkerPopup(marker, map);
+      }
       return () => {
         markersRef.current.delete(normalizedKey);
       };
-    }, [normalizedKey]);
+    }, [map, normalizedKey, openMarkerPopup]);
 
     const handleMarkerClick = useCallback(() => {
       if (!hasMapPane(map)) return;
@@ -730,6 +746,9 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       resolvedCategoryIdsFromNames,
     ]);
 
+    const hasArticle = !!String(point.articleUrl || point.urlTravel || '').trim();
+    const hasCoord = !!coord;
+
     return (
       <Popup
         autoPan
@@ -748,49 +767,163 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           imageHeight={180}
           width={300}
           contentSlot={
-            <View style={{ gap: 8 }}>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: (colors as any).text ?? undefined,
-                  ...(Platform.OS === 'web'
-                    ? ({
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      } as any)
-                    : null),
-                }}
-                numberOfLines={2}
-              >
-                {point.address || ''}
-              </Text>
-              {!!coord && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <Text
+            <View style={{ gap: 12 }}>
+              <View style={{ gap: 6 }}>
+                <Text
+                  style={{
+                    fontSize: 15,
+                    fontWeight: '700',
+                    color: (colors as any).text ?? undefined,
+                    ...(Platform.OS === 'web'
+                      ? ({
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        } as any)
+                      : null),
+                  }}
+                  numberOfLines={2}
+                >
+                  {point.address || ''}
+                </Text>
+                {!!categoryLabel && (
+                  <View
                     style={{
-                      fontSize: 12,
-                      color: (colors as any).textMuted ?? undefined,
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
+                      alignSelf: 'flex-start',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 4,
+                      paddingHorizontal: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: (colors as any).borderLight ?? (colors as any).border,
+                      backgroundColor: (colors as any).backgroundSecondary ?? (colors as any).surface,
                     }}
-                    numberOfLines={1}
                   >
-                    {coord}
+                    <Feather name="tag" size={12} color={(colors as any).textMuted ?? undefined} />
+                    <Text style={{ fontSize: 12, color: (colors as any).textMuted ?? undefined }} numberOfLines={1}>
+                      {categoryLabel}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {hasCoord && (
+                <View
+                  style={{
+                    padding: 10,
+                    borderRadius: 12,
+                    backgroundColor: (colors as any).backgroundSecondary ?? (colors as any).surface,
+                    borderWidth: 1,
+                    borderColor: (colors as any).borderLight ?? (colors as any).border,
+                    gap: 6,
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: (colors as any).textMuted ?? undefined, letterSpacing: 0.3 }}>
+                    Координаты
                   </Text>
-                  <Pressable
-                    accessibilityLabel="Скопировать координаты"
-                    onPress={(e) => {
-                      (e as any)?.stopPropagation?.();
-                      void handleCopyCoord();
-                    }}
-                    {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
-                  >
-                    <View {...({ title: 'Скопировать координаты', 'aria-label': 'Скопировать координаты' } as any)}>
-                      <Feather name="clipboard" size={16} color={(colors as any).textMuted ?? undefined} />
-                    </View>
-                  </Pressable>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: (colors as any).text ?? undefined,
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {coord}
+                    </Text>
+                    <Pressable
+                      accessibilityLabel="Скопировать координаты"
+                      onPress={(e) => {
+                        (e as any)?.stopPropagation?.();
+                        void handleCopyCoord();
+                      }}
+                      {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingVertical: 6,
+                        paddingHorizontal: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: (colors as any).border,
+                        backgroundColor: (colors as any).surface,
+                        opacity: pressed ? 0.9 : 1,
+                        cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+                      })}
+                    >
+                      <Feather name="clipboard" size={14} color={(colors as any).textMuted ?? undefined} />
+                      <Text style={{ fontSize: 12, color: (colors as any).textMuted ?? undefined }}>Скопировать</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+
+              {hasCoord && (
+                <View style={{ gap: 8 }}>
+                  <Text style={{ fontSize: 11, color: (colors as any).textMuted ?? undefined, letterSpacing: 0.3 }}>
+                    Открыть в
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    <Pressable
+                      accessibilityLabel="Открыть в Google Maps"
+                      onPress={(e) => {
+                        (e as any)?.stopPropagation?.();
+                        handleOpenGoogleMaps();
+                      }}
+                      {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingVertical: 8,
+                        paddingHorizontal: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: (colors as any).border,
+                        backgroundColor: (colors as any).surface,
+                        opacity: pressed ? 0.9 : 1,
+                        cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+                      })}
+                    >
+                      <Feather name="external-link" size={14} color={(colors as any).textMuted ?? undefined} />
+                      <Text style={{ fontSize: 12, color: (colors as any).text ?? undefined }}>Google Maps</Text>
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityLabel="Открыть в Organic Maps"
+                      onPress={(e) => {
+                        (e as any)?.stopPropagation?.();
+                        handleOpenOrganicMaps();
+                      }}
+                      {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingVertical: 8,
+                        paddingHorizontal: 10,
+                        borderRadius: 10,
+                        borderWidth: 1,
+                        borderColor: (colors as any).border,
+                        backgroundColor: (colors as any).surface,
+                        opacity: pressed ? 0.9 : 1,
+                        cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+                      })}
+                    >
+                      <Feather name="navigation" size={14} color={(colors as any).textMuted ?? undefined} />
+                      <Text style={{ fontSize: 12, color: (colors as any).text ?? undefined }}>Organic Maps</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {hasCoord && (
                   <Pressable
                     accessibilityLabel="Поделиться в Telegram"
                     onPress={(e) => {
@@ -798,114 +931,99 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
                       handleShareTelegram();
                     }}
                     {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: (colors as any).border,
+                      backgroundColor: (colors as any).surface,
+                      opacity: pressed ? 0.9 : 1,
+                      cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+                    })}
                   >
-                    <View {...({ title: 'Поделиться в Telegram', 'aria-label': 'Поделиться в Telegram' } as any)}>
-                      <Feather name="send" size={16} color={(colors as any).textMuted ?? undefined} />
-                    </View>
+                    <Feather name="send" size={14} color={(colors as any).textMuted ?? undefined} />
+                    <Text style={{ fontSize: 12, color: (colors as any).text ?? undefined }}>Поделиться</Text>
                   </Pressable>
-                </View>
-              )}
-              {(!!categoryLabel || !!coord) && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                  {!!categoryLabel && (
-                    <Text style={{ fontSize: 12, color: (colors as any).textMuted ?? undefined }} numberOfLines={1}>
-                      {categoryLabel}
-                    </Text>
-                  )}
+                )}
 
-                  {!!coord && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                      <Pressable
-                        accessibilityLabel="Открыть в Google Maps"
-                        onPress={(e) => {
-                          (e as any)?.stopPropagation?.();
-                          handleOpenGoogleMaps();
-                        }}
-                        {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
-                      >
-                        <View {...({ title: 'Открыть в Google Maps', 'aria-label': 'Открыть в Google Maps' } as any)}>
-                          <Feather name="external-link" size={16} color={(colors as any).textMuted ?? undefined} />
-                        </View>
-                      </Pressable>
-
-                      <Pressable
-                        accessibilityLabel="Открыть в Organic Maps"
-                        onPress={(e) => {
-                          (e as any)?.stopPropagation?.();
-                          handleOpenOrganicMaps();
-                        }}
-                        {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
-                      >
-                        <View {...({ title: 'Открыть в Organic Maps', 'aria-label': 'Открыть в Organic Maps' } as any)}>
-                          <Feather name="navigation" size={16} color={(colors as any).textMuted ?? undefined} />
-                        </View>
-                      </Pressable>
-
-                      {!!String(point.articleUrl || point.urlTravel || '').trim() && (
-                        <Pressable
-                          accessibilityLabel="Открыть статью"
-                          onPress={(e) => {
-                            (e as any)?.stopPropagation?.();
-                            handleOpenArticle();
-                          }}
-                          {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
-                        >
-                          <View {...({ title: 'Открыть статью', 'aria-label': 'Открыть статью' } as any)}>
-                            <Feather name="book-open" size={16} color={(colors as any).textMuted ?? undefined} />
-                          </View>
-                        </Pressable>
-                      )}
-                    </View>
-                  )}
-                </View>
-              )}
-              <View style={{ marginTop: 6, alignItems: 'flex-end' }}>
-                <Pressable
-                  accessibilityLabel="Добавить в мои точки"
-                  onPress={(e) => {
-                    (e as any)?.stopPropagation?.();
-                    void handleAddPoint();
-                  }}
-                  disabled={!authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint}
-                  {...(Platform.OS === 'web'
-                    ? ({
-                        title: 'Добавить в мои точки',
-                        'aria-label': 'Добавить в мои точки',
-                      } as any)
-                    : ({ accessibilityRole: 'button' } as any))}
-                  {...({ 'data-card-action': 'true' } as any)}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    paddingVertical: 6,
-                    paddingHorizontal: 12,
-                    borderRadius: 10,
-                    backgroundColor:
-                      !authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint
-                        ? 'rgba(0,0,0,0.08)'
-                        : (colors as any).primary,
-                    opacity: pressed ? 0.9 : 1,
-                    cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-                  })}
-                >
-                  {isAddingPoint ? (
-                    <ActivityIndicator size="small" color={(colors as any).textOnPrimary ?? '#fff'} />
-                  ) : (
-                    <Feather name="map-pin" size={16} color={(colors as any).textOnPrimary ?? '#fff'} />
-                  )}
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      fontWeight: '600',
-                      color: (colors as any).textOnPrimary ?? '#fff',
-                      letterSpacing: -0.2,
+                {hasArticle && (
+                  <Pressable
+                    accessibilityLabel="Открыть статью"
+                    onPress={(e) => {
+                      (e as any)?.stopPropagation?.();
+                      handleOpenArticle();
                     }}
+                    {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
+                    style={({ pressed }) => ({
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      borderRadius: 10,
+                      borderWidth: 1,
+                      borderColor: (colors as any).border,
+                      backgroundColor: (colors as any).surface,
+                      opacity: pressed ? 0.9 : 1,
+                      cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+                    })}
                   >
-                    Добавить в мои точки
-                  </Text>
-                </Pressable>
+                    <Feather name="book-open" size={14} color={(colors as any).textMuted ?? undefined} />
+                    <Text style={{ fontSize: 12, color: (colors as any).text ?? undefined }}>Статья</Text>
+                  </Pressable>
+                )}
               </View>
+
+              <Pressable
+                accessibilityLabel="Добавить в мои точки"
+                onPress={(e) => {
+                  (e as any)?.stopPropagation?.();
+                  void handleAddPoint();
+                }}
+                disabled={!authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint}
+                {...(Platform.OS === 'web'
+                  ? ({
+                      title: 'Добавить в мои точки',
+                      'aria-label': 'Добавить в мои точки',
+                    } as any)
+                  : ({ accessibilityRole: 'button' } as any))}
+                {...({ 'data-card-action': 'true' } as any)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
+                  borderRadius: 12,
+                  backgroundColor:
+                    !authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint
+                      ? 'rgba(0,0,0,0.08)'
+                      : (colors as any).primary,
+                  opacity: pressed ? 0.92 : 1,
+                  cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+                })}
+              >
+                {isAddingPoint ? (
+                  <ActivityIndicator size="small" color={(colors as any).textOnPrimary ?? '#fff'} />
+                ) : (
+                  <Feather name="map-pin" size={16} color={(colors as any).textOnPrimary ?? '#fff'} />
+                )}
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '700',
+                    color: (colors as any).textOnPrimary ?? '#fff',
+                    letterSpacing: -0.2,
+                  }}
+                >
+                  Добавить в мои точки
+                </Text>
+              </Pressable>
             </View>
           }
           mediaProps={{

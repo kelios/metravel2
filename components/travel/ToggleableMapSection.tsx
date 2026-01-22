@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, StyleSheet, Pressable, Text, ActivityIndicator, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -11,6 +11,7 @@ type ToggleableMapSectionProps = {
     isLoading?: boolean;
     loadingLabel?: string;
     keepMounted?: boolean;
+    forceOpenTrigger?: number;
 };
 
 const ToggleableMapSection = ({
@@ -19,6 +20,7 @@ const ToggleableMapSection = ({
     isLoading = false,
     loadingLabel = 'Загружаем карту...',
     keepMounted = false,
+    forceOpenTrigger,
 }: ToggleableMapSectionProps) => {
     const [showMap, setShowMap] = useState(initiallyOpen);
     const [hasOpened, setHasOpened] = useState(initiallyOpen);
@@ -45,6 +47,12 @@ const ToggleableMapSection = ({
             return next;
         });
     };
+
+    useEffect(() => {
+        if (forceOpenTrigger === undefined) return;
+        setShowMap(true);
+        setHasOpened(true);
+    }, [forceOpenTrigger]);
 
     return (
         <View style={styles.wrapper}>

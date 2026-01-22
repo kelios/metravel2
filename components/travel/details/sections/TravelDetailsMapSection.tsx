@@ -120,7 +120,8 @@ export const TravelDetailsMapSection: React.FC<{
   travel: Travel
   anchors: AnchorsMap
   canRenderHeavy: boolean
-}> = ({ travel, anchors, canRenderHeavy }) => {
+  scrollToMapSection: () => void
+}> = ({ travel, anchors, canRenderHeavy, scrollToMapSection }) => {
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0
@@ -133,11 +134,14 @@ export const TravelDetailsMapSection: React.FC<{
   const shouldRenderMap = canRenderHeavy && (Platform.OS !== 'web' || shouldLoadMap) && hasMapData
   const [hasMountedMap, setHasMountedMap] = useState(false)
   const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
+  const [mapOpenTrigger, setMapOpenTrigger] = useState(0)
   const handlePointCardPress = useCallback((point: any) => {
     const coord = String(point?.coord ?? '').trim()
     if (!coord) return
     setHighlightedPoint({ coord, key: `${coord}-${Date.now()}` })
-  }, [])
+    setMapOpenTrigger((prev) => prev + 1)
+    scrollToMapSection()
+  }, [scrollToMapSection])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -209,6 +213,7 @@ export const TravelDetailsMapSection: React.FC<{
               keepMounted={false}
               isLoading={!shouldRenderMap}
               loadingLabel="Подгружаем карту маршрута..."
+              forceOpenTrigger={mapOpenTrigger || undefined}
             >
               {shouldMountMap ? (
                 <Suspense fallback={<MapFallback />}>
@@ -239,16 +244,16 @@ export const TravelDetailsMapSection: React.FC<{
         <View style={{ marginTop: 12 }}>
           {travel.travelAddress && (
             <Suspense fallback={<PointListFallback />}>
-            <PointList
-              points={travel.travelAddress as any}
-              baseUrl={travel.url}
-              travelName={travel.name}
-              onPointCardPress={handlePointCardPress}
-            />
-            </Suspense>
-          )}
-        </View>
-      </View>
+                  <PointList
+                    points={travel.travelAddress as any}
+                    baseUrl={travel.url}
+                    travelName={travel.name}
+                    onPointCardPress={handlePointCardPress}
+                  />
+                </Suspense>
+              )}
+            </View>
+          </View>
     </>
   )
 }
