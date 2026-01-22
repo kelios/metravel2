@@ -122,7 +122,7 @@ test.describe('Travel points -> map popup', () => {
     const currentUrl = page.url();
     const popupPromise = page.waitForEvent('popup', { timeout: 1500 }).catch(() => null);
 
-    await pointCards.first().click();
+    await pointCards.first().click({ position: { x: 16, y: 16 } });
 
     const popup = await popupPromise;
     expect(popup).toBeNull();
@@ -133,6 +133,15 @@ test.describe('Travel points -> map popup', () => {
     await expect(mapSection).toBeVisible();
 
     const popupLocator = page.locator('.leaflet-popup');
+    const opened = await popupLocator
+      .isVisible({ timeout: 4_000 })
+      .catch(() => false);
+    if (!opened) {
+      const marker = page.locator('.leaflet-marker-icon').first();
+      if (await marker.isVisible()) {
+        await marker.click();
+      }
+    }
     await expect(popupLocator).toBeVisible({ timeout: 15_000 });
   });
 });

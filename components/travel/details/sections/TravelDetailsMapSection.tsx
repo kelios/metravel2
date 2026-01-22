@@ -187,23 +187,18 @@ export const TravelDetailsMapSection: React.FC<{
       )}
 
       <View
-        ref={anchors.map}
+        ref={(node) => {
+          (anchors.map as any).current = node
+          if (Platform.OS !== 'web') return
+          const target = (node as any)?._nativeNode || (node as any)?._domNode || node || null
+          setElementRef(target as any)
+        }}
         testID="travel-details-map"
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Карта маршрута"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'map', 'data-map-for-pdf': '1' } : {})}
       >
-        {Platform.OS === 'web' && (
-          <View
-            collapsable={false}
-            // @ts-ignore
-            ref={(node: any) => {
-              const target = node?._nativeNode || node?._domNode || node || null
-              setElementRef(target as any)
-            }}
-          />
-        )}
         <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
         <Text style={styles.sectionSubtitle}>Посмотрите последовательность точек на живой карте</Text>
         <View style={{ marginTop: 12 }}>

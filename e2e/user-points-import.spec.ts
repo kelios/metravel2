@@ -18,12 +18,14 @@ type MockPoint = {
 
 test.describe('User points import (mock API)', () => {
   async function openFiltersPanelTab(page: any) {
-    const filtersTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
+    const legacyTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
+    const segmentedTabButton = page.getByTestId('segmented-filters').first();
     const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
 
     for (let attempt = 0; attempt < 3; attempt++) {
-      await filtersTabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
-      await filtersTabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
+      await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
+      await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
       await page.waitForTimeout(150);
 
       if ((await searchBox.count()) > 0) {

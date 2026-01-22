@@ -107,6 +107,14 @@ const normalizeCoordKey = (coord?: string | null) => {
   return coord.replace(/;/g, ',').replace(/\s+/g, '').trim();
 };
 
+const parseCoordKey = (coordKey: string): [number, number] | null => {
+  const [latStr, lngStr] = coordKey.split(',').map((s) => s.trim());
+  const lat = Number(latStr);
+  const lng = Number(lngStr);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return [lat, lng];
+};
+
 const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
@@ -274,6 +282,28 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     if (!normalizedKey) return;
     const marker = markersRef.current.get(normalizedKey);
     if (!marker) {
+      const parsed = parseCoordKey(normalizedKey);
+      const mapInstance = mapRef.current;
+      if (parsed && mapInstance && typeof mapInstance.eachLayer === 'function') {
+        const [targetLat, targetLng] = parsed;
+        let found: any = null;
+        mapInstance.eachLayer((layer: any) => {
+          if (found) return;
+          const latLng = layer?.getLatLng?.();
+          if (!latLng) return;
+          const lat = Number(latLng.lat ?? latLng[0]);
+          const lng = Number(latLng.lng ?? latLng[1]);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+          if (Math.abs(lat - targetLat) < 1e-6 && Math.abs(lng - targetLng) < 1e-6) {
+            found = layer;
+          }
+        });
+        if (found) {
+          pendingHighlightRef.current = null;
+          openMarkerPopup(found, mapInstance);
+          return;
+        }
+      }
       pendingHighlightRef.current = {
         coordKey: normalizedKey,
         requestKey: highlightedPointRequest.key,
