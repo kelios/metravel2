@@ -312,13 +312,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   );
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
   const [prefetchEnabled, setPrefetchEnabled] = useState(
-    Platform.OS !== "web" ? true : canPrefetchOnWeb
+    Platform.OS !== "web" ? true : false
   );
 
   useEffect(() => {
     setLoadStatuses(images.map(() => "loading"));
     setShowSwipeHint(images.length > 1);
-    setPrefetchEnabled(Platform.OS !== "web" ? true : canPrefetchOnWeb);
+    // On web we avoid auto-prefetch during initial load (hurts PSI/LCP by pulling extra gallery images).
+    // Prefetch can still be enabled later on explicit user interaction.
+    setPrefetchEnabled(Platform.OS !== "web" ? true : false);
   }, [images, canPrefetchOnWeb]);
 
   const updateLoadStatus = useCallback((idx: number, status: LoadStatus) => {
@@ -551,12 +553,18 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // прогреть стартовые (отложено для улучшения LCP)
   useEffect(() => {
     if (!images.length || !prefetchEnabled) return;
-    // Первое изображение уже загружается с high priority, остальные откладываем
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     if (Platform.OS === "web") {
-      const timer = setTimeout(() => warmNeighbors(0), 200);
-      return () => clearTimeout(timer);
+      timer = setTimeout(() => warmNeighbors(0), 200);
+    } else {
+      warmNeighbors(0);
     }
-    warmNeighbors(0);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [images.length, warmNeighbors, prefetchEnabled]);
 
   const keyExtractor = useCallback((it: SliderImage) => String(it.id), []);
@@ -674,9 +682,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     updateLoadStatus(index, "loaded");
                     if (index === 0) {
                       onFirstImageLoad?.();
-                      if (!prefetchEnabled) {
-                        setPrefetchEnabled(true);
-                      }
                     }
                   }}
                   onError={() => updateLoadStatus(index, "error")}
@@ -762,7 +767,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               pausedByTouch.current = true;
               clearAutoplay();
               dismissSwipeHint();
-              if (!prefetchEnabled) {
+              if (Platform.OS !== 'web') return;
+              // Enable neighbor prefetch only after explicit user interaction.
+              if (!prefetchEnabled && canPrefetchOnWeb) {
                 setPrefetchEnabled(true);
               }
             }}

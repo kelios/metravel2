@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
@@ -218,6 +218,8 @@ function ImageCardMedia({
               alt=""
               aria-hidden
               crossOrigin="anonymous"
+              loading="lazy"
+              decoding="async"
               onError={() => {
                 if (!webBlurFallbackUri) return;
                 if (webBlurSrc === webBlurFallbackUri) return;

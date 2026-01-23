@@ -341,6 +341,8 @@ const OptimizedLCPHeroInner: React.FC<{
             alt=""
             aria-hidden
             crossOrigin="anonymous"
+            // @ts-ignore - React supports fetchPriority on img, but TS DOM typings may vary
+            fetchPriority="low"
             style={{
               position: 'absolute',
               inset: 0,
@@ -372,6 +374,8 @@ const OptimizedLCPHeroInner: React.FC<{
             decoding="async"
             // @ts-ignore
             fetchpriority="high"
+            // @ts-ignore - React supports fetchPriority on img, but TS DOM typings may vary
+            fetchPriority="high"
             crossOrigin="anonymous"
             referrerPolicy="no-referrer"
             data-lcp

@@ -59,11 +59,9 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS !== 'web' || lcpLoaded) return
-    // Do not force-mark LCP as loaded. That can cause heavy UI to mount before the
-    // actual hero image arrives, hurting LCP/TBT on slow networks.
-    // Instead, we only fall back to enabling the slider later.
-    const timeout = setTimeout(() => setSliderReady(true), 5000)
-    return () => clearTimeout(timeout)
+    // Keep the lightweight hero until the real LCP image finishes loading.
+    // Enabling the slider early can change the LCP candidate and confuse PSI/Lighthouse.
+    return
   }, [lcpLoaded])
 
   useEffect(() => {
