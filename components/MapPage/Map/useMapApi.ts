@@ -175,12 +175,14 @@ export function useMapApi({
       },
       openPopupForCoord: (coord: string) => {
         try {
-          const key = String(coord ?? '').trim();
-          if (!key) return;
+          const rawKey = String(coord ?? '').trim();
+          if (!rawKey) return;
+          const parsed = CoordinateConverter.fromLooseString(rawKey);
+          const key = parsed ? CoordinateConverter.toString(parsed) : rawKey;
 
           const markerIndex: Map<string, any> | undefined =
             (leafletControlRef as any)?.current?.markerByCoord ?? (leafletControlRef as any)?.markerByCoord;
-          const marker = markerIndex?.get?.(key);
+          const marker = markerIndex?.get?.(key) ?? markerIndex?.get?.(rawKey);
           if (!marker) return;
 
           try {

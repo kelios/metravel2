@@ -132,6 +132,23 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('map-travels-tab')).toBeVisible({ timeout: 60_000 });
   });
 
+  test('desktop: clicking a travel card opens popup and focuses map', async ({ page }) => {
+    await gotoMapWithRecovery(page);
+
+    await expect(page.getByTestId('map-panel-tab-travels')).toBeVisible({ timeout: 60_000 });
+    await page.getByTestId('map-panel-tab-travels').click();
+    await expect(page.getByTestId('map-travels-tab')).toBeVisible({ timeout: 60_000 });
+
+    const cards = page.locator('[data-testid="map-travel-card"]');
+    const cardCount = await cards.count();
+    if (cardCount === 0) return;
+
+    await cards.first().click({ position: { x: 16, y: 16 } });
+
+    // Leaflet popup rendered in DOM.
+    await expect(page.locator('.leaflet-popup')).toBeVisible({ timeout: 20_000 });
+  });
+
   test('desktop: scroll reaches footer area', async ({ page }) => {
     await gotoMapWithRecovery(page);
 

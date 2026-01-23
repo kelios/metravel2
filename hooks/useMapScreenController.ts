@@ -4,6 +4,7 @@ import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -189,7 +190,9 @@ export function useMapScreenController() {
   const buildRouteTo = useCallback(
     (item: TravelCoords) => {
       if (!item?.coord) return;
-      const coordStr = String(item.coord);
+      const rawCoordStr = String(item.coord);
+      const parsed = CoordinateConverter.fromLooseString(rawCoordStr);
+      const coordStr = parsed ? CoordinateConverter.toString(parsed) : rawCoordStr;
 
       try {
         mapUiApi?.focusOnCoord?.(coordStr, { zoom: 14 });

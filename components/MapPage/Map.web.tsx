@@ -641,8 +641,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
             onMarkerClick={handleMarkerZoom}
             onMarkerInstance={(coord, marker) => {
               try {
-                const key = String(coord ?? '').trim();
-                if (!key) return;
+                const raw = String(coord ?? '').trim();
+                if (!raw) return;
+                const parsed = CoordinateConverter.fromLooseString(raw);
+                const key = parsed ? CoordinateConverter.toString(parsed) : raw;
                 if (marker) markerByCoordRef.current.set(key, marker);
                 else markerByCoordRef.current.delete(key);
               } catch {
