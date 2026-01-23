@@ -215,13 +215,13 @@ const AddressListItem: React.FC<Props> = ({
         await openExternal(`https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`);
     }, [coord]);
 
-    const openMap = useCallback((e: any) => {
-        e?.stopPropagation();
+    const openMap = useCallback((e?: any) => {
+        e?.stopPropagation?.();
         openExternal(buildMapUrl(coord));
     }, [coord]);
 
     const openArticle = useCallback((e?: any) => {
-        e?.stopPropagation();
+        e?.stopPropagation?.();
         openExternal(articleUrl || urlTravel);
     }, [articleUrl, urlTravel]);
 
@@ -358,7 +358,11 @@ const AddressListItem: React.FC<Props> = ({
             coord={coord}
             badges={badges}
             onCardPress={handleMainPress}
-            onMediaPress={articleUrl || urlTravel ? () => openArticle() : undefined}
+            onMediaPress={
+              !onPress && (articleUrl || urlTravel)
+                ? () => openArticle()
+                : undefined
+            }
             onCopyCoord={coord ? copyCoords : undefined}
             onShare={coord ? openTelegram : undefined}
             mapActions={

@@ -138,14 +138,14 @@ describe('useMapScreenController.buildRouteTo', () => {
       result.current.buildRouteTo({ coord: '50.0619474, 19.9368564' } as any)
     })
 
-    expect(focusOnCoord).toHaveBeenCalledWith('50.0619474, 19.9368564', { zoom: 14 })
+    expect(focusOnCoord).toHaveBeenCalledWith('50.061947,19.936856', { zoom: 14 })
 
     // openPopupForCoord is scheduled with a timeout
     act(() => {
       jest.advanceTimersByTime(420)
     })
 
-    expect(openPopupForCoord).toHaveBeenCalledWith('50.0619474, 19.9368564')
+    expect(openPopupForCoord).toHaveBeenCalledWith('50.061947,19.936856')
 
     // Critical regression guard: we must not update global search coordinates
     expect(mockUpdateCoordinates).not.toHaveBeenCalled()

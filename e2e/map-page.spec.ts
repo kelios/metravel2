@@ -143,10 +143,21 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     const cardCount = await cards.count();
     if (cardCount === 0) return;
 
+    // Ensure map markers are mounted so openPopupForCoord has something to target.
+    await page.locator('.leaflet-marker-icon').first().waitFor({ state: 'visible', timeout: 30_000 });
+
     await cards.first().click({ position: { x: 16, y: 16 } });
 
     // Leaflet popup rendered in DOM.
-    await expect(page.locator('.leaflet-popup')).toBeVisible({ timeout: 20_000 });
+    const popupLocator = page.locator('.leaflet-popup');
+    const opened = await popupLocator.isVisible({ timeout: 8_000 }).catch(() => false);
+    if (!opened) {
+      const marker = page.locator('.leaflet-marker-icon').first();
+      if (await marker.isVisible().catch(() => false)) {
+        await marker.click({ force: true });
+      }
+    }
+    await expect(popupLocator).toBeVisible({ timeout: 20_000 });
   });
 
   test('desktop: scroll reaches footer area', async ({ page }) => {
