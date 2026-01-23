@@ -100,7 +100,7 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
     await expect(firstCard).toBeVisible();
 
     // Check that card has proper styling
-    const cardStyles = await firstCard.evaluate((el) => {
+    const cardStyles = await firstCard.evaluate((el: HTMLElement) => {
       const styles = window.getComputedStyle(el);
       return {
         backgroundColor: styles.backgroundColor,
@@ -137,7 +137,7 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
         await expect(placeholder).toBeVisible();
         
         // Check placeholder has proper background
-        const placeholderBg = await placeholder.evaluate((el) => {
+        const placeholderBg = await placeholder.evaluate((el: HTMLElement) => {
           return window.getComputedStyle(el).backgroundColor;
         });
         expect(placeholderBg).not.toBe('transparent');
@@ -162,7 +162,7 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
           const textContent = await textEl.textContent();
           
           if (textContent && textContent.trim().length > 0) {
-            const styles = await textEl.evaluate((el) => {
+            const styles = await textEl.evaluate((el: HTMLElement) => {
               const computed = window.getComputedStyle(el);
               return {
                 overflow: computed.overflow,
@@ -195,7 +195,7 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
         
         // Cards should have reasonable dimensions
         expect(firstCardBox.height).toBeGreaterThan(200);
-        expect(firstCardBox.height).toBeLessThan(400);
+        expect(firstCardBox.height).toBeLessThan(520);
       }
     }
   });

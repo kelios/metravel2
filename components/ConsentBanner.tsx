@@ -71,12 +71,22 @@ export default function ConsentBanner() {
     const body = document.body;
     if (!body) return;
     const update = () => {
-      setSuspendForOverlay(body.dataset.footerMoreOpen === 'true');
+      setSuspendForOverlay(body.getAttribute('data-footer-more-open') === 'true');
     };
     update();
     const observer = new MutationObserver(update);
     observer.observe(body, { attributes: true, attributeFilter: ['data-footer-more-open'] });
-    return () => observer.disconnect();
+    const handle = (event: Event) => {
+      const detail = (event as CustomEvent<{ open?: boolean }>).detail;
+      if (detail && typeof detail.open === 'boolean') {
+        setSuspendForOverlay(detail.open);
+      }
+    };
+    window.addEventListener('metravel:footer-more', handle);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('metravel:footer-more', handle);
+    };
   }, []);
 
   const handleAcceptAll = () => {
@@ -112,6 +122,7 @@ export default function ConsentBanner() {
     <View
       style={[styles.wrapper, { bottom: bottomOffset }, suspendForOverlay && styles.wrapperHidden]}
       pointerEvents={suspendForOverlay ? 'none' : 'box-none'}
+      testID="consent-banner"
     >
       <View
         style={[styles.container, { backgroundColor: colors.surface }]}
@@ -170,6 +181,7 @@ const styles = StyleSheet.create({
   },
   wrapperHidden: {
     opacity: 0,
+    display: 'none',
   },
   bottomLinkRow: {
     marginTop: 6,

@@ -366,7 +366,9 @@
 ## Fixes applied during QA
 - Added `/register` redirect to `/registration` to avoid 404s.
 - Consent banner pointer-events updated to avoid blocking underlying links while still allowing accept actions.
+- Consent banner hides when the mobile “Ещё” sheet is open to prevent click interception.
 - Bottom dock “Ещё” items now navigate to privacy/cookies/about pages.
+- Bottom dock “Ещё” sheet overlay z-index raised above the consent banner.
 - `scripts/serve-web-build.js` now proxies `/api` and media paths to `https://metravel.by` to bypass CORS for QA.
 - Registration page canonical now defaults to `/registration` when pathname is not available.
 - Added `E2E_API_PROXY_INSECURE` option to allow proxying HTTPS without local cert issues.

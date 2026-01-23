@@ -52,7 +52,7 @@
     "build:all:prod": "eas build --platform all --profile production",
     "lint": "eslint .",
     "audit:high": "node scripts/yarn-audit-high.js",
-    "release:check": "yarn run lint && ./verify-security-fixes.sh && yarn run audit:high && yarn run test:run && yarn run build:web"
+    "release:check": "yarn run lint && ./verify-security-fixes.sh && yarn run audit:high && yarn run test:run && yarn run e2e && yarn run build:web"
   },
   "dependencies": {
     "@babel/runtime": "^7.25.0",

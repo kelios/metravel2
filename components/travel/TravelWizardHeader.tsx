@@ -284,6 +284,7 @@ const TravelWizardHeader: React.FC<TravelWizardHeaderProps> = ({
                                 Platform.OS === 'web' && { cursor: 'pointer' },
                                 pressed && { opacity: 0.8 }
                             ]}
+                            testID="travel-wizard-preview"
                             accessibilityRole="button"
                             accessibilityLabel="Показать превью"
                             onHoverIn={() => showHover('preview')}

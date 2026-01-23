@@ -113,9 +113,12 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
     const body = document.body;
     if (!body) return;
     if (showMore) {
-      body.dataset.footerMoreOpen = "true";
+      body.setAttribute("data-footer-more-open", "true");
     } else {
-      delete body.dataset.footerMoreOpen;
+      body.removeAttribute("data-footer-more-open");
+    }
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("metravel:footer-more", { detail: { open: showMore } }));
     }
   }, [showMore]);
 

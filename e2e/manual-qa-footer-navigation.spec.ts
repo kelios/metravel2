@@ -67,6 +67,9 @@ test.describe('Manual QA automation: footer navigation', () => {
 
       await page.getByTestId('footer-item-more').click();
       await expect(page.getByTestId('footer-more-sheet')).toBeVisible({ timeout: 10_000 });
+      const moreOpen = await page.evaluate(() => document.body.getAttribute('data-footer-more-open'));
+      expect(moreOpen).toBe('true');
+      await expect(page.getByTestId('consent-banner')).toBeHidden({ timeout: 5_000 });
 
       await page.getByText(target.label, { exact: true }).click();
       await expect(page).toHaveURL(target.path);
