@@ -7,13 +7,14 @@
 - To unblock QA: поднять локальный прокси, чтобы CORS исчезал (см. Вариант A ниже).
 
 ## Summary
-- Navigation works for browser back button, but footer navigation clicks did not navigate (likely due to banner overlay; fixed, needs retest).
-- Multiple critical pages fail to load data due to CORS and show runtime React errors in console (proxy now available to unblock).
-- Cookie consent banner overlapped key actions; pointer-events fix applied, needs retest.
-- Login page “Зарегистрируйтесь” link was blocked by banner; fix applied, needs retest.
+- Navigation works for browser back button; footer navigation issue likely resolved by banner fix (pending manual retest).
+- Multiple critical pages fail to load data without proxy; local proxy now available to unblock CORS.
+- Cookie consent banner overlapped key actions; pointer-events fix applied (pending manual retest).
+- Login page “Зарегистрируйтесь” link was blocked by banner; fix applied (pending manual retest).
 - `/register` route returns not found; redirect added.
-- Bottom dock “Ещё” menu items did not navigate; fixed, needs retest.
+- Bottom dock “Ещё” menu items did not navigate; fixed (pending manual retest).
 - Added local proxy support for QA build to bypass CORS; requires re-run with proxy enabled.
+- Playwright E2E suite passed with proxy-enabled web server (see Evidence/Automation).
 
 ## Bugs & issues
 
@@ -28,7 +29,7 @@
 - Impact:
   - User cannot browse content, filters, map results, or roulette recommendations.
 - Status:
-  - Local proxy added to QA server; API endpoints respond via proxy (HTTP 200) after enabling.
+  - Blocked without proxy; resolved when local proxy is enabled.
 
 ### 2) Cookie banner overlaps key actions (login/register, footer nav)
 - Severity: major
@@ -42,7 +43,7 @@
 - Impact:
   - Users cannot navigate unless they dismiss the banner first.
 - Status:
-  - Fixed by allowing pointer-events passthrough on non-interactive banner areas; needs retest.
+  - Fixed by allowing pointer-events passthrough on non-interactive banner areas; pending manual retest.
 
 ### 3) Footer navigation items do not navigate
 - Severity: major
@@ -55,7 +56,7 @@
 - Impact:
   - Core navigation is blocked from the primary UI controls.
 - Status:
-  - Likely resolved by cookie banner fix; needs retest.
+  - Likely resolved by cookie banner fix; pending manual retest.
 
 ### 4) “Зарегистрируйтесь” link on login does not navigate (blocked by banner)
 - Severity: major
@@ -69,7 +70,7 @@
 - Impact:
   - Registration entry point appears broken.
 - Status:
-  - Fixed by cookie banner pointer-events update; needs retest.
+  - Fixed by cookie banner pointer-events update; pending manual retest.
 
 ### 5) Bottom dock “Ещё” sheet items do not navigate
 - Severity: major
@@ -83,7 +84,7 @@
 - Impact:
   - Users cannot reach legal/support pages from mobile dock.
 - Status:
-  - Fixed by routing the “Ещё” sheet items; needs retest.
+  - Fixed by routing the “Ещё” sheet items; pending manual retest.
 
 ## Scenario checks
 
@@ -341,8 +342,21 @@
 
 ## Mobile checks (emulation)
 - Scroll/viewport: no horizontal overflow detected on home.
-- Navigation: same issues as desktop; footer navigation clicks do not navigate.
-- Content: blocked by CORS like desktop, preventing main flows.
+- Navigation: pending retest after cookie banner pointer-events fix.
+- Content: blocked without proxy; retest with proxy enabled.
+
+## Emulation matrix (planned)
+- Mobile: 320x568, 360x740, 375x812, 390x844, 414x896.
+- Tablet: 768x1024, 820x1180, 1024x1366.
+- Desktop: 1280x720, 1366x768, 1440x900.
+- Orientations: portrait + landscape for mobile; portrait for tablet; default for desktop.
+
+## Manual scenario packs (prioritized)
+- Pack 1: Core discovery (A, B, F, H, I) with proxy enabled.
+- Pack 2: Auth entry points (C, D, L, W, X) with banner visible first load.
+- Pack 3: Legal/support navigation (U, AO) from footer + bottom dock.
+- Pack 4: Create/edit flows (J, K, Y, Z) with slow network on upload steps.
+- Pack 5: Resilience/quality (AG, AF, AP, T, R, S, AN).
 
 ## Product issues
 - Value discovery is weakened because core content blocks fail to load without backend access; landing does not show featured routes.
@@ -362,6 +376,12 @@
 - Minified React error logs after failed API requests on the above pages.
 - Proxy check: `/api/travels/`, `/api/travels/random/`, `/api/travels/of-month/`, `/api/filterformap/` return HTTP 200 via localhost proxy.
 - Proxy check: `/api/getFiltersTravel/`, `/api/countriesforsearch/` return HTTP 200 via localhost proxy.
+- Automation: `yarn lint`, `yarn test:run`, `yarn e2e` passed; e2e emitted proxy certificate warnings without `E2E_API_PROXY_INSECURE=true`.
+
+## Automation coverage (new)
+- Auth entrypoints: login -> registration link with visible cookie banner.
+- Footer navigation: desktop footer items and mobile dock "Ещё" links navigate with banner visible.
+- Core pages data: `/`, `/travelsby`, `/map`, `/roulette` validate API responses via proxy.
 
 ## Recommendations
 - Configure CORS for `http://127.0.0.1:8086` or provide a local API proxy for QA.

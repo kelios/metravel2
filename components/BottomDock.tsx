@@ -107,6 +107,18 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
     onDockHeight?.(MOBILE_DOCK_HEIGHT_WEB);
   }, [isMobile, onDockHeight]);
 
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (typeof document === "undefined") return;
+    const body = document.body;
+    if (!body) return;
+    if (showMore) {
+      body.dataset.footerMoreOpen = "true";
+    } else {
+      delete body.dataset.footerMoreOpen;
+    }
+  }, [showMore]);
+
   const iconColor = colors.primary;
 
   const items: DockItem[] = useMemo(
@@ -169,7 +181,7 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
   const Container = Platform.OS === "ios" || Platform.OS === "android" ? SafeAreaView : View;
 
   return (
-    <Container style={styles.container}>
+    <Container style={[styles.container, showMore && styles.containerOpen]}>
       <View
         style={[
           styles.dockWrapper,
@@ -245,6 +257,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...(Platform.OS === "web" ? ({ left: 0, right: 0, width: "100%" } as any) : null),
     zIndex: 50,
   },
+  containerOpen: {
+    zIndex: 11000,
+  },
   dockWrapper: {
     paddingTop: 6,
     paddingBottom: Platform.select({ web: 8, default: 6 }),
@@ -307,7 +322,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     position: "fixed",
     inset: 0,
     backgroundColor: colors.overlay,
-    zIndex: 999,
+    zIndex: 10900,
   },
   moreSheet: {
     position: "fixed",
@@ -318,7 +333,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
-    zIndex: 1000,
+    zIndex: 11000,
     boxShadow: DESIGN_TOKENS.shadows.modal,
   } as any,
   moreList: {

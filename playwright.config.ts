@@ -55,6 +55,8 @@ export default defineConfig({
         env: {
           ...process.env,
           E2E_WEB_PORT: String(E2E_WEB_PORT),
+          E2E_API_PROXY_INSECURE: process.env.E2E_API_PROXY_INSECURE || 'true',
+          EXPO_PUBLIC_IS_LOCAL_API: 'false',
           ...(E2E_API_URL
             ? {
                 EXPO_PUBLIC_API_URL: E2E_API_URL,

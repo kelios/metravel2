@@ -48,6 +48,7 @@ function writeConsent(consent: ConsentState) {
 export default function ConsentBanner() {
   const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
+  const [suspendForOverlay, setSuspendForOverlay] = useState(false);
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const insets = useSafeAreaInsets();
@@ -63,6 +64,19 @@ export default function ConsentBanner() {
     if (!existing) {
       setVisible(true);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!isWeb || typeof document === 'undefined') return;
+    const body = document.body;
+    if (!body) return;
+    const update = () => {
+      setSuspendForOverlay(body.dataset.footerMoreOpen === 'true');
+    };
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(body, { attributes: true, attributeFilter: ['data-footer-more-open'] });
+    return () => observer.disconnect();
   }, []);
 
   const handleAcceptAll = () => {
@@ -96,8 +110,8 @@ export default function ConsentBanner() {
 
   return (
     <View
-      style={[styles.wrapper, { bottom: bottomOffset }]}
-      pointerEvents="box-none"
+      style={[styles.wrapper, { bottom: bottomOffset }, suspendForOverlay && styles.wrapperHidden]}
+      pointerEvents={suspendForOverlay ? 'none' : 'box-none'}
     >
       <View
         style={[styles.container, { backgroundColor: colors.surface }]}
@@ -132,9 +146,9 @@ export default function ConsentBanner() {
           />
         </View>
       </View>
-      {isWeb && (
-        <View style={styles.bottomLinkRow} pointerEvents="auto">
-          <Link href="/cookies" style={styles.manageLink}>
+      {isWeb && !isMobile && (
+        <View style={styles.bottomLinkRow} pointerEvents="box-none">
+          <Link href="/cookies" style={styles.manageLink} pointerEvents="auto">
             <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
           </Link>
         </View>
@@ -149,10 +163,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 9999,
+    zIndex: 900,
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingBottom: 12,
+  },
+  wrapperHidden: {
+    opacity: 0,
   },
   bottomLinkRow: {
     marginTop: 6,
