@@ -1,65 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import Chip from '@/components/ui/Chip';
-
-const NAMED_COLORS: Record<string, string> = {
-  gray: '#9e9e9e',
-  grey: '#9e9e9e',
-  lightgray: '#d3d3d3',
-  lightgrey: '#d3d3d3',
-  pink: '#ffc0cb',
-  lightpink: '#ffb6c1',
-  white: '#ffffff',
-  silver: '#c0c0c0',
-};
-
-const parseHex = (hex: string) => {
-  const raw = String(hex).trim().replace('#', '');
-  if (raw.length === 3) {
-    const r = parseInt(raw[0] + raw[0], 16);
-    const g = parseInt(raw[1] + raw[1], 16);
-    const b = parseInt(raw[2] + raw[2], 16);
-    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
-    return { r, g, b };
-  }
-  if (raw.length === 6) {
-    const r = parseInt(raw.slice(0, 2), 16);
-    const g = parseInt(raw.slice(2, 4), 16);
-    const b = parseInt(raw.slice(4, 6), 16);
-    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
-    return { r, g, b };
-  }
-  return null;
-};
-
-const parseRgb = (value: string) => {
-  const m = String(value)
-    .trim()
-    .match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+)\s*)?\)$/i);
-  if (!m) return null;
-  const r = Number(m[1]);
-  const g = Number(m[2]);
-  const b = Number(m[3]);
-  if ([r, g, b].some((n) => !Number.isFinite(n))) return null;
-  return { r, g, b };
-};
-
-const isLightColor = (value: string) => {
-  const v = String(value ?? '').trim().toLowerCase();
-  const normalized = NAMED_COLORS[v] ?? v;
-  const rgb =
-    normalized.startsWith('#') ? parseHex(normalized) : normalized.startsWith('rgb') ? parseRgb(normalized) : null;
-  if (!rgb) return false;
-  const r = Math.min(255, Math.max(0, rgb.r)) / 255;
-  const g = Math.min(255, Math.max(0, rgb.g)) / 255;
-  const b = Math.min(255, Math.max(0, rgb.b)) / 255;
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 0.72;
-};
+import ColorChip from '@/components/ui/ColorChip';
 
 interface PointFiltersProps {
   filters: PointFiltersType;
@@ -165,16 +111,16 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
           <View style={styles.chipWrapRow}>
             {(availableColors ?? []).map((color) => {
               const isSelected = filters.colors?.includes(color);
-              const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
               return (
-                <TouchableOpacity
+                <ColorChip
                   key={color}
-                  style={[styles.colorChip, isSelected && styles.colorChipActive]}
+                  color={color}
+                  selected={isSelected}
                   onPress={() => toggleColor(color)}
                   accessibilityLabel={`Цвет ${color}`}
-                >
-                  <View style={[styles.colorDot, { backgroundColor: color, borderColor }]} />
-                </TouchableOpacity>
+                  style={styles.colorChip}
+                  selectedStyle={styles.colorChipSelected}
+                />
               );
             })}
           </View>
@@ -187,16 +133,16 @@ export const PointFilters: React.FC<PointFiltersProps> = ({
           >
             {(availableColors ?? []).map((color) => {
               const isSelected = filters.colors?.includes(color);
-              const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
               return (
-                <TouchableOpacity
+                <ColorChip
                   key={color}
-                  style={[styles.colorChip, isSelected && styles.colorChipActive]}
+                  color={color}
+                  selected={isSelected}
                   onPress={() => toggleColor(color)}
                   accessibilityLabel={`Цвет ${color}`}
-                >
-                  <View style={[styles.colorDot, { backgroundColor: color, borderColor }]} />
-                </TouchableOpacity>
+                  style={styles.colorChip}
+                  selectedStyle={styles.colorChipSelected}
+                />
               );
             })}
           </ScrollView>
@@ -278,24 +224,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginRight: DESIGN_TOKENS.spacing.xs,
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
-  colorDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
   colorChip: {
-    padding: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.full,
     borderWidth: 2,
-    borderColor: 'transparent',
-    backgroundColor: colors.surface,
     marginRight: DESIGN_TOKENS.spacing.xs,
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
-  colorChipActive: {
-    borderColor: colors.primary,
+  colorChipSelected: {
     backgroundColor: colors.backgroundTertiary,
   },
 });

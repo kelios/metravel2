@@ -25,6 +25,7 @@ npm run test:run
 
 - Before creating new UI components or styles, check `components/ui` and existing feature components and reuse them.
 - Add new components only when no existing component can be reasonably extended or composed.
+- When adding buttons, icons, or small UI primitives, prefer existing `components/ui` primitives (`Button`, `IconButton`, `Chip`) over custom one-offs.
 
 ### Images and placeholders
 

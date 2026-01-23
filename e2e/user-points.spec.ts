@@ -43,12 +43,14 @@ test.describe('User points', () => {
   }
 
   async function openFiltersPanelTab(page: any) {
-    const filtersTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
+    const legacyTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
+    const segmentedTabButton = page.getByTestId('segmented-filters').first();
     const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
 
     for (let attempt = 0; attempt < 3; attempt++) {
-      await filtersTabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
-      await filtersTabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
+      await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
+      await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
       await page.waitForTimeout(150);
 
       if ((await searchBox.count()) > 0) {
@@ -63,15 +65,17 @@ test.describe('User points', () => {
   async function openListPanelTab(page: any) {
     // On this screen there can be multiple "Список"-related buttons (e.g. selection-mode header "Назад к списку").
     // Use a stable testID on the panel tab.
-    const listTabButton = page.getByTestId('userpoints-panel-tab-list').first();
+    const legacyTabButton = page.getByTestId('userpoints-panel-tab-list').first();
+    const segmentedTabButton = page.getByTestId('segmented-list').first();
     const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
     const listContent = page.getByTestId('userpoints-panel-content-list');
 
     // RN-web overlays/animations can occasionally swallow the first click.
     for (let attempt = 0; attempt < 3; attempt++) {
-      await listTabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
+      const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
+      await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
       // Fallback: sometimes Playwright click doesn't trigger RN-web onPress reliably.
-      await listTabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
       await page.waitForTimeout(150);
 
       if ((await listContent.count()) > 0 && (await searchBox.count()) > 0) {
@@ -574,7 +578,7 @@ test.describe('User points', () => {
       });
 
       await test.step('Switch to list view', async () => {
-        await page.getByRole('button', { name: 'Список' }).click();
+        await openListPanelTab(page);
       });
 
       await test.step('Seed 2 points via mock API', async () => {
@@ -665,7 +669,7 @@ test.describe('User points', () => {
     await page.addInitScript(seedNecessaryConsent);
     await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
-    await page.getByRole('button', { name: 'Список' }).click();
+    await openListPanelTab(page);
 
     await expect(page.getByText(pointNameA).first()).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(pointNameB).first()).toBeVisible({ timeout: 30_000 });

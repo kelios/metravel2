@@ -1,12 +1,26 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import { 
+  Modal,
+  Platform,
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  TextInput, 
+  ScrollView, 
+  Pressable, 
+  useWindowDimensions 
+} from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import { userPointsApi } from '@/src/api/userPoints';
 import { fetchFilters } from '@/src/api/misc';
+import { normalizeCategoryDictionary, createCategoryNameToIdsMap, resolveCategoryIdsByNames as mapNamesToIds } from '@/src/utils/userPointsCategories';
+import { getPointCategoryNames } from '@/src/utils/travelPointMeta';
 import FormFieldWithValidation from '@/components/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/SimpleMultiSelect';
 import Button from '@/components/ui/Button';
+import ColorChip from '@/components/ui/ColorChip';
 import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { PointStatus, STATUS_LABELS } from '@/types/userPoints';
@@ -16,11 +30,6 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { PointsListHeader } from './PointsListHeader'
 import { PointsListGrid } from './PointsListGrid'
 import { PointsListItem } from './PointsListItem'
-import {
-  createCategoryNameToIdsMap,
-  normalizeCategoryDictionary,
-  resolveCategoryIdsByNames as mapNamesToIds,
-} from '@/src/utils/userPointsCategories';
 
 const DEFAULT_POINT_COLORS: string[] = [
   'red',
@@ -41,60 +50,6 @@ const DEFAULT_POINT_COLORS: string[] = [
   '#ff922b',
 ];
 
-const NAMED_COLORS: Record<string, string> = {
-  gray: '#9e9e9e',
-  grey: '#9e9e9e',
-  lightgray: '#d3d3d3',
-  lightgrey: '#d3d3d3',
-  pink: '#ffc0cb',
-  lightpink: '#ffb6c1',
-  white: '#ffffff',
-  silver: '#c0c0c0',
-};
-
-const parseHex = (hex: string) => {
-  const raw = String(hex).trim().replace('#', '');
-  if (raw.length === 3) {
-    const r = parseInt(raw[0] + raw[0], 16);
-    const g = parseInt(raw[1] + raw[1], 16);
-    const b = parseInt(raw[2] + raw[2], 16);
-    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
-    return { r, g, b };
-  }
-  if (raw.length === 6) {
-    const r = parseInt(raw.slice(0, 2), 16);
-    const g = parseInt(raw.slice(2, 4), 16);
-    const b = parseInt(raw.slice(4, 6), 16);
-    if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return null;
-    return { r, g, b };
-  }
-  return null;
-};
-
-const parseRgb = (value: string) => {
-  const m = String(value)
-    .trim()
-    .match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+)\s*)?\)$/i);
-  if (!m) return null;
-  const r = Number(m[1]);
-  const g = Number(m[2]);
-  const b = Number(m[3]);
-  if ([r, g, b].some((n) => !Number.isFinite(n))) return null;
-  return { r, g, b };
-};
-
-const isLightColor = (value: string) => {
-  const v = String(value ?? '').trim().toLowerCase();
-  const normalized = NAMED_COLORS[v] ?? v;
-  const rgb =
-    normalized.startsWith('#') ? parseHex(normalized) : normalized.startsWith('rgb') ? parseRgb(normalized) : null;
-  if (!rgb) return false;
-  const r = Math.min(255, Math.max(0, rgb.r)) / 255;
-  const g = Math.min(255, Math.max(0, rgb.g)) / 255;
-  const b = Math.min(255, Math.max(0, rgb.b)) / 255;
-  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luminance > 0.72;
-};
 
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371;
@@ -421,6 +376,19 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const resolveCategoryIdsByNames = useCallback(
     (names: string[]) => mapNamesToIds(names, categoryNameToIds),
     [categoryNameToIds]
+  );
+
+  const resolveCategoryIdsForEdit = useCallback(
+    (point: any): string[] => {
+      const rawIds = normalizeCategoryIdsFromPoint(point);
+      const validIds = rawIds.filter((id) => categoryIdToName.has(String(id).trim()));
+      if (validIds.length > 0) return validIds;
+
+      const names = getPointCategoryNames(point);
+      const resolved = resolveCategoryIdsByNames(names);
+      return resolved;
+    },
+    [categoryIdToName, resolveCategoryIdsByNames]
   );
 
   const handlePresetChange = useCallback(
@@ -1000,11 +968,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       setManualColor(String(point?.color ?? '#2196F3'));
       const nextStatus = ((point?.status as any) ?? PointStatus.PLANNING) as PointStatus;
       setManualStatus(nextStatus);
-      setManualCategoryIds(normalizeCategoryIdsFromPoint(point));
+      setManualCategoryIds(resolveCategoryIdsForEdit(point));
       setManualError(null);
       setShowManualAdd(true);
     },
-    [blurActiveElementForModal, resetManualForm]
+    [blurActiveElementForModal, resetManualForm, resolveCategoryIdsForEdit]
   );
 
   const requestDeletePoint = useCallback((point: any) => {
@@ -1906,17 +1874,17 @@ useEffect(() => {
                 <View style={styles.manualColorRow}>
                   {manualColorOptions.map((color) => {
                     const isSelected = manualColor === color;
-                    const borderColor = isLightColor(color) ? colors.textMuted : colors.border;
                     return (
-                      <TouchableOpacity
+                      <ColorChip
                         key={color}
-                        style={[styles.manualColorChip, isSelected && styles.manualColorChipActive]}
+                        color={color}
+                        selected={isSelected}
                         onPress={() => setManualColor(color)}
-                        accessibilityRole="button"
                         accessibilityLabel={`Цвет ${color}`}
-                      >
-                        <View style={[styles.manualColorDot, { backgroundColor: color, borderColor }]} />
-                      </TouchableOpacity>
+                        chipSize={32}
+                        dotSize={20}
+                        dotBorderWidth={1}
+                      />
                     );
                   })}
                 </View>
@@ -2211,27 +2179,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-  },
-  manualColorChip: {
-    width: 32,
-    height: 32,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  manualColorChipActive: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-  },
-  manualColorDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   manualInput: {
     backgroundColor: colors.surface,

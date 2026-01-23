@@ -1,5 +1,5 @@
 import React, { useCallback, useRef } from 'react'
-import { Platform, StyleSheet, TouchableOpacity } from 'react-native'
+import { Platform, Pressable, StyleSheet, TouchableOpacity } from 'react-native'
 
 export const DeleteAction: React.FC<{
   onActivate: () => void
@@ -30,30 +30,26 @@ export const DeleteAction: React.FC<{
   )
 
   if (Platform.OS === 'web') {
-    const ButtonComponent = 'button' as any
     const flatStyle = StyleSheet.flatten(style)
 
     return (
-      <ButtonComponent
-        onClick={makeActivate}
-        data-testid={testID}
+      <Pressable
+        onPress={makeActivate}
         style={{
           ...flatStyle,
-          border: 'none',
-          background: flatStyle?.backgroundColor || 'transparent',
+          borderWidth: 0,
+          backgroundColor: flatStyle?.backgroundColor || 'transparent',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          textDecoration: 'none',
-          fontFamily: 'inherit',
-          fontSize: 'inherit',
-          lineHeight: 'inherit',
+          textDecorationLine: 'none',
         }}
-        type="button"
+        accessibilityRole="button"
+        testID={testID}
       >
         {children}
-      </ButtonComponent>
+      </Pressable>
     )
   }
 
