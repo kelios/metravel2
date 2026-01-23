@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { FlatList, Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 

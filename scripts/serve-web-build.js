@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 const http = require('http')
+const https = require('https')
 const fs = require('fs')
 const path = require('path')
+const { URL } = require('url')
 
 const buildDir = process.env.E2E_BUILD_DIR
   ? path.resolve(process.env.E2E_BUILD_DIR)
@@ -35,8 +37,58 @@ const contentTypes = {
   '.map': 'application/json; charset=utf-8',
 }
 
+const apiProxyTarget = process.env.E2E_API_PROXY_TARGET || 'https://metravel.by'
+const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLowerCase() === 'true'
+const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/']
+
+const proxyRequest = (req, res, target) => {
+  try {
+    const targetUrl = new URL(target)
+    const isHttps = targetUrl.protocol === 'https:'
+    const proxyModule = isHttps ? https : http
+    const upstreamPath = req.url || '/'
+    const upstreamUrl = new URL(upstreamPath, targetUrl)
+
+    const proxyReq = proxyModule.request(
+      {
+        hostname: upstreamUrl.hostname,
+        port: upstreamUrl.port || (isHttps ? 443 : 80),
+        path: upstreamUrl.pathname + upstreamUrl.search,
+        method: req.method,
+        ...(isHttps ? { rejectUnauthorized: !allowInsecureProxy } : null),
+        headers: {
+          ...req.headers,
+          host: upstreamUrl.host,
+        },
+      },
+      (proxyRes) => {
+        res.writeHead(proxyRes.statusCode || 200, proxyRes.headers)
+        proxyRes.pipe(res)
+      }
+    )
+
+    proxyReq.on('error', (error) => {
+      console.error('❌ API proxy error:', error && error.message ? error.message : error)
+      res.statusCode = 502
+      res.end('Proxy error')
+    })
+
+    req.pipe(proxyReq)
+  } catch (error) {
+    console.error('❌ API proxy error:', error && error.message ? error.message : error)
+    res.statusCode = 500
+    res.end('Proxy error')
+  }
+}
+
 const server = http.createServer((req, res) => {
   try {
+    const shouldProxy = proxyPaths.some((prefix) => req.url && req.url.startsWith(prefix))
+    if (shouldProxy) {
+      proxyRequest(req, res, apiProxyTarget)
+      return
+    }
+
     const url = new URL(req.url || '/', `http://${host}:${port}`)
     let pathname = decodeURIComponent(url.pathname)
     if (pathname.endsWith('/')) pathname += 'index.html'

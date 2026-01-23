@@ -34,7 +34,15 @@ export function useTheme(): ThemeContextType {
   const context = useContext(ThemeContext);
 
   if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
+    if (__DEV__) {
+      console.error('useTheme must be used within ThemeProvider');
+    }
+    return {
+      theme: 'auto',
+      isDark: false,
+      setTheme: () => undefined,
+      toggleTheme: () => undefined,
+    };
   }
 
   return context;

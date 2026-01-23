@@ -4,14 +4,16 @@
 - Target: localhost web build served from `dist` via `scripts/serve-web-build.js` on `http://127.0.0.1:8086`.
 - Personas: guest (new user), registered user (attempted via UI), mobile (iPhone 12 viewport emulation).
 - Note: backend requests from localhost to `http://192.168.50.36` are blocked by CORS in this environment; this impacted content-heavy pages.
+- To unblock QA: поднять локальный прокси, чтобы CORS исчезал (см. Вариант A ниже).
 
 ## Summary
 - Navigation works for browser back button, but footer navigation clicks did not navigate (likely due to banner overlay; fixed, needs retest).
-- Multiple critical pages fail to load data due to CORS and show runtime React errors in console.
+- Multiple critical pages fail to load data due to CORS and show runtime React errors in console (proxy now available to unblock).
 - Cookie consent banner overlapped key actions; pointer-events fix applied, needs retest.
 - Login page “Зарегистрируйтесь” link was blocked by banner; fix applied, needs retest.
 - `/register` route returns not found; redirect added.
 - Bottom dock “Ещё” menu items did not navigate; fixed, needs retest.
+- Added local proxy support for QA build to bypass CORS; requires re-run with proxy enabled.
 
 ## Bugs & issues
 
@@ -25,6 +27,8 @@
   - Requests to `http://192.168.50.36/api/*` fail with CORS errors; console logs show minified React errors.
 - Impact:
   - User cannot browse content, filters, map results, or roulette recommendations.
+- Status:
+  - Local proxy added to QA server; API endpoints respond via proxy (HTTP 200) after enabling.
 
 ### 2) Cookie banner overlaps key actions (login/register, footer nav)
 - Severity: major
@@ -203,6 +207,138 @@
 - Actual: not verified in this run.
 - Problems: pending.
 
+### Scenario U: Bottom dock “Ещё” navigation
+- Steps: open mobile web viewport, tap “Ещё”, select legal/support items.
+- Expected: navigates to `/privacy`, `/cookies`, `/about`.
+- Actual: not verified after fix.
+- Problems: pending retest.
+
+### Scenario V: Registration canonical
+- Steps: open `/registration`, inspect canonical meta.
+- Expected: canonical points to `/registration`.
+- Actual: not verified after fix.
+- Problems: pending retest.
+
+### Scenario W: Login errors and validation
+- Steps: `/login`, submit empty form, invalid email, wrong password.
+- Expected: inline validation; server error displayed gracefully.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario X: Logout
+- Steps: login, then logout from profile/menu.
+- Expected: session cleared, redirected to `/`, protected pages require auth again.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario Y: Profile avatar upload
+- Steps: `/settings` or `/profile`, upload avatar image.
+- Expected: upload succeeds, avatar renders after refresh.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario Z: Travel details deep link
+- Steps: open a travel details URL directly (from shared link).
+- Expected: page loads, content renders, back navigation works.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AA: Share links
+- Steps: open a travel card, use share action (if present).
+- Expected: share dialog or link copy succeeds without errors.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AB: Article list and detail
+- Steps: open `/articles`, open an article detail.
+- Expected: list renders, detail loads with content.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AC: Cookie settings analytics toggle
+- Steps: `/cookies`, disable analytics, refresh, then enable analytics.
+- Expected: analytics scripts load only when enabled.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AD: Contact form validation
+- Steps: `/about`, submit empty form and then valid payload.
+- Expected: validation errors then success message.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AE: Map interactions
+- Steps: `/map`, pan/zoom, open map points, switch filters.
+- Expected: points update, no console errors.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AF: Responsive layout breakpoints
+- Steps: test widths 320, 375, 768, 1024, 1440.
+- Expected: layout adapts; no overlapping headers/footers.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AG: Offline/slow network handling
+- Steps: throttle network to Slow 3G, then offline; refresh `/` and `/travelsby`.
+- Expected: loading states shown; friendly error when offline; no infinite spinners.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AH: Pagination / infinite scroll
+- Steps: `/travelsby`, scroll to load more results or use pagination controls.
+- Expected: more items load; no duplicates; scroll position stable.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AI: Filters reset
+- Steps: `/travelsby`, set multiple filters, then reset/clear all.
+- Expected: filters cleared, list resets to default state.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AJ: Travel card interactions
+- Steps: `/travelsby`, hover/tap cards, open gallery/preview if available.
+- Expected: card interactions responsive; no layout shift.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AK: Map list panel scroll
+- Steps: `/map`, open list panel, scroll to bottom.
+- Expected: list scrolls without locking map; footer does not overlap.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AL: Search deep links
+- Steps: `/search?q=минск&tags=...` (query params), reload.
+- Expected: state restored from URL, results reflect filters.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AM: Form UX (required fields)
+- Steps: registration/contact forms, submit with missing required fields.
+- Expected: clear field-level errors and focus management.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AN: Analytics consent on first visit
+- Steps: first load `/`, choose "Только необходимые", verify no analytics requests.
+- Expected: no analytics calls until user opts in.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AO: Legal pages
+- Steps: open `/privacy` and `/cookies`.
+- Expected: content loads; links valid; headings readable on mobile.
+- Actual: not verified.
+- Problems: pending.
+
+### Scenario AP: 500/error state rendering
+- Steps: simulate API 500 (devtools mock) on `/travelsby`.
+- Expected: error UI with retry; no crash.
+- Actual: not verified.
+- Problems: pending.
+
 ## Mobile checks (emulation)
 - Scroll/viewport: no horizontal overflow detected on home.
 - Navigation: same issues as desktop; footer navigation clicks do not navigate.
@@ -217,17 +353,39 @@
 - Added `/register` redirect to `/registration` to avoid 404s.
 - Consent banner pointer-events updated to avoid blocking underlying links while still allowing accept actions.
 - Bottom dock “Ещё” items now navigate to privacy/cookies/about pages.
+- `scripts/serve-web-build.js` now proxies `/api` and media paths to `https://metravel.by` to bypass CORS for QA.
+- Registration page canonical now defaults to `/registration` when pathname is not available.
+- Added `E2E_API_PROXY_INSECURE` option to allow proxying HTTPS without local cert issues.
 
 ## Evidence (console/network)
 - CORS errors on `http://192.168.50.36/api/*` for pages `/`, `/travelsby`, `/roulette`, `/map`.
 - Minified React error logs after failed API requests on the above pages.
+- Proxy check: `/api/travels/`, `/api/travels/random/`, `/api/travels/of-month/`, `/api/filterformap/` return HTTP 200 via localhost proxy.
+- Proxy check: `/api/getFiltersTravel/`, `/api/countriesforsearch/` return HTTP 200 via localhost proxy.
 
 ## Recommendations
 - Configure CORS for `http://127.0.0.1:8086` or provide a local API proxy for QA.
 - Ensure cookie banner does not block primary actions on auth and footer areas.
 - Verify footer nav uses `Link`/`navigate` and click targets are not blocked by overlays.
 
+## QA setup: local proxy to bypass CORS
+- You поднимаешь прокси и CORS исчезает.
+- Вариант A: vite / webpack devServer
+```js
+proxy: {
+  '/api': {
+    target: 'https://metravel.by',
+    changeOrigin: true,
+    secure: false,
+  }
+}
+```
+- Вариант B: локальный сервер статической сборки
+  - Запуск: `E2E_API_PROXY_TARGET=https://metravel.by E2E_API_PROXY_INSECURE=true node scripts/serve-web-build.js`
+  - Проксируемые пути: `/api`, `/uploads`, `/media`, `/gallery`, `/travel-image`, `/address-image`
+
 ## Retest checklist (after fixes)
+- Run QA server with proxy enabled (`E2E_API_PROXY_TARGET=https://metravel.by E2E_API_PROXY_INSECURE=true`).
 - Verify `/` loads popular/random/of-month content.
 - Verify `/travelsby` filters populate and list items open details.
 - Verify `/roulette` returns recommendations without console errors.
