@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Button, Card } from 'react-native-paper';
 import { useIsFocused } from '@react-navigation/native';
-import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
@@ -246,18 +246,17 @@ export default function Login() {
                                                 </TouchableOpacity>
                                             <View style={styles.registerContainer}>
                                                 <Text style={styles.registerText}>Нет аккаунта? </Text>
-                                                <TouchableOpacity 
-                                                    onPress={() =>
-                                                        router.push(
-                                                            (redirect && typeof redirect === 'string')
-                                                                ? (`/registration?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
-                                                                : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
-                                                        )
+                                                <Link
+                                                    href={
+                                                        (redirect && typeof redirect === 'string')
+                                                            ? (`/registration?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                            : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                                     }
+                                                    style={styles.registerLink}
                                                     disabled={isSubmitting}
                                                 >
-                                                    <Text style={styles.registerLink}>Зарегистрируйтесь</Text>
-                                                </TouchableOpacity>
+                                                    Зарегистрируйтесь
+                                                </Link>
                                             </View>
                                         </>
                                         )}
