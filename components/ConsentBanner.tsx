@@ -96,14 +96,14 @@ export default function ConsentBanner() {
 
   return (
     <View
-      style={[
-        styles.wrapper,
-        { bottom: bottomOffset },
-        { pointerEvents: 'box-none' } as any,
-      ]}
+      style={[styles.wrapper, { bottom: bottomOffset }]}
+      pointerEvents="box-none"
     >
-      <View style={[styles.container, { backgroundColor: colors.surface }]}>
-        <View style={styles.textBlock}>
+      <View
+        style={[styles.container, { backgroundColor: colors.surface }]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.textBlock} pointerEvents="none">
           <Text style={[styles.title, { color: colors.text }]}>Мы ценим вашу приватность</Text>
           <Text style={[styles.text, { color: colors.textMuted }]}>
             Мы используем технические файлы и, с вашего согласия, аналитические инструменты (Яндекс.Метрика,
@@ -113,7 +113,7 @@ export default function ConsentBanner() {
             Подробнее читайте в нашей Политике конфиденциальности и на странице настроек cookies.
           </Text>
         </View>
-        <View style={styles.buttonsRow}>
+        <View style={styles.buttonsRow} pointerEvents="auto">
           <Button
             label="Только необходимые"
             onPress={handleNecessaryOnly}
@@ -133,7 +133,7 @@ export default function ConsentBanner() {
         </View>
       </View>
       {isWeb && (
-        <View style={styles.bottomLinkRow}>
+        <View style={styles.bottomLinkRow} pointerEvents="auto">
           <Link href="/cookies" style={styles.manageLink}>
             <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
           </Link>

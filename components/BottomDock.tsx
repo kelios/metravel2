@@ -34,6 +34,7 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
   const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
   const [showMore, setShowMore] = useState(false);
   const colors = useThemedColors();
+  const router = useRouter();
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -202,13 +203,31 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
           />
           <View testID="footer-more-sheet" style={styles.moreSheet}>
             <View testID="footer-more-list" style={styles.moreList}>
-              <Pressable onPress={() => setShowMore(false)} style={styles.moreItem}>
+              <Pressable
+                onPress={() => {
+                  setShowMore(false);
+                  router.push("/privacy" as any);
+                }}
+                style={styles.moreItem}
+              >
                 <Text style={styles.moreItemText}>Политика конфиденциальности</Text>
               </Pressable>
-              <Pressable onPress={() => setShowMore(false)} style={styles.moreItem}>
+              <Pressable
+                onPress={() => {
+                  setShowMore(false);
+                  router.push("/cookies" as any);
+                }}
+                style={styles.moreItem}
+              >
                 <Text style={styles.moreItemText}>Настройки cookies</Text>
               </Pressable>
-              <Pressable onPress={() => setShowMore(false)} style={styles.moreItem}>
+              <Pressable
+                onPress={() => {
+                  setShowMore(false);
+                  router.push("/about" as any);
+                }}
+                style={styles.moreItem}
+              >
                 <Text style={styles.moreItemText}>Связаться с нами</Text>
               </Pressable>
             </View>
