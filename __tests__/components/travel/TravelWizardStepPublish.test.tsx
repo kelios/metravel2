@@ -56,7 +56,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const onFinish = jest.fn();
     const setFormData = jest.fn();
 
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByTestId } = render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -80,7 +80,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     });
 
     // Press the header primary button (it uses accessibilityLabel=primaryLabel)
-    const primarySubmit = getByLabelText('Отправить на модерацию');
+    const primarySubmit = getByTestId('primary-button');
     await act(async () => {
       fireEvent.press(primarySubmit);
     });

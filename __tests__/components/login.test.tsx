@@ -16,6 +16,7 @@ if (typeof (global as any).HTMLButtonElement === 'undefined') {
 // Mock dependencies
 jest.mock('@/context/AuthContext');
 jest.mock('expo-router', () => ({
+  Link: ({ children }: any) => children,
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
@@ -507,4 +508,3 @@ describe('Login Component', () => {
     });
   });
 });
-

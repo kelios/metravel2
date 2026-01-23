@@ -8,7 +8,7 @@
 ## Summary
 - Navigation works for browser back button, but footer navigation clicks did not navigate.
 - Multiple critical pages fail to load data due to CORS and show runtime React errors in console.
-- CTA to create content redirects to login correctly, but registration link is broken.
+- Cookie consent banner overlaps key actions and blocks pointer interactions until dismissed.
 - Login page “Зарегистрируйтесь” link does not navigate to registration.
 - `/register` route returns not found; only `/registration` exists.
 
@@ -25,7 +25,7 @@
 - Impact:
   - User cannot browse content, filters, map results, or roulette recommendations.
 
-### 2) Footer navigation items do not navigate
+### 2) Cookie banner overlaps key actions (login/register, footer nav)\n- Severity: major\n- Steps:\n  - Open `/login` and try clicking “Зарегистрируйтесь”.\n  - Open `/` and try clicking footer nav items.\n- Expected:\n  - Links are clickable without requiring extra steps.\n- Actual:\n  - Cookie banner overlays the link area (elementFromPoint hits banner), blocking pointer events.\n- Impact:\n  - Users cannot navigate unless they dismiss the banner first.\n\n### 3) Footer navigation items do not navigate
 - Severity: major
 - Steps:
   - On home page, click footer items (Travels, Map, Roulette).
@@ -36,28 +36,7 @@
 - Impact:
   - Core navigation is blocked from the primary UI controls.
 
-### 3) “Зарегистрируйтесь” link on login does not navigate
-- Severity: major
-- Steps:
-  - Open `/login`.
-  - Click the “Зарегистрируйтесь” link.
-- Expected:
-  - Navigate to `/registration`.
-- Actual:
-  - Remains on `/login`.
-- Impact:
-  - User cannot reach registration from login.
-
-### 4) `/register` route is not found
-- Severity: minor
-- Steps:
-  - Open `/register`.
-- Expected:
-  - Redirect or render registration page.
-- Actual:
-  - Not found.
-- Impact:
-  - Users entering the common `/register` path hit a dead end.
+### 4) “Зарегистрируйтесь” link on login does not navigate (blocked by banner)\n- Severity: major\n- Steps:\n  - Open `/login`.\n  - Click “Зарегистрируйтесь” without dismissing cookie banner.\n- Expected:\n  - Navigate to `/registration`.\n- Actual:\n  - Remains on `/login` because click is intercepted by the banner.\n- Impact:\n  - Registration entry point appears broken.
 
 ## Scenario checks
 
@@ -74,13 +53,16 @@
 - Problems: blocker due to missing data.
 
 ### Scenario C: Save/add a route
-- Steps: on home, click “Рассказать о путешествии”.\n+- Expected: redirect to login with intent to create, then user can reach registration.\n+- Actual: redirects to login, but registration link on login does not navigate.\n+- Problems: major conversion blocker (registration path broken).
+- Steps: on home, click “Рассказать о путешествии”, then attempt to go to registration.
+- Expected: login page opens and registration link is clickable.
+- Actual: registration link is blocked by cookie banner until consent is dismissed.
+- Problems: major conversion blocker (extra friction + perceived broken flow).
 
 ### Scenario D: Register
 - Steps: go to `/login`, click “Зарегистрируйтесь”.
 - Expected: navigate to `/registration` and show registration form.
-- Actual: link does not navigate; `/registration` is reachable directly.
-- Problems: major navigation failure.
+- Actual: cookie banner overlays the link; navigation works only after consent is dismissed.
+- Problems: major navigation friction.
 
 ### Scenario E: Return to site
 - Steps: navigate from `/` to `/travelsby`, then back.
@@ -95,6 +77,8 @@
 
 ## Product issues
 - Value discovery is weakened because core content blocks fail to load without backend access; landing does not show featured routes.
-- The primary “create content” CTA is missing on the home page.
-- Registration path is broken from the login screen.
+- Cookie consent banner blocks critical actions (registration, footer nav) until dismissed.
 - Navigation dead-ends (footer links) reduce confidence and task completion.
+
+## Fixes applied during QA
+- Added `/register` redirect to `/registration` to avoid 404s.
