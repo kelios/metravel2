@@ -2,7 +2,7 @@
   "cookies": [],
   "origins": [
     {
-      "origin": "http://127.0.0.1:8088",
+      "origin": "http://127.0.0.1:8085",
       "localStorage": [
         {
           "name": "isSuperuser",

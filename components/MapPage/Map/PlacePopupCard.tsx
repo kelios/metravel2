@@ -1,8 +1,9 @@
 import React from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Platform, Text, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 type Props = {
   title: string;
@@ -76,13 +77,10 @@ const PlacePopupCard: React.FC<Props> = ({
             <View style={{ width: '100%', height: '100%', backgroundColor: colors.backgroundSecondary }} />
           )}
           {hasArticle && (
-            <Pressable
+            <CardActionPressable
               accessibilityLabel="Открыть статью"
-              onPress={(e) => {
-                (e as any)?.stopPropagation?.();
-                onOpenArticle?.();
-              }}
-              {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
+              onPress={onOpenArticle}
+              title="Открыть статью"
               style={{ position: 'absolute', inset: 0 } as any}
             />
           )}
@@ -148,13 +146,10 @@ const PlacePopupCard: React.FC<Props> = ({
                 {coord}
               </Text>
               {onCopyCoord && (
-                <Pressable
+                <CardActionPressable
                   accessibilityLabel="Скопировать координаты"
-                  onPress={(e) => {
-                    (e as any)?.stopPropagation?.();
-                    void onCopyCoord();
-                  }}
-                  {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
+                  onPress={() => void onCopyCoord()}
+                  title="Скопировать координаты"
                   style={({ pressed }) => ({
                     flexDirection: 'row',
                     alignItems: 'center',
@@ -169,7 +164,7 @@ const PlacePopupCard: React.FC<Props> = ({
                   })}
                 >
                   <Feather name="clipboard" size={13} color={colors.textMuted} />
-                </Pressable>
+                </CardActionPressable>
               )}
             </View>
           )}
@@ -178,13 +173,10 @@ const PlacePopupCard: React.FC<Props> = ({
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: isCompactPopup ? 5 : 8 }}>
         {hasCoord && onOpenGoogleMaps && (
-          <Pressable
+          <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
-            onPress={(e) => {
-              (e as any)?.stopPropagation?.();
-              onOpenGoogleMaps();
-            }}
-            {...({ 'data-card-action': 'true', title: 'Открыть в Google Maps' } as any)}
+            onPress={onOpenGoogleMaps}
+            title="Открыть в Google Maps"
             style={({ pressed }) => ({
               flexDirection: 'row',
               alignItems: 'center',
@@ -208,17 +200,14 @@ const PlacePopupCard: React.FC<Props> = ({
             >
               Google Maps
             </Text>
-          </Pressable>
+          </CardActionPressable>
         )}
 
         {hasCoord && onOpenOrganicMaps && (
-          <Pressable
+          <CardActionPressable
             accessibilityLabel="Открыть в Organic Maps"
-            onPress={(e) => {
-              (e as any)?.stopPropagation?.();
-              onOpenOrganicMaps();
-            }}
-            {...({ 'data-card-action': 'true', title: 'Открыть в Organic Maps' } as any)}
+            onPress={onOpenOrganicMaps}
+            title="Открыть в Organic Maps"
             style={({ pressed }) => ({
               flexDirection: 'row',
               alignItems: 'center',
@@ -242,17 +231,14 @@ const PlacePopupCard: React.FC<Props> = ({
             >
               Organic Maps
             </Text>
-          </Pressable>
+          </CardActionPressable>
         )}
 
         {hasCoord && onShareTelegram && (
-          <Pressable
+          <CardActionPressable
             accessibilityLabel="Поделиться в Telegram"
-            onPress={(e) => {
-              (e as any)?.stopPropagation?.();
-              onShareTelegram();
-            }}
-            {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
+            onPress={onShareTelegram}
+            title="Поделиться в Telegram"
             style={({ pressed }) => ({
               flexDirection: 'row',
               alignItems: 'center',
@@ -276,17 +262,14 @@ const PlacePopupCard: React.FC<Props> = ({
             >
               Телеграм
             </Text>
-          </Pressable>
+          </CardActionPressable>
         )}
 
         {hasArticle && (
-          <Pressable
+          <CardActionPressable
             accessibilityLabel="Открыть статью"
-            onPress={(e) => {
-              (e as any)?.stopPropagation?.();
-              onOpenArticle?.();
-            }}
-            {...({ 'data-card-action': 'true', title: 'Открыть статью' } as any)}
+            onPress={onOpenArticle}
+            title="Открыть статью"
             style={({ pressed }) => ({
               flexDirection: 'row',
               alignItems: 'center',
@@ -310,25 +293,16 @@ const PlacePopupCard: React.FC<Props> = ({
             >
               Статья
             </Text>
-          </Pressable>
+          </CardActionPressable>
         )}
       </View>
 
       {onAddPoint && (
-        <Pressable
+        <CardActionPressable
           accessibilityLabel={compactLabel}
-          onPress={(e) => {
-            (e as any)?.stopPropagation?.();
-            void onAddPoint();
-          }}
+          onPress={() => void onAddPoint()}
           disabled={addDisabled || isAdding}
-          {...(Platform.OS === 'web'
-            ? ({
-                title: compactLabel,
-                'aria-label': compactLabel,
-              } as any)
-            : ({ accessibilityRole: 'button' } as any))}
-          {...({ 'data-card-action': 'true' } as any)}
+          title={compactLabel}
           style={({ pressed }) => ({
             flexDirection: 'row',
             alignItems: 'center',
@@ -357,7 +331,7 @@ const PlacePopupCard: React.FC<Props> = ({
           >
             {compactLabel}
           </Text>
-        </Pressable>
+        </CardActionPressable>
       )}
     </View>
   );

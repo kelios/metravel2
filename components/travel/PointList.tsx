@@ -19,6 +19,7 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import PlaceListCard from '@/components/places/PlaceListCard';
 import { useResponsive } from '@/hooks/useResponsive';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useAuth } from '@/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -249,62 +250,18 @@ const PointCard = React.memo(function PointCard({
     }: {
       accessibilityLabel: string;
       title?: string;
-      onPress: (e?: any) => void;
+      onPress: () => void;
       icon: React.ReactNode;
     }) => {
-      if (Platform.OS === 'web') {
-        return (
-          <View
-            style={styles.actionBtn}
-            accessibilityRole="button"
-            accessibilityLabel={accessibilityLabel}
-            {...({
-              role: 'button',
-              tabIndex: 0,
-              title: title ?? accessibilityLabel,
-              'data-card-action': 'true',
-            } as any)}
-            onClick={(e: any) => {
-              try {
-                e?.preventDefault?.();
-                e?.stopPropagation?.();
-              } catch {
-                // noop
-              }
-              onPress(e);
-            }}
-            onKeyDown={(e: any) => {
-              if (e?.key !== 'Enter' && e?.key !== ' ') return;
-              try {
-                e?.preventDefault?.();
-                e?.stopPropagation?.();
-              } catch {
-                // noop
-              }
-              onPress(e);
-            }}
-          >
-            {icon}
-          </View>
-        );
-      }
-
       return (
-        <Pressable
+        <CardActionPressable
           style={styles.actionBtn}
-          onPress={(e) => {
-            try {
-              e?.stopPropagation?.();
-            } catch {
-              // noop
-            }
-            onPress(e);
-          }}
-          accessibilityRole="button"
+          onPress={onPress}
           accessibilityLabel={accessibilityLabel}
+          title={title ?? accessibilityLabel}
         >
           {icon}
-        </Pressable>
+        </CardActionPressable>
       );
     },
     [styles.actionBtn]
@@ -318,61 +275,17 @@ const PointCard = React.memo(function PointCard({
     }: {
       label: string;
       title?: string;
-      onPress: (e?: any) => void;
+      onPress: () => void;
     }) => {
-      if (Platform.OS === 'web') {
-        return (
-          <View
-            style={styles.mapChip}
-            accessibilityRole="button"
-            accessibilityLabel={label}
-            {...({
-              role: 'button',
-              tabIndex: 0,
-              title: title ?? label,
-              'data-card-action': 'true',
-            } as any)}
-            onClick={(e: any) => {
-              try {
-                e?.preventDefault?.();
-                e?.stopPropagation?.();
-              } catch {
-                // noop
-              }
-              onPress(e);
-            }}
-            onKeyDown={(e: any) => {
-              if (e?.key !== 'Enter' && e?.key !== ' ') return;
-              try {
-                e?.preventDefault?.();
-                e?.stopPropagation?.();
-              } catch {
-                // noop
-              }
-              onPress(e);
-            }}
-          >
-            <Text style={styles.mapChipText}>{label}</Text>
-          </View>
-        );
-      }
-
       return (
-        <Pressable
+        <CardActionPressable
           style={styles.mapChip}
-          onPress={(e) => {
-            try {
-              e?.stopPropagation?.();
-            } catch {
-              // noop
-            }
-            onPress(e);
-          }}
-          accessibilityRole="button"
+          onPress={onPress}
           accessibilityLabel={label}
+          title={title ?? label}
         >
           <Text style={styles.mapChipText}>{label}</Text>
-        </Pressable>
+        </CardActionPressable>
       );
     },
     [styles.mapChip, styles.mapChipText]
@@ -452,16 +365,11 @@ const PointCard = React.memo(function PointCard({
               {point.address}
             </Text>
 
-            <Pressable
+            <CardActionPressable
               style={[styles.overlayCoordRow, globalFocusStyles.focusable]}
-              onPress={(e) => {
-                e.stopPropagation();
-                openMapFromLink();
-              }}
+              onPress={openMapFromLink}
               accessibilityLabel={`Координаты: ${point.coord}`}
-              {...(Platform.OS === 'web'
-                ? ({ title: 'Открыть координаты в Google Maps' } as any)
-                : ({ accessibilityRole: 'button' } as any))}
+              title="Открыть координаты в Google Maps"
             >
               <Feather name="map-pin" size={14} color={colors.textOnDark} />
               <Text
@@ -470,7 +378,7 @@ const PointCard = React.memo(function PointCard({
               >
                 {point.coord}
               </Text>
-            </Pressable>
+            </CardActionPressable>
 
             <View style={styles.overlayMapChipsRow}>
               <ActionChip label="Google" title="Открыть в Google Maps" onPress={() => void openExternal(buildMapUrl(point.coord))} />
@@ -491,10 +399,7 @@ const PointCard = React.memo(function PointCard({
           </View>
           {onAddPoint && (
             <AddToPointsButton
-              onPress={(e) => {
-                e?.stopPropagation?.();
-                onAddPoint();
-              }}
+              onPress={onAddPoint}
               loading={Boolean(addButtonLoading)}
               disabled={Boolean(addButtonDisabled)}
               colors={colors}
@@ -509,7 +414,7 @@ const PointCard = React.memo(function PointCard({
 });
 
 type AddToPointsButtonProps = {
-  onPress: (e?: any) => void;
+  onPress: () => void;
   loading: boolean;
   disabled: boolean;
   colors: ReturnType<typeof useThemedColors>;
@@ -527,17 +432,17 @@ const AddToPointsButton = React.memo(function AddToPointsButton({
 }: AddToPointsButtonProps) {
   return (
     <View style={[styles.addButtonContainer, isWide && styles.addButtonContainerWide]}>
-      <Pressable
+      <CardActionPressable
         onPress={onPress}
         disabled={disabled || loading}
         accessibilityLabel="Мои точки"
         style={({ pressed }) => [
+          globalFocusStyles.focusable,
           styles.addButton,
           pressed && !disabled && !loading && styles.addButtonPressed,
           (disabled || loading) && styles.addButtonDisabled,
           isWide && styles.addButtonFullWidth,
         ]}
-        {...globalFocusStyles.focusable}
       >
         {loading ? (
           <ActivityIndicator size="small" color={colors.textOnPrimary} />
@@ -549,7 +454,7 @@ const AddToPointsButton = React.memo(function AddToPointsButton({
             </Text>
           </View>
         )}
-      </Pressable>
+      </CardActionPressable>
     </View>
   );
 });

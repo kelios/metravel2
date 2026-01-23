@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 type TravelWizardTipProps = {
     title?: string;
@@ -71,12 +72,14 @@ const TravelWizardTip: React.FC<TravelWizardTipProps> = ({
 
     return (
         <View style={styles.tipCard}>
-            <TouchableOpacity onPress={() => setExpanded(v => !v)} activeOpacity={0.8}>
-                <View style={styles.tipHeaderRow}>
-                    <Text style={styles.tipTitle}>{title}</Text>
-                    <Text style={styles.tipChevron}>{isExpanded ? 'Скрыть' : 'Показать'}</Text>
-                </View>
-            </TouchableOpacity>
+            <CardActionPressable
+                onPress={() => setExpanded(v => !v)}
+                style={styles.tipHeaderRow}
+                accessibilityLabel={title}
+            >
+                <Text style={styles.tipTitle}>{title}</Text>
+                <Text style={styles.tipChevron}>{isExpanded ? 'Скрыть' : 'Показать'}</Text>
+            </CardActionPressable>
             {isExpanded ? <Text style={styles.tipBody}>{body}</Text> : null}
         </View>
     );

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import { FlatList, Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -131,6 +131,222 @@ export const PointsListGrid: React.FC<{
       { key: 'list', label: `Список (${filteredPoints.length})` },
     ],
     [filteredPoints.length]
+  )
+
+  const renderMapCanvas = React.useCallback(
+    () => (
+      <View style={styles.mapInner}>
+        <PointsMap
+          points={filteredPoints}
+          center={currentLocation ?? undefined}
+          searchMarker={searchMarker}
+          routeLines={recommendedRouteLines}
+          onMapPress={onMapPress}
+          onEditPoint={onPointEdit}
+          onDeletePoint={onPointDelete}
+          pendingMarker={showManualAdd ? manualCoords : null}
+          pendingMarkerColor={manualColor}
+          activePointId={activePointId ?? undefined}
+          onPointPress={handleMapPointPress}
+          onMapUiApiReady={setMapUiApi}
+        />
+
+        <IconButton
+          icon={<Feather name="crosshair" size={20} color={colors.text} />}
+          label="Моё местоположение"
+          onPress={onLocateMe}
+          disabled={isLocating}
+          style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
+        />
+      </View>
+    ),
+    [
+      activePointId,
+      colors.text,
+      currentLocation,
+      filteredPoints,
+      handleMapPointPress,
+      isLocating,
+      manualColor,
+      manualCoords,
+      onLocateMe,
+      onMapPress,
+      onPointDelete,
+      onPointEdit,
+      recommendedRouteLines,
+      searchMarker,
+      showManualAdd,
+      styles.locateFab,
+      styles.locateFabDisabled,
+      styles.mapInner,
+    ]
+  )
+
+  const renderFiltersPanel = React.useCallback(
+    (isMobilePanel: boolean) => (
+      <ScrollView
+        style={localStyles.rightPanelScroll}
+        contentContainerStyle={localStyles.rightPanelContent}
+        showsVerticalScrollIndicator={true}
+      >
+        {renderHeader()}
+        {Platform.OS === 'web' && showMapSettings ? (
+          <FiltersPanelMapSettings
+            colors={themedColors as any}
+            styles={mapSettingsStyles}
+            isMobile={isMobilePanel}
+            mode="radius"
+            mapUiApi={mapUiApi}
+            totalPoints={filteredPoints.length}
+            hasFilters={hasFilters}
+            canBuildRoute={false}
+            onReset={onResetFilters}
+            hideReset={!hasFilters}
+            showLegend={false}
+            showBaseLayer={false}
+            showOverlays={true}
+            withContainer={false}
+          />
+        ) : null}
+      </ScrollView>
+    ),
+    [
+      filteredPoints.length,
+      hasFilters,
+      localStyles.rightPanelContent,
+      localStyles.rightPanelScroll,
+      mapSettingsStyles,
+      mapUiApi,
+      onResetFilters,
+      renderHeader,
+      showMapSettings,
+      themedColors,
+    ]
+  )
+
+  const renderListHeader = React.useCallback(
+    () => (
+      <>
+        <View style={localStyles.listControlsRow}>
+          <TextInput
+            style={localStyles.listSearchInput as any}
+            value={searchQuery}
+            onChangeText={onSearch}
+            placeholder="Поиск по названию..."
+            placeholderTextColor={themedColors.textMuted}
+            accessibilityLabel="Поиск по названию..."
+            testID="userpoints-list-search"
+          />
+
+          <IconButton
+            icon={<Feather name="sliders" size={16} color={themedColors.text} />}
+            label="Фильтры"
+            onPress={() => setPanelTab('filters')}
+            size="sm"
+            testID="userpoints-list-open-filters"
+          />
+
+          <IconButton
+            icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
+            label="Сбросить фильтры"
+            onPress={onResetFilters}
+            disabled={!hasFilters}
+            size="sm"
+            testID="userpoints-list-reset-filters"
+          />
+        </View>
+
+        {showingRecommendations ? (
+          <View style={localStyles.recommendationsHeader}>
+            <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
+            <View style={localStyles.recommendationsActions}>
+              <IconButton
+                icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}
+                label="3 случайные точки"
+                onPress={onRefreshRecommendations}
+                size="sm"
+              />
+              <IconButton
+                icon={<Feather name="x" size={16} color={themedColors.textOnPrimary} />}
+                label="Показать все"
+                onPress={onCloseRecommendations}
+                size="sm"
+                active
+              />
+            </View>
+          </View>
+        ) : null}
+      </>
+    ),
+    [
+      hasFilters,
+      localStyles.listControlsRow,
+      localStyles.listSearchInput,
+      localStyles.recommendationsActions,
+      localStyles.recommendationsHeader,
+      localStyles.recommendationsTitle,
+      onCloseRecommendations,
+      onRefreshRecommendations,
+      onResetFilters,
+      onSearch,
+      searchQuery,
+      showingRecommendations,
+      themedColors.text,
+      themedColors.textMuted,
+      themedColors.textOnPrimary,
+    ]
+  )
+
+  const renderListPanel = React.useCallback(
+    () => (
+      <FlatList
+        style={localStyles.rightPanelScroll}
+        contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
+        data={filteredPoints}
+        keyExtractor={(item) => String((item as any)?.id)}
+        testID="userpoints-panel-content-list"
+        removeClippedSubviews={removeClippedSubviews}
+        initialNumToRender={listInitialNumToRender}
+        windowSize={listWindowSize}
+        maxToRenderPerBatch={listMaxToRenderPerBatch}
+        updateCellsBatchingPeriod={listUpdateCellsBatchingPeriod}
+        renderItem={({ item }) => {
+          const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
+          return (
+            <View style={localStyles.pointsListItem}>
+              {renderItem({ item })}
+              {showingRecommendations && routeInfo ? (
+                <View style={localStyles.routeInfo}>
+                  <RNText style={localStyles.routeInfoText}>
+                    {routeInfo.distance} км · ~{routeInfo.duration} мин
+                  </RNText>
+                </View>
+              ) : null}
+            </View>
+          )
+        }}
+        ListHeaderComponent={renderListHeader()}
+        showsVerticalScrollIndicator={true}
+      />
+    ),
+    [
+      filteredPoints,
+      listInitialNumToRender,
+      listMaxToRenderPerBatch,
+      listUpdateCellsBatchingPeriod,
+      listWindowSize,
+      localStyles.pointsList,
+      localStyles.pointsListItem,
+      localStyles.rightPanelContent,
+      localStyles.rightPanelScroll,
+      localStyles.routeInfo,
+      localStyles.routeInfoText,
+      recommendedRoutes,
+      removeClippedSubviews,
+      renderItem,
+      renderListHeader,
+      showingRecommendations,
+    ]
   )
   
   // Auto-switch to list tab when showing recommendations
@@ -285,30 +501,7 @@ export const PointsListGrid: React.FC<{
     return (
       <View style={localStyles.mapLayoutContainer}>
         <View style={localStyles.mapMainContent}>
-          <View style={styles.mapInner}>
-            <PointsMap
-              points={filteredPoints}
-              center={currentLocation ?? undefined}
-              searchMarker={searchMarker}
-              routeLines={recommendedRouteLines}
-              onMapPress={onMapPress}
-              onEditPoint={onPointEdit}
-              onDeletePoint={onPointDelete}
-              pendingMarker={showManualAdd ? manualCoords : null}
-              pendingMarkerColor={manualColor}
-              activePointId={activePointId ?? undefined}
-              onPointPress={handleMapPointPress}
-              onMapUiApiReady={setMapUiApi}
-            />
-
-            <IconButton
-              icon={<Feather name="crosshair" size={20} color={colors.text} />}
-              label="Моё местоположение"
-              onPress={onLocateMe}
-              disabled={isLocating}
-              style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
-            />
-          </View>
+          {renderMapCanvas()}
         </View>
 
         <View style={localStyles.mapRightPanel}>
@@ -322,115 +515,7 @@ export const PointsListGrid: React.FC<{
             />
           </View>
 
-          {panelTab === 'filters' ? (
-            <ScrollView
-              style={localStyles.rightPanelScroll}
-              contentContainerStyle={localStyles.rightPanelContent}
-              showsVerticalScrollIndicator={true}
-            >
-              {renderHeader()}
-              {Platform.OS === 'web' && showMapSettings ? (
-                <FiltersPanelMapSettings
-                  colors={themedColors as any}
-                  styles={mapSettingsStyles}
-                  isMobile={false}
-                  mode="radius"
-                  mapUiApi={mapUiApi}
-                  totalPoints={filteredPoints.length}
-                  hasFilters={hasFilters}
-                  canBuildRoute={false}
-                  onReset={onResetFilters}
-                  hideReset={!hasFilters}
-                  showLegend={false}
-                  showBaseLayer={false}
-                  showOverlays={true}
-                  withContainer={false}
-                />
-              ) : null}
-            </ScrollView>
-          ) : (
-            <FlatList
-              style={localStyles.rightPanelScroll}
-              contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
-              data={filteredPoints}
-              keyExtractor={(item) => String((item as any)?.id)}
-              testID="userpoints-panel-content-list"
-              removeClippedSubviews={removeClippedSubviews}
-              initialNumToRender={listInitialNumToRender}
-              windowSize={listWindowSize}
-              maxToRenderPerBatch={listMaxToRenderPerBatch}
-              updateCellsBatchingPeriod={listUpdateCellsBatchingPeriod}
-              renderItem={({ item }) => {
-                const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
-                return (
-                  <View style={localStyles.pointsListItem}>
-                    {renderItem({ item })}
-                    {showingRecommendations && routeInfo ? (
-                      <View style={localStyles.routeInfo}>
-                        <RNText style={localStyles.routeInfoText}>
-                          {routeInfo.distance} км · ~{routeInfo.duration} мин
-                        </RNText>
-                      </View>
-                    ) : null}
-                  </View>
-                )
-              }}
-              ListHeaderComponent={
-                <>
-                  <View style={localStyles.listControlsRow}>
-                    <TextInput
-                      style={localStyles.listSearchInput as any}
-                      value={searchQuery}
-                      onChangeText={onSearch}
-                      placeholder="Поиск по названию..."
-                      placeholderTextColor={themedColors.textMuted}
-                      accessibilityLabel="Поиск по названию..."
-                      testID="userpoints-list-search"
-                    />
-
-                    <IconButton
-                      icon={<Feather name="sliders" size={16} color={themedColors.text} />}
-                      label="Фильтры"
-                      onPress={() => setPanelTab('filters')}
-                      size="sm"
-                      testID="userpoints-list-open-filters"
-                    />
-
-                    <IconButton
-                      icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
-                      label="Сбросить фильтры"
-                      onPress={onResetFilters}
-                      disabled={!hasFilters}
-                      size="sm"
-                      testID="userpoints-list-reset-filters"
-                    />
-                  </View>
-
-                  {showingRecommendations ? (
-                    <View style={localStyles.recommendationsHeader}>
-                      <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
-                      <View style={localStyles.recommendationsActions}>
-                        <IconButton
-                          icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}
-                          label="3 случайные точки"
-                          onPress={onRefreshRecommendations}
-                          size="sm"
-                        />
-                        <IconButton
-                          icon={<Feather name="x" size={16} color={themedColors.textOnPrimary} />}
-                          label="Показать все"
-                          onPress={onCloseRecommendations}
-                          size="sm"
-                          active
-                        />
-                      </View>
-                    </View>
-                  ) : null}
-                </>
-              }
-              showsVerticalScrollIndicator={true}
-            />
-          )}
+          {panelTab === 'filters' ? renderFiltersPanel(false) : renderListPanel()}
         </View>
       </View>
     )
@@ -451,141 +536,10 @@ export const PointsListGrid: React.FC<{
             />
           </View>
 
-          {panelTab === 'filters' ? (
-            <ScrollView
-              style={localStyles.rightPanelScroll}
-              contentContainerStyle={localStyles.rightPanelContent}
-              showsVerticalScrollIndicator={true}
-            >
-              {renderHeader()}
-              {Platform.OS === 'web' && showMapSettings ? (
-                <FiltersPanelMapSettings
-                  colors={themedColors as any}
-                  styles={mapSettingsStyles}
-                  isMobile={true}
-                  mode="radius"
-                  mapUiApi={mapUiApi}
-                  totalPoints={filteredPoints.length}
-                  hasFilters={hasFilters}
-                  canBuildRoute={false}
-                  onReset={onResetFilters}
-                  hideReset={!hasFilters}
-                  showLegend={false}
-                  showBaseLayer={false}
-                  showOverlays={true}
-                  withContainer={false}
-                />
-              ) : null}
-            </ScrollView>
-          ) : (
-            <FlatList
-              style={localStyles.rightPanelScroll}
-              contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
-              data={filteredPoints}
-              keyExtractor={(item) => String((item as any)?.id)}
-              testID="userpoints-panel-content-list"
-              removeClippedSubviews={removeClippedSubviews}
-              initialNumToRender={listInitialNumToRender}
-              windowSize={listWindowSize}
-              maxToRenderPerBatch={listMaxToRenderPerBatch}
-              updateCellsBatchingPeriod={listUpdateCellsBatchingPeriod}
-              renderItem={({ item }) => {
-                const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
-                return (
-                  <View style={localStyles.pointsListItem}>
-                    {renderItem({ item })}
-                    {showingRecommendations && routeInfo ? (
-                      <View style={localStyles.routeInfo}>
-                        <RNText style={localStyles.routeInfoText}>
-                          {routeInfo.distance} км · ~{routeInfo.duration} мин
-                        </RNText>
-                      </View>
-                    ) : null}
-                  </View>
-                )
-              }}
-              ListHeaderComponent={
-                <>
-                  <View style={localStyles.listControlsRow}>
-                    <TextInput
-                      style={localStyles.listSearchInput as any}
-                      value={searchQuery}
-                      onChangeText={onSearch}
-                      placeholder="Поиск по названию..."
-                      placeholderTextColor={themedColors.textMuted}
-                      accessibilityLabel="Поиск по названию..."
-                      testID="userpoints-list-search"
-                    />
-
-                    <IconButton
-                      icon={<Feather name="sliders" size={16} color={themedColors.text} />}
-                      label="Фильтры"
-                      onPress={() => setPanelTab('filters')}
-                      size="sm"
-                      testID="userpoints-list-open-filters"
-                    />
-
-                    <IconButton
-                      icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
-                      label="Сбросить фильтры"
-                      onPress={onResetFilters}
-                      disabled={!hasFilters}
-                      size="sm"
-                      testID="userpoints-list-reset-filters"
-                    />
-                  </View>
-
-                  {showingRecommendations ? (
-                    <View style={localStyles.recommendationsHeader}>
-                      <RNText style={localStyles.recommendationsTitle}>Куда поехать сегодня</RNText>
-                      <View style={localStyles.recommendationsActions}>
-                        <IconButton
-                          icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}
-                          label="3 случайные точки"
-                          onPress={onRefreshRecommendations}
-                          size="sm"
-                        />
-                        <IconButton
-                          icon={<Feather name="x" size={16} color={themedColors.textOnPrimary} />}
-                          label="Показать все"
-                          onPress={onCloseRecommendations}
-                          size="sm"
-                          active
-                        />
-                      </View>
-                    </View>
-                  ) : null}
-                </>
-              }
-              showsVerticalScrollIndicator={true}
-            />
-          )}
+          {panelTab === 'filters' ? renderFiltersPanel(true) : renderListPanel()}
         </View>
       ) : (
-        <View style={styles.mapInner}>
-          <PointsMap
-            points={filteredPoints}
-            center={currentLocation ?? undefined}
-            searchMarker={searchMarker}
-            routeLines={recommendedRouteLines}
-            onMapPress={onMapPress}
-            onEditPoint={onPointEdit}
-            onDeletePoint={onPointDelete}
-            pendingMarker={showManualAdd ? manualCoords : null}
-            pendingMarkerColor={manualColor}
-            activePointId={activePointId ?? undefined}
-            onPointPress={handleMapPointPress}
-            onMapUiApiReady={setMapUiApi}
-          />
-
-          <IconButton
-            icon={<Feather name="crosshair" size={20} color={colors.text} />}
-            label="Моё местоположение"
-            onPress={onLocateMe}
-            disabled={isLocating}
-            style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
-          />
-        </View>
+        renderMapCanvas()
       )}
     </View>
   )

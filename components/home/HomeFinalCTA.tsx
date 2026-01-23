@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { ResponsiveContainer } from '@/components/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 interface HomeFinalCTAProps {
   travelsCount?: number;
@@ -87,12 +87,8 @@ export default function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       lineHeight: 28,
     },
     button: {
-      backgroundColor: colors.primary,
       paddingHorizontal: 40,
       paddingVertical: 20,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      alignItems: 'center',
-      justifyContent: 'center',
       minHeight: 60,
       minWidth: 300,
       ...Platform.select({
@@ -130,18 +126,17 @@ export default function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
             Расскажи о своих путешествиях, вдохнови других — и собери всё в красивую книгу на память.
           </Text>
 
-          <Pressable
+          <Button
             onPress={handleAction}
-            style={({ pressed, hovered }) => [
-              styles.button,
-              (pressed || hovered) && styles.buttonHover,
-              globalFocusStyles.focusable,
-            ]}
-            accessibilityRole="button"
+            label={buttonLabel}
+            variant="primary"
+            size={isMobile ? 'md' : 'lg'}
+            style={styles.button}
+            labelStyle={styles.buttonText}
+            hoverStyle={styles.buttonHover}
+            pressedStyle={styles.buttonHover}
             accessibilityLabel={buttonLabel}
-          >
-            <Text style={styles.buttonText}>{buttonLabel}</Text>
-          </Pressable>
+          />
         </View>
       </ResponsiveContainer>
     </View>

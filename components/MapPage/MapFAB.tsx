@@ -3,9 +3,10 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Pressable, Animated, Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { View, StyleSheet, Animated, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 interface FABAction {
   icon: string;
@@ -73,7 +74,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
     <View style={[styles.container, containerStyle]}>
       {/* Backdrop overlay */}
       {isExpanded && (
-        <Pressable
+        <CardActionPressable
           style={styles.backdrop}
           onPress={toggleExpand}
           accessibilityLabel="Закрыть меню"
@@ -107,7 +108,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
                   },
                 ]}
               >
-                <Pressable
+                <CardActionPressable
                   style={[
                     styles.fab,
                     styles.secondaryFab,
@@ -115,14 +116,13 @@ export const MapFAB: React.FC<MapFABProps> = ({
                   ]}
                   onPress={() => handleActionPress(action)}
                   accessibilityLabel={action.label}
-                  accessibilityRole="button"
                 >
                   <MapIcon
                     name={action.icon}
                     size={24}
                     color={colors.textOnPrimary}
                   />
-                </Pressable>
+                </CardActionPressable>
               </Animated.View>
             );
           })}
@@ -130,7 +130,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
       )}
 
       {/* Main FAB */}
-      <Pressable
+      <CardActionPressable
         style={[
           styles.fab,
           styles.mainFab,
@@ -139,7 +139,6 @@ export const MapFAB: React.FC<MapFABProps> = ({
         onPress={handleMainPress}
         onLongPress={actions.length > 0 && !expandOnMainPress ? toggleExpand : undefined}
         accessibilityLabel={mainAction.label}
-        accessibilityRole="button"
         testID={mainActionTestID}
       >
         <Animated.View
@@ -160,7 +159,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
             color={colors.textOnPrimary}
           />
         </Animated.View>
-      </Pressable>
+      </CardActionPressable>
     </View>
   );
 };

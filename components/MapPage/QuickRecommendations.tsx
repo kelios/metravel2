@@ -3,10 +3,11 @@
  */
 
 import React, { useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import MapIcon from './MapIcon';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 
 interface Props {
@@ -109,14 +110,13 @@ export const QuickRecommendations: React.FC<Props> = ({
         contentContainerStyle={styles.scrollContent}
       >
         {topPlaces.map((place, index) => (
-          <Pressable
+          <CardActionPressable
             key={place.id ?? `place-${index}`}
             style={({ pressed }) => [
               styles.card,
               pressed && styles.cardPressed,
             ]}
             onPress={() => onPlaceSelect(place)}
-            accessibilityRole="button"
             accessibilityLabel={`Открыть ${place.address || 'место'}`}
           >
             <View style={styles.cardHeader}>
@@ -154,7 +154,7 @@ export const QuickRecommendations: React.FC<Props> = ({
                 <Text style={styles.categoryText} numberOfLines={1}>{place.categoryName.split(',')[0].trim()}</Text>
               </View>
             )}
-          </Pressable>
+          </CardActionPressable>
         ))}
       </ScrollView>
     </View>

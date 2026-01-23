@@ -1,10 +1,9 @@
 import React, { useMemo, memo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, FlatList, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive, useResponsiveColumns } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
@@ -13,6 +12,7 @@ import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
 import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
+import Button from '@/components/ui/Button';
 
 interface HomeSectionProps {
   title: string;
@@ -232,20 +232,18 @@ function HomeInspirationSection({
           <Text style={[styles.title, isMobile && styles.titleMobile]}>{title}</Text>
           {subtitle && <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>{subtitle}</Text>}
         </View>
-        <Pressable
+        <Button
+          label="Найти ещё маршруты"
           onPress={handleViewMore}
-          style={({ pressed, hovered }) => [
-            styles.viewMoreButton,
-            isMobile && styles.viewMoreButtonMobile,
-            (pressed || hovered) && styles.viewMoreButtonHover,
-            globalFocusStyles.focusable,
-          ]}
-          accessibilityRole="button"
           accessibilityLabel={`Смотреть все ${title}`}
-        >
-          <Text style={styles.viewMoreText}>Найти ещё маршруты</Text>
-          <Feather name="arrow-right" size={16} color={colors.text} />
-        </Pressable>
+          icon={<Feather name="arrow-right" size={16} color={colors.text} />}
+          iconPosition="right"
+          variant="secondary"
+          style={[styles.viewMoreButton, isMobile && styles.viewMoreButtonMobile]}
+          labelStyle={styles.viewMoreText}
+          hoverStyle={styles.viewMoreButtonHover}
+          pressedStyle={styles.viewMoreButtonHover}
+        />
       </View>
 
       <FlatList
@@ -351,4 +349,3 @@ function HomeInspirationSections() {
 }
 
 export default memo(HomeInspirationSections);
-

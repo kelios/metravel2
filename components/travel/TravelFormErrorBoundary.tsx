@@ -1,8 +1,9 @@
 import React, { Component, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 interface Props {
   children: ReactNode;
@@ -94,23 +95,27 @@ class TravelFormErrorBoundary extends Component<Props, State> {
             )}
 
             <View style={styles.actions}>
-              <TouchableOpacity
-                style={[styles.button, styles.retryButton]}
+              <Button
+                label="Попробовать снова"
                 onPress={this.handleRetry}
-              >
-                <Text style={styles.buttonText}>Попробовать снова</Text>
-              </TouchableOpacity>
+                variant="primary"
+                size="md"
+                style={[styles.button, styles.retryButton]}
+                accessibilityLabel="Попробовать снова"
+              />
               
-              <TouchableOpacity
-                style={[styles.button, styles.refreshButton]}
+              <Button
+                label="Обновить страницу"
                 onPress={() => {
                   if (typeof window !== 'undefined') {
                     window.location.reload();
                   }
                 }}
-              >
-                <Text style={styles.buttonText}>Обновить страницу</Text>
-              </TouchableOpacity>
+                variant="primary"
+                size="md"
+                style={[styles.button, styles.refreshButton]}
+                accessibilityLabel="Обновить страницу"
+              />
             </View>
           </View>
         </SafeAreaView>
@@ -180,12 +185,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   refreshButton: {
     backgroundColor: colors.success,
-  },
-  buttonText: {
-    color: colors.textOnPrimary,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: '600',
-    textAlign: 'center',
   },
 });
 

@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -119,31 +120,25 @@ const PlaceListCard: React.FC<Props> = ({
                   {coord}
                 </Text>
                 {onCopyCoord && (
-                  <Pressable
+                  <CardActionPressable
                     accessibilityLabel="Скопировать координаты"
-                    onPress={(e) => {
-                      e?.stopPropagation?.();
-                      void onCopyCoord();
-                    }}
-                    {...({ 'data-card-action': 'true', title: 'Скопировать координаты' } as any)}
+                    onPress={() => void onCopyCoord()}
+                    title="Скопировать координаты"
                     style={styles.inlineAction}
                   >
                     <Feather name="copy" size={14} color={colors.textMuted} />
-                  </Pressable>
+                  </CardActionPressable>
                 )}
                 {onShare && (
-                  <Pressable
+                  <CardActionPressable
                     accessibilityLabel="Поделиться в Telegram"
-                    onPress={(e) => {
-                      e?.stopPropagation?.();
-                      void onShare();
-                    }}
-                    {...({ 'data-card-action': 'true', title: 'Поделиться в Telegram' } as any)}
+                    onPress={() => void onShare()}
+                    title="Поделиться в Telegram"
                     style={styles.inlineAction}
                   >
                     <Feather name="send" size={14} color={colors.textMuted} />
                     <Text style={styles.inlineActionText}>Телеграм</Text>
-                  </Pressable>
+                  </CardActionPressable>
                 )}
               </View>
             </View>
@@ -154,22 +149,16 @@ const PlaceListCard: React.FC<Props> = ({
               {hasMapActions && (
                 <View style={styles.mapActionsRow}>
                   {mapActions.map((action) => (
-                    <Pressable
+                    <CardActionPressable
                       key={action.key}
                       accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                      onPress={(e) => {
-                        e?.stopPropagation?.();
-                        action.onPress();
-                      }}
-                      {...({
-                        'data-card-action': 'true',
-                        title: action.title ?? action.label,
-                      } as any)}
+                      onPress={action.onPress}
+                      title={action.title ?? action.label}
                       style={styles.mapChip}
                     >
                       <Feather name={action.icon} size={14} color={colors.text} />
                       <Text style={styles.mapChipText}>{action.label}</Text>
-                    </Pressable>
+                    </CardActionPressable>
                   ))}
                 </View>
               )}
@@ -181,43 +170,32 @@ const PlaceListCard: React.FC<Props> = ({
               {hasInlineActions && (
                 <View style={styles.bottomInlineActions}>
                   {inlineActions.map((action) => (
-                    <Pressable
+                    <CardActionPressable
                       key={action.key}
                       accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                      onPress={(e) => {
-                        e?.stopPropagation?.();
-                        action.onPress();
-                      }}
-                      {...({
-                        'data-card-action': 'true',
-                        title: action.title ?? action.label,
-                      } as any)}
+                      onPress={action.onPress}
+                      title={action.title ?? action.label}
                       style={styles.bottomInlineAction}
                     >
                       <Feather name={action.icon} size={14} color={colors.textMuted} />
                       <Text style={styles.inlineActionText}>{action.label}</Text>
-                    </Pressable>
+                    </CardActionPressable>
                   ))}
                 </View>
               )}
 
               {onAddPoint && (
                 <View style={styles.addButtonContainerInline}>
-                  <Pressable
-                    onPress={(e) => {
-                      e?.stopPropagation?.();
-                      void onAddPoint();
-                    }}
+                  <CardActionPressable
+                    onPress={() => void onAddPoint()}
                     disabled={addDisabled || isAdding}
                     accessibilityLabel={addLabel}
+                    title={addLabel}
                     style={({ pressed }) => [
                       styles.addButton,
                       pressed && !addDisabled && !isAdding && styles.addButtonPressed,
                       (addDisabled || isAdding) && styles.addButtonDisabled,
                     ]}
-                    {...(Platform.OS === 'web'
-                      ? ({ title: addLabel, 'aria-label': addLabel } as any)
-                      : ({ accessibilityRole: 'button' } as any))}
                   >
                     {isAdding ? (
                       <ActivityIndicator size="small" color={colors.textOnPrimary} />
@@ -229,7 +207,7 @@ const PlaceListCard: React.FC<Props> = ({
                         </Text>
                       </View>
                     )}
-                  </Pressable>
+                  </CardActionPressable>
                 </View>
               )}
             </View>
@@ -237,22 +215,16 @@ const PlaceListCard: React.FC<Props> = ({
             hasInlineActions && (
               <View style={[styles.section, styles.inlineActionsRow]}>
                 {inlineActions.map((action) => (
-                  <Pressable
+                  <CardActionPressable
                     key={action.key}
                     accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                    onPress={(e) => {
-                      e?.stopPropagation?.();
-                      action.onPress();
-                    }}
-                    {...({
-                      'data-card-action': 'true',
-                      title: action.title ?? action.label,
-                    } as any)}
+                    onPress={action.onPress}
+                    title={action.title ?? action.label}
                     style={styles.inlineAction}
                   >
                     <Feather name={action.icon} size={14} color={colors.textMuted} />
                     <Text style={styles.inlineActionText}>{action.label}</Text>
-                  </Pressable>
+                  </CardActionPressable>
                 ))}
               </View>
             )

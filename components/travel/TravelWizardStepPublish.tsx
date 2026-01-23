@@ -5,7 +5,6 @@ import {
     ScrollView,
     View,
     Text,
-    TouchableOpacity,
     StyleSheet,
     findNodeHandle,
     UIManager,
@@ -18,6 +17,8 @@ import { useRouter } from 'expo-router';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import { TravelFormData } from '@/src/types/types';
+import Button from '@/components/ui/Button';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
 import { trackWizardEvent } from '@/src/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -422,11 +423,11 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         <View style={[styles.card, styles.statusCard]}>
                             <Text style={styles.cardTitle}>Статус публикации</Text>
                             <View style={styles.statusOptions}>
-                                <TouchableOpacity
+                                <CardActionPressable
                                     style={[styles.statusOption, status === 'draft' && styles.statusOptionActive]}
                                     onPress={() => setStatus('draft')}
                                     disabled={userPendingModeration}
-                                    activeOpacity={0.85}
+                                    accessibilityLabel="Сохранить как черновик"
                                 >
                                     <View style={styles.radioOuter}>
                                         {status === 'draft' && <View style={styles.radioInner} />}
@@ -437,15 +438,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             Черновик виден только вам. Его можно дополнять и отправить на модерацию позже.
                                         </Text>
                                     </View>
-                                </TouchableOpacity>
+                                </CardActionPressable>
 
                                 <View style={styles.divider} />
 
-                                <TouchableOpacity
+                                <CardActionPressable
                                     style={[styles.statusOption, status === 'moderation' && styles.statusOptionActive]}
                                     onPress={() => setStatus('moderation')}
                                     disabled={userPendingModeration}
-                                    activeOpacity={0.85}
+                                    accessibilityLabel="Отправить на модерацию"
                                 >
                                     <View style={styles.radioOuter}>
                                         {status === 'moderation' && <View style={styles.radioInner} />}
@@ -456,7 +457,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                             После одобрения маршрут станет публичным и появится в списке путешествий.
                                         </Text>
                                     </View>
-                                </TouchableOpacity>
+                                </CardActionPressable>
                             </View>
                         </View>
                     )}
@@ -497,14 +498,14 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
                                 if (isClickable) {
                                     return (
-                                        <TouchableOpacity
+                                        <CardActionPressable
                                             key={issue.key}
                                             style={rowStyle}
                                             onPress={() => onNavigateToIssue?.(issue)}
-                                            activeOpacity={0.85}
+                                            accessibilityLabel={issue.label}
                                         >
                                             {rowContent}
-                                        </TouchableOpacity>
+                                        </CardActionPressable>
                                     );
                                 }
 
@@ -547,22 +548,26 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                                 Маршрут находится на модерации. Вы можете одобрить или отклонить его.
                             </Text>
                             <View style={styles.adminButtons}>
-                                <TouchableOpacity
-                                    style={[styles.adminButton, styles.adminButtonApprove]}
+                                <Button
+                                    label="Одобрить модерацию"
                                     onPress={handleApproveModeration}
-                                    activeOpacity={0.85}
-                                >
-                                    <Feather name="check-circle" size={20} color={colors.textOnPrimary} />
-                                    <Text style={styles.adminButtonText}>Одобрить модерацию</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.adminButton, styles.adminButtonReject]}
+                                    icon={<Feather name="check-circle" size={20} color={colors.textOnPrimary} />}
+                                    variant="primary"
+                                    size="md"
+                                    style={[styles.adminButton, styles.adminButtonApprove]}
+                                    labelStyle={styles.adminButtonText}
+                                    accessibilityLabel="Одобрить модерацию"
+                                />
+                                <Button
+                                    label="Отклонить"
                                     onPress={handleRejectModeration}
-                                    activeOpacity={0.85}
-                                >
-                                    <Feather name="x-circle" size={20} color={colors.textOnPrimary} />
-                                    <Text style={styles.adminButtonText}>Отклонить</Text>
-                                </TouchableOpacity>
+                                    icon={<Feather name="x-circle" size={20} color={colors.textOnPrimary} />}
+                                    variant="danger"
+                                    size="md"
+                                    style={[styles.adminButton, styles.adminButtonReject]}
+                                    labelStyle={styles.adminButtonText}
+                                    accessibilityLabel="Отклонить модерацию"
+                                />
                             </View>
                         </View>
                     )}

@@ -1,15 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { 
+import {
   Modal,
   Platform,
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  TextInput, 
-  ScrollView, 
-  Pressable, 
-  useWindowDimensions 
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  ScrollView,
+  Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
@@ -437,7 +436,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     });
   }, [categoryIdToName, points]);
 
-  const pointsVisibleWithinRadius = useMemo(() => {
+  const baseFilteredPoints = useMemo(() => {
     const q = String(searchQuery || '').trim().toLowerCase();
     const selectedColors = filters.colors ?? [];
     const selectedStatuses = filters.statuses ?? [];
@@ -483,7 +482,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
   const availableCategoryOptions = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const p of pointsVisibleWithinRadius as any[]) {
+    for (const p of baseFilteredPoints as any[]) {
       const ids = Array.isArray(p?.categoryIds) ? p.categoryIds : [];
       for (const id of ids) {
         const norm = String(id).trim();
@@ -495,7 +494,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .map(([id]) => ({ id, name: categoryIdToName.get(id) ?? id }));
-  }, [categoryIdToName, pointsVisibleWithinRadius]);
+  }, [baseFilteredPoints, categoryIdToName]);
 
   const availableColors = useMemo(() => {
     const colorMap = new Map<string, number>();
@@ -533,57 +532,19 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   }, [availableColors]);
 
   const filteredPoints = useMemo(() => {
-    const q = String(searchQuery || '').trim().toLowerCase();
-    const selectedColors = filters.colors ?? [];
-    const selectedStatuses = filters.statuses ?? [];
     const selectedCategoryIds = filters.categoryIds ?? [];
-    const radiusKm = filters.radiusKm;
+    if (!selectedCategoryIds.length) return baseFilteredPoints;
 
-    const radiusFilterEnabled = radiusKm !== null && radiusKm !== undefined && currentLocation;
-    const userLat = Number(currentLocation?.lat);
-    const userLng = Number(currentLocation?.lng);
-    const radius = Number(radiusKm);
-    const canDoRadius =
-      Boolean(radiusFilterEnabled) &&
-      Number.isFinite(userLat) &&
-      Number.isFinite(userLng) &&
-      Number.isFinite(radius) &&
-      radius > 0;
-
-    // Cheap bounding box pre-filter to avoid Haversine trig for clearly-outside points.
-    const latDelta = canDoRadius ? radius / 111 : 0;
-    const lngDelta = canDoRadius ? radius / (111 * Math.max(0.2, Math.cos((userLat * Math.PI) / 180))) : 0;
-    const minLat = canDoRadius ? userLat - latDelta : 0;
-    const maxLat = canDoRadius ? userLat + latDelta : 0;
-    const minLng = canDoRadius ? userLng - lngDelta : 0;
-    const maxLng = canDoRadius ? userLng + lngDelta : 0;
-
-    return pointsWithDerivedCategories.filter((p: any) => {
-      if (selectedColors.length > 0 && !selectedColors.includes(p.color)) return false;
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(p.status)) return false;
+    return baseFilteredPoints.filter((p: any) => {
       if (selectedCategoryIds.length > 0) {
         const ids = Array.isArray(p?.categoryIds) ? p.categoryIds : [];
         const hasAny = selectedCategoryIds.some((id) => ids.includes(id));
         if (!hasAny) return false;
       }
-      
-      // Radius filter - only apply if radiusKm is set and currentLocation exists
-      if (canDoRadius) {
-        const pointLat = Number(p.latitude);
-        const pointLng = Number(p.longitude);
-        if (Number.isFinite(pointLat) && Number.isFinite(pointLng)) {
-          if (pointLat < minLat || pointLat > maxLat || pointLng < minLng || pointLng > maxLng) return false;
-          const distance = haversineKm(userLat, userLng, pointLat, pointLng);
-          if (distance > radius) return false;
-        }
-      }
-      
-      if (!q) return true;
 
-      const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
-      return haystack.includes(q);
+      return true;
     });
-  }, [filters.categoryIds, filters.colors, filters.statuses, filters.radiusKm, pointsWithDerivedCategories, searchQuery, currentLocation]);
+  }, [baseFilteredPoints, filters.categoryIds]);
 
   const visibleFilteredPoints = useMemo(() => {
     const applyPresetSorting = (list: any[]) => {

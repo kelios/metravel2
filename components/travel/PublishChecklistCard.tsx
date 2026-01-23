@@ -1,8 +1,9 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { Icon } from 'react-native-paper';
 import type { ModerationIssue } from '@/utils/formValidation';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 type ChecklistItem = {
   key: string;
@@ -94,14 +95,14 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
 
           if (isClickable) {
             return (
-              <TouchableOpacity
+              <CardActionPressable
                 key={item.key}
                 style={rowStyle}
                 onPress={() => onNavigateToIssue?.(issue)}
-                activeOpacity={0.7}
+                accessibilityLabel={item.label}
               >
                 {rowContent}
-              </TouchableOpacity>
+              </CardActionPressable>
             );
           }
 
@@ -166,14 +167,14 @@ const PublishChecklistCard: React.FC<PublishChecklistCardProps> = ({
 
           if (isClickable) {
             return (
-              <TouchableOpacity
+              <CardActionPressable
                 key={item.key}
                 style={rowStyle}
                 onPress={() => onNavigateToIssue?.(issue)}
-                activeOpacity={0.7}
+                accessibilityLabel={item.label}
               >
                 {rowContent}
-              </TouchableOpacity>
+              </CardActionPressable>
             );
           }
 

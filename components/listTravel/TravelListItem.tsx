@@ -8,6 +8,7 @@ import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
+import CardActionPressable from "@/components/ui/CardActionPressable";
 import { useThemedColors } from '@/hooks/useTheme';
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -440,52 +441,24 @@ const rightTopSlot = (
 
 const leftTopSlot = canEdit ? (
   <View style={styles.adminActionsContainer}>
-    <InlineWebButton
-      accessibilityRole={isWeb ? undefined : 'button'}
+    <CardActionPressable
       accessibilityLabel="Редактировать"
-      onPress={(handleEdit as any)}
+      title="Редактировать"
+      onPress={() => handleEdit()}
       style={styles.adminBtn}
-      {...(isWeb
-        ? ({
-            role: 'button',
-            tabIndex: 0,
-            onClick: (e: any) => handleEdit(e),
-            onKeyDown: (e: any) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleEdit(e);
-              }
-            },
-            onMouseDown: (e: any) => e.stopPropagation?.(),
-          } as any)
-        : {})}
     >
       <Feather name="edit-2" size={14} color={colors.text} />
-    </InlineWebButton>
+    </CardActionPressable>
     <View style={styles.adminDivider} />
-    <InlineWebButton
-      accessibilityRole={isWeb ? undefined : 'button'}
+    <CardActionPressable
       accessibilityLabel="Удалить"
-      onPress={(handleDelete as any)}
+      title="Удалить"
+      onPress={() => handleDelete()}
       style={styles.adminBtn}
       testID="delete-button"
-      {...(isWeb
-        ? ({
-            role: 'button',
-            tabIndex: 0,
-            onClick: (e: any) => handleDelete(e),
-            onKeyDown: (e: any) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleDelete(e);
-              }
-            },
-            onMouseDown: (e: any) => e.stopPropagation?.(),
-          } as any)
-        : {})}
     >
       <Feather name="trash-2" size={14} color={colors.danger} />
-    </InlineWebButton>
+    </CardActionPressable>
   </View>
 ) : null;
 

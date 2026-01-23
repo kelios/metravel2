@@ -5,10 +5,11 @@
  */
 
 import React, { useRef } from 'react';
-import { StyleSheet, Animated, Pressable, Text, Platform } from 'react-native';
+import { StyleSheet, Animated, Text, Platform } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 interface SwipeableListItemProps {
   children: React.ReactNode;
@@ -65,7 +66,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
 
     return (
       <Animated.View style={[styles.leftAction, { transform: [{ scale }] }]}>
-        <Pressable
+        <CardActionPressable
           style={[
             styles.actionButton,
             { backgroundColor: isFavorite ? colors.warning : colors.accent },
@@ -81,7 +82,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
           <Text style={[styles.actionText, { color: colors.textOnPrimary }]}>
             {isFavorite ? 'Убрать' : 'Избранное'}
           </Text>
-        </Pressable>
+        </CardActionPressable>
       </Animated.View>
     );
   };
@@ -101,7 +102,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
 
     return (
       <Animated.View style={[styles.rightAction, { transform: [{ scale }] }]}>
-        <Pressable
+        <CardActionPressable
           style={[styles.actionButton, { backgroundColor: colors.primary }]}
           onPress={handleBuildRoute}
           accessibilityLabel="Построить маршрут сюда"
@@ -110,7 +111,7 @@ export const SwipeableListItem: React.FC<SwipeableListItemProps> = ({
           <Text style={[styles.actionText, { color: colors.textOnPrimary }]}>
             Маршрут
           </Text>
-        </Pressable>
+        </CardActionPressable>
       </Animated.View>
     );
   };

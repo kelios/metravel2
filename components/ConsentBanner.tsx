@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 const CONSENT_KEY = 'metravel_consent_v1';
 
@@ -113,12 +114,22 @@ export default function ConsentBanner() {
           </Text>
         </View>
         <View style={styles.buttonsRow}>
-          <TouchableOpacity style={[styles.button, styles.secondary, { borderColor: colors.border }]} onPress={handleNecessaryOnly}>
-            <Text style={[styles.secondaryText, { color: colors.text }]}>Только необходимые</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.primary, { backgroundColor: colors.primary }]} onPress={handleAcceptAll}>
-            <Text style={[styles.primaryText, { color: colors.textOnPrimary }]}>Принять всё</Text>
-          </TouchableOpacity>
+          <Button
+            label="Только необходимые"
+            onPress={handleNecessaryOnly}
+            variant="outline"
+            size="sm"
+            style={[styles.button, { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' }]}
+            accessibilityLabel="Только необходимые"
+          />
+          <Button
+            label="Принять всё"
+            onPress={handleAcceptAll}
+            variant="primary"
+            size="sm"
+            style={[styles.button, { backgroundColor: colors.primary }]}
+            accessibilityLabel="Принять всё"
+          />
         </View>
       </View>
       {isWeb && (
@@ -199,27 +210,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   button: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
     borderRadius: 9999,
     minWidth: 140,
-    alignItems: 'center',
     marginTop: 4,
-  },
-  primary: {
-    // backgroundColor перемещен в inline стили
-  },
-  primaryText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    // borderColor перемещен в inline стили
-  },
-  secondaryText: {
-    fontSize: 13,
-    fontWeight: '500',
   },
 });

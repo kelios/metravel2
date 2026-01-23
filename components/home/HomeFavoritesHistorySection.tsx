@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, FlatList, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
@@ -7,8 +7,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { ResponsiveContainer } from '@/components/layout';
-import { globalFocusStyles } from '@/styles/globalFocus';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 type TravelLikeItem = {
   id: string | number;
@@ -56,20 +56,18 @@ function SectionHeader({
         <Text style={styles.sectionSubtitle}>{count} шт.</Text>
       </View>
 
-      <Pressable
+      <Button
+        label="Смотреть все"
         onPress={onSeeAll}
-        style={({ pressed, hovered }) => [
-          styles.seeAllButton,
-          (pressed || hovered) && styles.seeAllButtonHover,
-          globalFocusStyles.focusable,
-        ]}
-        accessibilityRole="button"
         accessibilityLabel={`Смотреть все: ${title}`}
-        {...Platform.select({ web: { cursor: 'pointer' } })}
-      >
-        <Text style={styles.seeAllButtonText}>Смотреть все</Text>
-        <Feather name="chevron-right" size={16} color={colors.primary} />
-      </Pressable>
+        icon={<Feather name="chevron-right" size={16} color={colors.primary} />}
+        iconPosition="right"
+        variant="secondary"
+        style={styles.seeAllButton}
+        labelStyle={styles.seeAllButtonText}
+        hoverStyle={styles.seeAllButtonHover}
+        pressedStyle={styles.seeAllButtonHover}
+      />
     </View>
   );
 }

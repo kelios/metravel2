@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { getThemedColors, useThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 const STORAGE_KEY_NOTIFICATIONS = 'user_notifications';
 const STORAGE_KEY_LAST_CHECK = 'notifications_last_check';
@@ -133,9 +134,14 @@ const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) =>
           )}
         </View>
         {unreadCount > 0 && (
-          <Pressable onPress={markAllAsRead}>
-            <Text style={[styles.markAllRead, { color: colors.primary }]}>Прочитать все</Text>
-          </Pressable>
+          <Button
+            label="Прочитать все"
+            onPress={markAllAsRead}
+            variant="ghost"
+            size="sm"
+            style={[styles.markAllReadButton, { backgroundColor: 'transparent' }]}
+            accessibilityLabel="Прочитать все"
+          />
         )}
       </View>
 
@@ -248,9 +254,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  markAllRead: {
-    fontSize: 14,
-    fontWeight: '600',
+  markAllReadButton: {
+    minHeight: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   list: {
     paddingVertical: 8,

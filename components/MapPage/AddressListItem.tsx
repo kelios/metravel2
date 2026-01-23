@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Text } from 'react-native-paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 import * as Clipboard from 'expo-clipboard';
 import { TravelCoords } from '@/src/types/types';
 import { METRICS } from '@/constants/layout';
@@ -230,8 +231,7 @@ const AddressListItem: React.FC<Props> = ({
     }, [onPress, openArticle]);
 
     const handleIconPress = useCallback((handler: () => void) => {
-        return (e: any) => {
-            e?.stopPropagation();
+        return () => {
             handler();
         };
     }, []);
@@ -430,18 +430,17 @@ const AddressListItem: React.FC<Props> = ({
         name: keyof typeof Feather.glyphMap;
         size: number;
         color: string;
-        onPress?: (e: any) => void;
+        onPress?: () => void;
         style?: any;
         accessibilityLabel: string;
     }) => (
-        <Pressable
+        <CardActionPressable
             onPress={onPress}
             style={({ pressed }) => [style, pressed && { opacity: 0.85 }]}
-            accessibilityRole="button"
             accessibilityLabel={accessibilityLabel}
         >
             <Feather name={name} size={size} color={color} />
-        </Pressable>
+        </CardActionPressable>
     );
 
     return (
@@ -561,14 +560,13 @@ const AddressListItem: React.FC<Props> = ({
                     )}
 
                     {!!coord && !isMobile && (
-                      <Pressable
+                      <CardActionPressable
                         onPress={openMap}
                         style={styles.coordPressable}
-                        accessibilityRole="button"
                         accessibilityLabel="Открыть в карте"
                       >
                           <Text style={[styles.coord, isNoImage ? styles.coordOnLight : null, { fontSize: coordFontSize, color: isNoImage ? colors.text : colors.textOnDark }]}>{coord}</Text>
-                      </Pressable>
+                      </CardActionPressable>
                     )}
 
                     {!!categories.length && (
@@ -582,24 +580,16 @@ const AddressListItem: React.FC<Props> = ({
                     )}
 
                     <View style={styles.addButtonRow}>
-                      <Pressable
+                      <CardActionPressable
                         accessibilityLabel="Мои точки"
-                        onPress={(e) => {
-                          e?.stopPropagation?.();
-                          void handleAddPoint();
-                        }}
+                        onPress={() => void handleAddPoint()}
                         disabled={!authReady || !isAuthenticated || isAddingPoint}
                         style={({ pressed }) => [
                           styles.addButton,
                           (pressed || isAddingPoint) && styles.addButtonPressed,
                           (!authReady || !isAuthenticated || isAddingPoint) && styles.addButtonDisabled,
                         ]}
-                        {...((Platform.OS as any) === 'web'
-                          ? ({
-                              title: 'Мои точки',
-                              'aria-label': 'Мои точки',
-                            } as any)
-                          : ({ accessibilityRole: 'button' } as any))}
+                        title="Мои точки"
                       >
                         {isAddingPoint ? (
                           <ActivityIndicator size="small" color={colors.textOnPrimary} />
@@ -611,7 +601,7 @@ const AddressListItem: React.FC<Props> = ({
                             </Text>
                           </>
                         )}
-                      </Pressable>
+                      </CardActionPressable>
                     </View>
                 </View>
               )}

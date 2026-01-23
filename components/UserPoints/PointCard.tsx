@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Pressable, Linking, Share, Alert, ActionSheetIOS } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Linking, Share, Alert, ActionSheetIOS } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 import { showToast } from '@/src/utils/toast';
 
 interface PointCardProps {
@@ -38,7 +39,6 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   onToggleSelect,
 }) => {
   const colors = useThemedColors();
-  const WebClickable = View as any;
   const isSitePoint = React.useMemo(() => {
     const tags = (point as any)?.tags;
     return Boolean(String(tags?.travelUrl ?? '').trim() || String(tags?.articleUrl ?? '').trim());
@@ -92,7 +92,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
   const showActions = !selectionMode && (typeof onEdit === 'function' || typeof onDelete === 'function');
 
-  const WebAction = ({
+  const ActionButton = ({
     label,
     icon,
     onActivate,
@@ -101,130 +101,34 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     icon: 'edit-2' | 'trash-2' | 'copy' | 'map' | 'map-pin' | 'navigation' | 'send';
     onActivate?: () => void;
   }) => {
-    if (Platform.OS === 'web') {
-      const activate = (e?: any) => {
-        try {
-          e?.preventDefault?.();
-          e?.stopPropagation?.();
-        } catch {
-          // noop
-        }
-        onActivate?.();
-      };
-
-      return (
-        <WebClickable
-          style={styles.webActionButton}
-          accessibilityRole="button"
-          accessibilityLabel={label}
-          {...({
-            role: 'button',
-            tabIndex: 0,
-            title: label,
-            'data-card-action': 'true',
-          } as any)}
-          onClick={activate}
-          onPress={activate}
-          onKeyDown={(e: any) => {
-            if (e?.key !== 'Enter' && e?.key !== ' ') return;
-            activate(e);
-          }}
-        >
-          <Feather name={icon} size={16} color={colors.text} />
-        </WebClickable>
-      );
-    }
-
     return (
-      <Pressable
+      <CardActionPressable
         style={styles.webActionButton}
-        accessibilityRole="button"
         accessibilityLabel={label}
-        {...({
-          role: 'button',
-          tabIndex: 0,
-          title: label,
-          'data-card-action': 'true',
-        } as any)}
-        onPress={(e) => {
-          try {
-            (e as any)?.preventDefault?.();
-            (e as any)?.stopPropagation?.();
-          } catch {
-            // noop
-          }
-          onActivate?.();
-        }}
+        onPress={onActivate}
+        title={label}
       >
         <Feather name={icon} size={16} color={colors.text} />
-      </Pressable>
+      </CardActionPressable>
     );
   };
 
-  const WebChip = ({
+  const ActionChip = ({
     label,
     onActivate,
   }: {
     label: string;
     onActivate?: () => void;
   }) => {
-    if (Platform.OS === 'web') {
-      const activate = (e?: any) => {
-        try {
-          e?.preventDefault?.();
-          e?.stopPropagation?.();
-        } catch {
-          // noop
-        }
-        onActivate?.();
-      };
-
-      return (
-        <WebClickable
-          style={styles.webChipButton}
-          accessibilityRole="button"
-          accessibilityLabel={label}
-          {...({
-            role: 'button',
-            tabIndex: 0,
-            title: label,
-            'data-card-action': 'true',
-          } as any)}
-          onClick={activate}
-          onPress={activate}
-          onKeyDown={(e: any) => {
-            if (e?.key !== 'Enter' && e?.key !== ' ') return;
-            activate(e);
-          }}
-        >
-          <Text style={styles.webChipText}>{label}</Text>
-        </WebClickable>
-      );
-    }
-
     return (
-      <Pressable
+      <CardActionPressable
         style={styles.webChipButton}
-        accessibilityRole="button"
         accessibilityLabel={label}
-        {...({
-          role: 'button',
-          tabIndex: 0,
-          title: label,
-          'data-card-action': 'true',
-        } as any)}
-        onPress={(e) => {
-          try {
-            (e as any)?.preventDefault?.();
-            (e as any)?.stopPropagation?.();
-          } catch {
-            // noop
-          }
-          onActivate?.();
-        }}
+        onPress={onActivate}
+        title={label}
       >
         <Text style={styles.webChipText}>{label}</Text>
-      </Pressable>
+      </CardActionPressable>
     );
   };
 
@@ -380,7 +284,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
             <View style={styles.headerActions}>
               {typeof onEdit === 'function' ? (
                 Platform.OS === 'web' ? (
-                  <WebAction label="Редактировать" icon="edit-2" onActivate={() => onEdit(point)} />
+                  <ActionButton label="Редактировать" icon="edit-2" onActivate={() => onEdit(point)} />
                 ) : (
                   <IconButton
                     icon={<Feather name="edit-2" size={16} color={colors.text} />}
@@ -393,7 +297,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
               {typeof onDelete === 'function' ? (
                 Platform.OS === 'web' ? (
-                  <WebAction label="Удалить" icon="trash-2" onActivate={() => onDelete(point)} />
+                  <ActionButton label="Удалить" icon="trash-2" onActivate={() => onDelete(point)} />
                 ) : (
                   <IconButton
                     icon={<Feather name="trash-2" size={16} color={colors.text} />}
@@ -445,8 +349,8 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
               {Platform.OS === 'web' ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 } as any}>
-                  <WebAction label="Копировать координаты" icon="copy" onActivate={copyCoords} />
-                  <WebAction label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
+                  <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
+                  <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
                 </View>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 } as any}>
@@ -480,16 +384,16 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
                   }
                 >
                   <View style={{ flexShrink: 0 } as any}>
-                    <WebChip label="Google" onActivate={() => void openExternalUrl(mapUrls.google)} />
+                    <ActionChip label="Google" onActivate={() => void openExternalUrl(mapUrls.google)} />
                   </View>
                   <View style={{ flexShrink: 0 } as any}>
-                    <WebChip label="Apple" onActivate={() => void openExternalUrl(mapUrls.apple)} />
+                    <ActionChip label="Apple" onActivate={() => void openExternalUrl(mapUrls.apple)} />
                   </View>
                   <View style={{ flexShrink: 0 } as any}>
-                    <WebChip label="Яндекс" onActivate={() => void openExternalUrl(mapUrls.yandex)} />
+                    <ActionChip label="Яндекс" onActivate={() => void openExternalUrl(mapUrls.yandex)} />
                   </View>
                   <View style={{ flexShrink: 0 } as any}>
-                    <WebChip label="OSM" onActivate={() => void openExternalUrl(mapUrls.osm)} />
+                    <ActionChip label="OSM" onActivate={() => void openExternalUrl(mapUrls.osm)} />
                   </View>
                 </View>
               </View>

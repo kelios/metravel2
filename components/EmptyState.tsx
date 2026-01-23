@@ -1,10 +1,12 @@
 // Компонент для пустых состояний
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import Button from '@/components/ui/Button';
+import Chip from '@/components/ui/Chip';
 
 interface EmptyStateProps {
   icon: string;
@@ -65,22 +67,13 @@ export default function EmptyState({
           <Text style={styles.suggestionsTitle}>Попробуйте:</Text>
           <View style={styles.suggestionsList}>
             {suggestions.map((suggestion, index) => (
-              <Pressable
+              <Chip
                 key={index}
-                style={[styles.suggestionChip, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                onPress={() => {
-                  if (action) action.onPress();
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Попробовать: ${suggestion}`}
-                {...Platform.select({
-                  web: {
-                    cursor: 'pointer',
-                  },
-                })}
-              >
-                <Text style={styles.suggestionText}>{suggestion}</Text>
-              </Pressable>
+                label={suggestion}
+                onPress={action?.onPress}
+                style={[styles.suggestionChip, globalFocusStyles.focusable]}
+                testID={`empty-state-suggestion-${index}`}
+              />
             ))}
           </View>
         </View>
@@ -110,41 +103,24 @@ export default function EmptyState({
 
       <View style={styles.actionsContainer}>
         {action && (
-          <Pressable
-            style={[styles.actionButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+          <Button
+            label={action.label}
             onPress={action.onPress}
-            accessibilityRole="button"
+            variant="primary"
+            size="md"
+            style={styles.actionButton}
             accessibilityLabel={action.label}
-            {...Platform.select({
-              web: { 
-                cursor: 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                // @ts-ignore
-                ':hover': {
-                  transform: 'translateY(-2px) scale(1.02)',
-                  boxShadow: '0 4px 12px rgba(255, 159, 90, 0.3)',
-                },
-              },
-            })}
-          >
-            <Text style={styles.actionText}>{action.label}</Text>
-          </Pressable>
+          />
         )}
         {secondaryAction && (
-          <Pressable
-            style={[styles.secondaryActionButton, globalFocusStyles.focusable, { backgroundColor: colors.primarySoft }]} // ✅ Динамический фон
+          <Button
+            label={secondaryAction.label}
             onPress={secondaryAction.onPress}
-            accessibilityRole="button"
+            variant="ghost"
+            size="md"
+            style={[styles.secondaryActionButton, { backgroundColor: colors.primarySoft }]}
             accessibilityLabel={secondaryAction.label}
-            {...Platform.select({
-              web: { 
-                cursor: 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-              },
-            })}
-          >
-            <Text style={styles.secondaryActionText}>{secondaryAction.label}</Text>
-          </Pressable>
+          />
         )}
       </View>
     </View>
@@ -210,28 +186,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   actionButton: {
     paddingHorizontal: 32, // ✅ ДИЗАЙН: Увеличены отступы
     paddingVertical: 14, // ✅ ДИЗАЙН: Высота 48px (14*2 + 20px текста)
-    backgroundColor: colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
     borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
     minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    ...Platform.select({
-      web: {
-        backgroundColor: colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-        boxShadow: colors.boxShadows.medium,
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: colors.primaryDark,
-          transform: 'translateY(-2px) scale(1.02)',
-          boxShadow: colors.boxShadows.hover,
-        },
-      },
-    }),
-  },
-  actionText: {
-    color: colors.textOnPrimary,
-    fontSize: 16, // ✅ ДИЗАЙН: Увеличен размер
-    fontWeight: '700', // ✅ ДИЗАЙН: Увеличен weight
-    letterSpacing: 0.3,
   },
   actionsContainer: {
     flexDirection: 'row',
@@ -257,12 +213,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       },
     }),
   },
-  secondaryActionText: {
-    color: colors.primary,
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
-  },
   suggestionsContainer: {
     marginTop: 16,
     marginBottom: 24,
@@ -285,28 +235,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
   },
   suggestionChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     backgroundColor: colors.mutedBackground, // ✅ ИСПРАВЛЕНИЕ: Используем единый цвет
-    borderRadius: DESIGN_TOKENS.radii.pill, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-    minHeight: 32, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: colors.surface,
-          borderColor: colors.primary, // ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет
-        },
-      },
-    }),
-  },
-  suggestionText: {
-    fontSize: 13,
-    color: colors.text,
-    fontWeight: '500',
   },
   examplesContainer: {
     marginTop: 24,

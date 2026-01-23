@@ -11,6 +11,7 @@ import { showToast } from '@/src/utils/toast';
 import type { MapUiApi } from '@/src/types/mapUi';
 import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
 import { useMapApi } from '@/components/MapPage/Map/useMapApi';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
 import { createLeafletLayer } from '@/src/utils/mapWebLayers';
 
@@ -125,6 +126,36 @@ const PointMarkerWeb = React.memo(
       }
       return legacy;
     }, [countryLabel, point]);
+
+    const handleCopyCoords = React.useCallback(() => {
+      if (!coordsText) return;
+      try {
+        (navigator as any)?.clipboard?.writeText?.(coordsText);
+        void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
+      } catch {
+        // noop
+      }
+    }, [coordsText]);
+
+    const handleShareTelegram = React.useCallback(() => {
+      if (!coordsText) return;
+      try {
+        const text = String((point as any)?.name ?? '') || coordsText;
+        const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
+        const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+        window.open(tg, '_blank', 'noopener,noreferrer');
+      } catch {
+        // noop
+      }
+    }, [coordsText, point]);
+
+    const openExternalMap = React.useCallback((url: string) => {
+      try {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } catch {
+        // noop
+      }
+    }, []);
     const colorLabel = React.useMemo(() => String((point as any)?.color ?? '').trim(), [point]);
     const markerAccentColor = React.useMemo(
       () => String((point as any)?.color ?? '').trim() || colors.backgroundTertiary,
@@ -280,91 +311,51 @@ const PointMarkerWeb = React.memo(
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                {typeof onEditPoint === 'function' ? (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    title="Редактировать"
-                    aria-label="Редактировать"
-                    data-card-action="true"
-                    onClick={(e: any) => {
-                      try {
-                        e?.preventDefault?.();
-                        e?.stopPropagation?.();
-                      } catch {
-                        // noop
-                      }
-                      onEditPoint(point);
-                    }}
-                    onKeyDown={(e: any) => {
-                      if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                      try {
-                        e?.preventDefault?.();
-                        e?.stopPropagation?.();
-                      } catch {
-                        // noop
-                      }
-                      onEditPoint(point);
-                    }}
-                    style={{
-                      border: `1px solid ${colors.border}`,
-                      background: colors.surface,
-                      color: colors.text,
-                      borderRadius: 12,
-                      width: 34,
-                      height: 34,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Feather name="edit-2" size={16} color={colors.text} />
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  {typeof onEditPoint === 'function' ? (
+                    <CardActionPressable
+                      accessibilityLabel="Редактировать"
+                      title="Редактировать"
+                      onPress={() => onEditPoint(point)}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                        color: colors.text,
+                        borderRadius: 12,
+                        width: 34,
+                        height: 34,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+                      }}
+                    >
+                      <Feather name="edit-2" size={16} color={colors.text} />
+                    </CardActionPressable>
                 ) : null}
 
                 {typeof onDeletePoint === 'function' ? (
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    title="Удалить"
-                    aria-label="Удалить"
-                    data-card-action="true"
-                    onClick={(e: any) => {
-                      try {
-                        e?.preventDefault?.();
-                        e?.stopPropagation?.();
-                      } catch {
-                        // noop
-                      }
-                      onDeletePoint(point);
-                    }}
-                    onKeyDown={(e: any) => {
-                      if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                      try {
-                        e?.preventDefault?.();
-                        e?.stopPropagation?.();
-                      } catch {
-                        // noop
-                      }
-                      onDeletePoint(point);
-                    }}
-                    style={{
-                      border: `1px solid ${colors.border}`,
-                      background: colors.surface,
-                      color: colors.text,
-                      borderRadius: 12,
-                      width: 34,
-                      height: 34,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Feather name="trash-2" size={16} color={colors.text} />
-                  </div>
+                    <CardActionPressable
+                      accessibilityLabel="Удалить"
+                      title="Удалить"
+                      onPress={() => onDeletePoint(point)}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface,
+                        color: colors.text,
+                        borderRadius: 12,
+                        width: 34,
+                        height: 34,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+                      }}
+                    >
+                      <Feather name="trash-2" size={16} color={colors.text} />
+                    </CardActionPressable>
                 ) : null}
               </div>
             </div>
@@ -425,170 +416,77 @@ const PointMarkerWeb = React.memo(
                     We use an inline handler here to keep clipboard access tied to the user gesture.
                     Toast provides immediate feedback after a successful copy.
                   */}
-                  <div
-                    role="button"
-                    tabIndex={0}
+                  <CardActionPressable
+                    accessibilityLabel="Копировать координаты"
                     title="Копировать координаты"
-                    aria-label="Копировать координаты"
-                    data-card-action="true"
-                    onClick={(e: any) => {
-                        try {
-                          e?.preventDefault?.();
-                          e?.stopPropagation?.();
-                        } catch {
-                          // noop
-                        }
-                        try {
-                          ;(navigator as any)?.clipboard?.writeText?.(coordsText);
-                          void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
-                        } catch {
-                          // noop
-                        }
-                      }}
-                      onKeyDown={(e: any) => {
-                        if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                        try {
-                          e?.preventDefault?.();
-                          e?.stopPropagation?.();
-                        } catch {
-                          // noop
-                        }
-                        try {
-                          ;(navigator as any)?.clipboard?.writeText?.(coordsText);
-                          void showToast({ type: 'success', text1: 'Скопировано', position: 'bottom' });
-                        } catch {
-                          // noop
-                        }
-                      }}
-                      style={{
-                        border: `1px solid ${colors.border}`,
-                        background: colors.surface,
-                        color: colors.text,
-                        borderRadius: 12,
-                        width: 34,
-                        height: 34,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Feather name="copy" size={16} color={colors.text} />
-                    </div>
+                    onPress={handleCopyCoords}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                      color: colors.text,
+                      borderRadius: 12,
+                      width: 34,
+                      height: 34,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+                    }}
+                  >
+                    <Feather name="copy" size={16} color={colors.text} />
+                  </CardActionPressable>
 
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      title="Поделиться в Telegram"
-                      aria-label="Поделиться в Telegram"
-                      data-card-action="true"
-                      onClick={(e: any) => {
-                        try {
-                          e?.preventDefault?.();
-                          e?.stopPropagation?.();
-                        } catch {
-                          // noop
-                        }
-
-                        try {
-                          const text = String((point as any)?.name ?? '') || coordsText;
-                          const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
-                          const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-                          window.open(tg, '_blank', 'noopener,noreferrer');
-                        } catch {
-                          // noop
-                        }
-                      }}
-                      onKeyDown={(e: any) => {
-                        if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                        try {
-                          e?.preventDefault?.();
-                          e?.stopPropagation?.();
-                        } catch {
-                          // noop
-                        }
-
-                        try {
-                          const text = String((point as any)?.name ?? '') || coordsText;
-                          const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
-                          const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-                          window.open(tg, '_blank', 'noopener,noreferrer');
-                        } catch {
-                          // noop
-                        }
-                      }}
-                      style={{
-                        border: `1px solid ${colors.border}`,
-                        background: colors.surface,
-                        color: colors.text,
-                        borderRadius: 12,
-                        width: 34,
-                        height: 34,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Feather name="send" size={16} color={colors.text} />
-                    </div>
+                  <CardActionPressable
+                    accessibilityLabel="Поделиться в Telegram"
+                    title="Поделиться в Telegram"
+                    onPress={handleShareTelegram}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.surface,
+                      color: colors.text,
+                      borderRadius: 12,
+                      width: 34,
+                      height: 34,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+                    }}
+                  >
+                    <Feather name="send" size={16} color={colors.text} />
+                  </CardActionPressable>
                   </div>
                 </div>
 
                 <div style={{ marginTop: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap', whiteSpace: 'nowrap' }}>
                     {mapLinks.map((p) => (
-                      <div
+                      <CardActionPressable
                         key={p.key}
-                        role="button"
-                        tabIndex={0}
+                        accessibilityLabel={p.key}
                         title={p.key}
-                        aria-label={p.key}
-                        data-card-action="true"
-                        onClick={(e: any) => {
-                          try {
-                            e?.preventDefault?.();
-                            e?.stopPropagation?.();
-                          } catch {
-                            // noop
-                          }
-                          try {
-                            window.open(p.url, '_blank', 'noopener,noreferrer');
-                          } catch {
-                            // noop
-                          }
-                        }}
-                        onKeyDown={(e: any) => {
-                          if (e?.key !== 'Enter' && e?.key !== ' ') return;
-                          try {
-                            e?.preventDefault?.();
-                            e?.stopPropagation?.();
-                          } catch {
-                            // noop
-                          }
-                          try {
-                            window.open(p.url, '_blank', 'noopener,noreferrer');
-                          } catch {
-                            // noop
-                          }
-                        }}
+                        onPress={() => openExternalMap(p.url)}
                         style={{
-                          border: `1px solid ${colors.border}`,
-                          background: colors.surface,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          backgroundColor: colors.surface,
                           color: colors.text,
                           borderRadius: 999,
-                          padding: '4px 8px',
+                          paddingVertical: 4,
+                          paddingHorizontal: 8,
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          cursor: 'pointer',
+                          ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
                           fontSize: 11,
                           lineHeight: '13px',
                           flexShrink: 0,
                         }}
                       >
                         {p.key}
-                      </div>
+                      </CardActionPressable>
                     ))}
                   </div>
                 </div>

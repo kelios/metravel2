@@ -1,0 +1,101 @@
+import React from 'react';
+import {
+  Platform,
+  Pressable,
+  View,
+  type PressableStateCallbackType,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+
+type CardActionPressableProps = {
+  accessibilityLabel: string;
+  title?: string;
+  onPress?: () => void;
+  onLongPress?: () => void;
+  disabled?: boolean;
+  accessibilityRole?: 'button' | 'radio' | 'checkbox';
+  accessibilityState?: { checked?: boolean; selected?: boolean; disabled?: boolean; expanded?: boolean; busy?: boolean };
+  style?: StyleProp<ViewStyle> | ((state: PressableStateCallbackType) => StyleProp<ViewStyle>);
+  testID?: string;
+  children: React.ReactNode;
+};
+
+const CardActionPressable = ({
+  accessibilityLabel,
+  title,
+  onPress,
+  onLongPress,
+  disabled = false,
+  accessibilityRole = 'button',
+  accessibilityState,
+  style,
+  testID,
+  children,
+}: CardActionPressableProps) => {
+  const activate = (e?: any) => {
+    if (disabled) return;
+    try {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+    } catch {
+      // noop
+    }
+    onPress?.();
+  };
+
+  if (Platform.OS === 'web') {
+    const resolvedStyle = typeof style === 'function' ? style({ pressed: false } as any) : style;
+    const resolvedState = accessibilityState ?? (disabled ? { disabled: true } : undefined);
+    const ariaChecked = resolvedState?.checked;
+    const ariaSelected = resolvedState?.selected;
+    const ariaExpanded = resolvedState?.expanded;
+    const ariaBusy = resolvedState?.busy;
+    return (
+      <View
+        style={resolvedStyle}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityState={resolvedState}
+        {...({
+          role: accessibilityRole,
+          tabIndex: disabled ? -1 : 0,
+          title: title ?? accessibilityLabel,
+          'aria-disabled': disabled || undefined,
+          'aria-checked': ariaChecked !== undefined ? ariaChecked : undefined,
+          'aria-selected': ariaSelected !== undefined ? ariaSelected : undefined,
+          'aria-expanded': ariaExpanded !== undefined ? ariaExpanded : undefined,
+          'aria-busy': ariaBusy !== undefined ? ariaBusy : undefined,
+          'data-card-action': 'true',
+        } as any)}
+        onClick={activate}
+        onPress={activate}
+        onKeyDown={(e: any) => {
+          if (e?.key !== 'Enter' && e?.key !== ' ') return;
+          activate(e);
+        }}
+        testID={testID}
+      >
+        {children}
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      style={style}
+      accessibilityRole={accessibilityRole}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={accessibilityState ?? { disabled }}
+      disabled={disabled}
+      onPress={activate}
+      onLongPress={onLongPress}
+      testID={testID}
+      {...({ 'data-card-action': 'true' } as any)}
+    >
+      {children}
+    </Pressable>
+  );
+};
+
+export default React.memo(CardActionPressable);

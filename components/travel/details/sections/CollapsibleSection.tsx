@@ -4,11 +4,12 @@
  */
 
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getAccessibilityLabel } from '@/utils/a11y';
 import { useTravelDetailsStyles } from '../TravelDetailsStyles';
 import { Icon } from '../TravelDetailsIcons';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 export type HighlightType = 'default' | 'positive' | 'negative' | 'info';
 
@@ -62,7 +63,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
 
     return (
       <View style={[styles.sectionContainer, styles.contentStable]} collapsable={false}>
-        <TouchableOpacity
+        <CardActionPressable
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
           onPress={handleToggle}
@@ -73,7 +74,6 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
             highlight === 'info' && styles.sectionHeaderInfo,
             open && styles.sectionHeaderActive,
           ]}
-          hitSlop={10}
           accessibilityLabel={getAccessibilityLabel(title, `${open ? 'Expanded' : 'Collapsed'}`)}
         >
           <View style={styles.sectionHeaderTitleWrap}>
@@ -88,7 +88,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
             {badgeLabel && <Text style={styles.sectionHeaderBadge}>{badgeLabel}</Text>}
             <Icon name={open ? 'expand-less' : 'expand-more'} size={22} />
           </View>
-        </TouchableOpacity>
+        </CardActionPressable>
         {open ? <View style={{ marginTop: 12 }}>{children}</View> : null}
       </View>
     );

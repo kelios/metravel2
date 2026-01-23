@@ -1,8 +1,9 @@
 // Error Boundary для обработки ошибок React
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ThemeContext, getThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 interface Props {
   children: ReactNode;
@@ -57,18 +58,20 @@ export default class ErrorBoundary extends Component<Props, State> {
             <Text style={styles.message}>
               {this.state.error?.message || 'Произошла непредвиденная ошибка'}
             </Text>
-            <TouchableOpacity style={styles.button} onPress={this.handleReset}>
-              <Text style={styles.buttonText}>Попробовать снова</Text>
-            </TouchableOpacity>
+            <Button
+              label="Попробовать снова"
+              onPress={this.handleReset}
+              style={[styles.button, styles.primaryButton]}
+              accessibilityLabel="Попробовать снова"
+            />
             {Platform.OS === 'web' && (
-              <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
+              <Button
+                label="Перезагрузить страницу"
                 onPress={() => window.location.reload()}
-              >
-                <Text style={[styles.buttonText, styles.secondaryButtonText]}>
-                  Перезагрузить страницу
-                </Text>
-              </TouchableOpacity>
+                variant="ghost"
+                style={[styles.button, styles.secondaryButton]}
+                accessibilityLabel="Перезагрузить страницу"
+              />
             )}
           </View>
         </View>
@@ -107,13 +110,15 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     lineHeight: 24,
   },
   button: {
-    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: DESIGN_TOKENS.radii.md,
     marginBottom: 12,
     minWidth: 200,
     minHeight: 44,
+  },
+  primaryButton: {
+    backgroundColor: colors.primary,
     shadowColor: colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -133,12 +138,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
       },
     }),
   },
-  buttonText: {
-    color: colors.textOnPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
   secondaryButton: {
     backgroundColor: 'transparent',
     // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только цвет текста
@@ -152,8 +151,5 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         },
       },
     }),
-  },
-  secondaryButtonText: {
-    color: colors.primary,
   },
 });

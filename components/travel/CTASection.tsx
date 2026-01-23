@@ -4,16 +4,16 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { Travel } from '@/src/types/types';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
 
 interface CTASectionProps {
   travel: Travel;
@@ -150,10 +150,6 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
       backgroundColor: colors.primary,
       borderColor: colors.primary,
     },
-    buttonPressed: {
-      transform: [{ scale: 0.98 }],
-      opacity: 0.9,
-    },
     actionButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: '600',
@@ -214,21 +210,15 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
               Войдите или зарегистрируйтесь, чтобы добавить в избранное и создавать свои маршруты
             </Text>
           </View>
-          <Pressable
-            style={({ pressed }) => [
-              styles.primaryButton,
-              isMobile && styles.primaryButtonMobile,
-              pressed && styles.buttonPressed,
-              globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-            ]}
+          <Button
+            label="Войти / Регистрация"
             onPress={() => router.push('/login')}
-            accessibilityRole="button"
+            variant="primary"
+            size="md"
+            style={[styles.primaryButton, isMobile && styles.primaryButtonMobile]}
+            labelStyle={[styles.primaryButtonText, isMobile && styles.primaryButtonTextMobile]}
             accessibilityLabel="Войти или зарегистрироваться"
-          >
-            <Text style={[styles.primaryButtonText, isMobile && styles.primaryButtonTextMobile]}>
-              Войти / Регистрация
-            </Text>
-          </Pressable>
+          />
         </View>
       </View>
     );
@@ -238,80 +228,65 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
     <View style={[styles.container, isMobile && styles.containerMobile]}>
       <View style={styles.content}>
         {/* Кнопка "Добавить в избранное" */}
-        <Pressable
-          style={({ pressed }) => [
+        <Button
+          label={isFavorite ? 'В избранном' : 'В избранное'}
+          onPress={handleFavorite}
+          variant={isFavorite ? 'primary' : 'secondary'}
+          size="md"
+          icon={
+            <MaterialIcons
+              name={isFavorite ? 'favorite' : 'favorite-border'}
+              size={20}
+              color={isFavorite ? colors.surface : colors.primary}
+            />
+          }
+          style={[
             styles.actionButton,
             isMobile && styles.actionButtonMobile,
             isFavorite && styles.actionButtonActive,
-            pressed && styles.buttonPressed,
-            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           ]}
-          onPress={handleFavorite}
-          accessibilityRole="button"
-          accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
-          accessibilityState={{ selected: isFavorite }}
-        >
-          <MaterialIcons 
-            name={isFavorite ? 'favorite' : 'favorite-border'} 
-            size={20} 
-            color={isFavorite ? colors.surface : colors.primary}
-          />
-          <Text style={[
+          labelStyle={[
             styles.actionButtonText,
             isMobile && styles.actionButtonTextMobile,
             isFavorite && styles.actionButtonTextActive,
-          ]}>
-            {isFavorite ? 'В избранном' : 'В избранное'}
-          </Text>
-        </Pressable>
+          ]}
+          accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+        />
 
         {/* Кнопка "Смотреть все путешествия автора" */}
         {(travel as any).userIds || (travel as any).userId ? (
-          <Pressable
-            style={({ pressed }) => [
+          <Button
+            label="Все путешествия автора"
+            onPress={handleViewAuthorTravels}
+            variant="secondary"
+            size="md"
+            icon={<MaterialIcons name="person" size={20} color={colors.primary} />}
+            style={[
               styles.actionButton,
               isMobile && styles.actionButtonMobile,
               styles.actionButtonSecondary,
-              pressed && styles.buttonPressed,
-              globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
             ]}
-            onPress={handleViewAuthorTravels}
-            accessibilityRole="button"
+            labelStyle={[styles.actionButtonText, isMobile && styles.actionButtonTextMobile]}
             accessibilityLabel="Смотреть все путешествия автора"
-          >
-            <MaterialIcons name="person" size={20} color={colors.primary} />
-            <Text style={[
-              styles.actionButtonText,
-              isMobile && styles.actionButtonTextMobile,
-            ]}>
-              Все путешествия автора
-            </Text>
-          </Pressable>
+          />
         ) : null}
 
         {/* Кнопка "Создать путешествие" */}
-        <Pressable
-          style={({ pressed }) => [
+        <Button
+          label="Создать путешествие"
+          onPress={handleCreateTravel}
+          variant="secondary"
+          size="md"
+          icon={<MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />}
+          style={[
             styles.actionButton,
             isMobile && styles.actionButtonMobile,
             styles.actionButtonSecondary,
-            pressed && styles.buttonPressed,
-            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           ]}
-          onPress={handleCreateTravel}
-          accessibilityRole="button"
+          labelStyle={[styles.actionButtonText, isMobile && styles.actionButtonTextMobile]}
           accessibilityLabel="Создать свое путешествие"
-        >
-          <MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />
-          <Text style={[
-            styles.actionButtonText,
-            isMobile && styles.actionButtonTextMobile,
-          ]}>
-            Создать путешествие
-          </Text>
-        </Pressable>
+        />
       </View>
     </View>
   );
 }
-

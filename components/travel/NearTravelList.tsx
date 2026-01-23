@@ -9,10 +9,8 @@ import React, {
 import {
   ActivityIndicator,
   LayoutChangeEvent,
-  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   Platform,
   FlatList,
@@ -25,10 +23,10 @@ import { fetchTravelsNear } from '@/src/api/map';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import MapClientSideComponent from '@/components/Map';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
+import Button from '@/components/ui/Button';
 
 type Segment = 'list' | 'map';
 
@@ -712,13 +710,15 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       return (
         <View style={styles.errorContainer} onLayout={onLayout}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
+          <Button
+            label="Повторить попытку"
             onPress={fetchNearbyTravels}
+            variant="primary"
+            size="md"
             style={styles.retryButton}
-            accessibilityRole="button"
-          >
-            <Text style={styles.retryButtonText}>Повторить попытку</Text>
-          </TouchableOpacity>
+            labelStyle={styles.retryButtonText}
+            accessibilityLabel="Повторить попытку"
+          />
         </View>
       );
     }
@@ -781,12 +781,15 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
                   {visibleCount < travelsNear.length && (
                     <View style={styles.loadMoreContainer}>
-                      <TouchableOpacity onPress={handleLoadMore} style={styles.loadMoreButton}>
-                        <Text style={styles.loadMoreButtonText}>
-                          Показать ещё {Math.min(loadMoreCount, travelsNear.length - visibleCount)} из{' '}
-                          {travelsNear.length - visibleCount}
-                        </Text>
-                      </TouchableOpacity>
+                      <Button
+                        label={`Показать ещё ${Math.min(loadMoreCount, travelsNear.length - visibleCount)} из ${travelsNear.length - visibleCount}`}
+                        onPress={handleLoadMore}
+                        variant="outline"
+                        size="md"
+                        style={styles.loadMoreButton}
+                        labelStyle={styles.loadMoreButtonText}
+                        accessibilityLabel="Показать ещё"
+                      />
                     </View>
                   )}
                 </ScrollView>
@@ -819,14 +822,15 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                 ListFooterComponent={
                   visibleCount < travelsNear.length ? (
                     <View style={styles.loadMoreContainer}>
-                      <Pressable
+                      <Button
+                        label="Загрузить ещё"
                         onPress={handleLoadMore}
-                        style={[styles.loadMoreButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                        accessibilityRole="button"
+                        variant="outline"
+                        size="md"
+                        style={styles.loadMoreButton}
+                        labelStyle={styles.loadMoreButtonText}
                         accessibilityLabel="Загрузить ещё путешествий"
-                      >
-                        <Text style={styles.loadMoreButtonText}>Загрузить ещё</Text>
-                      </Pressable>
+                      />
                     </View>
                   ) : isLoading ? (
                     <View style={styles.skeletonContainer}>

@@ -8,6 +8,7 @@ import {
   Platform,
   type GestureResponderEvent,
   type StyleProp,
+  type TextStyle,
   type ViewStyle,
 } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -23,12 +24,16 @@ export interface ButtonProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
   accessibilityLabel?: string;
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  labelStyle?: StyleProp<TextStyle>;
+  hoverStyle?: StyleProp<ViewStyle>;
+  pressedStyle?: StyleProp<ViewStyle>;
 }
 
 const spacing = DESIGN_TOKENS.spacing;
@@ -45,12 +50,16 @@ const ButtonComponent = ({
   variant = 'primary',
   size = 'md',
   icon,
+  iconPosition = 'left',
   disabled = false,
   loading = false,
   fullWidth = false,
   accessibilityLabel,
   testID,
   style,
+  labelStyle,
+  hoverStyle,
+  pressedStyle,
 }: ButtonProps) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -76,6 +85,8 @@ const ButtonComponent = ({
         isDisabled && styles.disabled,
         !isDisabled && hovered && Platform.OS === 'web' && variantHoverStyles[variant],
         !isDisabled && pressed && variantPressedStyles[variant],
+        !isDisabled && hovered && Platform.OS === 'web' && hoverStyle,
+        !isDisabled && pressed && pressedStyle,
         style,
       ]}
     >
@@ -91,17 +102,19 @@ const ButtonComponent = ({
             style={styles.icon}
           />
         )}
-        {!loading && icon ? <View style={styles.icon}>{icon}</View> : null}
+        {!loading && icon && iconPosition === 'left' ? <View style={styles.icon}>{icon}</View> : null}
         <Text
           style={[
             styles.label,
             variant === 'secondary' || variant === 'ghost' || variant === 'outline' ? styles.labelSecondary : styles.labelPrimary,
             variant === 'danger' && styles.labelDanger,
+            labelStyle,
           ]}
           numberOfLines={1}
         >
           {label}
         </Text>
+        {!loading && icon && iconPosition === 'right' ? <View style={styles.icon}>{icon}</View> : null}
       </View>
     </Pressable>
   );

@@ -3,11 +3,12 @@
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import MapIcon from './MapIcon';
 import Button from '@/components/ui/Button';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 interface MapPeekPreviewProps {
   places: any[];
@@ -105,10 +106,11 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
               : null;
 
           return (
-            <Pressable
+            <CardActionPressable
               key={place.id || index}
               style={styles.placeCard}
               onPress={() => onPlacePress(place)}
+              accessibilityLabel={`Открыть ${place.address || 'место'}`}
             >
               <View style={styles.cardHeader}>
                 <Text style={styles.placeNumber}>{index + 1}</Text>
@@ -139,7 +141,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
                   </View>
                 </View>
               )}
-            </Pressable>
+            </CardActionPressable>
           );
         })}
       </ScrollView>

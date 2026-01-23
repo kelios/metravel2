@@ -7,11 +7,11 @@ import {
     StyleSheet,
     Dimensions,
     ActivityIndicator,
-    TouchableOpacity,
     Platform,
     Linking,
 } from 'react-native';
 import { Button } from 'react-native-paper';
+import ButtonBase from '@/components/ui/Button';
 
 import MultiSelectField from '@/components/MultiSelectField';
 import CheckboxComponent from '@/components/CheckboxComponent';
@@ -187,9 +187,15 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             keyboardShouldPersistTaps="handled"
         >
             {onClose && isMobile && (
-                <TouchableOpacity onPress={() => onClose()} style={styles.closeIcon} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Text style={styles.closeButtonText}>✖</Text>
-                </TouchableOpacity>
+                <ButtonBase
+                    label="✖"
+                    onPress={() => onClose()}
+                    variant="ghost"
+                    size="sm"
+                    style={styles.closeIcon}
+                    labelStyle={styles.closeButtonText}
+                    accessibilityLabel="Закрыть"
+                />
             )}
 
             {showSaveButton && (
@@ -421,6 +427,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: 12,
         width: 20,
         height: 20,
+        minHeight: 20,
+        minWidth: 20,
+        paddingHorizontal: 0,
+        paddingVertical: 0,
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1,

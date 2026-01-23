@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
-import { Button, IconButton } from 'react-native-paper';
+import { Button as PaperButton, IconButton as PaperIconButton } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
-import { globalFocusStyles } from '@/styles/globalFocus';
+import Button from '@/components/ui/Button';
+import IconButton from '@/components/ui/IconButton';
 
 interface TravelWizardFooterProps {
     canGoBack?: boolean;
@@ -224,35 +225,29 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                 <>
                     <View style={styles.mobileMainRow}>
                         {canGoBack && onBack ? (
-                            <Pressable
+                            <IconButton
+                                icon={<Feather name="arrow-left" size={18} color={colors.text} />}
+                                label="Назад"
                                 onPress={onBack}
-                                style={({ pressed }) => [
-                                    styles.backButtonMobile,
-                                    globalFocusStyles.focusable,
-                                    pressed && { opacity: 0.8 }
-                                ]}
+                                size="sm"
+                                style={styles.backButtonMobile}
                                 testID="travel-wizard-back"
-                                accessibilityRole="button"
-                                accessibilityLabel="Назад"
-                                {...Platform.select({ web: { cursor: 'pointer' } })}
-                            >
-                                <Feather name="arrow-left" size={18} color={colors.text} />
-                            </Pressable>
+                            />
                         ) : null}
 
                         {/* ✅ НОВОЕ: Кнопка быстрого черновика на мобильном */}
                         {onQuickDraft && (
-                            <Button
+                            <PaperButton
                                 mode="outlined"
                                 onPress={onQuickDraft}
                                 style={styles.quickDraftButtonMobile}
                                 compact
                             >
                                 <Feather name="save" size={16} color={colors.text} />
-                            </Button>
+                            </PaperButton>
                         )}
 
-                        <Button
+                        <PaperButton
                             mode="contained"
                             onPress={onPrimary}
                             style={styles.primaryButtonMobile}
@@ -261,10 +256,10 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                             contentStyle={styles.primaryButtonContent}
                         >
                             {primaryLabel}
-                        </Button>
+                        </PaperButton>
 
                         {onSave ? (
-                            <IconButton
+                            <PaperIconButton
                                 icon="content-save"
                                 size={20}
                                 onPress={onSave}
@@ -303,21 +298,16 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                 <>
                     <View style={styles.leftSection}>
                         {canGoBack && onBack ? (
-                            <Pressable
+                            <Button
+                                label="Назад"
                                 onPress={onBack}
-                                style={({ pressed }) => [
-                                    styles.backButton,
-                                    globalFocusStyles.focusable,
-                                    pressed && { opacity: 0.8 }
-                                ]}
-                                testID="travel-wizard-back"
-                                accessibilityRole="button"
+                                variant="secondary"
+                                size="sm"
+                                icon={<Feather name="arrow-left" size={16} color={colors.text} />}
+                                style={styles.backButton}
+                                labelStyle={styles.backButtonText}
                                 accessibilityLabel="Назад"
-                                {...Platform.select({ web: { cursor: 'pointer' } })}
-                            >
-                                <Feather name="arrow-left" size={16} color={colors.text} />
-                                <Text style={styles.backButtonText}>Назад</Text>
-                            </Pressable>
+                            />
                         ) : null}
                     </View>
 
@@ -350,16 +340,16 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                         <View style={styles.buttonsRow}>
                             {/* ✅ НОВОЕ: Кнопка быстрого черновика */}
                             {onQuickDraft && (
-                                <Button
+                                <PaperButton
                                     mode="outlined"
                                     onPress={onQuickDraft}
                                     style={styles.quickDraftButton}
                                     icon="content-save-outline"
                                 >
                                     {quickDraftLabel}
-                                </Button>
+                                </PaperButton>
                             )}
-                            <Button
+                            <PaperButton
                                 mode="contained"
                                 onPress={onPrimary}
                                 style={styles.primaryButton}
@@ -368,26 +358,22 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
                                 contentStyle={styles.primaryButtonContent}
                             >
                                 {primaryLabel}
-                            </Button>
+                            </PaperButton>
                         </View>
                     </View>
 
                     <View style={styles.rightSection}>
                         {onSave ? (
-                            <Pressable
+                            <Button
+                                label={saveLabel}
                                 onPress={onSave}
-                                style={({ pressed }) => [
-                                    styles.saveButton,
-                                    globalFocusStyles.focusable,
-                                    pressed && { opacity: 0.8 }
-                                ]}
-                                accessibilityRole="button"
+                                variant="ghost"
+                                size="sm"
+                                icon={<Feather name="save" size={16} color={colors.textMuted} />}
+                                style={styles.saveButton}
+                                labelStyle={styles.saveButtonText}
                                 accessibilityLabel={saveLabel}
-                                {...Platform.select({ web: { cursor: 'pointer' } })}
-                            >
-                                <Feather name="save" size={16} color={colors.textMuted} />
-                                <Text style={styles.saveButtonText}>{saveLabel}</Text>
-                            </Pressable>
+                            />
                         ) : null}
                     </View>
                 </>

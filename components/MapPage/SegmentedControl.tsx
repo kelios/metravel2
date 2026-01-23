@@ -1,9 +1,10 @@
 // components/MapPage/SegmentedControl.tsx
 import React, { useMemo } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import MapIcon from './MapIcon';
+import CardActionPressable from '@/components/ui/CardActionPressable';
 
 interface SegmentedControlOption {
   key: string;
@@ -45,7 +46,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
         const active = value === key;
         const isDisabled = disabled || disabledKeys.includes(key);
         return (
-          <Pressable
+          <CardActionPressable
             key={key}
             testID={`segmented-${key}`}
             style={({ pressed }) => [
@@ -60,13 +61,14 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
               onChange(key);
             }}
             disabled={isDisabled}
-            accessibilityRole={role}
             accessibilityState={
               role === 'radio'
                 ? ({ checked: active, disabled: isDisabled } as any)
                 : ({ selected: active, disabled: isDisabled } as any)
             }
             accessibilityLabel={label}
+            title={label}
+            accessibilityRole={role}
           >
             {icon && (
               <MapIcon
@@ -81,7 +83,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             ]}>
               {label}
             </Text>
-          </Pressable>
+          </CardActionPressable>
         );
       })}
     </View>

@@ -1,11 +1,13 @@
 import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, Platform, Animated } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import Button from '@/components/ui/Button';
+import IconButton from '@/components/ui/IconButton';
 
 const STORAGE_KEY_BANNER = 'onboarding_banner_dismissed';
 const STORAGE_KEY_ARTICLES_COUNT = 'user_articles_count';
@@ -124,11 +126,12 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
       position: 'absolute',
       top: 12,
       right: 12,
-      padding: 4,
       zIndex: 10,
+      backgroundColor: 'transparent',
       ...Platform.select({
         web: {
           cursor: 'pointer',
+          boxShadow: 'none',
         },
       }),
     },
@@ -193,7 +196,6 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
       gap: 8,
       paddingVertical: 14,
       paddingHorizontal: 20,
-      borderRadius: DESIGN_TOKENS.radii.md,
       ...Platform.select({
         web: {
           cursor: 'pointer',
@@ -243,13 +245,13 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        <Pressable
-          style={styles.closeButton}
+        <IconButton
+          icon={<Feather name="x" size={18} color={colors.textMuted} />}
+          label="Закрыть баннер"
           onPress={() => handleDismiss(true)}
-          accessibilityLabel="Закрыть баннер"
-        >
-          <Feather name="x" size={20} color={colors.textMuted} />
-        </Pressable>
+          size="sm"
+          style={styles.closeButton}
+        />
 
         <View style={styles.content}>
           <View style={styles.iconContainer}>
@@ -272,24 +274,23 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
           </View>
 
           <View style={styles.actions}>
-            <Pressable
-              style={[styles.button, styles.buttonPrimary]}
+            <Button
+              label="Начать"
               onPress={handleStart}
-              accessibilityRole="button"
               accessibilityLabel="Начать создание статьи"
-            >
-              <Feather name="edit-3" size={18} color={colors.textOnPrimary} />
-              <Text style={styles.buttonTextPrimary}>Начать</Text>
-            </Pressable>
+              icon={<Feather name="edit-3" size={18} color={colors.textOnPrimary} />}
+              style={[styles.button, styles.buttonPrimary]}
+              labelStyle={styles.buttonTextPrimary}
+            />
 
-            <Pressable
-              style={[styles.button, styles.buttonSecondary]}
+            <Button
+              label="Напомнить позже"
               onPress={() => handleDismiss(true)}
-              accessibilityRole="button"
               accessibilityLabel="Напомнить позже"
-            >
-              <Text style={styles.buttonTextSecondary}>Напомнить позже</Text>
-            </Pressable>
+              variant="secondary"
+              style={[styles.button, styles.buttonSecondary]}
+              labelStyle={styles.buttonTextSecondary}
+            />
           </View>
         </View>
       </LinearGradient>

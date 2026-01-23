@@ -5,10 +5,10 @@ import Feather from '@expo/vector-icons/Feather';
 import { Asset } from 'expo-asset';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
+import Button from '@/components/ui/Button';
 import OptimizedImage from './OptimizedImage';
 
 interface HomeHeroProps {
@@ -160,12 +160,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       width: '100%',
     },
     primaryButton: {
-      backgroundColor: colors.primary,
       paddingHorizontal: 24,
       paddingVertical: 16,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      alignItems: 'center',
-      justifyContent: 'center',
       minHeight: 56,
       ...Platform.select({
         web: {
@@ -191,15 +187,10 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       letterSpacing: 0.1,
     },
     secondaryButton: {
-      backgroundColor: colors.surface,
       borderWidth: 2,
       borderColor: colors.border,
       paddingHorizontal: 20,
       paddingVertical: 14,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
       gap: 8,
       minHeight: 56,
       ...Platform.select({
@@ -285,31 +276,31 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               gap={isMobile ? 12 : 16}
               style={styles.buttonsContainer}
             >
-              <Pressable
+              <Button
                 onPress={handleCreateBook}
-                style={({ pressed, hovered }) => [
-                  styles.primaryButton,
-                  (pressed || hovered) && styles.primaryButtonHover,
-                  globalFocusStyles.focusable,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={primaryButtonLabel}
-              >
-                <Text style={styles.primaryButtonText}>{primaryButtonLabel}</Text>
-              </Pressable>
+                label={primaryButtonLabel}
+                variant="primary"
+                size={isMobile ? 'md' : 'lg'}
+                fullWidth={isMobile}
+                style={styles.primaryButton}
+                labelStyle={styles.primaryButtonText}
+                hoverStyle={styles.primaryButtonHover}
+                pressedStyle={styles.primaryButtonHover}
+              />
 
-              <Pressable
+              <Button
                 onPress={handleOpenSearch}
-                style={({ pressed, hovered }) => [
-                  styles.secondaryButton,
-                  (pressed || hovered) && styles.secondaryButtonHover,
-                  globalFocusStyles.focusable,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Выбрать, куда поехать">
-                <Feather name="compass" size={18} color={colors.text} />
-                <Text style={styles.secondaryButtonText}>Выбрать, куда поехать</Text>
-              </Pressable>
+                label="Выбрать, куда поехать"
+                variant="secondary"
+                size={isMobile ? 'md' : 'lg'}
+                fullWidth={isMobile}
+                icon={<Feather name="compass" size={18} color={colors.text} />}
+                style={styles.secondaryButton}
+                labelStyle={styles.secondaryButtonText}
+                hoverStyle={styles.secondaryButtonHover}
+                pressedStyle={styles.secondaryButtonHover}
+                accessibilityLabel="Выбрать, куда поехать"
+              />
             </ResponsiveStack>
           </View>
 
