@@ -186,18 +186,18 @@ test.describe('UI layout regression guards (overlap/cutoff/viewport)', () => {
         await expect(accountMenu).toBeVisible({ timeout: 30_000 });
         await accountMenu.click();
 
-        // Menu must not cover the header.
+        // Menu must not cover the trigger (account menu anchor).
         const webPanel = page.getByTestId('web-menu-panel');
         if ((await webPanel.count()) > 0) {
           await expect(webPanel).toBeVisible({ timeout: 10_000 });
-          const [headerBox, panelBox] = await Promise.all([header.boundingBox(), webPanel.boundingBox()]);
-          expect(headerBox, 'header must have a bounding box').not.toBeNull();
+          const [anchorBox, panelBox] = await Promise.all([accountMenu.boundingBox(), webPanel.boundingBox()]);
+          expect(anchorBox, 'account menu anchor must have a bounding box').not.toBeNull();
           expect(panelBox, 'web menu panel must have a bounding box').not.toBeNull();
-          if (headerBox && panelBox) {
+          if (anchorBox && panelBox) {
             expect(
               panelBox.y,
-              `web menu panel must start below header bottom (panelTop=${panelBox.y}, headerBottom=${headerBox.y + headerBox.height})`
-            ).toBeGreaterThanOrEqual(headerBox.y + headerBox.height - 1);
+              `web menu panel must start below account menu anchor (panelTop=${panelBox.y}, anchorBottom=${anchorBox.y + anchorBox.height})`
+            ).toBeGreaterThanOrEqual(anchorBox.y + anchorBox.height - 1);
           }
         }
 

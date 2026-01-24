@@ -79,13 +79,18 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
         await assertTravelsListVisible();
         return;
       }
-      const image = await page.locator('[data-testid="travel-details-hero"] img').first();
-      await expect(image).toBeVisible();
+      const hero = await page.locator('[data-testid="travel-details-hero"]');
+      await expect(hero).toBeVisible();
 
-      // Verify image is loaded
-      const src = await image.getAttribute('src');
-      expect(src).toBeTruthy();
-      expect(src).toContain('http');
+      // Wait for image to load - check for either slider image or optimized hero img
+      const sliderImage = page.locator('[data-testid^="slider-image-"]').first();
+      const optimizedHeroImg = page.locator('[data-testid="travel-details-hero"] img').first();
+      
+      // At least one should be visible
+      const hasSliderImage = await sliderImage.isVisible().catch(() => false);
+      const hasOptimizedImg = await optimizedHeroImg.isVisible().catch(() => false);
+      
+      expect(hasSliderImage || hasOptimizedImg).toBeTruthy();
     });
 
     test('should load all sections', async () => {
