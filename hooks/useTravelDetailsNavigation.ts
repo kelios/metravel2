@@ -41,6 +41,24 @@ export function useTravelDetailsNavigation({
     let rafId: number | null = null
     let timeoutId: ReturnType<typeof setTimeout> | null = null
 
+    const isScrollableEl = (node: HTMLElement): boolean => {
+      try {
+        if (typeof document === 'undefined') return false
+        const docAny = document as any
+        const scrollingEl = (document.scrollingElement || docAny.documentElement || docAny.body) as any
+        if (node === scrollingEl || node === docAny.body || node === docAny.documentElement) {
+          return false
+        }
+        const style = typeof window !== 'undefined' ? window.getComputedStyle(node) : null
+        const overflowY = (style?.overflowY || '').toLowerCase()
+        const canScrollByStyle = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay'
+        const canScrollBySize = (node.scrollHeight || 0) > (node.clientHeight || 0) + 1
+        return Boolean(canScrollByStyle && canScrollBySize)
+      } catch {
+        return false
+      }
+    }
+
     const readNode = (): HTMLElement | null => {
       const scrollViewAny = scrollRef.current as any
       const node: HTMLElement | null =
@@ -64,9 +82,13 @@ export function useTravelDetailsNavigation({
 
       const node = readNode()
       if (node) {
-        setScrollRootEl((prev) => (prev === node ? prev : node))
+        const next = isScrollableEl(node) ? node : null
+        setScrollRootEl((prev) => (prev === next ? prev : next))
         return
       }
+
+      // If we can't find a dedicated scroll container, fall back to document scroll.
+      setScrollRootEl((prev) => (prev === null ? prev : null))
 
       if (attempts >= 60) return
 

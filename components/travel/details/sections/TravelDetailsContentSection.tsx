@@ -134,109 +134,59 @@ export const TravelDetailsContentSection: React.FC<{
   }, [extractSnippets, travel.minus, travel.plus, travel.recommendation])
 
   const decisionTips = useMemo(() => {
-    type TipItem = { text: string; level: 0 | 1 }
+    const cleanTip = (value: string) => {
+      return value
+        .replace(/^\s*[-–—•]+\s*/g, '')
+        .replace(/^\s*\d{1,2}\s*[).]\s*/g, '')
+        .replace(/\s*\b\d{1,2}\s*[).]\s*$/g, '')
+        .replace(/\s*\b\d{1,2}\.\s*$/g, '')
+        .replace(/\s*[:：]\s*$/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+    }
 
-    const splitToBullets = (text: string): TipItem[] => {
+    const splitToTips = (text: string): string[] => {
       const normalized = text
         .replace(/\r\n/g, '\n')
         .replace(/(&nbsp;|&#160;)/gi, ' ')
         .replace(/\u00a0/g, ' ')
         .replace(/\u2022/g, '•')
-        .replace(/\s+/g, ' ')
         .trim()
 
-      const withListBreaks = normalized
-        .replace(/\s+(?=\d{1,2}\s*[).]\s+)/g, '\n')
-        .replace(/\s+(?=[-–—]\s+)/g, '\n')
-
-      const lines = withListBreaks
+      const lines = normalized
         .split(/\n+/)
         .map((s) => s.trim())
         .filter(Boolean)
 
-      const items: TipItem[] = []
+      const out: string[] = []
 
-      const pushOrAppend = (level: 0 | 1, value: string) => {
-        const v = value.trim()
-        if (!v) return
-        if (level === 0) {
-          items.push({ text: v, level: 0 })
-          return
-        }
-        items.push({ text: v, level: 1 })
-      }
-
-      const splitInlineSubBullets = (mainText: string): { main: string; subs: string[] } => {
-        const cleaned = mainText.trim()
-        if (!cleaned) return { main: '', subs: [] }
-
-        const parts = cleaned
-          .split(/\s+[-–—]\s+/g)
-          .map((p) => p.trim())
+      for (const line of lines) {
+        const expanded = line
+          .replace(/\s+(?=\d{1,2}\s*[).]\s+)/g, '\n')
+          .replace(/\s+(?=[-–—•]\s+)/g, '\n')
+          .split(/\n+/)
+          .map((s) => s.trim())
           .filter(Boolean)
 
-        if (parts.length <= 1) return { main: cleaned, subs: [] }
-        return { main: parts[0] ?? '', subs: parts.slice(1) }
-      }
+        for (const chunk of expanded) {
+          const semis = chunk
+            .split(/\s*;\s+/g)
+            .map((s) => s.trim())
+            .filter(Boolean)
 
-      let inNumbered = false
-
-      for (const lineRaw of lines) {
-        const line = lineRaw.replace(/^•\s*/, '').trim()
-        const numberedMatch = line.match(/^(\d{1,2})\s*[).]\s+(.*)$/)
-
-        if (numberedMatch) {
-          inNumbered = true
-          const rest = (numberedMatch[2] ?? '').trim()
-          const { main, subs } = splitInlineSubBullets(rest)
-          pushOrAppend(0, main)
-          subs.forEach((s) => pushOrAppend(1, s))
-          continue
-        }
-
-        const subMatch = line.match(/^[-–—]\s+(.*)$/)
-        if (subMatch) {
-          pushOrAppend(1, subMatch[1] ?? '')
-          continue
-        }
-
-        if (inNumbered && items.length > 0) {
-          const idxFromEnd = [...items].reverse().findIndex((x) => x.level === 0)
-          if (idxFromEnd !== -1) {
-            const absoluteIndex = items.length - 1 - idxFromEnd
-            items[absoluteIndex] = {
-              ...items[absoluteIndex],
-              text: `${items[absoluteIndex].text} ${line}`.trim(),
-            }
-            continue
+          for (const maybe of semis.length > 0 ? semis : [chunk]) {
+            const tip = cleanTip(maybe)
+            if (tip) out.push(tip)
           }
         }
-
-        const fromSemicolons = line
-          .split(/\s*;\s+/g)
-          .map((s) => s.trim())
-          .filter(Boolean)
-
-        if (fromSemicolons.length > 1) {
-          fromSemicolons.forEach((s) => pushOrAppend(0, s))
-          continue
-        }
-
-        const sentences = line
-          .split(/(?<=[.!?])\s+/g)
-          .map((s) => s.trim())
-          .filter(Boolean)
-
-        sentences.forEach((s) => pushOrAppend(0, s))
       }
 
-      return items
+      return out
     }
 
     const tips = decisionSummary
-      .flatMap((item) => splitToBullets(item.text))
-      .map((t) => ({ ...t, text: t.text.replace(/^[-–—•]\s*/, '').trim() }))
-      .filter((t) => Boolean(t.text))
+      .flatMap((item) => splitToTips(item.text))
+      .filter((t) => Boolean(t))
 
     return tips.slice(0, 8)
   }, [decisionSummary])
@@ -340,31 +290,18 @@ export const TravelDetailsContentSection: React.FC<{
                   <View style={styles.decisionSummaryBox}>
                     <Text style={styles.decisionSummaryTitle}>Полезные советы перед поездкой</Text>
                     <View style={styles.decisionSummaryList}>
-                      {decisionTips.map((tip, idx) =>
-                        tip.level === 0 ? (
-                          <View key={`tip-${idx}`} style={styles.decisionSummaryBulletRow}>
-                            <MaterialIcons
-                              name="lightbulb-outline"
-                              size={14}
-                              color={colors.textMuted}
-                              style={styles.decisionSummaryBulletIcon}
-                              accessibilityElementsHidden
-                            />
-                            <Text style={styles.decisionSummaryBulletText}>{tip.text}</Text>
-                          </View>
-                        ) : (
-                          <View key={`tip-${idx}`} style={styles.decisionSummarySubBulletRow}>
-                            <MaterialIcons
-                              name="circle"
-                              size={6}
-                              color={colors.textMuted}
-                              style={styles.decisionSummarySubBulletIcon}
-                              accessibilityElementsHidden
-                            />
-                            <Text style={styles.decisionSummarySubBulletText}>{tip.text}</Text>
-                          </View>
-                        )
-                      )}
+                      {decisionTips.map((tip, idx) => (
+                        <View key={`tip-${idx}`} style={styles.decisionSummaryBulletRow}>
+                          <MaterialIcons
+                            name="lightbulb-outline"
+                            size={14}
+                            color={colors.textMuted}
+                            style={styles.decisionSummaryBulletIcon}
+                            accessibilityElementsHidden
+                          />
+                          <Text style={styles.decisionSummaryBulletText}>{tip}</Text>
+                        </View>
+                      ))}
                     </View>
                   </View>
                 )}

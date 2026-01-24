@@ -209,10 +209,6 @@ export default function BookSettingsModal({
   useEffect(() => {
     const errors: string[] = [];
 
-    if (settings.title && settings.title.length > 100) {
-      errors.push('Название книги не должно превышать 100 символов');
-    }
-
     if (settings.subtitle && settings.subtitle.length > 150) {
       errors.push('Подзаголовок не должен превышать 150 символов');
     }
@@ -659,7 +655,7 @@ export default function BookSettingsModal({
                     style={{
                       width: '100%',
                       padding: '12px 14px',
-                      border: `1.5px solid ${validationErrors.some(e => e.includes('название')) ? MODAL_COLORS.error : MODAL_COLORS.border}`,
+                      border: `1.5px solid ${MODAL_COLORS.border}`,
                       borderRadius: '12px',
                       fontSize: '15px',
                       minHeight: '44px',
@@ -675,17 +671,13 @@ export default function BookSettingsModal({
                       e.target.style.backgroundColor = MODAL_COLORS.surface;
                     }}
                     onBlur={(e) => {
-                      e.target.style.borderColor = validationErrors.some(err => err.includes('название')) ? (MODAL_COLORS.error as any) : (MODAL_COLORS.border as any);
+                      e.target.style.borderColor = MODAL_COLORS.border as any;
                       e.target.style.boxShadow = 'none';
                     }}
                     placeholder="Мои путешествия"
-                    maxLength={100}
                     aria-required="true"
-                    aria-invalid={validationErrors.some(e => e.includes('название'))}
+                    aria-invalid={false}
                   />
-                  <div style={{ fontSize: '11px', color: MODAL_COLORS.textMuted, marginTop: '4px', textAlign: 'right' }}>
-                    {settings.title.length}/100 символов
-                  </div>
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
