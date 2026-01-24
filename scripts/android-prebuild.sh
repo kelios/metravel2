@@ -85,13 +85,13 @@ else
     log_success ".env.prod найден"
 fi
 
-# 6. Проверка Google Services
+# 6. Проверка Google Services (опционально для analytics)
 log_info "Шаг 6: Проверка Google Services..."
 
 if [ ! -f "google-services.json" ]; then
     log_warning "google-services.json не найден"
-    log_warning "Скачайте файл из Firebase Console и поместите в корень проекта"
-    log_warning "https://console.firebase.google.com/"
+    log_warning "Нужен только для Firebase Analytics/Notifications"
+    log_warning "Для карт используется OpenStreetMap (бесплатный)"
 else
     log_success "google-services.json найден"
 fi
