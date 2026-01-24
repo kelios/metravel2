@@ -47,11 +47,35 @@ export function addResourceHints() {
     document.head.appendChild(link);
   };
 
-  ['//metravel.by', '//cdn.metravel.by', '//fonts.googleapis.com'].forEach((domain) => {
-    ensureLink('dns-prefetch', domain);
-  });
+  const lcpImg =
+    (document.querySelector('img[data-lcp]') as HTMLImageElement | null) ||
+    (document.querySelector('img[src*="travel"]') as HTMLImageElement | null)
 
-  ensureLink('preconnect', 'https://metravel.by', { crossOrigin: 'anonymous' });
+  const href = lcpImg ? (lcpImg.currentSrc || lcpImg.src) : ''
+  const origin = (() => {
+    try {
+      return href ? new URL(href).origin : null
+    } catch {
+      return null
+    }
+  })()
+
+  const domains = ['//metravel.by', '//cdn.metravel.by']
+  if (origin) {
+    try {
+      domains.push('//' + new URL(origin).host)
+    } catch {
+      // noop
+    }
+  }
+
+  Array.from(new Set(domains)).forEach((domain) => {
+    ensureLink('dns-prefetch', domain)
+  })
+
+  if (origin) {
+    ensureLink('preconnect', origin, { crossOrigin: 'anonymous' })
+  }
 }
 
 // 3. Critical CSS Inline Optimization

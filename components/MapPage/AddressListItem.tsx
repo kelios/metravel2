@@ -8,7 +8,7 @@ import {
     ActivityIndicator,
     Platform,
 } from 'react-native';
-import { Text } from 'react-native-paper';
+import { Text } from '@/src/ui/paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import * as Clipboard from 'expo-clipboard';

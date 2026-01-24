@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Snackbar } from 'react-native-paper';
+import { Snackbar } from '@/src/ui/paper';
 import { useRouter } from 'expo-router';
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';

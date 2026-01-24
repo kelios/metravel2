@@ -254,6 +254,9 @@ export class CoverPageGenerator {
   private renderTitle(title: string, textColor?: string): string {
     const { typography, colors } = this.theme;
     const color = textColor || colors.cover.text;
+
+    const safeTitle = (title || '').trim();
+    if (!safeTitle) return '';
     
     return `
       <h1 style="
@@ -270,7 +273,7 @@ export class CoverPageGenerator {
         overflow-wrap: anywhere;
         word-break: break-word;
         hyphens: auto;
-      ">${this.escapeHtml(title)}</h1>
+      ">${this.escapeHtml(safeTitle)}</h1>
     `;
   }
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Menu } from 'react-native-paper';
+import { Menu } from '@/src/ui/paper';
 import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 

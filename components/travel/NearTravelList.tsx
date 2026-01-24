@@ -16,7 +16,7 @@ import {
   FlatList,
   ScrollView,
 } from 'react-native';
-import { Title } from 'react-native-paper';
+import { Title } from '@/src/ui/paper';
 
 import { Travel } from '@/src/types/types';
 import { fetchTravelsNear } from '@/src/api/map';

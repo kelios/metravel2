@@ -12,7 +12,7 @@ import {
     View,
     Image,
 } from 'react-native';
-import { Button, Card } from 'react-native-paper';
+import { Button, Card } from '@/src/ui/paper';
 import { useIsFocused } from '@react-navigation/native';
 import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 

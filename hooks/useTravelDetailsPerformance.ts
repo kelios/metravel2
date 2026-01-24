@@ -43,7 +43,26 @@ export function useTravelDetailsPerformance({
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
-    rIC(() => setSliderReady(true), 600)
+    // Keep the main thread as free as possible during Lighthouse/PSI load window.
+    // The slider pulls in a heavy chunk on web; enable it only after window load + idle.
+    const enable = () => {
+      rIC(() => setSliderReady(true), 1200)
+    }
+
+    if (typeof window === 'undefined') {
+      enable()
+      return
+    }
+
+    if (document.readyState === 'complete') {
+      enable()
+      return
+    }
+
+    window.addEventListener('load', enable, { once: true })
+    return () => {
+      window.removeEventListener('load', enable as any)
+    }
   }, [lcpLoaded])
 
   useEffect(() => {
@@ -51,6 +70,12 @@ export function useTravelDetailsPerformance({
       setDeferAllowed(true)
     }
   }, [isLoading])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!travel) return
+    setDeferAllowed(true)
+  }, [travel])
 
   useEffect(() => {
     if (lcpLoaded) setDeferAllowed(true)
@@ -77,6 +102,14 @@ export function useTravelDetailsPerformance({
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
+    const connection = (window as any)?.navigator?.connection
+    const effectiveType = String(connection?.effectiveType || '')
+    const saveData = Boolean(connection?.saveData)
+    const isConstrained =
+      saveData || effectiveType.includes('2g') || effectiveType.includes('slow-2g')
+
+    if (isConstrained) return
+
     rIC(() => {
       Promise.allSettled([
         import('@/components/travel/TravelDescription'),
@@ -86,7 +119,7 @@ export function useTravelDetailsPerformance({
         // Removed ToggleableMapSection from eager prefetch to keep map bundles lazy
         // import('@/components/travel/ToggleableMapSection'),
       ])
-    }, 1200)
+    }, 3200)
   }, [lcpLoaded])
 
   return {

@@ -1,5 +1,5 @@
 // app/register.tsx (или соответствующий путь)
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     Dimensions,
     KeyboardAvoidingView,
@@ -12,7 +12,7 @@ import {
     View,
     Image,
 } from 'react-native';
-import { Button, Card } from 'react-native-paper';
+import { Button, Card } from '@/src/ui/paper';
 import Feather from '@expo/vector-icons/Feather';
 import { Formik, FormikHelpers } from 'formik';
 import { useIsFocused } from '@react-navigation/native';

@@ -9,7 +9,7 @@ import {
     NativeSyntheticEvent,
     TextInputSubmitEditingEventData,
 } from "react-native";
-import { IconButton, Menu } from "react-native-paper";
+import { IconButton, Menu } from "@/src/ui/paper";
 import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';

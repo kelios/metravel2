@@ -10,7 +10,7 @@ import {
     Platform,
     Linking,
 } from 'react-native';
-import { Button } from 'react-native-paper';
+import { Button } from '@/src/ui/paper';
 import ButtonBase from '@/components/ui/Button';
 
 import MultiSelectField from '@/components/MultiSelectField';

@@ -726,7 +726,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       styles.neutralPlaceholder,
       styles.slide,
       updateLoadStatus,
-      prefetchEnabled,
       isMobile,
     ]
   );

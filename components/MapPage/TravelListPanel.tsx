@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { Text } from 'react-native-paper';
+import { Text } from '@/src/ui/paper';
 import AddressListItem from './AddressListItem';
 import { SwipeableListItem } from './SwipeableListItem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';

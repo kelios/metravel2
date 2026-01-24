@@ -1,7 +1,6 @@
 import "@expo/metro-runtime";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox, useColorScheme } from "react-native";
-import { MD3DarkTheme, MD3LightTheme as DefaultTheme, PaperProvider } from "react-native-paper";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import { FiltersProvider } from "@/providers/FiltersProvider";
@@ -11,6 +10,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SkipLinks from "@/components/SkipLinks";
 import { NetworkStatus } from "@/components/NetworkStatus";
+import ThemedPaperProvider from "@/components/ThemedPaperProvider";
 const FooterLazy = React.lazy(() => import('@/components/Footer'));
 const ConsentBannerLazy = React.lazy(() => import('@/components/ConsentBanner'));
 const ToastLazy = React.lazy(() => import('@/components/ToastHost'));
@@ -18,7 +18,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
-import { ThemeProvider, useTheme, useThemedColors, getThemedColors } from "@/hooks/useTheme";
+import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
 if (Platform.OS === 'web') {
@@ -428,44 +428,9 @@ function ThemedContent({
   );
 }
 
-function ThemedPaperProvider({ children }: { children: React.ReactNode }) {
-    const { isDark } = useTheme();
-    const colors = useThemedColors();
-
-    const paperTheme = useMemo(() => {
-        const baseTheme = isDark ? MD3DarkTheme : DefaultTheme;
-        return {
-            ...baseTheme,
-            dark: isDark,
-            colors: {
-                ...baseTheme.colors,
-                primary: colors.primary,
-                secondary: colors.primaryDark,
-                background: colors.background,
-                surface: colors.surface,
-                error: colors.danger,
-                outline: colors.border,
-                onPrimary: colors.textOnPrimary,
-                onSecondary: colors.text,
-            },
-            fonts: { ...baseTheme.fonts },
-        };
-    }, [colors, isDark]);
-
-    return (
-      <PaperProvider
-        theme={paperTheme}
-        settings={{
-          icon: (props: any) => {
-            const name = props?.name;
-            return <Feather {...props} name={name} />;
-          },
-        }}
-      >
-        {children}
-      </PaperProvider>
-    );
-}
+// ThemedPaperProvider is implemented as platform-specific component:
+// - web: no-op wrapper
+// - native: react-native-paper provider
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     container: {

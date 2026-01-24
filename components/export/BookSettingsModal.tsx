@@ -1,7 +1,7 @@
 // components/export/BookSettingsModal.tsx
 // ✅ УЛУЧШЕНИЕ: Модальное окно настроек фотоальбома
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import ThemePreview, { type PdfThemeName } from './ThemePreview';
@@ -76,7 +76,7 @@ interface BookSettingsModalProps {
 }
 
 const defaultBookSettings: BookSettings = {
-  title: 'Мои путешествия',
+  title: '',
   subtitle: '',
   coverType: 'auto',
   template: 'minimal',
@@ -99,16 +99,14 @@ const defaultBookSettings: BookSettings = {
 
 
 const buildInitialSettings = (
-  overrides?: Partial<BookSettings>,
-  userName?: string
+  overrides?: Partial<BookSettings>
 ): BookSettings => {
   const merged: BookSettings = {
     ...defaultBookSettings,
     ...overrides,
   };
 
-  merged.title =
-    overrides?.title || (userName ? `Путешествия ${userName}` : defaultBookSettings.title);
+  merged.title = overrides?.title ?? defaultBookSettings.title;
 
   // Флаги includeGallery/includeMap теперь управляются только логикой экспорта,
   // без дополнительных режимов photoMode/mapMode.
@@ -132,7 +130,7 @@ export default function BookSettingsModal({
   onPreview,
   defaultSettings,
   travelCount,
-  userName,
+  userName: _userName,
   mode: _mode = 'save',
 }: BookSettingsModalProps) {
   const { isDark } = useTheme();
@@ -173,7 +171,7 @@ export default function BookSettingsModal({
   const firstFocusableRef = useRef<HTMLButtonElement | null>(null);
 
   const [settings, setSettings] = useState<BookSettings>(() =>
-    buildInitialSettings(defaultSettings, userName)
+    buildInitialSettings(defaultSettings)
   );
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>();
@@ -202,18 +200,14 @@ export default function BookSettingsModal({
       }
     }
 
-    setSettings(buildInitialSettings(savedSettings || defaultSettings, userName));
+    setSettings(buildInitialSettings(savedSettings || defaultSettings));
     setHasUnsavedChanges(false);
     setValidationErrors([]);
-  }, [defaultSettings, userName]);
+  }, [defaultSettings]);
 
   // ✅ УЛУЧШЕНИЕ: Валидация настроек
   useEffect(() => {
     const errors: string[] = [];
-
-    if (!settings.title || settings.title.trim().length === 0) {
-      errors.push('Укажите название книги');
-    }
 
     if (settings.title && settings.title.length > 100) {
       errors.push('Название книги не должно превышать 100 символов');
@@ -238,12 +232,6 @@ export default function BookSettingsModal({
     }
     onClose();
   }, [hasUnsavedChanges, onClose]);
-
-  const _handleConfirmClose = useCallback(() => {
-    setShowUnsavedWarning(false);
-    setHasUnsavedChanges(false);
-    onClose();
-  }, [onClose]);
 
   // ✅ УЛУЧШЕНИЕ: Обработка клавиши Escape
   useEffect(() => {

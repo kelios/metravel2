@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react'
-import {Image, StyleSheet, TextInput, View, Text, Platform} from 'react-native'
-import {Button, Card} from 'react-native-paper'
+import { useMemo, useState } from 'react'
+import {Image, StyleSheet, TextInput, View, Platform} from 'react-native'
+import {Button, Card, Text} from '@/src/ui/paper'
 import {useNavigation} from '@react-navigation/native'
 import {useRoute} from "@react-navigation/core";
 import {useAuth} from "@/context/AuthContext";

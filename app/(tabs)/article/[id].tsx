@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   StyleSheet,
@@ -11,13 +11,16 @@ import { Article } from '@/src/types/types'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { WebView } from 'react-native-webview'
-import { Card, Title } from 'react-native-paper'
+import { Card, Title } from '@/src/ui/paper'
 import { fetchArticle } from '@/src/api/articles'
 import { SafeHtml } from '@/components/SafeHtml'
 import { useResponsive } from '@/hooks/useResponsive'
+import { useThemedColors } from '@/hooks/useTheme'
 
 export default function ArticleDetails() {
   const { width } = useResponsive()
+  const colors = useThemedColors()
+  const styles = useMemo(() => createStyles(colors), [colors])
 
   const params = useLocalSearchParams()
   const id = typeof params.id === 'string' ? Number(params.id) : undefined
@@ -96,20 +99,23 @@ export default function ArticleDetails() {
   )
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  contentContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
-  },
-  card: {
-    margin: 20,
-    elevation: 5,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    maxWidth: 800,
-  },
-})
-
+const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    contentContainer: {
+      flexGrow: 1,
+      justifyContent: 'center',
+    },
+    card: {
+      margin: 20,
+      elevation: 5,
+      backgroundColor: colors.surface,
+      borderRadius: 10,
+      maxWidth: 800,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+  })

@@ -1,7 +1,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, TextInput, Platform, findNodeHandle, UIManager } from 'react-native';
-import { Button } from 'react-native-paper';
+import { Button } from '@/src/ui/paper';
 import { useRouter } from 'expo-router';
 
 import LocationSearchInput from '@/components/travel/LocationSearchInput';

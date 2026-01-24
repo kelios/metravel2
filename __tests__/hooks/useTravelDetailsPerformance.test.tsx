@@ -103,8 +103,22 @@ describe('useTravelDetailsPerformance', () => {
     act(() => {
       result.current.setLcpLoaded(true)
     })
+
+    // Slider is enabled after window load + idle time on web.
+    // Ensure we go through the "load" path even in jsdom.
+    try {
+      Object.defineProperty(document, 'readyState', {
+        value: 'loading',
+        configurable: true,
+      })
+    } catch {
+      // noop
+    }
     act(() => {
-      jest.advanceTimersByTime(600)
+      window.dispatchEvent(new Event('load'))
+    })
+    act(() => {
+      jest.advanceTimersByTime(1200)
     })
 
     expect(result.current.sliderReady).toBe(true)

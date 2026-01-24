@@ -20,6 +20,12 @@
     "module": "esnext",
     "moduleResolution": "node",
 
+    "moduleSuffixes": [
+      ".web",
+      ".native",
+      ""
+    ],
+
     // ✅ алиас @ на корень репо
     "baseUrl": ".",
     "paths": {

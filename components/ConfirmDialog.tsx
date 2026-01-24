@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo } from 'react';
-import { Dialog, Portal } from 'react-native-paper';
+import { Dialog, Portal } from '@/src/ui/paper';
 import { Text, StyleSheet, TouchableOpacity, Platform, View } from 'react-native';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

@@ -156,6 +156,7 @@ describe('EnhancedPdfGenerator helpers', () => {
       includeToc: true,
     })
 
+    expect(html).toContain('<title>Book</title>')
     expect(html).toContain('cover-page')
     expect(html).toContain('toc-page')
     expect(html).toContain('travel-content-page')
@@ -164,5 +165,24 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(html).toContain('hyphens: none')
     expect(html).toContain('word-break: normal')
     expect(html).toContain('overflow-wrap: normal')
+  })
+
+  it('falls back to MeTravel title and hides cover <h1> when settings.title is empty', async () => {
+    ;(generator as any).selectedQuotes = undefined
+    const html = await generator.generate([travelA, travelB], {
+      ...baseSettings,
+      title: '   ',
+    })
+
+    expect(html).toContain('<title>MeTravel</title>')
+
+    const coverStart = html.indexOf('cover-page')
+    const coverEnd = html.indexOf('toc-page')
+    const coverSlice =
+      coverStart !== -1 && coverEnd !== -1 && coverEnd > coverStart
+        ? html.slice(coverStart, coverEnd)
+        : html
+
+    expect(coverSlice).not.toContain('<h1')
   })
 })

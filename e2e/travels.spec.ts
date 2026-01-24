@@ -459,7 +459,7 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
         return;
       }
       // Mock API to fail
-      await page.route('**/api/travels/*', (route: any) => route.abort());
+      await page.route('**/api/travels/**', (route: any) => route.abort());
 
       // Navigate to details page with failing API
       await page.goto(travelBasePath);

@@ -263,6 +263,7 @@ export class EnhancedPdfGenerator {
     coverImage?: string
   ): string {
     const { colors, typography } = this.theme;
+    const safeTitle = (settings.title || '').trim();
     const travelLabel = this.getTravelLabel(travelCount);
     const safeCoverImage = this.buildSafeImageUrl(coverImage);
     const coverQuote = this.selectedQuotes?.cover;
@@ -343,18 +344,20 @@ export class EnhancedPdfGenerator {
             border: 1px solid rgba(255,255,255,0.14);
             box-shadow: 0 16px 40px rgba(0,0,0,0.35);
           ">
-            <h1 style="
-              color: ${colors.cover.text};
-              font-size: ${typography.h1.size};
-              font-weight: ${typography.h1.weight};
-              line-height: ${typography.h1.lineHeight};
-              margin: 0;
-              text-shadow: 0 10px 30px rgba(0,0,0,0.35);
-              font-family: ${typography.headingFont};
-              overflow-wrap: normal;
-              word-break: normal;
-              hyphens: none;
-            ">${this.escapeHtml(settings.title)}</h1>
+            ${safeTitle ? `
+              <h1 style="
+                color: ${colors.cover.text};
+                font-size: ${typography.h1.size};
+                font-weight: ${typography.h1.weight};
+                line-height: ${typography.h1.lineHeight};
+                margin: 0;
+                text-shadow: 0 10px 30px rgba(0,0,0,0.35);
+                font-family: ${typography.headingFont};
+                overflow-wrap: normal;
+                word-break: normal;
+                hyphens: none;
+              ">${this.escapeHtml(safeTitle)}</h1>
+            ` : ''}
 
             ${settings.subtitle ? `
               <div style="
@@ -1701,7 +1704,7 @@ export class EnhancedPdfGenerator {
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>${this.escapeHtml(settings.title)}</title>
+  <title>${this.escapeHtml((settings.title || '').trim() || 'MeTravel')}</title>
   
   <!-- Google Fonts для улучшенной типографики -->
   <link rel="preconnect" href="https://fonts.googleapis.com">

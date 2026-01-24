@@ -32,6 +32,8 @@ export class CoverPageGenerator extends BasePageGenerator {
 
     const background = `linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%)`;
 
+    const safeTitle = (settings.title || '').trim();
+
     return `
       <section class="pdf-page cover-page" style="
         padding: 0;
@@ -93,18 +95,20 @@ export class CoverPageGenerator extends BasePageGenerator {
           position: relative;
           z-index: 3;
         ">
-          <h1 style="
-            color: ${colors.cover.text};
-            font-size: ${typography.h1.size};
-            font-weight: ${typography.h1.weight};
-            line-height: ${typography.h1.lineHeight};
-            margin: 0;
-            text-shadow: 0 10px 30px rgba(0,0,0,0.35);
-            font-family: ${typography.headingFont};
-            overflow-wrap: anywhere;
-            word-break: break-word;
-            hyphens: auto;
-          ">${this.escapeHtml(settings.title)}</h1>
+          ${safeTitle ? `
+            <h1 style="
+              color: ${colors.cover.text};
+              font-size: ${typography.h1.size};
+              font-weight: ${typography.h1.weight};
+              line-height: ${typography.h1.lineHeight};
+              margin: 0;
+              text-shadow: 0 10px 30px rgba(0,0,0,0.35);
+              font-family: ${typography.headingFont};
+              overflow-wrap: anywhere;
+              word-break: break-word;
+              hyphens: auto;
+            ">${this.escapeHtml(safeTitle)}</h1>
+          ` : ''}
 
           ${settings.subtitle ? `
             <div style="

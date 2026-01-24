@@ -27,6 +27,20 @@ describe('CoverPageGenerator', () => {
       expect(html).toContain('cover-page');
     });
 
+    it('не должен рендерить заголовок если title пустой', async () => {
+      const data = {
+        title: '   ',
+        userName: 'Иван Иванов',
+        travelCount: 10,
+      };
+
+      const html = await generator.generate(data);
+
+      expect(html).not.toContain('<h1');
+      expect(html).toContain('Иван Иванов');
+      expect(html).toContain('cover-page');
+    });
+
     it('должен отображать подзаголовок если указан', async () => {
       const data = {
         title: 'Мои путешествия',

@@ -308,6 +308,7 @@ export const TravelDetailsContentSection: React.FC<{
         <Suspense fallback={<DescriptionFallback />}>
           <View
             ref={anchors.description}
+            testID="travel-details-description"
             collapsable={false}
             accessibilityLabel="Описание маршрута"
             {...(Platform.OS === 'web' ? { 'data-section-key': 'description' } : {})}

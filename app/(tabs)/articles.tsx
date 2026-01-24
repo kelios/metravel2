@@ -1,10 +1,10 @@
 import {ActivityIndicator, Dimensions, FlatList, SafeAreaView, StyleSheet, View} from 'react-native'
 import ArticleListItem from '@/components/ArticleListItem'
-import React, {useCallback, useEffect, useMemo, useState} from 'react'
+import {useCallback, useEffect, useMemo, useState} from 'react'
 import {Articles} from '@/src/types/types'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import {fetchArticles} from '@/src/api/articles'
-import {DataTable} from 'react-native-paper'
+import {DataTable} from '@/src/ui/paper'
 import {useLocalSearchParams} from 'expo-router'
 import ErrorDisplay from '@/components/ErrorDisplay'
 import EmptyState from '@/components/EmptyState'
@@ -131,7 +131,7 @@ export default function TabOneScreen() {
             <FlatList
                 data={articles?.data}
                 renderItem={({ item }) => <ArticleListItem article={item} />}
-                keyExtractor={(item, index) => index.toString()}
+                keyExtractor={(item, index) => (item.id ? String(item.id) : String(index))}
                 refreshing={isLoading}
                 onRefresh={fetchMore}
             />

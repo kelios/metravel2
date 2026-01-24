@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import { Text } from "react-native-paper";
+import { Text } from "@/src/ui/paper";
 import type { Travel } from "@/src/types/types";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
 import WeatherWidget from "@/components/WeatherWidget";

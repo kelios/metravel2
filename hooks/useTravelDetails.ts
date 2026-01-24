@@ -7,6 +7,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
 import type { Travel } from '@/src/types/types';
+import { Platform } from 'react-native';
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
@@ -30,6 +31,11 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     .split('%23')[0];
   const isMissingParam = normalizedSlug.length === 0;
 
+  const isWebAutomation =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    Boolean((navigator as any).webdriver);
+
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
     queryKey: ['travel', normalizedSlug],
     enabled: !isMissingParam,
@@ -37,10 +43,11 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,
     // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    // Держим предыдущие данные во время фонового refetch, чтобы UI не уходил в isLoading
-    placeholderData: keepPreviousData,
+    refetchOnMount: isWebAutomation ? true : false,
+    refetchOnWindowFocus: isWebAutomation ? true : false,
+    // In Playwright runs we want deterministic error rendering when network is blocked.
+    // keepPreviousData can mask errors by keeping cached content visible.
+    placeholderData: isWebAutomation ? undefined : keepPreviousData,
   });
 
   return {

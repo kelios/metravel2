@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { Icon } from 'react-native-paper';
+import { Icon } from '@/src/ui/paper';
 import type { ModerationIssue } from '@/utils/formValidation';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 

@@ -145,6 +145,9 @@ const getFontFaceSwapScript = () => String.raw`
 const getTravelHeroPreloadScript = () => String.raw`
 (function(){
   try {
+    var host = window.location && window.location.hostname;
+    var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';
+    if (!isProdHost) return;
     var path = window.location && window.location.pathname;
     if (!path || path.indexOf('/travels/') !== 0) return;
     var slug = path.replace(/^\/travels\//, '').replace(/\/+$/, '');
@@ -176,65 +179,80 @@ const getTravelHeroPreloadScript = () => String.raw`
       }
     }
 
-    var controller = window.AbortController ? new AbortController() : null;
-    var timeout = setTimeout(function(){
-      try { if (controller) controller.abort(); } catch (_e) {}
-    }, 2500);
+    // Defer API fetch to idle time and skip on constrained networks to avoid hurting LCP/TBT.
+    var conn = (navigator && (navigator.connection || navigator.mozConnection || navigator.webkitConnection)) || null;
+    var effectiveType = conn && conn.effectiveType ? String(conn.effectiveType) : '';
+    var saveData = conn && conn.saveData ? true : false;
+    var isConstrained = saveData || effectiveType.indexOf('2g') !== -1 || effectiveType.indexOf('slow-2g') !== -1;
+    if (isConstrained) return;
 
-    fetch(endpoint, {
-      method: 'GET',
-      credentials: 'omit',
-      signal: controller ? controller.signal : undefined
-    }).then(function(res){
-      if (!res || !res.ok) return null;
-      return res.json();
-    }).then(function(data){
-      if (!data) return;
-      var gallery = data.gallery;
-      if (!gallery || !gallery.length) return;
-      var first = gallery[0];
-      var url = typeof first === 'string' ? first : first && first.url;
-      if (!url || typeof url !== 'string') return;
+    function run(){
+      var controller = window.AbortController ? new AbortController() : null;
+      var timeout = setTimeout(function(){
+        try { if (controller) controller.abort(); } catch (_e) {}
+      }, 2500);
 
-      var viewport = Math.max(320, Math.min(window.innerWidth || 480, 960));
-      var isMobile = (window.innerWidth || 0) <= 540;
-      var targetWidth = isMobile ? Math.min(viewport, 480) : Math.min(viewport, 960);
-      var quality = isMobile ? 55 : 70;
-      var highWidth = Math.min(isMobile ? 720 : 1280, Math.round(targetWidth * 2));
-      var optimizedHref = buildOptimizedUrl(url, targetWidth, quality);
-      if (!optimizedHref) return;
-      var optimizedHrefHigh = highWidth !== targetWidth
-        ? buildOptimizedUrl(url, highWidth, quality)
-        : null;
+      fetch(endpoint, {
+        method: 'GET',
+        credentials: 'omit',
+        signal: controller ? controller.signal : undefined
+      }).then(function(res){
+        if (!res || !res.ok) return null;
+        return res.json();
+      }).then(function(data){
+        if (!data) return;
+        var gallery = data.gallery;
+        if (!gallery || !gallery.length) return;
+        var first = gallery[0];
+        var url = typeof first === 'string' ? first : first && first.url;
+        if (!url || typeof url !== 'string') return;
 
-      try {
-        var resolved = new URL(optimizedHref, window.location.origin);
-        var origin = resolved.origin;
-        if (origin && !document.querySelector('link[rel="preconnect"][href="' + origin + '"]')) {
-          var pre = document.createElement('link');
-          pre.rel = 'preconnect';
-          pre.href = origin;
-          pre.crossOrigin = 'anonymous';
-          document.head.appendChild(pre);
+        var viewport = Math.max(320, Math.min(window.innerWidth || 480, 960));
+        var isMobile = (window.innerWidth || 0) <= 540;
+        var targetWidth = isMobile ? Math.min(viewport, 480) : Math.min(viewport, 960);
+        var quality = isMobile ? 55 : 60;
+        var highWidth = Math.min(isMobile ? 720 : 1280, Math.round(targetWidth * 2));
+        var optimizedHref = buildOptimizedUrl(url, targetWidth, quality);
+        if (!optimizedHref) return;
+        var optimizedHrefHigh = highWidth !== targetWidth
+          ? buildOptimizedUrl(url, highWidth, quality)
+          : null;
+
+        try {
+          var resolved = new URL(optimizedHref, window.location.origin);
+          var origin = resolved.origin;
+          if (origin && !document.querySelector('link[rel="preconnect"][href="' + origin + '"]')) {
+            var pre = document.createElement('link');
+            pre.rel = 'preconnect';
+            pre.href = origin;
+            pre.crossOrigin = 'anonymous';
+            document.head.appendChild(pre);
+          }
+        } catch (_e) {}
+
+        if (document.querySelector('link[rel="preload"][href="' + optimizedHref + '"]')) return;
+        var link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = optimizedHref;
+        if (optimizedHrefHigh) {
+          link.setAttribute('imagesrcset', optimizedHref + ' ' + Math.round(targetWidth) + 'w, ' + optimizedHrefHigh + ' ' + Math.round(highWidth) + 'w');
+          link.setAttribute('imagesizes', '100vw');
         }
-      } catch (_e) {}
+        link.fetchPriority = 'high';
+        link.setAttribute('fetchpriority', 'high');
+        link.crossOrigin = 'anonymous';
+        document.head.appendChild(link);
+      }).catch(function(){}).finally(function(){
+        clearTimeout(timeout);
+      });
+    }
 
-      if (document.querySelector('link[rel="preload"][href="' + optimizedHref + '"]')) return;
-      var link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'image';
-      link.href = optimizedHref;
-      if (optimizedHrefHigh) {
-        link.setAttribute('imagesrcset', optimizedHref + ' ' + Math.round(targetWidth) + 'w, ' + optimizedHrefHigh + ' ' + Math.round(highWidth) + 'w');
-        link.setAttribute('imagesizes', '100vw');
-      }
-      link.fetchPriority = 'high';
-      link.setAttribute('fetchpriority', 'high');
-      link.crossOrigin = 'anonymous';
-      document.head.appendChild(link);
-    }).catch(function(){}).finally(function(){
-      clearTimeout(timeout);
-    });
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(run, { timeout: 2500 });
+    } else {
+      setTimeout(run, 1800);
+    }
   } catch (_e) {}
 })();
 `;
@@ -276,7 +294,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
@@ -304,6 +321,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
           __html:
             '(function() {\n'
             + "  if (typeof window !== 'undefined') {\n"
+            + "    var host = window.location && window.location.hostname;\n"
+            + "    var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';\n"
+            + "    if (!isProdHost) return;\n"
             + '    const shouldSuppress = (args) => {\n'
             + '      const msg = args && args[0];\n'
             + "      if (!msg || typeof msg !== 'string') return false;\n"

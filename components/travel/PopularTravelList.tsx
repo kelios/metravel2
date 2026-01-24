@@ -1,11 +1,12 @@
 // components/travel/PopularTravelList.tsx
-import React, {
+import {
   memo,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type FC,
 } from "react";
 import {
   ActivityIndicator,
@@ -15,13 +16,13 @@ import {
   Text,
   View,
 } from "react-native";
-import { Title } from "react-native-paper";
+import { Title } from "@/src/ui/paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
 import { fetchTravelsPopular } from "@/src/api/map";
 import type { TravelsMap } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
-import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+import { useThemedColors } from '@/hooks/useTheme'; // РЕДИЗАЙН: Темная тема
 import {
   FLATLIST_CONFIG,
   FLATLIST_CONFIG_MOBILE,
@@ -38,7 +39,7 @@ type PopularTravelListProps = {
 
 const SEPARATOR_HEIGHT = 20;
 
-const PopularTravelList: React.FC<PopularTravelListProps> = memo(
+const PopularTravelList: FC<PopularTravelListProps> = memo(
   ({
      onLayout,
      scrollToAnchor,
@@ -280,8 +281,10 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
 
     // Оптимизированная анимация - запускаем только когда контент готов
     useEffect(() => {
+      let timer: ReturnType<typeof setTimeout> | null = null;
+
       if (!isLoading && popularList.length > 0 && mountedRef.current) {
-        const timer = setTimeout(() => {
+        timer = setTimeout(() => {
           if (mountedRef.current) {
             Animated.timing(fadeAnim, {
               toValue: 1,
@@ -290,9 +293,11 @@ const PopularTravelList: React.FC<PopularTravelListProps> = memo(
             }).start();
           }
         }, 50); // Небольшая задержка для обеспечения плавности
-
-        return () => clearTimeout(timer);
       }
+
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
     }, [isLoading, popularList.length, fadeAnim]);
 
     // ✅ УЛУЧШЕНИЕ: Улучшенное выравнивание с одинаковой высотой карточек

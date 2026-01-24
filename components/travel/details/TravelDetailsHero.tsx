@@ -21,7 +21,6 @@ import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
   getPreferredImageFormat,
-  optimizeImageUrl,
 } from '@/utils/imageOptimization'
 import type { Travel } from '@/src/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -82,7 +81,7 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
       typeof window !== 'undefined'
         ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
         : lcpMaxWidth
-    const lcpQuality = isMobile ? 55 : 70
+    const lcpQuality = isMobile ? 55 : 60
     const responsive = buildResponsiveImageProps(versionedHref, {
       maxWidth: targetWidth,
       widths: lcpWidths,
@@ -122,19 +121,8 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
       createdLinks.push(preload)
     }
 
-    const apiOrigin = (() => {
-      try {
-        const base = String(process.env.EXPO_PUBLIC_API_URL || '').trim()
-        if (!base) return null
-        return new URL(base).origin
-      } catch {
-        return null
-      }
-    })()
-
     const domains = [
       getOrigin(imageUrl),
-      apiOrigin,
       optimizedOrigin,
     ].filter((d): d is string => isSafePreconnectDomain(d))
 
@@ -241,19 +229,6 @@ const OptimizedLCPHeroInner: React.FC<{
   })
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
-  const blurSrc = useMemo(() => {
-    if (!srcWithRetry) return '';
-    return (
-      optimizeImageUrl(srcWithRetry, {
-        width: 64,
-        height: 64,
-        quality: 30,
-        blur: 30,
-        fit: 'cover',
-        format: 'auto',
-      }) ?? srcWithRetry
-    );
-  }, [srcWithRetry])
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
 
   if (!srcWithRetry) {
@@ -335,25 +310,6 @@ const OptimizedLCPHeroInner: React.FC<{
               inset: 0,
               backgroundColor: colors.surfaceMuted,
             }}
-          />
-          <img
-            src={blurSrc}
-            alt=""
-            aria-hidden
-            crossOrigin="anonymous"
-            // @ts-ignore - React supports fetchPriority on img, but TS DOM typings may vary
-            fetchPriority="low"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              filter: 'blur(18px)',
-              transform: 'scale(1.08)',
-            }}
-            loading="eager"
-            decoding="async"
           />
           <img
             src={srcWithRetry}

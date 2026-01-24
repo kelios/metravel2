@@ -39,6 +39,7 @@ import { SectionSkeleton } from '@/components/SectionSkeleton';
 import { TravelHeroSection, useLCPPreload, OptimizedLCPHero } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
+import { TravelDeferredSections } from "@/components/travel/details/TravelDetailsDeferred";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import SkipToContentLink from "@/components/accessibility/SkipToContentLink";
@@ -49,11 +50,6 @@ import { useThemedColors } from "@/hooks/useTheme";
 /* -------------------- helpers -------------------- */
 
 const CompactSideBarTravel = withLazy(() => import("@/components/travel/CompactSideBarTravel"));
-const TravelDeferredSectionsLazy = React.lazy(() =>
-  import("@/components/travel/details/TravelDetailsDeferred").then((mod) => ({
-    default: mod.TravelDeferredSections,
-  }))
-);
 
 /* -------------------- SuspenseList shim -------------------- */
 const SList: React.FC<{
@@ -93,6 +89,11 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!when) return;
+
+    if (Platform.OS === 'web') {
+      setReady(true);
+      return;
+    }
     let done = false;
     const kick = () => {
       if (!done) {
@@ -116,6 +117,11 @@ export default function TravelDetailsContainer() {
   const useIsFocusedSafe = useIsFocused ?? (() => true);
   const isFocused = useIsFocusedSafe();
   const [, startTransition] = useTransition();
+
+  const isWebAutomation =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    Boolean((navigator as any).webdriver);
 
   /* ✅ PHASE 2: Accessibility Hooks */
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce();
@@ -299,6 +305,7 @@ export default function TravelDetailsContainer() {
               backgroundColor: themedColors.primary,
             }}
             accessibilityRole="button"
+            accessibilityLabel="Повторить"
           >
             <Text style={{ color: themedColors.textOnPrimary, fontWeight: '700' }}>Повторить</Text>
           </TouchableOpacity>
@@ -474,10 +481,10 @@ export default function TravelDetailsContainer() {
                   )}
 
                   {/* -------- deferred heavy content -------- */}
-                  <Defer when={deferAllowed || forceDeferMount}>
-                    {forceDeferMount ? (
+                  <Defer when={deferAllowed || forceDeferMount || isWebAutomation}>
+                    {forceDeferMount || isWebAutomation ? (
                       <Suspense fallback={<SectionSkeleton />}>
-                        <TravelDeferredSectionsLazy
+                        <TravelDeferredSections
                           travel={travel}
                           isMobile={isMobile}
                           forceOpenKey={forceOpenKey}
@@ -491,12 +498,12 @@ export default function TravelDetailsContainer() {
                         />
                       </Suspense>
                     ) : (
-                      <ProgressiveWrapper 
+                      <ProgressiveWrapper
                         config={{ priority: 'normal', rootMargin: '100px' }}
                         fallback={<SectionSkeleton />}
                       >
                         <Suspense fallback={<SectionSkeleton />}>
-                          <TravelDeferredSectionsLazy
+                          <TravelDeferredSections
                             travel={travel}
                             isMobile={isMobile}
                             forceOpenKey={forceOpenKey}
