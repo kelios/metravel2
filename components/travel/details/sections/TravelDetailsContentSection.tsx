@@ -1,6 +1,5 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
-import MaterialIcons from '@expo/vector-icons/MaterialIcons'
 
 import { useThemedColors } from '@/hooks/useTheme'
 
@@ -12,6 +11,7 @@ import type { Travel } from '@/src/types/types'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
+import { Icon } from '../TravelDetailsIcons'
 import { CollapsibleSection } from './CollapsibleSection'
 import { LazyYouTube } from './LazyYouTubeSection'
 
@@ -292,12 +292,10 @@ export const TravelDetailsContentSection: React.FC<{
                     <View style={styles.decisionSummaryList}>
                       {decisionTips.map((tip, idx) => (
                         <View key={`tip-${idx}`} style={styles.decisionSummaryBulletRow}>
-                          <MaterialIcons
+                          <Icon
                             name="lightbulb-outline"
                             size={14}
                             color={colors.textMuted}
-                            style={styles.decisionSummaryBulletIcon}
-                            accessibilityElementsHidden
                           />
                           <Text style={styles.decisionSummaryBulletText}>{tip}</Text>
                         </View>

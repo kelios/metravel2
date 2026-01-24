@@ -4,9 +4,9 @@
  * Тесты для редизайна секции описания путешествия
  */
 
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { DescriptionSection } from '@/components/travel/details/redesign/DescriptionSection.redesign';
+import { Icon } from '@/components/travel/details/TravelDetailsIcons';
 
 // Мок для TravelDescription
 jest.mock('@/components/travel/TravelDescription', () => {
@@ -273,8 +273,7 @@ describe('DescriptionSection.redesign', () => {
         <DescriptionSection {...mockProps} decisionTips={tips} />
       );
 
-      const { MaterialIcons } = require('@expo/vector-icons');
-      const icons = UNSAFE_getAllByType(MaterialIcons);
+      const icons = UNSAFE_getAllByType(Icon);
 
       // Проверяем, что декоративные иконки имеют accessibilityElementsHidden
       const decorativeIcons = icons.filter(

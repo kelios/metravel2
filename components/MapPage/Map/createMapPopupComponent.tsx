@@ -156,6 +156,14 @@ export const createMapPopupComponent = ({ useMap }: CreatePopupComponentArgs) =>
         category: categoryNameString,
         categoryName: categoryNameString,
       };
+
+      const photoCandidate =
+        (point as any)?.travelImageThumbUrl ??
+        (point as any)?.travel_image_thumb_url ??
+        (point as any)?.image;
+      if (typeof photoCandidate === 'string' && photoCandidate.trim()) {
+        payload.photo = photoCandidate.trim();
+      }
       if (point.categoryId || point.category_ids) {
         const ids = [
           point.categoryId,
@@ -185,9 +193,7 @@ export const createMapPopupComponent = ({ useMap }: CreatePopupComponentArgs) =>
       isAdding,
       categoryLabel,
       normalizedCoord,
-      point.address,
-      point.category_ids,
-      point.categoryId,
+      point,
       queryClient,
       handlePress,
     ]);
@@ -198,8 +204,6 @@ export const createMapPopupComponent = ({ useMap }: CreatePopupComponentArgs) =>
         imageUrl={point.travelImageThumbUrl}
         categoryLabel={categoryLabel}
         coord={coord}
-        onCardPress={handlePress}
-        enableCardPress={true}
         onOpenArticle={handleOpenArticle}
         onCopyCoord={handleCopyCoord}
         onShareTelegram={handleShareTelegram}

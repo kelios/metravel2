@@ -1,4 +1,3 @@
-import "@expo/metro-runtime";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox, useColorScheme } from "react-native";
 import { SplashScreen, Stack, usePathname } from "expo-router";
@@ -18,6 +17,10 @@ import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
+
+if (__DEV__) {
+  require("@expo/metro-runtime");
+}
 
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
 if (Platform.OS === 'web') {

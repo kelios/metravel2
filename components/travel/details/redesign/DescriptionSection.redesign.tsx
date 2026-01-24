@@ -20,10 +20,10 @@ import {
   Platform,
   Pressable,
 } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TravelDescription from '@/components/travel/TravelDescription';
+import { Icon } from '../TravelDetailsIcons';
 
 /* -------------------- Types -------------------- */
 
@@ -121,12 +121,7 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = memo(({
           {...(Platform.OS === 'web' ? { role: 'complementary' } as any : {})}
         >
           <View style={styles.tipsHeader}>
-            <MaterialIcons
-              name="lightbulb"
-              size={20}
-              color={colors.primary}
-              style={styles.tipsHeaderIcon}
-            />
+            <Icon name="lightbulb" size={20} color={colors.primary} accessibilityElementsHidden />
             <Text style={[styles.tipsTitle, { color: colors.text }]}>
               Полезные советы перед поездкой
             </Text>
@@ -136,26 +131,14 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = memo(({
             {decisionTips.map((tip, idx) =>
               tip.level === 0 ? (
                 <View key={`tip-${idx}`} style={styles.tipRow}>
-                  <MaterialIcons
-                    name="check-circle"
-                    size={16}
-                    color={colors.primary}
-                    style={styles.tipIcon}
-                    accessibilityElementsHidden
-                  />
+                  <Icon name="check-circle" size={16} color={colors.primary} accessibilityElementsHidden />
                   <Text style={[styles.tipText, { color: colors.text }]}>
                     {tip.text}
                   </Text>
                 </View>
               ) : (
                 <View key={`tip-${idx}`} style={styles.tipSubRow}>
-                  <MaterialIcons
-                    name="circle"
-                    size={6}
-                    color={colors.textMuted}
-                    style={styles.tipSubIcon}
-                    accessibilityElementsHidden
-                  />
+                  <Icon name="circle" size={6} color={colors.textMuted} accessibilityElementsHidden />
                   <Text style={[styles.tipSubText, { color: colors.text }]}>
                     {tip.text}
                   </Text>
@@ -192,12 +175,7 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = memo(({
           accessibilityLabel="Назад к началу страницы"
           accessibilityHint="Прокрутить страницу вверх"
         >
-          <MaterialIcons
-            name="arrow-upward"
-            size={18}
-            color={colors.primary}
-            style={styles.backToTopIcon}
-          />
+          <Icon name="arrow-upward" size={18} color={colors.primary} accessibilityElementsHidden />
           <Text style={[styles.backToTopText, { color: colors.textMuted }]}>
             Назад к началу
           </Text>

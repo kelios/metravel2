@@ -259,6 +259,10 @@ export const userPointsApi = {
   async deletePoint(id: number) {
     return apiClient.delete(`/user-points/${id}/`);
   },
+
+  async purgePoints() {
+    return apiClient.delete<{ deleted: number }>('/user-points/purge/');
+  },
   
   async bulkUpdatePoints(pointIds: number[], updates: Partial<ImportedPoint>) {
     return apiClient.patch<{

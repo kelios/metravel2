@@ -33,6 +33,7 @@ jest.mock('@/src/api/userPoints', () => ({
     createPoint: jest.fn(),
     updatePoint: jest.fn(),
     deletePoint: jest.fn(),
+    purgePoints: jest.fn(),
     bulkUpdatePoints: jest.fn(),
   },
 }));
@@ -44,6 +45,7 @@ jest.mock('@/src/api/misc', () => ({
 describe('PointsList (manual create)', () => {
   const mockGetPoints = require('@/src/api/userPoints').userPointsApi.getPoints as jest.Mock;
   const mockCreatePoint = require('@/src/api/userPoints').userPointsApi.createPoint as jest.Mock;
+  const mockPurgePoints = require('@/src/api/userPoints').userPointsApi.purgePoints as jest.Mock;
   const mockFetchFilters = require('@/src/api/misc').fetchFilters as jest.Mock;
 
   const renderWithClient = () => {
@@ -134,5 +136,40 @@ describe('PointsList (manual create)', () => {
 
     const payload = mockCreatePoint.mock.calls[0][0];
     expect(payload.categoryIds).toEqual(['39']);
+  });
+
+  it('should purge all points when confirming delete all', async () => {
+    mockGetPoints.mockResolvedValue([
+      {
+        id: 1,
+        name: 'P1',
+        latitude: 1,
+        longitude: 2,
+        address: null,
+        color: 'blue',
+        category: 'Food',
+        status: 'planning',
+        imported_at: new Date(0).toISOString(),
+        created_at: new Date(0).toISOString(),
+        updated_at: new Date(0).toISOString(),
+      },
+    ]);
+    mockPurgePoints.mockResolvedValue({ deleted: 1 });
+
+    renderWithClient();
+
+    await waitFor(() => {
+      expect(mockGetPoints).toHaveBeenCalled();
+    });
+
+    fireEvent.press(screen.getByLabelText('Управление точками'));
+    fireEvent.press(screen.getByText('Удалить все точки'));
+    await screen.findByText('Удалить все точки?');
+
+    fireEvent.press(screen.getByText('Удалить все'));
+
+    await waitFor(() => {
+      expect(mockPurgePoints).toHaveBeenCalledTimes(1);
+    });
   });
 });

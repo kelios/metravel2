@@ -24,6 +24,7 @@ export interface ImportedPoint {
   source: 'google_maps' | 'osm';
   original_id?: string | null;
   imported_at: string;
+  photo?: string | null;
   photos?: Record<string, unknown> | null;
   rating?: number | null;
   notes?: string | null;

@@ -121,6 +121,42 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
 })();
 `;
 
+const getEntryPreloadScript = () => String.raw`
+(function(){
+  try {
+    if (typeof document === 'undefined') return;
+    var scripts = document.getElementsByTagName('script');
+    var entrySrc = '';
+    for (var i = 0; i < scripts.length; i++) {
+      var s = scripts[i];
+      var src = s && s.getAttribute ? s.getAttribute('src') : '';
+      if (!src) continue;
+      if (src.indexOf('/_expo/static/js/web/entry-') !== -1 && src.indexOf('.js') !== -1) {
+        entrySrc = src;
+        try {
+          if (!s.getAttribute('fetchpriority')) {
+            s.setAttribute('fetchpriority', 'high');
+          }
+          if (typeof s.fetchPriority !== 'undefined') {
+            s.fetchPriority = 'high';
+          }
+        } catch (_e) {}
+        break;
+      }
+    }
+    if (!entrySrc) return;
+    if (document.querySelector('link[rel="preload"][as="script"][href="' + entrySrc + '"]')) return;
+    var link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'script';
+    link.href = entrySrc;
+    link.setAttribute('fetchpriority', 'high');
+    try { link.fetchPriority = 'high'; } catch (_e) {}
+    document.head.appendChild(link);
+  } catch (_e) {}
+})();
+`;
+
 const getFontFaceSwapScript = () => String.raw`
 (function(){
   try {
@@ -301,6 +337,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Ensure font-display=swap for dynamically injected icon fonts */}
       <script
         dangerouslySetInnerHTML={{ __html: getFontFaceSwapScript() }}
+      />
+
+      <script
+        dangerouslySetInnerHTML={{ __html: getEntryPreloadScript() }}
       />
 
       {/* Early travel hero preload to improve LCP on /travels/* */}

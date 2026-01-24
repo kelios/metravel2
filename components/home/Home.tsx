@@ -48,7 +48,6 @@ const HomeTrustBlock = lazy(() => import('./HomeTrustBlock'));
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));
 const HomeFAQSection = lazy(() => import('./HomeFAQSection'));
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
-const HomeFavoritesHistorySection = lazy(() => import('./HomeFavoritesHistorySection'));
 const HomeFinalCTA = lazy(() => import('./HomeFinalCTA'));
 
 const SectionSkeleton = memo(({ hydrated }: { hydrated: boolean }) => {
@@ -149,12 +148,11 @@ function Home() {
       'hero',
       'trust',
       'howItWorks',
-      ...(isAuthenticated ? (['favoritesHistory'] as const) : []),
       'inspiration',
       'faq',
       'finalCta',
     ] as const
-  ), [isAuthenticated]);
+  ), []);
 
   const sectionCount = sections.length;
 
@@ -175,16 +173,6 @@ function Home() {
           <Suspense fallback={<View style={{ minHeight: 320 }} />}>
             <HomeHowItWorks />
           </Suspense>
-        );
-      case 'favoritesHistory':
-        return showHeavyContent ? (
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <Suspense fallback={<View style={{ height: 240 }} />}>
-              <HomeFavoritesHistorySection />
-            </Suspense>
-          </Animated.View>
-        ) : (
-          <View style={{ height: 240 }} />
         );
       case 'inspiration':
         return showHeavyContent ? (

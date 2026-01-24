@@ -35,6 +35,12 @@ jest.mock('@/src/api/misc', () => ({
   })),
 }));
 
+jest.mock('@/src/api/userPoints', () => ({
+  userPointsApi: {
+    createPoint: jest.fn(async () => ({ id: 1 })),
+  },
+}));
+
 import PointList from '@/components/travel/PointList';
 
 jest.mock('expo-clipboard', () => ({
@@ -135,5 +141,31 @@ describe('PointList (web coordinates list uses popup template)', () => {
         });
       });
     });
+  });
+
+  it('sends photo in payload when adding point to user points', async () => {
+    const prevOs = Platform.OS;
+    (Platform as any).OS = 'web';
+
+    const mockCreatePoint = require('@/src/api/userPoints').userPointsApi.createPoint as jest.Mock;
+    mockCreatePoint.mockClear();
+
+    const { getByLabelText, getAllByLabelText } = render(
+      <PointList points={[basePoint as any]} baseUrl="https://example.com/travel-page" travelName="T" />
+    );
+
+    fireEvent.press(getByLabelText(/Показать координаты мест/));
+
+    const addButtons = getAllByLabelText('Мои точки');
+    fireEvent.press(addButtons[0]);
+
+    await waitFor(() => {
+      expect(mockCreatePoint).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = mockCreatePoint.mock.calls[0][0];
+    expect(payload.photo).toBe(basePoint.travelImageThumbUrl);
+
+    (Platform as any).OS = prevOs;
   });
 });

@@ -51,6 +51,18 @@ config.resolver = {
           type: 'sourceFile',
         };
       }
+
+      // Exclude react-native-gesture-handler from web bundles.
+      // It pulls in react-native-reanimated and is only needed for native.
+      if (
+        normalizedModuleName === 'react-native-gesture-handler' ||
+        normalizedModuleName.startsWith('react-native-gesture-handler/')
+      ) {
+        return {
+          filePath: path.resolve(__dirname, 'metro-stubs/react-native-gesture-handler.js'),
+          type: 'sourceFile',
+        };
+      }
     }
 
     // Исключаем html2canvas для jsPDF (не нужен для нашего использования)
@@ -159,6 +171,10 @@ config.resolver = {
     'leaflet': path.resolve(__dirname, 'metro-stubs/leaflet.js'),
     '@expo/vector-icons/MaterialCommunityIcons': path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
     'react-native-vector-icons/MaterialCommunityIcons': path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
+    'react-native-gesture-handler': path.resolve(
+      __dirname,
+      'metro-stubs/react-native-gesture-handler.js'
+    ),
   },
 }
 

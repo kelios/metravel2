@@ -12,6 +12,7 @@ import type { MapUiApi } from '@/src/types/mapUi';
 import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
 import { useMapApi } from '@/components/MapPage/Map/useMapApi';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
 import { createLeafletLayer } from '@/src/utils/mapWebLayers';
 
@@ -162,6 +163,26 @@ const PointMarkerWeb = React.memo(
       [colors.backgroundTertiary, point]
     );
     const badgeLabel = hasCoords && categoryLabel ? categoryLabel : colorLabel;
+
+    const photoUrl = React.useMemo(() => {
+      const v = (point as any)?.photo;
+      if (typeof v === 'string' && v.trim()) return v.trim();
+
+      const legacy = (point as any)?.photos;
+      if (typeof legacy === 'string' && legacy.trim()) return legacy.trim();
+      if (legacy && typeof legacy === 'object') {
+        const knownKeys = ['url', 'src', 'photo', 'image', 'thumb', 'thumbnail', 'travelImageThumbUrl'];
+        for (const k of knownKeys) {
+          const val = (legacy as any)?.[k];
+          if (typeof val === 'string' && val.trim()) return val.trim();
+        }
+        for (const val of Object.values(legacy as Record<string, unknown>)) {
+          if (typeof val === 'string' && val.trim()) return val.trim();
+        }
+      }
+
+      return '';
+    }, [point]);
 
     const mapLinks = React.useMemo(
       () =>
@@ -359,6 +380,29 @@ const PointMarkerWeb = React.memo(
                 ) : null}
               </div>
             </div>
+
+            {photoUrl ? (
+              <div
+                style={{
+                  marginTop: 12,
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                  border: `1px solid ${colors.border}`,
+                  background: colors.backgroundSecondary,
+                }}
+              >
+                <ImageCardMedia
+                  src={photoUrl}
+                  alt="Фото точки"
+                  height={140}
+                  width="100%"
+                  borderRadius={12}
+                  fit="contain"
+                  blurBackground
+                  blurRadius={16}
+                />
+              </div>
+            ) : null}
 
             {(point as any)?.description ? (
               <div style={{ marginTop: 10, color: colors.text, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>

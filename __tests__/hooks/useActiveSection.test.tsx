@@ -29,7 +29,7 @@ describe('useActiveSection', () => {
     // JSDOM doesn't compute layout; stub rects for deterministic scrollspy.
     const s1 = document.getElementById('section-1') as any
     const s2 = document.getElementById('section-2') as any
-    s1.getBoundingClientRect = jest.fn(() => ({ top: 0, bottom: 200, height: 200 } as any))
+    s1.getBoundingClientRect = jest.fn(() => ({ top: 30, bottom: 230, height: 200 } as any))
     s2.getBoundingClientRect = jest.fn(() => ({ top: 800, bottom: 1000, height: 200 } as any))
   })
 

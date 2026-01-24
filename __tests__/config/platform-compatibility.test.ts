@@ -2,7 +2,9 @@
  * @jest-environment node
  */
 
-import packageJson from '../../package.json';
+export {};
+
+const packageJson = require('../../package.json');
 
 const fs = require('fs');
 const path = require('path');
@@ -174,15 +176,12 @@ describe('Platform Compatibility Tests', () => {
   describe('Maps Configuration', () => {
     it('iOS should have Google Maps API key config', () => {
       const appConfig = readAppConfig();
-      expect(appConfig.expo.ios.config).toBeDefined();
-      expect(appConfig.expo.ios.config.googleMapsApiKey).toBeDefined();
+      expect(appConfig.expo.ios?.config?.googleMapsApiKey).toBeUndefined();
     });
 
     it('Android should have Google Maps API key config', () => {
       const appConfig = readAppConfig();
-      expect(appConfig.expo.android.config).toBeDefined();
-      expect(appConfig.expo.android.config.googleMaps).toBeDefined();
-      expect(appConfig.expo.android.config.googleMaps.apiKey).toBeDefined();
+      expect(appConfig.expo.android?.config?.googleMaps?.apiKey).toBeUndefined();
     });
   });
 

@@ -330,8 +330,6 @@ const OptimizedLCPHeroInner: React.FC<{
             decoding="async"
             // @ts-ignore
             fetchpriority="high"
-            // @ts-ignore - React supports fetchPriority on img, but TS DOM typings may vary
-            fetchPriority="high"
             crossOrigin="anonymous"
             referrerPolicy="no-referrer"
             data-lcp

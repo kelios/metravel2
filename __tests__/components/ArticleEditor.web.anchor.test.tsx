@@ -1,4 +1,3 @@
-import React from 'react';
 import { TextInput, Platform } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
@@ -29,6 +28,8 @@ jest.mock('@/components/QuillEditor.web', () => {
   return {
     __esModule: true,
     default: React.forwardRef((props: any, ref: any) => {
+      ;(globalThis as any).__quillProps__ = props;
+
       const readSelection = () => {
         const sel = (globalThis as any).__quillSelection__;
         if (sel && typeof sel.index === 'number' && typeof sel.length === 'number') {
@@ -98,6 +99,7 @@ describe('ArticleEditor.web anchors', () => {
     jest.clearAllMocks();
     setPlatformOs('web');
     (globalThis as any).__quillSelection__ = null;
+    ;(globalThis as any).__quillProps__ = null;
   });
 
   it('inserts an anchor and it is visible in HTML mode', async () => {
@@ -217,5 +219,108 @@ describe('ArticleEditor.web anchors', () => {
       '_blank',
       'noopener,noreferrer'
     );
+  });
+
+  it('normalizes full HTML document to body HTML when leaving HTML mode (content should not disappear)', async () => {
+    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+
+    const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
+      <ArticleEditor content={''} onChange={jest.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+    });
+
+    // Enter HTML mode.
+    fireEvent.press(getByLabelText('Показать HTML-код'));
+
+    await waitFor(() => {
+      const inputs = UNSAFE_getAllByType(TextInput);
+      expect(inputs.length).toBeGreaterThan(0);
+    });
+
+    const fullDoc = '<!DOCTYPE html><html><head><style>body{color:red}</style></head><body><p>HELLO</p></body></html>';
+
+    const inputs = UNSAFE_getAllByType(TextInput);
+    const htmlInput = inputs[inputs.length - 1];
+    fireEvent.changeText(htmlInput, fullDoc);
+
+    // Leave HTML mode => should normalize to body.innerHTML.
+    fireEvent.press(getByLabelText('Скрыть HTML-код'));
+
+    // Re-open HTML mode and verify content is preserved and normalized.
+    fireEvent.press(getByLabelText('Показать HTML-код'));
+
+    await waitFor(() => {
+      const nextInputs = UNSAFE_getAllByType(TextInput);
+      const nextHtmlInput = nextInputs[nextInputs.length - 1];
+      const value = String(nextHtmlInput.props.value);
+      expect(value).toContain('<p>HELLO</p>');
+      expect(value.toLowerCase()).not.toContain('<!doctype');
+      expect(value.toLowerCase()).not.toContain('<head');
+    });
+  });
+
+  it('does not wipe non-empty content on non-user empty Quill onChange', async () => {
+    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+
+    const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
+      <ArticleEditor content={'<p>keep</p>'} onChange={jest.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+    });
+
+    const quillProps = (globalThis as any).__quillProps__;
+    expect(quillProps).toBeTruthy();
+
+    // Simulate Quill emitting empty change with source !== 'user' (mount/toggle artifact)
+    quillProps.onChange('', null, 'api');
+
+    fireEvent.press(getByLabelText('Показать HTML-код'));
+
+    await waitFor(() => {
+      const inputs = UNSAFE_getAllByType(TextInput);
+      const htmlInput = inputs[inputs.length - 1];
+      expect(String(htmlInput.props.value)).toContain('<p>keep</p>');
+    });
+  });
+
+  it('preserves a normal HTML fragment when toggling HTML mode on and off', async () => {
+    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+
+    const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
+      <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+    });
+
+    // Enter HTML mode.
+    fireEvent.press(getByLabelText('Показать HTML-код'));
+
+    await waitFor(() => {
+      const inputs = UNSAFE_getAllByType(TextInput);
+      expect(inputs.length).toBeGreaterThan(0);
+    });
+
+    const inputs = UNSAFE_getAllByType(TextInput);
+    const htmlInput = inputs[inputs.length - 1];
+    fireEvent.changeText(htmlInput, '<p>changed</p>');
+
+    // Leave HTML mode.
+    fireEvent.press(getByLabelText('Скрыть HTML-код'));
+
+    // Re-open HTML mode and verify the change is still there.
+    fireEvent.press(getByLabelText('Показать HTML-код'));
+
+    await waitFor(() => {
+      const nextInputs = UNSAFE_getAllByType(TextInput);
+      const nextHtmlInput = nextInputs[nextInputs.length - 1];
+      expect(String(nextHtmlInput.props.value)).toContain('<p>changed</p>');
+    });
   });
 });

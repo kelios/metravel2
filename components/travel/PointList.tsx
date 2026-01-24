@@ -689,6 +689,10 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         category: categoryNameString,
       };
 
+      if (point.travelImageThumbUrl) {
+        payload.photo = point.travelImageThumbUrl;
+      }
+
       if (filteredIds.length > 0) {
         payload.categoryIds = filteredIds;
       }

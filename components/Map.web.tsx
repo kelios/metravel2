@@ -778,6 +778,14 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         category: categoryNameString,
         categoryName: categoryNameString,
       };
+
+      const photoCandidate =
+        (point as any)?.travelImageThumbUrl ??
+        (point as any)?.travel_image_thumb_url ??
+        (point as any)?.image;
+      if (typeof photoCandidate === 'string' && photoCandidate.trim()) {
+        payload.photo = photoCandidate.trim();
+      }
       if (filteredIds.length > 0) {
         payload.categoryIds = filteredIds;
       }

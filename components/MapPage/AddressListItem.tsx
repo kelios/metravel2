@@ -267,6 +267,10 @@ const AddressListItem: React.FC<Props> = ({
             categoryName: categoryString,
         };
 
+        if (travelImageThumbUrl) {
+            payload.photo = travelImageThumbUrl;
+        }
+
         const tags: Record<string, unknown> = {};
         if (urlTravel) tags.travelUrl = urlTravel;
         if (articleUrl) tags.articleUrl = articleUrl;
@@ -302,6 +306,7 @@ const AddressListItem: React.FC<Props> = ({
         queryClient,
         travel.lat,
         travel.lng,
+        travelImageThumbUrl,
         urlTravel,
     ]);
 

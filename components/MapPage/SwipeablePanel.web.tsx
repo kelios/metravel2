@@ -1,11 +1,5 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { StyleSheet, ViewStyle, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from 'react-native-reanimated';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, View, ViewStyle, Pressable } from 'react-native';
 
 interface SwipeablePanelProps {
   children: React.ReactNode;
@@ -28,7 +22,7 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
   swipeDirection = 'right',
   threshold = 100,
 }) => {
-  const translateX = useSharedValue(0);
+  const [translateX, setTranslateX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef(0);
   const activePointerIdRef = useRef<number | null>(null);
@@ -43,25 +37,17 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
     setIsDragging(false);
     activePointerIdRef.current = null;
 
-    const distance = Math.abs(translateX.value);
+    const distance = Math.abs(translateX);
 
     // Закрываем панель если превышен порог
     if (distance > threshold) {
       const finalPosition = swipeDirection === 'right' ? 400 : -400;
-      translateX.value = withSpring(finalPosition, {
-        damping: 20,
-        stiffness: 90,
-      }, (finished) => {
-        if (finished) {
-          runOnJS(closePanel)();
-        }
-      });
+      setTranslateX(finalPosition);
+      // Give CSS transition time to finish.
+      setTimeout(() => closePanel(), 300);
     } else {
       // Возвращаем панель на место
-      translateX.value = withSpring(0, {
-        damping: 20,
-        stiffness: 90,
-      });
+      setTranslateX(0);
     }
   }, [isDragging, threshold, swipeDirection, translateX, closePanel]);
 
@@ -90,11 +76,11 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
 
     // Разрешаем свайп только в указанном направлении
     if (swipeDirection === 'right' && deltaX > 0) {
-      translateX.value = deltaX;
+      setTranslateX(deltaX);
     } else if (swipeDirection === 'left' && deltaX < 0) {
-      translateX.value = deltaX;
+      setTranslateX(deltaX);
     }
-  }, [isDragging, swipeDirection, translateX]);
+  }, [isDragging, swipeDirection]);
 
   const handlePointerUp = useCallback((e: any) => {
     const event = e.nativeEvent as PointerEvent;
@@ -106,21 +92,27 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
     finalizeDrag();
   }, [finalizeDrag]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: translateX.value }],
-    };
-  });
-
   // Сбрасываем позицию при изменении isOpen
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
-      translateX.value = withSpring(0, {
-        damping: 20,
-        stiffness: 90,
-      });
+      setTranslateX(0);
+      setIsDragging(false);
+      activePointerIdRef.current = null;
     }
-  }, [isOpen, translateX]);
+  }, [isOpen]);
+
+  const panelStyle = useMemo(() => {
+    const base: any = {
+      transform: [{ translateX }],
+    };
+    if (Platform.OS === 'web') {
+      base.transitionProperty = 'transform';
+      base.transitionDuration = isDragging ? '0ms' : '300ms';
+      base.transitionTimingFunction = 'ease-out';
+      base.willChange = 'transform';
+    }
+    return base;
+  }, [isDragging, translateX]);
 
   // Добавляем глобальные обработчики для отслеживания движения за пределами компонента
   React.useEffect(() => {
@@ -131,9 +123,9 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
         const deltaX = e.clientX - startXRef.current;
 
         if (swipeDirection === 'right' && deltaX > 0) {
-          translateX.value = deltaX;
+          setTranslateX(deltaX);
         } else if (swipeDirection === 'left' && deltaX < 0) {
-          translateX.value = deltaX;
+          setTranslateX(deltaX);
         }
       };
 
@@ -153,20 +145,26 @@ const SwipeablePanel: React.FC<SwipeablePanelProps> = ({
         window.removeEventListener('pointercancel', handleGlobalPointerUp);
       };
     }
+    return () => undefined;
   }, [isDragging, swipeDirection, translateX, finalizeDrag]);
 
+  if (!isOpen) return null;
+
   return (
-    <Animated.View style={[styles.container, style, animatedStyle]}>
-      <Pressable
-        style={styles.pressableContent}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
+    <View
+      style={[styles.container, panelStyle, style]}
+      // @ts-ignore - web-only pointer events
+      onPointerDown={handlePointerDown as any}
+      // @ts-ignore - web-only pointer events
+      onPointerMove={handlePointerMove as any}
+      // @ts-ignore - web-only pointer events
+      onPointerUp={handlePointerUp as any}
+      // @ts-ignore - web-only pointer events
+      onPointerCancel={handlePointerCancel as any}
+    >
+      <Pressable style={styles.overlay} onPress={onClose} />
+      <View style={[styles.panel, style]}>{children}</View>
+    </View>
   );
 };
 
@@ -174,7 +172,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  pressableContent: {
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  panel: {
     flex: 1,
   },
 });

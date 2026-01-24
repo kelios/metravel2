@@ -1,7 +1,9 @@
 'use strict';
 
 // Import gesture handler at the very top for proper initialization
-import 'react-native-gesture-handler';
+if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
+  require('react-native-gesture-handler');
+}
 
 if (typeof globalThis !== 'undefined' && typeof globalThis._WORKLET === 'undefined') {
   globalThis._WORKLET = false;

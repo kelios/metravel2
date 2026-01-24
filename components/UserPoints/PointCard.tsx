@@ -7,6 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { showToast } from '@/src/utils/toast';
 
 interface PointCardProps {
@@ -89,6 +90,27 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     return legacy;
   }, [countryLabel, point]);
   const styles = React.useMemo(() => createStyles(colors), [colors]);
+
+  const photoUrl = React.useMemo(() => {
+    const v = (point as any)?.photo;
+    const s = typeof v === 'string' ? v.trim() : '';
+    if (s) return s;
+
+    const legacy = (point as any)?.photos;
+    if (typeof legacy === 'string' && legacy.trim()) return legacy.trim();
+    if (legacy && typeof legacy === 'object') {
+      const knownKeys = ['url', 'src', 'photo', 'image', 'thumb', 'thumbnail', 'travelImageThumbUrl'];
+      for (const k of knownKeys) {
+        const val = (legacy as any)?.[k];
+        if (typeof val === 'string' && val.trim()) return val.trim();
+      }
+      for (const val of Object.values(legacy as Record<string, unknown>)) {
+        if (typeof val === 'string' && val.trim()) return val.trim();
+      }
+    }
+
+    return null;
+  }, [point]);
 
   const showActions = !selectionMode && (typeof onEdit === 'function' || typeof onDelete === 'function');
 
@@ -256,6 +278,20 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       activeOpacity={0.7}
     >
       <View testID="color-indicator" style={[styles.colorIndicator, { backgroundColor: markerColor }]} />
+
+      {photoUrl ? (
+        <View style={[styles.photoWrap, layout === 'grid' ? styles.photoWrapGrid : null]}>
+          <ImageCardMedia
+            src={photoUrl}
+            height={layout === 'grid' ? 120 : 84}
+            width={layout === 'grid' ? '100%' : 84}
+            borderRadius={DESIGN_TOKENS.radii.md}
+            fit="contain"
+            blurBackground
+            blurRadius={12}
+          />
+        </View>
+      ) : null}
 
       <View
         style={[
@@ -458,6 +494,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   colorIndicator: {
     width: 6,
+  },
+  photoWrap: {
+    width: 84,
+    padding: DESIGN_TOKENS.spacing.sm,
+  },
+  photoWrapGrid: {
+    width: 140,
+    padding: DESIGN_TOKENS.spacing.sm,
   },
   content: {
     flex: 1,

@@ -14,7 +14,18 @@ export default function TravelDetailsScreen() {
 
   return (
     <Suspense
-      fallback={<View style={{ flex: 1, backgroundColor: colors.background }} />}
+      fallback={
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          <View
+            style={{
+              height: 260,
+              margin: 16,
+              borderRadius: 12,
+              backgroundColor: colors.backgroundSecondary,
+            }}
+          />
+        </View>
+      }
     >
       <TravelDetailsLazy />
     </Suspense>

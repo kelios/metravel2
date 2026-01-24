@@ -55,6 +55,23 @@ function sanitizeHtml(html: string): string {
     return result;
 }
 
+function normalizeHtmlForQuill(input: string): string {
+    const raw = String(input ?? '');
+    const looksLikeFullDocument = /<!doctype\s+html/i.test(raw) || /<html[\s>]/i.test(raw) || /<head[\s>]/i.test(raw) || /<body[\s>]/i.test(raw);
+    if (!looksLikeFullDocument) return raw;
+
+    if (typeof window === 'undefined') return raw;
+    try {
+        const parser = new window.DOMParser();
+        const doc = parser.parseFromString(raw, 'text/html');
+        const body = doc?.body;
+        const extracted = body?.innerHTML;
+        return typeof extracted === 'string' && extracted.trim().length > 0 ? extracted : raw;
+    } catch {
+        return raw;
+    }
+}
+
 // Важно: грузим в отдельном модуле, чтобы Quill не попадал в initial chunk
 const QuillEditor =
     isWeb && win
@@ -126,7 +143,11 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const lastFullscreenRef = useRef<boolean | null>(null);
 
-    const lastExternalContentRef = useRef<string>('');
+    const lastExternalContentRef = useRef<string>(typeof content === 'string' ? content : '');
+
+    const lastEmittedHtmlRef = useRef<string>(typeof content === 'string' ? content : '');
+
+    const htmlRef = useRef<string>(typeof content === 'string' ? content : '');
 
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
@@ -311,8 +332,37 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const debouncedParentChange = useDebounce(onChange, 250);
 
     useEffect(() => {
-        setHtml(prev => (prev === content ? prev : content));
+        const next = typeof content === 'string' ? content : '';
+
+        // Only react to actual external content changes.
+        if (next === lastExternalContentRef.current) return;
+
+        // Ignore prop updates that are simply echo of our own debounced onChange.
+        if (next === lastEmittedHtmlRef.current) {
+            lastExternalContentRef.current = next;
+            return;
+        }
+
+        // Avoid wiping non-empty local state with an empty/stale prop value.
+        if (next.trim().length === 0 && htmlRef.current.trim().length > 0) {
+            lastExternalContentRef.current = next;
+            return;
+        }
+
+        setHtml(prev => (prev === next ? prev : next));
+        htmlRef.current = next;
+        lastExternalContentRef.current = next;
+        lastEmittedHtmlRef.current = next;
     }, [content]);
+
+    useEffect(() => {
+        if (!isWeb) return;
+        if (showHtml) return;
+        if (shouldLoadQuill) return;
+        const next = typeof html === 'string' ? html : '';
+        if (next.trim().length === 0) return;
+        setShouldLoadQuill(true);
+    }, [html, shouldLoadQuill, showHtml]);
 
     useEffect(() => {
         const prev = lastExternalContentRef.current;
@@ -461,9 +511,27 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const fireChange = useCallback((val: string) => {
         const clean = sanitizeHtml(val);
+        lastEmittedHtmlRef.current = clean;
+        htmlRef.current = clean;
         setHtml(clean);
         debouncedParentChange(clean);
     }, [debouncedParentChange]);
+
+    const focusQuill = useCallback(() => {
+        if (!isWeb) return;
+        if (showHtml) return;
+        try {
+            const editor = quillRef.current?.getEditor?.();
+            if (editor && typeof editor.focus === 'function') {
+                editor.focus();
+                return;
+            }
+            const root = editor?.root as HTMLElement | undefined;
+            if (root && typeof root.focus === 'function') root.focus();
+        } catch {
+            // noop
+        }
+    }, [showHtml]);
 
     const insertImage = useCallback((url: string) => {
         if (!quillRef.current) return;
@@ -529,6 +597,16 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 return;
             }
 
+            const onDragOver = (e: DragEvent) => {
+                if (!e.dataTransfer?.files?.length) return;
+                e.preventDefault();
+                try {
+                    e.dataTransfer.dropEffect = 'copy';
+                } catch {
+                    // noop
+                }
+            };
+
             const onDrop = (e: DragEvent) => {
                 if (!e.dataTransfer?.files?.length) return;
                 e.preventDefault();
@@ -536,16 +614,20 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             };
             const onPaste = (e: ClipboardEvent) => {
                 const file = Array.from(e.clipboardData?.files ?? [])[0];
-                if (file) {
+                if (file && typeof file.type === 'string' && file.type.startsWith('image/')) {
                     e.preventDefault();
                     uploadAndInsert(file);
                 }
             };
 
+            root.addEventListener('dragover', onDragOver);
+            root.addEventListener('dragenter', onDragOver);
             root.addEventListener('drop', onDrop);
             root.addEventListener('paste', onPaste);
 
             cleanup = () => {
+                root.removeEventListener('dragover', onDragOver);
+                root.removeEventListener('dragenter', onDragOver);
                 root.removeEventListener('drop', onDrop);
                 root.removeEventListener('paste', onPaste);
             };
@@ -673,6 +755,27 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                             tmpStoredRange.current = selection;
                         } catch {
                             tmpStoredRange.current = null;
+                        }
+
+                        if (!showHtml) {
+                            try {
+                                const editor = quillRef.current?.getEditor?.();
+                                const currentFromQuill = String(editor?.root?.innerHTML ?? '');
+                                if (currentFromQuill) {
+                                    fireChange(currentFromQuill);
+                                }
+                            } catch {
+                                // noop
+                            }
+                        }
+
+                        if (showHtml) {
+                            const currentRaw = typeof html === 'string' ? html : '';
+                            const normalized = normalizeHtmlForQuill(currentRaw);
+                            if (normalized !== currentRaw) {
+                                fireChange(normalized);
+                            }
+                            if (normalized.trim().length > 0) setShouldLoadQuill(true);
                         }
                         setShowHtml(v => !v);
                     }}
@@ -806,6 +909,42 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         }
     }, [html]);
 
+    const handleQuillChange = useCallback(
+        (val: string, _delta: unknown, source: unknown) => {
+            const next = typeof val === 'string' ? val : '';
+            const local = typeof html === 'string' ? html : '';
+
+            // Quill may emit non-user changes (source !== 'user') during mount/toggle.
+            // Some of those can be empty strings; do not let them wipe a non-empty local state.
+            if (source !== 'user' && next.trim().length === 0 && local.trim().length > 0) return;
+
+            fireChange(next);
+        },
+        [fireChange, html]
+    );
+
+    useEffect(() => {
+        if (!isWeb || !win) return;
+        if (showHtml) return;
+        if (!shouldLoadQuill) return;
+
+        const raf = (win as any)?.requestAnimationFrame?.(() => {
+            try {
+                ensureQuillContent();
+            } catch {
+                // noop
+            }
+        }) ?? 0;
+
+        return () => {
+            try {
+                (win as any)?.cancelAnimationFrame?.(raf);
+            } catch {
+                // noop
+            }
+        };
+    }, [ensureQuillContent, shouldLoadQuill, showHtml]);
+
     useEffect(() => {
         if (!isWeb || !win) return;
         if (showHtml) return;
@@ -868,7 +1007,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     ref={handleQuillRef}
                     theme="snow"
                     value={html}
-                    onChange={(val: string) => fireChange(val)}
+                    onChange={handleQuillChange}
                     modules={modules}
                     placeholder={placeholder}
                     style={dynamicStyles.editor}
@@ -882,7 +1021,18 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const body = (
         <>
             <Toolbar />
-            <View ref={editorViewportRef} style={dynamicStyles.editorArea}>{editorArea}</View>
+            <View
+                ref={editorViewportRef}
+                style={dynamicStyles.editorArea}
+                {...(isWeb
+                    ? ({
+                          onMouseDown: () => focusQuill(),
+                          onTouchStart: () => focusQuill(),
+                      } as any)
+                    : null)}
+            >
+                {editorArea}
+            </View>
             <Modal
                 visible={anchorModalVisible}
                 transparent

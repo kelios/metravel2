@@ -1015,19 +1015,9 @@ const deleteSelected = useCallback(async () => {
 }, [queryClient, selectedIds]);
 
 const deleteAll = useCallback(async () => {
-  const allIds = points.map((p: any) => Number(p.id)).filter((id: any) => Number.isFinite(id));
-  if (!allIds.length) return;
   setIsBulkWorking(true);
-  setBulkProgress({ current: 0, total: allIds.length });
   try {
-    const batchSize = 5;
-    let done = 0;
-    for (let i = 0; i < allIds.length; i += batchSize) {
-      const chunk = allIds.slice(i, i + batchSize);
-      await Promise.all(chunk.map((id) => userPointsApi.deletePoint(id)));
-      done += chunk.length;
-      setBulkProgress({ current: done, total: allIds.length });
-    }
+    await userPointsApi.purgePoints();
     queryClient.setQueryData(['userPointsAll'], []);
     exitSelectionMode();
   } catch {
@@ -1037,7 +1027,7 @@ const deleteAll = useCallback(async () => {
     setBulkProgress(null);
     setShowConfirmDeleteAll(false);
   }
-}, [exitSelectionMode, points, queryClient]);
+}, [exitSelectionMode, queryClient]);
 
   const handleMapPress = useCallback(
     (coords: { lat: number; lng: number }) => {
