@@ -14,7 +14,6 @@ import ThemedPaperProvider from "@/components/ThemedPaperProvider";
 const FooterLazy = React.lazy(() => import('@/components/Footer'));
 const ConsentBannerLazy = React.lazy(() => import('@/components/ConsentBanner'));
 const ToastLazy = React.lazy(() => import('@/components/ToastHost'));
-import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
@@ -229,7 +228,7 @@ function RootLayoutNav() {
             SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
             "Roboto-Regular": require("../assets/fonts/Roboto-Regular.ttf"),
             "Roboto-Medium": require("../assets/fonts/Roboto-Medium.ttf"),
-            ...(Feather as any).font,
+            ...(require('@expo/vector-icons/Feather') as any).font,
           }
     );
 

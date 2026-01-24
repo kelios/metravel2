@@ -215,7 +215,7 @@ const OptimizedLCPHeroInner: React.FC<{
     typeof window !== 'undefined'
       ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
       : lcpMaxWidth
-  const lcpQuality = isMobile ? 55 : 70
+  const lcpQuality = isMobile ? 55 : 60
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
