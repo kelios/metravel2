@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -120,15 +120,18 @@ export default function ConsentBanner() {
 
   return (
     <View
-      style={[styles.wrapper, { bottom: bottomOffset }, suspendForOverlay && styles.wrapperHidden]}
-      pointerEvents={suspendForOverlay ? 'none' : 'box-none'}
+      style={[
+        styles.wrapper,
+        { bottom: bottomOffset },
+        suspendForOverlay && styles.wrapperHidden,
+        { pointerEvents: suspendForOverlay ? 'none' : 'box-none' } as any,
+      ]}
       testID="consent-banner"
     >
       <View
-        style={[styles.container, { backgroundColor: colors.surface }]}
-        pointerEvents="box-none"
+        style={[styles.container, { backgroundColor: colors.surface }, { pointerEvents: 'box-none' } as any]}
       >
-        <View style={styles.textBlock} pointerEvents="none">
+        <View style={[styles.textBlock, { pointerEvents: 'none' } as any]}>
           <Text style={[styles.title, { color: colors.text }]}>Мы ценим вашу приватность</Text>
           <Text style={[styles.text, { color: colors.textMuted }]}>
             Мы используем технические файлы и, с вашего согласия, аналитические инструменты (Яндекс.Метрика,
@@ -138,7 +141,7 @@ export default function ConsentBanner() {
             Подробнее читайте в нашей Политике конфиденциальности и на странице настроек cookies.
           </Text>
         </View>
-        <View style={styles.buttonsRow} pointerEvents="auto">
+        <View style={[styles.buttonsRow, { pointerEvents: 'auto' } as any]}>
           <Button
             label="Только необходимые"
             onPress={handleNecessaryOnly}
@@ -158,8 +161,8 @@ export default function ConsentBanner() {
         </View>
       </View>
       {isWeb && !isMobile && (
-        <View style={styles.bottomLinkRow} pointerEvents="box-none">
-          <Link href="/cookies" style={styles.manageLink} pointerEvents="auto">
+        <View style={[styles.bottomLinkRow, { pointerEvents: 'box-none' } as any]}>
+          <Link href="/cookies" style={[styles.manageLink, { pointerEvents: 'auto' } as any]}>
             <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
           </Link>
         </View>

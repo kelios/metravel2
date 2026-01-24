@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
@@ -284,9 +284,11 @@ function UnifiedTravelCard({
             />
           ) : (
             <View
-              style={styles.imagePlaceholder}
               testID="image-stub"
-              {...(isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : {})}
+              style={[
+                styles.imagePlaceholder,
+                isWeb && onMediaPress ? ({ pointerEvents: 'none' } as any) : null,
+              ]}
               {...(process.env.NODE_ENV === 'test'
                 ? {}
                 : ({ accessibilityElementsHidden: true, 'aria-hidden': true } as any))}

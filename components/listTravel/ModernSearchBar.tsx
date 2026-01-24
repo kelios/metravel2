@@ -47,6 +47,7 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
   const animatedScale = useRef(new Animated.Value(1)).current;
   const animatedOpacity = useRef(new Animated.Value(0)).current;
   const inputRef = useRef<TextInput>(null);
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   useEffect(() => {
     setLocalValue(value);
@@ -59,17 +60,17 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
     Animated.parallel([
       Animated.spring(animatedScale, {
         toValue: 1.02,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
         tension: 50,
         friction: 7,
       }),
       Animated.timing(animatedOpacity, {
         toValue: 1,
         duration: animations.duration.fast,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start();
-  }, [onFocus, animatedScale, animatedOpacity]);
+  }, [onFocus, animatedScale, animatedOpacity, shouldUseNativeDriver]);
 
   const handleBlur = useCallback(() => {
     setIsFocused(false);
@@ -78,17 +79,17 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
     Animated.parallel([
       Animated.spring(animatedScale, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
         tension: 50,
         friction: 7,
       }),
       Animated.timing(animatedOpacity, {
         toValue: 0,
         duration: animations.duration.fast,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start();
-  }, [onBlur, animatedScale, animatedOpacity]);
+  }, [onBlur, animatedScale, animatedOpacity, shouldUseNativeDriver]);
 
   const handleChangeText = useCallback((text: string) => {
     setLocalValue(text);

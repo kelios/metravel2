@@ -323,7 +323,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
             + "  if (typeof window !== 'undefined') {\n"
             + "    var host = window.location && window.location.hostname;\n"
             + "    var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';\n"
-            + "    if (!isProdHost) return;\n"
+            + "    var isLocalHost = host === 'localhost' || host === '127.0.0.1';\n"
+            + "    if (!isProdHost && !isLocalHost) return;\n"
             + '    const shouldSuppress = (args) => {\n'
             + '      const msg = args && args[0];\n'
             + "      if (!msg || typeof msg !== 'string') return false;\n"

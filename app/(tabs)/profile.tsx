@@ -557,11 +557,10 @@ export default function ProfileScreen() {
             </View>
           </View>
           <View style={styles.dashboardSections}>{Array.from({ length: 4 }).map((_, index) => (
-              <View key={index} style={{ marginBottom: 12 }}>
-                <SkeletonLoader width="100%" height={120} borderRadius={12} />
-              </View>
-            ))}
-          </View>
+            <View key={index} style={{ marginBottom: 12 }}>
+              <SkeletonLoader width="100%" height={120} borderRadius={12} />
+            </View>
+          ))}</View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -831,29 +830,28 @@ export default function ProfileScreen() {
         >
           <Text style={styles.menuSectionTitle}>Разделы</Text>
           <View style={styles.menuContainer}>{menuItems.map((item, index) => (
-              <Pressable
-                key={index}
-                style={[styles.menuItem, globalFocusStyles.focusable]}
-                onPress={item.onPress}
-                accessibilityRole="button"
-                accessibilityLabel={item.label}
-                {...Platform.select({
-                  web: { cursor: 'pointer' },
-                })}
-              >
-                <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
-                  <Feather name={item.icon as any} size={20} color={item.color} />
-                </View>
-                <View style={styles.menuContent}>
-                  <Text style={styles.menuLabel}>{item.label}</Text>
-                  {item.count !== undefined && (
-                    <Text style={styles.menuCount}>{item.count}</Text>
-                  )}
-                </View>
-                <Feather name="chevron-right" size={20} color={colors.textMuted} />
-              </Pressable>
-            ))}
-          </View>
+            <Pressable
+              key={index}
+              style={[styles.menuItem, globalFocusStyles.focusable]}
+              onPress={item.onPress}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              {...Platform.select({
+                web: { cursor: 'pointer' },
+              })}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
+                <Feather name={item.icon as any} size={20} color={item.color} />
+              </View>
+              <View style={styles.menuContent}>
+                <Text style={styles.menuLabel}>{item.label}</Text>
+                {item.count !== undefined && (
+                  <Text style={styles.menuCount}>{item.count}</Text>
+                )}
+              </View>
+              <Feather name="chevron-right" size={20} color={colors.textMuted} />
+            </Pressable>
+          ))}</View>
         </View>
 
         {/* Logout Button */}

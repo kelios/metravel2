@@ -21,6 +21,7 @@ export default function ScrollToTopButton({
   forceVisible,
 }: ScrollToTopButtonProps) {
   const colors = useThemedColors();
+  const shouldUseNativeDriver = Platform.OS !== 'web';
   const styles = useMemo(() => StyleSheet.create({
     container: {
       position: 'absolute',
@@ -81,11 +82,11 @@ export default function ScrollToTopButton({
             Animated.timing(fadeAnim, {
               toValue: visible ? 1 : 0,
               duration: 200,
-              useNativeDriver: true,
+              useNativeDriver: shouldUseNativeDriver,
             }),
             Animated.spring(scaleAnim, {
               toValue: visible ? 1 : 0.8,
-              useNativeDriver: true,
+              useNativeDriver: shouldUseNativeDriver,
               tension: 100,
               friction: 8,
             }),
@@ -97,7 +98,7 @@ export default function ScrollToTopButton({
         scrollY.removeListener(listener);
       };
     }
-  }, [scrollY, threshold, isVisible, fadeAnim, scaleAnim, forceVisible]);
+  }, [scrollY, threshold, isVisible, fadeAnim, scaleAnim, forceVisible, shouldUseNativeDriver]);
 
   const scrollToTop = () => {
     if (scrollViewRef?.current) {

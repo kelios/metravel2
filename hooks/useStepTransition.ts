@@ -222,12 +222,14 @@ export function useTipAnimation(visible: boolean, delay: number = 0, config: Ste
 export function useButtonHoverAnimation() {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
+  const shouldUseNativeDriver = Platform.OS !== 'web';
+
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
       toValue: 0.95,
       friction: 3,
       tension: 100,
-      useNativeDriver: true,
+      useNativeDriver: shouldUseNativeDriver,
     }).start();
   };
 
@@ -236,7 +238,7 @@ export function useButtonHoverAnimation() {
       toValue: 1,
       friction: 3,
       tension: 100,
-      useNativeDriver: true,
+      useNativeDriver: shouldUseNativeDriver,
     }).start();
   };
 
