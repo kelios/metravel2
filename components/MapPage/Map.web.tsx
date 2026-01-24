@@ -426,8 +426,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // Popup component
   const PopupComponent = useMemo(() => {
     if (!rl) return null;
-    return createMapPopupComponent({ useMap: rl.useMap });
-  }, [rl]);
+    return createMapPopupComponent({ useMap: rl.useMap, userLocation: userLocationLatLng });
+  }, [rl, userLocationLatLng]);
 
   const noPointsAlongRoute = useMemo(() => {
     if (mode !== 'route') return false;

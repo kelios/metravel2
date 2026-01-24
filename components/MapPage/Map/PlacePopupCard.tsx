@@ -10,6 +10,9 @@ type Props = {
   imageUrl?: string | null;
   categoryLabel?: string | null;
   coord?: string | null;
+  drivingDistanceMeters?: number | null;
+  drivingDurationSeconds?: number | null;
+  isDrivingLoading?: boolean;
   onOpenArticle?: () => void;
   onCopyCoord?: () => void;
   onShareTelegram?: () => void;
@@ -28,6 +31,9 @@ const PlacePopupCard: React.FC<Props> = ({
   imageUrl,
   categoryLabel,
   coord,
+  drivingDistanceMeters,
+  drivingDurationSeconds,
+  isDrivingLoading = false,
   onOpenArticle,
   onCopyCoord,
   onShareTelegram,
@@ -43,6 +49,19 @@ const PlacePopupCard: React.FC<Props> = ({
   const colors = useThemedColors();
   const hasCoord = !!coord;
   const hasArticle = typeof onOpenArticle === 'function';
+  const hasDrivingInfo =
+    typeof drivingDistanceMeters === 'number' &&
+    Number.isFinite(drivingDistanceMeters) &&
+    typeof drivingDurationSeconds === 'number' &&
+    Number.isFinite(drivingDurationSeconds);
+
+  const drivingText = React.useMemo(() => {
+    if (!hasDrivingInfo) return null;
+    const km = drivingDistanceMeters! / 1000;
+    const mins = Math.max(1, Math.round(drivingDurationSeconds! / 60));
+    const kmLabel = km >= 10 ? `${Math.round(km)} км` : `${km.toFixed(1)} км`;
+    return `${kmLabel} · ${mins} мин`;
+  }, [drivingDistanceMeters, drivingDurationSeconds, hasDrivingInfo]);
   const { width: viewportWidth } = useWindowDimensions();
   const isCompactPopup = viewportWidth <= 640;
   const isNarrowPopup = viewportWidth <= 480;
@@ -82,7 +101,9 @@ const PlacePopupCard: React.FC<Props> = ({
               onPress={onOpenArticle}
               title="Открыть статью"
               style={{ position: 'absolute', inset: 0 } as any}
-            />
+            >
+              {null}
+            </CardActionPressable>
           )}
         </View>
 
@@ -131,6 +152,33 @@ const PlacePopupCard: React.FC<Props> = ({
               >
                 {categoryLabel}
               </Text>
+            </View>
+          )}
+
+          {(isDrivingLoading || hasDrivingInfo) && (
+            <View
+              testID="popup-driving-info"
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Feather name="navigation" size={12} color={colors.textMuted} />
+              {isDrivingLoading ? (
+                <ActivityIndicator size="small" color={colors.textMuted} />
+              ) : (
+                <Text
+                  style={{
+                    fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
+                    color: colors.textMuted,
+                  }}
+                  numberOfLines={1}
+                >
+                  {drivingText}
+                </Text>
+              )}
             </View>
           )}
 

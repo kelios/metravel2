@@ -384,12 +384,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
               </View>
 
               {Platform.OS === 'web' ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 } as any}>
+                <View style={styles.coordsActionsRow as any}>
                   <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
                   <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
                 </View>
               ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 } as any}>
+                <View style={styles.coordsActionsRow as any}>
                   <IconButton
                     icon={<Feather name="copy" size={16} color={colors.textMuted} />}
                     label="Копировать координаты"
@@ -407,30 +407,12 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
             </View>
 
             {Platform.OS === 'web' && mapUrls ? (
-              <View style={{ marginTop: 10 } as any}>
-                <View
-                  style={
-                    {
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 6,
-                      marginTop: 6,
-                      flexWrap: 'nowrap',
-                    } as any
-                  }
-                >
-                  <View style={{ flexShrink: 0 } as any}>
-                    <ActionChip label="Google" onActivate={() => void openExternalUrl(mapUrls.google)} />
-                  </View>
-                  <View style={{ flexShrink: 0 } as any}>
-                    <ActionChip label="Apple" onActivate={() => void openExternalUrl(mapUrls.apple)} />
-                  </View>
-                  <View style={{ flexShrink: 0 } as any}>
-                    <ActionChip label="Яндекс" onActivate={() => void openExternalUrl(mapUrls.yandex)} />
-                  </View>
-                  <View style={{ flexShrink: 0 } as any}>
-                    <ActionChip label="OSM" onActivate={() => void openExternalUrl(mapUrls.osm)} />
-                  </View>
+              <View style={styles.mapChipsSection as any}>
+                <View style={styles.mapChipsRow as any}>
+                  <ActionChip label="Google" onActivate={() => void openExternalUrl(mapUrls.google)} />
+                  <ActionChip label="Apple" onActivate={() => void openExternalUrl(mapUrls.apple)} />
+                  <ActionChip label="Яндекс" onActivate={() => void openExternalUrl(mapUrls.yandex)} />
+                  <ActionChip label="OSM" onActivate={() => void openExternalUrl(mapUrls.osm)} />
                 </View>
               </View>
             ) : null}
@@ -604,6 +586,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     justifyContent: 'space-between',
     marginTop: DESIGN_TOKENS.spacing.xs,
   },
+  coordsActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
   coordsBox: {
     flex: 1,
     minWidth: 0,
@@ -619,6 +607,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textMuted,
     flexShrink: 1,
+  },
+  mapChipsSection: {
+    marginTop: 10,
+  },
+  mapChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    flexWrap: 'wrap',
   },
   webChipButton: {
     borderWidth: 1,

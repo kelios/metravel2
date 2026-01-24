@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PlacePopupCard from './PlacePopupCard';
 import type { Point } from './types';
 import { buildGoogleMapsUrl, buildOrganicMapsUrl, buildTelegramShareUrl } from './mapLinks';
@@ -12,6 +12,7 @@ type UseMap = () => any;
 
 interface CreatePopupComponentArgs {
   useMap: UseMap;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 const stripCountryFromCategoryString = (raw: unknown, address?: string | null) => {
@@ -34,13 +35,19 @@ const stripCountryFromCategoryString = (raw: unknown, address?: string | null) =
   return filtered.join(', ');
 };
 
-export const createMapPopupComponent = ({ useMap }: CreatePopupComponentArgs) => {
+export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupComponentArgs) => {
   const PopupComponent: React.FC<{ point: Point }> = ({ point }) => {
     const [isAdding, setIsAdding] = useState(false);
+    const [isDrivingLoading, setIsDrivingLoading] = useState(false);
+    const [drivingDistanceMeters, setDrivingDistanceMeters] = useState<number | null>(null);
+    const [drivingDurationSeconds, setDrivingDurationSeconds] = useState<number | null>(null);
     const map = useMap();
     const coord = String(point.coord ?? '').trim();
     const { isAuthenticated, authReady } = useAuth();
     const queryClient = useQueryClient();
+
+    const lastDriveKeyRef = useRef<string | null>(null);
+    const abortDriveRef = useRef<AbortController | null>(null);
 
     const handlePress = useCallback(() => {
       if (map) {
@@ -119,6 +126,53 @@ export const createMapPopupComponent = ({ useMap }: CreatePopupComponentArgs) =>
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
       return { lat, lng };
     }, [coord]);
+
+    useEffect(() => {
+      if (!normalizedCoord) return;
+      if (!userLocation) return;
+      if (!Number.isFinite(userLocation.lat) || !Number.isFinite(userLocation.lng)) return;
+
+      const driveKey = `${userLocation.lat.toFixed(6)},${userLocation.lng.toFixed(6)}->${normalizedCoord.lat.toFixed(6)},${normalizedCoord.lng.toFixed(6)}`;
+      if (lastDriveKeyRef.current === driveKey) return;
+      lastDriveKeyRef.current = driveKey;
+
+      abortDriveRef.current?.abort();
+      const abortController = new AbortController();
+      abortDriveRef.current = abortController;
+
+      setIsDrivingLoading(true);
+      setDrivingDistanceMeters(null);
+      setDrivingDurationSeconds(null);
+
+      const fetchDrive = async () => {
+        try {
+          const coordsStr = `${userLocation.lng.toFixed(6)},${userLocation.lat.toFixed(6)};${normalizedCoord.lng.toFixed(6)},${normalizedCoord.lat.toFixed(6)}`;
+          const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=false`;
+
+          const res = await fetch(url, { signal: abortController.signal });
+          if (!res.ok) throw new Error(`OSRM error: ${res.status}`);
+          const data = await res.json();
+          const route = data?.routes?.[0];
+          const dist = Number(route?.distance);
+          const dur = Number(route?.duration);
+          if (!Number.isFinite(dist) || !Number.isFinite(dur)) throw new Error('Invalid OSRM payload');
+          setDrivingDistanceMeters(dist);
+          setDrivingDurationSeconds(dur);
+        } catch {
+          // noop
+        } finally {
+          if (!abortController.signal.aborted) {
+            setIsDrivingLoading(false);
+          }
+        }
+      };
+
+      void fetchDrive();
+
+      return () => {
+        abortController.abort();
+      };
+    }, [normalizedCoord, userLocation]);
 
     const rawCategoryName = useMemo(() => {
       if (Array.isArray(point.categoryName)) return point.categoryName.join(', ');
@@ -204,6 +258,9 @@ export const createMapPopupComponent = ({ useMap }: CreatePopupComponentArgs) =>
         imageUrl={point.travelImageThumbUrl}
         categoryLabel={categoryLabel}
         coord={coord}
+        drivingDistanceMeters={drivingDistanceMeters}
+        drivingDurationSeconds={drivingDurationSeconds}
+        isDrivingLoading={isDrivingLoading}
         onOpenArticle={handleOpenArticle}
         onCopyCoord={handleCopyCoord}
         onShareTelegram={handleShareTelegram}

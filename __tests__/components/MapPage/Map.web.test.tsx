@@ -360,6 +360,56 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     ;(process.env as any).NODE_ENV = prevNodeEnv
   })
 
+  it('renders driving distance and duration in popup when OSRM route is available', async () => {
+    const prevNodeEnv = process.env.NODE_ENV
+    ;(process.env as any).NODE_ENV = 'test'
+
+    const originalFetch = (globalThis as any).fetch
+    ;(globalThis as any).fetch = jest.fn(async (_url: any) => {
+      return {
+        ok: true,
+        json: async () => ({
+          routes: [
+            {
+              distance: 12345,
+              duration: 1800,
+            },
+          ],
+        }),
+      }
+    })
+
+    const travel = {
+      data: [
+        {
+          id: 1,
+          coord: '53.9100,27.5700',
+          address: 'Test Address',
+          travelImageThumbUrl: 'thumb.jpg',
+          categoryName: 'Test',
+          articleUrl: '',
+        },
+      ],
+    }
+
+    const { getByTestId } = renderWithProviders(
+      <MapPageComponent
+        {...defaultProps}
+        mode="radius"
+        travel={travel as any}
+      />
+    )
+
+    await act(async () => {})
+
+    await waitFor(() => {
+      expect(getByTestId('popup-driving-info')).toBeTruthy()
+    })
+
+    ;(globalThis as any).fetch = originalFetch
+    ;(process.env as any).NODE_ENV = prevNodeEnv
+  })
+
   it('does not request current position when geolocation permission is denied', async () => {
     const prevNodeEnv = process.env.NODE_ENV
     ;(process.env as any).NODE_ENV = 'test'
