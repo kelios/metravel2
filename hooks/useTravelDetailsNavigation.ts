@@ -41,15 +41,22 @@ export function useTravelDetailsNavigation({
     let rafId: number | null = null
     let timeoutId: ReturnType<typeof setTimeout> | null = null
 
-    const isScrollableEl = (node: HTMLElement): boolean => {
+    const isDocumentScrollEl = (node: any): boolean => {
       try {
-        if (typeof document === 'undefined') return false
+        if (typeof document === 'undefined') return true
         const docAny = document as any
         const scrollingEl = (document.scrollingElement || docAny.documentElement || docAny.body) as any
-        if (node === scrollingEl || node === docAny.body || node === docAny.documentElement) {
-          return false
-        }
-        const style = typeof window !== 'undefined' ? window.getComputedStyle(node) : null
+        return node === window || node === document || node === docAny.body || node === docAny.documentElement || node === scrollingEl
+      } catch {
+        return true
+      }
+    }
+
+    const isScrollableEl = (node: HTMLElement): boolean => {
+      try {
+        if (typeof window === 'undefined') return false
+        if (!node || isDocumentScrollEl(node)) return false
+        const style = window.getComputedStyle(node)
         const overflowY = (style?.overflowY || '').toLowerCase()
         const canScrollByStyle = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay'
         const canScrollBySize = (node.scrollHeight || 0) > (node.clientHeight || 0) + 1
@@ -57,6 +64,17 @@ export function useTravelDetailsNavigation({
       } catch {
         return false
       }
+    }
+
+    const findScrollableContainer = (start: HTMLElement): HTMLElement | null => {
+      let cur: HTMLElement | null = start
+      let hops = 0
+      while (cur && hops < 10) {
+        if (isScrollableEl(cur)) return cur
+        cur = cur.parentElement
+        hops += 1
+      }
+      return null
     }
 
     const readNode = (): HTMLElement | null => {
@@ -73,6 +91,17 @@ export function useTravelDetailsNavigation({
         return node
       }
 
+      if (typeof document !== 'undefined') {
+        try {
+          const byTestId = document.querySelector('[data-testid="travel-details-scroll"]') as any
+          if (byTestId && typeof byTestId.getBoundingClientRect === 'function') {
+            return byTestId as HTMLElement
+          }
+        } catch {
+          // noop
+        }
+      }
+
       return null
     }
 
@@ -82,15 +111,15 @@ export function useTravelDetailsNavigation({
 
       const node = readNode()
       if (node) {
-        const next = isScrollableEl(node) ? node : null
+        const next = findScrollableContainer(node) || null
         setScrollRootEl((prev) => (prev === next ? prev : next))
-        return
+        if (next) return
       }
 
-      // If we can't find a dedicated scroll container, fall back to document scroll.
-      setScrollRootEl((prev) => (prev === null ? prev : null))
-
       if (attempts >= 60) return
+
+      // If we can't find a dedicated scroll container yet, fall back to document scroll for now.
+      setScrollRootEl((prev) => (prev === null ? prev : null))
 
       const raf =
         (typeof window !== 'undefined' && window.requestAnimationFrame) ||

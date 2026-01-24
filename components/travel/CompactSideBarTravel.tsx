@@ -561,6 +561,7 @@ function CompactSideBarTravel({
               'data-sidebar-link': true,
               'data-active': currentActive === key ? 'true' : 'false',
               'aria-selected': currentActive === key,
+              'aria-current': currentActive === key ? 'page' : undefined,
               role: 'button',
               'aria-label': label,
             } : {})}

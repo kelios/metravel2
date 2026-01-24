@@ -441,6 +441,7 @@ function TravelHeroSectionInner({
         ref={anchors.gallery}
         testID="travel-details-section-gallery"
         collapsable={false}
+        style={Platform.OS === 'web' ? { height: 0 } : undefined}
         {...(Platform.OS === 'web'
           ? {
               // @ts-ignore - устанавливаем data-атрибут для Intersection Observer

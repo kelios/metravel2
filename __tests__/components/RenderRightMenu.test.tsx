@@ -336,6 +336,9 @@ describe('AccountMenu', () => {
 
     const { getByText } = renderWithClient(<RenderRightMenu />);
 
+    // Раскрываем секцию "Аккаунт"
+    fireEvent.press(getByText('Аккаунт'));
+
     // Нажимаем на пункт меню "Выход"
     fireEvent.press(getByText('Выход'));
 

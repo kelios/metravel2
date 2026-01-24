@@ -120,55 +120,55 @@ export default function ConsentBanner() {
 
   return (
     <View
+      pointerEvents={suspendForOverlay ? 'none' : 'box-none'}
       style={[
         styles.wrapper,
         { bottom: bottomOffset },
         suspendForOverlay && styles.wrapperHidden,
-        { pointerEvents: suspendForOverlay ? 'none' : 'box-none' } as any,
       ]}
-      testID="consent-banner"
     >
-      <View style={[styles.inner, { pointerEvents: 'box-none' } as any]}>
-        <View style={[styles.container, { backgroundColor: colors.surface }, { pointerEvents: 'none' } as any]}>
-          <View style={[styles.textBlock, { pointerEvents: 'none' } as any]}>
+      <View testID="consent-banner" pointerEvents="none" style={styles.inner}>
+        <View pointerEvents="none" style={[styles.container, { backgroundColor: colors.surface }]}>
+          <View pointerEvents="none" style={styles.textBlock}>
             <Text style={[styles.title, { color: colors.text }]}>Мы ценим вашу приватность</Text>
             <Text style={[styles.text, { color: colors.textMuted }]}>
               Мы используем технические файлы и, с вашего согласия, аналитические инструменты (Яндекс.Метрика,
               Google Analytics) для улучшения сервиса. Вы можете выбрать только необходимые или принять всё.
             </Text>
-            <Text style={[styles.linkHint, { color: colors.textMuted }]}>
+            <Text style={[styles.linkHint, { color: colors.textMuted }]}> 
               Подробнее читайте в нашей Политике конфиденциальности и на странице настроек cookies.
             </Text>
           </View>
           <View style={styles.actionsSpacer} />
         </View>
-        <View style={[styles.actionsOverlay, { pointerEvents: 'auto' } as any]}>
-          <View style={styles.buttonsRow}>
-            <Button
-              label="Только необходимые"
-              onPress={handleNecessaryOnly}
-              variant="outline"
-              size="sm"
-              style={[styles.button, { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' }]}
-              accessibilityLabel="Только необходимые"
-            />
-            <Button
-              label="Принять всё"
-              onPress={handleAcceptAll}
-              variant="primary"
-              size="sm"
-              style={[styles.button, { backgroundColor: colors.primary }]}
-              accessibilityLabel="Принять всё"
-            />
-          </View>
-          {isWeb && !isMobile && (
-            <View style={styles.bottomLinkRow}>
-              <Link href="/cookies" style={styles.manageLink}>
-                <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
-              </Link>
-            </View>
-          )}
+      </View>
+
+      <View pointerEvents={suspendForOverlay ? 'none' : 'box-none'} style={styles.actionsOverlay}>
+        <View pointerEvents="auto" style={styles.buttonsRow}>
+          <Button
+            label="Только необходимые"
+            onPress={handleNecessaryOnly}
+            variant="outline"
+            size="sm"
+            style={[styles.button, { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' }]}
+            accessibilityLabel="Только необходимые"
+          />
+          <Button
+            label="Принять всё"
+            onPress={handleAcceptAll}
+            variant="primary"
+            size="sm"
+            style={[styles.button, { backgroundColor: colors.primary }]}
+            accessibilityLabel="Принять всё"
+          />
         </View>
+        {isWeb && !isMobile && (
+          <View pointerEvents="auto" style={styles.bottomLinkRow}>
+            <Link href="/cookies" style={styles.manageLink}>
+              <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
+            </Link>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -232,10 +232,9 @@ const styles = StyleSheet.create({
   },
   actionsOverlay: {
     position: 'absolute' as any,
-    left: 0,
-    right: 0,
-    bottom: 10,
-    paddingHorizontal: 16,
+    right: 12,
+    bottom: 12,
+    alignItems: 'flex-end',
   },
   title: {
     fontSize: 15,

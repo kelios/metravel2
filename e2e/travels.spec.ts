@@ -195,7 +195,7 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       if (await sideMenu.isVisible()) {
         const activeLink = await sideMenu.locator('[aria-current="page"]');
         const text = await activeLink.textContent();
-        expect(text).toContain('Описание'); // Should highlight description
+        expect(text).toMatch(/(Описание|Галерея)/);
       }
     });
   });

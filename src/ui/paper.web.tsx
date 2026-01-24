@@ -138,6 +138,7 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
   contentStyle,
 }) => {
   const [panelPosition, setPanelPosition] = React.useState<{ top: number; right: number; maxHeight: number } | null>(null)
+  const anchorRef = React.useRef<View>(null)
 
   React.useEffect(() => {
     if (!visible) {
@@ -149,28 +150,32 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
 
     const update = () => {
       try {
-        const anchorEl =
-          (document.querySelector('[data-testid="account-menu-anchor"]') as HTMLElement | null) ||
-          (document.querySelector('[data-testid="web-menu-anchor"]') as HTMLElement | null)
-        const anchorRect =
-          anchorEl && typeof anchorEl.getBoundingClientRect === 'function' ? anchorEl.getBoundingClientRect() : null
-
-        const headerEl = document.querySelector('[data-testid="main-header"]') as HTMLElement | null
-        const headerRect =
-          headerEl && typeof headerEl.getBoundingClientRect === 'function' ? headerEl.getBoundingClientRect() : null
-
+        let anchorEl: HTMLElement | null = null
+        
+        if (anchorRef.current) {
+          anchorEl = anchorRef.current as any as HTMLElement
+        }
+        
+        if (!anchorEl) {
+          const allAnchors = document.querySelectorAll('[data-testid="web-menu-anchor"]')
+          if (allAnchors.length > 0) {
+            anchorEl = allAnchors[allAnchors.length - 1] as HTMLElement
+          }
+        }
+        
+        if (!anchorEl) {
+          anchorEl = document.querySelector('[data-testid="account-menu-anchor"]') as HTMLElement | null
+        }
+        
+        if (!anchorEl) return
+        
+        const anchorRect = anchorEl.getBoundingClientRect()
         const margin = 8
 
-        const topFromAnchor = anchorRect ? anchorRect.bottom + 6 : null
-        const topFromHeader = headerRect ? headerRect.bottom + margin : null
-
-        const topCandidates = [topFromAnchor, topFromHeader].filter((v): v is number => typeof v === 'number')
-        if (topCandidates.length === 0) return
-
-        const top = Math.max(margin, ...topCandidates)
-        const rightFromAnchor = anchorRect ? window.innerWidth - anchorRect.right : null
-        const right = Math.max(margin, rightFromAnchor ?? margin)
+        const top = anchorRect.bottom + 6
+        const right = window.innerWidth - anchorRect.right
         const maxHeight = Math.max(200, window.innerHeight - top - margin)
+        
         setPanelPosition({ top, right, maxHeight })
       } catch {
         // noop
@@ -195,7 +200,7 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
 
   return (
     <View style={styles.menuRoot}>
-      <View testID="web-menu-anchor" collapsable={false}>
+      <View ref={anchorRef} testID="web-menu-anchor" collapsable={false}>
         {anchor}
       </View>
       {visible ? (
@@ -317,18 +322,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
+    paddingVertical: 8,
+    minHeight: 40,
   },
   menuItemIcon: {
-    width: 22,
-    marginRight: 10,
-    alignItems: 'center',
+    width: 20,
+    marginRight: 12,
+    alignItems: 'flex-start',
     justifyContent: 'center',
   },
   menuItemText: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#111827',
+    textAlign: 'left',
+    flex: 1,
   },
   card: {
     backgroundColor: '#fff',
