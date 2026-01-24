@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import process from 'process';
 
 const YandexMetrica = {
     init: () => {
@@ -15,7 +16,8 @@ const YandexMetrica = {
                     (window.ym.a = window.ym.a || []).push(arguments);
                 };
                 window.ym.l = 1 * new Date();
-                window.ym(62803912, 'init', {
+                const metrikaId = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 62803912;
+                window.ym(metrikaId, 'init', {
                     clickmap: true,
                     trackLinks: true,
                     accurateTrackBounce: true,
@@ -28,7 +30,8 @@ const YandexMetrica = {
 
     sendEvent: (eventName, params = {}) => {
         if (Platform.OS !== 'web' || !window.ym) return;
-        window.ym(62803912, 'reachGoal', eventName, params);
+        const metrikaId = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 62803912;
+        window.ym(metrikaId, 'reachGoal', eventName, params);
     }
 };
 

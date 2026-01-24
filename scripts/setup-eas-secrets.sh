@@ -40,19 +40,30 @@ echo "Настройка секретов:"
 echo "========================================="
 echo ""
 
-# Google API Secret (если используется)
-echo "1. GOOGLE_API_SECRET"
-read -p "Введите Google API Secret (или Enter для пропуска): " GOOGLE_SECRET
-if [ ! -z "$GOOGLE_SECRET" ]; then
-    eas secret:create --scope project --name GOOGLE_API_SECRET --value "$GOOGLE_SECRET" --force
-    echo "✅ GOOGLE_API_SECRET настроен"
+# Google Analytics 4 (если используется)
+echo "1. EXPO_PUBLIC_GOOGLE_GA4"
+read -p "Введите Google GA4 Measurement ID (или Enter для пропуска): " GA4_ID
+if [ ! -z "$GA4_ID" ]; then
+    eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_GA4 --value "$GA4_ID" --force
+    echo "✅ EXPO_PUBLIC_GOOGLE_GA4 настроен"
+else
+    echo "⏭️  Пропущен"
+fi
+echo ""
+
+# Яндекс Метрика (если используется)
+echo "2. EXPO_PUBLIC_METRIKA_ID"
+read -p "Введите Яндекс Метрика ID (или Enter для пропуска): " METRIKA_ID
+if [ ! -z "$METRIKA_ID" ]; then
+    eas secret:create --scope project --name EXPO_PUBLIC_METRIKA_ID --value "$METRIKA_ID" --force
+    echo "✅ EXPO_PUBLIC_METRIKA_ID настроен"
 else
     echo "⏭️  Пропущен"
 fi
 echo ""
 
 # Route Service Key (OpenRouteService или другой)
-echo "2. ROUTE_SERVICE_KEY"
+echo "3. ROUTE_SERVICE_KEY"
 echo "   Получите бесплатный ключ на: https://openrouteservice.org/dev/#/signup"
 read -p "Введите Route Service API Key: " ROUTE_KEY
 if [ ! -z "$ROUTE_KEY" ]; then
@@ -65,7 +76,7 @@ fi
 echo ""
 
 # Firebase/Google Services (если используется)
-echo "3. FIREBASE_CONFIG (опционально)"
+echo "4. FIREBASE_CONFIG (опционально)"
 read -p "Настроить Firebase config? (y/n): " SETUP_FIREBASE
 if [ "$SETUP_FIREBASE" = "y" ]; then
     echo "Добавьте firebase конфигурацию вручную:"

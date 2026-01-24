@@ -7,7 +7,7 @@ type SetupOptions = {
   consent?: Consent | null
 }
 
-const TEST_METRIKA_ID = 62803912
+const TEST_METRIKA_ID = '12345678'
 const TEST_GA_ID = 'G-TEST'
 
 const originalWindow = (global as any).window
@@ -79,7 +79,8 @@ const setupDomEnv = ({ host = 'metravel.by', consent = { necessary: true, analyt
 }
 
 const runAnalyticsSnippet = () => {
-  const snippet = getAnalyticsInlineScript(TEST_METRIKA_ID, TEST_GA_ID)
+  process.env.EXPO_PUBLIC_METRIKA_ID = TEST_METRIKA_ID
+  const snippet = getAnalyticsInlineScript(parseInt(TEST_METRIKA_ID, 10), TEST_GA_ID)
    
   // ✅ ИСПРАВЛЕНИЕ: Вместо eval() создаём и выполняем script в изолированной области
   // eval() опасна - создаём функцию из кода и вызываем её в нужном контексте
@@ -108,11 +109,11 @@ describe('analytics inline script', () => {
     runAnalyticsSnippet()
 
     expect(typeof windowMock.metravelLoadAnalytics).toBe('function')
-    expect(windowMock.__metravelMetrikaId).toBe(TEST_METRIKA_ID)
+    expect(windowMock.__metravelMetrikaId).toBe(parseInt(TEST_METRIKA_ID, 10))
     expect(windowMock.__metravelGaId).toBe(TEST_GA_ID)
     expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
     expect(windowMock.ym).toHaveBeenCalledWith(
-      TEST_METRIKA_ID,
+      parseInt(TEST_METRIKA_ID, 10),
       'init',
       expect.objectContaining({ webvisor: true })
     )
@@ -128,7 +129,7 @@ describe('analytics inline script', () => {
     runAnalyticsSnippet()
 
     expect(typeof windowMock.metravelLoadAnalytics).toBe('function')
-    expect(windowMock.__metravelMetrikaId).toBe(TEST_METRIKA_ID)
+    expect(windowMock.__metravelMetrikaId).toBe(parseInt(TEST_METRIKA_ID, 10))
     expect(windowMock.__metravelGaId).toBe(TEST_GA_ID)
     expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
     expect(windowMock.gtag).toBeUndefined()

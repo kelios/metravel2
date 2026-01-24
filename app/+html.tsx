@@ -2,8 +2,8 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import React from 'react';
 
-const METRIKA_ID = 62803912;          // твой счётчик Метрики
-const GA_ID = 'G-GBT9YNPXKB';         // твой GA4 id
+const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 62803912;
+const GA_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4 || 'G-GBT9YNPXKB';
 
 export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => String.raw`
 (function(){
