@@ -219,6 +219,9 @@ function AccountMenu() {
   const handleNavigate = useCallback(
     (path: string, extraAction?: () => void) => {
       extraAction?.();
+      closeMenu();
+      
+      // На вебе открываем все ссылки в новой вкладке
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         const url =
           path.startsWith('http') || path.startsWith('https')
@@ -226,9 +229,9 @@ function AccountMenu() {
             : `${window.location.origin}${path}`;
         window.open(url, '_blank', 'noopener');
       } else {
+        // На мобильных используем роутер
         router.push(path as any);
       }
-      closeMenu();
     },
     [closeMenu]
   );

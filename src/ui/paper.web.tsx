@@ -137,7 +137,7 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
   children,
   contentStyle,
 }) => {
-  const [panelPosition, setPanelPosition] = React.useState<{ top: number; right: number; maxHeight: number } | null>(null)
+  const [panelPosition, setPanelPosition] = React.useState<{ top: number; left: number; maxHeight: number; width: number } | null>(null)
   const anchorRef = React.useRef<View>(null)
 
   React.useEffect(() => {
@@ -170,13 +170,54 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
         if (!anchorEl) return
         
         const anchorRect = anchorEl.getBoundingClientRect()
-        const margin = 8
+        const VIEWPORT_MARGIN = 8
+        const MENU_GAP = 4
+        const MAX_MENU_WIDTH = 320
+        const MIN_MENU_HEIGHT = 200
+        const MAX_MENU_HEIGHT = 600
 
-        const top = anchorRect.bottom + 6
-        const right = window.innerWidth - anchorRect.right
-        const maxHeight = Math.max(200, window.innerHeight - top - margin)
+        // Вычисляем доступную ширину viewport
+        const availableWidth = window.innerWidth - (VIEWPORT_MARGIN * 2)
+        const menuWidth = Math.min(MAX_MENU_WIDTH, availableWidth)
+
+        // 1. Вычисляем вертикальную позицию (top)
+        let top = anchorRect.bottom + MENU_GAP
         
-        setPanelPosition({ top, right, maxHeight })
+        const availableHeightBelow = window.innerHeight - top - VIEWPORT_MARGIN
+        let maxHeight = Math.max(MIN_MENU_HEIGHT, Math.min(MAX_MENU_HEIGHT, availableHeightBelow))
+        
+        if (maxHeight < MIN_MENU_HEIGHT) {
+          const availableHeightAbove = anchorRect.top - VIEWPORT_MARGIN
+          if (availableHeightAbove > availableHeightBelow) {
+            maxHeight = Math.max(MIN_MENU_HEIGHT, Math.min(MAX_MENU_HEIGHT, availableHeightAbove))
+            top = Math.max(VIEWPORT_MARGIN, anchorRect.top - maxHeight - MENU_GAP)
+          }
+        }
+        
+        top = Math.max(VIEWPORT_MARGIN, top)
+        
+        // 2. Вычисляем горизонтальную позицию (left)
+        let left = anchorRect.right - menuWidth
+        
+        // Проверяем левую границу
+        if (left < VIEWPORT_MARGIN) {
+          left = anchorRect.left
+          
+          if (left < VIEWPORT_MARGIN) {
+            left = VIEWPORT_MARGIN
+          }
+        }
+        
+        // Проверяем правую границу
+        const menuRight = left + menuWidth
+        if (menuRight > window.innerWidth - VIEWPORT_MARGIN) {
+          left = window.innerWidth - menuWidth - VIEWPORT_MARGIN
+          
+          // Финальная проверка, что не выходим за левую границу
+          left = Math.max(VIEWPORT_MARGIN, left)
+        }
+        
+        setPanelPosition({ top, left, maxHeight, width: menuWidth })
       } catch {
         // noop
       }
@@ -213,7 +254,8 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
                 panelPosition
                   ? ({
                       top: panelPosition.top,
-                      right: panelPosition.right,
+                      left: panelPosition.left,
+                      width: panelPosition.width,
                       maxHeight: panelPosition.maxHeight,
                       overflowY: 'auto',
                     } as any)
@@ -309,8 +351,6 @@ const styles = StyleSheet.create({
   },
   menuPanel: {
     position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
-    top: 6,
-    right: 6,
     minWidth: 260,
     borderRadius: 12,
     paddingVertical: 8,
