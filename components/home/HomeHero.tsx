@@ -255,7 +255,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   return (
     <View testID="home-hero" style={[styles.band, isMobile && styles.bandMobile]}>
       <ResponsiveContainer maxWidth="xl" padding>
-        <ResponsiveStack direction="responsive" gap={60} align="center">
+        <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={60} align="center">
           <View style={styles.content}>
             <ResponsiveText variant="h1" style={styles.title}>
               Пиши о своих путешествиях

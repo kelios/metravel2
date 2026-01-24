@@ -243,6 +243,20 @@ select {
   max-width: 100% !important;
 }
 
+/* Home hero layout guard (web): prevent vertical stacking on desktop/tablet due to hydration/breakpoint mismatch */
+[data-testid="home-hero-stack"] {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+}
+
+@media (min-width: 768px) {
+  [data-testid="home-hero-stack"] {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+}
+
 /* Footer layout guard (web): prevent vertical stacking in the mobile dock and desktop bar */
 [data-testid="footer-dock-row"],
 [data-testid="footer-desktop-bar"] {
