@@ -78,7 +78,9 @@ export const MapFAB: React.FC<MapFABProps> = ({
           style={styles.backdrop}
           onPress={toggleExpand}
           accessibilityLabel="Закрыть меню"
-        />
+        >
+          {null}
+        </CardActionPressable>
       )}
 
       {/* Secondary actions */}

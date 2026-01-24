@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -120,14 +120,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.modal,
-      },
-      default: {
-        ...colors.shadows.heavy,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.modal } as any)
+      : ({ ...(colors.shadows.heavy as any) } as any)),
   },
   iconContainer: {
     width: 48,

@@ -174,10 +174,56 @@ test.describe('UI layout regression guards (overlap/cutoff/viewport)', () => {
       await expect(header).toBeVisible({ timeout: 30_000 });
 
       if (vp.name === 'desktop') {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Burger menu is not expected on desktop layout',
+        const before = await page.evaluate(() => {
+          const docEl = document.documentElement;
+          return {
+            clientWidth: docEl?.clientWidth ?? 0,
+            scrollWidth: docEl?.scrollWidth ?? 0,
+          };
         });
+
+        const accountMenu = page.getByTestId('account-menu-anchor');
+        await expect(accountMenu).toBeVisible({ timeout: 30_000 });
+        await accountMenu.click();
+
+        // Menu must not cover the header.
+        const webPanel = page.getByTestId('web-menu-panel');
+        if ((await webPanel.count()) > 0) {
+          await expect(webPanel).toBeVisible({ timeout: 10_000 });
+          const [headerBox, panelBox] = await Promise.all([header.boundingBox(), webPanel.boundingBox()]);
+          expect(headerBox, 'header must have a bounding box').not.toBeNull();
+          expect(panelBox, 'web menu panel must have a bounding box').not.toBeNull();
+          if (headerBox && panelBox) {
+            expect(
+              panelBox.y,
+              `web menu panel must start below header bottom (panelTop=${panelBox.y}, headerBottom=${headerBox.y + headerBox.height})`
+            ).toBeGreaterThanOrEqual(headerBox.y + headerBox.height - 1);
+          }
+        }
+
+        // Opening account menu must not introduce horizontal scroll.
+        await expectNoHorizontalScroll(page);
+
+        const after = await page.evaluate(() => {
+          const docEl = document.documentElement;
+          return {
+            clientWidth: docEl?.clientWidth ?? 0,
+            scrollWidth: docEl?.scrollWidth ?? 0,
+          };
+        });
+
+        expect(
+          after.clientWidth,
+          `AccountMenu open must not change documentElement.clientWidth (before=${before.clientWidth}, after=${after.clientWidth})`
+        ).toBe(before.clientWidth);
+        expect(
+          after.scrollWidth,
+          `AccountMenu open must not increase documentElement.scrollWidth (before=${before.scrollWidth}, after=${after.scrollWidth})`
+        ).toBeLessThanOrEqual(before.scrollWidth);
+
+        // Close by clicking outside.
+        await page.mouse.click(10, 10);
+        await expectNoHorizontalScroll(page);
         return;
       }
 

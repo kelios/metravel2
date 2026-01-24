@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, Platform } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 
 import ModernFilters from '@/components/listTravel/ModernFilters';
@@ -322,3 +322,5 @@ export function useRoulette() {
     onSelect,
   };
 }
+
+export { useRoulette as useRouletteLogic };

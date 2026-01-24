@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, useCallback, useMemo } from 'react';
+import { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, Animated } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -90,7 +90,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
     } catch (error) {
       console.error('Error dismissing banner:', error);
     }
-  }, [fadeAnim]);
+  }, [fadeAnim, shouldUseNativeDriver]);
 
   const handleStart = useCallback(() => {
     router.push('/travel/new?mode=quick');

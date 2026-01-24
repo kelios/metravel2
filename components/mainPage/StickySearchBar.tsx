@@ -1,7 +1,7 @@
 // StickySearchBar.tsx
 // ✅ НОВЫЙ КОМПОНЕНТ: Sticky поисковая строка с быстрыми действиями
 
-import React, { useState, useRef, useEffect, memo, useMemo } from 'react';
+import { useState, useRef, useEffect, memo, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -408,11 +408,8 @@ function StickySearchBar({
               style={[
                 styles.resultsInline,
                 !showResultsCount ? ({ opacity: 0 } as any) : null,
-                Platform.OS === 'web' && ({ pointerEvents: showResultsCount ? 'auto' : 'none' } as any),
+                ({ pointerEvents: showResultsCount ? 'auto' : 'none' } as any),
               ]}
-              {...(Platform.OS !== 'web'
-                ? ({ pointerEvents: showResultsCount ? 'auto' : 'none' } as any)
-                : {})}
               testID="results-count-wrapper"
             >
               <Text style={styles.resultsText} testID="results-count-text">
@@ -484,11 +481,8 @@ function StickySearchBar({
               style={[
                 styles.clearAllButton,
                 !showClearAll ? ({ opacity: 0 } as any) : null,
-                Platform.OS === 'web' && ({ pointerEvents: showClearAll ? 'auto' : 'none' } as any),
+                ({ pointerEvents: showClearAll ? 'auto' : 'none' } as any),
               ]}
-              {...(Platform.OS !== 'web'
-                ? ({ pointerEvents: showClearAll ? 'auto' : 'none' } as any)
-                : {})}
               accessibilityLabel="Сбросить все фильтры и поиск"
             >
               <Feather name="x-circle" size={14} color={colors.textMuted} />

@@ -1,6 +1,6 @@
 // SkeletonLoader.tsx - компонент для skeleton loading состояний
 import React from 'react';
-import { View, StyleSheet, Animated, Easing } from 'react-native';
+import { View, StyleSheet, Animated, Easing, Platform } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';

@@ -128,45 +128,48 @@ export default function ConsentBanner() {
       ]}
       testID="consent-banner"
     >
-      <View
-        style={[styles.container, { backgroundColor: colors.surface }, { pointerEvents: 'box-none' } as any]}
-      >
-        <View style={[styles.textBlock, { pointerEvents: 'none' } as any]}>
-          <Text style={[styles.title, { color: colors.text }]}>Мы ценим вашу приватность</Text>
-          <Text style={[styles.text, { color: colors.textMuted }]}>
-            Мы используем технические файлы и, с вашего согласия, аналитические инструменты (Яндекс.Метрика,
-            Google Analytics) для улучшения сервиса. Вы можете выбрать только необходимые или принять всё.
-          </Text>
-          <Text style={[styles.linkHint, { color: colors.textMuted }]}>
-            Подробнее читайте в нашей Политике конфиденциальности и на странице настроек cookies.
-          </Text>
+      <View style={[styles.inner, { pointerEvents: 'box-none' } as any]}>
+        <View style={[styles.container, { backgroundColor: colors.surface }, { pointerEvents: 'none' } as any]}>
+          <View style={[styles.textBlock, { pointerEvents: 'none' } as any]}>
+            <Text style={[styles.title, { color: colors.text }]}>Мы ценим вашу приватность</Text>
+            <Text style={[styles.text, { color: colors.textMuted }]}>
+              Мы используем технические файлы и, с вашего согласия, аналитические инструменты (Яндекс.Метрика,
+              Google Analytics) для улучшения сервиса. Вы можете выбрать только необходимые или принять всё.
+            </Text>
+            <Text style={[styles.linkHint, { color: colors.textMuted }]}>
+              Подробнее читайте в нашей Политике конфиденциальности и на странице настроек cookies.
+            </Text>
+          </View>
+          <View style={styles.actionsSpacer} />
         </View>
-        <View style={[styles.buttonsRow, { pointerEvents: 'auto' } as any]}>
-          <Button
-            label="Только необходимые"
-            onPress={handleNecessaryOnly}
-            variant="outline"
-            size="sm"
-            style={[styles.button, { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' }]}
-            accessibilityLabel="Только необходимые"
-          />
-          <Button
-            label="Принять всё"
-            onPress={handleAcceptAll}
-            variant="primary"
-            size="sm"
-            style={[styles.button, { backgroundColor: colors.primary }]}
-            accessibilityLabel="Принять всё"
-          />
+        <View style={[styles.actionsOverlay, { pointerEvents: 'auto' } as any]}>
+          <View style={styles.buttonsRow}>
+            <Button
+              label="Только необходимые"
+              onPress={handleNecessaryOnly}
+              variant="outline"
+              size="sm"
+              style={[styles.button, { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' }]}
+              accessibilityLabel="Только необходимые"
+            />
+            <Button
+              label="Принять всё"
+              onPress={handleAcceptAll}
+              variant="primary"
+              size="sm"
+              style={[styles.button, { backgroundColor: colors.primary }]}
+              accessibilityLabel="Принять всё"
+            />
+          </View>
+          {isWeb && !isMobile && (
+            <View style={styles.bottomLinkRow}>
+              <Link href="/cookies" style={styles.manageLink}>
+                <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
+              </Link>
+            </View>
+          )}
         </View>
       </View>
-      {isWeb && !isMobile && (
-        <View style={[styles.bottomLinkRow, { pointerEvents: 'box-none' } as any]}>
-          <Link href="/cookies" style={[styles.manageLink, { pointerEvents: 'auto' } as any]}>
-            <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
-          </Link>
-        </View>
-      )}
     </View>
   );
 }
@@ -186,6 +189,11 @@ const styles = StyleSheet.create({
     opacity: 0,
     display: 'none',
   },
+  inner: {
+    width: '100%',
+    maxWidth: 920,
+    position: 'relative',
+  },
   bottomLinkRow: {
     marginTop: 6,
     alignItems: 'flex-start',
@@ -199,8 +207,6 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   container: {
-    maxWidth: 920,
-    width: '100%',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -220,6 +226,16 @@ const styles = StyleSheet.create({
   },
   textBlock: {
     marginBottom: 10,
+  },
+  actionsSpacer: {
+    minHeight: 44,
+  },
+  actionsOverlay: {
+    position: 'absolute' as any,
+    left: 0,
+    right: 0,
+    bottom: 10,
+    paddingHorizontal: 16,
   },
   title: {
     fontSize: 15,

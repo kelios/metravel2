@@ -1,15 +1,13 @@
 User-agent: *
-Allow: /
-Allow: /*?
 Disallow: /api/
+Disallow: /admin/
 Disallow: /_expo/
 Disallow: /metro/
-Disallow: /node_modules/
 Disallow: /assets/icons/
 Disallow: /*?debug=*
 
-# Ускоряет обработку зеркал Яндекса
+Sitemap: https://metravel.by/sitemap.xml
+
 Host: metravel.by
 
-# Основная карта сайта: обновляется при сборке фронтенда
-Sitemap: https://metravel.by/sitemap.xml
+Clean-param: ref,utm_source,utm_medium,utm_campaign,utm_term,utm_content

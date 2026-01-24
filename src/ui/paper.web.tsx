@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import ReactDOM from 'react-dom'
 import {
   Platform,
   Pressable,
@@ -136,14 +137,90 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
   children,
   contentStyle,
 }) => {
+  const [panelPosition, setPanelPosition] = React.useState<{ top: number; right: number; maxHeight: number } | null>(null)
+
+  React.useEffect(() => {
+    if (!visible) {
+      setPanelPosition(null)
+      return
+    }
+    if (Platform.OS !== 'web') return
+    if (typeof window === 'undefined') return
+
+    const update = () => {
+      try {
+        const anchorEl =
+          (document.querySelector('[data-testid="account-menu-anchor"]') as HTMLElement | null) ||
+          (document.querySelector('[data-testid="web-menu-anchor"]') as HTMLElement | null)
+        const anchorRect =
+          anchorEl && typeof anchorEl.getBoundingClientRect === 'function' ? anchorEl.getBoundingClientRect() : null
+
+        const headerEl = document.querySelector('[data-testid="main-header"]') as HTMLElement | null
+        const headerRect =
+          headerEl && typeof headerEl.getBoundingClientRect === 'function' ? headerEl.getBoundingClientRect() : null
+
+        const margin = 8
+
+        const topFromAnchor = anchorRect ? anchorRect.bottom + 6 : null
+        const topFromHeader = headerRect ? headerRect.bottom + margin : null
+
+        const topCandidates = [topFromAnchor, topFromHeader].filter((v): v is number => typeof v === 'number')
+        if (topCandidates.length === 0) return
+
+        const top = Math.max(margin, ...topCandidates)
+        const rightFromAnchor = anchorRect ? window.innerWidth - anchorRect.right : null
+        const right = Math.max(margin, rightFromAnchor ?? margin)
+        const maxHeight = Math.max(200, window.innerHeight - top - margin)
+        setPanelPosition({ top, right, maxHeight })
+      } catch {
+        // noop
+      }
+    }
+
+    const raf = window.requestAnimationFrame ? window.requestAnimationFrame(update) : (setTimeout(update, 0) as any)
+
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, true)
+
+    return () => {
+      try {
+        if (window.cancelAnimationFrame && typeof raf === 'number') window.cancelAnimationFrame(raf)
+      } catch {
+        // noop
+      }
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update, true)
+    }
+  }, [visible])
+
   return (
     <View style={styles.menuRoot}>
-      {anchor}
+      <View testID="web-menu-anchor" collapsable={false}>
+        {anchor}
+      </View>
       {visible ? (
-        <View style={[styles.menuOverlay, contentStyle] as any} accessibilityRole="menu">
-          <Pressable style={styles.menuBackdrop} onPress={onDismiss} />
-          <View style={styles.menuPanel}>{children}</View>
-        </View>
+        <Portal>
+          <View style={styles.menuOverlay} accessibilityRole="menu" testID="web-menu-overlay">
+            <Pressable style={styles.menuBackdrop} onPress={onDismiss} />
+            <View
+              style={[
+                styles.menuPanel,
+                panelPosition
+                  ? ({
+                      top: panelPosition.top,
+                      right: panelPosition.right,
+                      maxHeight: panelPosition.maxHeight,
+                      overflowY: 'auto',
+                    } as any)
+                  : null,
+                contentStyle,
+              ] as any}
+              testID="web-menu-panel"
+            >
+              {children}
+            </View>
+          </View>
+        </Portal>
       ) : null}
     </View>
   )
@@ -164,7 +241,11 @@ Dialog.Title = ({ children }: ChildrenProps) => <Title>{children}</Title>
 Dialog.Content = ({ children }: ChildrenProps) => <View>{children}</View>
 Dialog.Actions = ({ children }: ChildrenProps) => <View>{children}</View>
 
-export const Portal: React.FC<ChildrenProps> = ({ children }) => <>{children}</>
+export const Portal: React.FC<ChildrenProps> = ({ children }) => {
+  if (Platform.OS !== 'web') return <>{children}</>
+  if (typeof document === 'undefined') return <>{children}</>
+  return ReactDOM.createPortal(children as any, document.body)
+}
 
 export const Snackbar: React.FC<ChildrenProps & { visible: boolean }> = ({ children, visible }) =>
   visible ? <View style={styles.snackbar}>{children}</View> : null
@@ -222,8 +303,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   menuPanel: {
-    marginTop: 6,
-    marginRight: 6,
+    position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
+    top: 6,
+    right: 6,
     minWidth: 260,
     borderRadius: 12,
     paddingVertical: 8,
