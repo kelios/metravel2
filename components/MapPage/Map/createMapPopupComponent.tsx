@@ -46,6 +46,9 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
     const { isAuthenticated, authReady } = useAuth();
     const queryClient = useQueryClient();
 
+    const userLat = userLocation?.lat;
+    const userLng = userLocation?.lng;
+
     const lastDriveKeyRef = useRef<string | null>(null);
     const abortDriveRef = useRef<AbortController | null>(null);
 
@@ -129,10 +132,9 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
 
     useEffect(() => {
       if (!normalizedCoord) return;
-      if (!userLocation) return;
-      if (!Number.isFinite(userLocation.lat) || !Number.isFinite(userLocation.lng)) return;
+      if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) return;
 
-      const driveKey = `${userLocation.lat.toFixed(6)},${userLocation.lng.toFixed(6)}->${normalizedCoord.lat.toFixed(6)},${normalizedCoord.lng.toFixed(6)}`;
+      const driveKey = `${userLat.toFixed(6)},${userLng.toFixed(6)}->${normalizedCoord.lat.toFixed(6)},${normalizedCoord.lng.toFixed(6)}`;
       if (lastDriveKeyRef.current === driveKey) return;
       lastDriveKeyRef.current = driveKey;
 
@@ -146,7 +148,7 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
 
       const fetchDrive = async () => {
         try {
-          const coordsStr = `${userLocation.lng.toFixed(6)},${userLocation.lat.toFixed(6)};${normalizedCoord.lng.toFixed(6)},${normalizedCoord.lat.toFixed(6)}`;
+          const coordsStr = `${userLng.toFixed(6)},${userLat.toFixed(6)};${normalizedCoord.lng.toFixed(6)},${normalizedCoord.lat.toFixed(6)}`;
           const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=false`;
 
           const res = await fetch(url, { signal: abortController.signal });
@@ -172,7 +174,7 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
       return () => {
         abortController.abort();
       };
-    }, [normalizedCoord, userLocation]);
+    }, [normalizedCoord, userLat, userLng]);
 
     const rawCategoryName = useMemo(() => {
       if (Array.isArray(point.categoryName)) return point.categoryName.join(', ');
