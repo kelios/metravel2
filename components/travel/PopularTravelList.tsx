@@ -279,6 +279,8 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       scrollToAnchor?.();
     }, [scrollToAnchor]);
 
+    const shouldUseNativeDriver = Platform.OS !== 'web';
+
     // Оптимизированная анимация - запускаем только когда контент готов
     useEffect(() => {
       let timer: ReturnType<typeof setTimeout> | null = null;
@@ -289,7 +291,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
             Animated.timing(fadeAnim, {
               toValue: 1,
               duration: 250, // Укороченная анимация
-              useNativeDriver: true,
+              useNativeDriver: shouldUseNativeDriver,
             }).start();
           }
         }, 50); // Небольшая задержка для обеспечения плавности
@@ -298,7 +300,7 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       return () => {
         if (timer) clearTimeout(timer);
       };
-    }, [isLoading, popularList.length, fadeAnim]);
+    }, [isLoading, popularList.length, fadeAnim, shouldUseNativeDriver]);
 
     // ✅ УЛУЧШЕНИЕ: Улучшенное выравнивание с одинаковой высотой карточек
     const columnWrapperStyle: any = useMemo(

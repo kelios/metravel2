@@ -27,6 +27,7 @@ interface UpsertTravelViewProps {
 // Skeleton component for loading state
 const WizardSkeleton = ({ colors }: { colors: UpsertTravelController['colors'] }) => {
   const pulseAnim = useMemo(() => new Animated.Value(0.3), []);
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -34,18 +35,18 @@ const WizardSkeleton = ({ colors }: { colors: UpsertTravelController['colors'] }
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 800,
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
         Animated.timing(pulseAnim, {
           toValue: 0.3,
           duration: 800,
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
       ])
     );
     animation.start();
     return () => animation.stop();
-  }, [pulseAnim]);
+  }, [pulseAnim, shouldUseNativeDriver]);
 
   const skeletonStyle = {
     opacity: pulseAnim,
@@ -69,14 +70,15 @@ const WizardSkeleton = ({ colors }: { colors: UpsertTravelController['colors'] }
 // Offline indicator banner
 const OfflineBanner = ({ colors, isVisible }: { colors: UpsertTravelController['colors']; isVisible: boolean }) => {
   const [opacity] = useState(new Animated.Value(0));
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   useEffect(() => {
     Animated.timing(opacity, {
       toValue: isVisible ? 1 : 0,
       duration: 300,
-      useNativeDriver: true,
+      useNativeDriver: shouldUseNativeDriver,
     }).start();
-  }, [isVisible, opacity]);
+  }, [isVisible, opacity, shouldUseNativeDriver]);
 
   if (!isVisible) return null;
 

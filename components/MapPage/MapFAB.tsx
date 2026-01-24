@@ -49,7 +49,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
 
     Animated.spring(animation, {
       toValue,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== 'web',
       friction: 5,
       tension: 40,
     }).start();

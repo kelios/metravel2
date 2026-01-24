@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { Animated, Easing, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Platform, useWindowDimensions } from 'react-native';
 
 const PANEL_ANIMATION_DURATION = 250;
 
@@ -12,24 +12,26 @@ export function usePanelController(isMobile: boolean = false) {
     const [isPanelVisible, setPanelVisible] = useState(!isMobile);
     const panelAnimation = useRef(new Animated.Value(isMobile ? 0 : 1)).current;
 
+    const shouldUseNativeDriver = Platform.OS !== 'web';
+
     const openPanel = useCallback(() => {
         setPanelVisible(true);
         Animated.timing(panelAnimation, {
             toValue: 1,
             duration: PANEL_ANIMATION_DURATION,
             easing: Easing.out(Easing.exp),
-            useNativeDriver: true,
+            useNativeDriver: shouldUseNativeDriver,
         }).start();
-    }, [panelAnimation]);
+    }, [panelAnimation, shouldUseNativeDriver]);
 
     const closePanel = useCallback(() => {
         Animated.timing(panelAnimation, {
             toValue: 0,
             duration: PANEL_ANIMATION_DURATION,
             easing: Easing.in(Easing.exp),
-            useNativeDriver: true,
+            useNativeDriver: shouldUseNativeDriver,
         }).start(() => setPanelVisible(false));
-    }, [panelAnimation]);
+    }, [panelAnimation, shouldUseNativeDriver]);
 
     const panelStyle = useMemo(() => ({
         transform: [

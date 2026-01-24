@@ -36,7 +36,7 @@ export default function ResponsiveStack({
   style,
   testID,
 }: ResponsiveStackProps) {
-  const { isTablet, isDesktop } = useResponsive();
+  const { isTablet, isLargeTablet, isDesktop } = useResponsive();
 
   // Определяем gap
   const gapConfig = typeof gap === 'number'
@@ -47,10 +47,10 @@ export default function ResponsiveStack({
 
   const resolvedDirection = useMemo(() => {
     if (direction === 'responsive') {
-      return (isTablet || isDesktop) ? 'row' : 'column';
+      return (isTablet || isLargeTablet || isDesktop) ? 'row' : 'column';
     }
     return direction === 'horizontal' ? 'row' : 'column';
-  }, [direction, isTablet, isDesktop]);
+  }, [direction, isTablet, isLargeTablet, isDesktop]);
 
   const resolvedAlignItems = useMemo(() => {
     const map = {

@@ -165,6 +165,7 @@ const NotificationItem = memo(({ notification, onPress }: NotificationItemProps)
   const colors = useThemedColors();
   const { title, message, icon, color, timestamp, read } = notification;
   const [fadeAnim] = useState(new Animated.Value(read ? 1 : 0.95));
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   useEffect(() => {
     if (!read) {
@@ -172,10 +173,10 @@ const NotificationItem = memo(({ notification, onPress }: NotificationItemProps)
         toValue: 1,
         tension: 50,
         friction: 7,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }).start();
     }
-  }, [fadeAnim, read]);
+  }, [fadeAnim, read, shouldUseNativeDriver]);
 
   const getTimeAgo = (timestamp: string): string => {
     const now = new Date();

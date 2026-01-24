@@ -25,23 +25,24 @@ const BadgeNotification = ({
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(-100));
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   const handleDismiss = useCallback(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 200,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
       Animated.timing(slideAnim, {
         toValue: -100,
         duration: 200,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start(() => {
       onDismiss();
     });
-  }, [fadeAnim, onDismiss, slideAnim]);
+  }, [fadeAnim, onDismiss, slideAnim, shouldUseNativeDriver]);
 
   useEffect(() => {
     if (visible) {
@@ -49,13 +50,13 @@ const BadgeNotification = ({
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
         Animated.spring(slideAnim, {
           toValue: 0,
           tension: 50,
           friction: 7,
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
       ]).start();
 
@@ -67,7 +68,7 @@ const BadgeNotification = ({
     }
 
     return undefined;
-  }, [duration, fadeAnim, handleDismiss, slideAnim, visible]);
+  }, [duration, fadeAnim, handleDismiss, slideAnim, visible, shouldUseNativeDriver]);
 
   if (!visible) return null;
 

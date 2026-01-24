@@ -49,6 +49,8 @@ export default function CollapsibleBlock({
 }: CollapsibleBlockProps) {
   const colors = useThemedColors();
 
+  const shouldUseNativeDriver = Platform.OS !== 'web';
+
   // ✅ ИСПРАВЛЕНИЕ: Используем контролируемое состояние если передано, иначе внутреннее
   const isControlled = controlledExpanded !== undefined || controlledHidden !== undefined;
   const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
@@ -80,10 +82,10 @@ export default function CollapsibleBlock({
       Animated.timing(animatedOpacity, {
         toValue: isHidden ? 0 : 1,
         duration: 200,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }),
     ]).start();
-  }, [isExpanded, isHidden, animatedHeight, animatedOpacity]);
+  }, [isExpanded, isHidden, animatedHeight, animatedOpacity, shouldUseNativeDriver]);
 
   const handleToggle = () => {
     const newExpanded = !isExpanded;

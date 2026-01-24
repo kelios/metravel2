@@ -81,6 +81,7 @@ function Home() {
   const [showHeavyContent, setShowHeavyContent] = useState(false);
   const [hydrated, setHydrated] = useState(!isWeb);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   useEffect(() => {
     if (!isWeb) return;
@@ -96,7 +97,7 @@ function Home() {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }).start();
     };
 
@@ -127,7 +128,7 @@ function Home() {
         }
       }
     };
-  }, [fadeAnim, isMobile]);
+  }, [fadeAnim, isMobile, shouldUseNativeDriver]);
 
   // Lightweight: avoid fetching full list of user travels on home screen.
   // Count can be provided later from a dedicated endpoint if needed.

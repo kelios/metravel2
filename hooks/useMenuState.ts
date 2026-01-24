@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing } from 'react-native';
+import { Animated, Easing, Platform } from 'react-native';
 
 import { useResponsive } from '@/hooks/useResponsive';
 
@@ -26,6 +26,8 @@ const clamp = (value: number, min: number, max: number) => Math.max(min, Math.mi
 export function useMenuState(isMobile: boolean): UseMenuStateReturn {
   const { width } = useResponsive();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   const stableWidth = useMemo(() => {
     if (width && width > 0) return width;
@@ -53,10 +55,10 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
         toValue: targetValue,
         duration: 230,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }).start();
     },
-    [animatedX, isMobile, stableWidth, menuWidthNum]
+    [animatedX, isMobile, stableWidth, menuWidthNum, shouldUseNativeDriver]
   );
 
   const toggleMenu = useCallback(() => {

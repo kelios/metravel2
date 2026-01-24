@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, memo } from 'react';
+import { useEffect, useMemo, useState, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -19,7 +19,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
-  const { isSmallPhone, isPhone, isTablet, isDesktop } = useResponsive();
+  const { isSmallPhone, isPhone, isTablet, isLargeTablet, isDesktop } = useResponsive();
   const articleUrl =
     'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
 
@@ -93,7 +93,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
-  const showImage = hydrated && (isTablet || isDesktop);
+  const showImage = hydrated && (isTablet || isLargeTablet || isDesktop);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;

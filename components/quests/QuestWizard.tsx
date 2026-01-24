@@ -69,10 +69,11 @@ const resolveUri = (src: any | undefined): string | undefined => {
 const ImageZoomModal = ({ image, visible, onClose }: { image: any; visible: boolean; onClose: () => void; }) => {
     const { styles } = useQuestWizardTheme();
     const scale = useRef(new Animated.Value(1)).current;
+    const shouldUseNativeDriver = Platform.OS !== 'web';
     // @ts-ignore
-    const onPinchEvent = Animated.event([{ nativeEvent: { scale } }], { useNativeDriver: true });
+    const onPinchEvent = Animated.event([{ nativeEvent: { scale } }], { useNativeDriver: shouldUseNativeDriver });
     const onPinchStateChange = (e: any) => {
-        if (e.nativeEvent.oldState === State.ACTIVE) Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+        if (e.nativeEvent.oldState === State.ACTIVE) Animated.spring(scale, { toValue: 1, useNativeDriver: shouldUseNativeDriver }).start();
     };
     if (!visible) return null;
     return (
@@ -107,10 +108,11 @@ const StepCard = memo((props: StepCardProps) => {
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [hasOrganic, setHasOrganic] = useState(false); const [hasMapsme, setHasMapsme] = useState(false);
     const shakeAnim = useRef(new Animated.Value(0)).current;
+    const shouldUseNativeDriver = Platform.OS !== 'web';
 
     // flip animation
     const flip = useRef(new Animated.Value(0)).current;
-    const triggerFlip = () => { flip.setValue(0); Animated.timing(flip, { toValue: 1, duration: 600, useNativeDriver: true }).start(() => flip.setValue(0)); };
+    const triggerFlip = () => { flip.setValue(0); Animated.timing(flip, { toValue: 1, duration: 600, useNativeDriver: shouldUseNativeDriver }).start(() => flip.setValue(0)); };
     const rot = flip.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['0deg', '180deg', '360deg'] });
 
     useEffect(() => { setValue(''); setError(''); }, [step.id]);
@@ -150,9 +152,9 @@ const StepCard = memo((props: StepCardProps) => {
     const shake = () => {
         shakeAnim.setValue(0);
         Animated.sequence([
-            Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-            Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-            Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: shouldUseNativeDriver }),
+            Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: shouldUseNativeDriver }),
+            Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: shouldUseNativeDriver }),
         ]).start();
     };
 

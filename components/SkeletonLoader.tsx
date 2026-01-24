@@ -22,6 +22,7 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 }) => {
   const colors = useThemedColors();
   const animatedValue = React.useRef(new Animated.Value(0)).current;
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   React.useEffect(() => {
     const animation = Animated.loop(
@@ -30,19 +31,19 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
           toValue: 1,
           duration: 1000,
           easing: Easing.ease,
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
         Animated.timing(animatedValue, {
           toValue: 0,
           duration: 1000,
           easing: Easing.ease,
-          useNativeDriver: true,
+          useNativeDriver: shouldUseNativeDriver,
         }),
       ])
     );
     animation.start();
     return () => animation.stop();
-  }, [animatedValue]);
+  }, [animatedValue, shouldUseNativeDriver]);
 
   const opacity = animatedValue.interpolate({
     inputRange: [0, 1],

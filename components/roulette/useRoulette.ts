@@ -21,7 +21,7 @@ function shuffleTravels(items: Travel[]): Travel[] {
   return arr;
 }
 
-export function useRouletteLogic() {
+export function useRoulette() {
   const { data: rawOptions, isLoading: filtersLoading } = useQuery({
     queryKey: ['filter-options'],
     queryFn: fetchAllFiltersOptimized,
@@ -248,6 +248,7 @@ export function useRouletteLogic() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState<Travel[]>([]);
   const spinAnim = useRef(new Animated.Value(0)).current;
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   const handleSpin = useCallback(async () => {
     setSpinning(true);
@@ -279,12 +280,12 @@ export function useRouletteLogic() {
       toValue: 1,
       duration: 900,
       easing: Easing.inOut(Easing.quad),
-      useNativeDriver: true,
+      useNativeDriver: shouldUseNativeDriver,
     }).start(() => {
       setResult(next);
       setSpinning(false);
     });
-  }, [spinAnim, travels, refetch]);
+  }, [spinAnim, travels, refetch, shouldUseNativeDriver]);
 
   const handleClearAll = useCallback(() => {
     resetFilters();

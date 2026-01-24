@@ -21,6 +21,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   const [visible, setVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   const checkShouldShow = useCallback(async () => {
     try {
@@ -55,12 +56,12 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 400,
-        useNativeDriver: true,
+        useNativeDriver: shouldUseNativeDriver,
       }).start();
     } catch (error) {
       console.error('Error checking banner visibility:', error);
     }
-  }, [fadeAnim]);
+  }, [fadeAnim, shouldUseNativeDriver]);
 
   useEffect(() => {
     checkShouldShow();
@@ -71,7 +72,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
     Animated.timing(fadeAnim, {
       toValue: 0,
       duration: 300,
-      useNativeDriver: true,
+      useNativeDriver: shouldUseNativeDriver,
     }).start(() => {
       setVisible(false);
     });
