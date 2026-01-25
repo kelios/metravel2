@@ -1,5 +1,5 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
-import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -408,42 +408,6 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         // noop
       }
     };
-  }, []);
-
-  // React/Leaflet: если контейнер "завис" с _leaflet_id, очистим его до инициализации карты.
-  useLayoutEffect(() => {
-    if (!isWeb) return;
-    const containerId = mapContainerIdRef.current;
-    if (!containerId || typeof document === 'undefined') return;
-
-    const container = document.getElementById(containerId) as any;
-    if (!container || !container._leaflet_id || mapRef.current) return;
-
-    try {
-      if (container._leaflet_map && typeof container._leaflet_map.remove === 'function') {
-        container._leaflet_map.remove();
-      }
-    } catch {
-      // noop
-    } finally {
-      try {
-        delete container._leaflet_id;
-      } catch {
-        // noop
-      }
-
-      try {
-        delete container._leaflet_map;
-      } catch {
-        // noop
-      }
-
-      try {
-        if (typeof container.innerHTML === 'string') container.innerHTML = '';
-      } catch {
-        // noop
-      }
-    }
   }, []);
 
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован

@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { act } from 'react-test-renderer';
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true }),
@@ -39,23 +38,12 @@ jest.mock('@/components/QuillEditor.web', () => {
         return { index: 0, length: 0 };
       };
 
-      const doc = (globalThis as any).document;
-
-      const linkBtn = (globalThis as any).__quillLinkBtn__ ?? doc.createElement('button');
-      linkBtn.className = 'ql-link';
-
-      const quillEl = (globalThis as any).__quillEl__ ?? doc.createElement('div');
-      quillEl.className = 'quill';
-      if (!quillEl.querySelector('button.ql-link')) {
-        quillEl.appendChild(linkBtn);
-      }
-
-      const rootEl = (globalThis as any).__quillRootEl__ ?? doc.createElement('div');
-      rootEl.className = 'ql-editor';
-      rootEl.closest = () => quillEl;
-
       const editorRef = React.useRef({
-        root: rootEl,
+        root: {
+          innerHTML: props.value ?? '',
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+        },
         focus: jest.fn(),
         getSelection: () => readSelection(),
         getLength: () => (typeof editorRef.current?.root?.innerHTML === 'string' ? editorRef.current.root.innerHTML.length : 0),
@@ -69,28 +57,10 @@ jest.mock('@/components/QuillEditor.web', () => {
       } as any);
 
       ;(globalThis as any).__quillEditor__ = editorRef.current;
-      try {
-        (quillEl as any)._editor = editorRef.current;
-      } catch {
-        void 0;
-      }
 
       React.useEffect(() => {
         editorRef.current.root.innerHTML = props.value ?? '';
       }, [props.value]);
-
-      React.useEffect(() => {
-        if (!doc.body.contains(quillEl)) {
-          doc.body.appendChild(quillEl);
-        }
-        return () => {
-          try {
-            quillEl.remove();
-          } catch {
-            void 0;
-          }
-        };
-      }, []);
 
       React.useImperativeHandle(ref, () => ({
         getEditor: () => editorRef.current,
@@ -114,9 +84,7 @@ describe('ArticleEditor.web link', () => {
     setPlatformOs('web');
     ;(globalThis as any).__quillSelection__ = null;
     ;(globalThis as any).__quillProps__ = null;
-    ;(globalThis as any).__quillLinkBtn__ = null;
-    ;(globalThis as any).__quillEl__ = null;
-    ;(globalThis as any).__quillRootEl__ = null;
+    ;(globalThis as any).__quillEditor__ = null;
   });
 
   it('applies link to selected text using stored selection (custom link modal)', async () => {
@@ -134,14 +102,19 @@ describe('ArticleEditor.web link', () => {
       expect(getByTestId('quill-mock')).toBeTruthy();
     });
 
-    const linkBtn = document.querySelector('button.ql-link') as HTMLButtonElement | null;
-    expect(linkBtn).toBeTruthy();
-
-    await act(async () => {
-      linkBtn?.dispatchEvent(
-        new (globalThis as any).MouseEvent('mousedown', { bubbles: true, cancelable: true })
-      );
+    await waitFor(() => {
+      expect((globalThis as any).__quillProps__).toBeTruthy();
+      expect((globalThis as any).__quillEditor__).toBeTruthy();
     });
+
+    const quillProps = (globalThis as any).__quillProps__;
+    const editor = (globalThis as any).__quillEditor__;
+
+    const handler = quillProps?.modules?.toolbar?.handlers?.link;
+    expect(typeof handler).toBe('function');
+
+    // Simulate Quill calling toolbar handler.
+    handler.call({ quill: editor }, true);
 
     await waitFor(() => {
       expect(getByText('Ссылка')).toBeTruthy();
@@ -151,8 +124,6 @@ describe('ArticleEditor.web link', () => {
     fireEvent.press(getByLabelText('Сохранить') as any);
 
     await waitFor(() => {
-      const editor = (globalThis as any).__quillEditor__;
-      expect(editor).toBeTruthy();
       expect(editor.format).toHaveBeenCalledWith('link', 'https://example.com', 'user');
     });
   });
