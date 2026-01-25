@@ -137,6 +137,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     content: {
       flex: 1,
       gap: 24,
+      alignItems: 'flex-start',
     },
     title: {
       color: colors.text,

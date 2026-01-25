@@ -6,7 +6,6 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -120,8 +119,8 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {/* Дата */}
       {whenLine && (
         <SafeView style={styles.factItem}>
-          <MaterialIcons
-            name="calendar-today"
+          <Feather
+            name="calendar"
             size={Platform.select({ default: 16, web: 18 })}
             color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
           />
@@ -132,8 +131,8 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {/* Длительность */}
       {daysText && (
         <SafeView style={styles.factItem}>
-          <MaterialIcons
-            name="schedule"
+          <Feather
+            name="clock"
             size={Platform.select({ default: 16, web: 18 })}
             color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
           />
@@ -156,8 +155,8 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       {/* Категории */}
       {categories.length > 0 && (
         <SafeView style={[styles.factItem, styles.categoriesContainer]}>
-          <MaterialIcons
-            name="label"
+          <Feather
+            name="tag"
             size={Platform.select({ default: 16, web: 18 })}
             color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
           />

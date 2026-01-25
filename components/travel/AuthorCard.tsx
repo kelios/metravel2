@@ -7,7 +7,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, type ViewProps } from 'react-native';
 import { useRouter } from 'expo-router';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/src/types/types';
 import { openExternalUrl } from '@/src/utils/externalLinks';
@@ -221,7 +220,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               isMobile && styles.avatarMobile,
               { backgroundColor: colors.backgroundSecondary }
             ]}>
-              <MaterialIcons name="person" size={isMobile ? 32 : 40} color={colors.textMuted} />
+              <Feather name="user" size={isMobile ? 32 : 40} color={colors.textMuted} />
             </SafeView>
           )}
         </Pressable>
@@ -271,7 +270,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
 
           {travelsCount !== null && (
             <SafeView style={styles.statsRow}>
-              <MaterialIcons name="explore" size={16} color={colors.textMuted} />
+              <Feather name="map" size={16} color={colors.textMuted} />
               <Text style={[styles.statsText, { color: colors.textSecondary }]}>
                 {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
               </Text>

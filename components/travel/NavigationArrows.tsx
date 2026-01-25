@@ -7,7 +7,7 @@ import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/src/types/types';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
@@ -183,7 +183,7 @@ export default function NavigationArrows({
         >
           <View style={styles.navContent}>
             {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
-            <MaterialIcons name="chevron-left" size={24} color={colors.primary} />
+            <Feather name="chevron-left" size={24} color={colors.primary} />
             <View style={styles.navInfo}>
               <Text style={styles.navLabel} numberOfLines={1}>
                 Предыдущее
@@ -245,7 +245,7 @@ export default function NavigationArrows({
               </Text>
             </View>
             {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
-            <MaterialIcons name="chevron-right" size={24} color={colors.primary} />
+            <Feather name="chevron-right" size={24} color={colors.primary} />
           </View>
         </Pressable>
       ) : (

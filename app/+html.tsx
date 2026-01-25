@@ -518,7 +518,13 @@ img[width][height]{aspect-ratio:attr(width)/attr(height)}
 /* Оптимизация для LCP */
 img[fetchpriority="high"]{content-visibility:auto;will-change:auto}
 /* Резервирование пространства для hero изображения */
-[data-testid="travel-details-hero"]{min-height:300px}
+[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint}
+[data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px}
+/* Резервирование пространства для home hero изображения */
+[data-testid="home-hero-stack"]{min-height:400px}
+[data-testid="home-hero-stack"] img{width:320px;height:400px;aspect-ratio:4/5}
+/* Оптимизация для travel gallery */
+[data-testid*="travel-gallery"] img{aspect-ratio:16/9;contain:layout style paint}
 /* Предотвращение CLS для контейнеров с фиксированной высотой */
 [style*="minHeight"]{contain:layout style paint}
 /* Оптимизация загрузки */

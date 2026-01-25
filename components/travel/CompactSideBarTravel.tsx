@@ -629,35 +629,21 @@ function CompactSideBarTravel({
 
   return (
     <View style={[styles.root, { backgroundColor: themedColors.background }]}>
-      {isWeb ? (
-        <View
-          style={[
-            styles.menu,
-            isMobile ? { width: '100%' } : { width: '100%', maxWidth: 350 },
-            {
-              paddingBottom: menuPaddingBottom,
-              paddingLeft: menuPaddingHorizontal,
-              paddingRight: menuPaddingHorizontal,
-            },
-          ]}
-          {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}
-        >
-          {menuItems}
-        </View>
-      ) : (
-        <ScrollView
-          style={[styles.menu, { width: '100%' }]}
-          contentContainerStyle={{
-            paddingBottom: menuPaddingBottom,
-            paddingLeft: menuPaddingHorizontal,
-            paddingRight: menuPaddingHorizontal,
-          }}
-          showsHorizontalScrollIndicator={false}
-          {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}
-        >
-          {menuItems}
-        </ScrollView>
-      )}
+      <ScrollView
+        style={[
+          styles.menu,
+          isMobile ? { width: '100%' } : { width: '100%', maxWidth: 350 },
+        ]}
+        contentContainerStyle={{
+          paddingBottom: menuPaddingBottom,
+          paddingLeft: menuPaddingHorizontal,
+          paddingRight: menuPaddingHorizontal,
+        }}
+        showsVerticalScrollIndicator={Platform.OS !== 'web'}
+        {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}
+      >
+        {menuItems}
+      </ScrollView>
 
       {isMobile && (
         <View style={styles.closeBar}>
@@ -687,9 +673,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1, 
     backgroundColor: colors.surface,
     ...(Platform.OS === "web" ? {
-      // На web прокрутка должна быть общей для страницы,
-      // поэтому убираем собственный scroll/100vh/position: fixed
       position: "relative" as any,
+      height: '100vh' as any,
+      display: 'flex' as any,
+      flexDirection: 'column' as any,
     } : {}),
   },
   // ✅ РЕДИЗАЙН: Современное меню с изящными отступами
@@ -701,9 +688,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
     alignSelf: "flex-start",
     ...(Platform.OS === 'web' ? {
-      maxWidth: 350, 
+      maxWidth: 350,
+      flex: 1,
+      overflowY: 'auto' as any,
       overflowX: 'hidden' as any,
-      overflow: 'hidden' as any,
       width: '100%',
     } : {}),
   },
@@ -1068,7 +1056,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.surfaceMuted,
     borderWidth: 0,
     borderColor: "transparent",
-    flexShrink: 0,
+    flexShrink: 1,
+    maxWidth: Platform.select({ default: 140, web: 120 }),
   },
   linkMetaText: {
     fontSize: Platform.select({ default: 14, web: 12 }),
@@ -1076,6 +1065,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontFamily: "Georgia",
     fontWeight: "600",
     lineHeight: Platform.select({ default: 18, web: 16 }),
+    flexWrap: 'wrap',
   },
   linkDivider: {
     height: 1,

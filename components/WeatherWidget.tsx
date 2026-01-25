@@ -3,7 +3,7 @@
  * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { Platform, View, Text, StyleSheet, Image } from 'react-native';
+import { Platform, View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
@@ -106,7 +106,11 @@ export default function WeatherWidget({ points, countryName }: Props) {
               )}
           </View>
 
-          <View style={styles.forecastContainer}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.forecastContainer}
+          >
               {forecast.map((day, index) => (
                 <View key={day.date} style={[
                     styles.forecastItem,
@@ -129,7 +133,7 @@ export default function WeatherWidget({ points, countryName }: Props) {
                     </Text>
                 </View>
               ))}
-          </View>
+          </ScrollView>
       </View>
     );
 }
@@ -166,7 +170,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     title: {
         fontSize: 13, // было 14px (-7%)
         fontWeight: '600',
-        fontFamily: 'Roboto-Medium',
         color: colors.text,
         cursor: 'default',
         width: '100%',
@@ -186,17 +189,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     tooltipText: {
         color: colors.text,
         fontSize: 13, // было 14px (-7%)
-        fontFamily: 'Roboto-Regular',
+        fontWeight: '400',
     },
     forecastContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 5, // было 6px (-17%)
+        gap: 12,
+        paddingRight: 8,
     },
     forecastItem: {
-        flex: 1,
         alignItems: 'center',
         paddingVertical: 1,
+        minWidth: 80,
+        width: 80,
     },
     lastItem: {
         marginRight: 0,
@@ -208,7 +212,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     date: {
         fontSize: 13, // было 14px (-7%)
         fontWeight: '500',
-        fontFamily: 'Roboto-Medium',
         color: colors.textMuted,
         marginBottom: 3, // было 4px (-25%)
         textAlign: 'center',
@@ -225,19 +228,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     tempMax: {
         fontSize: 13, // было 14px (-7%)
         fontWeight: '600',
-        fontFamily: 'Roboto-Medium',
         color: colors.text,
     },
     tempMin: {
         fontSize: 13, // было 14px (-7%)
         fontWeight: '400',
-        fontFamily: 'Roboto-Regular',
         color: colors.textMuted,
     },
     desc: {
         fontSize: 13, // было 14px (-7%)
         color: colors.textMuted,
-        fontFamily: 'Roboto-Regular',
+        fontWeight: '400',
         textAlign: 'center',
         maxWidth: '100%',
     },
