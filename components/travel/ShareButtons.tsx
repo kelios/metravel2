@@ -241,7 +241,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     {
       key: 'whatsapp',
       label: 'WhatsApp',
-      icon: 'chat',
+      icon: 'message-circle',
       onPress: handleShareWhatsApp,
       color: palette.whatsapp,
     },

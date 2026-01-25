@@ -633,21 +633,25 @@ function CompactSideBarTravel({
 
   return (
     <View style={[styles.root, { backgroundColor: themedColors.background }]}>
-      <ScrollView
-        style={[
-          styles.menu,
-          { width: '100%' },
-        ]}
-        contentContainerStyle={{
-          paddingBottom: menuPaddingBottom,
-          paddingLeft: menuPaddingHorizontal,
-          paddingRight: menuPaddingHorizontal,
-        }}
-        showsVerticalScrollIndicator={Platform.OS !== 'web'}
+      <View
+        style={{ flex: 1, minHeight: 0 }}
         {...(Platform.OS === 'web' ? { 'data-sidebar-menu': true } : {})}
       >
-        {menuItems}
-      </ScrollView>
+        <ScrollView
+          style={[
+            styles.menu,
+            { width: '100%' },
+          ]}
+          contentContainerStyle={{
+            paddingBottom: menuPaddingBottom,
+            paddingLeft: menuPaddingHorizontal,
+            paddingRight: menuPaddingHorizontal,
+          }}
+          showsVerticalScrollIndicator={Platform.OS !== 'web'}
+        >
+          {menuItems}
+        </ScrollView>
+      </View>
 
       {isMobile && (
         <View style={styles.closeBar}>
@@ -678,9 +682,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.surface,
     ...(Platform.OS === "web" ? {
       position: "relative" as any,
-      height: '100vh' as any,
       display: 'flex' as any,
       flexDirection: 'column' as any,
+      minHeight: 0 as any,
     } : {}),
   },
   // ✅ РЕДИЗАЙН: Современное меню с изящными отступами
@@ -694,9 +698,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...(Platform.OS === 'web' ? {
       maxWidth: 350,
       flex: 1,
+      minHeight: 0 as any,
       overflowY: 'auto' as any,
       overflowX: 'hidden' as any,
       width: '100%',
+      alignSelf: 'stretch' as any,
     } : {}),
   },
   // ✅ РЕДИЗАЙН: Компактная карточка автора (оптимизация для отображения без скролла)
