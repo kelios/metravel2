@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import { METRICS } from '@/constants/layout';
 
 type Breakpoint = keyof typeof METRICS.breakpoints;
@@ -38,7 +38,19 @@ type DimensionsSnapshot = {
   height: number;
 };
 
+const getWebWindowSnapshot = (): DimensionsSnapshot | null => {
+  if (Platform.OS !== 'web') return null;
+  if (typeof window === 'undefined') return null;
+  const width = Number(window.innerWidth);
+  const height = Number(window.innerHeight);
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
+  if (width <= 0 || height <= 0) return null;
+  return { width, height };
+};
+
 let currentSnapshot: DimensionsSnapshot = (() => {
+  const webSnapshot = getWebWindowSnapshot();
+  if (webSnapshot) return webSnapshot;
   const { width, height } = Dimensions.get('window');
   return { width, height };
 })();
@@ -53,7 +65,8 @@ const ensureSubscription = () => {
   // Ensure we start from the actual client window dimensions.
   // On web with SSR, module-level initialization can run with incorrect dimensions.
   try {
-    const { width, height } = Dimensions.get('window');
+    const webSnapshot = getWebWindowSnapshot();
+    const { width, height } = webSnapshot ?? Dimensions.get('window');
     if (currentSnapshot.width !== width || currentSnapshot.height !== height) {
       currentSnapshot = { width, height };
       snapshotChanged = true;
@@ -62,8 +75,7 @@ const ensureSubscription = () => {
     // noop
   }
 
-  subscription = Dimensions.addEventListener('change', ({ window }) => {
-    currentSnapshot = { width: window.width, height: window.height };
+  const notify = () => {
     subscribers.forEach((cb) => {
       try {
         cb();
@@ -71,7 +83,77 @@ const ensureSubscription = () => {
         // noop
       }
     });
+  };
+
+  const dimSub = Dimensions.addEventListener('change', ({ window }) => {
+    currentSnapshot = { width: window.width, height: window.height };
+    notify();
   }) as any;
+
+  // On web static/prod builds Dimensions can occasionally report stale/zero values.
+  // Keep an additional window resize subscription as the source of truth.
+  let removeWebListener: (() => void) | null = null;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    let raf = 0 as any;
+    const onResize = () => {
+      if (raf) return;
+      raf = (window as any).requestAnimationFrame?.(() => {
+        raf = 0;
+        const webSnapshot = getWebWindowSnapshot();
+        if (!webSnapshot) return;
+        if (
+          currentSnapshot.width !== webSnapshot.width ||
+          currentSnapshot.height !== webSnapshot.height
+        ) {
+          currentSnapshot = webSnapshot;
+          notify();
+        }
+      }) ?? setTimeout(() => {
+        raf = 0;
+        const webSnapshot = getWebWindowSnapshot();
+        if (!webSnapshot) return;
+        if (
+          currentSnapshot.width !== webSnapshot.width ||
+          currentSnapshot.height !== webSnapshot.height
+        ) {
+          currentSnapshot = webSnapshot;
+          notify();
+        }
+      }, 0);
+    };
+
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    removeWebListener = () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+      try {
+        if (raf && typeof (window as any).cancelAnimationFrame === 'function') {
+          (window as any).cancelAnimationFrame(raf);
+        }
+      } catch {
+        // noop
+      }
+      raf = 0;
+    };
+
+    // Force a sync update after attaching listeners to avoid "stuck" initial width.
+    try {
+      onResize();
+    } catch {
+      // noop
+    }
+  }
+
+  subscription = {
+    remove: () => {
+      try {
+        dimSub?.remove?.();
+      } finally {
+        removeWebListener?.();
+      }
+    },
+  };
   return snapshotChanged;
 };
 

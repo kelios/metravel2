@@ -285,6 +285,20 @@ function RootLayoutNav() {
       }
     }, [fontError]);
 
+    useEffect(() => {
+      if (!isWeb) return;
+      if (typeof window === 'undefined') return;
+      
+      const isProd = window.location.hostname === 'metravel.by' || window.location.hostname === 'www.metravel.by';
+      if (!isProd) return;
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    }, []);
+
     if (!fontsLoaded && !isWeb) {
       return (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: loadingColors.background }}>
@@ -339,10 +353,6 @@ function ThemedContent({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const defaultTitle = "MeTravel — путешествия и маршруты";
-  const defaultDescription = "Маршруты, места и впечатления от путешественников.";
-  const SITE = process.env.EXPO_PUBLIC_SITE_URL || "https://metravel.by";
-  const canonical = `${SITE}${pathname || "/"}`;
   const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
   const WEB_FOOTER_RESERVE_HEIGHT = 56;
 
@@ -378,9 +388,6 @@ function ThemedContent({
                                   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
                                   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
                                   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-                                  <title key="fallback-title">{defaultTitle}</title>
-                                  <meta key="fallback-description" name="description" content={defaultDescription} />
-                                  <link key="fallback-canonical" rel="canonical" href={canonical} />
                               </Head>
 
                               {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}

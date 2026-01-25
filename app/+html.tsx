@@ -310,7 +310,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
     <html lang="ru" suppressHydrationWarning>
     <head>
       <meta charSet="utf-8" />
+      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
+      <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+      <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+      <meta name="color-scheme" content="light dark" />
 
       <script
         dangerouslySetInnerHTML={{
@@ -337,13 +341,26 @@ export default function Root({ children }: { children: React.ReactNode }) {
         }}
       />
 
+      {/* Resource hints - critical domains */}
+      <link rel="dns-prefetch" href="//cdn.metravel.by" />
+      <link rel="dns-prefetch" href="//api.metravel.by" />
+      <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
+      
       {/* Icons */}
-      <link rel="icon" href="/favicon.ico" sizes="any" />
+      <link rel="icon" href="/favicon.ico" sizes="32x32" />
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-      <link rel="dns-prefetch" href="//cdn.metravel.by" />
-      <link rel="preconnect" href="https://api.open-meteo.com" crossOrigin="" />
-      <link rel="preconnect" href="https://cdn-icons-png.flaticon.com" crossOrigin="" />
+      <link rel="manifest" href="/manifest.json" />
+      
+      {/* Preload critical fonts */}
+      <link 
+        rel="preload" 
+        href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf" 
+        as="font" 
+        type="font/ttf" 
+        crossOrigin="anonymous"
+      />
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
@@ -468,94 +485,74 @@ export default function Root({ children }: { children: React.ReactNode }) {
         __html: getAnalyticsInlineScript(METRIKA_ID, GA_ID),
       }}
     />
-
-    {/* Noscript (не условный — это нормально) */}
-    <noscript>
-      <div>
-        <img
-          src={`https://mc.yandex.ru/watch/${METRIKA_ID}`}
-          style={{ position: 'absolute', left: '-9999px' }}
-          alt=""
-        />
-        <iframe
-          src={`https://www.googletagmanager.com/ns.html?id=${GA_ID}`}
-          height="0"
-          width="0"
-          style={{ display: 'none', visibility: 'hidden' }}
-        />
-      </div>
-    </noscript>
     </body>
     </html>
   );
 }
 
 const criticalCSS = `
-*,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;height:100%;scrollbar-gutter:stable}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;height:100%;scrollbar-gutter:stable;-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%}
 body{
   margin:0;
   min-height:100vh;
   min-height:-webkit-fill-available;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',sans-serif;
   font-display:swap;
   line-height:1.6;
   -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
   text-rendering:optimizeSpeed;
-  color:var(--color-text);
-  background:linear-gradient(180deg,var(--color-background) 0%,var(--color-backgroundSecondary) 40%,var(--color-surface) 100%);
+  color:var(--color-text,#1a1a1a);
+  background:linear-gradient(180deg,var(--color-background,#fff) 0%,var(--color-backgroundSecondary,#f5f5f5) 40%,var(--color-surface,#fafafa) 100%);
   padding-bottom:env(safe-area-inset-bottom);
   overflow-y:scroll;
+  overflow-x:hidden;
 }
-img,picture,video,canvas{display:block;max-width:100%}
- /* Prevent react-native-web ActivityIndicator SVG from stretching to full container size */
- svg[viewBox="0 0 32 32"][width="100%"][height="100%"]{width:32px;height:32px;max-width:none;max-height:none;display:inline-block}
-img{height:auto;width:100%;object-fit:cover}
-input,button,textarea,select{font:inherit}
-button{cursor:pointer}
+img,picture,video,canvas,svg{display:block;max-width:100%;height:auto}
+svg[viewBox="0 0 32 32"][width="100%"][height="100%"]{width:32px;height:32px;max-width:none;max-height:none;display:inline-block}
+img{width:100%;object-fit:cover;font-style:italic;vertical-align:middle}
+input,button,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:transparent;border:0}
+button:focus-visible,a:focus-visible{outline:2px solid var(--color-focus,#0066cc);outline-offset:2px}
+a{color:inherit;text-decoration:none}
 [hidden]{display:none !important}
-img[data-lcp]{content-visibility:auto;contain:layout style paint;min-height:300px;background:var(--color-backgroundSecondary)}
-/* Предотвращение CLS - фиксированные размеры для изображений */
+img[data-lcp]{content-visibility:auto;contain:layout style paint;min-height:300px;background:var(--color-backgroundSecondary,#f5f5f5);aspect-ratio:16/9}
 img[width][height]{aspect-ratio:attr(width)/attr(height)}
-/* Оптимизация для LCP */
-img[fetchpriority="high"]{content-visibility:auto;will-change:auto}
-/* Резервирование пространства для hero изображения */
-[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint}
-[data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px}
-/* Резервирование пространства для home hero изображения */
-[data-testid="home-hero-stack"]{min-height:400px}
-[data-testid="home-hero-stack"] img{width:320px;height:400px;aspect-ratio:4/5}
-/* Оптимизация для travel gallery */
-[data-testid*="travel-gallery"] img{aspect-ratio:16/9;contain:layout style paint}
-/* Предотвращение CLS для контейнеров с фиксированной высотой */
+img[fetchpriority="high"]{content-visibility:auto;will-change:transform}
+img[loading="lazy"]{content-visibility:auto}
+[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,#f5f5f5)}
+[data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:cover}
+[data-testid="home-hero-stack"]{min-height:400px;contain:layout style paint}
+[data-testid="home-hero-stack"] img{width:320px;height:400px;aspect-ratio:4/5;object-fit:cover}
+[data-testid*="travel-gallery"] img{aspect-ratio:16/9;contain:layout style paint;object-fit:cover}
 [style*="minHeight"]{contain:layout style paint}
-/* Оптимизация загрузки */
-[loading="lazy"]{content-visibility:auto}
-/* Критический CSS для страницы travels - предотвращение layout shift */
+[role="img"]:not([aria-label]){font-size:0}
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
-  *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important}
+  *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;scroll-behavior:auto !important}
 }
-html[data-theme="dark"]{color-scheme:dark}
-html[data-theme="light"]{color-scheme:light}
-:focus-visible{outline:2px solid var(--color-focus);outline-offset:2px}
-/* ✅ ИСПРАВЛЕНИЕ: Оптимизация для мобильных устройств (320-430px) */
+html[data-theme="dark"]{color-scheme:dark;--color-text:#fff;--color-background:#1a1a1a;--color-backgroundSecondary:#2a2a2a;--color-surface:#333;--color-focus:#66b3ff}
+html[data-theme="light"]{color-scheme:light;--color-text:#1a1a1a;--color-background:#fff;--color-backgroundSecondary:#f5f5f5;--color-surface:#fafafa;--color-focus:#0066cc}
+:focus-visible{outline:2px solid var(--color-focus,#0066cc);outline-offset:2px}
+::selection{background-color:rgba(0,102,204,0.3);color:inherit}
 @media (max-width:768px){
-  html{height:100%;height:-webkit-fill-available}
+  html{height:100%;height:-webkit-fill-available;font-size:100%}
   body{min-height:100vh;min-height:-webkit-fill-available;padding-bottom:calc(env(safe-area-inset-bottom) + 80px)}
-  img[data-lcp]{min-height:240px;aspect-ratio:16/9;background:var(--color-backgroundTertiary)}
+  img[data-lcp]{min-height:240px;aspect-ratio:16/9;background:var(--color-backgroundTertiary,#f0f0f0)}
   [data-testid="travel-details-hero"]{min-height:240px}
-  /* Предотвращаем обрезку карточек */
-  [data-card]{margin-bottom:16px;width:100%;max-width:100%}
-  [data-card] img{height:200px;object-fit:cover;width:100%}
+  [data-card]{margin-bottom:16px;width:100%;max-width:100%;contain:layout style paint}
+  [data-card] img{height:200px;object-fit:cover;width:100%;aspect-ratio:16/9}
 }
-/* ✅ ИСПРАВЛЕНИЕ: Поддержка iOS Safari safe area */
+@media (min-width:769px){
+  body{font-size:16px}
+}
 @supports (padding-bottom: env(safe-area-inset-bottom)){
   body{padding-bottom:env(safe-area-inset-bottom)}
 }
-[data-testid="footer-dock-row"],
-[data-testid="footer-desktop-bar"]{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;align-items:center !important}
+[data-testid="footer-dock-row"],[data-testid="footer-desktop-bar"]{display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;align-items:center !important}
 [data-testid="footer-dock-row"]{justify-content:center !important}
 [data-testid="footer-desktop-bar"]{justify-content:space-between !important}
 [data-testid^="footer-item-"]{display:inline-flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;flex:0 0 auto !important}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 `;

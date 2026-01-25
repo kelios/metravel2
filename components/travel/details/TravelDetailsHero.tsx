@@ -210,18 +210,18 @@ const OptimizedLCPHeroInner: React.FC<{
   )
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9
   const lcpMaxWidth = isMobile ? 420 : 860
-  const lcpWidths = isMobile ? [320, 380, 420] : [640, 720, 860]
+  const lcpWidths = isMobile ? [320, 380, 420, 640] : [640, 720, 860, 1080]
   const targetWidth =
     typeof window !== 'undefined'
       ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
       : lcpMaxWidth
-  const lcpQuality = isMobile ? 50 : 55
+  const lcpQuality = isMobile ? 65 : 70
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
     widths: lcpWidths,
     quality: lcpQuality,
-    format: 'webp',
+    format: 'auto',
     fit: 'cover',
     sizes: isMobile
       ? '100vw'
@@ -327,7 +327,7 @@ const OptimizedLCPHeroInner: React.FC<{
             src={srcWithRetry}
             srcSet={responsive.srcSet}
             sizes={responsive.sizes}
-            alt={alt || ''}
+            alt={alt || 'Фотография маршрута путешествия'}
             width={img.width || 1200}
             height={img.height || Math.round(1200 / ratio)}
             style={{

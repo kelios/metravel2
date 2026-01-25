@@ -1,9 +1,8 @@
-// src/components/seo/LazyInstantSEO.tsx
 import React from 'react';
 import Head from 'expo-router/head';
 
 type Props = {
-    headKey?: string | null;   // стабильный ключ для страницы (например, 'map', 'travel-list', и т.п.)
+    headKey?: string | null;
     title: string;
     description?: string;
     canonical?: string;
@@ -14,113 +13,17 @@ type Props = {
     children?: React.ReactNode;
 };
 
-function upsertMeta(sel: { name?: string; property?: string }, content?: string) {
-    if (!content || typeof document === 'undefined') return;
-    const head = document.head;
-    const selector = sel.name
-        ? `meta[name="${sel.name}"]`
-        : `meta[property="${sel.property}"]`;
-
-    let el = head.querySelector<HTMLMetaElement>(selector);
-    if (!el) {
-        el = document.createElement('meta');
-        if (sel.name) el.setAttribute('name', sel.name);
-        if (sel.property) el.setAttribute('property', sel.property);
-        head.appendChild(el);
-    }
-    el.setAttribute('content', content);
-}
-
-function upsertCanonical(href?: string) {
-    if (!href || typeof document === 'undefined') return;
-    const head = document.head;
-    let link = head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-    if (!link) {
-        link = document.createElement('link');
-        link.setAttribute('rel', 'canonical');
-        head.appendChild(link);
-    }
-    link.setAttribute('href', href);
-}
-
-// «самый ранний» эффект: useInsertionEffect -> useLayoutEffect -> useEffect
-const useEarlyEffect: typeof React.useLayoutEffect =
-    // @ts-ignore
-    (React as any).useInsertionEffect || React.useLayoutEffect || React.useEffect;
-
 const InstantSEO: React.FC<Props> = ({
-                                         headKey,
-                                         title,
-                                         description,
-                                         canonical,
-                                         image,
-                                         ogType = 'website',
-                                         robots,
-                                         additionalTags,
-                                         children,
-                                     }) => {
-    // 1) Синхронно применяем тайтл/меты сразу при маунте/обновлении
-    useEarlyEffect(() => {
-        if (typeof document === 'undefined') return;
-
-        try {
-            document.title = title;
-
-            upsertCanonical(canonical);
-
-            if (description) {
-                upsertMeta({ name: 'description' }, description);
-                upsertMeta({ name: 'twitter:description' }, description);
-                upsertMeta({ property: 'og:description' }, description);
-            }
-            if (robots) {
-                upsertMeta({ name: 'robots' }, robots);
-            }
-
-            upsertMeta({ property: 'og:type' }, ogType);
-            upsertMeta({ property: 'og:title' }, title);
-            upsertMeta({ name: 'twitter:title' }, title);
-
-            if (image) {
-                upsertMeta({ property: 'og:image' }, image);
-                upsertMeta({ name: 'twitter:image' }, image);
-            }
-
-            if (canonical) {
-                upsertMeta({ property: 'og:url' }, canonical);
-            }
-
-            upsertMeta({ name: 'twitter:card' }, 'summary_large_image');
-
-            // маяк для восстановления после BFCache
-            upsertMeta({ name: 'x-current-title' }, title);
-        } catch (error) {
-             
-            console.warn('InstantSEO: failed to update meta tags', error);
-        }
-    }, [title, description, canonical, image, ogType, robots]);
-
-    // 2) При возвращении «назад» из bfcache браузера — ещё раз фиксируем тайтл
-    React.useEffect(() => {
-        if (typeof window === 'undefined') return;
-        const onPageShow = () => {
-            // isTrusted + persisted гарантирует BFCache; но нам ок и просто дожать тайтл
-            try {
-                const meta = document.head.querySelector<HTMLMetaElement>('meta[name="x-current-title"]');
-                const expected = meta?.getAttribute('content') || title;
-                if (document.title !== expected) {
-                    document.title = expected;
-                }
-            } catch (error) {
-                 
-                console.warn('InstantSEO: failed to sync title from bfcache', error);
-            }
-        };
-        window.addEventListener('pageshow', onPageShow);
-        return () => window.removeEventListener('pageshow', onPageShow);
-    }, [title]);
-
-    // 3) SSR/пререндер — дублируем в <Head>
+    headKey,
+    title,
+    description,
+    canonical,
+    image,
+    ogType = 'website',
+    robots,
+    additionalTags,
+    children,
+}) => {
     return (
         <Head key={headKey ?? 'instant-seo'}>
             <title key="title">{title}</title>
