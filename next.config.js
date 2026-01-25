@@ -3,9 +3,11 @@ const nextConfig = {
   // Оптимизация изображений
   images: {
     formats: ['image/avif', 'image/webp'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    deviceSizes: [420, 640, 750, 860, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 31536000, // 1 год
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
   
   // Компрессия
@@ -13,6 +15,10 @@ const nextConfig = {
   
   // Оптимизация production сборки
   swcMinify: true,
+  
+  // Оптимизация производительности
+  poweredByHeader: false,
+  reactStrictMode: true,
   
   // Headers для кеширования
   async headers() {
@@ -42,6 +48,14 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['react-native-paper', '@expo/vector-icons'],
+    scrollRestoration: true,
+  },
+  
+  // Оптимизация модулей
+  modularizeImports: {
+    '@expo/vector-icons': {
+      transform: '@expo/vector-icons/{{member}}',
+    },
   },
 }
 

@@ -42,7 +42,7 @@ const buildWeservProxyUrl = (src: string) => {
     // Avoid double-wrapping an already-proxied URL.
     if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) return normalized;
     const withoutScheme = trimmed.replace(/^https?:\/\//i, '');
-    return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=1600&fit=inside`;
+    return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=1200&q=70&fit=inside`;
   } catch {
     return null;
   }
@@ -54,6 +54,7 @@ const stripDangerousTags = (html: string) =>
 const normalizeImgTags = (html: string): string =>
   html.replace(/<img\b[^>]*?>/gi, (tag) => {
     const src = tag.match(/\bsrc="([^"]+)"/i)?.[1] ?? "";
+    const optimizedSrc = src ? buildWeservProxyUrl(src) || src : src;
     let w = tag.match(/\bwidth="(\d+)"/i)?.[1];
     let h = tag.match(/\bheight="(\d+)"/i)?.[1];
     if (!w || !h) {
@@ -70,6 +71,10 @@ const normalizeImgTags = (html: string): string =>
       style
     );
     let out = tag.replace(styleMatch ? styleMatch[0] : "", "").replace(/>$/, ` style="${ensured}">`);
+    out = out
+      .replace(/\bsrc="[^"]*"/i, optimizedSrc ? `src="${optimizedSrc.replace(/"/g, '&quot;')}"` : '')
+      .replace(/\bsrcset="[^"]*"/i, '')
+      .replace(/\bsizes="[^"]*"/i, '');
     out = out.replace(/\bwidth="[^"]*"/i, "").replace(/\bheight="[^"]*"/i, "");
     if (w && h) out = out.replace(/>$/, ` width="${w}" height="${h}">`);
     out = out.replace(/\bdecoding="[^"]*"/i, "").replace(/\bfetchpriority="[^"]*"/i, "");
@@ -383,21 +388,60 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const connection = (navigator as any)?.connection;
+    const effectiveType = String(connection?.effectiveType || '').toLowerCase();
+    const saveData = Boolean(connection?.saveData);
+    const isConstrained = saveData || effectiveType.includes('2g') || effectiveType.includes('slow-2g');
+    if (isConstrained) return;
+
     const first = extractFirstImgSrc(prepared);
     if (!first) return;
     const safeHref = buildWeservProxyUrl(first) || first;
     const linkId = `prefetch-stable-content-first-img-${encodeURIComponent(safeHref)}`;
     if (document.getElementById(linkId)) return;
-    const link = document.createElement("link");
-    // Use prefetch to avoid "preloaded but not used" warnings when the HTML/image
-    // is mounted after window load.
-    link.rel = "prefetch";
-    link.as = "image";
-    link.href = safeHref;
-    link.id = linkId;
-    document.head.appendChild(link);
+
+    let link: HTMLLinkElement | null = null;
+    let cancelled = false;
+
+    const mount = () => {
+      if (cancelled) return;
+      if (document.getElementById(linkId)) return;
+      link = document.createElement("link");
+      link.rel = "prefetch";
+      link.as = "image";
+      link.href = safeHref;
+      link.id = linkId;
+      document.head.appendChild(link);
+    };
+
+    const schedule = () => {
+      try {
+        if ((window as any).requestIdleCallback) {
+          ;(window as any).requestIdleCallback(mount, { timeout: 2500 });
+        } else {
+          setTimeout(mount, 1800);
+        }
+      } catch {
+        mount();
+      }
+    };
+
+    if (document.readyState === 'complete') {
+      schedule();
+    } else {
+      window.addEventListener('load', schedule, { once: true });
+    }
+
     return () => {
-      if (link.parentNode) link.parentNode.removeChild(link);
+      cancelled = true;
+      try {
+        window.removeEventListener('load', schedule as any);
+      } catch {
+        void 0;
+      }
+      if (link?.parentNode) link.parentNode.removeChild(link);
     };
   }, [prepared]);
 

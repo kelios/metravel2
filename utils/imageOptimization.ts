@@ -56,7 +56,7 @@ export function optimizeImageUrl(
   const {
     width,
     height,
-    quality = 85,
+    quality = 75,
     format = 'auto',
     dpr =
       typeof window !== 'undefined'
@@ -344,7 +344,7 @@ export function generateSrcSet(
       const optimizedUrl = optimizeImageUrl(baseUrl, {
         width: size,
         format: resolvedFormat,
-        quality: options.quality ?? 85,
+        quality: options.quality ?? 75,
         fit: options.fit,
         dpr: resolvedDpr,
       });
@@ -419,7 +419,7 @@ export function buildResponsiveImageProps(
   const src =
     optimizeImageUrl(baseUrl, {
       width: widest,
-      quality: options.quality ?? 85,
+      quality: options.quality ?? 75,
       format,
       fit: options.fit,
       dpr: resolvedDpr,
@@ -431,7 +431,7 @@ export function buildResponsiveImageProps(
 
   const srcSet = generateSrcSet(baseUrl, widths, {
     format,
-    quality: options.quality ?? 85,
+    quality: options.quality ?? 75,
     fit: options.fit,
     dpr: resolvedDpr,
   });

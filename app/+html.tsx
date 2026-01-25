@@ -207,8 +207,8 @@ const getTravelHeroPreloadScript = () => String.raw`
         if (!allowed) return null;
         if (width) resolved.searchParams.set('w', String(Math.round(width)));
         if (quality) resolved.searchParams.set('q', String(quality));
-        resolved.searchParams.set('f', 'auto');
-        resolved.searchParams.set('fit', 'contain');
+        resolved.searchParams.set('f', 'webp');
+        resolved.searchParams.set('fit', 'cover');
         return resolved.toString();
       } catch (_e) {
         return null;
@@ -243,11 +243,11 @@ const getTravelHeroPreloadScript = () => String.raw`
         var url = typeof first === 'string' ? first : first && first.url;
         if (!url || typeof url !== 'string') return;
 
-        var viewport = Math.max(320, Math.min(window.innerWidth || 480, 960));
+        var viewport = Math.max(320, Math.min(window.innerWidth || 420, 860));
         var isMobile = (window.innerWidth || 0) <= 540;
-        var targetWidth = isMobile ? Math.min(viewport, 480) : Math.min(viewport, 960);
-        var quality = isMobile ? 55 : 60;
-        var highWidth = Math.min(isMobile ? 720 : 1280, Math.round(targetWidth * 2));
+        var targetWidth = isMobile ? Math.min(viewport, 420) : Math.min(viewport, 860);
+        var quality = isMobile ? 50 : 55;
+        var highWidth = Math.min(isMobile ? 640 : 1080, Math.round(targetWidth * 1.5));
         var optimizedHref = buildOptimizedUrl(url, targetWidth, quality);
         if (!optimizedHref) return;
         var optimizedHrefHigh = highWidth !== targetWidth
@@ -275,8 +275,10 @@ const getTravelHeroPreloadScript = () => String.raw`
           link.setAttribute('imagesrcset', optimizedHref + ' ' + Math.round(targetWidth) + 'w, ' + optimizedHrefHigh + ' ' + Math.round(highWidth) + 'w');
           link.setAttribute('imagesizes', '100vw');
         }
-        link.fetchPriority = 'high';
-        link.setAttribute('fetchpriority', 'high');
+        try {
+          link.fetchPriority = 'high';
+          link.setAttribute('fetchpriority', 'high');
+        } catch (_e) {}
         link.crossOrigin = 'anonymous';
         document.head.appendChild(link);
       }).catch(function(){}).finally(function(){
@@ -284,10 +286,20 @@ const getTravelHeroPreloadScript = () => String.raw`
       });
     }
 
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(run, { timeout: 2500 });
+    function scheduleAfterLoad(){
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(run, { timeout: 2500 });
+      } else {
+        setTimeout(run, 1800);
+      }
+    }
+
+    // Run only after full load to avoid competing with React hydration, route chunk,
+    // and the actual LCP hero request.
+    if (document.readyState === 'complete') {
+      scheduleAfterLoad();
     } else {
-      setTimeout(run, 1800);
+      window.addEventListener('load', scheduleAfterLoad, { once: true });
     }
   } catch (_e) {}
 })();
@@ -329,10 +341,16 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="icon" href="/favicon.ico" sizes="any" />
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-      <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
+      <link rel="dns-prefetch" href="//cdn.metravel.by" />
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
+
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `@font-face{font-family:feather;src:url(/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf) format('truetype');font-weight:normal;font-style:normal;font-display:optional;}`, 
+        }}
+      />
 
       {/* Ensure font-display=swap for dynamically injected icon fonts */}
       <script
@@ -494,11 +512,13 @@ img{height:auto;width:100%;object-fit:cover}
 input,button,textarea,select{font:inherit}
 button{cursor:pointer}
 [hidden]{display:none !important}
-img[data-lcp]{content-visibility:auto;contain:layout style paint}
+img[data-lcp]{content-visibility:auto;contain:layout style paint;min-height:300px;background:var(--color-backgroundSecondary)}
 /* Предотвращение CLS - фиксированные размеры для изображений */
 img[width][height]{aspect-ratio:attr(width)/attr(height)}
 /* Оптимизация для LCP */
 img[fetchpriority="high"]{content-visibility:auto;will-change:auto}
+/* Резервирование пространства для hero изображения */
+[data-testid="travel-details-hero"]{min-height:300px}
 /* Предотвращение CLS для контейнеров с фиксированной высотой */
 [style*="minHeight"]{contain:layout style paint}
 /* Оптимизация загрузки */
@@ -515,7 +535,8 @@ html[data-theme="light"]{color-scheme:light}
 @media (max-width:768px){
   html{height:100%;height:-webkit-fill-available}
   body{min-height:100vh;min-height:-webkit-fill-available;padding-bottom:calc(env(safe-area-inset-bottom) + 80px)}
-  img[data-lcp]{min-height:200px;background:var(--color-backgroundTertiary)}
+  img[data-lcp]{min-height:240px;aspect-ratio:16/9;background:var(--color-backgroundTertiary)}
+  [data-testid="travel-details-hero"]{min-height:240px}
   /* Предотвращаем обрезку карточек */
   [data-card]{margin-bottom:16px;width:100%;max-width:100%}
   [data-card] img{height:200px;object-fit:cover;width:100%}

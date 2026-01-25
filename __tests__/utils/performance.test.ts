@@ -78,9 +78,9 @@ describe('Image Optimization', () => {
       expect(result).toMatch(/\bf=(avif|webp|jpg|png)\b/);
     });
 
-    it('should default to quality 85', () => {
+    it('should default to quality 75', () => {
       const result = optimizeImageUrl(baseUrl, {});
-      expect(result).toContain('q=85');
+      expect(result).toContain('q=75');
     });
 
     it('should clamp quality to valid range', () => {

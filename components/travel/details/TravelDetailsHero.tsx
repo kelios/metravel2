@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LayoutChangeEvent,
   Platform,
@@ -20,7 +20,6 @@ import {
 import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
-  getPreferredImageFormat,
 } from '@/utils/imageOptimization'
 import type { Travel } from '@/src/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -75,19 +74,19 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
     if (!imageUrl) return
 
     const versionedHref = buildVersioned(imageUrl, updatedAt, id)
-    const lcpMaxWidth = isMobile ? 480 : 960
-    const lcpWidths = isMobile ? [320, 420, 480] : [640, 768, 960]
+    const lcpMaxWidth = isMobile ? 420 : 860
+    const lcpWidths = isMobile ? [320, 380, 420] : [640, 720, 860]
     const targetWidth =
       typeof window !== 'undefined'
         ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
         : lcpMaxWidth
-    const lcpQuality = isMobile ? 55 : 60
+    const lcpQuality = isMobile ? 50 : 55
     const responsive = buildResponsiveImageProps(versionedHref, {
       maxWidth: targetWidth,
       widths: lcpWidths,
       quality: lcpQuality,
-      format: getPreferredImageFormat(),
-      fit: 'contain',
+      format: 'webp',
+      fit: 'cover',
       sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 860px',
     })
     const _optimizedHref = responsive.src || versionedHref
@@ -202,6 +201,7 @@ const OptimizedLCPHeroInner: React.FC<{
   const [loadError, setLoadError] = useState(false)
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null)
   const [didTryApiPrefix, setDidTryApiPrefix] = useState(false)
+  const imgRef = useRef<HTMLImageElement | null>(null)
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const baseSrc = buildVersionedImageUrl(
     buildVersioned(img.url, img.updated_at ?? null, img.id),
@@ -209,24 +209,36 @@ const OptimizedLCPHeroInner: React.FC<{
     img.id
   )
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9
-  const lcpMaxWidth = isMobile ? 480 : 960
-  const lcpWidths = isMobile ? [320, 420, 480] : [640, 768, 960]
+  const lcpMaxWidth = isMobile ? 420 : 860
+  const lcpWidths = isMobile ? [320, 380, 420] : [640, 720, 860]
   const targetWidth =
     typeof window !== 'undefined'
       ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
       : lcpMaxWidth
-  const lcpQuality = isMobile ? 55 : 60
+  const lcpQuality = isMobile ? 50 : 55
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
     widths: lcpWidths,
     quality: lcpQuality,
-    format: getPreferredImageFormat(),
-    fit: 'contain',
+    format: 'webp',
+    fit: 'cover',
     sizes: isMobile
       ? '100vw'
       : '(max-width: 1024px) 92vw, 860px',
   })
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    const el = imgRef.current
+    if (!el) return
+    try {
+      ;(el as any).fetchPriority = 'high'
+      el.setAttribute('fetchpriority', 'high')
+    } catch {
+      // noop
+    }
+  }, [])
 
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
@@ -329,7 +341,7 @@ const OptimizedLCPHeroInner: React.FC<{
             loading="eager"
             decoding="async"
             // @ts-ignore
-            fetchpriority="high"
+            ref={imgRef as any}
             crossOrigin="anonymous"
             referrerPolicy="no-referrer"
             data-lcp

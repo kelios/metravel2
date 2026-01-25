@@ -38,6 +38,17 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
 
   const setElementRef = useCallback((node: any) => {
     elementRef.current = node;
+
+    if (Platform.OS !== 'web') return;
+    if (!observerRef.current) return;
+    if (!node) return;
+    const domElement = node._nativeNode || node._domNode || node;
+    if (!domElement) return;
+    try {
+      observerRef.current.observe(domElement);
+    } catch {
+      // noop
+    }
   }, []);
 
   useEffect(() => {
@@ -91,17 +102,28 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
     );
 
     const element = elementRef.current;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
     if (element) {
-      // Handle React Native Web elements
       const domElement = element._nativeNode || element._domNode || element;
       if (domElement) {
         observerRef.current.observe(domElement);
+      } else {
+        fallbackTimer = setTimeout(() => {
+          setShouldLoad(true);
+        }, fallbackDelay || 2000);
       }
+    } else {
+      fallbackTimer = setTimeout(() => {
+        setShouldLoad(true);
+      }, fallbackDelay || 2000);
     }
 
     return () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
+      }
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer);
       }
     };
   }, [enabled, fallbackDelay, priority, rootMargin, shouldLoad, threshold]);

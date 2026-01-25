@@ -66,21 +66,54 @@ export function useTravelDetailsPerformance({
   }, [lcpLoaded])
 
   useEffect(() => {
-    if (!isLoading) {
-      setDeferAllowed(true)
+    if (Platform.OS !== 'web') {
+      if (!isLoading) setDeferAllowed(true)
+      return
     }
-  }, [isLoading])
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (!travel) return
-    setDeferAllowed(true)
-  }, [travel])
+    // If loading is complete but we still don't have travel data (e.g. missing param / error state),
+    // allow deferred UI immediately. The heavy sections won't mount meaningfully without data,
+    // and this keeps tests and non-happy paths deterministic.
+    if (!isLoading && !travel) {
+      setDeferAllowed(true)
+      return
+    }
 
-  useEffect(() => {
-    if (lcpLoaded) setDeferAllowed(true)
-    else rIC(() => setDeferAllowed(true), 800)
-  }, [lcpLoaded])
+    // On web, keep heavy/deferred sections unmounted until the LCP hero finishes loading.
+    // This avoids network contention and main-thread work that can push LCP out dramatically.
+    if (lcpLoaded) {
+      setDeferAllowed(true)
+      return
+    }
+
+    if (typeof window === 'undefined') return
+
+    let cancelled = false
+    const enable = () => {
+      if (cancelled) return
+      rIC(() => {
+        if (!cancelled) setDeferAllowed(true)
+      }, 1200)
+    }
+
+    // After window load, allow heavy content in idle time.
+    if (document.readyState === 'complete') {
+      enable()
+    } else {
+      window.addEventListener('load', enable, { once: true })
+    }
+
+    // Safety net: do not block forever if image never loads.
+    const t = setTimeout(() => {
+      if (!cancelled) setDeferAllowed(true)
+    }, 3500)
+
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+      window.removeEventListener('load', enable as any)
+    }
+  }, [isLoading, lcpLoaded, travel])
 
   useEffect(() => {
     if (Platform.OS !== 'web' || lcpLoaded) return

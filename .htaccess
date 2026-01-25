@@ -86,6 +86,19 @@
   
   # Referrer Policy
   Header set Referrer-Policy "strict-origin-when-cross-origin"
+  
+  # Preconnect для критичных доменов
+  Header add Link "<https://cdn.metravel.by>; rel=preconnect; crossorigin"
+  Header add Link "<https://api.metravel.by>; rel=preconnect; crossorigin"
+</IfModule>
+
+# HTTP/2 Server Push (если поддерживается)
+<IfModule mod_http2.c>
+  H2Push on
+  H2PushPriority * after
+  H2PushPriority text/css before
+  H2PushPriority image/webp after
+  H2PushPriority image/avif after
 </IfModule>
 
 

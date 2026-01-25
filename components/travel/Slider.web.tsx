@@ -67,7 +67,7 @@ const buildUri = (
     const aspectRatio = img.width / img.height
     const cappedWidth = Math.min(containerWidth, 1200)
     const optimalSize = getOptimalImageSize(cappedWidth, containerHeight, aspectRatio)
-    const quality = isFirst ? 75 : 70
+    const quality = isFirst ? 55 : 65
 
     return (
       optimizeImageUrl(versionedUrl, {

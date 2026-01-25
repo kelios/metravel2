@@ -194,7 +194,7 @@ const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: n
     const aspectRatio = img.width / img.height;
     const cappedWidth = isWeb ? Math.min(containerWidth, 1200) : containerWidth;
     const optimalSize = getOptimalImageSize(cappedWidth, containerHeight, aspectRatio);
-    const quality = isWeb ? (isFirst ? 75 : 70) : isFirst ? 90 : 85;
+    const quality = isWeb ? (isFirst ? 55 : 65) : isFirst ? 75 : 70;
 
     // Не обрезаем изображение по высоте: сохраняем исходные пропорции, подстраиваясь только по ширине
     return (

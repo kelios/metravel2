@@ -48,6 +48,14 @@ export const COMPACT_TYPOGRAPHY = {
   },
 } as const;
 
+/* -------------------- helpers -------------------- */
+const getShadowStyle = (colors: ThemedColors, shadowType: 'light' | 'medium' = 'light') => {
+  if (Platform.OS === 'web') {
+    return { boxShadow: shadowType === 'light' ? colors.boxShadows.light : colors.boxShadows.card };
+  }
+  return shadowType === 'light' ? colors.shadows.light : colors.shadows.medium;
+};
+
 /* -------------------- styles -------------------- */
 export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.create({
   // ✅ РЕДИЗАЙН: Светлый современный фон
@@ -151,18 +159,13 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
       default: COMPACT_SPACING.section.mobile, // было md (16px)
       web: COMPACT_SPACING.card.mobile, // было sm+xs (14px)
     }),
-    borderRadius: 999,
+    borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
     backgroundColor: colors.surface,
     marginRight: DESIGN_TOKENS.spacing.sm,
     marginBottom: DESIGN_TOKENS.spacing.sm,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      } as any,
-      default: colors.shadows.light,
-    }),
+    ...(getShadowStyle(colors, 'light') as any),
   },
   quickJumpChipPressed: {
     backgroundColor: colors.primaryLight,
@@ -202,12 +205,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     borderWidth: 1,
     borderColor: colors.borderAccent,
     backgroundColor: colors.accentSoft,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.card,
-      } as any,
-      default: colors.shadows.medium,
-    }),
+    ...(getShadowStyle(colors, 'medium') as any),
   },
   decisionSummaryTitle: {
     fontSize: Platform.select({ default: 22, web: 24 }),
@@ -368,12 +366,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     borderWidth: 1,
     borderColor: colors.borderLight,
     minHeight: 56, // было 64
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.card,
-      } as any,
-      default: colors.shadows.medium,
-    }),
+    ...(getShadowStyle(colors, 'medium') as any),
   },
   sectionHeaderPositive: {
     backgroundColor: colors.successSoft,
@@ -388,10 +381,18 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     borderColor: colors.infoLight,
   },
   sectionHeaderActive: {
-    shadowOpacity: 0.10,
-    shadowRadius: 10,
     borderColor: colors.primary,
     backgroundColor: colors.primarySoft,
+    ...(Platform.OS === 'web' 
+      ? { boxShadow: '0 2px 10px rgba(0, 0, 0, 0.10)' } as any
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.10,
+          shadowRadius: 10,
+          elevation: 3,
+        }
+    ),
   },
   sectionHeaderTitleWrap: {
     flexDirection: "row",
@@ -448,19 +449,11 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   },
   sliderContainer: {
     width: "100%",
-    borderRadius: DESIGN_TOKENS.radii.md,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     overflow: "hidden",
     marginBottom: 0,
     backgroundColor: "transparent",
-    // Объединенные стили теней
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      },
-      default: {
-        ...colors.shadows.light,
-      },
-    }),
+    ...(getShadowStyle(colors, 'light') as any),
   },
 
   videoContainer: {
@@ -518,12 +511,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     }),
     borderWidth: 1,
     borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.card,
-      } as any,
-      default: colors.shadows.medium,
-    }),
+    ...(getShadowStyle(colors, 'medium') as any),
   },
 
   mobileInsightTabsWrapper: {

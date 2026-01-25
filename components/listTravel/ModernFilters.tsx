@@ -485,9 +485,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
       paddingTop: spacing.md,
       paddingBottom: spacing.lg,
       backgroundColor: colors.surface,
-      shadowColor: 'transparent',
-      shadowOpacity: 0,
-      shadowRadius: 0,
       elevation: 0,
     },
     containerWebFull: {

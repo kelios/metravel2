@@ -13,24 +13,6 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 
-const buildWeservProxyUrl = (src: string) => {
-    try {
-        const trimmed = String(src || '').trim();
-        if (!trimmed) return null;
-        if (trimmed.startsWith('data:')) return trimmed;
-        // Normalize HTML entities that might appear in src attributes.
-        const normalized = trimmed.replace(/&amp;/g, '&');
-        // Avoid double-wrapping an already-proxied weserv URL.
-        if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) return normalized;
-        // Weserv expects url either encoded full, or encoded without scheme.
-        const withoutScheme = normalized.replace(/^https?:\/\//i, '');
-        const encoded = encodeURIComponent(withoutScheme);
-        return `https://images.weserv.nl/?url=${encoded}&w=1600&fit=inside`;
-    } catch {
-        return null;
-    }
-};
-
 interface TravelDescriptionProps {
     htmlContent: string;
     title?: string;
@@ -108,14 +90,13 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     }, [htmlContent]);
 
     // --- HTML подготовка: поднимаем приоритет LCP и фиксируем медиа ---
-    const { preparedHtml, lcpSrc } = useMemo(() => {
-        if (!htmlContent) return { preparedHtml: htmlContent, lcpSrc: null as string | null };
+    const { preparedHtml } = useMemo(() => {
+        if (!htmlContent) return { preparedHtml: htmlContent };
 
         // Небольшой парсер по регуляркам (достаточно для наших задач).
         // 1) Соберём все <img ...>
         const imgRegex = /<img\b[^>]*?>/gi;
 
-        let lcpCandidate: string | null = null;
         let idx = 0;
 
         let out = htmlContent
@@ -178,7 +159,6 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
 
               // LCP — первая картинка в документе: high priority, не lazy
               const isLcp = idx === LCP_INDEX;
-              if (isLcp && src) lcpCandidate = src;
 
               const patched = tag
                 // добавим/заменим style (height:auto)
@@ -203,29 +183,8 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
               return patched;
           });
 
-        return { preparedHtml: out, lcpSrc: lcpCandidate };
+        return { preparedHtml: out };
     }, [htmlContent]);
-
-    // Предзагрузка LCP-картинки на web (ускоряет LCP)
-    useEffect(() => {
-        if (Platform.OS !== "web" || !lcpSrc) return;
-        const safeHref = buildWeservProxyUrl(lcpSrc) || lcpSrc;
-        const linkId = `prefetch-travel-desc-lcp-${encodeURIComponent(safeHref)}`;
-        if (document.getElementById(linkId)) return;
-        const link = document.createElement("link");
-        // Use prefetch (instead of preload) to avoid "preloaded but not used" warnings
-        // when the image is not actually requested immediately after window load.
-        link.rel = "prefetch";
-        link.as = "image";
-        link.href = safeHref;
-        link.id = linkId;
-        document.head.appendChild(link);
-        return () => {
-            if (link.parentNode) {
-                link.parentNode.removeChild(link);
-            }
-        };
-    }, [lcpSrc]);
 
     // Навесим делегат на легкий YouTube (загрузить iframe по клику) — только web
     useEffect(() => {

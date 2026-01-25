@@ -81,15 +81,15 @@ export function addResourceHints() {
 // 3. Critical CSS Inline Optimization
 export const ultraCriticalCSS = `
 /* Ultra-critical CSS for LCP optimization */
-body{margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif}
-.hero-section{width:100%;aspect-ratio:16/9;background:#000}
-.hero-image{width:100%;height:100%;object-fit:cover;display:block}
+body{margin:0;padding:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;contain:layout style paint}
+.hero-section{width:100%;aspect-ratio:16/9;background:#000;min-height:300px;contain:layout style paint}
+.hero-image{width:100%;height:100%;object-fit:cover;display:block;content-visibility:auto}
 .skeleton{background:linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%);background-size:200% 100%;animation:loading 1.5s infinite}
 @keyframes loading{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.progress-container{position:fixed;top:0;left:0;right:0;height:4px;background:rgba(0,0,0,0.08);z-index:1000}
-.progress-bar{height:100%;background:#ff9f5a;width:0%;transition:width 0.15s ease-out}
-.title{font-size:24px;font-weight:600;color:#1f2937;margin:0 0 8px 0;line-height:1.3}
-.subtitle{font-size:16px;color:#6b7280;margin:0 0 16px 0;line-height:1.5}
+.progress-container{position:fixed;top:0;left:0;right:0;height:4px;background:rgba(0,0,0,0.08);z-index:1000;will-change:transform}
+.progress-bar{height:100%;background:#ff9f5a;width:0%;transition:width 0.15s ease-out;will-change:width}
+.title{font-size:24px;font-weight:600;color:#1f2937;margin:0 0 8px 0;line-height:1.3;contain:layout style}
+.subtitle{font-size:16px;color:#6b7280;margin:0 0 16px 0;line-height:1.5;contain:layout style}
 `;
 
 // 4. Image Optimization for LCP
@@ -99,10 +99,11 @@ export function optimizeLCPImage(imageUrl: string): string {
   try {
     const url = new URL(imageUrl);
     
-    // Critical image optimizations
-    url.searchParams.set('w', '1200'); // Optimal LCP width
-    url.searchParams.set('h', '675');  // 16:9 aspect ratio
-    url.searchParams.set('q', '75');    // Balance quality vs size
+    // Critical image optimizations for green scores
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    url.searchParams.set('w', isMobile ? '420' : '860'); // Smaller sizes
+    url.searchParams.set('h', isMobile ? '236' : '484');  // 16:9 aspect ratio
+    url.searchParams.set('q', isMobile ? '50' : '55');    // More aggressive compression
     url.searchParams.set('f', 'webp'); // Modern format
     url.searchParams.set('fit', 'cover');
     url.searchParams.set('auto', 'compress');
@@ -121,8 +122,10 @@ export function optimizeJavaScriptLoading() {
   const scripts = document.querySelectorAll('script[src]:not([async]):not([defer])');
   scripts.forEach(script => {
     const src = (script as HTMLScriptElement).src;
-    if (src.includes('analytics') || src.includes('tracking') || src.includes('ads')) {
+    // Defer all non-critical scripts
+    if (src.includes('analytics') || src.includes('tracking') || src.includes('ads') || src.includes('gtag') || src.includes('metrika')) {
       script.setAttribute('async', '');
+      script.setAttribute('defer', '');
     }
   });
 

@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import type { Region } from 'react-native-maps';
 import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
 import type { PointColor } from '@/types/userPoints';
@@ -15,6 +14,13 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
 import { createLeafletLayer } from '@/src/utils/mapWebLayers';
+
+type Region = {
+  latitude: number
+  longitude: number
+  latitudeDelta: number
+  longitudeDelta: number
+}
 
 const DEFAULT_SITE_POINT_COLOR = '#ff922b';
 
@@ -1370,7 +1376,11 @@ const PointsMapNative: React.FC<PointsMapProps> = ({
   const nativeMaps = React.useMemo(() => {
     if (Platform.OS === 'web') return null;
     try {
-      const m = require('react-native-maps');
+      // IMPORTANT: avoid a statically analyzable `require('react-native-maps')`.
+      // Metro includes such requires in the web entry bundle even when guarded by Platform.OS.
+      // Using eval keeps it native-only and prevents bundling into web.
+      const req = (0, eval)('require') as any;
+      const m = req('react-native-maps');
       return {
         MapView: m?.default ?? m,
         Marker: m?.Marker,
