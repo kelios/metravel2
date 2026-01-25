@@ -7,13 +7,20 @@ const path = require('path')
 const zlib = require('zlib')
 const { spawn } = require('child_process')
 
-const buildDir = process.env.LIGHTHOUSE_BUILD_DIR
-  ? path.resolve(process.env.LIGHTHOUSE_BUILD_DIR)
-  : path.join(__dirname, '..', 'dist')
+const buildDir = (() => {
+  if (process.env.LIGHTHOUSE_BUILD_DIR) {
+    return path.resolve(process.env.LIGHTHOUSE_BUILD_DIR)
+  }
+
+  const prodDir = path.join(__dirname, '..', 'dist', 'prod')
+  if (fs.existsSync(prodDir)) return prodDir
+
+  return path.join(__dirname, '..', 'dist')
+})()
 
 if (!fs.existsSync(buildDir)) {
   console.error(`❌ Build directory not found: ${buildDir}`)
-  console.error('Run `npm run build` first to generate the web export.')
+  console.error('Run `npm run build:web:prod` (recommended) or `npm run build:web` first to generate the web export.')
   process.exit(1)
 }
 

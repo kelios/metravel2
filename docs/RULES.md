@@ -17,6 +17,13 @@ npm run test:run
 ```
 
 - Always run `npm run lint` and `npm run test:run` at the end of a task to verify nothing broke.
+- For performance checks (Lighthouse), run against a production web export:
+
+```bash
+npm run build:web:prod
+npm run lighthouse:travel:mobile
+npm run lighthouse:travel:desktop
+```
 - If you find unused code during work, remove it.
 
 ## UI rules

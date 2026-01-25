@@ -79,8 +79,8 @@
   Цель: зеленый скор (>= 80) на основных страницах.
 
   ```bash
-  # 1) Собрать web
-  yarn build:web
+  # 1) Собрать web (prod export, как в прод-деплое)
+  yarn build:web:prod
 
   # 2) Mobile
   yarn lighthouse:travel:mobile
