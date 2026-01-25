@@ -1,19 +1,29 @@
 /* Современные стили для бокового меню (Web) */
 
 /* Плавные hover эффекты для карточки */
+[data-sidebar-card] {
+  position: relative;
+  transition: box-shadow 180ms ease, transform 180ms ease;
+  will-change: transform;
+}
+
 [data-sidebar-card]:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.05) !important;
-  transform: translateY(-1px);
+  transform: translate3d(0, -1px, 0);
+  z-index: 2;
 }
 
 /* Аватарка с эффектом при наведении */
 [data-sidebar-avatar] {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+  will-change: transform;
 }
 
 [data-sidebar-avatar]:hover {
-  transform: scale(1.05);
+  transform: scale(1.03);
   box-shadow: 0 6px 16px rgba(122, 157, 143, 0.25), 0 3px 6px rgba(122, 157, 143, 0.15) !important;
+  z-index: 2;
 }
 
 /* Пункты меню с градиентом при наведении */
@@ -105,12 +115,22 @@
 
 /* Категории-бейджи */
 [data-category-tag] {
-  transition: all 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  will-change: transform;
+}
+
+[data-category-tag-text] {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 [data-category-tag]:hover {
   background-color: var(--color-primaryLight) !important;
-  transform: translateY(-1px);
+  transform: translate3d(0, -1px, 0);
   box-shadow: 0 2px 6px rgba(122, 157, 143, 0.15);
 }
 

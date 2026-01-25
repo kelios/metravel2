@@ -1,0 +1,48 @@
+/* WeatherWidget web-specific styles */
+
+/* Prevent text decoration on hover */
+[data-weather-widget] * {
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+  text-decoration-style: none !important;
+}
+
+[data-weather-widget] *:hover {
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+}
+
+[data-weather-widget] {
+  contain: layout paint;
+}
+
+[data-weather-widget] *,
+[data-weather-widget] *::before,
+[data-weather-widget] *::after {
+  box-sizing: border-box;
+}
+
+[data-weather-tooltip] {
+  pointer-events: none !important;
+}
+
+/* Ensure consistent font rendering */
+[data-weather-title] {
+  font-family: Georgia, serif !important;
+  text-decoration: none !important;
+  -webkit-text-decoration: none !important;
+}
+
+[data-weather-title]:hover {
+  text-decoration: none !important;
+  -webkit-text-decoration: none !important;
+}
+
+/* Prevent any inherited text styles */
+[data-weather-forecast] {
+  text-decoration: none !important;
+}
+
+[data-weather-forecast] * {
+  text-decoration: none !important;
+}

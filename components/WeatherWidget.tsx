@@ -2,9 +2,14 @@
  * Компонент виджета погоды
  * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Platform, View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+
+// ✅ УЛУЧШЕНИЕ: Импорт CSS для предотвращения проблем с текстом на hover
+if (Platform.OS === 'web') {
+  require('./WeatherWidget.web.css');
+}
 
 type Props = {
     points: { coord: string; address?: string }[];
@@ -88,7 +93,10 @@ export default function WeatherWidget({ points, countryName }: Props) {
         : undefined;
 
     return (
-      <View style={styles.wrapper}>
+      <View 
+        style={styles.wrapper}
+        {...(Platform.OS === 'web' ? { 'data-weather-widget': true } : {})}
+      >
           <View style={styles.titleContainer}>
               <Text
                 ref={titleRef}
@@ -96,11 +104,16 @@ export default function WeatherWidget({ points, countryName }: Props) {
                 numberOfLines={1}
                 ellipsizeMode="tail"
                 {...webTitleEvents}
+                {...(Platform.OS === 'web' ? { 'data-weather-title': true } : {})}
               >
                   Погода в {locationLabel}
               </Text>
               {showFullTitle && isTitleTruncated && (
-                <View style={[styles.tooltip, { backgroundColor: colors.surfaceElevated }]}>
+                <View
+                  pointerEvents="none"
+                  style={[styles.tooltip, { backgroundColor: colors.surfaceElevated }]}
+                  {...(Platform.OS === 'web' ? { 'data-weather-tooltip': true } : {})}
+                >
                     <Text style={[styles.tooltipText, { color: colors.text }]}>Погода в {locationLabel}</Text>
                 </View>
               )}
@@ -110,6 +123,7 @@ export default function WeatherWidget({ points, countryName }: Props) {
             horizontal 
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.forecastContainer}
+            {...(Platform.OS === 'web' ? { 'data-weather-forecast': true } : {})}
           >
               {forecast.map((day, index) => (
                 <View key={day.date} style={[
@@ -171,14 +185,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 13, // было 14px (-7%)
         fontWeight: '600',
         color: colors.text,
-        cursor: 'default',
         width: '100%',
-        flexWrap: 'wrap',
+        ...(Platform.OS === 'web' ? {
+            cursor: 'default',
+            textDecoration: 'none',
+            fontFamily: 'Georgia',
+        } as any : {}),
     },
     tooltip: {
         position: 'absolute',
         top: '100%',
         left: 0,
+        right: 0,
         backgroundColor: colors.surfaceElevated,
         paddingHorizontal: 8,
         paddingVertical: 4,

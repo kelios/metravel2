@@ -376,6 +376,11 @@ html[data-theme="dark"] .leaflet-tile {
   font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
   font-size: 14px !important;
   line-height: 20px !important;
+  max-width: min(420px, calc(100vw - 32px)) !important;
+}
+
+.leaflet-popup {
+  max-width: calc(100vw - 24px) !important;
 }
 
 .leaflet-popup-tip {

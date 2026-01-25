@@ -67,14 +67,16 @@ const PlacePopupCard: React.FC<Props> = ({
   const isNarrowPopup = viewportWidth <= 480;
   const compactLabel = isNarrowPopup ? 'В мои точки' : addLabel;
   const maxPopupWidth = Math.min(width, Math.max(280, viewportWidth - (isNarrowPopup ? 32 : 64)));
+  const thumbSize = isNarrowPopup ? 64 : isCompactPopup ? 72 : imageHeight;
 
   return (
     <View style={{ width: '100%', maxWidth: maxPopupWidth, gap: isCompactPopup ? 6 : 10 }}>
       <View style={{ flexDirection: 'row', gap: isCompactPopup ? 8 : 12 }}>
         <View
           style={{
-            width: '30%',
-            minWidth: isNarrowPopup ? 64 : isCompactPopup ? 72 : imageHeight,
+            width: thumbSize,
+            minWidth: thumbSize,
+            flexShrink: 0,
             aspectRatio: 1,
             borderRadius: isNarrowPopup ? 8 : isCompactPopup ? 10 : 12,
             overflow: 'hidden',
@@ -107,7 +109,7 @@ const PlacePopupCard: React.FC<Props> = ({
           )}
         </View>
 
-        <View style={{ width: '70%', gap: 6 }}>
+        <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
           <Text
             style={{
               fontSize: isNarrowPopup ? 11 : isCompactPopup ? 12 : 13,

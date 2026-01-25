@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Platform, View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { GoogleMapsParser } from '@/src/api/parsers/googleMapsParser';
@@ -238,9 +238,23 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   container: {
     flex: 1,
     backgroundColor: colors.background,
+    alignItems: 'center',
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+    paddingVertical: DESIGN_TOKENS.spacing.xl,
   },
   stepContainer: {
+    width: '100%',
+    maxWidth: 720,
     padding: DESIGN_TOKENS.spacing.lg,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: (colors as any).boxShadows?.card ?? '0 8px 30px rgba(0,0,0,0.08)',
+        } as any)
+      : null),
   },
   title: {
     fontSize: DESIGN_TOKENS.typography.sizes.xl,
@@ -280,6 +294,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   previewList: {
     maxHeight: 300,
     marginBottom: DESIGN_TOKENS.spacing.lg,
+    width: '100%',
   },
   previewItem: {
     padding: DESIGN_TOKENS.spacing.md,
@@ -330,6 +345,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   loader: {
     marginVertical: DESIGN_TOKENS.spacing.xl,
+    alignSelf: 'center',
   },
   errorText: {
     color: colors.danger,

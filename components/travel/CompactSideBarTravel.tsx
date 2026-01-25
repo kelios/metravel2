@@ -454,7 +454,11 @@ function CompactSideBarTravel({
                   style={styles.categoryTagWrapper}
                   {...(Platform.OS === 'web' ? { 'data-category-tag': true } : {})}
                 >
-                  <Text style={[styles.categoryTag, { color: mutedText }]} numberOfLines={1}>
+                  <Text
+                    style={[styles.categoryTag, { color: mutedText }]}
+                    numberOfLines={1}
+                    {...(Platform.OS === 'web' ? { 'data-category-tag-text': true } : {})}
+                  >
                     {cat}
                   </Text>
                 </View>
@@ -632,7 +636,7 @@ function CompactSideBarTravel({
       <ScrollView
         style={[
           styles.menu,
-          isMobile ? { width: '100%' } : { width: '100%', maxWidth: 350 },
+          { width: '100%' },
         ]}
         contentContainerStyle={{
           paddingBottom: menuPaddingBottom,

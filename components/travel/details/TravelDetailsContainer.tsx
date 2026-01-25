@@ -386,7 +386,7 @@ export default function TravelDetailsContainer() {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
-          {!isMobile && responsiveWidth >= METRICS.breakpoints.tablet && (
+          {!isMobile && responsiveWidth >= METRICS.breakpoints.largeTablet && (
             <View style={{ width: menuWidthNum }}>
               <Defer when={deferAllowed}>
                 <Animated.View
@@ -469,7 +469,7 @@ export default function TravelDetailsContainer() {
                   />
                   </View>
 
-                  {isMobile && sectionLinks.length > 0 && (
+                  {responsiveWidth < METRICS.breakpoints.largeTablet && sectionLinks.length > 0 && (
                     <View style={styles.sectionTabsContainer}>
                       <TravelSectionsSheet
                         links={sectionLinks}
