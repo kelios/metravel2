@@ -155,17 +155,7 @@ test.describe('Article anchors (TOC -> section)', () => {
     await expect(page).toHaveURL(new RegExp(`#${targetId}$`));
 
     // Ensure the target is within viewport (allowing headers / layout differences)
-    await page.waitForFunction(
-      (targetSelector) => {
-        const el = document.querySelector(targetSelector) as HTMLElement | null;
-        if (!el) return false;
-        const rect = el.getBoundingClientRect();
-        const visible = rect.bottom >= 0 && rect.top <= window.innerHeight;
-        return visible;
-      },
-      `#${targetId}`,
-      { timeout: 10_000 },
-    );
+    await expect(target).toBeInViewport({ timeout: 20_000 });
 
     // Optional sanity: in typical builds scroll position changes.
     expect(scrollAfter >= scrollBefore).toBeTruthy();

@@ -342,6 +342,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <link rel="dns-prefetch" href="//cdn.metravel.by" />
+      <link rel="preconnect" href="https://api.open-meteo.com" crossOrigin="" />
+      <link rel="preconnect" href="https://cdn-icons-png.flaticon.com" crossOrigin="" />
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />

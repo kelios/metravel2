@@ -80,6 +80,20 @@ const buildUri = (
     )
   }
 
+  if (containerWidth) {
+    const cappedWidth = Math.min(containerWidth, 1200)
+    const quality = isFirst ? 55 : 65
+    return (
+      optimizeImageUrl(versionedUrl, {
+        width: cappedWidth,
+        format: getPreferredImageFormat(),
+        quality,
+        fit: 'contain',
+        dpr: 1,
+      }) || versionedUrl
+    )
+  }
+
   return versionedUrl
 }
 

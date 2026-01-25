@@ -24,6 +24,8 @@ npm run build:web:prod
 npm run lighthouse:travel:mobile
 npm run lighthouse:travel:desktop
 ```
+
+- After deploying to production, validate performance against the real production URL (PageSpeed Insights or Lighthouse).
 - If you find unused code during work, remove it.
 
 ## UI rules

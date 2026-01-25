@@ -99,6 +99,21 @@
   - Порог можно повысить через `LIGHTHOUSE_MIN_SCORE=0.9`
   - Любую страницу можно проверить через `LIGHTHOUSE_PATH=/нужная-страница`
 
+  После деплоя на prod (для сравнения с PageSpeed Insights):
+
+  ```bash
+  # Default URL is built into the script.
+  yarn lighthouse:produrl:travel:mobile
+  yarn lighthouse:produrl:travel:desktop
+
+  # Override target URL (recommended):
+  LIGHTHOUSE_URL=https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele yarn lighthouse:produrl:travel:mobile
+  LIGHTHOUSE_URL=https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele yarn lighthouse:produrl:travel:desktop
+
+  yarn lighthouse:produrl:summary
+  yarn lighthouse:produrl:lcp
+  ```
+
 - [ ] **Analytics**
   - [ ] Настроить Google Analytics 4 (ключ уже в .env)
   - [ ] Настроить Yandex Metrika (ID уже в .env)

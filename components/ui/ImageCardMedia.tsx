@@ -218,7 +218,8 @@ function ImageCardMedia({
               alt=""
               aria-hidden
               crossOrigin="anonymous"
-              loading="lazy"
+              loading={loading}
+              fetchPriority="low"
               decoding="async"
               onError={() => {
                 if (!webBlurFallbackUri) return;
