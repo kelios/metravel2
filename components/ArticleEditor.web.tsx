@@ -1,4 +1,3 @@
-// ✅ УЛУЧШЕНИЕ: мигрирован на DESIGN_TOKENS и useThemedColors для поддержки тем
 import React, {
     useCallback,
     useEffect,
@@ -13,7 +12,6 @@ import {
     View,
     Text,
     StyleSheet,
-    TouchableOpacity,
     TextInput,
     Alert,
     Modal,
@@ -25,6 +23,15 @@ import { uploadImage } from '@/src/api/misc';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useDebounce } from '@/hooks/useDebounce';
+import { 
+    sanitizeHtml, 
+    normalizeHtmlForQuill, 
+    normalizeAnchorId, 
+    escapeHtml 
+} from '@/utils/htmlUtils';
+import UiIconButton from '@/components/ui/IconButton';
+import Button from '@/components/ui/Button';
 
 const isWeb = Platform.OS === 'web';
 const win = isWeb && typeof window !== 'undefined' ? window : undefined;
@@ -32,45 +39,6 @@ const isTestEnv =
     typeof process !== 'undefined' &&
     (process as any)?.env &&
     ((process as any).env.NODE_ENV === 'test' || (process as any).env.JEST_WORKER_ID !== undefined);
-
-function useDebounce<T extends unknown[]>(fn: (...args: T) => void, ms = 300) {
-    const timeout = useRef<ReturnType<typeof setTimeout>>();
-    const fnRef = useRef(fn);
-    fnRef.current = fn;
-    return useCallback((...args: T) => {
-        if (timeout.current) clearTimeout(timeout.current);
-        timeout.current = setTimeout(() => fnRef.current(...args), ms);
-    }, [ms]);
-}
-
-function sanitizeHtml(html: string): string {
-    if (!html) return '';
-    let result = String(html);
-    // Удаляем инлайн-стили и лишние презентационные атрибуты из Word/Google Docs
-    result = result.replace(/ style="[^"]*"/gi, '');
-    result = result.replace(/ (color|face|size)="[^"]*"/gi, '');
-    result = result.replace(/ class="[^"]*"/gi, '');
-    // Убираем HTML-комментарии
-    result = result.replace(/<!--[\s\S]*?-->/g, '');
-    return result;
-}
-
-function normalizeHtmlForQuill(input: string): string {
-    const raw = String(input ?? '');
-    const looksLikeFullDocument = /<!doctype\s+html/i.test(raw) || /<html[\s>]/i.test(raw) || /<head[\s>]/i.test(raw) || /<body[\s>]/i.test(raw);
-    if (!looksLikeFullDocument) return raw;
-
-    if (typeof window === 'undefined') return raw;
-    try {
-        const parser = new window.DOMParser();
-        const doc = parser.parseFromString(raw, 'text/html');
-        const body = doc?.body;
-        const extracted = body?.innerHTML;
-        return typeof extracted === 'string' && extracted.trim().length > 0 ? extracted : raw;
-    } catch {
-        return raw;
-    }
-}
 
 // Важно: грузим в отдельном модуле, чтобы Quill не попадал в initial chunk
 const QuillEditor =
@@ -263,14 +231,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             fontWeight: '600' as const,
             color: colors.text,
         },
-        row: { flexDirection: 'row' },
+        row: { flexDirection: 'row', alignItems: 'center' },
         btn: {
             marginLeft: DESIGN_TOKENS.spacing.md,
-            padding: DESIGN_TOKENS.spacing.xs,
-            minWidth: 44,
-            minHeight: 44,
-            alignItems: 'center',
-            justifyContent: 'center',
         },
         editorArea: {
             flex: 1,
@@ -316,7 +279,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         if (!quillRef.current) return;
         if (typeof editorRef === 'function') editorRef(quillRef.current);
         else (editorRef as any).current = quillRef.current;
-    }, [editorRef]);
+    }, [editorRef, quillMountKey, shouldLoadQuill]);
 
     useEffect(() => {
         if (!isWeb) return;
@@ -645,91 +608,20 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, [uploadAndInsert, quillMountKey, showHtml, shouldLoadQuill]);
 
-    useEffect(() => {
-        if (!isWeb || !win) return;
-        if (showHtml) return;
-        if (!shouldLoadQuill) return;
-
-        const editor = quillRef.current?.getEditor?.();
-        const root = editor?.root as HTMLElement | undefined;
-        if (!root) return;
-
-        if (typeof (root as any).closest !== 'function') return;
-
-        const quillEl = root.closest('.quill') as HTMLElement | null;
-        if (!quillEl) return;
-
-        if (typeof (quillEl as any).querySelector !== 'function') return;
-
-        const linkBtn = quillEl.querySelector('button.ql-link') as HTMLButtonElement | null;
-        if (!linkBtn) return;
-
-        const onMouseDown = (e: MouseEvent) => {
-            try {
-                e.preventDefault();
-                e.stopPropagation();
-            } catch {
-                // noop
-            }
-
-            let selection: { index: number; length: number } | null = null;
-            try {
-                selection = editor.getSelection(true);
-            } catch {
-                try {
-                    selection = editor.getSelection();
-                } catch {
-                    selection = null;
-                }
-            }
-
-            tmpStoredRange.current = selection;
-            tmpStoredLinkQuill.current = editor;
-
-            let existing = '';
-            try {
-                const fmt = selection ? editor.getFormat(selection) : editor.getFormat();
-                existing = typeof (fmt as any)?.link === 'string' ? (fmt as any).link : '';
-            } catch {
-                existing = '';
-            }
-
-            setLinkValue(existing);
-            setLinkModalVisible(true);
-        };
-
-        linkBtn.addEventListener('mousedown', onMouseDown);
-        return () => {
-            linkBtn.removeEventListener('mousedown', onMouseDown);
-        };
-    }, [showHtml, shouldLoadQuill]);
-
-    const IconButton = React.memo(function IconButton({
-                                                          name,
-                                                          onPress,
-                                                          label,
-                                                      }: { name: keyof typeof Feather.glyphMap; onPress: () => void; label: string }) {
+    const IconButton = React.memo(function IconButtonWrapper({
+        name,
+        onPress,
+        label,
+    }: { name: keyof typeof Feather.glyphMap; onPress: () => void; label: string }) {
         return (
-            <TouchableOpacity
+            <UiIconButton
+                icon={<Feather name={name} size={20} color={colors.textSecondary} />}
                 onPress={onPress}
+                label={label}
                 style={dynamicStyles.btn}
-                accessibilityRole="button"
-                accessibilityLabel={label}
-            >
-                <Feather name={name} size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
+            />
         );
     });
-
-    const normalizeAnchorId = useCallback((value: string) => {
-        const raw = String(value ?? '').trim().toLowerCase();
-        const collapsed = raw
-          .replace(/\s+/g, '-')
-          .replace(/[^\p{L}\p{N}\-_]+/gu, '-')
-          .replace(/-+/g, '-')
-          .replace(/^-|-$/g, '');
-        return collapsed;
-    }, []);
 
     const insertAnchor = useCallback((idRaw: string) => {
         if (!quillRef.current) return;
@@ -739,14 +631,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
             return;
         }
-
-        const escapeHtml = (value: string) =>
-            String(value ?? '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
 
         try {
             if (typeof editor.focus === 'function') editor.focus();
@@ -1213,16 +1097,14 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                 marginBottom: DESIGN_TOKENS.spacing.md,
                             }}
                         />
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                            <TouchableOpacity
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: DESIGN_TOKENS.spacing.sm }}>
+                            <Button
                                 onPress={() => setAnchorModalVisible(false)}
-                                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
-                                accessibilityRole="button"
-                                accessibilityLabel="Отмена"
-                            >
-                                <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm }}>Отмена</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
+                                label="Отмена"
+                                variant="ghost"
+                                size="sm"
+                            />
+                            <Button
                                 onPress={() => {
                                     setAnchorModalVisible(false);
                                     if (tmpStoredRange.current && quillRef.current) {
@@ -1234,13 +1116,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                             Alert.alert('Якорь', 'Введите корректный идентификатор (например: day-3)');
                                             return;
                                         }
-                                        const escapeHtml = (value: string) =>
-                                            String(value ?? '')
-                                                .replace(/&/g, '&amp;')
-                                                .replace(/</g, '&lt;')
-                                                .replace(/>/g, '&gt;')
-                                                .replace(/"/g, '&quot;')
-                                                .replace(/'/g, '&#039;');
 
                                         const current = String(html ?? '');
                                         const sel = htmlSelectionRef.current;
@@ -1261,12 +1136,10 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                     }
                                     insertAnchor(anchorValue);
                                 }}
-                                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
-                                accessibilityRole="button"
-                                accessibilityLabel="Вставить"
-                            >
-                                <Text style={{ color: colors.primary, fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600' as const }}>Вставить</Text>
-                            </TouchableOpacity>
+                                label="Вставить"
+                                variant="primary"
+                                size="sm"
+                            />
                         </View>
                     </View>
                 </View>
@@ -1304,44 +1177,40 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                 marginBottom: DESIGN_TOKENS.spacing.md,
                             }}
                         />
-                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                            <TouchableOpacity
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: DESIGN_TOKENS.spacing.sm }}>
+                            <Button
                                 onPress={() => {
                                     setLinkModalVisible(false);
                                     tmpStoredRange.current = null;
                                     tmpStoredLinkQuill.current = null;
                                 }}
-                                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
-                                accessibilityRole="button"
-                                accessibilityLabel="Отмена"
-                            >
-                                <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm }}>Отмена</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
+                                label="Отмена"
+                                variant="ghost"
+                                size="sm"
+                            />
+                            <Button
                                 onPress={() => {
                                     setLinkModalVisible(false);
                                     applyLinkToSelection(linkValue);
                                 }}
-                                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
-                                accessibilityRole="button"
-                                accessibilityLabel="Сохранить"
-                            >
-                                <Text style={{ color: colors.primary, fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600' as const }}>Сохранить</Text>
-                            </TouchableOpacity>
+                                label="Вставить"
+                                variant="primary"
+                                size="sm"
+                            />
                         </View>
-                    </View>
-                </View>
-            </Modal>
-        </>
-    );
+            </View>
+        </View>
+    </Modal>
+</>
+);
 
-    return fullscreen ? (
-        <Modal visible animationType="slide">
-            <SafeAreaView style={dynamicStyles.fullWrap}>{body}</SafeAreaView>
-        </Modal>
-    ) : (
-        <View style={dynamicStyles.wrap}>{body}</View>
-    );
+return fullscreen ? (
+    <Modal visible animationType="slide">
+        <SafeAreaView style={dynamicStyles.fullWrap}>{body}</SafeAreaView>
+    </Modal>
+) : (
+    <View style={dynamicStyles.wrap}>{body}</View>
+);
 };
 
 const NativeEditor: React.FC<ArticleEditorProps> = ({

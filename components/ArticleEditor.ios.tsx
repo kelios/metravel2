@@ -1,6 +1,6 @@
 // components/ArticleEditor.ios.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
@@ -10,6 +10,9 @@ import { useAuth } from '@/context/AuthContext';
 import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { normalizeAnchorId, safeJsonString } from '@/utils/htmlUtils';
+import UiIconButton from '@/components/ui/IconButton';
+import Button from '@/components/ui/Button';
 
 export interface ArticleEditorProps {
   label?: string;
@@ -46,32 +49,16 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const [anchorModalVisible, setAnchorModalVisible] = useState(false);
   const [anchorValue, setAnchorValue] = useState('');
   const webViewRef = useRef<WebView>(null);
-  const lastWebViewHtmlRef = useRef<string>('');
-  const lastPropCleanedRef = useRef<string>('');
+  const lastPropContentRef = useRef<string>(content);
+  const isUserEditingRef = useRef<boolean>(false);
   const autosaveTimer = useRef<NodeJS.Timeout>();
+  const onChangeDebounceTimer = useRef<NodeJS.Timeout>();
+  const pendingContentUpdateRef = useRef<string | null>(null);
   const { isAuthenticated } = useAuth();
 
-  const normalizeAnchorId = useCallback((value: string) => {
-    const raw = String(value ?? '').trim().toLowerCase();
-    const collapsed = raw
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9\-_]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-    return collapsed;
-  }, []);
-
-  const safeJsonString = useCallback((value: string) => {
-    // Avoid breaking out of <script> tag and avoid template-literal interpolation issues.
-    return JSON.stringify(value)
-      .replace(/</g, '\\u003c')
-      .replace(/\u2028/g, '\\u2028')
-      .replace(/\u2029/g, '\\u2029');
-  }, []);
-
   const initialSanitizedContent = useMemo(() => sanitizeForEditor(content), [content, sanitizeForEditor]);
-  const safePlaceholder = useMemo(() => safeJsonString(placeholder), [placeholder, safeJsonString]);
-  const safeInitialContent = useMemo(() => safeJsonString(initialSanitizedContent), [initialSanitizedContent, safeJsonString]);
+  const safePlaceholder = useMemo(() => safeJsonString(placeholder), [placeholder]);
+  const safeInitialContent = useMemo(() => safeJsonString(initialSanitizedContent), [initialSanitizedContent]);
 
   // Quill HTML template with dynamic theme colors
   const quillHTML = useMemo(() => `
@@ -187,24 +174,37 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       modules: {
         toolbar: '#toolbar',
         history: {
-          delay: 2000,
+          delay: 1000,
           maxStack: 100,
           userOnly: true
+        },
+        clipboard: {
+          matchVisual: false
         }
       },
       placeholder: INITIAL_PLACEHOLDER,
     });
 
-    // Установка начального контента
-    quill.root.innerHTML = INITIAL_CONTENT;
+    // Установка начального контента через Delta (сохраняет форматирование)
+    var tempDiv = document.createElement('div');
+    tempDiv.innerHTML = INITIAL_CONTENT;
+    quill.clipboard.dangerouslyPasteHTML(0, INITIAL_CONTENT, 'silent');
 
-    // Отправка изменений в React Native
-    quill.on('text-change', function() {
-      var html = quill.root.innerHTML;
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        type: 'content-change',
-        html: html
-      }));
+    // Отправка изменений в React Native с debouncing
+    var changeTimer = null;
+    quill.on('text-change', function(delta, oldDelta, source) {
+      // Игнорируем программные изменения
+      if (source !== 'user') return;
+      
+      clearTimeout(changeTimer);
+      changeTimer = setTimeout(function() {
+        var html = quill.root.innerHTML;
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'content-change',
+          html: html,
+          source: source
+        }));
+      }, 150);
     });
 
     // Обработка команд от React Native
@@ -213,12 +213,26 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
         var data = JSON.parse(e.data);
         
         if (data.type === 'set-content') {
-          quill.root.innerHTML = data.html;
+          // Сохраняем позицию курсора
+          var selection = quill.getSelection();
+          var currentLength = quill.getLength();
+          
+          // Используем Delta API для обновления содержимого
+          quill.clipboard.dangerouslyPasteHTML(0, data.html, 'api');
+          
+          // Восстанавливаем курсор если возможно
+          if (selection) {
+            var newLength = quill.getLength();
+            var newIndex = Math.min(selection.index, newLength - 1);
+            setTimeout(function() {
+              quill.setSelection(newIndex, 0);
+            }, 0);
+          }
         }
         
         if (data.type === 'insert-image') {
-          var range = quill.getSelection() || { index: quill.getLength(), length: 0 };
-          quill.insertEmbed(range.index, 'image', data.url);
+          var range = quill.getSelection() || { index: quill.getLength() - 1, length: 0 };
+          quill.insertEmbed(range.index, 'image', data.url, 'user');
           quill.setSelection(range.index + 1, 0);
         }
 
@@ -233,7 +247,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
         if (data.type === 'insert-anchor') {
           var id = normalizeAnchorId(data.id);
           if (!id) return;
-          var range = quill.getSelection() || { index: quill.getLength(), length: 0 };
+          var range = quill.getSelection() || { index: quill.getLength() - 1, length: 0 };
           quill.clipboard.dangerouslyPasteHTML(range.index, '<span id="' + id + '">&#8203;</span>', 'user');
           quill.setSelection(range.index + 1, 0);
         }
@@ -269,14 +283,34 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       
       if (data.type === 'ready') {
         setIsReady(true);
+        // Если есть отложенное обновление контента, применяем его
+        if (pendingContentUpdateRef.current !== null) {
+          const pendingContent = pendingContentUpdateRef.current;
+          pendingContentUpdateRef.current = null;
+          webViewRef.current?.postMessage(JSON.stringify({
+            type: 'set-content',
+            html: pendingContent
+          }));
+        }
       }
       
-      if (data.type === 'content-change') {
+      if (data.type === 'content-change' && data.source === 'user') {
         const newHtml = typeof data.html === 'string' ? data.html : '';
-        const cleaned = sanitizeForEditor(newHtml);
-        lastWebViewHtmlRef.current = cleaned;
-        setHtml(cleaned);
-        onChange(cleaned);
+        
+        // Отмечаем, что пользователь редактирует
+        isUserEditingRef.current = true;
+        
+        // Обновляем локальное состояние без санитизации (доверяем Quill)
+        setHtml(newHtml);
+        
+        // Debounced onChange callback
+        if (onChangeDebounceTimer.current) {
+          clearTimeout(onChangeDebounceTimer.current);
+        }
+        onChangeDebounceTimer.current = setTimeout(() => {
+          onChange(newHtml);
+          isUserEditingRef.current = false;
+        }, 300);
         
         // Автосохранение
         if (onAutosave) {
@@ -284,38 +318,56 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             clearTimeout(autosaveTimer.current);
           }
           autosaveTimer.current = setTimeout(() => {
-            onAutosave(cleaned);
+            onAutosave(newHtml);
           }, autosaveDelay);
         }
       }
     } catch (error) {
       console.error('Error parsing WebView message:', error);
     }
-  }, [onChange, onAutosave, autosaveDelay, sanitizeForEditor]);
+  }, [onChange, onAutosave, autosaveDelay]);
 
-  // Обновление контента при изменении prop
-  useEffect(() => {
+  // Обновление контента при изменении prop (только внешние изменения)
+  useLayoutEffect(() => {
+    // Игнорируем если пользователь сейчас редактирует
+    if (isUserEditingRef.current) return;
+    
+    // Проверяем, изменился ли prop контент
+    if (content === lastPropContentRef.current) return;
+    lastPropContentRef.current = content;
+    
     const cleaned = sanitizeForEditor(content);
-    if (!isReady) return;
-    if (cleaned === lastWebViewHtmlRef.current) {
-      lastPropCleanedRef.current = cleaned;
+    
+    // Сравниваем с текущим состоянием (без HTML пробелов)
+    const normalizeForComparison = (str: string) => 
+      str.replace(/\s+/g, ' ').trim();
+    
+    if (normalizeForComparison(cleaned) === normalizeForComparison(html)) {
       return;
     }
-    if (cleaned === lastPropCleanedRef.current) return;
-    lastPropCleanedRef.current = cleaned;
-    if (cleaned !== html) {
+    
+    setHtml(cleaned);
+    
+    // Обновляем WebView если готов
+    if (isReady) {
       webViewRef.current?.postMessage(JSON.stringify({
         type: 'set-content',
         html: cleaned
       }));
+    } else {
+      // Сохраняем для применения после готовности
+      pendingContentUpdateRef.current = cleaned;
     }
   }, [content, html, isReady, sanitizeForEditor]);
 
-  // Очистка таймера при размонтировании
+  // Очистка таймеров при размонтировании
   useEffect(() => {
     return () => {
       if (autosaveTimer.current) {
         clearTimeout(autosaveTimer.current);
+      }
+      if (onChangeDebounceTimer.current) {
+        clearTimeout(onChangeDebounceTimer.current);
       }
     };
   }, []);
@@ -396,49 +448,36 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
       <View style={[styles.header, { backgroundColor: colors.backgroundSecondary, borderBottomColor: colors.border }]}>
         <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
         <View style={styles.headerButtons}>
-          <TouchableOpacity
+          <UiIconButton
+            icon={<Feather name="rotate-ccw" size={20} color={isReady ? colors.text : colors.textMuted} />}
             onPress={handleUndo}
-            style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            label="Отменить"
             disabled={!isReady}
-            accessibilityRole="button"
-            accessibilityLabel="Отменить"
-          >
-            <Feather name="rotate-ccw" size={20} color={isReady ? colors.text : colors.textMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity
+            size="sm"
+          />
+          <UiIconButton
+            icon={<Feather name="rotate-cw" size={20} color={isReady ? colors.text : colors.textMuted} />}
             onPress={handleRedo}
-            style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            label="Повторить"
             disabled={!isReady}
-            accessibilityRole="button"
-            accessibilityLabel="Повторить"
-          >
-            <Feather name="rotate-cw" size={20} color={isReady ? colors.text : colors.textMuted} />
-          </TouchableOpacity>
+            size="sm"
+          />
           {variant === 'default' && (
-            <TouchableOpacity
+            <UiIconButton
+              icon={isUploading ? <ActivityIndicator size="small" color={colors.primary} /> : <Feather name="image" size={20} color={isReady ? colors.text : colors.textMuted} />}
               onPress={handleImagePick}
-              style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              label="Добавить изображение"
               disabled={!isReady || isUploading}
-              accessibilityRole="button"
-              accessibilityLabel="Добавить изображение"
-            >
-              {isUploading ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Feather name="image" size={20} color={isReady ? colors.text : colors.textMuted} />
-              )}
-            </TouchableOpacity>
+              size="sm"
+            />
           )}
-
-          <TouchableOpacity
+          <UiIconButton
+            icon={<Feather name="bookmark" size={20} color={isReady ? colors.text : colors.textMuted} />}
             onPress={handleInsertAnchor}
-            style={[styles.headerButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            label="Вставить якорь"
             disabled={!isReady}
-            accessibilityRole="button"
-            accessibilityLabel="Вставить якорь"
-          >
-            <Feather name="bookmark" size={20} color={isReady ? colors.text : colors.textMuted} />
-          </TouchableOpacity>
+            size="sm"
+          />
         </View>
       </View>
 
@@ -497,16 +536,14 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
                 marginBottom: DESIGN_TOKENS.spacing.md,
               }}
             />
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <TouchableOpacity
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: DESIGN_TOKENS.spacing.sm }}>
+              <Button
                 onPress={() => setAnchorModalVisible(false)}
-                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
-                accessibilityRole="button"
-                accessibilityLabel="Отмена"
-              >
-                <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm }}>Отмена</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+                label="Отмена"
+                variant="ghost"
+                size="sm"
+              />
+              <Button
                 onPress={() => {
                   const id = normalizeAnchorId(anchorValue);
                   if (!id) {
@@ -516,12 +553,10 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
                   setAnchorModalVisible(false);
                   webViewRef.current?.postMessage(JSON.stringify({ type: 'insert-anchor', id }));
                 }}
-                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
-                accessibilityRole="button"
-                accessibilityLabel="Вставить"
-              >
-                <Text style={{ color: colors.primary, fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600' }}>Вставить</Text>
-              </TouchableOpacity>
+                label="Вставить"
+                variant="primary"
+                size="sm"
+              />
             </View>
           </View>
         </View>
@@ -551,11 +586,6 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     gap: DESIGN_TOKENS.spacing.xs,
-  },
-  headerButton: {
-    padding: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    borderWidth: 1,
   },
   editorContainer: {
     flex: 1,
