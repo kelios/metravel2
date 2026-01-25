@@ -20,7 +20,7 @@ import {
     SafeAreaView,
     Platform,
 } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { uploadImage } from '@/src/api/misc';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -645,7 +645,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                                           name,
                                                           onPress,
                                                           label,
-                                                      }: { name: keyof typeof MaterialIcons.glyphMap; onPress: () => void; label: string }) {
+                                                      }: { name: keyof typeof Feather.glyphMap; onPress: () => void; label: string }) {
         return (
             <TouchableOpacity
                 onPress={onPress}
@@ -653,7 +653,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 accessibilityRole="button"
                 accessibilityLabel={label}
             >
-                <MaterialIcons name={name} size={20} color={colors.textSecondary} />
+                <Feather name={name} size={20} color={colors.textSecondary} />
             </TouchableOpacity>
         );
     });
@@ -727,12 +727,12 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             <Text style={dynamicStyles.label}>{label}</Text>
             <View style={dynamicStyles.row}>
                 <IconButton
-                    name="undo"
+                    name="rotate-ccw"
                     onPress={() => quillRef.current?.getEditor().history.undo()}
                     label="Отменить последнее действие"
                 />
                 <IconButton
-                    name="redo"
+                    name="rotate-cw"
                     onPress={() => quillRef.current?.getEditor().history.redo()}
                     label="Повторить действие"
                 />
@@ -782,7 +782,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     label={showHtml ? 'Скрыть HTML-код' : 'Показать HTML-код'}
                 />
                 <IconButton
-                    name={fullscreen ? 'fullscreen-exit' : 'fullscreen'}
+                    name={fullscreen ? 'minimize' : 'maximize'}
                     onPress={() => {
                         try {
                             const editor = quillRef.current?.getEditor();
@@ -806,7 +806,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     label={fullscreen ? 'Выйти из полноэкранного режима' : 'Перейти в полноэкранный режим'}
                 />
                 <IconButton
-                    name="format-clear"
+                    name="delete"
                     onPress={() => {
                         if (!quillRef.current) return;
                         const editor = quillRef.current.getEditor();
@@ -834,7 +834,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
                 {isWeb && (
                     <IconButton
-                        name="launch"
+                        name="external-link"
                         onPress={openPreview}
                         label="Открыть превью"
                     />

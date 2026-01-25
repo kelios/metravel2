@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
 import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/src/types/pdf-presets';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -157,7 +157,7 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
     >
       <View style={styles.presetHeader}>
         <View style={styles.presetIcon}>
-          <MaterialIcons
+          <Feather
             name={getPresetIconName(preset) as any}
             size={22}
             color={styles.presetIconColor.color}
@@ -177,7 +177,7 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
           )}
           {isSelected && (
             <View style={styles.selectedPill}>
-              <MaterialIcons name="check" size={16} color={styles.selectedPillIcon.color} />
+              <Feather name="check" size={16} color={styles.selectedPillIcon.color} />
               <Text style={styles.selectedPillText}>Выбрано</Text>
             </View>
           )}
@@ -207,7 +207,7 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
 
       <View style={styles.presetFooter}>
         <Text style={styles.presetCtaText}>Выбрать</Text>
-        <MaterialIcons name="chevron-right" size={18} color={styles.presetCtaIcon.color} />
+        <Feather name="chevron-right" size={18} color={styles.presetCtaIcon.color} />
       </View>
     </Pressable>
   );
@@ -222,7 +222,7 @@ interface FeatureBadgeProps {
 function FeatureBadge({ iconName, label, styles }: FeatureBadgeProps) {
   return (
     <View style={styles.featureBadge}>
-      <MaterialIcons name={iconName as any} size={14} color={styles.featureBadgeIconColor.color} />
+      <Feather name={iconName as any} size={14} color={styles.featureBadgeIconColor.color} />
       <Text style={styles.featureBadgeText}>{label}</Text>
     </View>
   );

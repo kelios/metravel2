@@ -21,8 +21,6 @@ export const TravelDeferredSections: React.FC<{
   isMobile: boolean
   forceOpenKey: string | null
   anchors: AnchorsMap
-  relatedTravels: Travel[]
-  setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>
   scrollY: Animated.Value
   viewportHeight: number
   scrollRef: any
@@ -32,8 +30,6 @@ export const TravelDeferredSections: React.FC<{
   isMobile,
   forceOpenKey,
   anchors,
-  relatedTravels,
-  setRelatedTravels,
   scrollY,
   viewportHeight,
   scrollRef,
@@ -75,8 +71,6 @@ export const TravelDeferredSections: React.FC<{
       <TravelDetailsSidebarSection
         travel={travel}
         anchors={anchors}
-        relatedTravels={relatedTravels}
-        setRelatedTravels={setRelatedTravels}
         scrollY={scrollY}
         viewportHeight={viewportHeight}
         canRenderHeavy={canRenderHeavy}

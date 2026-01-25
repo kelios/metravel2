@@ -12,6 +12,7 @@
 - `DEVELOPMENT.md` — local setup and day-to-day dev workflow.
 - `TESTING.md` — Jest + Playwright.
 - `RELEASE.md` — release/deploy checklist.
+- `SEO_MIGRATION.md` — SEO/meta architecture guide (NEW: 25.01.2026).
 
 ## Quick start
 

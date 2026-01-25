@@ -1,6 +1,5 @@
-import React from 'react';
-import { Text, type TextStyle } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { type TextStyle } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 
 type MapIconProps = {
   name: string;
@@ -9,10 +8,63 @@ type MapIconProps = {
   style?: TextStyle;
 };
 
+/**
+ * Маппинг MaterialIcons -> Feather для совместимости
+ */
+const mapIconName = (name: string): keyof typeof Feather.glyphMap => {
+  switch (name) {
+    // Search & navigation
+    case 'search':
+      return 'search';
+    case 'close':
+      return 'x';
+    case 'place':
+      return 'map-pin';
+    case 'location-on':
+      return 'map-pin';
+    case 'my-location':
+      return 'crosshair';
+    
+    // Route & directions
+    case 'alt-route':
+      return 'git-branch';
+    case 'directions':
+      return 'navigation';
+    case 'trip-origin':
+      return 'circle';
+    case 'swap-vert':
+      return 'refresh-cw';
+    
+    // Actions
+    case 'refresh':
+      return 'rotate-cw';
+    case 'add':
+      return 'plus';
+    case 'remove':
+      return 'minus';
+    case 'download':
+      return 'download';
+    
+    // UI controls
+    case 'expand-more':
+      return 'chevron-down';
+    case 'expand-less':
+      return 'chevron-up';
+    
+    // Map controls
+    case 'map':
+      return 'map';
+    case 'zoom-out-map':
+      return 'maximize';
+    case 'star':
+      return 'star';
+    
+    // Default: try to use the name as-is if it exists in Feather
+    default:
+      return name as keyof typeof Feather.glyphMap;
+  }
+};
+
 export default function MapIcon({ name, size, color, style }: MapIconProps) {
-  return (
-    <Text style={style}>
-      <MaterialIcons name={name as any} size={size} color={color} />
-    </Text>
-  );
+  return <Feather name={mapIconName(name)} size={size} color={color} style={style} />;
 }

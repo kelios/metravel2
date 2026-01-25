@@ -2,10 +2,21 @@
 import { ScrollViewStyleReset } from 'expo-router/html';
 import React from 'react';
 
-const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 62803912;
-const GA_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4 || 'G-GBT9YNPXKB';
+const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 0;
+const GA_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4 || '';
 
-export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => String.raw`
+if (!METRIKA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.error('[Analytics] EXPO_PUBLIC_METRIKA_ID is not set. Analytics will be disabled.');
+}
+if (!GA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.error('[Analytics] EXPO_PUBLIC_GOOGLE_GA4 is not set. Analytics will be disabled.');
+}
+
+export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
+  if (!metrikaId || !gaId) {
+    return '// Analytics disabled: missing EXPO_PUBLIC_METRIKA_ID or EXPO_PUBLIC_GOOGLE_GA4';
+  }
+  return String.raw`
 (function(){
   var host = window.location.hostname;
   var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';
@@ -120,6 +131,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => Str
   }
 })();
 `;
+};
 
 const getEntryPreloadScript = () => String.raw`
 (function(){
@@ -306,6 +318,10 @@ const getTravelHeroPreloadScript = () => String.raw`
 `;
 
 export default function Root({ children }: { children: React.ReactNode }) {
+  const isProduction = typeof process !== 'undefined' && 
+    (process.env.EXPO_PUBLIC_SITE_URL === 'https://metravel.by' || 
+     process.env.NODE_ENV === 'production');
+  
   return (
     <html lang="ru" suppressHydrationWarning>
     <head>
@@ -315,6 +331,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
       <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
       <meta name="color-scheme" content="light dark" />
+      
+      {!isProduction && <meta name="robots" content="noindex,nofollow" />}
 
       <script
         dangerouslySetInnerHTML={{
@@ -352,24 +370,27 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="icon" href="/icon.svg" type="image/svg+xml" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/manifest.json" />
-      
-      {/* Preload critical fonts */}
-      <link 
-        rel="preload" 
-        href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf" 
-        as="font" 
-        type="font/ttf" 
-        crossOrigin="anonymous"
-      />
+
+      {process.env.NODE_ENV === 'production' ? (
+        <link
+          rel="preload"
+          href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+      ) : null}
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
 
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `@font-face{font-family:feather;src:url(/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf) format('truetype');font-weight:normal;font-style:normal;font-display:optional;}`, 
-        }}
-      />
+      {process.env.NODE_ENV === 'production' ? (
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `@font-face{font-family:feather;src:url(/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf) format('truetype');font-weight:normal;font-style:normal;font-display:optional;}`,
+          }}
+        />
+      ) : null}
 
       {/* Ensure font-display=swap for dynamically injected icon fonts */}
       <script

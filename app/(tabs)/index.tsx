@@ -14,14 +14,13 @@ function HomeScreen() {
     const isFocused = useIsFocused();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
-
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
 
     const canonical = useMemo(() => {
         const raw = String(pathname ?? '').trim();
         const normalized = raw === '' || raw === '/' ? '/' : raw.startsWith('/') ? raw : `/${raw}`;
-        return `${SITE}${normalized}`;
-    }, [SITE, pathname]);
+        return buildCanonicalUrl(normalized);
+    }, [pathname]);
 
     if (!isFocused) {
         return <View style={styles.container} />;
@@ -42,7 +41,7 @@ function HomeScreen() {
                     title={title}
                     description={description}
                     canonical={canonical}
-                    image={`${SITE}/og-preview.jpg`}
+                    image={buildOgImageUrl('/og-preview.jpg')}
                     ogType="website"
                 />
             )}

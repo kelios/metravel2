@@ -12,10 +12,10 @@ const ListTravel = isWeb && isClient
   : require('@/components/listTravel/ListTravelBase').default;
 
 export default function MeTravelScreen() {
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
     const isFocused = useIsFocused();
     // стабильный canonical и стабильный ключ для head
-    const canonical = useMemo(() => `${SITE}/metravel`, [SITE]);
+    const canonical = useMemo(() => buildCanonicalUrl('/metravel'), []);
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -27,7 +27,7 @@ export default function MeTravelScreen() {
                 title="Мои путешествия | Metravel"
                 description="Список ваших опубликованных и черновых путешествий на платформе Metravel."
                 canonical={canonical}
-                image={`${SITE}/og-preview.jpg`}
+                image={buildOgImageUrl('/og-preview.jpg')}
                 ogType="website"
                 robots="noindex, nofollow"
             />

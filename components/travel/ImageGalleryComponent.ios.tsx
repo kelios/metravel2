@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -242,7 +242,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.headerContainer}>
         <View style={styles.titleRow}>
-          <MaterialIcons name="photo-camera" size={20} color={colors.text} />
+          <Feather name="camera" size={20} color={colors.text} />
           <Text style={[styles.galleryTitle, { color: colors.text }]}>Галерея</Text>
         </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
@@ -258,7 +258,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
             disabled={isUploading}
             testID="gallery-ios.pick"
           >
-            <MaterialIcons name="photo-library" size={18} color={colors.textInverse} />
+            <Feather name="image" size={18} color={colors.textInverse} />
             <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Выбрать из галереи</Text>
           </TouchableOpacity>
 
@@ -268,7 +268,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
             disabled={isUploading}
             testID="gallery-ios.camera"
           >
-            <MaterialIcons name="photo-camera" size={18} color={colors.textInverse} />
+            <Feather name="camera" size={18} color={colors.textInverse} />
             <Text style={[styles.addButtonText, { color: colors.textInverse }]}>Сделать фото</Text>
           </TouchableOpacity>
         </View>
@@ -297,7 +297,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
                     style={[styles.deleteButton, { backgroundColor: colors.danger }]}
                     testID={`gallery-ios.delete:${image.id}`}
                   >
-                    <MaterialIcons name="close" size={18} color={colors.textOnPrimary} />
+                    <Feather name="x" size={18} color={colors.textOnPrimary} />
                   </TouchableOpacity>
                 </>
               )}

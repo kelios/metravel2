@@ -1,6 +1,6 @@
 import React from 'react'
 import { Text, View } from 'react-native'
-import MaterialIcons from '@expo/vector-icons/MaterialIcons'
+import Feather from '@expo/vector-icons/Feather'
 
 export type GalleryControlsStyles = {
   container: any
@@ -46,7 +46,7 @@ export const GalleryControls: React.FC<{
       <View style={[styles.headerContainer, { borderBottomColor: colors.borderLight }]}
       >
         <View style={styles.titleRow}>
-          <MaterialIcons name="photo-camera" size={20} color={colors.text} />
+          <Feather name="camera" size={20} color={colors.text} />
           <Text style={[styles.galleryTitle, { color: colors.text }]}>Галерея</Text>
         </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
@@ -111,7 +111,7 @@ export const GalleryControls: React.FC<{
             },
           ]}
         >
-          <MaterialIcons name="warning-amber" size={18} color={colors.warningDark} />
+          <Feather name="alert-triangle" size={18} color={colors.warningDark} />
           <Text style={[styles.errorBannerText, { color: colors.warningDark }]}
           >
             Некоторые изображения не удалось загрузить. Удалите их и попробуйте снова.

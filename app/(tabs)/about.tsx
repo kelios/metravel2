@@ -33,9 +33,9 @@ function AboutAndContactScreen() {
   const router = useRouter();
 
   const isFocused = useIsFocused();
-  const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+  const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
   // стабильный canonical и ключ для <head>
-  const canonical = useMemo(() => `${SITE}/about`, [SITE]);
+  const canonical = useMemo(() => buildCanonicalUrl('/about'), []);
 
   // --- contact form state ---
   const [name, setName] = useState('');
@@ -145,7 +145,7 @@ function AboutAndContactScreen() {
             title={title}
             description={description}
             canonical={canonical}
-            image={`${SITE}/og-preview.jpg`}
+            image={buildOgImageUrl('/og-preview.jpg')}
             ogType="website"
         />
         )}

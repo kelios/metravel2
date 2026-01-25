@@ -29,8 +29,7 @@ export default function ExportScreen() {
     const pathname = usePathname();
     const router = useRouter();
     const { isAuthenticated, userId } = useAuth();
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
-    const canonical = `${SITE}${pathname || '/export'}`;
+    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
 
     const title = 'Экспорт в pdf | Metravel';
     const description =
@@ -87,8 +86,8 @@ export default function ExportScreen() {
                     headKey="export"
                     title={title}
                     description={description}
-                    canonical={canonical}
-                    image={`${SITE}/og-preview.jpg`}
+                    canonical={buildCanonicalUrl(pathname || '/export')}
+                    image={buildOgImageUrl('/og-preview.jpg')}
                     ogType="website"
                     robots="noindex, nofollow"
                 />

@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import * as Linking from 'expo-linking';
 import type { Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -57,7 +57,7 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
         accessibilityRole="button"
         accessibilityLabel={hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
       >
-        <MaterialIcons name="telegram" size={20} color={colors.textOnPrimary} />
+        <Feather name="send" size={20} color={colors.textOnPrimary} />
         <Text style={styles.buttonText}>
           {hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
         </Text>

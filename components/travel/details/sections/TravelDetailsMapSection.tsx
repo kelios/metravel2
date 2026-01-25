@@ -146,7 +146,7 @@ export const TravelDetailsMapSection: React.FC<{
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!canRenderHeavy) return
-    rIC(() => setMapLazyEnabled(true), 2000)
+    setMapLazyEnabled(true)
   }, [canRenderHeavy])
 
   useEffect(() => {

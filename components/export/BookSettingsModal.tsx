@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import ThemePreview, { type PdfThemeName } from './ThemePreview';
 import PresetSelector from './PresetSelector';
 import GalleryLayoutSelector from './GalleryLayoutSelector';
@@ -474,7 +474,7 @@ export default function BookSettingsModal({
                 }}
                 title="У вас есть несохраненные изменения"
               >
-                <MaterialIcons name="circle" size={8} color={MODAL_COLORS.accent as any} />
+                <Feather name="circle" size={8} color={MODAL_COLORS.accent as any} />
                 <span>Не сохранено</span>
               </span>
             )}
@@ -494,7 +494,7 @@ export default function BookSettingsModal({
               aria-live="polite"
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: MODAL_COLORS.errorDark, marginBottom: '6px' }}>
-                <MaterialIcons name="warning" size={16} color={MODAL_COLORS.errorDark as any} />
+                <Feather name="alert-triangle" size={16} color={MODAL_COLORS.errorDark as any} />
                 <span>Исправьте ошибки:</span>
               </div>
               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: MODAL_COLORS.errorDark }}>
@@ -516,7 +516,7 @@ export default function BookSettingsModal({
             gap: '10px',
           }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24 }}>
-              <MaterialIcons name="photo-album" size={20} color={MODAL_COLORS.primary as any} />
+              <Feather name="book" size={20} color={MODAL_COLORS.primary as any} />
             </span>
             <div>
               <div style={{ color: MODAL_COLORS.text, fontSize: '14px', fontWeight: 500 }}>
@@ -632,8 +632,8 @@ export default function BookSettingsModal({
                   e.currentTarget.style.backgroundColor = 'transparent';
                 }}
               >
-                <MaterialIcons
-                  name={showAdvanced ? 'expand-less' : 'expand-more'}
+                <Feather
+                  name={showAdvanced ? 'chevron-up' : 'chevron-down'}
                   size={18}
                   color={MODAL_COLORS.textMuted as any}
                 />
@@ -978,8 +978,8 @@ export default function BookSettingsModal({
                 }}
                 aria-label="Предварительный просмотр PDF"
               >
-                <MaterialIcons
-                  name={isSaving ? 'hourglass-top' : 'visibility'}
+                <Feather
+                  name={isSaving ? 'clock' : 'eye'}
                   size={18}
                   color={MODAL_COLORS.primary as any}
                 />
@@ -1039,7 +1039,7 @@ export default function BookSettingsModal({
                     display: 'inline-block',
                     animation: 'spin 1s linear infinite',
                   }}>
-                    <MaterialIcons name="hourglass-top" size={18} color={MODAL_COLORS.textOnPrimary as any} />
+                    <Feather name="clock" size={18} color={MODAL_COLORS.textOnPrimary as any} />
                   </span>
                   <style>{`
                     @keyframes spin {
@@ -1051,7 +1051,7 @@ export default function BookSettingsModal({
                 </>
               ) : (
                 <>
-                  <MaterialIcons name="picture-as-pdf" size={18} color={MODAL_COLORS.textOnPrimary as any} />
+                  <Feather name="file-text" size={18} color={MODAL_COLORS.textOnPrimary as any} />
                   Сохранить PDF
                 </>
               )}

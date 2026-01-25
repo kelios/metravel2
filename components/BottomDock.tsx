@@ -133,12 +133,6 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         icon: <Feather name="home" size={22} color={iconColor} />,
       },
       {
-        key: "belarus",
-        label: "Беларусь",
-        route: "/travelsby" as any,
-        icon: <Feather name="flag" size={22} color={iconColor} />,
-      },
-      {
         key: "search",
         label: "Поиск",
         route: "/search" as any,
@@ -157,23 +151,11 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         icon: <Feather name="heart" size={22} color={iconColor} />,
       },
       {
-        key: "create",
-        label: "Создать",
-        route: "/travel/new" as any,
-        icon: <Feather name="plus-circle" size={22} color={iconColor} />,
-      },
-      {
         key: "more",
         label: "Ещё",
         route: "/more" as any,
         icon: <Feather name="more-horizontal" size={22} color={iconColor} />,
         isMore: true,
-      },
-      {
-        key: "profile",
-        label: "Профиль",
-        route: "/profile" as any,
-        icon: <Feather name="user" size={22} color={iconColor} />,
       },
     ],
     [iconColor]
@@ -200,7 +182,7 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
                 testID={`footer-item-${item.key}`}
                 href={item.route}
                 label={item.label}
-                showLabel={false}
+                showLabel={Platform.OS === "web"}
                 onPress={item.isMore ? () => setShowMore(true) : undefined}
               >
                 {item.icon}
@@ -221,11 +203,43 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
               <Pressable
                 onPress={() => {
                   setShowMore(false);
+                  router.push("/travelsby" as any);
+                }}
+                style={styles.moreItem}
+              >
+                <Feather name="flag" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                <Text style={styles.moreItemText}>Беларусь</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowMore(false);
+                  router.push("/travel/new" as any);
+                }}
+                style={styles.moreItem}
+              >
+                <Feather name="plus-circle" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                <Text style={styles.moreItemText}>Создать маршрут</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowMore(false);
+                  router.push("/profile" as any);
+                }}
+                style={styles.moreItem}
+              >
+                <Feather name="user" size={18} color={colors.primary} style={styles.moreItemIcon} />
+                <Text style={styles.moreItemText}>Профиль</Text>
+              </Pressable>
+              <View style={styles.moreDivider} />
+              <Pressable
+                onPress={() => {
+                  setShowMore(false);
                   router.push("/privacy" as any);
                 }}
                 style={styles.moreItem}
               >
-                <Text style={styles.moreItemText}>Политика конфиденциальности</Text>
+                <Feather name="shield" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
+                <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Политика конфиденциальности</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -234,7 +248,8 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
                 }}
                 style={styles.moreItem}
               >
-                <Text style={styles.moreItemText}>Настройки cookies</Text>
+                <Feather name="settings" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
+                <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Настройки cookies</Text>
               </Pressable>
               <Pressable
                 onPress={() => {
@@ -243,7 +258,8 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
                 }}
                 style={styles.moreItem}
               >
-                <Text style={styles.moreItemText}>Связаться с нами</Text>
+                <Feather name="mail" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
+                <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Связаться с нами</Text>
               </Pressable>
             </View>
           </View>
@@ -314,8 +330,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   itemText: {
     color: colors.textMuted,
     fontSize: 10,
-    lineHeight: 10,
-    marginTop: 0,
+    lineHeight: 12,
+    marginTop: 2,
     textAlign: "center",
   },
   itemTextOnly: {
@@ -340,13 +356,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     boxShadow: DESIGN_TOKENS.shadows.modal,
   } as any,
   moreList: {
-    gap: 12,
+    gap: 4,
   } as any,
   moreItem: {
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
+  moreItemIcon: {
+    marginRight: 12,
+  } as any,
   moreItemText: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text,
+  },
+  moreDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 8,
   },
 });

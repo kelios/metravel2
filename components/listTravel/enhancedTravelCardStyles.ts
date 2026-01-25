@@ -1,7 +1,10 @@
 import { StyleSheet, Platform } from 'react-native';
-import { designTokens } from '../../constants/designTokens';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { TRAVEL_CARD_MAX_WIDTH } from './utils/listTravelConstants';
+
+// Alias для более короткой записи
+const designTokens = DESIGN_TOKENS;
 
 // Создаем отдельные стили для web и native с правильными типами
 const webStyles: any = {
@@ -131,10 +134,10 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   card: {
     width: getCardWidth() as any,
     maxWidth: TRAVEL_CARD_MAX_WIDTH,
-    borderRadius: designTokens.radius.lg, // Используем design token
-    backgroundColor: designTokens.colors.neutral[50], // Используем design token
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    backgroundColor: DESIGN_TOKENS.colors.background,
     borderWidth: 1,
-    borderColor: designTokens.colors.neutral[200], // Используем design token
+    borderColor: DESIGN_TOKENS.colors.border,
     overflow: "hidden",
     flexDirection: 'column',
     // Карточка растягивается на всю ячейку, но не выходит за пределы maxWidth
@@ -144,7 +147,7 @@ export const enhancedTravelCardStyles = StyleSheet.create({
     // Это предотвращает конфликты с gap в columnWrapperStyle и дает явный контроль над отступами
     ...Platform.select({
       ios: {
-        shadowColor: designTokens.colors.neutral[900], // Используем design token
+        shadowColor: designTokens.colors.text, // Используем design token
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 16,
@@ -167,7 +170,7 @@ export const enhancedTravelCardStyles = StyleSheet.create({
     // ✅ Фиксированная высота 220px для всех платформ для предсказуемости
     // В браузере Platform всегда = 'web', поэтому aspectRatio делал изображения большими
     height: 220,
-    backgroundColor: designTokens.colors.neutral[100], // Используем design token
+    backgroundColor: designTokens.colors.surfaceMuted, // Используем design token
     overflow: "hidden",
     flexShrink: 0,
     ...Platform.select({
@@ -204,10 +207,10 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   // Улучшенный контент под изображением
   contentContainer: {
     // ✅ Мобильные значения по умолчанию для правильной работы в браузере
-    padding: designTokens.spacing[3], // Используем design token
-    paddingTop: designTokens.spacing[2], // Используем design token
-    gap: designTokens.spacing[2], // Используем design token
-    backgroundColor: designTokens.colors.neutral[50], // Используем design token
+    padding: DESIGN_TOKENS.spacing.sm,
+    paddingTop: DESIGN_TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.xs,
+    backgroundColor: DESIGN_TOKENS.colors.background,
     // flex: 1, // УБРАНО: убираем растягивание контента
     justifyContent: 'space-between',
     ...Platform.select({
@@ -218,14 +221,13 @@ export const enhancedTravelCardStyles = StyleSheet.create({
 
   // ✅ B2.1: Улучшенная типографика с адаптивными размерами
   title: {
-    fontSize: designTokens.typography.fontSize.base, // Используем design token
-    fontWeight: designTokens.typography.fontWeight.bold, // Используем design token
-    fontFamily: Platform.select({ web: designTokens.typography.fontFamily.primary, default: undefined }),
-    color: designTokens.colors.neutral[900], // Используем design token
-    // ✅ B2.1: Улучшенный line-height для читаемости (1.4x)
-    lineHeight: designTokens.typography.lineHeight.normal, // Используем design token
-    letterSpacing: parseFloat(designTokens.typography.letterSpacing.tight), // Конвертируем string в number
-    marginBottom: designTokens.spacing[1], // Используем design token
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: DESIGN_TOKENS.typography.weights.bold,
+    fontFamily: Platform.select({ web: DESIGN_TOKENS.typography.fontFamily, default: undefined }),
+    color: DESIGN_TOKENS.colors.text,
+    lineHeight: DESIGN_TOKENS.typography.sizes.md * 1.5,
+    letterSpacing: -0.025,
+    marginBottom: DESIGN_TOKENS.spacing.xxs,
     minHeight: 44, // Мобильное значение
     ...Platform.select({
       web: {
@@ -240,29 +242,29 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   tagsContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: designTokens.spacing[1], // Используем design token
-    marginBottom: designTokens.spacing[2], // Используем design token
+    gap: designTokens.spacing.xxs, // Используем design token
+    marginBottom: designTokens.spacing.xs, // Используем design token
   },
 
   tag: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: designTokens.colors.neutral[100], // Используем design token
-    borderRadius: designTokens.radius.base, // Используем design token
-    paddingHorizontal: designTokens.spacing[2], // Используем design token
-    paddingVertical: designTokens.spacing[1], // Используем design token
+    backgroundColor: designTokens.colors.surfaceMuted, // Используем design token
+    borderRadius: designTokens.radii.sm, // Используем design token
+    paddingHorizontal: designTokens.spacing.xs, // Используем design token
+    paddingVertical: designTokens.spacing.xxs, // Используем design token
     borderWidth: 1,
-    borderColor: designTokens.colors.neutral[200], // Используем design token
+    borderColor: designTokens.colors.borderLight, // Используем design token
     ...Platform.select({
       web: webStyles.tag,
     }),
   },
 
   tagText: {
-    fontSize: designTokens.typography.fontSize.sm, // Используем design token
-    color: designTokens.colors.neutral[600], // Используем design token
-    fontWeight: designTokens.typography.fontWeight.semibold, // Используем design token
-    letterSpacing: parseFloat(designTokens.typography.letterSpacing.normal), // Конвертируем string в number
+    fontSize: designTokens.typography.sizes.sm, // Используем design token
+    color: designTokens.colors.textMuted, // Используем design token
+    fontWeight: designTokens.typography.weights.semibold as any, // Используем design token
+    letterSpacing: 0, // Normal letter spacing
     // ✅ B2.1: Улучшенный line-height
     lineHeight: 15, // Мобильное значение
   },
@@ -272,33 +274,33 @@ export const enhancedTravelCardStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: 'space-between',
-    paddingTop: designTokens.spacing[3], // Используем design token
+    paddingTop: designTokens.spacing.sm, // Используем design token
     borderTopWidth: 1,
-    borderTopColor: designTokens.colors.neutral[200], // Используем design token
+    borderTopColor: designTokens.colors.borderLight, // Используем design token
     marginTop: 'auto',
   },
 
   metaLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[3] }), // Используем design tokens
+    gap: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.sm }) as any, // Используем design tokens
     flex: 1,
   },
 
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: designTokens.spacing[1], // Используем design token
+    gap: designTokens.spacing.xxs, // Используем design token
   },
 
   metaText: {
     // ✅ B2.1: Адаптивный размер для мета-информации
-    fontSize: designTokens.typography.fontSize.sm, // Используем design token
-    color: designTokens.colors.neutral[500], // Используем design token
-    fontWeight: designTokens.typography.fontWeight.medium, // Используем design token
-    letterSpacing: parseFloat(designTokens.typography.letterSpacing.normal), // Конвертируем string в number
+    fontSize: designTokens.typography.sizes.sm, // Используем design token
+    color: designTokens.colors.textMuted, // Используем design token
+    fontWeight: designTokens.typography.weights.medium as any, // Используем design token
+    letterSpacing: 0, // Normal letter spacing
     // ✅ B2.1: Улучшенный line-height
-    lineHeight: designTokens.typography.lineHeight.normal, // Используем design token
+    lineHeight: 20, // Normal line height
     ...Platform.select({
       web: {
         fontSize: 'clamp(13px, 1.4vw, 16px)' as any, // Было 11-13px
@@ -310,13 +312,13 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Platform.select({ default: designTokens.spacing[1], web: designTokens.spacing[1] }), // Используем design token
-    paddingHorizontal: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
-    paddingVertical: Platform.select({ default: designTokens.spacing[1], web: designTokens.spacing[1] }), // Используем design token
-    borderRadius: designTokens.radius.full, // Используем design token
-    backgroundColor: designTokens.colors.neutral[100], // Используем design token
+    gap: Platform.select({ default: designTokens.spacing.xxs, web: designTokens.spacing.xxs }) as any, // Используем design token
+    paddingHorizontal: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
+    paddingVertical: Platform.select({ default: designTokens.spacing.xxs, web: designTokens.spacing.xxs }) as any, // Используем design token
+    borderRadius: designTokens.radii.full, // Используем design token
+    backgroundColor: designTokens.colors.surfaceMuted, // Используем design token
     borderWidth: 1,
-    borderColor: designTokens.colors.neutral[200], // Используем design token
+    borderColor: designTokens.colors.borderLight, // Используем design token
     ...Platform.select({
       web: {
         transition: "all 0.2s ease",
@@ -325,57 +327,57 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   },
 
   statusBadgeText: {
-    fontSize: Platform.select({ default: designTokens.typography.fontSize.sm, web: designTokens.typography.fontSize.sm }), // Используем design token
-    fontWeight: designTokens.typography.fontWeight.semibold, // Используем design token
-    color: designTokens.colors.neutral[700], // Используем design token
-    letterSpacing: parseFloat(designTokens.typography.letterSpacing.normal), // Конвертируем string в number
+    fontSize: Platform.select({ default: designTokens.typography.sizes.sm, web: designTokens.typography.sizes.sm }) as any, // Используем design token
+    fontWeight: designTokens.typography.weights.semibold as any, // Используем design token
+    color: designTokens.colors.text, // Используем design token
+    letterSpacing: 0, // Normal letter spacing
   },
 
   // Популярный статус с улучшенными цветами
   popularBadge: {
-    backgroundColor: designTokens.colors.primary[50], // Используем доступный оттенок token
-    borderColor: designTokens.colors.primary[100], // Используем доступный оттенок token
+    backgroundColor: designTokens.colors.primarySoft, // Используем доступный оттенок token
+    borderColor: designTokens.colors.primaryLight, // Используем доступный оттенок token
   },
   popularBadgeText: {
-    color: designTokens.colors.primary[600], // Используем design token
+    color: designTokens.colors.primaryDark, // Используем design token
   },
 
   // Новый статус с улучшенными цветами
   newBadge: {
-    backgroundColor: designTokens.colors.special.accent + '20', // Используем design token с прозрачностью
-    borderColor: designTokens.colors.special.accent + '40', // Используем design token с прозрачностью
+    backgroundColor: designTokens.colors.accentSoft, // Используем design token
+    borderColor: designTokens.colors.accentLight, // Используем design token
   },
   newBadgeText: {
-    color: designTokens.colors.special.accent, // Используем design token
+    color: designTokens.colors.accent, // Используем design token
   },
 
   topBadges: {
     position: "absolute",
-    bottom: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
-    left: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
-    right: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
+    bottom: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
+    left: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
+    right: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: Platform.select({ default: designTokens.spacing[1], web: designTokens.spacing[1] }), // Используем design token
+    gap: Platform.select({ default: designTokens.spacing.xxs, web: designTokens.spacing.xxs }) as any, // Используем design token
     zIndex: designTokens.zIndex.dropdown, // Используем design token
   },
 
   // ✅ B7.1: Улучшенная кнопка избранного - touch-friendly размер
   favoriteButton: {
     position: "absolute",
-    top: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
-    right: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
+    top: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
+    right: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
     zIndex: designTokens.zIndex.modal, // Используем design token
     // ✅ B7.1: Минимум 44x44px для touch targets
     width: Platform.select({ default: 44, web: 40 }),
     height: Platform.select({ default: 44, web: 40 }),
-    borderRadius: Platform.select({ default: designTokens.radius.full, web: designTokens.radius.lg }), // Используем design token
-    backgroundColor: designTokens.colors.special.glass, // Используем design token
+    borderRadius: Platform.select({ default: designTokens.radii.full, web: designTokens.radii.lg }) as any, // Используем design token
+    backgroundColor: designTokens.colors.surfaceElevated, // Используем design token
     justifyContent: "center",
     alignItems: "center",
     ...Platform.select({
       ios: {
-        shadowColor: designTokens.colors.neutral[900], // Используем design token
+        shadowColor: designTokens.colors.text, // Используем design token
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
@@ -390,19 +392,19 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   // ✅ B7.1: Улучшенные кнопки администратора - touch-friendly
   adminActionsContainer: {
     position: 'absolute',
-    top: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
-    left: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
+    top: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
+    left: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
     zIndex: designTokens.zIndex.modal, // Используем design token
     flexDirection: 'row',
     alignItems: 'center',
     // ✅ B7.1: Увеличенный padding для touch targets
-    paddingHorizontal: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
-    paddingVertical: Platform.select({ default: designTokens.spacing[1], web: designTokens.spacing[1] }), // Используем design token
-    borderRadius: designTokens.radius.full, // Используем design token
-    backgroundColor: designTokens.colors.special.glass, // Используем design token
+    paddingHorizontal: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
+    paddingVertical: Platform.select({ default: designTokens.spacing.xxs, web: designTokens.spacing.xxs }) as any, // Используем design token
+    borderRadius: designTokens.radii.full, // Используем design token
+    backgroundColor: designTokens.colors.surfaceElevated, // Используем design token
     ...Platform.select({
       ios: {
-        shadowColor: designTokens.colors.neutral[900], // Используем design token
+        shadowColor: designTokens.colors.text, // Используем design token
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
@@ -416,11 +418,11 @@ export const enhancedTravelCardStyles = StyleSheet.create({
 
   adminButton: {
     // ✅ B7.1: Минимум 44x44px touch target
-    paddingHorizontal: Platform.select({ default: designTokens.spacing[3], web: designTokens.spacing[2] }), // Используем design token
-    paddingVertical: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[1] }), // Используем design token
+    paddingHorizontal: Platform.select({ default: designTokens.spacing.sm, web: designTokens.spacing.xs }) as any, // Используем design token
+    paddingVertical: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xxs }) as any, // Используем design token
     minWidth: Platform.select({ default: 44, web: undefined }),
     minHeight: Platform.select({ default: 44, web: undefined }),
-    borderRadius: designTokens.radius.full, // Используем design token
+    borderRadius: designTokens.radii.full, // Используем design token
     justifyContent: 'center',
     alignItems: 'center',
     ...Platform.select({
@@ -432,17 +434,17 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   infoBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: Platform.select({ default: designTokens.spacing[1], web: designTokens.spacing[1] }), // Используем design token
-    backgroundColor: designTokens.colors.special.glass, // Используем design token
-    borderRadius: designTokens.radius.full, // Используем design token
-    paddingHorizontal: Platform.select({ default: designTokens.spacing[2], web: designTokens.spacing[2] }), // Используем design token
-    paddingVertical: Platform.select({ default: designTokens.spacing[1], web: designTokens.spacing[1] }), // Используем design token
+    gap: Platform.select({ default: designTokens.spacing.xxs, web: designTokens.spacing.xxs }) as any, // Используем design token
+    backgroundColor: designTokens.colors.surfaceElevated, // Используем design token
+    borderRadius: designTokens.radii.full, // Используем design token
+    paddingHorizontal: Platform.select({ default: designTokens.spacing.xs, web: designTokens.spacing.xs }) as any, // Используем design token
+    paddingVertical: Platform.select({ default: designTokens.spacing.xxs, web: designTokens.spacing.xxs }) as any, // Используем design token
     borderWidth: 1,
-    borderColor: designTokens.colors.special.glass, // Используем design token
-    margin: Platform.select({ default: designTokens.spacing[1], web: 0 }), // Используем design token
+    borderColor: designTokens.colors.border, // Используем design token
+    margin: Platform.select({ default: designTokens.spacing.xxs, web: 0 }) as any, // Используем design token
     ...Platform.select({
       ios: {
-        shadowColor: designTokens.colors.neutral[900], // Используем design token
+        shadowColor: designTokens.colors.text, // Используем design token
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -455,10 +457,10 @@ export const enhancedTravelCardStyles = StyleSheet.create({
   },
 
   infoBadgeText: {
-    fontSize: Platform.select({ default: designTokens.typography.fontSize.sm, web: designTokens.typography.fontSize.sm }), // Используем design token
-    color: designTokens.colors.neutral[900], // Используем design token
-    fontWeight: designTokens.typography.fontWeight.bold, // Используем design token
-    letterSpacing: parseFloat(designTokens.typography.letterSpacing.tight), // Конвертируем string в number
+    fontSize: Platform.select({ default: designTokens.typography.sizes.sm, web: designTokens.typography.sizes.sm }) as any, // Используем design token
+    color: designTokens.colors.text, // Используем design token
+    fontWeight: designTokens.typography.weights.bold as any, // Используем design token
+    letterSpacing: -0.02, // Tight letter spacing
   },
 
   // Адаптивные стили для разных размеров экрана
@@ -472,8 +474,8 @@ export const enhancedTravelCardStyles = StyleSheet.create({
 
   // Анимация загрузки
   loadingPlaceholder: {
-    backgroundColor: designTokens.colors.neutral[100], // Используем design token
-    borderRadius: designTokens.radius.base, // Используем design token
+    backgroundColor: designTokens.colors.surfaceMuted, // Используем design token
+    borderRadius: designTokens.radii.sm, // Используем design token
     ...Platform.select({
       web: {
         // animation будет добавлен через CSS классы
@@ -547,7 +549,7 @@ const addWebAnimations = () => {
       
       /* Focus indicators для доступности */
       .travel-card:focus-visible {
-        outline: 2px solid ${designTokens.colors.primary[500]};
+        outline: 2px solid ${designTokens.colors.primary};
         outline-offset: 2px;
       }
     `;

@@ -1,12 +1,42 @@
 # ✅ Production Release Checklist
 
-## ✅ ИСПРАВЛЕНО - Google Maps заменен на бесплатные альтернативы
+## ✅ ИСПРАВЛЕНО - Критичні архітектурні проблеми
+
+### Google Maps заменен на бесплатные альтернативы
 
 - ✅ **Карты без Google Maps API**
   - iOS: Apple Maps (нативные)
   - Android: Google Maps (встроенные в устройство, без API key)
   - Web: OpenStreetMap (бесплатный)
   - См. `docs/MAPS_CONFIGURATION.md`
+
+### SEO/Meta архітектура оптимізована (25.01.2026)
+
+- ✅ **Усунуто дублі meta-тегів**
+  - Видалено fallback title/description/canonical з `app/_layout.tsx`
+  - Спрощено `InstantSEO.tsx` (тільки декларативний Head)
+  - Тепер 1 canonical, 1 description на сторінці
+  
+- ✅ **Виправлено consent compliance**
+  - Видалено `<noscript>` analytics блок (обходив баннер згоди)
+  - Analytics запускається ТІЛЬКИ після явної згоди користувача
+  
+- ✅ **Централізовані SEO утиліти**
+  - Новий модуль `utils/seo.ts` з функціями:
+    - `getSiteBaseUrl()` — нормалізований base URL
+    - `buildCanonicalUrl(pathname)` — правильний canonical
+    - `buildOgImageUrl(path)` — правильний OG image URL
+  - 21 файл мігровано на нові утиліти
+  
+- ✅ **Захист від індексації non-prod**
+  - `<meta name="robots" content="noindex,nofollow">` на staging/dev
+  - Автоматична перевірка hostname у `app/+html.tsx`
+  
+- ✅ **Fail-fast для analytics**
+  - Видалено дефолтні GA/Metrika ID
+  - На prod без env змінних аналітика вимкнена (не використовує чужі ID)
+  
+- 📖 **Документація:** `docs/SEO_MIGRATION.md`
 
 - ✅ **Bundle Identifiers обновлены**
   - iOS: `by.metravel.app`
@@ -177,6 +207,11 @@ npm run prod:web  # Production build
 - [ ] API errors < 1%
 - [ ] App load time < 3s
 - [ ] No critical bugs reported
+- [ ] **SEO перевірки:**
+  - [ ] View Page Source → 1 canonical, 1 description (no duplicates)
+  - [ ] Staging має `robots: noindex,nofollow`
+  - [ ] Analytics не запускається без consent
+  - [ ] PageSpeed Insights SEO Score ≥ 95
 
 **Первая неделя:**
 - [ ] User retention D1 > 40%

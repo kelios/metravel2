@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useState } from 'react'
-import { Animated, InteractionManager, LayoutChangeEvent, Platform, Text, View } from 'react-native'
+import { Animated, Platform, Text, View } from 'react-native'
 
 import NavigationArrows from '@/components/travel/NavigationArrows'
 import { TravelListSkeleton } from '@/components/travel/TravelDetailSkeletons'
@@ -25,74 +25,42 @@ const TravelListFallback = () => {
 export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel
   anchors: AnchorsMap
-  relatedTravels: Travel[]
-  setRelatedTravels: React.Dispatch<React.SetStateAction<Travel[]>>
   scrollY: Animated.Value
   viewportHeight: number
   canRenderHeavy: boolean
 }> = ({
   travel,
   anchors,
-  relatedTravels,
-  setRelatedTravels,
-  scrollY,
-  viewportHeight,
+  scrollY: _scrollY, // Unused in simplified version
+  viewportHeight: _viewportHeight, // Unused in simplified version
   canRenderHeavy,
 }) => {
   const styles = useTravelDetailsStyles()
   const isWeb = Platform.OS === 'web'
-  const preloadMargin = 0
   const progressiveEnabled = !isWeb || canRenderHeavy
+  const [relatedTravels, setRelatedTravels] = useState<Travel[]>([])
 
-  const { shouldLoad: shouldLoadNearWeb, setElementRef: setNearRefWeb } = useProgressiveLoad({
+  // Unified progressive loading for both platforms
+  const { shouldLoad: shouldLoadNear, setElementRef: setNearRef } = useProgressiveLoad({
     priority: 'low',
-    rootMargin: `${preloadMargin}px`,
-    threshold: 0.25,
-    fallbackDelay: 2500,
-    enabled: progressiveEnabled,
-  })
-  const { shouldLoad: shouldLoadPopularWeb, setElementRef: setPopularRefWeb } = useProgressiveLoad({
-    priority: 'low',
-    rootMargin: `${preloadMargin}px`,
-    threshold: 0.25,
-    fallbackDelay: 2600,
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 1000,
     enabled: progressiveEnabled,
   })
 
-  const [nearTop, setNearTop] = useState<number | null>(null)
-  const [popularTop, setPopularTop] = useState<number | null>(null)
-  const [shouldLoadNearNative, setShouldLoadNearNative] = useState(false)
-  const [shouldLoadPopularNative, setShouldLoadPopularNative] = useState(false)
-
-  useEffect(() => {
-    if (isWeb) return
-    if (!viewportHeight || viewportHeight <= 0) return
-
-    const id = scrollY.addListener(({ value }) => {
-      const bottomY = value + viewportHeight + preloadMargin
-
-      if (nearTop != null) {
-        const nextNear = bottomY >= nearTop
-        setShouldLoadNearNative((prev) => (prev === nextNear ? prev : nextNear))
-      }
-
-      if (popularTop != null) {
-        const nextPopular = bottomY >= popularTop
-        setShouldLoadPopularNative((prev) => (prev === nextPopular ? prev : nextPopular))
-      }
-    })
-
-    return () => {
-      scrollY.removeListener(id)
-    }
-  }, [isWeb, nearTop, popularTop, preloadMargin, scrollY, viewportHeight])
-
-  const shouldLoadNear = isWeb ? shouldLoadNearWeb : shouldLoadNearNative
-  const shouldLoadPopular = isWeb ? shouldLoadPopularWeb : shouldLoadPopularNative
+  const { shouldLoad: shouldLoadPopular, setElementRef: setPopularRef } = useProgressiveLoad({
+    priority: 'low',
+    rootMargin: '200px',
+    threshold: 0.1,
+    fallbackDelay: 1200,
+    enabled: progressiveEnabled,
+  })
 
   const [hasLoadedNear, setHasLoadedNear] = useState(false)
   const [hasLoadedPopular, setHasLoadedPopular] = useState(false)
 
+  // Keep content visible once loaded
   useEffect(() => {
     if (shouldLoadNear && !hasLoadedNear) setHasLoadedNear(true)
   }, [shouldLoadNear, hasLoadedNear])
@@ -104,87 +72,26 @@ export const TravelDetailsSidebarSection: React.FC<{
   const shouldRenderNear = shouldLoadNear || hasLoadedNear
   const shouldRenderPopular = shouldLoadPopular || hasLoadedPopular
 
-  const [canMountNear, setCanMountNear] = useState(false)
-  const [canMountPopular, setCanMountPopular] = useState(false)
-
-  useEffect(() => {
-    if (!shouldRenderNear || canMountNear) return
-    if (
-      Platform.OS === 'web' &&
-      typeof window !== 'undefined' &&
-      typeof (window as any).requestIdleCallback === 'function'
-    ) {
-      const id = (window as any).requestIdleCallback(() => setCanMountNear(true), { timeout: 1200 })
-      return () => {
-        try {
-          ;(window as any).cancelIdleCallback?.(id)
-        } catch {
-          void 0
-        }
-      }
-    }
-
-    const task = InteractionManager.runAfterInteractions(() => setCanMountNear(true))
-    return () => task.cancel()
-  }, [shouldRenderNear, canMountNear])
-
-  useEffect(() => {
-    if (!shouldRenderPopular || canMountPopular) return
-    if (
-      Platform.OS === 'web' &&
-      typeof window !== 'undefined' &&
-      typeof (window as any).requestIdleCallback === 'function'
-    ) {
-      const id = (window as any).requestIdleCallback(() => setCanMountPopular(true), {
-        timeout: 1200,
-      })
-      return () => {
-        try {
-          ;(window as any).cancelIdleCallback?.(id)
-        } catch {
-          void 0
-        }
-      }
-    }
-
-    const task = InteractionManager.runAfterInteractions(() => setCanMountPopular(true))
-    return () => task.cancel()
-  }, [shouldRenderPopular, canMountPopular])
-
   return (
     <>
       <View
-        ref={anchors.near}
+        ref={(node) => {
+          // Handle both anchor ref and progressive load ref
+          if (anchors.near && typeof anchors.near === 'object') {
+            (anchors.near as any).current = node;
+          }
+          setNearRef(node);
+        }}
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Рядом можно посмотреть"
-        onLayout={
-          isWeb
-            ? undefined
-            : (e: LayoutChangeEvent) => {
-                const y = e.nativeEvent.layout.y
-                setNearTop((prev) => (prev === y ? prev : y))
-              }
-        }
         {...(Platform.OS === 'web' ? { 'data-section-key': 'near' } : {})}
       >
-        {Platform.OS === 'web' ? (
-          <View
-            collapsable={false}
-            // @ts-ignore
-            ref={(node: any) => {
-              const target = node?._nativeNode || node?._domNode || node || null
-              setNearRefWeb(target)
-            }}
-          />
-        ) : (
-          <View />
-        )}
         <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
         <Text style={styles.sectionSubtitle}>Маршруты в радиусе ~60 км</Text>
         <View style={{ marginTop: 8 }}>
           {travel.travelAddress &&
-            (shouldRenderNear && canMountNear ? (
+            (shouldRenderNear ? (
               <View testID="travel-details-near-loaded">
                 <Suspense fallback={<TravelListFallback />}>
                   <NearTravelList
@@ -197,7 +104,7 @@ export const TravelDetailsSidebarSection: React.FC<{
               </View>
             ) : (
               <View testID="travel-details-near-placeholder" style={styles.lazySectionReserved}>
-                <TravelListSkeleton count={3} />
+                <TravelListFallback />
               </View>
             ))}
         </View>
@@ -213,36 +120,21 @@ export const TravelDetailsSidebarSection: React.FC<{
       )}
 
       <View
-        ref={anchors.popular}
+        ref={(node) => {
+          if (anchors.popular && typeof anchors.popular === 'object') {
+            (anchors.popular as any).current = node;
+          }
+          setPopularRef(node);
+        }}
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Популярные маршруты"
-        onLayout={
-          isWeb
-            ? undefined
-            : (e: LayoutChangeEvent) => {
-                const y = e.nativeEvent.layout.y
-                setPopularTop((prev) => (prev === y ? prev : y))
-              }
-        }
         {...(Platform.OS === 'web' ? { 'data-section-key': 'popular' } : {})}
       >
-        {Platform.OS === 'web' ? (
-          <View
-            collapsable={false}
-            // @ts-ignore
-            ref={(node: any) => {
-              const target = node?._nativeNode || node?._domNode || node || null
-              setPopularRefWeb(target)
-            }}
-          />
-        ) : (
-          <View />
-        )}
         <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
         <Text style={styles.sectionSubtitle}>Самые просматриваемые направления за неделю</Text>
         <View style={{ marginTop: 8 }}>
-          {shouldRenderPopular && canMountPopular ? (
+          {shouldRenderPopular ? (
             <View testID="travel-details-popular-loaded">
               <Suspense fallback={<TravelListFallback />}>
                 <PopularTravelList title={null} showHeader={false} embedded />
@@ -250,7 +142,7 @@ export const TravelDetailsSidebarSection: React.FC<{
             </View>
           ) : (
             <View testID="travel-details-popular-placeholder" style={styles.lazySectionReserved}>
-              <TravelListSkeleton count={3} />
+              <TravelListFallback />
             </View>
           )}
         </View>

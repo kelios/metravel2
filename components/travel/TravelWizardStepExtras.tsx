@@ -115,6 +115,13 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
         return validateStep(5, formData);
     }, [formData]);
 
+    // Stable field change handler
+    const handleFieldChange = React.useCallback((field: keyof TravelFormData, value: any) => {
+        if (typeof setFormData === 'function') {
+            (setFormData as any)((prev: TravelFormData) => ({ ...prev, [field]: value }));
+        }
+    }, [setFormData]);
+
     // ✅ УЛУЧШЕНИЕ: Подсчет заполненных полей
     const groupsFilledCounts = useMemo(() => {
         const hasCategories = Array.isArray(formData.categories) && formData.categories.length > 0;
@@ -216,6 +223,7 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                                 filters={filters}
                                 formData={formData}
                                 setFormData={setFormData}
+                                onFieldChange={handleFieldChange}
                                 travelDataOld={travelDataOld}
                                 isSuperAdmin={isSuperAdmin}
                                 onSave={onManualSave}

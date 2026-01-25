@@ -1,6 +1,6 @@
-import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, Pressable } from 'react-native'
-import MaterialIcons from '@expo/vector-icons/MaterialIcons'
+import Feather from '@expo/vector-icons/Feather'
 
 import type { Travel } from '@/src/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
@@ -56,7 +56,7 @@ export default function TravelPdfExportControl({
       return <ActivityIndicator size="small" color={mutedText} />
     }
 
-    return <MaterialIcons name="picture-as-pdf" size={18} color={mutedText} />
+    return <Feather name="file-text" size={18} color={mutedText} />
   }, [mutedText, pdfExport.isGenerating])
 
   return (

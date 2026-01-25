@@ -2,8 +2,7 @@ import React, { useMemo } from 'react';
 import Head from 'expo-router/head';
 import { usePathname } from 'expo-router';
 import { useBreadcrumbModel, type BreadcrumbModel } from '@/hooks/useBreadcrumbModel';
-
-const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+import { getSiteBaseUrl } from '@/utils/seo';
 
 const normalizePath = (path: string) => {
   if (!path) return '/';
@@ -13,7 +12,7 @@ const normalizePath = (path: string) => {
 
 const toAbsoluteUrl = (path: string) => {
   if (path.startsWith('http')) return path;
-  return `${SITE_URL}${normalizePath(path)}`;
+  return `${getSiteBaseUrl()}${normalizePath(path)}`;
 };
 
 type BreadcrumbsJsonLdProps = {

@@ -11,7 +11,7 @@ import {
   DeviceEventEmitter,
   Alert,
 } from "react-native";
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { Text } from "@/src/ui/paper";
 import type { Travel } from "@/src/types/types";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
@@ -316,7 +316,7 @@ function CompactSideBarTravel({
           hitSlop={8}
           {...(Platform.OS === 'web' ? { role: 'button', 'aria-label': 'Закрыть меню' } : {})}
         >
-          <MaterialIcons name="close" size={20} color={textColor} />
+          <Feather name="x" size={20} color={textColor} />
         </Pressable>
       </View>
     ) : null,
@@ -389,7 +389,7 @@ function CompactSideBarTravel({
                     ? { 'data-action-btn': true, role: 'button', 'aria-label': 'Редактировать путешествие' }
                     : {})}
                 >
-                  <MaterialIcons name="edit" size={18} color={textColor} />
+                  <Feather name="edit" size={18} color={textColor} />
                 </Pressable>
               )}
 
@@ -411,7 +411,7 @@ function CompactSideBarTravel({
             <View style={styles.metaRow}>
               {whenLine ? (
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="calendar-today" size={14} color={mutedText} />
+                  <Feather name="calendar" size={14} color={mutedText} />
                   <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
                     {whenLine}
                   </Text>
@@ -419,7 +419,7 @@ function CompactSideBarTravel({
               ) : null}
               {daysText ? (
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="schedule" size={14} color={mutedText} />
+                  <Feather name="clock" size={14} color={mutedText} />
                   <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
                     {daysText}
                   </Text>
@@ -427,7 +427,7 @@ function CompactSideBarTravel({
               ) : null}
               {viewsSafe != null && Number.isFinite(viewsSafe) ? (
                 <View style={styles.metaItem}>
-                  <MaterialIcons name="visibility" size={14} color={mutedText} />
+                  <Feather name="eye" size={14} color={mutedText} />
                   <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
                     {viewsSafe.toLocaleString('ru-RU')}
                   </Text>
@@ -441,7 +441,7 @@ function CompactSideBarTravel({
       <View style={styles.infoSection}>
         {categories.length > 0 ? (
           <View style={styles.infoRow}>
-            <MaterialIcons name="category" size={14} color={mutedText} />
+            <Feather name="tag" size={14} color={mutedText} />
             <View
               style={[
                 styles.categoriesWrap,
@@ -510,7 +510,7 @@ function CompactSideBarTravel({
             accessibilityRole="button"
             accessibilityLabel="Координаты"
           >
-            <MaterialIcons name="place" size={14} color={mutedText} />
+            <Feather name="map-pin" size={14} color={mutedText} />
             <Text
               style={[
                 styles.infoText,
@@ -521,8 +521,8 @@ function CompactSideBarTravel({
               {firstCoord}
             </Text>
             {Platform.OS === "web" ? (
-              <MaterialIcons
-                name="content-copy"
+              <Feather
+                name="copy"
                 size={12}
                 color={mutedText}
                 style={{ marginLeft: DESIGN_TOKENS.spacing.xs }}
@@ -578,7 +578,7 @@ function CompactSideBarTravel({
               ]}
             />
             <View style={styles.linkLeft}>
-              <MaterialIcons
+              <Feather
                 name={icon as any}
                 size={Platform.select({
                   default: 18,
@@ -661,7 +661,7 @@ function CompactSideBarTravel({
             accessibilityLabel="Закрыть меню"
             {...(Platform.OS === 'web' ? { role: 'button', 'aria-label': 'Закрыть меню' } : {})}
           >
-            <MaterialIcons name="close" size={20} color={themedColors.textInverse} />
+            <Feather name="x" size={20} color={themedColors.textInverse} />
             <Text style={[styles.closeTxt, { color: themedColors.textInverse }]}>Закрыть</Text>
           </Pressable>
         </View>

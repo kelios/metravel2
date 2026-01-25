@@ -3,7 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export type PdfThemeName = 
@@ -331,7 +331,7 @@ function ThemeCard({ theme, isSelected, onSelect, compact, styles }: ThemeCardPr
       {/* Индикатор выбора */}
       {isSelected && (
         <View style={styles.selectedBadge}>
-          <MaterialIcons name="check" size={16} color={styles.selectedBadgeText.color} />
+          <Feather name="check" size={16} color={styles.selectedBadgeText.color} />
         </View>
       )}
     </Pressable>

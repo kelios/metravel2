@@ -1,4 +1,8 @@
 /**
+ * @deprecated This file is deprecated. Use @/constants/designSystem instead.
+ * See docs/DESIGN_SYSTEM_CONSOLIDATION.md for migration guide.
+ * This file will be removed in v2.0.0
+ * 
  * ✅ ДИЗАЙН: Максимально легкая и воздушная цветовая палитра
  * Мягкие, почти невесомые цвета с минимальным контрастом
  * Создает ощущение легкости, воздушности и невесомости

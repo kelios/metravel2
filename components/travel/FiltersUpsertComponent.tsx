@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
@@ -88,6 +88,7 @@ interface FiltersComponentProps {
     onClose?: () => void;
     isSuperAdmin?: boolean;
     onSave: () => void;
+    onFieldChange?: (field: keyof TravelFormData, value: any) => void;
     showSaveButton?: boolean;
     showPreviewButton?: boolean;
     showPublishControls?: boolean;
@@ -105,6 +106,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                      onClose,
                                                                      isSuperAdmin = false,
                                                                      onSave,
+                                                                     onFieldChange,
                                                                      showSaveButton = true,
                                                                      showPreviewButton = true,
                                                                      showPublishControls = true,
@@ -119,14 +121,23 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    // Local handler fallback if onFieldChange is not provided
+    const handleFieldChange = (field: keyof TravelFormData, value: any) => {
+        if (onFieldChange) {
+            onFieldChange(field, value);
+        } else {
+            setFormData({ ...formData!, [field]: value });
+        }
+    };
+
     useEffect(() => {
         // если новая запись — явно фиксируем publish=false,
         // чтобы избежать случайной публикации до модерации
         if (!formData) return;
         if (!formData.id && formData.publish !== false) {
-            setFormData({ ...formData, publish: false });
+            handleFieldChange('publish', false);
         }
-    }, [formData, setFormData]);
+    }, [formData?.id, formData?.publish]);
 
     if (isLoading) {
         return (
@@ -143,29 +154,27 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     const normalizedInput: any =
         (resolvedFilters as any)?.data?.filters ?? (resolvedFilters as any)?.data ?? resolvedFilters;
 
-    const rawCategories =
-        normalizedInput.categories ??
-        (normalizedInput as any).categoriesTravel ??
-        (normalizedInput as any).categories_travel ??
-        [];
-    const rawTransports = normalizedInput.transports ?? (normalizedInput as any).transportsTravel ?? [];
-    const rawComplexity = normalizedInput.complexity ?? (normalizedInput as any).complexityTravel ?? [];
-    const rawCompanions = normalizedInput.companions ?? (normalizedInput as any).companionsTravel ?? [];
-    const rawOvernights =
-        normalizedInput.over_nights_stay ?? (normalizedInput as any).overNightsStay ?? (normalizedInput as any).overnights ?? [];
-    const rawMonth = normalizedInput.month ?? (normalizedInput as any).months ?? [];
-    const rawCountries = normalizedInput.countries || [];
+    // Memoize raw data access
+    const rawData = useMemo(() => ({
+        categories: normalizedInput.categories ?? (normalizedInput as any).categoriesTravel ?? (normalizedInput as any).categories_travel ?? [],
+        transports: normalizedInput.transports ?? (normalizedInput as any).transportsTravel ?? [],
+        complexity: normalizedInput.complexity ?? (normalizedInput as any).complexityTravel ?? [],
+        companions: normalizedInput.companions ?? (normalizedInput as any).companionsTravel ?? [],
+        overnights: normalizedInput.over_nights_stay ?? (normalizedInput as any).overNightsStay ?? (normalizedInput as any).overnights ?? [],
+        month: normalizedInput.month ?? (normalizedInput as any).months ?? [],
+        countries: normalizedInput.countries || []
+    }), [normalizedInput]);
 
-    let resolvedCategories = normalizeTravelCategoriesLocal(rawCategories);
+    // Memoize normalized lists
+    const resolvedCategories = useMemo(() => normalizeTravelCategoriesLocal(rawData.categories), [rawData.categories]);
+    const resolvedTransports = useMemo(() => normalizeIdNameList(rawData.transports), [rawData.transports]);
+    const resolvedComplexity = useMemo(() => normalizeIdNameList(rawData.complexity), [rawData.complexity]);
+    const resolvedCompanions = useMemo(() => normalizeIdNameList(rawData.companions), [rawData.companions]);
+    const resolvedOvernights = useMemo(() => normalizeIdNameList(rawData.overnights), [rawData.overnights]);
+    const resolvedMonth = useMemo(() => normalizeIdNameList(rawData.month), [rawData.month]);
+    const resolvedCountries = useMemo(() => normalizeCountriesLocal(rawData.countries), [rawData.countries]);
 
-    const resolvedTransports = normalizeIdNameList(rawTransports);
-    const resolvedComplexity = normalizeIdNameList(rawComplexity);
-    const resolvedCompanions = normalizeIdNameList(rawCompanions);
-    const resolvedOvernights = normalizeIdNameList(rawOvernights);
-    const resolvedMonth = normalizeIdNameList(rawMonth);
-    const resolvedCountries = normalizeCountriesLocal(rawCountries);
-
-    const openPreview = () => {
+    const openPreview = useCallback(() => {
         if (!form.slug) return;
         const url = `/travels/${form.slug}`;
         if (Platform.OS === 'web') {
@@ -178,7 +187,17 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                 }
             });
         }
-    };
+    }, [form.slug]);
+
+    // Memoized handlers for MultiSelectFields
+    const handleCountriesChange = useCallback((v: any) => handleFieldChange('countries', v), [handleFieldChange]);
+    const handleCategoriesChange = useCallback((v: any) => handleFieldChange('categories', v), [handleFieldChange]);
+    const handleTransportsChange = useCallback((v: any) => handleFieldChange('transports', v), [handleFieldChange]);
+    const handleComplexityChange = useCallback((v: any) => handleFieldChange('complexity', v), [handleFieldChange]);
+    const handleCompanionsChange = useCallback((v: any) => handleFieldChange('companions', v), [handleFieldChange]);
+    const handleOvernightsChange = useCallback((v: any) => handleFieldChange('over_nights_stay', v), [handleFieldChange]);
+    const handleMonthChange = useCallback((v: any) => handleFieldChange('month', v), [handleFieldChange]);
+    const handleVisaChange = useCallback((v: any) => handleFieldChange('visa', v), [handleFieldChange]);
 
     return (
         <ScrollView
@@ -230,14 +249,14 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     <CheckboxComponent
                         label="Сохранить как черновик"
                         value={!form.publish}
-                        onChange={(value) => setFormData({ ...form, publish: !value })}
+                        onChange={(value) => handleFieldChange('publish', !value)}
                     />
 
                     {isSuperAdmin && (
                         <CheckboxComponent
                             label="Прошел модерацию"
                             value={form.moderation ?? false}
-                            onChange={(value) => setFormData({ ...form, moderation: value })}
+                            onChange={(value) => handleFieldChange('moderation', value)}
                         />
                     )}
                 </>
@@ -267,7 +286,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     label="Страны для путешествия *"
                     items={resolvedCountries}
                     value={form.countries ?? []}
-                    onChange={(countries: any) => setFormData({ ...form, countries })}
+                    onChange={handleCountriesChange}
                     labelField="title_ru"
                     valueField="country_id"
                 />
@@ -279,7 +298,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                         label="Категории путешествий *"
                         items={resolvedCategories}
                         value={form.categories ?? []}
-                        onChange={(categories: any) => setFormData({ ...form, categories })}
+                        onChange={handleCategoriesChange}
                         labelField="name"
                         valueField="id"
                     />
@@ -292,7 +311,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                         label="Средства передвижения"
                     items={resolvedTransports}
                         value={form.transports ?? []}
-                        onChange={(transports: any) => setFormData({ ...form, transports })}
+                        onChange={handleTransportsChange}
                         labelField="name"
                         valueField="id"
                     />
@@ -301,7 +320,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                         label="Физическая подготовка"
                     items={resolvedComplexity}
                         value={form.complexity ?? []}
-                        onChange={(complexity: any) => setFormData({ ...form, complexity })}
+                        onChange={handleComplexityChange}
                         labelField="name"
                         valueField="id"
                     />
@@ -310,7 +329,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                         label="Путешествуете с..."
                     items={resolvedCompanions}
                         value={form.companions ?? []}
-                        onChange={(companions: any) => setFormData({ ...form, companions })}
+                        onChange={handleCompanionsChange}
                         labelField="name"
                         valueField="id"
                     />
@@ -319,7 +338,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                         label="Ночлег..."
                     items={resolvedOvernights}
                         value={form.over_nights_stay ?? []}
-                        onChange={(over_nights_stay: any) => setFormData({ ...form, over_nights_stay })}
+                        onChange={handleOvernightsChange}
                         labelField="name"
                         valueField="id"
                     />
@@ -328,7 +347,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                         label="Месяц путешествия"
                     items={resolvedMonth}
                         value={form.month ?? []}
-                        onChange={(month: any) => setFormData({ ...form, month })}
+                        onChange={handleMonthChange}
                         labelField="name"
                         valueField="id"
                     />
@@ -337,7 +356,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                     <CheckboxComponent
                         label="Требуется виза"
                         value={form.visa ?? false}
-                        onChange={(visa) => setFormData({ ...form, visa })}
+                        onChange={handleVisaChange}
                     />
                     {renderNumericInput('Количество участников', 'number_peoples')}
                     {renderNumericInput('Длительность (дней)', 'number_days')}
@@ -350,16 +369,19 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     // Поле, принимающее только цифры
     function renderNumericInput(label: string, field: keyof TravelFormData) {
         const current = form as TravelFormData;
+        const fieldValue = (current[field] as any)?.toString?.() ?? '';
+        
         return (
             <View style={styles.inputGroup}>
                 <Text style={styles.label}>{label}</Text>
                 <TextInput
                     style={styles.input}
-                    value={(current[field] as any)?.toString?.() ?? ''}
+                    value={fieldValue}
                     onChangeText={(value) => {
-                        // только цифры (чтобы не разъезжались типы на бэке)
                         const digits = value.replace(/[^\d]/g, '');
-                        setFormData({ ...(current as any), [field]: digits } as TravelFormData);
+                        if (digits !== fieldValue) {
+                            handleFieldChange(field, digits);
+                        }
                     }}
                     placeholder={`Введите ${label.toLowerCase()}`}
                     keyboardType={Platform.select({ ios: 'number-pad', android: 'numeric', default: 'numeric' })}

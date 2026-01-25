@@ -313,16 +313,18 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                                     }
                                 >
                                     <GallerySectionLazy
-                                        formData={formData}
-                                        travelDataOld={travelDataOld}
+                                        images={formData.gallery}
+                                        travelId={formData.id}
                                         onChange={handleGalleryChange}
+                                        isLoading={false}
                                     />
                                 </Suspense>
                             ) : GallerySectionNative ? (
                                 <GallerySectionNative
-                                    formData={formData}
-                                    travelDataOld={travelDataOld}
+                                    images={formData.gallery}
+                                    travelId={formData.id}
                                     onChange={handleGalleryChange}
+                                    isLoading={false}
                                 />
                             ) : null}
                         </View>

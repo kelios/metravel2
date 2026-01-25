@@ -15,14 +15,9 @@ const ListTravel = isWeb && isClient
 export default function TravelsByScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
-
-    const canonical = useMemo(
-        () => `${SITE}${pathname || '/travelsby'}`,
-        [SITE, pathname]
-    );
 
     const title = 'Путешествия по Беларуси | Metravel';
     const description =
@@ -35,8 +30,8 @@ export default function TravelsByScreen() {
                 headKey="travelsby" // Упрощенный стабильный ключ
                 title={title}
                 description={description}
-                canonical={canonical}
-                image={`${SITE}/og-preview.jpg`}
+                canonical={buildCanonicalUrl(pathname || '/travelsby')}
+                image={buildOgImageUrl('/og-preview.jpg')}
                 ogType="website"
             />
             )}

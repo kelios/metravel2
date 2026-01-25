@@ -319,7 +319,6 @@ function RootLayoutNav() {
       <ErrorBoundary>
         <ThemeProvider>
           <ThemedContent
-            pathname={pathname}
             showMapBackground={showMapBackground}
             showFooter={showFooter}
             isMobile={isMobile}
@@ -334,7 +333,6 @@ function RootLayoutNav() {
 
 // Компонент с доступом к ThemeProvider
 function ThemedContent({
-  pathname,
   showMapBackground,
   showFooter,
   isMobile,
@@ -342,7 +340,6 @@ function ThemedContent({
   setDockHeight,
   isMounted,
 }: {
-  pathname: string | null;
   showMapBackground: boolean;
   showFooter: boolean;
   isMobile: boolean;

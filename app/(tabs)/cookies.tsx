@@ -43,8 +43,8 @@ function writeConsent(consent: ConsentState) {
 export default function CookieSettingsScreen() {
   const pathname = usePathname();
   const router = useRouter();
-  const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
-  const canonical = `${SITE}${pathname || '/cookies'}`;
+  const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
+  const canonical = buildCanonicalUrl(pathname || '/cookies');
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -92,7 +92,8 @@ export default function CookieSettingsScreen() {
         headKey="cookie-settings"
         title={title}
         description={description}
-        canonical={canonical}
+        canonical={buildCanonicalUrl(pathname || '/cookies')}
+        image={buildOgImageUrl('/og-preview.jpg')}
         ogType="website"
         robots="noindex, nofollow"
       />

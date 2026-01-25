@@ -61,8 +61,7 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
   const [localCoordinates, setLocalCoordinates] = useState<Coordinates | null>(propCoordinates);
   const [isLoading, setIsLoading] = useState(true);
   const themeColors = useThemedColors();
-
-  const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+  const { getSiteBaseUrl } = require('@/utils/seo');
 
   useEffect(() => {
     if (!localCoordinates) {
@@ -230,7 +229,7 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
           try {
             const parsed = JSON.parse(raw);
             if (parsed?.type !== 'OPEN_URL') return;
-            const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl: SITE_URL });
+            const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
             if (!safeUrl) return;
             const can = await Linking.canOpenURL(safeUrl);
             if (can) {

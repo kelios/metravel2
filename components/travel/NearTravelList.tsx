@@ -271,7 +271,8 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
     // Оптимизированная загрузка данных с защитой от повторных запросов
     const fetchNearbyTravels = useCallback(async () => {
-      if (!travel.id || hasLoadedRef.current) return;
+      const travelId = Number(travel.id);
+      if (!Number.isFinite(travelId) || hasLoadedRef.current) return;
 
       // Отменяем предыдущий запрос, если он существует
       if (controllerRef.current) {
@@ -282,20 +283,17 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       controllerRef.current = controller;
       hasLoadedRef.current = true;
 
+      // Timeout for the fetch request
       const timeoutId = setTimeout(() => {
         controller.abort();
-      }, 10000);
+      }, 15000);
 
       try {
         setIsLoading(true);
         setError(null);
 
-        const travelId = Number(travel.id);
-        if (!Number.isFinite(travelId)) {
-          throw new Error('Некорректный идентификатор путешествия');
-        }
-
         const data = await fetchTravelsNear(travelId);
+        
         if (!controller.signal.aborted) {
           const travelsArray = Array.isArray(data) ? data.slice(0, 50) : [];
           setTravelsNear(travelsArray);
@@ -304,12 +302,13 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       } catch (e: any) {
         if (controller.signal.aborted) return;
         
-        // ✅ УЛУЧШЕНИЕ: Понятные сообщения об ошибках
+        // Понятные сообщения об ошибках
         if (e.name === 'AbortError') {
           setError('Превышено время ожидания загрузки. Проверьте подключение к интернету.');
         } else {
           setError('Не удалось загрузить маршруты. Проверьте подключение и попробуйте позже.');
         }
+        
         if (__DEV__) {
           console.error('Fetch error:', e);
         }
@@ -318,19 +317,23 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         clearTimeout(timeoutId);
         if (!controller.signal.aborted) {
           setIsLoading(false);
+          controllerRef.current = null;
         }
       }
     }, [travel.id]);
 
-    // ✅ ИСПРАВЛЕНИЕ: Загружаем данные только один раз при монтировании или изменении travel.id
+    // Загружаем данные только один раз при монтировании или изменении travel.id
     useEffect(() => {
       if (!travel.id) return;
       
       hasLoadedRef.current = false; // Сбрасываем флаг при изменении travel.id
+      setTravelsNear([]); // Reset previous data
+      setIsLoading(true);
+      setError(null);
       
       const timer = setTimeout(() => {
         fetchNearbyTravels();
-      }, 300);
+      }, 300); // Small delay to prioritize main content rendering
       
       return () => {
         clearTimeout(timer);

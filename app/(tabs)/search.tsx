@@ -20,10 +20,7 @@ function SearchScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
     const colors = useThemedColors();
-
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
-
-    const canonical = useMemo(() => `${SITE}${pathname || ''}`, [SITE, pathname]);
+    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
 
     const title = 'Поиск путешествий | Metravel';
     const description = 'Найдите путешествия по фильтрам и сохраните лучшие идеи в свою книгу.';
@@ -55,8 +52,8 @@ function SearchScreen() {
                     headKey="travel-search"
                     title={title}
                     description={description}
-                    canonical={canonical}
-                    image={`${SITE}/og-preview.jpg`}
+                    canonical={buildCanonicalUrl(pathname || '/search')}
+                    image={buildOgImageUrl('/og-preview.jpg')}
                     ogType="website"
                 />
             )}

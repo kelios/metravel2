@@ -6,7 +6,7 @@
 
 import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Alert } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
 import type { Travel } from '@/src/types/types';
@@ -47,9 +47,9 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       return window.location.href;
     }
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
+    const { getSiteBaseUrl } = require('@/utils/seo');
     const travelId = travel.slug || travel.id;
-    return `${SITE}/travels/${travelId}`;
+    return `${getSiteBaseUrl()}/travels/${travelId}`;
   }, [url, travel]);
 
   const shareTitle = travel.name || 'Путешествие на MeTravel';
@@ -202,14 +202,14 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
     {
       key: 'copy',
       label: 'Копировать ссылку',
-      icon: 'content-copy',
+      icon: 'copy',
       onPress: handleCopyLink,
       color: palette.neutral,
     },
     {
       key: 'copyPost',
       label: 'Текст для поста',
-      icon: 'article',
+      icon: 'file-text',
       onPress: handleCopyPostText,
       color: palette.neutral,
     },
@@ -218,7 +218,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
       ? [{
           key: 'export' as const,
           label: isGenerating ? `Создание книги... ${progress}%` : 'Книга / PDF',
-          icon: 'picture-as-pdf' as const,
+          icon: 'file-text' as const,
           onPress: () => setShowExportModal(true),
           color: palette.export,
           disabled: isGenerating,
@@ -275,7 +275,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
         accessibilityRole="button"
         accessibilityLabel="Показать панель действий"
       >
-        <MaterialIcons name="more-horiz" size={24} color={colors.textMuted} />
+        <Feather name="more-horizontal" size={24} color={colors.textMuted} />
       </Pressable>
     );
   }
@@ -303,8 +303,8 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                 accessibilityRole="button"
                 accessibilityLabel={isCollapsed ? 'Показать панель действий' : 'Скрыть панель действий'}
               >
-                <MaterialIcons 
-                  name={isCollapsed ? 'expand-more' : 'expand-less'} 
+                <Feather 
+                  name={isCollapsed ? 'chevron-down' : 'chevron-up'} 
                   size={24} 
                   color={colors.textMuted}
                 />
@@ -334,7 +334,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                   accessibilityRole="button"
                   accessibilityLabel="Скрыть панель действий"
                 >
-                  <MaterialIcons name="close" size={20} color={colors.textMuted} />
+                  <Feather name="x" size={20} color={colors.textMuted} />
                 </Pressable>
               )}
               {shareButtons.map((button) => (
@@ -354,7 +354,7 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
                   accessibilityLabel={button.label}
                   android_ripple={{ color: colors.overlayLight }}
                 >
-                  <MaterialIcons name={button.icon as any} size={20} color={button.color} />
+                  <Feather name={button.icon as any} size={20} color={button.color} />
                   {!isMobile && !isSticky && <Text style={[styles.buttonText, { color: colors.text }]}>{button.label}</Text>}
                   {button.key === 'copy' && copied && (
                     <Text style={styles.copiedText}>✓</Text>

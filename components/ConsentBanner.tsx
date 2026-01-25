@@ -4,7 +4,6 @@ import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LAYOUT } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 
@@ -53,7 +52,7 @@ export default function ConsentBanner() {
   const isMobile = isPhone || isLargePhone;
   const insets = useSafeAreaInsets();
   const bottomOffset = useMemo(() => {
-    if (!isMobile) return 0;
+    if (!isMobile) return 12;
     // On mobile we keep it above the bottom tab bar and respect safe-area.
     return (insets?.bottom || 0) + LAYOUT.tabBarHeight + 8;
   }, [insets?.bottom, isMobile]);
@@ -130,13 +129,14 @@ export default function ConsentBanner() {
       <View testID="consent-banner" pointerEvents="none" style={styles.inner}>
         <View pointerEvents="none" style={[styles.container, { backgroundColor: colors.surface }]}>
           <View pointerEvents="none" style={styles.textBlock}>
-            <Text style={[styles.title, { color: colors.text }]}>Мы ценим вашу приватность</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Cookies</Text>
             <Text style={[styles.text, { color: colors.textMuted }]}>
-              Мы используем технические файлы и, с вашего согласия, аналитические инструменты (Яндекс.Метрика,
-              Google Analytics) для улучшения сервиса. Вы можете выбрать только необходимые или принять всё.
-            </Text>
-            <Text style={[styles.linkHint, { color: colors.textMuted }]}> 
-              Подробнее читайте в нашей Политике конфиденциальности и на странице настроек cookies.
+              Используем аналитику для улучшения сервиса.{' '}
+              {isWeb && !isMobile && (
+                <Link href="/cookies" style={{ color: colors.primary, textDecorationLine: 'underline' }}>
+                  Подробнее
+                </Link>
+              )}
             </Text>
           </View>
           <View style={styles.actionsSpacer} />
@@ -162,10 +162,10 @@ export default function ConsentBanner() {
             accessibilityLabel="Принять всё"
           />
         </View>
-        {isWeb && !isMobile && (
-          <View pointerEvents="auto" style={styles.bottomLinkRow}>
+        {isWeb && isMobile && (
+          <View pointerEvents="auto" style={styles.mobileLinkRow}>
             <Link href="/cookies" style={styles.manageLink}>
-              <Text style={[styles.manageLinkText, { color: colors.textMuted }]}>Изменить настройки cookies</Text>
+              <Text style={[styles.manageLinkText, { color: colors.primary }]}>Настройки</Text>
             </Link>
           </View>
         )}
@@ -177,13 +177,12 @@ export default function ConsentBanner() {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'fixed' as any,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    left: 12,
+    right: 12,
+    bottom: 12,
     zIndex: 900,
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    alignItems: 'flex-end',
+    pointerEvents: 'box-none',
   },
   wrapperHidden: {
     opacity: 0,
@@ -191,12 +190,12 @@ const styles = StyleSheet.create({
   },
   inner: {
     width: '100%',
-    maxWidth: 920,
+    maxWidth: 480,
     position: 'relative',
   },
-  bottomLinkRow: {
+  mobileLinkRow: {
     marginTop: 6,
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   manageLink: {
     paddingHorizontal: 4,
@@ -207,28 +206,29 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   container: {
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.modal,
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+        backdropFilter: 'blur(10px)',
       },
       ios: {
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 3 },
       },
       android: {
-        elevation: 6,
+        elevation: 4,
       },
     }),
   },
   textBlock: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   actionsSpacer: {
-    minHeight: 44,
+    minHeight: 40,
   },
   actionsOverlay: {
     position: 'absolute' as any,
@@ -237,13 +237,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   title: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   text: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
   },
   linkHint: {
     marginTop: 4,
@@ -258,7 +258,9 @@ const styles = StyleSheet.create({
   },
   button: {
     borderRadius: 9999,
-    minWidth: 140,
+    minWidth: 120,
     marginTop: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
   },
 });

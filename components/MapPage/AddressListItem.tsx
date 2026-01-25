@@ -71,10 +71,9 @@ const buildOsmUrl = (coord?: string) => {
   return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(p.lat))}&mlon=${encodeURIComponent(String(p.lon))}#map=16/${encodeURIComponent(String(p.lat))}/${encodeURIComponent(String(p.lon))}`;
 };
 
-const SITE_URL = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
-
 const openExternal = async (url?: string) => {
-    const safeUrl = getSafeExternalUrl(url, { allowRelative: true, baseUrl: SITE_URL });
+    const { getSiteBaseUrl } = require('@/utils/seo');
+    const safeUrl = getSafeExternalUrl(url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
     if (!safeUrl) return;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
         window.open(safeUrl, '_blank', 'noopener,noreferrer');

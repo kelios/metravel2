@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { useThemedColors } from "@/hooks/useTheme" // ✅ РЕДИЗАЙН: Темная тема
 import { DESIGN_TOKENS } from "@/constants/designSystem"
@@ -250,10 +250,10 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
           ref={triggerRef}
           style={({ pressed }) => [styles.trigger, pressed && styles.triggerPressed]}
         >
-          <MaterialIcons name={"list" as any} size={18} color={colors.text} />
+          <Feather name="list" size={18} color={colors.text} />
           <Text style={styles.triggerText}>Секции</Text>
           <View style={{ flex: 1 }} />
-          <MaterialIcons name={"expand-more" as any} size={20} color={colors.textMuted} />
+          <Feather name="chevron-down" size={20} color={colors.textMuted} />
         </Pressable>
       </View>
 
@@ -297,7 +297,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                 ref={closeRef}
                 style={({ pressed }) => [styles.closeBtn, pressed && styles.closeBtnPressed]}
               >
-                <MaterialIcons name={"close" as any} size={20} color={colors.text} />
+                <Feather name="x" size={20} color={colors.text} />
               </Pressable>
             </View>
 
@@ -323,7 +323,7 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
                       ]}
                     >
                       <View style={styles.itemLeft}>
-                        <MaterialIcons
+                        <Feather
                           name={icon as any}
                           size={18}
                           color={isActive ? colors.text : colors.textMuted}

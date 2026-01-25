@@ -6,7 +6,7 @@
 import React, { useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useState } from 'react';
 import { Platform, View, Text, StyleSheet, Pressable } from 'react-native';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { X } from 'lucide-react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 
@@ -166,7 +166,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
 
               <View style={styles.headerActions}>
                 <IconButton
-                  icon={<MaterialIcons name="close" size={20} color={colors.textMuted} />}
+                  icon={<X size={20} color={colors.textMuted} {...({} as any)} />}
                   label="Закрыть панель"
                   size="sm"
                   onPress={() => {
@@ -214,7 +214,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           {/* Quick actions */}
           <View style={styles.headerActions}>
             <IconButton
-              icon={<MaterialIcons name="close" size={20} color={colors.textMuted} />}
+              icon={<X size={20} color={colors.textMuted} {...({} as any)} />}
               label="Закрыть панель"
               size="sm"
               onPress={() => bottomSheetRef.current?.close()}

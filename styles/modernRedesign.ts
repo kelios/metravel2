@@ -1,3 +1,9 @@
+/**
+ * @deprecated This file is deprecated. Use @/constants/designSystem instead.
+ * See docs/DESIGN_SYSTEM_CONSOLIDATION.md for migration guide.
+ * This file will be removed in v2.0.0
+ */
+
 // modernRedesign.ts - Modern UI Redesign Styles
 import { StyleSheet, Platform } from 'react-native';
 

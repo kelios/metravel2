@@ -5,7 +5,7 @@
 
 import React, { useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
 
 interface ThemeToggleProps {
@@ -55,8 +55,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         accessibilityLabel={`Переключить тему (текущая: ${isDark ? 'тёмная' : 'светлая'})`}
         accessibilityHint="Дважды нажмите, чтобы переключить между светлым и тёмным режимом"
       >
-        <MaterialIcons
-          name={isDark ? 'light-mode' : 'dark-mode'}
+        <Feather
+          name={isDark ? 'sun' : 'moon'}
           size={iconSize}
           color={colors.text}
         />
@@ -84,7 +84,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
             ...(theme === 'light' ? webStyles.compactButtonActive : {}),
           }}
         >
-          <MaterialIcons name="light-mode" size={14} color={theme === 'light' ? colors.primary : colors.text} />
+          <Feather name="sun" size={14} color={theme === 'light' ? colors.primary : colors.text} />
           <span style={webStyles.compactLabel}>Светлая</span>
         </button>
 
@@ -98,7 +98,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
             ...(theme === 'dark' ? webStyles.compactButtonActive : {}),
           }}
         >
-          <MaterialIcons name="dark-mode" size={14} color={theme === 'dark' ? colors.primary : colors.text} />
+          <Feather name="moon" size={14} color={theme === 'dark' ? colors.primary : colors.text} />
           <span style={webStyles.compactLabel}>Тёмная</span>
         </button>
 
@@ -112,7 +112,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
             ...(theme === 'auto' ? webStyles.compactButtonActive : {}),
           }}
         >
-          <MaterialIcons name="brightness-auto" size={14} color={theme === 'auto' ? colors.primary : colors.text} />
+          <Feather name="monitor" size={14} color={theme === 'auto' ? colors.primary : colors.text} />
           <span style={webStyles.compactLabel}>Авто</span>
         </button>
 
@@ -138,8 +138,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         aria-label={`Переключить тему (текущая: ${isDark ? 'тёмная' : 'светлая'})`}
         style={webStyles.toggleButton}
       >
-        <MaterialIcons
-          name={isDark ? 'light-mode' : 'dark-mode'}
+        <Feather
+          name={isDark ? 'sun' : 'moon'}
           size={iconSize}
           color={colors.text}
         />
@@ -161,7 +161,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           onClick={() => setTheme('light')}
           style={webStyles.menuItem}
         >
-          <MaterialIcons name="light-mode" size={16} color={colors.text} />
+          <Feather name="sun" size={16} color={colors.text} />
           <span>Light</span>
         </button>
 
@@ -171,7 +171,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           onClick={() => setTheme('dark')}
           style={webStyles.menuItem}
         >
-          <MaterialIcons name="dark-mode" size={16} color={colors.text} />
+          <Feather name="moon" size={16} color={colors.text} />
           <span>Dark</span>
         </button>
 
@@ -181,7 +181,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
           onClick={handlePressAuto}
           style={webStyles.menuItem}
         >
-          <MaterialIcons name="brightness-auto" size={16} color={colors.text} />
+          <Feather name="monitor" size={16} color={colors.text} />
           <span>Auto</span>
         </button>
       </div>

@@ -8,7 +8,7 @@ import {
   Platform,
   Modal,
 } from "react-native"
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -275,7 +275,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
                     modalCloseRef.current = node
                   }}
                 >
-                  <MaterialIcons name={"close" as any} size={20} color={colors.text} />
+                  <Feather name="x" size={20} color={colors.text} />
                 </Pressable>
               </View>
               {overflowLinks.map(({ key, icon, label }) => {

@@ -63,9 +63,10 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
         [formData?.id]
     );
 
-    const handleChange = <T extends keyof TravelFormData>(name: T, value: TravelFormData[T]) => {
+    // Optimized handler to prevent unnecessary re-renders of ArticleEditor
+    const handleChange = React.useCallback((name: keyof TravelFormData, value: any) => {
         setFormData(prev => ({ ...prev, [name]: value }));
-    };
+    }, [setFormData]);
 
     const recommendationFieldsFilled = useMemo(() => {
         const keys: (keyof TravelFormData)[] = ['plus', 'minus', 'recommendation'];

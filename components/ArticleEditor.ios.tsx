@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as ImagePicker from 'expo-image-picker';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 
 import { uploadImage } from '@/src/api/misc';
 import { useAuth } from '@/context/AuthContext';
@@ -403,7 +403,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Отменить"
           >
-            <MaterialIcons name="undo" size={20} color={isReady ? colors.text : colors.textMuted} />
+            <Feather name="rotate-ccw" size={20} color={isReady ? colors.text : colors.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleRedo}
@@ -412,7 +412,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Повторить"
           >
-            <MaterialIcons name="redo" size={20} color={isReady ? colors.text : colors.textMuted} />
+            <Feather name="rotate-cw" size={20} color={isReady ? colors.text : colors.textMuted} />
           </TouchableOpacity>
           {variant === 'default' && (
             <TouchableOpacity
@@ -425,7 +425,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
               {isUploading ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <MaterialIcons name="add-photo-alternate" size={20} color={isReady ? colors.text : colors.textMuted} />
+                <Feather name="image" size={20} color={isReady ? colors.text : colors.textMuted} />
               )}
             </TouchableOpacity>
           )}
@@ -437,7 +437,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Вставить якорь"
           >
-            <MaterialIcons name="bookmark" size={20} color={isReady ? colors.text : colors.textMuted} />
+            <Feather name="bookmark" size={20} color={isReady ? colors.text : colors.textMuted} />
           </TouchableOpacity>
         </View>
       </View>

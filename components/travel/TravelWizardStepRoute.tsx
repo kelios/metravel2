@@ -334,7 +334,15 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
         const latOk = Number.isFinite(lat) && lat >= -90 && lat <= 90;
         const lngOk = Number.isFinite(lng) && lng >= -180 && lng <= 180;
-        if (!latOk || !lngOk) return;
+        
+        if (!latOk || !lngOk) {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Некорректные координаты',
+                text2: 'Проверьте широту (-90..90) и долготу (-180..180)',
+            });
+            return;
+        }
 
         let address = '';
         let derivedCountryId: string | null = null;

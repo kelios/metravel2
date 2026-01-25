@@ -6,8 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 export default function PrivacyScreen() {
   const pathname = usePathname();
-  const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
-  const canonical = `${SITE}${pathname || '/privacy'}`;
+  const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
+  const canonical = buildCanonicalUrl(pathname || '/privacy');
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -21,6 +21,7 @@ export default function PrivacyScreen() {
         title={title}
         description={description}
         canonical={canonical}
+        image={buildOgImageUrl('/og-preview.jpg')}
         ogType="website"
       />
       <ScrollView contentContainerStyle={styles.container}>

@@ -45,8 +45,8 @@ export default function Login() {
 
     const isFocused = useIsFocused();
     const pathname = usePathname();
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
-    const canonical = `${SITE}${pathname || '/login'}`;
+    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
+    const canonical = buildCanonicalUrl(pathname || '/login');
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -127,7 +127,7 @@ export default function Login() {
                     title={title}
                     description={description}
                     canonical={canonical}
-                    image={`${SITE}/og-preview.jpg`}
+                    image={buildOgImageUrl('/og-preview.jpg')}
                     ogType="website"
                     robots="noindex, nofollow"
                 />

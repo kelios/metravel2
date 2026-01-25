@@ -1,9 +1,9 @@
 // components/export/GalleryLayoutSelector.tsx
 // Компонент для выбора раскладки галереи
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -20,35 +20,35 @@ const GALLERY_LAYOUTS: GalleryLayoutInfo[] = [
     id: 'grid',
     name: 'Сетка',
     description: 'Классическая раскладка с одинаковыми размерами',
-    iconName: 'grid-view',
+    iconName: 'grid',
     bestFor: 'Универсальная раскладка для любых фото',
   },
   {
     id: 'masonry',
     name: 'Мозаика',
     description: 'Pinterest-style с разной высотой фото',
-    iconName: 'view-quilt',
+    iconName: 'grid',
     bestFor: 'Фото с разными пропорциями',
   },
   {
     id: 'collage',
     name: 'Коллаж',
     description: 'Одно большое фото + несколько маленьких',
-    iconName: 'dashboard',
+    iconName: 'layout',
     bestFor: 'Выделение ключевого фото',
   },
   {
     id: 'polaroid',
     name: 'Полароид',
     description: 'Ретро стиль с белыми рамками',
-    iconName: 'crop-square',
+    iconName: 'square',
     bestFor: 'Винтажный стиль, воспоминания',
   },
   {
     id: 'slideshow',
     name: 'Слайдшоу',
     description: 'Одно фото на страницу',
-    iconName: 'photo-size-select-large',
+    iconName: 'image',
     bestFor: 'Крупные фото с подробными подписями',
   },
 ];
@@ -358,7 +358,7 @@ function LayoutCard({ layout, isSelected, onSelect, styles }: LayoutCardProps) {
     >
       {/* Иконка */}
       <View style={styles.layoutIcon}>
-        <MaterialIcons name={layout.iconName as any} size={24} color={styles.layoutIconText.color} />
+        <Feather name={layout.iconName as any} size={24} color={styles.layoutIconText.color} />
       </View>
 
       {/* Информация */}
@@ -377,7 +377,7 @@ function LayoutCard({ layout, isSelected, onSelect, styles }: LayoutCardProps) {
       {/* Индикатор выбора */}
       {isSelected && (
         <View style={styles.selectedBadge}>
-          <MaterialIcons name="check" size={14} color={styles.selectedBadgeText.color} />
+          <Feather name="check" size={14} color={styles.selectedBadgeText.color} />
         </View>
       )}
     </Pressable>

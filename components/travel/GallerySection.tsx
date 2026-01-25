@@ -1,22 +1,21 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Text, ActivityIndicator, Platform } from 'react-native';
-import { TravelFormData, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ImageGalleryComponent from '@/components/travel/ImageGalleryComponent';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface GallerySectionProps {
-    formData: TravelFormData | null;
-    travelDataOld?: Travel | null;
+    images: any[] | null | undefined;
+    travelId?: string | number | null;
     onChange?: (urls: string[]) => void;
+    isLoading?: boolean;
 }
 
-const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) => {
+const GallerySection: React.FC<GallerySectionProps> = ({ images, travelId, onChange, isLoading }) => {
     const colors = useThemedColors();
-    const gallerySource = formData?.gallery;
 
     const normalizedImages = useMemo(() => {
-        const raw = Array.isArray(gallerySource) ? gallerySource : [];
+        const raw = Array.isArray(images) ? images : [];
         return raw
             .map((item, index) => {
                 if (typeof item === 'string') {
@@ -28,12 +27,12 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
                 return null;
             })
             .filter(Boolean) as { id: string; url: string }[];
-    }, [gallerySource]);
+    }, [images]);
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    if (!formData) {
+    if (isLoading) {
         return (
             <View style={styles.galleryContainer}>
                 <ActivityIndicator size="large" color={colors.primary} />
@@ -45,7 +44,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
     }
 
     // Без ID нельзя загрузить файлы (нужен travelId на бэке)
-    if (!formData.id) {
+    if (!travelId) {
         return (
             <View style={styles.galleryContainer}>
                 <Text style={styles.infoText}>
@@ -61,7 +60,7 @@ const GallerySection: React.FC<GallerySectionProps> = ({ formData, onChange }) =
             <ImageGalleryComponent
                 // Бэкенд коллекция галереи
                 collection="gallery"
-                idTravel={String(formData.id)}
+                idTravel={String(travelId)}
                 initialImages={normalizedImages}
                 maxImages={10}
                 onChange={onChange}

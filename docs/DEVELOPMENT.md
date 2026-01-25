@@ -62,3 +62,44 @@ Optional:
 ## UI implementation rules
 
 See `RULES.md`.
+
+## SEO/Meta implementation
+
+**Для нових сторінок завжди використовуйте централізовані SEO утиліти:**
+
+```tsx
+import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { usePathname } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
+
+export default function MyPage() {
+  const pathname = usePathname();
+  const isFocused = useIsFocused();
+
+  return (
+    <>
+      {isFocused && (
+        <InstantSEO
+          headKey="my-page"
+          title="My Page | Metravel"
+          description="Page description"
+          canonical={buildCanonicalUrl(pathname || '/my-page')}
+          image={buildOgImageUrl('/og-preview.jpg')}
+          ogType="website"
+        />
+      )}
+      {/* Your content */}
+    </>
+  );
+}
+```
+
+**Важливо:**
+- Завжди `buildCanonicalUrl()` замість ручної конкатенації
+- Завжди `buildOgImageUrl()` для consistency
+- Wrap у `isFocused` для уникнення конфліктів
+- Унікальний `headKey` для кожної сторінки
+- `robots="noindex,nofollow"` для auth/приватних сторінок
+
+**Детальна документація:** `docs/SEO_MIGRATION.md`

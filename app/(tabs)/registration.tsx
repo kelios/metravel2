@@ -40,8 +40,8 @@ export default function RegisterForm() {
 
     const isFocused = useIsFocused();
     const pathname = usePathname();
-    const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
-    const canonical = `${SITE}${pathname || '/registration'}`;
+    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
+    const canonical = buildCanonicalUrl(pathname || '/registration');
 
     const onSubmit = async (
         values: FormValues,
@@ -94,7 +94,7 @@ export default function RegisterForm() {
                     title={title}
                     description={description}
                     canonical={canonical}
-                    image={`${SITE}/og-preview.jpg`}
+                    image={buildOgImageUrl('/og-preview.jpg')}
                     ogType="website"
                     robots="noindex, nofollow"
                 />

@@ -130,9 +130,6 @@ export default function TravelDetailsContainer() {
   const themedColors = useThemedColors();
   const styles = useTravelDetailsStyles();
 
-  // ✅ УЛУЧШЕНИЕ: Состояние для похожих путешествий (для навигации)
-  const [relatedTravels, setRelatedTravels] = useState<Travel[]>([]);
-  
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
   const travelDetails = useTravelDetails({
     isMobile,
@@ -489,8 +486,6 @@ export default function TravelDetailsContainer() {
                           isMobile={isMobile}
                           forceOpenKey={forceOpenKey}
                           anchors={anchors}
-                          relatedTravels={relatedTravels}
-                          setRelatedTravels={setRelatedTravels}
                           scrollY={scrollY}
                           viewportHeight={viewportHeight}
                           scrollRef={scrollRef}
@@ -508,8 +503,6 @@ export default function TravelDetailsContainer() {
                             isMobile={isMobile}
                             forceOpenKey={forceOpenKey}
                             anchors={anchors}
-                            relatedTravels={relatedTravels}
-                            setRelatedTravels={setRelatedTravels}
                             scrollY={scrollY}
                             viewportHeight={viewportHeight}
                             scrollRef={scrollRef}

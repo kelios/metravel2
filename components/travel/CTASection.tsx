@@ -6,7 +6,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/src/types/types';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
@@ -234,8 +234,8 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
           variant={isFavorite ? 'primary' : 'secondary'}
           size="md"
           icon={
-            <MaterialIcons
-              name={isFavorite ? 'favorite' : 'favorite-border'}
+            <Feather
+              name="heart"
               size={20}
               color={isFavorite ? colors.surface : colors.primary}
             />
@@ -260,7 +260,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
             onPress={handleViewAuthorTravels}
             variant="secondary"
             size="md"
-            icon={<MaterialIcons name="person" size={20} color={colors.primary} />}
+            icon={<Feather name="user" size={20} color={colors.primary} />}
             style={[
               styles.actionButton,
               isMobile && styles.actionButtonMobile,
@@ -277,7 +277,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
           onPress={handleCreateTravel}
           variant="secondary"
           size="md"
-          icon={<MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />}
+          icon={<Feather name="plus-circle" size={20} color={colors.primary} />}
           style={[
             styles.actionButton,
             isMobile && styles.actionButtonMobile,

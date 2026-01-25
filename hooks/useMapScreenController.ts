@@ -27,8 +27,8 @@ import {
   useMapPanelState,
   useMapResponsive,
 } from '@/hooks/map';
+import { getSiteBaseUrl, buildCanonicalUrl } from '@/utils/seo';
 
-const SITE = process.env.EXPO_PUBLIC_SITE_URL || 'https://metravel.by';
 const HEADER_HEIGHT_WEB = 88;
 
 /**
@@ -242,7 +242,7 @@ export function useMapScreenController() {
   }, [routeStorePoints, setRoutePoints]);
 
   // Canonical URL
-  const canonical = useMemo(() => `${SITE}${pathname || '/map'}`, [pathname]);
+  const canonical = buildCanonicalUrl(pathname || '/map');
 
   // Styles
   const headerOffset = Platform.OS === 'web' ? HEADER_HEIGHT_WEB : 0;
