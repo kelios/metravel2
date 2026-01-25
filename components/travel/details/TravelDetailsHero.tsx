@@ -64,7 +64,7 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
       (window as any).__metravel_lcp_preloaded = new Set<string>()
     }
     const createdLinks: HTMLLinkElement[] = []
-    const first = travel?.gallery?.[0]
+    const first = travel?.travel_image_thumb_url || travel?.gallery?.[0]
     if (!first) return
 
     const imageUrl = typeof first === 'string' ? first : first.url
@@ -74,13 +74,13 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
     if (!imageUrl) return
 
     const versionedHref = buildVersioned(imageUrl, updatedAt, id)
-    const lcpMaxWidth = isMobile ? 420 : 860
-    const lcpWidths = isMobile ? [320, 380, 420] : [640, 720, 860]
+    const lcpMaxWidth = isMobile ? 400 : 860
+    const lcpWidths = isMobile ? [320, 400] : [640, 860]
     const targetWidth =
       typeof window !== 'undefined'
         ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
         : lcpMaxWidth
-    const lcpQuality = isMobile ? 50 : 55
+    const lcpQuality = isMobile ? 45 : 50
     const responsive = buildResponsiveImageProps(versionedHref, {
       maxWidth: targetWidth,
       widths: lcpWidths,
@@ -209,13 +209,13 @@ const OptimizedLCPHeroInner: React.FC<{
     img.id
   )
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9
-  const lcpMaxWidth = isMobile ? 420 : 860
-  const lcpWidths = isMobile ? [320, 380, 420, 640] : [640, 720, 860, 1080]
+  const lcpMaxWidth = isMobile ? 400 : 860
+  const lcpWidths = isMobile ? [320, 400] : [640, 860]
   const targetWidth =
     typeof window !== 'undefined'
       ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
       : lcpMaxWidth
-  const lcpQuality = isMobile ? 65 : 70
+  const lcpQuality = isMobile ? 60 : 65
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
@@ -341,6 +341,8 @@ const OptimizedLCPHeroInner: React.FC<{
             loading="eager"
             decoding="async"
             // @ts-ignore
+            fetchPriority="high"
+            // @ts-ignore
             ref={imgRef as any}
             crossOrigin="anonymous"
             referrerPolicy="no-referrer"
@@ -389,7 +391,14 @@ function TravelHeroSectionInner({
   const { width: winW, height: winH } = useWindowDimensions()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
   const [extrasReady, setExtrasReady] = useState(!deferExtras || Platform.OS !== 'web')
-  const firstImg = (travel?.gallery?.[0] ?? null) as unknown as ImgLike | null
+  
+  const firstRaw = travel?.travel_image_thumb_url || travel?.gallery?.[0]
+  const firstImg = useMemo(() => {
+    if (!firstRaw) return null
+    if (typeof firstRaw === 'string') return { url: firstRaw }
+    return firstRaw
+  }, [firstRaw]) as ImgLike | null
+
   const aspectRatio =
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW

@@ -75,13 +75,29 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
     () => withAlpha(themeColors.surface, 0.8),
     [themeColors.surface]
   );
-  const markerColor = themeColors.primary;
-  const markerInnerColor = themeColors.textOnDark;
+  const markerColor = '#FF8A00';
   const markerSvg = `
     <svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="16" fill="${markerColor}"/>
-      <circle cx="16" cy="16" r="10" fill="${markerInnerColor}"/>
-      <path d="M24 32C20 40 16 48 16 48C16 48 12 40 8 32H24Z" fill="${markerColor}"/>
+      <defs>
+        <linearGradient id="pinGlow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22" />
+          <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0" />
+        </linearGradient>
+        <filter id="pinShadow" x="-30%" y="-10%" width="160%" height="160%" color-interpolation-filters="sRGB">
+          <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.20" />
+        </filter>
+      </defs>
+
+      <g filter="url(#pinShadow)">
+        <circle cx="16" cy="15.5" r="12.5" fill="${markerColor}"/>
+        <circle cx="16" cy="15.5" r="12.5" fill="url(#pinGlow)"/>
+
+        <path d="M22 28.5C19.2 34.8 16 41.8 16 41.8C16 41.8 12.8 34.8 10 28.5H22Z" fill="${markerColor}"/>
+
+        <circle cx="16" cy="15.5" r="5.2" fill="#FFFFFF" fill-opacity="0.96" />
+        <circle cx="16" cy="15.5" r="3.2" fill="${markerColor}" />
+        <rect x="12.5" y="7.2" width="7.8" height="3.8" rx="1.9" fill="#FFFFFF" fill-opacity="0.35" transform="rotate(-18 12.5 7.2)" />
+      </g>
     </svg>
   `;
   const markerSvgUrl = `data:image/svg+xml;utf8,${encodeURIComponent(markerSvg)}`;

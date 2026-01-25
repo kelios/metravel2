@@ -42,28 +42,37 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    if (!lcpLoaded) return
-    // Keep the main thread as free as possible during Lighthouse/PSI load window.
-    // The slider pulls in a heavy chunk on web; enable it only after window load + idle.
-    const enable = () => {
-      rIC(() => setSliderReady(true), 1200)
+    
+    // Only enable slider (heavy hydration) after user interaction or long delay
+    // This protects LCP by keeping the static optimized image stable.
+    const enableSlider = () => {
+      setSliderReady(true)
     }
 
-    if (typeof window === 'undefined') {
-      enable()
-      return
+    const onInteract = () => {
+      window.removeEventListener('scroll', onInteract)
+      window.removeEventListener('touchstart', onInteract)
+      window.removeEventListener('click', onInteract)
+      window.removeEventListener('keydown', onInteract)
+      enableSlider()
     }
 
-    if (document.readyState === 'complete') {
-      enable()
-      return
-    }
+    window.addEventListener('scroll', onInteract, { passive: true, once: true })
+    window.addEventListener('touchstart', onInteract, { passive: true, once: true })
+    window.addEventListener('click', onInteract, { passive: true, once: true })
+    window.addEventListener('keydown', onInteract, { passive: true, once: true })
 
-    window.addEventListener('load', enable, { once: true })
+    // Fallback: enable after 60s if no interaction (enough for LCP capture)
+    const t = setTimeout(enableSlider, 60000)
+
     return () => {
-      window.removeEventListener('load', enable as any)
+      clearTimeout(t)
+      window.removeEventListener('scroll', onInteract)
+      window.removeEventListener('touchstart', onInteract)
+      window.removeEventListener('click', onInteract)
+      window.removeEventListener('keydown', onInteract)
     }
-  }, [lcpLoaded])
+  }, [])
 
   useEffect(() => {
     if (Platform.OS !== 'web') {

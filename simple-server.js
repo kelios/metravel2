@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
@@ -18,8 +19,37 @@ const mimeTypes = {
 };
 
 const server = http.createServer((request, response) => {
+  // Handle API proxying
+  if (request.url.startsWith('/api/')) {
+    const options = {
+      hostname: 'metravel.by',
+      port: 443,
+      path: request.url,
+      method: request.method,
+      headers: {
+        ...request.headers,
+        host: 'metravel.by',
+        referer: 'https://metravel.by'
+      }
+    };
+
+    const proxyReq = https.request(options, (proxyRes) => {
+      response.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(response);
+    });
+
+    proxyReq.on('error', (e) => {
+      console.error(`API Proxy Error: ${e.message}`);
+      response.writeHead(502);
+      response.end('Bad Gateway');
+    });
+
+    request.pipe(proxyReq);
+    return;
+  }
+
   // Safe path handling
-  const safePath = path.normalize(request.url).replace(/^(\.\.[\/\\])+/, '');
+  const safePath = path.normalize(request.url.split('?')[0]).replace(/^(\.\.[\/\\])+/, '');
   let filePath = path.join(PUBLIC_DIR, safePath);
   
   // If URL ends with /, try index.html
@@ -64,5 +94,5 @@ const server = http.createServer((request, response) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`SPA Server running at http://localhost:${PORT}/`);
+  console.log(`SPA Server with API Proxy running at http://localhost:${PORT}/`);
 });

@@ -194,7 +194,7 @@ const getTravelHeroPreloadScript = () => String.raw`
 (function(){
   try {
     var host = window.location && window.location.hostname;
-    var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';
+    var isProdHost = host === 'metravel.by' || host === 'www.metravel.by' || host === 'localhost' || host === '127.0.0.1';
     if (!isProdHost) return;
     var path = window.location && window.location.pathname;
     if (!path || path.indexOf('/travels/') !== 0) return;
@@ -208,20 +208,39 @@ const getTravelHeroPreloadScript = () => String.raw`
       ? apiBase + '/api/travels/' + encodeURIComponent(slug) + '/'
       : apiBase + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
 
-    function buildOptimizedUrl(rawUrl, width, quality) {
+    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id) {
       try {
         var resolved = new URL(rawUrl, window.location.origin);
-        var host = resolved.hostname || '';
-        var allowed =
-          host === 'metravel.by' ||
-          host === 'cdn.metravel.by' ||
-          host === 'api.metravel.by';
-        if (!allowed) return null;
-        if (width) resolved.searchParams.set('w', String(Math.round(width)));
-        if (quality) resolved.searchParams.set('q', String(quality));
-        resolved.searchParams.set('f', 'webp');
-        resolved.searchParams.set('fit', 'cover');
-        return resolved.toString();
+        
+        // Add version param to match React component logic
+        if (updatedAt) {
+          var ts = Date.parse(updatedAt);
+          if (!isNaN(ts)) resolved.searchParams.set('v', String(ts));
+        } else if (id) {
+          resolved.searchParams.set('v', String(id));
+        }
+
+        var host = (resolved.hostname || '').toLowerCase();
+        // Force proxy for metravel domains to ensure resizing
+        var allowed = host === 'images.weserv.nl';
+        
+        if (allowed) {
+          if (width) resolved.searchParams.set('w', String(Math.round(width)));
+          if (quality) resolved.searchParams.set('q', String(quality));
+          resolved.searchParams.set('f', 'webp');
+          resolved.searchParams.set('fit', 'cover');
+          return resolved.toString();
+        } else {
+          // Fallback to images.weserv.nl for external images
+          var proxy = new URL('https://images.weserv.nl/');
+          var cleanUrl = resolved.toString().replace(/^https?:\/\//i, '');
+          proxy.searchParams.set('url', cleanUrl);
+          if (width) proxy.searchParams.set('w', String(Math.round(width)));
+          if (quality) proxy.searchParams.set('q', String(quality));
+          proxy.searchParams.set('output', 'webp');
+          proxy.searchParams.set('fit', 'cover');
+          return proxy.toString();
+        }
       } catch (_e) {
         return null;
       }
@@ -230,10 +249,9 @@ const getTravelHeroPreloadScript = () => String.raw`
     // Defer API fetch to idle time and skip on constrained networks to avoid hurting LCP/TBT.
     var conn = (navigator && (navigator.connection || navigator.mozConnection || navigator.webkitConnection)) || null;
     var effectiveType = conn && conn.effectiveType ? String(conn.effectiveType) : '';
-    var saveData = conn && conn.saveData ? true : false;
-    var isConstrained = saveData || effectiveType.indexOf('2g') !== -1 || effectiveType.indexOf('slow-2g') !== -1;
-    if (isConstrained) return;
-
+    // REMOVED: Network constraint check that was blocking preload on Lighthouse throttled networks.
+    // We want to prioritize the hero image even on slow networks for LCP.
+    
     function run(){
       var controller = window.AbortController ? new AbortController() : null;
       var timeout = setTimeout(function(){
@@ -249,21 +267,34 @@ const getTravelHeroPreloadScript = () => String.raw`
         return res.json();
       }).then(function(data){
         if (!data) return;
-        var gallery = data.gallery;
-        if (!gallery || !gallery.length) return;
-        var first = gallery[0];
-        var url = typeof first === 'string' ? first : first && first.url;
+        
+        var url = data.travel_image_thumb_url;
+        var updatedAt = data.updated_at;
+        var id = data.id;
+
+        if (!url) {
+            var gallery = data.gallery;
+            if (gallery && gallery.length) {
+                var first = gallery[0];
+                url = typeof first === 'string' ? first : first && first.url;
+                updatedAt = typeof first === 'string' ? undefined : first.updated_at;
+                id = typeof first === 'string' ? undefined : first.id;
+            }
+        }
+        
         if (!url || typeof url !== 'string') return;
 
-        var viewport = Math.max(320, Math.min(window.innerWidth || 420, 860));
+        var viewport = Math.max(320, Math.min(window.innerWidth || 400, 860));
         var isMobile = (window.innerWidth || 0) <= 540;
-        var targetWidth = isMobile ? Math.min(viewport, 420) : Math.min(viewport, 860);
-        var quality = isMobile ? 50 : 55;
-        var highWidth = Math.min(isMobile ? 640 : 1080, Math.round(targetWidth * 1.5));
-        var optimizedHref = buildOptimizedUrl(url, targetWidth, quality);
+        var targetWidth = isMobile ? Math.min(viewport, 400) : Math.min(viewport, 860);
+        var quality = isMobile ? 45 : 50;
+        // Desktop max width in component is 860, so we shouldn't preload 1080
+        var highWidth = isMobile ? 400 : 860; 
+        
+        var optimizedHref = buildOptimizedUrl(url, targetWidth, quality, updatedAt, id);
         if (!optimizedHref) return;
         var optimizedHrefHigh = highWidth !== targetWidth
-          ? buildOptimizedUrl(url, highWidth, quality)
+          ? buildOptimizedUrl(url, highWidth, quality, updatedAt, id)
           : null;
 
         try {
@@ -283,9 +314,13 @@ const getTravelHeroPreloadScript = () => String.raw`
         link.rel = 'preload';
         link.as = 'image';
         link.href = optimizedHref;
+        
+        // Exact match with TravelDetailsHero.tsx sizes
+        var sizesAttr = isMobile ? '100vw' : '(max-width: 1024px) 92vw, 860px';
+        
         if (optimizedHrefHigh) {
           link.setAttribute('imagesrcset', optimizedHref + ' ' + Math.round(targetWidth) + 'w, ' + optimizedHrefHigh + ' ' + Math.round(highWidth) + 'w');
-          link.setAttribute('imagesizes', '100vw');
+          link.setAttribute('imagesizes', sizesAttr);
         }
         try {
           link.fetchPriority = 'high';
@@ -298,21 +333,9 @@ const getTravelHeroPreloadScript = () => String.raw`
       });
     }
 
-    function scheduleAfterLoad(){
-      if (window.requestIdleCallback) {
-        window.requestIdleCallback(run, { timeout: 2500 });
-      } else {
-        setTimeout(run, 1800);
-      }
-    }
-
-    // Run only after full load to avoid competing with React hydration, route chunk,
-    // and the actual LCP hero request.
-    if (document.readyState === 'complete') {
-      scheduleAfterLoad();
-    } else {
-      window.addEventListener('load', scheduleAfterLoad, { once: true });
-    }
+    // Run immediately to start fetching API data for LCP image as soon as possible
+    // independent of React hydration.
+    run();
   } catch (_e) {}
 })();
 `;
@@ -364,6 +387,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="dns-prefetch" href="//api.metravel.by" />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://images.weserv.nl" crossOrigin="anonymous" />
       
       {/* Icons */}
       <link rel="icon" href="/favicon.ico" sizes="32x32" />
