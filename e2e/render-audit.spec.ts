@@ -193,12 +193,13 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       // At least one content marker should exist.
       // data-section-key is best-effort on web (setAttribute via refs) and can be flaky during hydration.
       // Therefore accept either section-key anchors OR stable testIDs.
-      await expect(
-        page.locator(
-          '[data-section-key="description"], [data-section-key="video"], [data-section-key="map"], [data-section-key="points"], ' +
-            `${tid('travel-details-map')}, ${tid('travel-details-points')}`
-        )
-      ).toHaveCount(1, { timeout: 45_000 });
+      const contentMarkers = page.locator(
+        '[data-section-key="description"], [data-section-key="video"], [data-section-key="map"], [data-section-key="points"], ' +
+          `${tid('travel-details-map')}, ${tid('travel-details-points')}`
+      );
+      await expect(contentMarkers.first()).toBeVisible({ timeout: 45_000 });
+      const markerCount = await contentMarkers.count();
+      expect(markerCount).toBeGreaterThanOrEqual(1);
 
       // Ensure the page is scrollable and stable.
       await assertNoHorizontalScroll(page);

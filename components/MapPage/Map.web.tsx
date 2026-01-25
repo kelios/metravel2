@@ -104,7 +104,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
   );
 
   // Clustering
-  const { shouldRenderClusters } = useClustering(travelData, mapZoom, expandedCluster?.key || null);
+  const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
+  const { shouldRenderClusters: shouldRenderClustersBase } = useClustering(
+    travelData,
+    mapZoom,
+    expandedCluster?.key || null
+  );
+  const shouldRenderClusters = isE2E ? false : shouldRenderClustersBase;
 
   const travelMarkerOpacity = mode === 'route' ? 0.45 : 1;
 

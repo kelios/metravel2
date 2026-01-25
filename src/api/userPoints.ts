@@ -292,5 +292,9 @@ export const userPointsApi = {
   
   async getStats() {
     return apiClient.get<UserPointsStats>('/user-points/stats/');
+  },
+
+  async exportKml() {
+    return apiClient.download('/user-points/export-kml/', { method: 'GET' });
   }
 };

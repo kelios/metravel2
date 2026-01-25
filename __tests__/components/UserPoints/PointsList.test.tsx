@@ -35,6 +35,7 @@ jest.mock('@/src/api/userPoints', () => ({
     deletePoint: jest.fn(),
     purgePoints: jest.fn(),
     bulkUpdatePoints: jest.fn(),
+    exportKml: jest.fn(),
   },
 }));
 

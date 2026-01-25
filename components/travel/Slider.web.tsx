@@ -253,6 +253,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 imageProps={{
                   ...(imageProps || {}),
                   contentPosition: 'center',
+                  testID: `slider-image-${index}`,
                   accessibilityRole: 'image',
                   accessibilityLabel: `Фотография путешествия ${index + 1} из ${images.length}`,
                 }}

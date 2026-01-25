@@ -82,15 +82,10 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       const hero = await page.locator('[data-testid="travel-details-hero"]');
       await expect(hero).toBeVisible();
 
-      // Wait for image to load - check for either slider image or optimized hero img
-      const sliderImage = page.locator('[data-testid^="slider-image-"]').first();
-      const optimizedHeroImg = page.locator('[data-testid="travel-details-hero"] img').first();
-      
-      // At least one should be visible
-      const hasSliderImage = await sliderImage.isVisible().catch(() => false);
-      const hasOptimizedImg = await optimizedHeroImg.isVisible().catch(() => false);
-      
-      expect(hasSliderImage || hasOptimizedImg).toBeTruthy();
+      // Web hero media can be rendered by expo-image (not always a direct <img> we can target via testIDs).
+      // We accept any visible image-like element inside the hero container.
+      const heroMedia = hero.locator('img, [role="img"]').first();
+      await expect(heroMedia).toBeVisible({ timeout: 20_000 });
     });
 
     test('should load all sections', async () => {

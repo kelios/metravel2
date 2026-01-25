@@ -56,6 +56,12 @@ export class ApiError extends Error {
     }
 }
 
+type DownloadResponse = {
+    blob: Blob;
+    filename?: string;
+    contentType?: string;
+};
+
 /**
  * Единый API клиент
  */
@@ -393,6 +399,125 @@ class ApiClient {
             }
 
             // For non-offline errors, preserve original error message for callers/tests.
+            throw error;
+        }
+    }
+
+    async download(
+        endpoint: string,
+        options: RequestInit = {},
+        timeout: number = LONG_TIMEOUT
+    ): Promise<DownloadResponse> {
+        if (!this.checkRateLimit(endpoint)) {
+            throw new ApiError(
+                429,
+                'Слишком много запросов. Пожалуйста, подождите немного.',
+                { rateLimited: true }
+            );
+        }
+
+        const isOnline = await this.checkNetworkStatus();
+        if (!isOnline) {
+            throw new ApiError(
+                0,
+                'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
+                { offline: true }
+            );
+        }
+
+        const token = await this.getAccessToken();
+        const headers: HeadersInit = {
+            ...(token && { Authorization: `Token ${token}` }),
+            ...options.headers,
+        };
+
+        const parseFilename = (contentDisposition: string | null): string | undefined => {
+            if (!contentDisposition) return undefined;
+            const v = String(contentDisposition);
+            const utf8 = v.match(/filename\*=UTF-8''([^;]+)/i);
+            if (utf8?.[1]) {
+                try {
+                    return decodeURIComponent(utf8[1].trim().replace(/^"|"$/g, ''));
+                } catch {
+                    return utf8[1].trim().replace(/^"|"$/g, '');
+                }
+            }
+            const plain = v.match(/filename=([^;]+)/i);
+            if (plain?.[1]) {
+                return plain[1].trim().replace(/^"|"$/g, '');
+            }
+            return undefined;
+        };
+
+        const handle = async (resp: Response): Promise<DownloadResponse> => {
+            if (!resp.ok) {
+                const errorText = await resp.text().catch(() => 'Unknown error');
+                let errorData: any = errorText;
+                try {
+                    errorData = JSON.parse(errorText);
+                } catch {
+                    // keep raw
+                }
+                throw new ApiError(
+                    resp.status,
+                    errorData?.message || errorData?.detail || `Ошибка запроса: ${resp.statusText}`,
+                    errorData
+                );
+            }
+
+            const blob = await resp.blob();
+            const contentType = resp.headers.get('content-type') ?? undefined;
+            const filename = parseFilename(resp.headers.get('content-disposition'));
+            return { blob, contentType, filename };
+        };
+
+        try {
+            const resp = await fetchWithTimeout(
+                `${this.baseURL}${endpoint}`,
+                { ...options, method: options.method || 'GET', headers },
+                timeout
+            );
+
+            if (resp.status === 401 && token) {
+                try {
+                    const newToken = await this.refreshAccessToken();
+                    const retryHeaders: HeadersInit = {
+                        Authorization: `Token ${newToken}`,
+                        ...options.headers,
+                    };
+                    const retryResp = await fetchWithTimeout(
+                        `${this.baseURL}${endpoint}`,
+                        { ...options, method: options.method || 'GET', headers: retryHeaders },
+                        timeout
+                    );
+                    return await handle(retryResp);
+                } catch {
+                    throw new ApiError(401, 'Требуется авторизация');
+                }
+            }
+
+            return await handle(resp);
+        } catch (error) {
+            if (error instanceof ApiError) throw error;
+            devError('API download error:', error);
+
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isOffline = Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.onLine === false;
+            const isFetchFailure =
+                errorMessage.includes('Failed to fetch') ||
+                errorMessage.includes('Network request failed') ||
+                errorMessage.includes('fetch') ||
+                errorMessage.includes('timeout') ||
+                errorMessage.includes('network failed');
+
+            if (isOffline || isFetchFailure) {
+                throw new ApiError(
+                    0,
+                    'Нет подключения к интернету. Проверьте ваше соединение и попробуйте снова.',
+                    { offline: true }
+                );
+            }
+
             throw error;
         }
     }

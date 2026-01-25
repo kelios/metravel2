@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Location from 'expo-location';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import { userPointsApi } from '@/src/api/userPoints';
 import { fetchFilters } from '@/src/api/misc';
 import { normalizeCategoryDictionary, createCategoryNameToIdsMap, resolveCategoryIdsByNames as mapNamesToIds } from '@/src/utils/userPointsCategories';
@@ -253,6 +255,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [manualCategoryIds, setManualCategoryIds] = useState<string[]>([]);
   const [isSavingManual, setIsSavingManual] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const { width: windowWidth } = useWindowDimensions();
   const isNarrow = windowWidth < 420;
@@ -870,6 +874,43 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setShowManualAdd(false);
     resetManualForm();
   }, [resetManualForm]);
+
+  const handleExportKml = useCallback(async () => {
+    setExportError(null);
+    setIsExporting(true);
+    try {
+      const result = await userPointsApi.exportKml();
+
+      const fallbackName = `user-points-${new Date().toISOString().slice(0, 10)}.kml`;
+      const filename = String((result as any)?.filename || '').trim() || fallbackName;
+      const contentType = String((result as any)?.contentType || '').trim() || 'application/vnd.google-earth.kml+xml';
+
+      if (Platform.OS === 'web') {
+        const blob = (result as any)?.blob as Blob;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      const blob = (result as any)?.blob as Blob;
+      const text = await blob.text();
+      const uri = `${FileSystem.cacheDirectory}${filename}`;
+      await FileSystem.writeAsStringAsync(uri, text);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: contentType, dialogTitle: 'Экспорт точек' });
+      }
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Ошибка экспорта');
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
 
   const openManualAdd = useCallback(() => {
     blurActiveElementForModal();
@@ -1510,6 +1551,8 @@ useEffect(() => {
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>Действия</Text>
 
+            {exportError ? <Text style={styles.manualErrorText}>{exportError}</Text> : null}
+
             <Button
               label="Импорт"
               onPress={() => {
@@ -1518,6 +1561,15 @@ useEffect(() => {
               }}
               accessibilityLabel="Импорт"
               fullWidth
+              style={styles.actionsButton}
+            />
+
+            <Button
+              label={isExporting ? 'Экспорт…' : 'Экспорт'}
+              onPress={handleExportKml}
+              accessibilityLabel="Экспорт"
+              fullWidth
+              loading={isExporting}
               style={styles.actionsButton}
             />
 
