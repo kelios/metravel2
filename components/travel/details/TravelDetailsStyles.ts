@@ -331,7 +331,9 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     backdropFilter: "blur(20px)" as any,
     // Ensure the sidebar can scroll independently on long menus
     maxHeight: `calc(100vh - ${HEADER_OFFSET_DESKTOP}px)` as any,
-    overflow: "hidden" as any,
+    overflowY: "auto" as any,
+    overflowX: "hidden" as any,
+    overscrollBehavior: "contain" as any,
     display: "flex" as any,
     flexDirection: "column" as any,
     minHeight: 0 as any,

@@ -21,7 +21,7 @@ function ensureEnv(name: string): string | null {
 async function maybeAcceptCookies(page: any) {
   const acceptAll = page.getByText('Принять всё', { exact: true });
   const necessaryOnly = page.getByText('Только необходимые', { exact: true });
-  const bannerTitle = page.getByText('Мы ценим вашу приватность', { exact: true });
+  const bannerTitle = page.getByTestId('consent-banner');
 
   await Promise.race([
     bannerTitle.waitFor({ state: 'visible', timeout: 1500 }).catch(() => null),

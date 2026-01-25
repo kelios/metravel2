@@ -86,7 +86,7 @@ function migrateFile(filePath, dryRun = false) {
     });
 
     // Шаг 2: Заменить использования
-    Object.entries(DEPRECATED_IMPORTS).forEach(([name, config]) => {
+    Object.entries(DEPRECATED_IMPORTS).forEach(([, config]) => {
       Object.entries(config.mappings).forEach(([oldUsage, newUsage]) => {
         const oldPattern = new RegExp(oldUsage.replace(/\./g, '\\.'), 'g');
         if (oldPattern.test(modified)) {

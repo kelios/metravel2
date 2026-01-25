@@ -60,7 +60,7 @@ const desktopConfig = {
   },
 };
 
-async function runLighthouse(url, config, formFactor) {
+async function runLighthouse(url, config) {
   const chrome = await chromeLauncher.launch({
     chromeFlags: ['--headless', '--disable-gpu', '--no-sandbox'],
   });

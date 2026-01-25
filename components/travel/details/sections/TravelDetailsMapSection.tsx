@@ -47,14 +47,6 @@ const PointListFallback = () => {
   )
 }
 
-const rIC = (cb: () => void, timeout = 300) => {
-  if (typeof (window as any)?.requestIdleCallback === 'function') {
-    ;(window as any).requestIdleCallback(cb, { timeout })
-  } else {
-    setTimeout(cb, timeout)
-  }
-}
-
 const ExcursionsLazySection: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const containerRef = useRef<any>(null)
   const [visible, setVisible] = useState(false)
@@ -197,7 +189,13 @@ export const TravelDetailsMapSection: React.FC<{
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Карта маршрута"
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'map', 'data-map-for-pdf': '1' } : {})}
+        {...(Platform.OS === 'web'
+          ? {
+              'data-testid': 'travel-details-map',
+              'data-section-key': 'map',
+              'data-map-for-pdf': '1',
+            }
+          : {})}
       >
         <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
         <Text style={styles.sectionSubtitle}>Посмотрите последовательность точек на живой карте</Text>
@@ -205,7 +203,7 @@ export const TravelDetailsMapSection: React.FC<{
           {hasMapData ? (
             <ToggleableMap
               initiallyOpen={!isMobileWeb}
-              keepMounted={false}
+              keepMounted={Platform.OS === 'web'}
               isLoading={!shouldRenderMap}
               loadingLabel="Подгружаем карту маршрута..."
               forceOpenTrigger={mapOpenTrigger || undefined}
@@ -214,7 +212,7 @@ export const TravelDetailsMapSection: React.FC<{
                 <Suspense fallback={<MapFallback />}>
                   <MapClientSide
                     travel={{ data: travel.travelAddress as any }}
-                    highlightedPointRequest={highlightedPoint}
+                    highlightedPointRequest={highlightedPoint ?? undefined}
                   />
                 </Suspense>
               ) : null}
@@ -233,7 +231,9 @@ export const TravelDetailsMapSection: React.FC<{
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
         collapsable={false}
         accessibilityLabel="Координаты мест"
-        {...(Platform.OS === 'web' ? { 'data-section-key': 'points' } : {})}
+        {...(Platform.OS === 'web'
+          ? { 'data-testid': 'travel-details-points', 'data-section-key': 'points' }
+          : {})}
       >
         <Text style={styles.sectionHeaderText}>Координаты мест</Text>
         <View style={{ marginTop: 12 }}>

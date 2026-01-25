@@ -49,7 +49,7 @@ const server = http.createServer((request, response) => {
   }
 
   // Safe path handling
-  const safePath = path.normalize(request.url.split('?')[0]).replace(/^(\.\.[\/\\])+/, '');
+  const safePath = path.normalize(request.url.split('?')[0]).replace(/^(\.\.([/\\]))+/, '');
   let filePath = path.join(PUBLIC_DIR, safePath);
   
   // If URL ends with /, try index.html

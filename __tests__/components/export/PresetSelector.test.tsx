@@ -1,7 +1,6 @@
 // __tests__/components/export/PresetSelector.test.tsx
 // Тесты для компонента PresetSelector
 
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import PresetSelector from '@/components/export/PresetSelector';
 import { BOOK_PRESETS } from '@/src/types/pdf-presets';
@@ -47,10 +46,9 @@ describe('PresetSelector', () => {
     it('should display preset icons', () => {
       const { getAllByTestId } = render(<PresetSelector {...defaultProps} />);
 
-      // MaterialIcons are rendered as views with `testID="material-${iconName}"` in tests
-      expect(getAllByTestId('material-notes').length).toBeGreaterThan(0);
-      expect(getAllByTestId('material-photo-camera').length).toBeGreaterThan(0);
-      expect(getAllByTestId('material-map').length).toBeGreaterThan(0);
+      expect(getAllByTestId('feather-notes').length).toBeGreaterThan(0);
+      expect(getAllByTestId('feather-photo-camera').length).toBeGreaterThan(0);
+      expect(getAllByTestId('feather-map').length).toBeGreaterThan(0);
     });
   });
 

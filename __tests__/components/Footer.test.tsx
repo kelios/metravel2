@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import Footer from '@/components/Footer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -45,10 +44,10 @@ describe('Footer', () => {
   it('renders mobile dock correctly', () => {
     const { getByTestId } = render(<Footer />)
     expect(getByTestId('footer-item-home')).toBeTruthy()
-    expect(getByTestId('footer-item-belarus')).toBeTruthy()
+    expect(getByTestId('footer-item-search')).toBeTruthy()
     expect(getByTestId('footer-item-map')).toBeTruthy()
     expect(getByTestId('footer-item-favorites')).toBeTruthy()
-    expect(getByTestId('footer-item-create')).toBeTruthy()
+    expect(getByTestId('footer-item-more')).toBeTruthy()
   })
 
   it('calls onDockHeight callback', () => {

@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 
 const waitForConsentBanner = async (page: any) => {
-  const banner = page.getByText('Мы ценим вашу приватность', { exact: true });
+  const banner = page.getByTestId('consent-banner');
   await expect(banner).toBeVisible({ timeout: 10_000 });
 };
 

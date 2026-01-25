@@ -137,6 +137,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const [showHtml, setShowHtml] = useState(false);
     const [anchorModalVisible, setAnchorModalVisible] = useState(false);
     const [anchorValue, setAnchorValue] = useState('');
+    const [linkModalVisible, setLinkModalVisible] = useState(false);
+    const [linkValue, setLinkValue] = useState('');
     const htmlSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
 
     const editorViewportRef = useRef<any>(null);
@@ -151,6 +153,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
+    const tmpStoredLinkQuill = useRef<any>(null);
     const { isAuthenticated } = useAuth();
 
     const pendingForceSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -240,7 +243,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             backgroundColor: colors.surface,
             width: '100%',
             maxWidth: '100%',
-            overflow: 'hidden',
+            overflow: isWeb ? ('visible' as any) : 'hidden',
         },
         bar: {
             flexDirection: 'row',
@@ -497,6 +500,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
       .ql-editor{max-width:100%;overflow-wrap:anywhere}
       .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;height:100%;min-height:0;border:none}
       .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
+      .ql-tooltip{z-index:9999}
       .ql-editor img{max-width:100%;height:auto;max-height:60vh;display:block;margin:12px auto;object-fit:contain}
     `;
         win.document.head.appendChild(style);
@@ -641,6 +645,65 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, [uploadAndInsert, quillMountKey, showHtml, shouldLoadQuill]);
 
+    useEffect(() => {
+        if (!isWeb || !win) return;
+        if (showHtml) return;
+        if (!shouldLoadQuill) return;
+
+        const editor = quillRef.current?.getEditor?.();
+        const root = editor?.root as HTMLElement | undefined;
+        if (!root) return;
+
+        if (typeof (root as any).closest !== 'function') return;
+
+        const quillEl = root.closest('.quill') as HTMLElement | null;
+        if (!quillEl) return;
+
+        if (typeof (quillEl as any).querySelector !== 'function') return;
+
+        const linkBtn = quillEl.querySelector('button.ql-link') as HTMLButtonElement | null;
+        if (!linkBtn) return;
+
+        const onMouseDown = (e: MouseEvent) => {
+            try {
+                e.preventDefault();
+                e.stopPropagation();
+            } catch {
+                // noop
+            }
+
+            let selection: { index: number; length: number } | null = null;
+            try {
+                selection = editor.getSelection(true);
+            } catch {
+                try {
+                    selection = editor.getSelection();
+                } catch {
+                    selection = null;
+                }
+            }
+
+            tmpStoredRange.current = selection;
+            tmpStoredLinkQuill.current = editor;
+
+            let existing = '';
+            try {
+                const fmt = selection ? editor.getFormat(selection) : editor.getFormat();
+                existing = typeof (fmt as any)?.link === 'string' ? (fmt as any).link : '';
+            } catch {
+                existing = '';
+            }
+
+            setLinkValue(existing);
+            setLinkModalVisible(true);
+        };
+
+        linkBtn.addEventListener('mousedown', onMouseDown);
+        return () => {
+            linkBtn.removeEventListener('mousedown', onMouseDown);
+        };
+    }, [showHtml, shouldLoadQuill]);
+
     const IconButton = React.memo(function IconButton({
                                                           name,
                                                           onPress,
@@ -721,6 +784,40 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             }
         }
     }, [fireChange, normalizeAnchorId]);
+
+    const applyLinkToSelection = useCallback((urlRaw: string) => {
+        const editor = tmpStoredLinkQuill.current || quillRef.current?.getEditor?.();
+        const url = String(urlRaw ?? '').trim();
+
+        if (!editor) return;
+
+        try {
+            if (typeof editor.focus === 'function') editor.focus();
+        } catch {
+            // noop
+        }
+
+        const range = tmpStoredRange.current || editor.getSelection() || { index: editor.getLength(), length: 0 };
+
+        try {
+            editor.setSelection(range, 'silent');
+        } catch {
+            // noop
+        }
+
+        try {
+            if (url) {
+                editor.format('link', url, 'user');
+            } else {
+                editor.format('link', false, 'user');
+            }
+            tmpStoredRange.current = null;
+            tmpStoredLinkQuill.current = null;
+            fireChange(editor.root.innerHTML);
+        } catch {
+            // noop
+        }
+    }, [fireChange]);
 
     const Toolbar = () => (
         <View style={dynamicStyles.bar}>
@@ -980,7 +1077,58 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     if (!QuillEditor) return <Loader />;
 
-    const modules = variant === 'compact' ? quillModulesCompact : quillModulesDefault;
+    const modules = useMemo(() => {
+        const base = variant === 'compact' ? quillModulesCompact : quillModulesDefault;
+        const container = (base as any).toolbar;
+
+        return {
+            ...base,
+            toolbar: {
+                container,
+                handlers: {
+                    link: function (value: any) {
+                        const quill = (this as any)?.quill;
+                        if (!quill) return;
+
+                        if (value === false) {
+                            try {
+                                quill.format('link', false, 'user');
+                                fireChange(quill.root.innerHTML);
+                            } catch {
+                                // noop
+                            }
+                            return;
+                        }
+
+                        let selection: { index: number; length: number } | null = null;
+                        try {
+                            selection = quill.getSelection(true);
+                        } catch {
+                            try {
+                                selection = quill.getSelection();
+                            } catch {
+                                selection = null;
+                            }
+                        }
+
+                        tmpStoredRange.current = selection;
+                        tmpStoredLinkQuill.current = quill;
+
+                        let existing = '';
+                        try {
+                            const fmt = selection ? quill.getFormat(selection) : quill.getFormat();
+                            existing = typeof fmt?.link === 'string' ? fmt.link : '';
+                        } catch {
+                            existing = '';
+                        }
+
+                        setLinkValue(existing);
+                        setLinkModalVisible(true);
+                    },
+                },
+            },
+        } as any;
+    }, [fireChange, variant]);
 
     const editorArea = showHtml ? (
         <TextInput
@@ -1118,6 +1266,67 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                 accessibilityLabel="Вставить"
                             >
                                 <Text style={{ color: colors.primary, fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600' as const }}>Вставить</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                visible={linkModalVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setLinkModalVisible(false)}
+            >
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: DESIGN_TOKENS.spacing.lg }}>
+                    <View style={{ backgroundColor: colors.surface, borderRadius: DESIGN_TOKENS.radii.md, borderWidth: 1, borderColor: colors.border, padding: DESIGN_TOKENS.spacing.lg }}>
+                        <Text style={{ color: colors.text, fontSize: DESIGN_TOKENS.typography.sizes.md, fontWeight: '600' as const, marginBottom: DESIGN_TOKENS.spacing.sm }}>
+                            Ссылка
+                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm, marginBottom: DESIGN_TOKENS.spacing.md }}>
+                            URL (например: https://example.com)
+                        </Text>
+                        <TextInput
+                            value={linkValue}
+                            onChangeText={setLinkValue}
+                            placeholder="https://..."
+                            placeholderTextColor={colors.textSecondary}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            style={{
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                                borderRadius: DESIGN_TOKENS.radii.sm,
+                                paddingHorizontal: DESIGN_TOKENS.spacing.md,
+                                paddingVertical: DESIGN_TOKENS.spacing.sm,
+                                color: colors.text,
+                                backgroundColor: colors.surface,
+                                marginBottom: DESIGN_TOKENS.spacing.md,
+                            }}
+                        />
+                        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setLinkModalVisible(false);
+                                    tmpStoredRange.current = null;
+                                    tmpStoredLinkQuill.current = null;
+                                }}
+                                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
+                                accessibilityRole="button"
+                                accessibilityLabel="Отмена"
+                            >
+                                <Text style={{ color: colors.textSecondary, fontSize: DESIGN_TOKENS.typography.sizes.sm }}>Отмена</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setLinkModalVisible(false);
+                                    applyLinkToSelection(linkValue);
+                                }}
+                                style={{ paddingHorizontal: DESIGN_TOKENS.spacing.md, paddingVertical: DESIGN_TOKENS.spacing.sm }}
+                                accessibilityRole="button"
+                                accessibilityLabel="Сохранить"
+                            >
+                                <Text style={{ color: colors.primary, fontSize: DESIGN_TOKENS.typography.sizes.sm, fontWeight: '600' as const }}>Сохранить</Text>
                             </TouchableOpacity>
                         </View>
                     </View>

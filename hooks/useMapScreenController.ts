@@ -27,7 +27,7 @@ import {
   useMapPanelState,
   useMapResponsive,
 } from '@/hooks/map';
-import { getSiteBaseUrl, buildCanonicalUrl } from '@/utils/seo';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 const HEADER_HEIGHT_WEB = 88;
 

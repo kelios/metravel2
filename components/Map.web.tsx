@@ -228,9 +228,23 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         }
 
         try {
+          if (el._leaflet_map) {
+            delete el._leaflet_map;
+          }
+        } catch {
+          // noop
+        }
+
+        try {
           if (el._leaflet_id) {
             delete el._leaflet_id;
           }
+        } catch {
+          // noop
+        }
+
+        try {
+          if (typeof el.innerHTML === 'string') el.innerHTML = '';
         } catch {
           // noop
         }
@@ -364,12 +378,32 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         const idContainer = mapContainerId
           ? (document.getElementById(mapContainerId) as any)
           : null;
-        if (container?._leaflet_id) {
-          delete container._leaflet_id;
-        }
-        if (idContainer?._leaflet_id) {
-          delete idContainer._leaflet_id;
-        }
+        const containers = [container, idContainer].filter(Boolean);
+
+        containers.forEach((el: any) => {
+          try {
+            if (el._leaflet_map && typeof el._leaflet_map.remove === 'function') {
+              el._leaflet_map.remove();
+            }
+          } catch {
+            // noop
+          }
+          try {
+            if (el._leaflet_map) delete el._leaflet_map;
+          } catch {
+            // noop
+          }
+          try {
+            if (el._leaflet_id) delete el._leaflet_id;
+          } catch {
+            // noop
+          }
+          try {
+            if (typeof el.innerHTML === 'string') el.innerHTML = '';
+          } catch {
+            // noop
+          }
+        });
       } catch {
         // noop
       }
@@ -394,6 +428,18 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     } finally {
       try {
         delete container._leaflet_id;
+      } catch {
+        // noop
+      }
+
+      try {
+        delete container._leaflet_map;
+      } catch {
+        // noop
+      }
+
+      try {
+        if (typeof container.innerHTML === 'string') container.innerHTML = '';
       } catch {
         // noop
       }
@@ -937,11 +983,19 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         preferCanvas
         whenCreated={(map: any) => {
           mapRef.current = map;
+          try {
+            const el = map?.getContainer?.() as any;
+            if (el) {
+              el._leaflet_map = map;
+            }
+          } catch {
+            // noop
+          }
         }}
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-          attribution="© OpenStreetMap © CartoDB"
+          attribution="&copy; OpenStreetMap &copy; CartoDB"
           crossOrigin="anonymous"
         />
         <FitBoundsOnData data={travelData} />

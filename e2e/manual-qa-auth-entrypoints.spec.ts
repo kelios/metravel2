@@ -7,7 +7,7 @@ test.describe('Manual QA automation: auth entrypoints', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
-    const banner = page.getByText('Мы ценим вашу приватность', { exact: true });
+    const banner = page.getByTestId('consent-banner');
     await expect(banner).toBeVisible({ timeout: 10_000 });
 
     const registerLink = page.getByText('Зарегистрируйтесь', { exact: true });

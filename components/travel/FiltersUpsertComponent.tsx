@@ -118,17 +118,61 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const isLoading = !formData || !filters;
 
-    // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    const normalizedInput: any = useMemo(() => {
+        if (!filters) return {};
+        const resolvedFilters: any = filters as any;
+        const maybeNormalized =
+            (resolvedFilters as any)?.data?.filters ?? (resolvedFilters as any)?.data ?? resolvedFilters;
+        return maybeNormalized ?? {};
+    }, [filters]);
+
+    // Memoize raw data access
+    const rawData = useMemo(
+        () => ({
+            categories:
+                normalizedInput.categories ??
+                (normalizedInput as any).categoriesTravel ??
+                (normalizedInput as any).categories_travel ??
+                [],
+            transports: normalizedInput.transports ?? (normalizedInput as any).transportsTravel ?? [],
+            complexity: normalizedInput.complexity ?? (normalizedInput as any).complexityTravel ?? [],
+            companions: normalizedInput.companions ?? (normalizedInput as any).companionsTravel ?? [],
+            overnights:
+                normalizedInput.over_nights_stay ??
+                (normalizedInput as any).overNightsStay ??
+                (normalizedInput as any).overnights ??
+                [],
+            month: normalizedInput.month ?? (normalizedInput as any).months ?? [],
+            countries: normalizedInput.countries || [],
+        }),
+        [normalizedInput]
+    );
+
+    // Memoize normalized lists
+    const resolvedCategories = useMemo(
+        () => normalizeTravelCategoriesLocal(rawData.categories),
+        [rawData.categories]
+    );
+    const resolvedTransports = useMemo(() => normalizeIdNameList(rawData.transports), [rawData.transports]);
+    const resolvedComplexity = useMemo(() => normalizeIdNameList(rawData.complexity), [rawData.complexity]);
+    const resolvedCompanions = useMemo(() => normalizeIdNameList(rawData.companions), [rawData.companions]);
+    const resolvedOvernights = useMemo(() => normalizeIdNameList(rawData.overnights), [rawData.overnights]);
+    const resolvedMonth = useMemo(() => normalizeIdNameList(rawData.month), [rawData.month]);
+    const resolvedCountries = useMemo(
+        () => normalizeCountriesLocal(rawData.countries),
+        [rawData.countries]
+    );
+
     // Local handler fallback if onFieldChange is not provided
-    const handleFieldChange = (field: keyof TravelFormData, value: any) => {
+    const handleFieldChange = useCallback((field: keyof TravelFormData, value: any) => {
         if (onFieldChange) {
             onFieldChange(field, value);
         } else {
             setFormData({ ...formData!, [field]: value });
         }
-    };
+    }, [formData, onFieldChange, setFormData]);
 
     useEffect(() => {
         // если новая запись — явно фиксируем publish=false,
@@ -137,7 +181,43 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         if (!formData.id && formData.publish !== false) {
             handleFieldChange('publish', false);
         }
-    }, [formData?.id, formData?.publish]);
+    }, [formData, handleFieldChange]);
+
+    const form: any = formData;
+
+    const openPreview = useCallback(() => {
+        const slug = form?.slug;
+        if (!slug) return;
+        const url = `/travels/${slug}`;
+        if (Platform.OS === 'web') {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+            Linking.openURL(`https://metravel.by${url}`).catch((error) => {
+                if (__DEV__) {
+                    console.warn('[FiltersUpsertComponent] Не удалось открыть URL:', error);
+                }
+            });
+        }
+    }, [form?.slug]);
+
+    // Memoized handlers for MultiSelectFields
+    const handleCountriesChange = useCallback((v: any) => handleFieldChange('countries', v), [handleFieldChange]);
+    const handleCategoriesChange = useCallback((v: any) => handleFieldChange('categories', v), [handleFieldChange]);
+    const handleTransportsChange = useCallback((v: any) => handleFieldChange('transports', v), [handleFieldChange]);
+    const handleComplexityChange = useCallback(
+        (v: any) => handleFieldChange('complexity', v),
+        [handleFieldChange]
+    );
+    const handleCompanionsChange = useCallback(
+        (v: any) => handleFieldChange('companions', v),
+        [handleFieldChange]
+    );
+    const handleOvernightsChange = useCallback(
+        (v: any) => handleFieldChange('over_nights_stay', v),
+        [handleFieldChange]
+    );
+    const handleMonthChange = useCallback((v: any) => handleFieldChange('month', v), [handleFieldChange]);
+    const handleVisaChange = useCallback((v: any) => handleFieldChange('visa', v), [handleFieldChange]);
 
     if (isLoading) {
         return (
@@ -147,57 +227,6 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
             </View>
         );
     }
-
-    const form: any = formData!;
-    const resolvedFilters = filters!;
-
-    const normalizedInput: any =
-        (resolvedFilters as any)?.data?.filters ?? (resolvedFilters as any)?.data ?? resolvedFilters;
-
-    // Memoize raw data access
-    const rawData = useMemo(() => ({
-        categories: normalizedInput.categories ?? (normalizedInput as any).categoriesTravel ?? (normalizedInput as any).categories_travel ?? [],
-        transports: normalizedInput.transports ?? (normalizedInput as any).transportsTravel ?? [],
-        complexity: normalizedInput.complexity ?? (normalizedInput as any).complexityTravel ?? [],
-        companions: normalizedInput.companions ?? (normalizedInput as any).companionsTravel ?? [],
-        overnights: normalizedInput.over_nights_stay ?? (normalizedInput as any).overNightsStay ?? (normalizedInput as any).overnights ?? [],
-        month: normalizedInput.month ?? (normalizedInput as any).months ?? [],
-        countries: normalizedInput.countries || []
-    }), [normalizedInput]);
-
-    // Memoize normalized lists
-    const resolvedCategories = useMemo(() => normalizeTravelCategoriesLocal(rawData.categories), [rawData.categories]);
-    const resolvedTransports = useMemo(() => normalizeIdNameList(rawData.transports), [rawData.transports]);
-    const resolvedComplexity = useMemo(() => normalizeIdNameList(rawData.complexity), [rawData.complexity]);
-    const resolvedCompanions = useMemo(() => normalizeIdNameList(rawData.companions), [rawData.companions]);
-    const resolvedOvernights = useMemo(() => normalizeIdNameList(rawData.overnights), [rawData.overnights]);
-    const resolvedMonth = useMemo(() => normalizeIdNameList(rawData.month), [rawData.month]);
-    const resolvedCountries = useMemo(() => normalizeCountriesLocal(rawData.countries), [rawData.countries]);
-
-    const openPreview = useCallback(() => {
-        if (!form.slug) return;
-        const url = `/travels/${form.slug}`;
-        if (Platform.OS === 'web') {
-            window.open(url, '_blank', 'noopener,noreferrer');
-        } else {
-            Linking.openURL(`https://metravel.by${url}`).catch((error) => {
-                // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
-                if (__DEV__) {
-                    console.warn('[FiltersUpsertComponent] Не удалось открыть URL:', error);
-                }
-            });
-        }
-    }, [form.slug]);
-
-    // Memoized handlers for MultiSelectFields
-    const handleCountriesChange = useCallback((v: any) => handleFieldChange('countries', v), [handleFieldChange]);
-    const handleCategoriesChange = useCallback((v: any) => handleFieldChange('categories', v), [handleFieldChange]);
-    const handleTransportsChange = useCallback((v: any) => handleFieldChange('transports', v), [handleFieldChange]);
-    const handleComplexityChange = useCallback((v: any) => handleFieldChange('complexity', v), [handleFieldChange]);
-    const handleCompanionsChange = useCallback((v: any) => handleFieldChange('companions', v), [handleFieldChange]);
-    const handleOvernightsChange = useCallback((v: any) => handleFieldChange('over_nights_stay', v), [handleFieldChange]);
-    const handleMonthChange = useCallback((v: any) => handleFieldChange('month', v), [handleFieldChange]);
-    const handleVisaChange = useCallback((v: any) => handleFieldChange('visa', v), [handleFieldChange]);
 
     return (
         <ScrollView

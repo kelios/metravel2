@@ -12,6 +12,36 @@ export const useMapCleanup = () => {
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
+    const clearContainer = (el: any) => {
+      if (!el) return;
+      try {
+        if (el._leaflet_map) {
+          try {
+            el._leaflet_map.remove();
+          } catch {
+            // Ignore
+          }
+        }
+      } catch {
+        // Ignore
+      }
+      try {
+        delete el._leaflet_map;
+      } catch {
+        // Ignore
+      }
+      try {
+        delete el._leaflet_id;
+      } catch {
+        // Ignore
+      }
+      try {
+        if (typeof el.innerHTML === 'string') el.innerHTML = '';
+      } catch {
+        // Ignore
+      }
+    };
+
     try {
       const allLeafletContainers = document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`);
       allLeafletContainers.forEach((el: any) => {
@@ -21,17 +51,7 @@ export const useMapCleanup = () => {
         // Avoid mutating Leaflet internal/private fields (_leaflet_id, _leaflet_events, L.Util._stamps).
         if (el && typeof el.isConnected === 'boolean' && el.isConnected) return;
 
-        try {
-          if (el._leaflet_map) {
-            try {
-              el._leaflet_map.remove();
-            } catch {
-              // Ignore
-            }
-          }
-        } catch {
-          // Ignore
-        }
+        clearContainer(el);
       });
     } catch (e) {
       console.warn('[Map] Failed to clean orphaned containers:', e);
@@ -55,6 +75,22 @@ export const useMapCleanup = () => {
           } catch {
             // Ignore
           }
+        }
+
+        try {
+          delete container._leaflet_map;
+        } catch {
+          // Ignore
+        }
+        try {
+          delete container._leaflet_id;
+        } catch {
+          // Ignore
+        }
+        try {
+          if (typeof container.innerHTML === 'string') container.innerHTML = '';
+        } catch {
+          // Ignore
         }
       } catch (e) {
         console.warn('[Map] Failed to clean container on unmount:', e);

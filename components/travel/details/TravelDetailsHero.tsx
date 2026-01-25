@@ -144,7 +144,7 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
         }
       })
     }
-  }, [isMobile, travel?.gallery])
+  }, [isMobile, travel?.gallery, travel?.travel_image_thumb_url])
 }
 
 /* -------------------- LCP Hero -------------------- */

@@ -5,7 +5,7 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect, useTransition } from 'react';
 import { View, StyleSheet, Platform, InteractionManager } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { RotateCw } from 'lucide-react-native';
+import Feather from '@expo/vector-icons/Feather';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
 import { MapPeekPreview } from './MapPeekPreview';
 import TravelListPanel from './TravelListPanel';
@@ -255,7 +255,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             {uiTab === 'filters' && typeof filtersPanelProps?.props?.resetFilters === 'function' && (
               <IconButton
                 testID="map-panel-reset"
-                icon={<RotateCw size={20} color={colors.textMuted} {...({} as any)} />}
+                icon={<Feather name="rotate-cw" size={20} color={colors.textMuted} />}
                 label="Сбросить фильтры"
                 size="sm"
                 onPress={() => {

@@ -20,7 +20,7 @@ self.addEventListener('install', (event) => {
     caches.open(STATIC_CACHE).then((cache) => {
       return cache.addAll(STATIC_ASSETS.filter(asset => asset !== '/offline.html'));
     }).catch(() => {
-      console.log('SW: Static cache install failed');
+      console.info('SW: Static cache install failed');
     })
   );
   self.skipWaiting();
@@ -106,7 +106,7 @@ async function cacheFirst(request, cacheName = DYNAMIC_CACHE, maxSize = MAX_CACH
     }
 
     return response;
-  } catch (error) {
+  } catch {
     const cached = await caches.match(request);
     return cached || new Response('Offline', { status: 503 });
   }
@@ -123,7 +123,7 @@ async function networkFirst(request) {
     }
     
     return response;
-  } catch (error) {
+  } catch {
     const cached = await caches.match(request);
     if (cached) return cached;
     
@@ -145,6 +145,6 @@ async function limitCacheSize(cacheName, maxSize) {
       limitCacheSize(cacheName, maxSize);
     }
   } catch (error) {
-    console.log('SW: Cache size limit error', error);
+    console.info('SW: Cache size limit error', error);
   }
 }

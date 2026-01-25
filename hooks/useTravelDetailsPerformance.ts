@@ -75,6 +75,40 @@ export function useTravelDetailsPerformance({
   }, [])
 
   useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!lcpLoaded) return
+    if (sliderReady) return
+    if (typeof window === 'undefined') return
+
+    let cancelled = false
+
+    const enable = () => {
+      if (cancelled) return
+      rIC(() => {
+        if (!cancelled) setSliderReady(true)
+      }, 1200)
+    }
+
+    // After window load, enable in idle time.
+    if (typeof document !== 'undefined' && document.readyState === 'complete') {
+      enable()
+    } else {
+      window.addEventListener('load', enable, { once: true })
+    }
+
+    // Safety net: don't block forever.
+    const t = setTimeout(() => {
+      if (!cancelled) setSliderReady(true)
+    }, 3500)
+
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+      window.removeEventListener('load', enable as any)
+    }
+  }, [lcpLoaded, sliderReady])
+
+  useEffect(() => {
     if (Platform.OS !== 'web') {
       if (!isLoading) setDeferAllowed(true)
       return

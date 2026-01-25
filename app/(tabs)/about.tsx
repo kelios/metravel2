@@ -1,5 +1,5 @@
 // app/about/index.tsx
-import React, { useCallback, useMemo, useRef, useState, memo } from 'react';
+import { useCallback, useMemo, useRef, useState, memo } from 'react';
 import { KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -35,7 +35,7 @@ function AboutAndContactScreen() {
   const isFocused = useIsFocused();
   const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
   // стабильный canonical и ключ для <head>
-  const canonical = useMemo(() => buildCanonicalUrl('/about'), []);
+  const canonical = buildCanonicalUrl('/about');
 
   // --- contact form state ---
   const [name, setName] = useState('');
@@ -121,10 +121,13 @@ function AboutAndContactScreen() {
     });
   }, []);
 
-  const invalidName = useMemo(() => touched.name && !name.trim(), [touched.name, name]);
-  const invalidEmail = useMemo(() => touched.email && (!email.trim() || !isEmailValid(email)), [touched.email, email]);
-  const invalidMessage = useMemo(() => touched.message && !message.trim(), [touched.message, message]);
-  const invalidAgree = useMemo(() => touched.agree && !agree, [touched.agree, agree]);
+  const invalidName = useMemo(() => !!touched.name && !name.trim(), [touched.name, name]);
+  const invalidEmail = useMemo(
+    () => !!touched.email && (!email.trim() || !isEmailValid(email)),
+    [touched.email, email]
+  );
+  const invalidMessage = useMemo(() => !!touched.message && !message.trim(), [touched.message, message]);
+  const invalidAgree = useMemo(() => !!touched.agree && !agree, [touched.agree, agree]);
   const isDisabled = useMemo(() => {
     if (sending) return true;
     if (!name.trim() || !email.trim() || !message.trim()) return true;

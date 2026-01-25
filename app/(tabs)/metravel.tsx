@@ -1,8 +1,8 @@
 // app/metravel/index.tsx
-import React, { Suspense, lazy, useMemo } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import { Platform, View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import {useIsFocused} from "@react-navigation/native";
+import { useIsFocused } from '@react-navigation/native';
 import { useThemedColors } from '@/hooks/useTheme';
 
 const isWeb = Platform.OS === 'web';
@@ -15,7 +15,7 @@ export default function MeTravelScreen() {
     const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
     const isFocused = useIsFocused();
     // стабильный canonical и стабильный ключ для head
-    const canonical = useMemo(() => buildCanonicalUrl('/metravel'), []);
+    const canonical = buildCanonicalUrl('/metravel');
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 

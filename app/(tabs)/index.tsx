@@ -20,7 +20,7 @@ function HomeScreen() {
         const raw = String(pathname ?? '').trim();
         const normalized = raw === '' || raw === '/' ? '/' : raw.startsWith('/') ? raw : `/${raw}`;
         return buildCanonicalUrl(normalized);
-    }, [pathname]);
+    }, [buildCanonicalUrl, pathname]);
 
     if (!isFocused) {
         return <View style={styles.container} />;

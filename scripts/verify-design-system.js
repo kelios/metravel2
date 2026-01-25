@@ -48,11 +48,6 @@ const DEPRECATED_PATTERNS = [
 ];
 
 // Паттерны для правильного использования
-const CORRECT_PATTERNS = [
-  /@\/constants\/designSystem/,
-  /DESIGN_TOKENS/
-];
-
 const issues = [];
 const stats = {
   filesScanned: 0,

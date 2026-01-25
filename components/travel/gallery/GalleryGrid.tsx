@@ -81,7 +81,7 @@ export const GalleryGrid: React.FC<{
                   onLoad={() => onImageLoad(stableKey)}
                 />
                 <View style={styles.errorOverlay}>
-                  <MaterialIcons name="warning-amber" size={24} color={colors.warningDark} />
+                  <Feather name="alert-triangle" size={24} color={colors.warningDark} />
                   <Text style={[styles.errorOverlaySubtext, { color: colors.warningDark }]}>{image.error}</Text>
                   <DeleteAction
                     onActivate={() => onDelete(stableKey)}
