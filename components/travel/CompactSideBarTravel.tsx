@@ -193,10 +193,7 @@ function CompactSideBarTravel({
       ? Number((travel as any).countUnicIpView)
       : null;
 
-  const authorSubtitle = useMemo(() => {
-    if (!userName) return '';
-    return 'Личный тревел-дневник';
-  }, [userName]);
+  const authorTravelsCtaLabel = 'Все путешествия автора';
 
   const authorUserId = useMemo(() => {
     if (travelOwnerId == null) return null;
@@ -357,12 +354,6 @@ function CompactSideBarTravel({
             </View>
           </View>
 
-          {authorSubtitle ? (
-            <Text style={[styles.userSubtitle, { color: mutedText }]} numberOfLines={1}>
-              {authorSubtitle}
-            </Text>
-          ) : null}
-
           {(whenLine || (viewsSafe != null && Number.isFinite(viewsSafe))) ? (
             <View style={styles.metaRow}>
               {whenLine ? (
@@ -396,13 +387,15 @@ function CompactSideBarTravel({
           {userName ? (
             <View style={styles.allTravelsWrap}>
               <Button
-                label="Все путешествия"
+                label={authorTravelsCtaLabel}
                 onPress={handleUserTravels}
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 fullWidth
-                accessibilityLabel={`Открыть путешествия автора ${userName}`}
+                accessibilityLabel={authorTravelsCtaLabel}
                 style={styles.allTravelsButton}
+                labelStyle={styles.allTravelsButtonLabel}
+                labelNumberOfLines={2}
                 {...(Platform.OS === 'web'
                   ? ({ testID: 'open-author-travels', } as any)
                   : {})}
@@ -410,10 +403,6 @@ function CompactSideBarTravel({
             </View>
           ) : null}
         </View>
-      </View>
-
-      <View style={styles.infoSection}>
-        {null}
       </View>
     </View>,
 
@@ -647,12 +636,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.borderLight,
   },
   
-  infoSection: {
-    marginTop: Platform.select({ default: 10, web: 6 }),
-    paddingTop: Platform.select({ default: 10, web: 6 }),
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
   // ✅ РЕДИЗАЙН: Компактные информационные строки
   infoRow: {
     flexDirection: "row",
@@ -982,13 +965,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     paddingHorizontal: 4,
   },
   allTravelsWrap: {
-    marginTop: DESIGN_TOKENS.spacing.sm,
+    marginTop: DESIGN_TOKENS.spacing.xs,
     width: '100%',
   },
   allTravelsButton: {
     borderRadius: 999,
+    backgroundColor: colors.surfaceMuted,
+    borderColor: colors.borderLight,
   },
-
+  allTravelsButtonLabel: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   closeBar: {
     position: "absolute",
     bottom: 0,

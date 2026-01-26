@@ -66,6 +66,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const mapContainerStyle = useMemo(() => {
+    const base = StyleSheet.flatten(styles.map as any) as any;
+    if (Platform.OS !== 'web') return base;
+    return { ...(base || {}), position: 'relative', zIndex: 1 };
+  }, [styles.map]);
 
   const safeCoordinates = useMemo(() => {
     const fallback = { latitude: 53.8828449, longitude: 27.7273595 };
@@ -663,8 +668,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       )}
 
       <MapContainer
-        style={styles.map as any}
-        {...(Platform.OS === 'web' ? ({ style: [{ ...(styles.map as any), position: 'relative', zIndex: 1 }] } as any) : null)}
+        style={mapContainerStyle}
         data-testid="map-leaflet-container"
         id={mapContainerIdRef.current}
         center={safeCenter}

@@ -32,6 +32,7 @@ export interface ButtonProps {
   testID?: string;
   style?: StyleProp<ViewStyle>;
   labelStyle?: StyleProp<TextStyle>;
+  labelNumberOfLines?: number;
   hoverStyle?: StyleProp<ViewStyle>;
   pressedStyle?: StyleProp<ViewStyle>;
 }
@@ -58,6 +59,7 @@ const ButtonComponent = ({
   testID,
   style,
   labelStyle,
+  labelNumberOfLines = 1,
   hoverStyle,
   pressedStyle,
 }: ButtonProps) => {
@@ -110,7 +112,7 @@ const ButtonComponent = ({
             variant === 'danger' && styles.labelDanger,
             labelStyle,
           ]}
-          numberOfLines={1}
+          numberOfLines={labelNumberOfLines}
         >
           {label}
         </Text>

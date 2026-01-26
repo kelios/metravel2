@@ -67,7 +67,7 @@ describe('AuthorCard', () => {
     expect(getByText('3 путешествия')).toBeTruthy()
 
     // Кнопка "Все путешествия"
-    const button = getByLabelText('Показать все путешествия автора Test User')
+    const button = getByLabelText('Все путешествия автора')
     expect(button).toBeTruthy()
   })
 
@@ -78,7 +78,7 @@ describe('AuthorCard', () => {
       <AuthorCard travel={baseTravel} onViewAuthorTravels={onViewAuthorTravels} />,
     )
 
-    const button = getByLabelText('Показать все путешествия автора Test User')
+    const button = getByLabelText('Все путешествия автора')
     fireEvent.press(button)
 
     expect(onViewAuthorTravels).toHaveBeenCalledTimes(1)
@@ -89,7 +89,7 @@ describe('AuthorCard', () => {
   it('navigates with router.push on web when userId exists and no onViewAuthorTravels', () => {
     const { getByLabelText } = renderWithClient(<AuthorCard travel={baseTravel} />)
 
-    const button = getByLabelText('Показать все путешествия автора Test User')
+    const button = getByLabelText('Все путешествия автора')
     fireEvent.press(button)
     expect(mockPush).toHaveBeenCalledWith('/search?user_id=42')
   })

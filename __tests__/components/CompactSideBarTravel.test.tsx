@@ -310,7 +310,7 @@ describe('CompactSideBarTravel', () => {
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
-    fireEvent.press(getByText('Все путешествия'));
+    fireEvent.press(getByText('Все путешествия автора'));
 
     expect(openSpy).toHaveBeenCalledWith('/search?user_id=555');
     openSpy.mockRestore();

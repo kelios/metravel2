@@ -1,7 +1,7 @@
 // components/export/PresetSelector.tsx
 // Компонент для выбора пресетов настроек PDF
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
@@ -157,11 +157,7 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
     >
       <View style={styles.presetHeader}>
         <View style={styles.presetIcon}>
-          <Feather
-            name={getPresetIconName(preset) as any}
-            size={22}
-            color={styles.presetIconColor.color}
-          />
+          <Text style={styles.presetIconText}>?</Text>
         </View>
 
         <View style={styles.presetMetaBadges}>
@@ -194,13 +190,13 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
 
         <View style={styles.presetFeatures}>
           {preset.settings.includeGallery && (
-            <FeatureBadge iconName="photo" label="Галерея" styles={styles} />
+            <FeatureBadge label="Галерея" styles={styles} />
           )}
           {preset.settings.includeMap && (
-            <FeatureBadge iconName="map" label="Карты" styles={styles} />
+            <FeatureBadge label="Карты" styles={styles} />
           )}
           {preset.settings.includeChecklists && (
-            <FeatureBadge iconName="checklist" label="Чек-листы" styles={styles} />
+            <FeatureBadge label="Чек-листы" styles={styles} />
           )}
         </View>
       </View>
@@ -214,27 +210,17 @@ function PresetCard({ preset, isSelected, onSelect, styles }: PresetCardProps) {
 }
 
 interface FeatureBadgeProps {
-  iconName: string;
   label: string;
   styles: ReturnType<typeof createStyles>;
 }
 
-function FeatureBadge({ iconName, label, styles }: FeatureBadgeProps) {
+function FeatureBadge({ label, styles }: FeatureBadgeProps) {
   return (
     <View style={styles.featureBadge}>
-      <Feather name={iconName as any} size={14} color={styles.featureBadgeIconColor.color} />
+      <Text style={styles.featureBadgeIconText}>?</Text>
       <Text style={styles.featureBadgeText}>{label}</Text>
     </View>
   );
-}
-
-function getPresetIconName(preset: BookPreset): string {
-  if (preset.category === 'minimal') return 'notes';
-  if (preset.category === 'detailed') return 'menu-book';
-  if (preset.category === 'photo-focused') return 'photo-camera';
-  if (preset.category === 'map-focused') return 'map';
-  if (preset.category === 'print') return 'print';
-  return 'tune';
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
@@ -361,6 +347,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   presetIconColor: {
     color: colors.text,
   },
+  presetIconText: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: colors.text,
+  },
   presetMetaBadges: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -433,6 +424,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 4,
   },
   featureBadgeIconColor: {
+    color: colors.textMuted,
+  },
+  featureBadgeIconText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: colors.textMuted,
   },
   featureBadgeText: {

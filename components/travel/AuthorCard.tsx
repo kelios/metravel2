@@ -286,13 +286,13 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             style={({ pressed }) => [styles.viewButtonInline, pressed && styles.viewButtonPressed]}
             onPress={handleViewAuthorTravels}
             accessibilityRole="button"
-            accessibilityLabel={`Показать все путешествия автора ${userName || 'Аноним'}`}
+            accessibilityLabel="Все путешествия автора"
           >
             <Text
               style={[styles.viewButtonInlineText, { color: colors.textSecondary }]}
               numberOfLines={1}
             >
-              Показать все путешествия автора
+              Все путешествия автора
             </Text>
           </Pressable>
         )}
@@ -314,9 +314,9 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
           ]}
           onPress={handleViewAuthorTravels}
           accessibilityRole="button"
-          accessibilityLabel={`Показать все путешествия автора ${userName || 'Аноним'}`}
+          accessibilityLabel="Все путешествия автора"
         >
-          <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Показать все путешествия автора</Text>
+          <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Все путешествия автора</Text>
         </Pressable>
       )}
   </SafeView>
