@@ -193,112 +193,132 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
       }
     ]}>
       <SafeView style={[styles.content, isMobile && styles.contentMobile]}>
-        {/* Аватар */}
-        <Pressable
-          style={styles.avatarSection}
-          onPress={handleOpenAuthorProfile}
-          accessibilityRole={userId ? 'button' : undefined}
-          accessibilityLabel={userId ? `Открыть профиль автора ${userName || 'Аноним'}` : undefined}
-          disabled={!userId}
-        >
-          {avatarUri ? (
-            <ImageCardMedia
-              src={avatarUri}
-              alt={userName || 'Автор'}
-              width={avatarSize}
-              height={avatarSize}
-              borderRadius={avatarBorderRadius}
-              fit="contain"
-              blurBackground
-              priority="low"
-              loading="lazy"
-              style={[styles.avatar, isMobile && styles.avatarMobile]}
-            />
-          ) : (
-            <SafeView style={[
-              styles.avatarPlaceholder,
-              isMobile && styles.avatarMobile,
-              { backgroundColor: colors.backgroundSecondary }
-            ]}>
-              <Feather name="user" size={isMobile ? 32 : 40} color={colors.textMuted} />
-            </SafeView>
-          )}
-        </Pressable>
-
-        {/* Информация об авторе */}
-        <SafeView style={styles.infoSection}>
+        <SafeView style={styles.mainRow}>
+          {/* Аватар */}
           <Pressable
+            style={styles.avatarSection}
             onPress={handleOpenAuthorProfile}
-            disabled={!userId}
             accessibilityRole={userId ? 'button' : undefined}
             accessibilityLabel={userId ? `Открыть профиль автора ${userName || 'Аноним'}` : undefined}
-            style={({ pressed }) => [pressed && userId ? { opacity: 0.85 } : null]}
+            disabled={!userId}
           >
-            <Text style={[styles.authorName, isMobile && styles.authorNameMobile, { color: colors.text }]}>
-              {userName || 'Аноним'}
+            {avatarUri ? (
+              <ImageCardMedia
+                src={avatarUri}
+                alt={userName || 'Автор'}
+                width={avatarSize}
+                height={avatarSize}
+                borderRadius={avatarBorderRadius}
+                fit="contain"
+                blurBackground
+                priority="low"
+                loading="lazy"
+                style={[styles.avatar, isMobile && styles.avatarMobile]}
+              />
+            ) : (
+              <SafeView style={[
+                styles.avatarPlaceholder,
+                isMobile && styles.avatarMobile,
+                { backgroundColor: colors.backgroundSecondary }
+              ]}>
+                <Feather name="user" size={isMobile ? 32 : 40} color={colors.textMuted} />
+              </SafeView>
+            )}
+          </Pressable>
+
+          {/* Информация об авторе */}
+          <SafeView style={styles.infoSection}>
+            <Pressable
+              onPress={handleOpenAuthorProfile}
+              disabled={!userId}
+              accessibilityRole={userId ? 'button' : undefined}
+              accessibilityLabel={userId ? `Открыть профиль автора ${userName || 'Аноним'}` : undefined}
+              style={({ pressed }) => [pressed && userId ? { opacity: 0.85 } : null]}
+            >
+              <Text style={[styles.authorName, isMobile && styles.authorNameMobile, { color: colors.text }]}>
+                {userName || 'Аноним'}
+              </Text>
+            </Pressable>
+            {authorCountryName && (
+              <SafeView style={styles.locationRow}>
+                <Feather name="map-pin" size={14} color={colors.textMuted} />
+                <Text style={[styles.locationText, { color: colors.textSecondary }]}>{authorCountryName}</Text>
+              </SafeView>
+            )}
+
+            {socials.length > 0 && (
+              <SafeView style={styles.socialsRow}>
+                {socials.map((s) => (
+                  <Pressable
+                    key={s.key}
+                    onPress={() => openExternalUrl(String(s.value))}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Открыть ${s.label}`}
+                    style={({ pressed }) => [
+                      styles.socialChip,
+                      pressed && styles.socialChipPressed,
+                      {
+                        backgroundColor: colors.primarySoft,
+                        borderColor: colors.borderLight,
+                      }
+                    ]}
+                  >
+                    <Text style={[styles.socialChipText, { color: colors.primary }]}>{s.label}</Text>
+                  </Pressable>
+                ))}
+              </SafeView>
+            )}
+
+            {travelsCount !== null && (
+              <SafeView style={styles.statsRow}>
+                <Feather name="map" size={16} color={colors.textMuted} />
+                <Text style={[styles.statsText, { color: colors.textSecondary }]}>
+                  {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
+                </Text>
+              </SafeView>
+            )}
+          </SafeView>
+        </SafeView>
+
+        {/* CTA: desktop/web in one line, mobile stays bottom */}
+        {!isMobile && userId && (
+          <Pressable
+            style={({ pressed }) => [styles.viewButtonInline, pressed && styles.viewButtonPressed]}
+            onPress={handleViewAuthorTravels}
+            accessibilityRole="button"
+            accessibilityLabel={`Показать все путешествия автора ${userName || 'Аноним'}`}
+          >
+            <Text
+              style={[styles.viewButtonInlineText, { color: colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              Показать все путешествия автора
             </Text>
           </Pressable>
-          {authorCountryName && (
-            <SafeView style={styles.locationRow}>
-              <Feather name="map-pin" size={14} color={colors.textMuted} />
-              <Text style={[styles.locationText, { color: colors.textSecondary }]}>{authorCountryName}</Text>
-            </SafeView>
-          )}
-
-          {socials.length > 0 && (
-            <SafeView style={styles.socialsRow}>
-              {socials.map((s) => (
-                <Pressable
-                  key={s.key}
-                  onPress={() => openExternalUrl(String(s.value))}
-                  accessibilityRole="link"
-                  accessibilityLabel={`Открыть ${s.label}`}
-                  style={({ pressed }) => [
-                    styles.socialChip,
-                    pressed && styles.socialChipPressed,
-                    {
-                      backgroundColor: colors.primarySoft,
-                      borderColor: colors.borderLight,
-                    }
-                  ]}
-                >
-                  <Text style={[styles.socialChipText, { color: colors.primary }]}>{s.label}</Text>
-                </Pressable>
-              ))}
-            </SafeView>
-          )}
-
-          {travelsCount !== null && (
-            <SafeView style={styles.statsRow}>
-              <Feather name="map" size={16} color={colors.textMuted} />
-              <Text style={[styles.statsText, { color: colors.textSecondary }]}>
-                {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
-              </Text>
-            </SafeView>
-          )}
+        )}
       </SafeView>
-    </SafeView>
 
-    <SafeView style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+      {isMobile && (
+        <SafeView style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+      )}
 
-    {/* Кнопка "Смотреть все путешествия" */}
-    {userId && (
-      <Pressable
-        style={({ pressed }) => [
-          styles.viewButtonBottom,
-          pressed && styles.viewButtonPressed,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.surface,
-          }
-        ]}
-        onPress={handleViewAuthorTravels}
-        accessibilityRole="button"
-        accessibilityLabel={`Показать все путешествия автора ${userName || 'Аноним'}`}
-      >
-        <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Показать все путешествия автора</Text>
-      </Pressable>
-    )}
+      {isMobile && userId && (
+        <Pressable
+          style={({ pressed }) => [
+            styles.viewButtonBottom,
+            pressed && styles.viewButtonPressed,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.surface,
+            }
+          ]}
+          onPress={handleViewAuthorTravels}
+          accessibilityRole="button"
+          accessibilityLabel={`Показать все путешествия автора ${userName || 'Аноним'}`}
+        >
+          <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Показать все путешествия автора</Text>
+        </Pressable>
+      )}
   </SafeView>
   );
 }
@@ -323,12 +343,33 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       default: DESIGN_TOKENS.shadowsNative.medium,
     }),
   },
+  viewButtonInline: {
+    marginLeft: 'auto',
+    flexShrink: 0,
+    paddingVertical: Platform.select({ default: 10, web: 12 }),
+    paddingHorizontal: Platform.select({ default: 14, web: 16 }),
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+    }),
+  },
+  viewButtonInlineText: {
+    fontSize: Platform.select({ default: 14, web: 14 }),
+    fontWeight: '600',
+    fontFamily: 'Georgia',
+    letterSpacing: -0.2,
+  },
   containerMobile: {
     padding: 18, // было 24px (-25%)
   },
   content: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 18, // было 24px (-25%)
   },
   contentMobile: {
@@ -339,6 +380,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   avatarSection: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  mainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    gap: 18,
   },
   // ✅ РЕДИЗАЙН: Уменьшенный аватар (-15%)
   avatar: {

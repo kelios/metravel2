@@ -11,12 +11,16 @@ expo-env.d.ts
 # @end expo-cli
 settings.json
 .prettierrc
+.DS_Store
+**/.DS_Store
+.vscode/
 .env
 .env.dev
 .env.preprod
 .env.prod
 .env.e2e
 .expo
+.expo-shared/
 .idea
 env.sh
 /assets/quests/
@@ -30,11 +34,14 @@ junit.xml
 /coverage/
 jest-results.json
 *.log
+.eslintcache
+.tsbuildinfo
 
 # Playwright artifacts
 /test-results/
 /playwright-report/
 .playwright-report-extracted/
+/e2e/.auth/
 
 # Android sensitive files
 google-services.json
@@ -46,6 +53,7 @@ upload-keystore.jks
 
 # Local tooling artifacts
 lighthouse-report*.json
+lighthouse*.json
 yarn-error.log
 
 # Android build files
@@ -54,3 +62,9 @@ android/
 build/
 *.apk
 *.aab
+
+# Next.js / bundler caches (web)
+.next/
+.swc/
+.turbo/
+.parcel-cache/
