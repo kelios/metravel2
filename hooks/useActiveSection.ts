@@ -73,7 +73,22 @@ export function useActiveSection(
     };
 
     const safeHeaderOffsetRaw = typeof headerOffset === 'number' && !isNaN(headerOffset) ? headerOffset : 0;
-    const safeHeaderOffset = isDocumentRoot(scrollRoot) ? safeHeaderOffsetRaw : 0;
+    const safeHeaderOffset = (() => {
+      // If we are observing the document scroll, header always overlaps viewport.
+      if (isDocumentRoot(scrollRoot)) return safeHeaderOffsetRaw;
+
+      // For nested scroll containers, apply header offset only when container is under the sticky header.
+      try {
+        if (scrollRoot && typeof scrollRoot.getBoundingClientRect === 'function') {
+          const rect = scrollRoot.getBoundingClientRect();
+          const top = Number(rect?.top ?? 0);
+          if (top < safeHeaderOffsetRaw - 4) return safeHeaderOffsetRaw;
+        }
+      } catch {
+        // noop
+      }
+      return 0;
+    })();
 
     const computeAndSetActive = () => {
       // Robust scrollspy for long sections:
@@ -87,12 +102,20 @@ export function useActiveSection(
           ? scrollRoot.getBoundingClientRect()
           : null;
 
-      const keys = Array.from(registeredSectionsRef.current);
+      const keys = Object.keys(anchors);
       const measured: Array<{ key: string; top: number; bottom: number }> = [];
 
       keys.forEach((key) => {
         const el = doc.querySelector(`[data-section-key="${key}"]`) as HTMLElement | null;
         if (!el || typeof el.getBoundingClientRect !== 'function') return;
+        if (!registeredSectionsRef.current.has(key)) {
+          try {
+            observerRef.current?.observe?.(el);
+          } catch {
+            // noop
+          }
+          registeredSectionsRef.current.add(key);
+        }
         const rect = el.getBoundingClientRect();
         const relativeTop = rootRect ? rect.top - rootRect.top : rect.top;
         const relativeBottom = rootRect ? rect.bottom - rootRect.top : rect.bottom;
@@ -148,14 +171,18 @@ export function useActiveSection(
 
       let nextActive: string | null = null;
 
-      if (firstBelowHeader.length) {
-        nextActive = firstBelowHeader[0].key;
-      } else if (nearTop.length) {
-        nextActive = nearTop[0].key;
-      } else if (spanning.length) {
+      // Priority order:
+      // 1) Section that spans the header line (the section currently being read)
+      // 2) Section whose top is near the header line
+      // 3) First section that starts below the header line
+      if (spanning.length) {
         // If multiple span (rare), prefer the one with the greatest top (closest to header).
         spanning.sort((a, b) => b.top - a.top);
         nextActive = spanning[0].key;
+      } else if (nearTop.length) {
+        nextActive = nearTop[0].key;
+      } else if (firstBelowHeader.length) {
+        nextActive = firstBelowHeader[0].key;
       } else {
         // Otherwise choose the first section below the header line.
         const below = measured.find((s) => s.top > headerLine);
@@ -234,6 +261,8 @@ export function useActiveSection(
     try {
       scrollTarget?.addEventListener?.('scroll', onScroll, { passive: true } as any);
       window.addEventListener?.('resize', onScroll, { passive: true } as any);
+      // Capture scroll events from any element (scroll doesn't bubble) to avoid missing container scrolls.
+      doc.addEventListener?.('scroll', onScroll as any, { passive: true, capture: true } as any);
     } catch {
       // noop
     }
@@ -255,6 +284,7 @@ export function useActiveSection(
       try {
         scrollTarget?.removeEventListener?.('scroll', onScroll as any);
         window.removeEventListener?.('resize', onScroll as any);
+        doc.removeEventListener?.('scroll', onScroll as any, { capture: true } as any);
       } catch {
         // noop
       }

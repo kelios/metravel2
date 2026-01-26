@@ -155,4 +155,65 @@ describe('useScrollNavigation (web)', () => {
 
     expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start', inline: 'nearest' });
   });
+
+  it('retries and scrolls when section mounts lazily and is only available via ref (regression)', () => {
+    // Remove the target from DOM initially so querySelector by data-section-key fails.
+    document.body.innerHTML = `
+      <div id="scroll-container" style="height: 200px; overflow-y: auto;">
+        <div style="height: 1000px; position: relative;"></div>
+      </div>
+    `;
+
+    const container = document.getElementById('scroll-container') as any;
+    Object.defineProperty(container, 'scrollTop', { value: 0, writable: true });
+    Object.defineProperty(container, 'scrollHeight', { value: 1000, writable: true });
+    Object.defineProperty(container, 'clientHeight', { value: 200, writable: true });
+    container.getBoundingClientRect = () => ({ top: 0, bottom: 200, left: 0, right: 200, width: 200, height: 200 } as any);
+    container.scrollTo = jest.fn((arg1: any) => {
+      if (typeof arg1 === 'object' && arg1) {
+        container.scrollTop = Number(arg1.top ?? 0);
+      }
+    });
+    container.scrollBy = jest.fn((arg1: any) => {
+      if (typeof arg1 === 'object' && arg1) {
+        container.scrollTop = Number(container.scrollTop ?? 0) + Number(arg1.top ?? 0);
+      }
+    });
+
+    jest.spyOn(window, 'getComputedStyle').mockImplementation((el: any) => {
+      if (el && el.id === 'scroll-container') {
+        return { overflowY: 'auto' } as any;
+      }
+      return { overflowY: 'visible' } as any;
+    });
+
+    const { result } = renderHook(() => useScrollNavigation());
+    (result.current.scrollRef as any).current = {
+      getScrollableNode: () => container,
+    };
+
+    // Create the element, but only expose it via anchors ref at first.
+    const el = document.createElement('div') as any;
+    el.getBoundingClientRect = () => ({ top: 120, bottom: 160, left: 0, right: 200, width: 200, height: 40 } as any);
+
+    // Patch anchors for the key that will be scrolled to.
+    ;(result.current.anchors as any).description = { current: el };
+
+    expect(document.querySelector('[data-section-key="description"]')).toBeNull();
+
+    act(() => {
+      result.current.scrollTo('description');
+    });
+
+    // First attempt won't find the element in DOM; later it may be mounted.
+    act(() => {
+      // Mount element after some time.
+      container.appendChild(el);
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(el.getAttribute('data-section-key')).toBe('description');
+    expect(container.scrollTo).toHaveBeenCalled();
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 120, behavior: 'smooth' });
+  });
 });

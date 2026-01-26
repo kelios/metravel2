@@ -188,7 +188,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: '100%',
         ...(Platform.OS === 'web' ? {
             cursor: 'default',
-            textDecoration: 'none',
+            textDecorationLine: 'none',
             fontFamily: 'Georgia',
         } as any : {}),
     },

@@ -63,7 +63,33 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
       const tryScrollWeb = (k: string): boolean => {
         if (Platform.OS !== 'web' || typeof document === 'undefined') return false;
 
-        const el = document.querySelector<HTMLElement>(`[data-section-key="${k}"]`);
+        const resolveElement = (): HTMLElement | null => {
+          // Primary: by data attribute (stable across re-renders)
+          const byAttr = document.querySelector<HTMLElement>(`[data-section-key="${k}"]`);
+          if (byAttr) return byAttr;
+
+          // Fallback: by ref (useful when the section mounted lazily and attribute is not yet assigned)
+          try {
+            const refAny: any = (anchors as any)?.[k];
+            const current: any = refAny?.current;
+            const node: any = current?._nativeNode || current?._domNode || current;
+            if (!node) return null;
+            if (typeof node.getBoundingClientRect !== 'function') return null;
+
+            if (typeof node.setAttribute === 'function') {
+              const existing = typeof node.getAttribute === 'function' ? node.getAttribute('data-section-key') : null;
+              if (!existing) {
+                node.setAttribute('data-section-key', k);
+              }
+            }
+
+            return node as HTMLElement;
+          } catch {
+            return null;
+          }
+        };
+
+        const el = resolveElement();
         if (dbg) {
           // eslint-disable-next-line no-console
           console.debug('[nav] scrollTo lookup', { key: k, found: !!el });

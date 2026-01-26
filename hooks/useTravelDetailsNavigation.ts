@@ -112,8 +112,21 @@ export function useTravelDetailsNavigation({
       const node = readNode()
       if (node) {
         const next = findScrollableContainer(node) || null
-        setScrollRootEl((prev) => (prev === next ? prev : next))
-        if (next) return
+        if (next) {
+          setScrollRootEl((prev) => (prev === next ? prev : next))
+          return
+        }
+
+        // Fallback: treat the node itself as scroll root if it can scroll by size
+        try {
+          const canScrollBySize = (node.scrollHeight || 0) > (node.clientHeight || 0) + 1
+          if (canScrollBySize) {
+            setScrollRootEl((prev) => (prev === node ? prev : node))
+            return
+          }
+        } catch {
+          // noop
+        }
       }
 
       if (attempts >= 60) return
@@ -215,28 +228,58 @@ export function useTravelDetailsNavigation({
   useEffect(() => {
     if (Platform.OS !== 'web') return
 
-    const setupSectionAttributes = () => {
-      Object.keys(anchors).forEach((key) => {
-        const ref = anchors[key as keyof typeof anchors]
-        if (ref?.current && Platform.OS === 'web') {
-          setTimeout(() => {
-            try {
-              const domNode = ref.current?._nativeNode || ref.current?._domNode || ref.current
-              if (domNode && domNode.setAttribute) {
-                domNode.setAttribute('data-section-key', key)
-              } else if (domNode && typeof domNode === 'object' && 'ownerDocument' in domNode) {
-                ;(domNode as HTMLElement).setAttribute('data-section-key', key)
-              }
-            } catch {
-              // ignore
-            }
-          }, 100)
+    let cancelled = false
+    let intervalId: ReturnType<typeof setInterval> | null = null
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const sectionKeys = Object.keys(anchors)
+    const applied = new Set<string>()
+
+    const applyOnce = (key: string) => {
+      if (applied.has(key)) return
+      const ref = anchors[key as keyof typeof anchors]
+      if (!ref?.current) return
+
+      try {
+        const domNode: any = (ref.current as any)?._nativeNode || (ref.current as any)?._domNode || ref.current
+        if (!domNode || typeof domNode.setAttribute !== 'function') return
+
+        const existing = typeof domNode.getAttribute === 'function' ? domNode.getAttribute('data-section-key') : null
+        if (!existing) {
+          domNode.setAttribute('data-section-key', key)
         }
-      })
+        applied.add(key)
+      } catch {
+        // ignore
+      }
     }
 
-    setupSectionAttributes()
-  }, [anchors, headerOffset, activeSection])
+    const tick = () => {
+      if (cancelled) return
+      sectionKeys.forEach((k) => applyOnce(k))
+
+      if (applied.size >= sectionKeys.length) {
+        if (intervalId) clearInterval(intervalId)
+        intervalId = null
+      }
+    }
+
+    // First attempt immediately.
+    tick()
+
+    // Retry for a while to catch lazy-mounted sections.
+    intervalId = setInterval(tick, 250)
+    timeoutId = setTimeout(() => {
+      if (intervalId) clearInterval(intervalId)
+      intervalId = null
+    }, 8000)
+
+    return () => {
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [anchors, headerOffset, slug])
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false })
