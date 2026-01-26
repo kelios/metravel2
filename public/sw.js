@@ -44,6 +44,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   if (request.method !== 'GET') return;
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));
@@ -69,6 +70,10 @@ self.addEventListener('fetch', (event) => {
 
 async function cacheFirst(request, cacheName = DYNAMIC_CACHE, maxSize = MAX_CACHE_SIZE) {
   try {
+    const url = new URL(request.url);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return fetch(request);
+    }
     const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
     

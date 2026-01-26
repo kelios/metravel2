@@ -3,7 +3,7 @@
  * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Platform, View, Text, StyleSheet, Image, ScrollView } from 'react-native';
+import { Platform, View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для предотвращения проблем с текстом на hover
@@ -132,11 +132,9 @@ export default function WeatherWidget({ points, countryName }: Props) {
                 ]}>
                     <View style={styles.dateIconContainer}>
                         <Text style={[styles.date, { color: colors.textMuted }]}>{formatDateShort(day.date)}</Text>
-                        <Image
-                          source={{ uri: day.icon }}
-                          style={styles.icon}
-                          {...(Platform.OS === 'web' ? { loading: 'lazy' } : {})}
-                        />
+                        <Text style={styles.iconEmoji} accessibilityRole="image" aria-label={day.condition}>
+                          {day.icon}
+                        </Text>
                     </View>
                     <View style={styles.tempContainer}>
                         <Text style={[styles.tempMax, { color: colors.text }]}>{Math.round(day.temperatureMax)}°</Text>
@@ -238,6 +236,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: 28, // было 32px (-12.5%)
         height: 28, // было 32px (-12.5%)
     },
+    iconEmoji: {
+        width: 28,
+        height: 28,
+        textAlign: 'center',
+        fontSize: 20,
+        lineHeight: 28,
+    },
     tempContainer: {
         flexDirection: 'row',
         alignItems: 'flex-start',
@@ -294,11 +299,11 @@ const weatherDescriptions: Record<number, string> = {
 };
 
 function iconFromCode(code: number): string {
-    if (code === 0) return 'https://cdn-icons-png.flaticon.com/512/869/869869.png';
-    if (code <= 2) return 'https://cdn-icons-png.flaticon.com/512/1163/1163661.png';
-    if (code <= 3) return 'https://cdn-icons-png.flaticon.com/512/414/414825.png';
-    if (code >= 45 && code < 60) return 'https://cdn-icons-png.flaticon.com/512/4005/4005901.png';
-    if (code >= 60 && code < 70) return 'https://cdn-icons-png.flaticon.com/512/3075/3075858.png';
-    if (code >= 80) return 'https://cdn-icons-png.flaticon.com/512/1146/1146869.png';
-    return 'https://cdn-icons-png.flaticon.com/512/1163/1163624.png';
+    if (code === 0) return '☀️';
+    if (code <= 2) return '🌤️';
+    if (code <= 3) return '☁️';
+    if (code >= 45 && code < 60) return '🌫️';
+    if (code >= 60 && code < 70) return '🌧️';
+    if (code >= 80) return '⛈️';
+    return '🌦️';
 }

@@ -140,7 +140,7 @@ export default function TravelDetailsContainer() {
   const { contentHorizontalPadding, sideMenuPlatformStyles } = travelDetails.layout
   const { anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey } =
     travelDetails.navigation
-  const { setLcpLoaded, sliderReady, deferAllowed } = travelDetails.performance
+  const { lcpLoaded, setLcpLoaded, sliderReady, deferAllowed } = travelDetails.performance
   const { closeMenu, animatedX, menuWidth: _menuWidth, menuWidthNum } = travelDetails.menu
   const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
     travelDetails.scroll
@@ -148,8 +148,7 @@ export default function TravelDetailsContainer() {
   const lcpLinkRel = useMemo(() => {
     if (Platform.OS !== "web") return "preload";
     if (typeof document === "undefined") return "preload";
-    // In SPA navigation, window load has already fired; prefetch avoids preload warnings.
-    return document.readyState === "complete" ? "prefetch" : "preload";
+    return "preload";
   }, []);
   // Стабильный ключ для <Head>, чтобы избежать ReferenceError при отрисовке
   const headKey = useMemo(
@@ -191,7 +190,7 @@ export default function TravelDetailsContainer() {
       typeof window !== "undefined"
         ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
         : lcpMaxWidth;
-    const lcpQuality = isMobile ? 55 : 60;
+    const lcpQuality = isMobile ? 45 : 50;
     const lcpProps = versioned
       ? buildResponsiveImageProps(versioned, {
           maxWidth: lcpTargetWidth,
@@ -314,7 +313,25 @@ export default function TravelDetailsContainer() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          <ActivityIndicator size="large" color={themedColors.primary} />
+          {Platform.OS === 'web' ? (
+            <View style={{ width: '100%' as any }}>
+              <View
+                style={{
+                  height: 260,
+                  margin: 16,
+                  borderRadius: 12,
+                  backgroundColor: themedColors.backgroundSecondary,
+                }}
+              />
+              <View style={{ paddingHorizontal: 16 }}>
+                <SectionSkeleton lines={6} />
+                <View style={{ height: 16 }} />
+                <SectionSkeleton lines={4} />
+              </View>
+            </View>
+          ) : (
+            <ActivityIndicator size="large" color={themedColors.primary} />
+          )}
         </View>
       </SafeAreaView>
     );
@@ -457,7 +474,7 @@ export default function TravelDetailsContainer() {
                     travel={travel}
                     anchors={anchors}
                     isMobile={isMobile}
-                    renderSlider={Platform.OS !== "web" ? true : sliderReady}
+                    renderSlider={Platform.OS !== "web" ? true : sliderReady && lcpLoaded}
                     onFirstImageLoad={() => setLcpLoaded(true)}
                     sectionLinks={sectionLinks}
                     onQuickJump={scrollToWithMenuClose}

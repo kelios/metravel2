@@ -2,7 +2,6 @@
  * @jest-environment jsdom
  */
 
-import React from 'react'
 import renderer from 'react-test-renderer'
 import { Platform } from 'react-native'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
@@ -28,11 +27,13 @@ describe('ImageCardMedia blur background (web)', () => {
       />,
     )
 
-    const blurImgs = tree.root.findAll(
-      (node) => node.type === 'img' && node.props['aria-hidden'] === true,
-    )
+    const blurLayers = tree.root.findAll((node: any) => {
+      if (node?.props?.['aria-hidden'] !== true) return false
+      const filter = String(node?.props?.style?.filter || '')
+      return filter.includes('blur')
+    })
 
-    expect(blurImgs.length).toBeGreaterThan(0)
-    expect(String(blurImgs[0].props.style?.filter || '')).toContain('blur')
+    expect(blurLayers.length).toBeGreaterThan(0)
+    expect(String(blurLayers[0].props.style?.filter || '')).toContain('blur')
   })
 })

@@ -212,32 +212,29 @@ function ImageCardMedia({
     >
       {resolvedSource && !shouldDisableNetwork ? (
         <>
-          {Platform.OS === 'web' && blurBackground && (webBlurSrc || webBlurUri) && (
-            <img
-              src={webBlurSrc || webBlurUri || undefined}
-              alt=""
-              aria-hidden
-              crossOrigin="anonymous"
-              loading={loading}
-              fetchPriority="low"
-              decoding="async"
-              onError={() => {
-                if (!webBlurFallbackUri) return;
-                if (webBlurSrc === webBlurFallbackUri) return;
-                setWebBlurSrc(webBlurFallbackUri);
-              }}
-              style={{
-                position: 'absolute',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                filter: 'blur(18px)',
-                transform: 'scale(1.08)',
-                zIndex: 0,
-              }}
-            />
-          )}
+          {Platform.OS === 'web' &&
+            blurBackground &&
+            (webBlurSrc || webBlurUri || webBlurFallbackUri) && (
+              <img
+                aria-hidden
+                src={webBlurSrc || webBlurUri || webBlurFallbackUri || undefined}
+                alt=""
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  filter: 'blur(18px)',
+                  transform: 'scale(1.18)',
+                  zIndex: 0,
+                  borderRadius,
+                  display: 'block',
+                }}
+                loading="eager"
+                decoding="async"
+              />
+            )}
           {(!blurOnly || Platform.OS !== 'web') && (
             <OptimizedImage
               source={

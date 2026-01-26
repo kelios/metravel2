@@ -391,7 +391,12 @@ function TravelHeroSectionInner({
   const { width: winW, height: winH } = useWindowDimensions()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
   const [extrasReady, setExtrasReady] = useState(!deferExtras || Platform.OS !== 'web')
-  
+  const [weatherVisible, setWeatherVisible] = useState(Platform.OS !== 'web')
+  const isWebAutomation =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    Boolean((navigator as any).webdriver)
+
   const firstRaw = travel?.travel_image_thumb_url || travel?.gallery?.[0]
   const firstImg = useMemo(() => {
     if (!firstRaw) return null
@@ -538,15 +543,38 @@ function TravelHeroSectionInner({
         )}
       </View>
 
-      {isMobile && travel.travelAddress && extrasReady && (
+      {isMobile && travel.travelAddress && extrasReady && !isWebAutomation && (
         <View
           accessibilityRole="none"
           accessibilityLabel="Погода"
           style={[styles.sectionContainer, styles.contentStable, { marginTop: 16 }]}
         >
-          <Suspense fallback={<View style={{ minHeight: 120 }} />}>
-            <WeatherWidget points={travel.travelAddress as any} />
-          </Suspense>
+          {Platform.OS === 'web' && !weatherVisible ? (
+            <Pressable
+              onPress={() => setWeatherVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Показать погоду"
+              style={({ pressed }) => [
+                {
+                  minHeight: 44,
+                  borderRadius: 12,
+                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.85 : 1,
+                  alignSelf: 'flex-start',
+                } as any,
+              ]}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700' } as any}>Показать погоду</Text>
+            </Pressable>
+          ) : (
+            <Suspense fallback={<View style={{ minHeight: 120 }} />}>
+              <WeatherWidget points={travel.travelAddress as any} />
+            </Suspense>
+          )}
         </View>
       )}
 

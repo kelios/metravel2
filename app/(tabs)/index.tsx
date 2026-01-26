@@ -16,17 +16,24 @@ function HomeScreen() {
     const styles = useMemo(() => createStyles(colors), [colors]);
     const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
 
+    const effectivePathname = useMemo(() => {
+        if (Platform.OS !== 'web') return pathname;
+        if (typeof window === 'undefined') return pathname;
+        const p = String(window.location?.pathname ?? '').trim();
+        return p !== '' ? p : pathname;
+    }, [pathname]);
+
     const canonical = useMemo(() => {
-        const raw = String(pathname ?? '').trim();
+        const raw = String(effectivePathname ?? '').trim();
         const normalized = raw === '' || raw === '/' ? '/' : raw.startsWith('/') ? raw : `/${raw}`;
         return buildCanonicalUrl(normalized);
-    }, [buildCanonicalUrl, pathname]);
+    }, [buildCanonicalUrl, effectivePathname]);
 
     if (!isFocused) {
         return <View style={styles.container} />;
     }
 
-    if (Platform.OS === 'web' && pathname && pathname !== '/' && pathname !== '') {
+    if (Platform.OS === 'web' && effectivePathname && effectivePathname !== '/' && effectivePathname !== '') {
         return <View style={styles.container} />;
     }
 

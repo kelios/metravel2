@@ -42,11 +42,17 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    
-    // Only enable slider (heavy hydration) after user interaction or long delay
-    // This protects LCP by keeping the static optimized image stable.
+    if (!lcpLoaded) return
+
+    // Enable the slider only after the LCP image has finished loading.
+    // This keeps the optimized hero image as the LCP candidate.
     const enableSlider = () => {
       setSliderReady(true)
+    }
+
+    if (typeof window === 'undefined') {
+      enableSlider()
+      return
     }
 
     const onInteract = () => {
@@ -62,7 +68,7 @@ export function useTravelDetailsPerformance({
     window.addEventListener('click', onInteract, { passive: true, once: true })
     window.addEventListener('keydown', onInteract, { passive: true, once: true })
 
-    // Fallback: enable after 60s if no interaction (enough for LCP capture)
+    // Fallback: enable after idle if no interaction.
     const t = setTimeout(enableSlider, 60000)
 
     return () => {
@@ -72,7 +78,7 @@ export function useTravelDetailsPerformance({
       window.removeEventListener('click', onInteract)
       window.removeEventListener('keydown', onInteract)
     }
-  }, [])
+  }, [lcpLoaded])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return

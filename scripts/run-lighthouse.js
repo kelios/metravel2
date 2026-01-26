@@ -36,6 +36,17 @@ const extraFlags = process.env.LIGHTHOUSE_FLAGS
   ? process.env.LIGHTHOUSE_FLAGS.split(' ').filter(Boolean)
   : defaultFlags
 
+// Make Lighthouse runs deterministic on RNW/Expo pages.
+// FullPageScreenshot is a common source of PROTOCOL_TIMEOUT and is not needed for perf scoring.
+if (!extraFlags.includes('--disable-full-page-screenshot')) {
+  extraFlags.push('--disable-full-page-screenshot')
+}
+
+// Give the page a bit more time in case API/network is slow.
+if (!extraFlags.some((flag) => flag.startsWith('--max-wait-for-load'))) {
+  extraFlags.push('--max-wait-for-load=60000')
+}
+
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -136,6 +147,58 @@ const compressResponse = (req, res, data, contentType) => {
   res.end(data)
 }
 
+const injectEntryPreload = (html) => {
+  try {
+    if (typeof html !== 'string' || html.length === 0) return html
+    // Find the first entry bundle reference.
+    const match = html.match(/\/_expo\/static\/js\/web\/entry-[^"'\s>]+\.js/)
+    if (!match) return html
+    const entrySrc = match[0]
+
+    const entryScriptTagMatch = html.match(new RegExp(`<script[^>]*?src=["']${entrySrc}["'][^>]*?>`, 'i'))
+    const entryScriptTag = entryScriptTagMatch ? entryScriptTagMatch[0] : ''
+    const isModuleScript = /\btype\s*=\s*["']module["']/i.test(entryScriptTag)
+
+    // Patch the actual entry script tag as well (preload is not always respected).
+    const patchedHtml = html.replace(
+      new RegExp(`(<script[^>]*?src=["']${entrySrc}["'][^>]*?)>`, 'i'),
+      (m, prefix) => {
+        // Avoid double-adding attributes.
+        const hasFetchPriority = /fetchpriority\s*=/.test(prefix)
+        const hasImportance = /importance\s*=/.test(prefix)
+        const attrs =
+          `${prefix}` +
+          `${hasFetchPriority ? '' : ' fetchpriority="high"'}` +
+          `${hasImportance ? '' : ' importance="high"'}`
+        return `${attrs}>`
+      }
+    )
+
+    // Avoid duplicate injections (but keep the entry <script> patched).
+    const hasPreload =
+      (patchedHtml.includes('rel="preload"') && patchedHtml.includes(entrySrc) && patchedHtml.includes('as="script"')) ||
+      (patchedHtml.includes('rel="modulepreload"') && patchedHtml.includes(entrySrc))
+    if (hasPreload) {
+      return patchedHtml
+    }
+
+    const preloadTag = isModuleScript
+      ? `<link rel="modulepreload" href="${entrySrc}" fetchpriority="high">`
+      : `<link rel="preload" as="script" href="${entrySrc}" fetchpriority="high">`
+
+    // Insert into <head> as early as possible.
+    const headOpenMatch = patchedHtml.match(/<head[^>]*>/i)
+    if (headOpenMatch && typeof headOpenMatch.index === 'number') {
+      const insertAt = headOpenMatch.index + headOpenMatch[0].length
+      return patchedHtml.slice(0, insertAt) + preloadTag + patchedHtml.slice(insertAt)
+    }
+
+    return patchedHtml
+  } catch {
+    return html
+  }
+}
+
 const server = http.createServer((req, res) => {
   try {
     const url = new URL(req.url || '/', `http://${host}:${port}`)
@@ -217,8 +280,18 @@ const server = http.createServer((req, res) => {
 
     fs.readFile(resolvedPath, (err, data) => {
       if (err) {
-        const indexPath = path.join(buildDir, 'index.html')
-        fs.readFile(indexPath, (fallbackErr, fallbackData) => {
+        const travelFallbackPath = path.join(buildDir, 'travels', '[param].html')
+        const defaultIndexPath = path.join(buildDir, 'index.html')
+
+        const rawPath = decodeURIComponent(url.pathname || '/')
+        const shouldUseTravelFallback = rawPath.startsWith('/travels/')
+
+        const fallbackPath =
+          shouldUseTravelFallback && fs.existsSync(travelFallbackPath)
+            ? travelFallbackPath
+            : defaultIndexPath
+
+        fs.readFile(fallbackPath, (fallbackErr, fallbackData) => {
           if (fallbackErr) {
             res.statusCode = 404
             res.end('Not found')
@@ -227,7 +300,9 @@ const server = http.createServer((req, res) => {
           const contentType = 'text/html; charset=utf-8'
           res.setHeader('Content-Type', contentType)
           applyCaching(res, pathname, '.html')
-          compressResponse(req, res, fallbackData, contentType)
+
+          const patched = injectEntryPreload(String(fallbackData))
+          compressResponse(req, res, Buffer.from(patched), contentType)
         })
         return
       }
@@ -236,6 +311,13 @@ const server = http.createServer((req, res) => {
       const contentType = contentTypes[ext] || 'application/octet-stream'
       res.setHeader('Content-Type', contentType)
       applyCaching(res, pathname, ext)
+
+      if (ext === '.html') {
+        const patched = injectEntryPreload(String(data))
+        compressResponse(req, res, Buffer.from(patched), contentType)
+        return
+      }
+
       compressResponse(req, res, data, contentType)
     })
   } catch {

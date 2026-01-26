@@ -251,14 +251,58 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const isFirstSlide = index === 0
       const mainPriority = isFirstSlide ? 'high' : 'low'
 
+      let sideGap = 0
+      if (
+        Platform.OS === 'web' &&
+        blurBackground &&
+        item?.width &&
+        item?.height &&
+        containerW > 0 &&
+        containerH > 0
+      ) {
+        const scale = Math.min(containerW / item.width, containerH / item.height)
+        const displayW = item.width * scale
+        sideGap = Math.max(0, (containerW - displayW) / 2)
+      }
+
       return (
         <View style={[styles.slide, { width: containerW, height: containerH }]}>
+          {Platform.OS === 'web' && sideGap > 1 ? (
+            <>
+              <View style={[styles.sideBlurContainer, { left: 0, width: sideGap }]}>
+                <ImageCardMedia
+                  src={uri}
+                  fit="cover"
+                  blurBackground
+                  blurOnly
+                  priority={'low' as any}
+                  loading="lazy"
+                  transition={0}
+                  style={styles.sideBlurMedia}
+                  alt=""
+                />
+              </View>
+              <View style={[styles.sideBlurContainer, { right: 0, width: sideGap }]}>
+                <ImageCardMedia
+                  src={uri}
+                  fit="cover"
+                  blurBackground
+                  blurOnly
+                  priority={'low' as any}
+                  loading="lazy"
+                  transition={0}
+                  style={styles.sideBlurMedia}
+                  alt=""
+                />
+              </View>
+            </>
+          ) : null}
           <View style={styles.imageCardWrapper}>
             <View style={styles.imageCardSurface}>
               <ImageCardMedia
                 src={uri}
                 fit="contain"
-                blurBackground={blurBackground}
+                blurBackground={false}
                 priority={mainPriority as any}
                 loading={isFirstSlide ? 'eager' : 'lazy'}
                 transition={0}
@@ -280,7 +324,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         </View>
       )
     },
-    [blurBackground, containerH, containerW, imageProps, images.length, onFirstImageLoad, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
+    [blurBackground, containerH, containerW, imageProps, images.length, onFirstImageLoad, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.sideBlurContainer, styles.sideBlurMedia, styles.slide, uriMap]
   )
 
   if (!images.length) return null
@@ -364,9 +408,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create<Record<string, any>>({
     sliderStack: {
       width: '100%',
+      alignItems: 'center',
     },
     wrapper: {
       width: '100%',
+      maxWidth: 1280,
+      alignSelf: 'center',
       backgroundColor: 'transparent',
       position: 'relative',
       borderRadius: 12,
@@ -418,19 +465,34 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       position: 'absolute',
       top: '50%',
       marginTop: -24,
-      backgroundColor: colors.overlayLight,
+      backgroundColor: colors.overlay,
       borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderColor: colors.borderStrong,
       width: 48,
       height: 48,
       borderRadius: 24,
       zIndex: 50,
       justifyContent: 'center',
       alignItems: 'center',
+      ...(Platform.OS === 'web'
+        ? ({ boxShadow: '0 8px 24px rgba(0,0,0,0.22)' } as any)
+        : null),
     },
     arrowIconContainer: {
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    sideBlurContainer: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      zIndex: 0,
+      overflow: 'hidden',
+      pointerEvents: 'none',
+    },
+    sideBlurMedia: {
+      width: '100%',
+      height: '100%',
     },
     dots: {
       position: 'absolute',
