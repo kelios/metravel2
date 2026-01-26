@@ -117,13 +117,14 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       await expect(search).toBeVisible({ timeout: 30_000 });
 
       // Either list skeleton, list content, or empty state should render.
-      await Promise.race([
+      const listState = await Promise.any([
         page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }),
         page.waitForSelector('[data-testid="travel-card-skeleton"]', { timeout: 30_000 }),
         page.waitForSelector('[data-testid="list-travel-skeleton"]', { timeout: 30_000 }),
         page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
         page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
-      ]);
+      ].map((p) => p.catch(() => null)));
+      expect(listState, 'main list should render cards, skeleton, or empty state').toBeTruthy();
 
       await assertNoHorizontalScroll(page);
 
