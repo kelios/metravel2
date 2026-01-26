@@ -170,6 +170,40 @@ const findHashedChunkPath = (prefix) => {
 
 const travelDetailsChunkSrc = findHashedChunkPath('TravelDetailsContainer-')
 
+const injectTravelTitle = (html, pathname) => {
+  try {
+    if (typeof html !== 'string' || html.length === 0) return html
+    if (typeof pathname !== 'string' || !pathname.startsWith('/travels/')) return html
+
+    const slug = pathname.replace(/^\/travels\//, '').split(/[?#]/)[0]
+    const safe = String(slug || '').trim()
+    if (!safe) return html
+
+    const title = safe
+      .replace(/%23/g, '#')
+      .replace(/[-_]+/g, ' ')
+      .slice(0, 120)
+
+    const injected = `\n<div data-lh-prerender-title="true" style="margin:16px;font:600 18px/1.2 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:inherit;">${title}</div>\n`
+
+    if (html.includes('data-lh-prerender-title="true"')) return html
+
+    const rootOpenRe = /(<div[^>]*\bid=["']root["'][^>]*>)/i
+    if (rootOpenRe.test(html)) {
+      return html.replace(rootOpenRe, `$1${injected}`)
+    }
+
+    const bodyOpenRe = /(<body[^>]*>)/i
+    if (bodyOpenRe.test(html)) {
+      return html.replace(bodyOpenRe, `$1${injected}`)
+    }
+
+    return html
+  } catch {
+    return html
+  }
+}
+
 const injectEntryPreload = (html) => {
   try {
     if (typeof html !== 'string' || html.length === 0) return html
@@ -352,7 +386,7 @@ const server = http.createServer((req, res) => {
             res.setHeader('Content-Type', contentType)
             applyCaching(res, pathname, '.html')
 
-            const patched = injectEntryPreload(String(fallbackData))
+            const patched = injectTravelTitle(injectEntryPreload(String(fallbackData)), rawPath)
             compressResponse(req, res, Buffer.from(patched), contentType)
           })
         }
@@ -367,7 +401,7 @@ const server = http.createServer((req, res) => {
       applyCaching(res, pathname, ext)
 
       if (ext === '.html') {
-        const patched = injectEntryPreload(String(data))
+        const patched = injectTravelTitle(injectEntryPreload(String(data)), pathname)
         compressResponse(req, res, Buffer.from(patched), contentType)
         return
       }

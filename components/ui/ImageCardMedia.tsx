@@ -74,6 +74,8 @@ function ImageCardMedia({
   onLoad,
   onError,
 }: Props) {
+  const isJest =
+    typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
   const disableRemoteImages =
     __DEV__ && process.env.EXPO_PUBLIC_DISABLE_REMOTE_IMAGES === 'true';
   const colors = useThemedColors();
@@ -151,6 +153,15 @@ function ImageCardMedia({
   useEffect(() => {
     setWebBlurSrc(webBlurUri);
   }, [webBlurUri]);
+
+  const webMainSrc = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    if (!resolvedSource || typeof resolvedSource === 'number') return null;
+    if (shouldDisableNetwork) return null;
+    if (webOptimizedSource) return webOptimizedSource;
+    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
+    return uri || null;
+  }, [resolvedSource, shouldDisableNetwork, webOptimizedSource]);
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -234,8 +245,10 @@ function ImageCardMedia({
                   borderRadius,
                   display: 'block',
                 }}
-                loading="eager"
+                loading="lazy"
                 decoding="async"
+                // @ts-ignore
+                fetchpriority="low"
                 onError={(e) => {
                   if (
                     webBlurFallbackUri &&
@@ -246,7 +259,29 @@ function ImageCardMedia({
                 }}
               />
             )}
-          {(!blurOnly || Platform.OS !== 'web') && (
+          {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
+            <img
+              src={webMainSrc}
+              alt={alt || ''}
+              style={{
+                position: 'absolute',
+                objectFit: fit === 'cover' ? 'cover' : 'contain',
+                objectPosition: 'center',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                zIndex: 1,
+                borderRadius,
+                display: 'block',
+              }}
+              loading={loading}
+              decoding="async"
+              // @ts-ignore
+              fetchpriority={priority === 'high' ? 'high' : 'auto'}
+              onLoad={onLoad}
+              onError={onError}
+            />
+          ) : (!blurOnly || Platform.OS !== 'web') && (
             <OptimizedImage
               source={
                 Platform.OS === 'web' && webOptimizedSource

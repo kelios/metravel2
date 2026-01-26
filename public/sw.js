@@ -113,12 +113,13 @@ async function cacheFirst(request, cacheName = DYNAMIC_CACHE, maxSize = MAX_CACH
     }
     const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
+    const maxAge = cacheName === JS_CACHE ? JS_CACHE_EXPIRATION_TIME : CACHE_EXPIRATION_TIME;
     
     if (cached) {
       const cacheDate = cached.headers.get('sw-cache-date');
       if (cacheDate) {
         const age = Date.now() - parseInt(cacheDate, 10);
-        if (age > CACHE_EXPIRATION_TIME) {
+        if (age > maxAge) {
           cache.delete(request);
         } else {
           return cached;
@@ -251,10 +252,7 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
 async function prefetchCriticalResources() {
   try {
     const cache = await caches.open(CRITICAL_CACHE);
-    const scripts = await self.clients.matchAll().then(clients => {
-      if (clients.length === 0) return [];
-      return clients[0].url;
-    });
+    await self.clients.matchAll().catch(() => []);
     
     // Знаходимо всі JS chunks на сторінці
     const response = await fetch('/');

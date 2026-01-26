@@ -520,6 +520,8 @@ function TravelHeroSectionInner({
                 autoPlay={false}
                 preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
                 blurBackground
+                fit={Platform.OS === 'web' ? 'cover' : 'contain'}
+                fullBleed={Platform.OS === 'web'}
                 aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.6}
               onFirstImageLoad={onFirstImageLoad}

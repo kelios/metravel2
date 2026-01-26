@@ -84,8 +84,28 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
 
       // Web hero media can be rendered by expo-image (not always a direct <img> we can target via testIDs).
       // We accept any visible image-like element inside the hero container.
-      const heroMedia = hero.locator('img, [role="img"]').first();
-      await expect(heroMedia).toBeVisible({ timeout: 20_000 });
+      const candidates = [
+        hero.locator('img').first(),
+        hero.locator('[role="img"]').first(),
+        hero.locator('[data-testid="slider-image-0"]').first(),
+        hero.locator('[data-lcp]').first(),
+      ];
+
+      const start = Date.now();
+      const timeoutMs = 20_000;
+      let found = false;
+      while (!found && Date.now() - start < timeoutMs) {
+        for (const c of candidates) {
+          if ((await c.count()) === 0) continue;
+          if (await c.isVisible().catch(() => false)) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) await page.waitForTimeout(200);
+      }
+
+      expect(found).toBeTruthy();
     });
 
     test('should load all sections', async () => {

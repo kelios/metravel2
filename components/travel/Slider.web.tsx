@@ -35,6 +35,8 @@ export interface SliderProps {
   showDots?: boolean
   hideArrowsOnMobile?: boolean
   aspectRatio?: number
+  fit?: 'contain' | 'cover'
+  fullBleed?: boolean
   autoPlay?: boolean
   autoPlayInterval?: number
   onIndexChanged?: (index: number) => void
@@ -59,9 +61,11 @@ const buildUri = (
   img: SliderImage,
   containerWidth?: number,
   containerHeight?: number,
+  fit: 'contain' | 'cover' = 'contain',
   isFirst: boolean = false
 ) => {
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id)
+  const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit
 
   if (containerWidth && img.width && img.height) {
     const aspectRatio = img.width / img.height
@@ -74,7 +78,7 @@ const buildUri = (
         width: optimalSize.width,
         format: getPreferredImageFormat(),
         quality,
-        fit: 'contain',
+        fit: fitForUrl,
         dpr: 1,
       }) || versionedUrl
     )
@@ -88,7 +92,7 @@ const buildUri = (
         width: cappedWidth,
         format: getPreferredImageFormat(),
         quality,
-        fit: 'contain',
+        fit: fitForUrl,
         dpr: 1,
       }) || versionedUrl
     )
@@ -107,6 +111,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     showDots = true,
     hideArrowsOnMobile,
     aspectRatio = DEFAULT_AR,
+    fit = 'contain',
+    fullBleed = false,
     onIndexChanged,
     imageProps,
     preloadCount = 0,
@@ -156,9 +162,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const uriMap = useMemo(
     () =>
       images.map((img, idx) =>
-        buildUri(img, containerW, containerH, idx === 0)
+        buildUri(img, containerW, containerH, fit, idx === 0)
       ),
-    [images, containerW, containerH]
+    [images, containerW, containerH, fit]
   )
 
   const canPrefetchOnWeb = useMemo(() => {
@@ -264,7 +270,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             <View style={styles.imageCardSurface}>
               <ImageCardMedia
                 src={uri}
-                fit="contain"
+                fit={fit}
                 blurBackground={blurBackground}
                 priority={mainPriority as any}
                 loading={isFirstSlide ? 'eager' : 'lazy'}
@@ -287,7 +293,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         </View>
       )
     },
-    [blurBackground, containerH, containerW, imageProps, images.length, onFirstImageLoad, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
+    [blurBackground, containerH, containerW, fit, imageProps, images.length, onFirstImageLoad, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
   )
 
   if (!images.length) return null
@@ -297,7 +303,16 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   return (
     <View style={styles.sliderStack}>
-      <View onLayout={onLayout} style={[styles.wrapper, { height: containerH }]}>
+      <View
+        onLayout={onLayout}
+        style={[
+          styles.wrapper,
+          { height: containerH },
+          Platform.OS === 'web' && !fullBleed
+            ? ({ maxWidth: 1280, marginHorizontal: 'auto' } as any)
+            : null,
+        ]}
+      >
         <View style={styles.clip}>
           <FlatList
             ref={listRef}
@@ -319,11 +334,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           />
         </View>
 
-        {Platform.OS === 'web' &&
-        shouldShowSideBlurPanels &&
-        showArrows &&
-        images.length > 1 &&
-        !(isMobile && hideArrowsOnMobile) ? (
+        {Platform.OS === 'web' && shouldShowSideBlurPanels ? (
           <>
             <View
               pointerEvents="none"
@@ -407,7 +418,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     wrapper: {
       width: '100%',
-      maxWidth: 1280,
       alignSelf: 'center',
       backgroundColor: 'transparent',
       position: 'relative',
@@ -415,7 +425,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderWidth: 0,
       borderColor: 'transparent',
       ...(Platform.OS === 'web'
-        ? ({ boxShadow: colors.boxShadows.heavy, marginHorizontal: 'auto' } as any)
+        ? ({ boxShadow: colors.boxShadows.heavy } as any)
         : null),
     },
     clip: {
