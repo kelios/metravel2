@@ -50,6 +50,13 @@ jest.mock('@/components/QuillEditor.web', () => {
         setSelection: jest.fn(),
         getFormat: jest.fn(() => ({})),
         format: jest.fn(),
+        formatText: jest.fn(),
+        insertText: jest.fn((index: number, text: string) => {
+          const current = String(editorRef.current.root.innerHTML ?? '')
+          const safeIndex = Math.max(0, Math.min(current.length, Number(index) || 0))
+          editorRef.current.root.innerHTML =
+            current.slice(0, safeIndex) + text + current.slice(safeIndex)
+        }),
         history: { undo: jest.fn(), redo: jest.fn() },
         clipboard: {
           dangerouslyPasteHTML: jest.fn(),
@@ -124,7 +131,43 @@ describe('ArticleEditor.web link', () => {
     fireEvent.press(getByLabelText('Сохранить') as any);
 
     await waitFor(() => {
-      expect(editor.format).toHaveBeenCalledWith('link', 'https://example.com', 'user');
+      expect(editor.formatText).toHaveBeenCalledWith(6, 5, 'link', 'https://example.com', 'user');
+    });
+  });
+
+  it('inserts link text when selection is collapsed', async () => {
+    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+
+    ;(globalThis as any).__quillSelection__ = { index: 3, length: 0 };
+
+    const onChange = jest.fn();
+
+    const { getByTestId, getByText, getByPlaceholderText, getByLabelText } = render(
+      <ArticleEditor content={'hello'} onChange={onChange} />
+    );
+
+    await waitFor(() => {
+      expect(getByTestId('quill-mock')).toBeTruthy();
+    });
+
+    const quillProps = (globalThis as any).__quillProps__;
+    const editor = (globalThis as any).__quillEditor__;
+
+    const handler = quillProps?.modules?.toolbar?.handlers?.link;
+    expect(typeof handler).toBe('function');
+
+    handler.call({ quill: editor }, true);
+
+    await waitFor(() => {
+      expect(getByText('Ссылка')).toBeTruthy();
+    });
+
+    fireEvent.changeText(getByPlaceholderText('https://...'), 'https://example.com');
+    fireEvent.press(getByLabelText('Сохранить') as any);
+
+    await waitFor(() => {
+      expect(editor.insertText).toHaveBeenCalledWith(3, 'https://example.com', { link: 'https://example.com' }, 'user');
+      expect(editor.setSelection).toHaveBeenCalledWith(3 + 'https://example.com'.length, 0, 'silent');
     });
   });
 });

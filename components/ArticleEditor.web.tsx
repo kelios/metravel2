@@ -7,6 +7,7 @@ import React, {
     forwardRef,
     type Ref,
     useMemo,
+    useLayoutEffect,
 } from 'react';
 import {
     View,
@@ -119,9 +120,14 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const htmlRef = useRef<string>(typeof content === 'string' ? content : '');
 
+    const hasUserEditedRef = useRef(false);
+    const lastAutosavedHtmlRef = useRef<string>(typeof content === 'string' ? content : '');
+
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
     const tmpStoredLinkQuill = useRef<any>(null);
+    const lastSelectionRef = useRef<{ index: number; length: number } | null>(null);
+    const pendingSelectionRestoreRef = useRef<{ index: number; length: number } | null>(null);
     const { isAuthenticated } = useAuth();
 
     const pendingForceSyncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -472,17 +478,48 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     useEffect(() => {
         if (!onAutosave) return;
-        const t = setTimeout(() => onAutosave(html), autosaveDelay);
+        if (!hasUserEditedRef.current) return;
+        if (html === lastAutosavedHtmlRef.current) return;
+        const t = setTimeout(() => {
+            void Promise.resolve(onAutosave(html)).finally(() => {
+                lastAutosavedHtmlRef.current = html;
+                hasUserEditedRef.current = false;
+            });
+        }, autosaveDelay);
         return () => clearTimeout(t);
     }, [html, onAutosave, autosaveDelay]);
 
-    const fireChange = useCallback((val: string) => {
-        const clean = sanitizeHtml(val);
-        lastEmittedHtmlRef.current = clean;
-        htmlRef.current = clean;
-        setHtml(clean);
-        debouncedParentChange(clean);
-    }, [debouncedParentChange]);
+    const fireChange = useCallback(
+        (val: string, selection?: { index: number; length: number } | null) => {
+            const clean = sanitizeHtml(val);
+            if (clean === htmlRef.current) return;
+
+            if (selection) {
+                pendingSelectionRestoreRef.current = selection;
+            }
+
+            hasUserEditedRef.current = true;
+
+            lastEmittedHtmlRef.current = clean;
+            htmlRef.current = clean;
+            setHtml(prev => (prev === clean ? prev : clean));
+            debouncedParentChange(clean);
+        },
+        [debouncedParentChange]
+    );
+
+    const resolveEditorSelection = useCallback((editor: any) => {
+        if (!editor) return { index: 0, length: 0 };
+        try {
+            const direct = typeof editor.getSelection === 'function' ? editor.getSelection(true) : null;
+            if (direct && typeof direct.index === 'number') return direct;
+        } catch {
+            // noop
+        }
+
+        if (lastSelectionRef.current) return lastSelectionRef.current;
+        return { index: editor.getLength?.() ?? 0, length: 0 };
+    }, []);
 
     const focusQuill = useCallback(() => {
         if (!isWeb) return;
@@ -584,7 +621,38 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 if (file && typeof file.type === 'string' && file.type.startsWith('image/')) {
                     e.preventDefault();
                     uploadAndInsert(file);
+                    return;
                 }
+
+                const editorInstance = quillRef.current?.getEditor?.();
+                if (!editorInstance) return;
+
+                const htmlData = e.clipboardData?.getData('text/html');
+                const textData = e.clipboardData?.getData('text/plain');
+
+                if (htmlData && htmlData.trim().length > 0) {
+                    e.preventDefault();
+                    const normalized = normalizeHtmlForQuill(htmlData);
+                    const clean = sanitizeHtml(normalized);
+                    const range = resolveEditorSelection(editorInstance);
+                    editorInstance.clipboard?.dangerouslyPasteHTML?.(range.index, clean, 'user');
+                    editorInstance.setSelection?.(range.index + 1, 0, 'silent');
+                    fireChange(editorInstance.root.innerHTML, { index: range.index + 1, length: 0 });
+                    return;
+                }
+
+                if (textData && textData.trim().length > 0) {
+                    e.preventDefault();
+                    const range = resolveEditorSelection(editorInstance);
+                    editorInstance.insertText?.(range.index, textData, 'user');
+                    editorInstance.setSelection?.(range.index + textData.length, 0, 'silent');
+                    fireChange(editorInstance.root.innerHTML, { index: range.index + textData.length, length: 0 });
+                }
+            };
+
+            const onSelectionChange = (range: { index: number; length: number } | null) => {
+                if (!range || typeof range.index !== 'number') return;
+                lastSelectionRef.current = range;
             };
 
             root.addEventListener('dragover', onDragOver);
@@ -592,11 +660,18 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             root.addEventListener('drop', onDrop);
             root.addEventListener('paste', onPaste);
 
+            if (typeof editor.on === 'function') {
+                editor.on('selection-change', onSelectionChange);
+            }
+
             cleanup = () => {
                 root.removeEventListener('dragover', onDragOver);
                 root.removeEventListener('dragenter', onDragOver);
                 root.removeEventListener('drop', onDrop);
                 root.removeEventListener('paste', onPaste);
+                if (typeof editor.off === 'function') {
+                    editor.off('selection-change', onSelectionChange);
+                }
             };
         };
 
@@ -606,7 +681,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             if (t) clearTimeout(t);
             if (cleanup) cleanup();
         };
-    }, [uploadAndInsert, quillMountKey, showHtml, shouldLoadQuill]);
+    }, [fireChange, resolveEditorSelection, showHtml, shouldLoadQuill, uploadAndInsert, quillMountKey]);
 
     const IconButton = React.memo(function IconButtonWrapper({
         name,
@@ -638,10 +713,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             // noop
         }
 
-        const range =
-            tmpStoredRange.current ||
-            editor.getSelection() ||
-            { index: editor.getLength(), length: 0 };
+        const range = tmpStoredRange.current || resolveEditorSelection(editor);
         try {
             if (range.length > 0) {
                 const selectedText = editor.getText(range.index, range.length);
@@ -655,19 +727,19 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 editor.setSelection(range.index + 1, 0, 'silent');
             }
             tmpStoredRange.current = null;
-            fireChange(editor.root.innerHTML);
+            fireChange(editor.root.innerHTML, { index: range.index + (range.length > 0 ? range.length : 1), length: 0 });
         } catch (e) {
             try {
                 editor.insertText(range.index, `[#${id}] `, 'user');
                 tmpStoredRange.current = null;
-                fireChange(editor.root.innerHTML);
+                fireChange(editor.root.innerHTML, { index: range.index + 1, length: 0 });
             } catch (inner) {
                 if (__DEV__) {
                     console.warn('Failed to insert anchor into editor', { e, inner });
                 }
             }
         }
-    }, [fireChange, normalizeAnchorId]);
+    }, [fireChange, resolveEditorSelection]);
 
     const applyLinkToSelection = useCallback((urlRaw: string) => {
         const editor = tmpStoredLinkQuill.current || quillRef.current?.getEditor?.();
@@ -681,27 +753,43 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             // noop
         }
 
-        const range = tmpStoredRange.current || editor.getSelection() || { index: editor.getLength(), length: 0 };
+        const range = tmpStoredRange.current || resolveEditorSelection(editor);
+        const safeRange = range ?? { index: 0, length: 0 };
 
         try {
-            editor.setSelection(range, 'silent');
+            editor.setSelection(safeRange, 'silent');
         } catch {
             // noop
         }
 
         try {
             if (url) {
-                editor.format('link', url, 'user');
+                if (safeRange.length > 0) {
+                    if (typeof editor.formatText === 'function') {
+                        editor.formatText(safeRange.index, safeRange.length, 'link', url, 'user');
+                    } else {
+                        editor.format('link', url, 'user');
+                    }
+                } else if (typeof editor.insertText === 'function') {
+                    editor.insertText(safeRange.index, url, { link: url }, 'user');
+                    editor.setSelection(safeRange.index + url.length, 0, 'silent');
+                } else {
+                    editor.format('link', url, 'user');
+                }
+            } else if (safeRange.length > 0 && typeof editor.formatText === 'function') {
+                editor.formatText(safeRange.index, safeRange.length, 'link', false, 'user');
             } else {
                 editor.format('link', false, 'user');
             }
+
             tmpStoredRange.current = null;
             tmpStoredLinkQuill.current = null;
-            fireChange(editor.root.innerHTML);
+            const nextIndex = safeRange.index + Math.max(safeRange.length, url ? url.length : 1);
+            fireChange(editor.root.innerHTML, { index: nextIndex, length: 0 });
         } catch {
             // noop
         }
-    }, [fireChange]);
+    }, [fireChange, resolveEditorSelection]);
 
     const Toolbar = () => (
         <View style={dynamicStyles.bar}>
@@ -899,6 +987,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             // Some of those can be empty strings; do not let them wipe a non-empty local state.
             if (source !== 'user' && next.trim().length === 0 && local.trim().length > 0) return;
 
+            // For normal user typing Quill already maintains selection.
+            // Restoring a cached selection here can override Quill's internal caret position
+            // (often observed as jumping to the beginning on the first character).
             fireChange(next);
         },
         [fireChange, html]
@@ -925,6 +1016,24 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             }
         };
     }, [ensureQuillContent, shouldLoadQuill, showHtml]);
+
+    useLayoutEffect(() => {
+        if (!isWeb || !win) return;
+        if (showHtml) return;
+        if (!shouldLoadQuill) return;
+        if (!pendingSelectionRestoreRef.current) return;
+
+        const selection = pendingSelectionRestoreRef.current;
+        pendingSelectionRestoreRef.current = null;
+
+        try {
+            const editor = quillRef.current?.getEditor?.();
+            if (!editor || !selection) return;
+            editor.setSelection?.(selection, 'silent');
+        } catch {
+            // noop
+        }
+    }, [html, shouldLoadQuill, showHtml]);
 
     useEffect(() => {
         if (!isWeb || !win) return;
@@ -958,8 +1067,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             <Text style={dynamicStyles.loadTxt}>Загрузка…</Text>
         </View>
     );
-
-    if (!QuillEditor) return <Loader />;
 
     const modules = useMemo(() => {
         const base = variant === 'compact' ? quillModulesCompact : quillModulesDefault;
@@ -1014,6 +1121,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         } as any;
     }, [fireChange, variant]);
 
+    if (!QuillEditor) return <Loader />;
+
     const editorArea = showHtml ? (
         <TextInput
             style={dynamicStyles.html}
@@ -1058,8 +1167,16 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 style={dynamicStyles.editorArea}
                 {...(isWeb
                     ? ({
-                          onMouseDown: () => focusQuill(),
-                          onTouchStart: () => focusQuill(),
+                          onMouseDown: (e: any) => {
+                              const target = e?.target as HTMLElement | null;
+                              if (target?.closest?.('.ql-editor')) return;
+                              focusQuill();
+                          },
+                          onTouchStart: (e: any) => {
+                              const target = e?.target as HTMLElement | null;
+                              if (target?.closest?.('.ql-editor')) return;
+                              focusQuill();
+                          },
                       } as any)
                     : null)}
             >
@@ -1193,7 +1310,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                     setLinkModalVisible(false);
                                     applyLinkToSelection(linkValue);
                                 }}
-                                label="Вставить"
+                                label="Сохранить"
                                 variant="primary"
                                 size="sm"
                             />
@@ -1224,6 +1341,8 @@ const NativeEditor: React.FC<ArticleEditorProps> = ({
     const colors = useThemedColors();
     const [text, setText] = useState(content);
     const debouncedParentChange = useDebounce(onChange, 250);
+    const hasUserEditedRef = useRef(false);
+    const lastAutosavedTextRef = useRef<string>(typeof content === 'string' ? content : '');
 
     const dynamicStyles = useMemo(() => StyleSheet.create({
         wrap: {
@@ -1258,12 +1377,20 @@ const NativeEditor: React.FC<ArticleEditorProps> = ({
 
     useEffect(() => {
         if (!onAutosave) return;
-        const t = setTimeout(() => onAutosave(text), autosaveDelay);
+        if (!hasUserEditedRef.current) return;
+        if (text === lastAutosavedTextRef.current) return;
+        const t = setTimeout(() => {
+            void Promise.resolve(onAutosave(text)).finally(() => {
+                lastAutosavedTextRef.current = text;
+                hasUserEditedRef.current = false;
+            });
+        }, autosaveDelay);
         return () => clearTimeout(t);
     }, [text, onAutosave, autosaveDelay]);
 
     const onEdit = (t: string) => {
         setText(t);
+        hasUserEditedRef.current = true;
         debouncedParentChange(t);
     };
 

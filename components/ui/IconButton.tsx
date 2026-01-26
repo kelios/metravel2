@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { Pressable, StyleSheet, View, Platform, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, Platform, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -46,7 +46,7 @@ function IconButton({
       disabled={disabled}
       onPress={handlePress}
       testID={testID}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }) => [
         styles.base,
         globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         {
@@ -61,9 +61,20 @@ function IconButton({
         style,
         disabled && styles.disabled,
         pressed && !disabled && styles.pressed,
+        !disabled && hovered && Platform.OS === 'web' && styles.hovered,
       ]}
     >
-      <View style={styles.icon}>{icon}</View>
+      {({ hovered }) => (
+        <>
+          <View style={styles.icon}>{icon}</View>
+          {Platform.OS === 'web' && hovered && !disabled ? (
+            <View style={[styles.tooltip, { backgroundColor: colors.text }]}
+            >
+              <Text style={[styles.tooltipText, { color: colors.surface }]}>{label}</Text>
+            </View>
+          ) : null}
+        </>
+      )}
     </Pressable>
   );
 }
@@ -95,9 +106,38 @@ const getStyles = (colors: ThemedColors) => {
         },
       }),
     },
+    hovered: {
+      ...Platform.select({
+        web: {
+          zIndex: 2,
+        },
+      }),
+    },
   icon: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tooltip: {
+    position: 'absolute',
+    top: -36,
+    left: '50%',
+    transform: [{ translateX: -0.5 } as any],
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.sm,
+    maxWidth: 240,
+    zIndex: 9999,
+    pointerEvents: 'none',
+    ...Platform.select({
+      web: {
+        whiteSpace: 'nowrap',
+      },
+    }),
+  },
+  tooltipText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    lineHeight: DESIGN_TOKENS.typography.sizes.xs + 2,
+    fontWeight: '500' as any,
   },
   disabled: {
     opacity: 0.5,
