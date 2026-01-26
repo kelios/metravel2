@@ -8,6 +8,18 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 
+jest.mock('@/src/hooks/useUserProfileCached', () => ({
+  __esModule: true,
+  useUserProfileCached: () => ({
+    profile: { avatar: 'https://example.com/profile-avatar.jpg' },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+    fullName: '',
+    refetch: jest.fn(),
+  }),
+}));
+
 jest.mock('@/components/WeatherWidget', () => ({
   __esModule: true,
   default: () => <div data-testid="weather-widget" />,
@@ -104,7 +116,6 @@ describe('CompactSideBarTravel - Web', () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(screen.getAllByText(/Юлия/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Беларусь/i).length).toBeGreaterThan(0);
     });
 
     it('должен отрендерить все пункты меню', () => {
@@ -125,7 +136,6 @@ describe('CompactSideBarTravel - Web', () => {
 
       expect(screen.getByText(/Октябрь/i)).toBeTruthy();
       expect(screen.getByText(/2022/i)).toBeTruthy();
-      expect(screen.getByText(/1 дн/i)).toBeTruthy();
     });
 
     it('должен показывать количество просмотров', () => {
@@ -134,10 +144,10 @@ describe('CompactSideBarTravel - Web', () => {
       expect(screen.getByText('100')).toBeTruthy();
     });
 
-    it('должен показывать категории', () => {
+    it('не должен показывать категории', () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 
-      expect(screen.getByText('Религия')).toBeTruthy();
+      expect(screen.queryByText('Религия')).toBeNull();
     });
   });
 

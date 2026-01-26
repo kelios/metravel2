@@ -81,6 +81,12 @@ function ImageCardMedia({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
+
+  const resolvedBorderRadius = useMemo(() => {
+    const flattened = StyleSheet.flatten(style) as any;
+    const override = flattened?.borderRadius;
+    return typeof override === 'number' ? override : borderRadius;
+  }, [borderRadius, style]);
   const resolvedSource = useMemo(() => {
     if (source) return source;
     if (src) return { uri: src };
@@ -122,7 +128,7 @@ function ImageCardMedia({
       height: blurSize,
       quality: 30,
       blur: 30,
-      fit: 'contain',
+      fit: 'cover',
       format: 'auto',
     }) ?? uri;
     
@@ -144,7 +150,7 @@ function ImageCardMedia({
         height: blurSize,
         quality: 30,
         blur: 30,
-        fit: 'contain',
+        fit: 'cover',
         format: 'auto',
       }) ?? fallback
     );
@@ -217,7 +223,7 @@ function ImageCardMedia({
         {
           width,
           height,
-          borderRadius,
+          borderRadius: resolvedBorderRadius,
         },
         style,
       ]}
@@ -234,15 +240,18 @@ function ImageCardMedia({
                 alt=""
                 style={{
                   position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
+                  left: '50%',
+                  top: '50%',
+                  width: '110%',
+                  height: '110%',
+                  maxWidth: 'none',
+                  maxHeight: 'none',
                   objectFit: 'cover',
                   objectPosition: 'center',
                   filter: 'blur(20px)',
-                  transform: 'scale(1.1)',
+                  transform: 'translate(-50%, -50%)',
                   zIndex: 0,
-                  borderRadius,
+                  borderRadius: resolvedBorderRadius,
                   display: 'block',
                 }}
                 loading="lazy"
@@ -270,8 +279,10 @@ function ImageCardMedia({
                 inset: 0,
                 width: '100%',
                 height: '100%',
+                maxWidth: 'none',
+                maxHeight: 'none',
                 zIndex: 1,
-                borderRadius,
+                borderRadius: resolvedBorderRadius,
                 display: 'block',
               }}
               loading={loading}

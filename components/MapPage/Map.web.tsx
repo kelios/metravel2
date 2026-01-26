@@ -60,6 +60,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
   const [mapInstance, setMapInstance] = useState<any>(null);
+  const [mapTilesReady, setMapTilesReady] = useState(false);
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
 
@@ -128,6 +129,79 @@ const MapPageComponent: React.FC<Props> = (props) => {
     lat: safeCoordinates.latitude,
     lng: safeCoordinates.longitude,
   }), [safeCoordinates.latitude, safeCoordinates.longitude]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof document === 'undefined') return;
+
+    try {
+      const zoomCandidate = Number.isFinite(safeCoordinates.zoom)
+        ? Number(safeCoordinates.zoom)
+        : Number(initialZoomRef.current);
+      const zoom = Math.min(19, Math.max(0, Math.round(zoomCandidate)));
+      const lat = Number(safeCoordinates.latitude);
+      const lng = Number(safeCoordinates.longitude);
+      if (!Number.isFinite(zoom) || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+      const ensurePreconnect = (origin: string) => {
+        if (document.querySelector(`link[rel="preconnect"][href="${origin}"]`)) return;
+        const link = document.createElement('link');
+        link.rel = 'preconnect';
+        link.href = origin;
+        link.crossOrigin = 'anonymous';
+        document.head.appendChild(link);
+      };
+
+      const ensurePreload = (href: string) => {
+        if (document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) return;
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = href;
+        try {
+          (link as any).fetchPriority = 'high';
+          link.setAttribute('fetchpriority', 'high');
+        } catch {
+          // noop
+        }
+        document.head.appendChild(link);
+      };
+
+      ensurePreconnect('https://a.tile.openstreetmap.org');
+      ensurePreconnect('https://b.tile.openstreetmap.org');
+      ensurePreconnect('https://c.tile.openstreetmap.org');
+
+      const n = Math.pow(2, zoom);
+      const xRaw = Math.floor(((lng + 180) / 360) * n);
+      const latRad = (lat * Math.PI) / 180;
+      const yRaw = Math.floor(
+        ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
+      );
+
+      const x = Math.min(n - 1, Math.max(0, xRaw));
+      const y = Math.min(n - 1, Math.max(0, yRaw));
+
+      const origins = [
+        'https://a.tile.openstreetmap.org',
+        'https://b.tile.openstreetmap.org',
+        'https://c.tile.openstreetmap.org',
+      ];
+
+      const tileCoords: Array<[number, number]> = [
+        [x, y],
+        [Math.min(n - 1, x + 1), y],
+        [x, Math.min(n - 1, y + 1)],
+        [Math.min(n - 1, x + 1), Math.min(n - 1, y + 1)],
+      ];
+
+      tileCoords.forEach(([tx, ty], index) => {
+        const origin = origins[index % origins.length];
+        ensurePreload(`${origin}/${zoom}/${tx}/${ty}.png`);
+      });
+    } catch {
+      // noop
+    }
+  }, [safeCoordinates.latitude, safeCoordinates.longitude, safeCoordinates.zoom]);
 
   const userLocationLatLng = useMemo(() => {
     if (!userLocation) return null;
@@ -203,35 +277,52 @@ const MapPageComponent: React.FC<Props> = (props) => {
         });
     };
 
-    // Defer loading heavy map libraries until the browser is idle.
-    // This reduces main-thread blocking and typically improves TBT/INP on mobile.
-    let idleHandle: any = null;
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-
-    if (isTestEnv) {
-      load();
-    } else if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleHandle = (window as any).requestIdleCallback(load, { timeout: 2500 });
-    } else {
-      timeoutHandle = setTimeout(load, 1500);
-    }
+    // Start loading immediately to avoid delaying the first visible map tile (LCP on /map).
+    load();
 
     return () => {
       cancelled = true;
+    };
+  }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!L || !rl) return;
+    if (mapTilesReady) return;
+    if (typeof document === 'undefined') return;
+
+    let cancelled = false;
+    const startAt = Date.now();
+    const maxMs = 12_000;
+
+    const tick = () => {
+      if (cancelled) return;
       try {
-        if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-          (window as any).cancelIdleCallback(idleHandle);
+        const container = document.getElementById(mapContainerIdRef.current);
+        if (container) {
+          const tile = container.querySelector('img.leaflet-tile-loaded');
+          if (tile) {
+            setMapTilesReady(true);
+            return;
+          }
         }
       } catch {
         // noop
       }
 
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
+      if (Date.now() - startAt > maxMs) {
+        setMapTilesReady(true);
+        return;
       }
+
+      setTimeout(tick, 120);
     };
-  }, []);
+
+    setTimeout(tick, 120);
+    return () => {
+      cancelled = true;
+    };
+  }, [L, rl, mapTilesReady, mapContainerIdRef]);
 
   // Get user location
   useEffect(() => {
@@ -374,12 +465,48 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const renderLoader = useCallback(
     (message: string) => (
-      <View style={styles.loader}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text>{message}</Text>
+      <View style={[styles.loader, { position: 'relative', overflow: 'hidden' }] as any}>
+        {Platform.OS === 'web' && (
+          <img
+            alt=""
+            aria-hidden="true"
+            src={
+              'data:image/svg+xml;utf8,' +
+              encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">' +
+                  '<defs>' +
+                    '<linearGradient id="g" x1="0" y1="0" x2="1" y2="0">' +
+                      '<stop offset="0" stop-color="rgba(0,0,0,0.12)" />' +
+                      '<stop offset="0.5" stop-color="rgba(0,0,0,0.18)" />' +
+                      '<stop offset="1" stop-color="rgba(0,0,0,0.12)" />' +
+                    '</linearGradient>' +
+                  '</defs>' +
+                  '<rect width="1200" height="900" rx="24" fill="url(%23g)" />' +
+                  '<text x="60" y="120" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto" font-size="28" font-weight="700" fill="rgba(0,0,0,0.55)">' +
+                    String(message || 'Загружаем карту…').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+                  '</text>' +
+                '</svg>'
+              )
+            }
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: 1,
+              pointerEvents: 'none',
+              zIndex: 0,
+            }}
+          />
+        )}
+        <View style={{ position: 'relative', zIndex: 1, alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={{ color: colors.textMuted, marginTop: 12 }}>{message}</Text>
+        </View>
       </View>
     ),
-    [colors.primary, styles.loader]
+    [colors.primary, colors.textMuted, styles.loader]
   );
 
   // Safe center calculation with strict validation
@@ -453,6 +580,39 @@ const MapPageComponent: React.FC<Props> = (props) => {
   return (
     <View style={styles.wrapper} testID="map-leaflet-wrapper">
       {Platform.OS === 'web' && (
+        <img
+          alt=""
+          aria-hidden="true"
+          src={
+            'data:image/svg+xml;utf8,' +
+            encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">' +
+                '<defs>' +
+                  '<linearGradient id="g" x1="0" y1="0" x2="1" y2="0">' +
+                    '<stop offset="0" stop-color="rgba(0,0,0,0.12)" />' +
+                    '<stop offset="0.5" stop-color="rgba(0,0,0,0.18)" />' +
+                    '<stop offset="1" stop-color="rgba(0,0,0,0.12)" />' +
+                  '</linearGradient>' +
+                '</defs>' +
+                '<rect width="1200" height="900" rx="24" fill="url(%23g)" />' +
+                '<text x="60" y="120" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto" font-size="28" font-weight="700" fill="rgba(0,0,0,0.55)">Загружаем карту…</text>' +
+              '</svg>'
+            )
+          }
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            // Keep a stable opacity so the LCP candidate does not change after map tiles load.
+            opacity: 0.18,
+            pointerEvents: 'none',
+            zIndex: 5,
+          }}
+        />
+      )}
+      {Platform.OS === 'web' && (
         <style>
           {`
           /* Mobile: ensure Leaflet receives touch drag gestures instead of page scroll */
@@ -504,6 +664,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
       <MapContainer
         style={styles.map as any}
+        {...(Platform.OS === 'web' ? ({ style: [{ ...(styles.map as any), position: 'relative', zIndex: 1 }] } as any) : null)}
         data-testid="map-leaflet-container"
         id={mapContainerIdRef.current}
         center={safeCenter}

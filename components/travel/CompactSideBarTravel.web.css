@@ -98,10 +98,22 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+[data-action-btn]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 [data-action-btn]:hover:not([data-disabled="true"]) {
-  background-color: var(--color-primaryLight) !important;
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 12px rgba(122, 157, 143, 0.2) !important;
+  background-color: var(--color-backgroundSecondary) !important;
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Имя автора (кнопка) */
+[data-author-name="true"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 10px;
 }
 
 [data-action-btn]:active:not([data-disabled="true"]) {
@@ -111,6 +123,18 @@
 [data-action-btn][data-disabled="true"] {
   cursor: not-allowed;
   opacity: 0.4;
+}
+
+/* CTA "Все путешествия" */
+[data-all-travels-btn] {
+  transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  will-change: transform;
+}
+
+[data-all-travels-btn]:hover {
+  background-color: var(--color-primaryLight) !important;
+  transform: translate3d(0, -1px, 0);
+  box-shadow: 0 8px 18px rgba(122, 157, 143, 0.18) !important;
 }
 
 /* Категории-бейджи */
@@ -192,11 +216,6 @@
 [data-sidebar-link]:nth-child(6) { animation-delay: 0.3s; }
 [data-sidebar-link]:nth-child(7) { animation-delay: 0.35s; }
 [data-sidebar-link]:nth-child(8) { animation-delay: 0.4s; }
-
-/* Гладкие переходы для всех интерактивных элементов */
-* {
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-}
 
 /* Оптимизация для темной темы */
 html[data-theme="dark"] [data-sidebar-card] {

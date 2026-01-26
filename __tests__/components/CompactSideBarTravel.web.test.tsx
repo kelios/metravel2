@@ -9,6 +9,18 @@ import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/src/types/types';
 import { Platform, StyleSheet } from 'react-native';
 
+jest.mock('@/src/hooks/useUserProfileCached', () => ({
+  __esModule: true,
+  useUserProfileCached: () => ({
+    profile: { avatar: 'https://example.com/profile-avatar.jpg' },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+    fullName: '',
+    refetch: jest.fn(),
+  }),
+}));
+
 // Mock для веб-окружения
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -212,19 +224,17 @@ describe('CompactSideBarTravel - Web Version', () => {
   });
 
   describe('Информация о путешествии', () => {
-    it('должен отображать имя пользователя и страну', () => {
+    it('должен отображать имя пользователя', () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(screen.getAllByText(/Julia/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/Беларусь/i).length).toBeGreaterThan(0);
     });
 
-    it('должен отображать дату и продолжительность', () => {
+    it('должен отображать дату', () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(screen.getByText(/Октябрь/i)).toBeTruthy();
       expect(screen.getByText(/2022/i)).toBeTruthy();
-      expect(screen.getByText(/1 дн/i)).toBeTruthy();
     });
 
     it('должен отображать количество просмотров', () => {
@@ -233,10 +243,10 @@ describe('CompactSideBarTravel - Web Version', () => {
       expect(screen.getByText(/2.*345/)).toBeTruthy();
     });
 
-    it('должен отображать категории', () => {
+    it('не должен отображать категории', () => {
       render(<CompactSideBarTravel {...defaultProps} />);
 
-      expect(screen.getByText(/Религия/i)).toBeTruthy();
+      expect(screen.queryByText(/Религия/i)).toBeNull();
     });
   });
 

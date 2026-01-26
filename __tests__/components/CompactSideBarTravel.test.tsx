@@ -1,8 +1,19 @@
-import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/src/types/types';
+
+jest.mock('@/src/hooks/useUserProfileCached', () => ({
+  __esModule: true,
+  useUserProfileCached: () => ({
+    profile: { avatar: 'https://example.com/profile-avatar.jpg' },
+    isLoading: false,
+    isFetching: false,
+    error: null,
+    fullName: '',
+    refetch: jest.fn(),
+  }),
+}));
 
 // Mock expo-image
 jest.mock('expo-image', () => ({
@@ -88,20 +99,18 @@ describe('CompactSideBarTravel', () => {
   it('should render user information when provided', () => {
     const travel = createMockTravel({
       userName: 'Test User',
-      countryName: 'Test Country',
       year: 2024,
       monthName: 'January',
       number_days: 5,
       travel_image_thumb_small_url: 'https://example.com/avatar.jpg',
     } as any);
 
-    const { getByText } = render(
+    const { getAllByText, getByText } = render(
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
-    expect(getByText(/Test User.*Test Country/)).toBeTruthy();
+    expect(getAllByText(/Test User/).length).toBeGreaterThan(0);
     expect(getByText(/January.*2024/)).toBeTruthy();
-    expect(getByText(/5 дн\./)).toBeTruthy();
   });
 
   it('should render navigation links', () => {
@@ -262,7 +271,7 @@ describe('CompactSideBarTravel', () => {
     expect(closeMenu).toHaveBeenCalled();
   });
 
-  it('should render categories when available', () => {
+  it('should not render categories even when available in travelAddress', () => {
     const travel = createMockTravel({
       travelAddress: [
         { categoryName: 'Museum, Park' },
@@ -270,12 +279,12 @@ describe('CompactSideBarTravel', () => {
       ] as any,
     });
 
-    const { getByText } = render(
+    const { queryByText } = render(
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
-    expect(getByText('Museum')).toBeTruthy();
-    expect(getByText('Park')).toBeTruthy();
+    expect(queryByText('Museum')).toBeNull();
+    expect(queryByText('Park')).toBeNull();
   });
 
   it('should render view count when available', () => {
@@ -301,7 +310,7 @@ describe('CompactSideBarTravel', () => {
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
-    fireEvent.press(getByText('Путешествия Test User'));
+    fireEvent.press(getByText('Все путешествия'));
 
     expect(openSpy).toHaveBeenCalledWith('/search?user_id=555');
     openSpy.mockRestore();

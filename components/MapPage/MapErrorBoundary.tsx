@@ -1,9 +1,12 @@
 // MapErrorBoundary.tsx
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { AlertCircle, RotateCw } from 'lucide-react-native';
+import { Platform, View, Text, StyleSheet } from 'react-native';
 import { ThemeContext, getThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+
+const Lucide = Platform.OS === 'web' ? require('lucide-react') : require('lucide-react-native');
+const AlertCircle = (Lucide as any).AlertCircle as any;
+const RotateCw = (Lucide as any).RotateCw as any;
 
 interface Props {
   children: ReactNode;

@@ -430,6 +430,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     clip: {
       flex: 1,
+      width: '100%',
+      alignSelf: 'stretch',
       overflow: 'hidden',
       borderRadius: 12,
       backgroundColor: 'transparent',

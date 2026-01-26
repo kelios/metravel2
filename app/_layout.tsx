@@ -4,9 +4,7 @@ import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import { FiltersProvider } from "@/providers/FiltersProvider";
 import { AuthProvider } from "@/context/AuthContext";
-const FavoritesProviderLazy = React.lazy(() => import('@/context/FavoritesContext').then(m => ({ default: m.FavoritesProvider })));
-
-const FavoritesProviderFallback = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+import { FavoritesProvider } from "@/context/FavoritesContext";
 
 import { QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -379,11 +377,10 @@ function ThemedContent({
   return (
     <ThemedPaperProvider>
               <AuthProvider>
-                  <React.Suspense fallback={<FavoritesProviderFallback>{null}</FavoritesProviderFallback>}>
-                    <FavoritesProviderLazy>
+                    <FavoritesProvider>
                       <QueryClientProvider client={queryClient}>
-                          <FiltersProvider>
-                              <View style={styles.container}>
+                        <FiltersProvider>
+                          <View style={styles.container}>
                               {showMapBackground && (
                                 <Image
                                   source={mapBackground}
@@ -435,10 +432,9 @@ function ThemedContent({
                                 </View>
                               )}
                         </View>
-                    </FiltersProvider>
-                </QueryClientProvider>
-                    </FavoritesProviderLazy>
-                  </React.Suspense>
+                        </FiltersProvider>
+                      </QueryClientProvider>
+                    </FavoritesProvider>
             </AuthProvider>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
             {isMounted && (

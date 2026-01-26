@@ -2,7 +2,7 @@
  * Компонент виджета погоды
  * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -27,9 +27,6 @@ type DailyForecast = {
 export default function WeatherWidget({ points, countryName }: Props) {
     const [forecast, setForecast] = useState<DailyForecast[]>([]);
     const [locationLabel, setLocationLabel] = useState<string>('');
-    const [isTitleTruncated, setIsTitleTruncated] = useState(false);
-    const [showFullTitle, setShowFullTitle] = useState(false);
-    const titleRef = useRef<Text>(null);
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -47,14 +44,6 @@ export default function WeatherWidget({ points, countryName }: Props) {
         if (countryName) locationParts.push(countryName);
         const fullLabel = locationParts.join(', ');
         setLocationLabel(fullLabel);
-
-        // Check if title will be truncated
-        setTimeout(() => {
-            if (titleRef.current) {
-                const element = titleRef.current as unknown as HTMLElement;
-                setIsTitleTruncated(element.scrollWidth > element.clientWidth);
-            }
-        }, 100);
 
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto`;
 
@@ -84,14 +73,6 @@ export default function WeatherWidget({ points, countryName }: Props) {
 
     if (Platform.OS !== 'web' || !forecast.length || !locationLabel) return null;
 
-    const webTitleEvents =
-      Platform.OS === 'web'
-        ? {
-            onMouseEnter: () => isTitleTruncated && setShowFullTitle(true),
-            onMouseLeave: () => setShowFullTitle(false),
-          }
-        : undefined;
-
     return (
       <View 
         style={styles.wrapper}
@@ -99,24 +80,11 @@ export default function WeatherWidget({ points, countryName }: Props) {
       >
           <View style={styles.titleContainer}>
               <Text
-                ref={titleRef}
                 style={[styles.title, { color: colors.text }]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                {...webTitleEvents}
                 {...(Platform.OS === 'web' ? { 'data-weather-title': true } : {})}
               >
                   Погода в {locationLabel}
               </Text>
-              {showFullTitle && isTitleTruncated && (
-                <View
-                  pointerEvents="none"
-                  style={[styles.tooltip, { backgroundColor: colors.surfaceElevated }]}
-                  {...(Platform.OS === 'web' ? { 'data-weather-tooltip': true } : {})}
-                >
-                    <Text style={[styles.tooltipText, { color: colors.text }]}>Погода в {locationLabel}</Text>
-                </View>
-              )}
           </View>
 
           <ScrollView 
@@ -140,7 +108,7 @@ export default function WeatherWidget({ points, countryName }: Props) {
                         <Text style={[styles.tempMax, { color: colors.text }]}>{Math.round(day.temperatureMax)}°</Text>
                         <Text style={[styles.tempMin, { color: colors.textMuted }]}>/{Math.round(day.temperatureMin)}°</Text>
                     </View>
-                    <Text style={[styles.desc, { color: colors.textMuted }]} numberOfLines={1} ellipsizeMode="tail">
+                    <Text style={[styles.desc, { color: colors.textMuted }]}>
                         {day.condition}
                     </Text>
                 </View>
@@ -184,28 +152,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '600',
         color: colors.text,
         width: '100%',
+        flexWrap: 'wrap',
         ...(Platform.OS === 'web' ? {
             cursor: 'default',
             textDecorationLine: 'none',
             fontFamily: 'Georgia',
         } as any : {}),
-    },
-    tooltip: {
-        position: 'absolute',
-        top: '100%',
-        left: 0,
-        right: 0,
-        backgroundColor: colors.surfaceElevated,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-        zIndex: 1000,
-        marginTop: 4,
-    },
-    tooltipText: {
-        color: colors.text,
-        fontSize: 13, // было 14px (-7%)
-        fontWeight: '400',
     },
     forecastContainer: {
         flexDirection: 'row',
@@ -264,6 +216,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontWeight: '400',
         textAlign: 'center',
         maxWidth: '100%',
+        flexWrap: 'wrap',
     },
 });
 

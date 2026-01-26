@@ -276,32 +276,30 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
               </Text>
             </SafeView>
           )}
-        </SafeView>
-
-        {/* Кнопка "Смотреть все путешествия" */}
-        {userId && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.viewButton,
-              isMobile && styles.viewButtonMobile,
-              pressed && styles.viewButtonPressed,
-              {
-                backgroundColor: colors.backgroundSecondary,
-                borderColor: colors.border,
-              }
-            ]}
-            onPress={handleViewAuthorTravels}
-            accessibilityRole="button"
-            accessibilityLabel={`Смотреть все путешествия автора ${userName}`}
-          >
-            <Text style={[styles.viewButtonText, isMobile && styles.viewButtonTextMobile, { color: colors.text }]}>
-              Все путешествия
-            </Text>
-            <Feather name="arrow-right" size={16} color={colors.textMuted} />
-          </Pressable>
-        )}
       </SafeView>
     </SafeView>
+
+    <SafeView style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+
+    {/* Кнопка "Смотреть все путешествия" */}
+    {userId && (
+      <Pressable
+        style={({ pressed }) => [
+          styles.viewButtonBottom,
+          pressed && styles.viewButtonPressed,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.surface,
+          }
+        ]}
+        onPress={handleViewAuthorTravels}
+        accessibilityRole="button"
+        accessibilityLabel={`Показать все путешествия автора ${userName || 'Аноним'}`}
+      >
+        <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Показать все путешествия автора</Text>
+      </Pressable>
+    )}
+  </SafeView>
   );
 }
 
@@ -452,6 +450,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textTertiary,
     fontWeight: '600',
   },
+  divider: {
+    width: '100%',
+    height: 1,
+    marginTop: DESIGN_TOKENS.spacing.lg,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    opacity: 0.5,
+  },
   viewButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -481,6 +486,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       },
     }),
   },
+  viewButtonBottom: {
+    width: '100%',
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: DESIGN_TOKENS.radii.md,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+    }),
+  },
   viewButtonMobile: {
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
@@ -498,6 +515,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
     fontWeight: '600',
     color: colors.primary,
+  },
+  viewButtonBottomText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: '600',
+    fontFamily: 'Georgia',
+    letterSpacing: -0.2,
   },
   viewButtonTextMobile: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

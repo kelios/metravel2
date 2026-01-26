@@ -16,12 +16,13 @@ import { Text } from "@/src/ui/paper";
 import type { Travel } from "@/src/types/types";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
 import WeatherWidget from "@/components/WeatherWidget";
-// ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from "@/utils/imageOptimization";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, useTheme } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import Button from '@/components/ui/Button';
+import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
+import { globalFocusStyles } from '@/styles/globalFocus';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для современных стилей (только для web)
 if (Platform.OS === 'web') {
@@ -97,14 +98,19 @@ function CompactSideBarTravel({
   const styles = useMemo(() => createStyles(themedColors), [themedColors]);
   const textColor = themedColors.text;
   const mutedText = isDark ? themedColors.textMuted : themedColors.textSecondary;
-  const travelAddress = travel.travelAddress;
   const travelOwnerId = (travel as any).userIds ?? (travel as any).userId ?? (travel as any).user?.id ?? null;
-  const avatar = (travel as any).user?.avatar;
-  const updatedAt = (travel as any).updated_at;
-  const travelId = travel.id;
+  const { profile: authorProfile } = useUserProfileCached(travelOwnerId, { enabled: !!travelOwnerId });
+  const avatar =
+    (authorProfile as any)?.avatar ??
+    (travel as any).user?.avatar ??
+    (travel as any).avatar ??
+    (travel as any).userAvatar ??
+    (travel as any).user_avatar ??
+    (travel as any).authorAvatar ??
+    (travel as any).author_avatar ??
+    null;
   const navLinksSource = Array.isArray(links) && links.length ? links : null;
   const [active, setActive] = useState<string>("");
-  const [showAllCategories, setShowAllCategories] = useState(false);
 
   // ✅ УЛУЧШЕНИЕ: Группировка пунктов меню по категориям
   const navLinks = navLinksSource ? navLinksSource : buildTravelSectionLinks(travel);
@@ -177,26 +183,20 @@ function CompactSideBarTravel({
 
   // ── Безопасные текстовые поля (ничего "null"/"undefined" не рендерим) ──
   const userName = (travel as any).userName || "";
-  const countryName = (travel as any).countryName || "";
   const monthName = (travel as any).monthName || ""; // напр. "Май"
   const yearStr =
     travel && (travel as any).year != null ? String((travel as any).year) : "";
-  const numberDays =
-    travel && (travel as any).number_days != null
-      ? Number((travel as any).number_days)
-      : null;
-  const daysText =
-    numberDays != null && Number.isFinite(numberDays)
-      ? `• ${numberDays} дн.`
-      : "";
-
-  const titleLine = [userName, countryName].filter(Boolean).join(" | ");
   const whenLine = [monthName, yearStr].filter(Boolean).join(" ");
 
   const viewsSafe =
     (travel as any).countUnicIpView != null
       ? Number((travel as any).countUnicIpView)
       : null;
+
+  const authorSubtitle = useMemo(() => {
+    if (!userName) return '';
+    return 'Личный тревел-дневник';
+  }, [userName]);
 
   const authorUserId = useMemo(() => {
     if (travelOwnerId == null) return null;
@@ -209,93 +209,28 @@ function CompactSideBarTravel({
     openUrl(`/user/${authorUserId}`);
   }, [authorUserId]);
 
-  // ✅ УЛУЧШЕНИЕ: Оптимизация URL аватара
+  const normalizeMediaUrl = useCallback((raw: string) => {
+    const value = String(raw ?? '').trim();
+    if (!value) return '';
+    const lower = value.toLowerCase();
+    if (lower === 'null' || lower === 'undefined') return '';
+    if (value.startsWith('http://') || value.startsWith('https://')) return value;
+
+    if (value.startsWith('/')) {
+      const base = (process.env.EXPO_PUBLIC_API_URL || '').replace(/\/?api\/?$/, '');
+      if (base) return `${base}${value}`;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        return `${window.location.origin}${value}`;
+      }
+    }
+
+    return value;
+  }, []);
+
   const avatarUri = useMemo(() => {
-    if (!avatar) return "";
-    
-    const versionedUrl = buildVersionedImageUrl(
-      avatar,
-      updatedAt,
-      travelId
-    );
-    
-    // Оптимальный размер для аватара (72x72)
-    const avatarSize = 72;
-    const optimalSize = getOptimalImageSize(avatarSize, avatarSize);
-    
-    return optimizeImageUrl(versionedUrl, {
-      width: optimalSize.width,
-      height: optimalSize.height,
-      format: 'webp',
-      quality: 85,
-      fit: 'cover',
-    }) || versionedUrl;
-  }, [avatar, updatedAt, travelId]);
-
-  const coverUri = useMemo(() => {
-    const rawFirst = (travel as any)?.gallery?.[0];
-    const firstUrl = rawFirst
-      ? typeof rawFirst === 'string'
-        ? rawFirst
-        : rawFirst?.url
-      : '';
-
-    if (!firstUrl) return '';
-
-    const imgUpdatedAt = (rawFirst as any)?.updated_at ?? updatedAt;
-    const imgId = (rawFirst as any)?.id ?? travelId;
-
-    const versionedUrl = buildVersionedImageUrl(firstUrl, imgUpdatedAt, imgId);
-
-    const coverSize = 48;
-    const optimalSize = getOptimalImageSize(coverSize, coverSize);
-
-    return (
-      optimizeImageUrl(versionedUrl, {
-        width: optimalSize.width,
-        height: optimalSize.height,
-        format: 'webp',
-        quality: 85,
-        fit: 'cover',
-      }) || versionedUrl
-    );
-  }, [travel, travelId, updatedAt]);
-
-  const headerImageUri = coverUri || avatarUri;
-
-  // Извлекаем координаты из travelAddress
-  const firstCoord = useMemo(() => {
-    if (travelAddress && Array.isArray(travelAddress) && travelAddress.length > 0) {
-      const first = travelAddress[0] as any;
-      return first?.coord || first?.coordsMeTravel?.[0] || null;
-    }
-    return null;
-  }, [travelAddress]);
-
-  // Извлекаем категории
-  const categories = useMemo(() => {
-    if (travelAddress && Array.isArray(travelAddress)) {
-      const cats = new Set<string>();
-      travelAddress.forEach((addr: any) => {
-        if (addr?.categoryName) {
-          // ✅ ИСПРАВЛЕНИЕ: Обрабатываем случай, когда categoryName может быть объектом с {id, name}
-          let categoryNameStr: string;
-          if (typeof addr.categoryName === 'string') {
-            categoryNameStr = addr.categoryName;
-          } else if (addr.categoryName && typeof addr.categoryName === 'object' && 'name' in addr.categoryName) {
-            categoryNameStr = String(addr.categoryName.name || '');
-          } else {
-            categoryNameStr = String(addr.categoryName || '');
-          }
-          
-          const parts = categoryNameStr.split(',').map(s => s.trim()).filter(Boolean);
-          parts.forEach(cat => cats.add(cat));
-        }
-      });
-      return Array.from(cats);
-    }
-    return [];
-  }, [travelAddress]);
+    if (!avatar) return '';
+    return normalizeMediaUrl(String(avatar));
+  }, [avatar, normalizeMediaUrl]);
 
   const handleUserTravels = () => {
     const id = (travel as any).userIds ?? (travel as any).userId;
@@ -331,10 +266,10 @@ function CompactSideBarTravel({
           style={styles.avatarWrap}
           {...(Platform.OS === 'web' ? { 'data-sidebar-avatar': true } : {})}
         >
-          {headerImageUri ? (
+          {avatarUri ? (
             <ImageCardMedia
-              src={headerImageUri}
-              alt={(travel as any)?.name || titleLine || userName || 'Обложка'}
+              src={avatarUri}
+              alt={userName || 'Пользователь'}
               width={styles.avatar.width as any}
               height={styles.avatar.height as any}
               borderRadius={styles.avatar.borderRadius as any}
@@ -345,7 +280,9 @@ function CompactSideBarTravel({
               style={styles.avatar}
             />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]} />
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Feather name="user" size={22} color={mutedText} />
+            </View>
           )}
         </View>
 
@@ -360,11 +297,18 @@ function CompactSideBarTravel({
               }
               style={({ pressed }) => [
                 styles.userNameWrap,
+                globalFocusStyles.focusable,
                 pressed && authorUserId ? { opacity: 0.9 } : null,
               ]}
               {...Platform.select({
                 web: authorUserId
-                  ? { cursor: 'pointer', role: 'button', 'aria-label': `Открыть профиль автора ${userName || 'Пользователь'}` }
+                  ? {
+                      cursor: 'pointer',
+                      role: 'button',
+                      'aria-label': `Открыть профиль автора ${userName || 'Пользователь'}`,
+                      'data-author-name': true,
+                      title: `Открыть профиль автора ${userName || 'Пользователь'}`,
+                    }
                   : {},
               })}
             >
@@ -372,9 +316,6 @@ function CompactSideBarTravel({
                 <Text style={[styles.userNamePrimary, { color: textColor }]}>
                   {userName || 'Пользователь'}
                 </Text>
-                {countryName ? (
-                  <Text style={[styles.userCountry, { color: mutedText }]}>{` | ${countryName}`}</Text>
-                ) : null}
               </Text>
             </Pressable>
 
@@ -384,9 +325,18 @@ function CompactSideBarTravel({
                   onPress={handleEdit}
                   accessibilityRole="button"
                   accessibilityLabel="Редактировать путешествие"
-                  style={({ pressed }) => [styles.actionBtn, pressed && styles.actionBtnPressed]}
+                  style={({ pressed }) => [
+                    styles.actionBtn,
+                    globalFocusStyles.focusable,
+                    pressed && styles.actionBtnPressed,
+                  ]}
                   {...(Platform.OS === 'web'
-                    ? { 'data-action-btn': true, role: 'button', 'aria-label': 'Редактировать путешествие' }
+                    ? {
+                        'data-action-btn': true,
+                        role: 'button',
+                        'aria-label': 'Редактировать путешествие',
+                        title: 'Редактировать',
+                      }
                     : {})}
                 >
                   <Feather name="edit" size={18} color={textColor} />
@@ -407,26 +357,33 @@ function CompactSideBarTravel({
             </View>
           </View>
 
-          {(whenLine || daysText || (viewsSafe != null && Number.isFinite(viewsSafe))) ? (
+          {authorSubtitle ? (
+            <Text style={[styles.userSubtitle, { color: mutedText }]} numberOfLines={1}>
+              {authorSubtitle}
+            </Text>
+          ) : null}
+
+          {(whenLine || (viewsSafe != null && Number.isFinite(viewsSafe))) ? (
             <View style={styles.metaRow}>
               {whenLine ? (
-                <View style={styles.metaItem}>
+                <View style={styles.metaPill}>
                   <Feather name="calendar" size={14} color={mutedText} />
                   <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
                     {whenLine}
                   </Text>
                 </View>
               ) : null}
-              {daysText ? (
-                <View style={styles.metaItem}>
-                  <Feather name="clock" size={14} color={mutedText} />
-                  <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
-                    {daysText}
-                  </Text>
-                </View>
-              ) : null}
               {viewsSafe != null && Number.isFinite(viewsSafe) ? (
-                <View style={styles.metaItem}>
+                <View
+                  style={styles.metaPill}
+                  accessibilityRole={Platform.OS === 'web' ? undefined : 'text'}
+                  accessibilityLabel={`${viewsSafe.toLocaleString('ru-RU')} просмотров`}
+                  {...(Platform.OS === 'web'
+                    ? {
+                        'aria-label': `${viewsSafe.toLocaleString('ru-RU')} просмотров`,
+                      }
+                    : {})}
+                >
                   <Feather name="eye" size={14} color={mutedText} />
                   <Text style={[styles.metaText, { color: mutedText }]} numberOfLines={1}>
                     {viewsSafe.toLocaleString('ru-RU')}
@@ -435,101 +392,28 @@ function CompactSideBarTravel({
               ) : null}
             </View>
           ) : null}
+
+          {userName ? (
+            <View style={styles.allTravelsWrap}>
+              <Button
+                label="Все путешествия"
+                onPress={handleUserTravels}
+                variant="primary"
+                size="sm"
+                fullWidth
+                accessibilityLabel={`Открыть путешествия автора ${userName}`}
+                style={styles.allTravelsButton}
+                {...(Platform.OS === 'web'
+                  ? ({ testID: 'open-author-travels', } as any)
+                  : {})}
+              />
+            </View>
+          ) : null}
         </View>
       </View>
 
       <View style={styles.infoSection}>
-        {categories.length > 0 ? (
-          <View style={styles.infoRow}>
-            <Feather name="tag" size={14} color={mutedText} />
-            <View
-              style={[
-                styles.categoriesWrap,
-                { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1 },
-              ]}
-            >
-              {(showAllCategories ? categories : categories.slice(0, 2)).map((cat, idx) => (
-                <View
-                  key={`${cat}-${idx}`}
-                  style={styles.categoryTagWrapper}
-                  {...(Platform.OS === 'web' ? { 'data-category-tag': true } : {})}
-                >
-                  <Text
-                    style={[styles.categoryTag, { color: mutedText }]}
-                    numberOfLines={1}
-                    {...(Platform.OS === 'web' ? { 'data-category-tag-text': true } : {})}
-                  >
-                    {cat}
-                  </Text>
-                </View>
-              ))}
-              {!showAllCategories && categories.length > 2 ? (
-                <Pressable
-                  onPress={() => setShowAllCategories(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Показать все категории (${categories.length})`}
-                  hitSlop={8}
-                  style={({ pressed }) => [
-                    styles.categoryMoreBtn,
-                    pressed ? styles.categoryMoreBtnPressed : null,
-                  ]}
-                >
-                  <Text style={[styles.categoryMore, { color: mutedText }]}>
-                    +{categories.length - 2}
-                  </Text>
-                </Pressable>
-              ) : null}
-              {showAllCategories && categories.length > 2 ? (
-                <Pressable
-                  onPress={() => setShowAllCategories(false)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Свернуть категории"
-                  hitSlop={8}
-                  style={({ pressed }) => [
-                    styles.categoryMoreBtn,
-                    pressed ? styles.categoryMoreBtnPressed : null,
-                  ]}
-                >
-                  <Text style={[styles.categoryMore, { color: mutedText }]}>Свернуть</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
-        ) : null}
-
-        {!categories.length && firstCoord ? (
-          <Pressable
-            style={styles.infoRow}
-            onPress={() => {
-              if (Platform.OS === "web") {
-                navigator.clipboard?.writeText(firstCoord).then(() => {
-                  alert("Координаты скопированы!");
-                });
-              }
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Координаты"
-          >
-            <Feather name="map-pin" size={14} color={mutedText} />
-            <Text
-              style={[
-                styles.infoText,
-                { marginLeft: DESIGN_TOKENS.spacing.xs, flex: 1, color: mutedText },
-              ]}
-              numberOfLines={1}
-            >
-              {firstCoord}
-            </Text>
-            {Platform.OS === "web" ? (
-              <Feather
-                name="copy"
-                size={12}
-                color={mutedText}
-                style={{ marginLeft: DESIGN_TOKENS.spacing.xs }}
-              />
-            ) : null}
-          </Pressable>
-        ) : null}
+        {null}
       </View>
     </View>,
 
@@ -608,20 +492,6 @@ function CompactSideBarTravel({
         </React.Fragment>
       );
     }),
-
-    userName ? (
-      <Pressable
-        key="all-travels"
-        onPress={handleUserTravels}
-        accessibilityRole="link"
-        accessibilityLabel={`Путешествия автора ${userName}`}
-        {...(Platform.OS === 'web'
-          ? { role: 'link', 'aria-label': `Путешествия автора ${userName}` }
-          : {})}
-      >
-        <Text style={styles.allTravels}>Путешествия {userName}</Text>
-      </Pressable>
-    ) : null,
 
     <Suspense key="weather" fallback={<Fallback />}>
       <WeatherWidget points={travel.travelAddress as any} />
@@ -708,10 +578,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   // ✅ РЕДИЗАЙН: Компактная карточка автора (оптимизация для отображения без скролла)
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: Platform.select({
-      default: 12,
-      web: 10,
+      default: 14,
+      web: 14,
     }),
     marginBottom: Platform.select({
       default: 10,
@@ -762,14 +632,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 22,
     }),
     borderWidth: 2,
-    borderColor: colors.primaryLight,
-    shadowColor: colors.primary,
+    borderColor: colors.borderLight,
+    shadowColor: colors.shadows.light.shadowColor,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
     ...(Platform.OS === 'web' ? {
-      boxShadow: '0 4px 12px rgba(122, 157, 143, 0.2), 0 2px 4px rgba(122, 157, 143, 0.1)',
+      boxShadow: colors.boxShadows.light,
     } as any : {}),
   },
   avatarPlaceholder: {
@@ -856,7 +726,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: "row", 
     alignItems: "center", 
     justifyContent: "space-between", 
-    marginBottom: DESIGN_TOKENS.spacing.xs, // Уменьшено с 8
+    marginBottom: 2,
   },
   actionsRow: {
     flexDirection: "row",
@@ -867,15 +737,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignSelf: 'center',
   },
   actionBtn: {
-    width: Platform.select({ default: 44, web: 40 }),
-    height: Platform.select({ default: 44, web: 40 }),
-    borderRadius: Platform.select({ default: 12, web: 10 }),
+    width: Platform.select({ default: 42, web: 40 }),
+    height: Platform.select({ default: 42, web: 40 }),
+    borderRadius: Platform.select({ default: 12, web: 12 }),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    shadowColor: colors.primary,
+    shadowColor: colors.shadows.light.shadowColor,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 3,
@@ -883,13 +753,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer' as any,
       transition: 'all 0.2s ease',
-      boxShadow: '0 1px 3px rgba(122, 157, 143, 0.1)',
+      boxShadow: colors.boxShadows.light,
     } as any : {}),
   },
   actionBtnPressed: {
     transform: [{ scale: 0.95 }],
     opacity: 0.85,
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.backgroundSecondary,
   },
   actionBtnDisabled: {
     opacity: 0.4,
@@ -909,11 +779,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.text,
     fontFamily: "Georgia", 
     flexShrink: 1,
-    lineHeight: Platform.select({ default: 20, web: 18 }),
+    lineHeight: Platform.select({ default: 20, web: 19 }),
+    letterSpacing: -0.2,
   },
   userNamePrimary: {
     fontWeight: "800",
     color: colors.text,
+  },
+  userSubtitle: {
+    marginTop: 2,
+    fontSize: Platform.select({ default: 13, web: 12 }),
+    fontFamily: 'Georgia',
+    fontWeight: '500',
+    lineHeight: Platform.select({ default: 18, web: 17 }),
   },
   userCountry: {
     fontWeight: "600",
@@ -939,20 +817,26 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     flexWrap: 'nowrap',
     columnGap: 10,
-    marginTop: Platform.select({ default: 6, web: 4 }),
+    marginTop: Platform.select({ default: 6, web: 6 }),
   },
-  metaItem: {
+  metaPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     flexShrink: 1,
     minWidth: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   metaText: {
-    fontSize: Platform.select({ default: 14, web: 13 }),
+    fontSize: Platform.select({ default: 13, web: 12 }),
     color: colors.textMuted,
     fontFamily: 'Georgia',
-    fontWeight: '600',
+    fontWeight: '500',
     lineHeight: Platform.select({ default: 20, web: 18 }),
     flexShrink: 1,
   },
@@ -1090,14 +974,19 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
 
   allTravels: {
-    marginTop: DESIGN_TOKENS.spacing.md,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     textAlign: "center",
-    fontWeight: "500",
-    color: colors.accentDark,
+    color: colors.primary,
     fontFamily: "Georgia",
+    fontWeight: "700",
+    paddingHorizontal: 4,
+  },
+  allTravelsWrap: {
+    marginTop: DESIGN_TOKENS.spacing.sm,
     width: '100%',
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+  },
+  allTravelsButton: {
+    borderRadius: 999,
   },
 
   closeBar: {

@@ -1,4 +1,3 @@
-import React from 'react'
 import { act, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import WeatherWidget from '@/components/WeatherWidget'
@@ -31,7 +30,7 @@ describe('WeatherWidget', () => {
     expect(queryByText(/Погода/)).toBeNull()
   })
 
-  it('renders forecast for valid coordinates and shows tooltip only when truncated', async () => {
+  it('renders forecast for valid coordinates', async () => {
     const fetchMock = global.fetch as jest.Mock
     fetchMock.mockResolvedValue({
       json: () =>

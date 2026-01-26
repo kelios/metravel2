@@ -285,7 +285,7 @@ const server = http.createServer((req, res) => {
 
       const proxyModule = targetUrl.protocol === 'http:' ? http : https
 
-      const insecureTls = process.env.LIGHTHOUSE_API_INSECURE === '1'
+      const insecureTls = String(process.env.LIGHTHOUSE_API_INSECURE ?? '1') === '1'
       const agent =
         targetUrl.protocol === 'https:'
           ? new https.Agent({ rejectUnauthorized: !insecureTls })
@@ -329,7 +329,12 @@ const server = http.createServer((req, res) => {
         }
       )
 
-      proxyReq.setTimeout(10_000, () => {
+      const timeoutMs = Math.min(
+        120_000,
+        Math.max(1_000, Number(process.env.LIGHTHOUSE_API_TIMEOUT_MS || 30_000))
+      )
+
+      proxyReq.setTimeout(timeoutMs, () => {
         proxyReq.destroy(new Error('Proxy timeout'))
       })
 
