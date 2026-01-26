@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
@@ -288,6 +288,7 @@ function OptimizedImage({
             width: '100%',
             height: '100%',
             objectFit: contentFit === 'cover' ? 'cover' : 'contain',
+            objectPosition: 'center',
             borderRadius,
             display: 'block',
           }}
@@ -334,6 +335,7 @@ function OptimizedImage({
             {
               borderRadius,
             },
+            Platform.OS === 'web' && ({ objectPosition: 'center' } as any),
           ]}
           // Web-specific optimizations
           {...(Platform.OS === 'web' && {
@@ -382,6 +384,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+    ...(Platform.OS === 'web' ? ({ objectPosition: 'center' } as any) : null),
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,

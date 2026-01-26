@@ -341,7 +341,7 @@ const OptimizedLCPHeroInner: React.FC<{
             loading="eager"
             decoding="async"
             // @ts-ignore
-            fetchPriority="high"
+            fetchpriority="high"
             // @ts-ignore
             ref={imgRef as any}
             crossOrigin="anonymous"

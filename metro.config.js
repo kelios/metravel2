@@ -52,6 +52,18 @@ config.resolver = {
         };
       }
 
+      // Exclude react-native-webview from web bundles. Some Expo DOM runtime paths
+      // may attempt to resolve it even if we never render it on web.
+      if (
+        normalizedModuleName === 'react-native-webview' ||
+        normalizedModuleName.startsWith('react-native-webview/')
+      ) {
+        return {
+          filePath: path.resolve(__dirname, 'metro-stubs/react-native-webview.js'),
+          type: 'sourceFile',
+        };
+      }
+
       // Exclude react-native-gesture-handler from web bundles.
       // It pulls in react-native-reanimated and is only needed for native.
       if (
@@ -175,6 +187,7 @@ config.resolver = {
       __dirname,
       'metro-stubs/react-native-gesture-handler.js'
     ),
+    'react-native-webview': path.resolve(__dirname, 'metro-stubs/react-native-webview.js'),
   },
 }
 
@@ -245,8 +258,8 @@ config.server = {
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
       // Проксируем запросы к изображениям на API сервер
-      const imagePaths = ['/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/'];
-      const shouldProxy = imagePaths.some(p => req.url && req.url.startsWith(p));
+      const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/'];
+      const shouldProxy = proxyPaths.some(p => req.url && req.url.startsWith(p));
       
       if (shouldProxy) {
         const apiUrl = process.env.EXPO_PUBLIC_API_URL || '';

@@ -1,7 +1,9 @@
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.1.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
+const JS_CACHE = `metravel-js-${CACHE_VERSION}`;
+const CRITICAL_CACHE = `metravel-critical-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
   '/',
@@ -11,9 +13,21 @@ const STATIC_ASSETS = [
   '/icon.svg',
 ];
 
+// Критичні JS chunks для travel pages (будуть prefetch при першому візиті)
+const CRITICAL_JS_CHUNKS = [
+  'TravelDetailsContainer',
+  'GallerySection',
+  'TravelDescription',
+  'Map',
+  'NetworkStatus',
+  'ConsentBanner',
+];
+
 const MAX_CACHE_SIZE = 100;
 const MAX_IMAGE_CACHE_SIZE = 50;
+const MAX_JS_CACHE_SIZE = 200;
 const CACHE_EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
+const JS_CACHE_EXPIRATION_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days для JS chunks
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -31,12 +45,24 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name.startsWith('metravel-') && name !== STATIC_CACHE && name !== DYNAMIC_CACHE && name !== IMAGE_CACHE)
+          .filter((name) => name.startsWith('metravel-') && 
+                  name !== STATIC_CACHE && 
+                  name !== DYNAMIC_CACHE && 
+                  name !== IMAGE_CACHE && 
+                  name !== JS_CACHE &&
+                  name !== CRITICAL_CACHE)
           .map((name) => caches.delete(name))
       );
     })
   );
   self.clients.claim();
+});
+
+// Prefetch критичних ресурсів для travel pages
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'PREFETCH_TRAVEL_RESOURCES') {
+    event.waitUntil(prefetchCriticalResources());
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -56,11 +82,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (
-    request.destination === 'script' ||
-    request.destination === 'style' ||
-    request.destination === 'font'
-  ) {
+  // JS chunks з hash в імені (immutable) — агресивне кешування
+  if (request.destination === 'script') {
+    const isHashedChunk = /\/_expo\/static\/js\/web\/.*-[a-f0-9]{32}\.js$/.test(url.pathname);
+    
+    if (isHashedChunk) {
+      // Immutable chunks — cache-first з довгим TTL
+      event.respondWith(cacheFirstLongTerm(request, JS_CACHE, MAX_JS_CACHE_SIZE));
+      return;
+    }
+    
+    // Entry bundle та інші JS без hash — stale-while-revalidate
+    event.respondWith(staleWhileRevalidate(request, JS_CACHE));
+    return;
+  }
+
+  if (request.destination === 'style' || request.destination === 'font') {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }
@@ -137,6 +174,114 @@ async function networkFirst(request) {
     }
     
     return new Response('Network error', { status: 503 });
+  }
+}
+
+// Cache-first з довгим TTL для immutable chunks (з hash в імені)
+async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_JS_CACHE_SIZE) {
+  try {
+    const cache = await caches.open(cacheName);
+    const cached = await cache.match(request);
+    
+    if (cached) {
+      // Immutable chunks — завжди повертаємо з кешу
+      return cached;
+    }
+
+    const response = await fetch(request);
+    
+    if (response && response.status === 200) {
+      const responseToCache = response.clone();
+      const headers = new Headers(responseToCache.headers);
+      headers.append('sw-cache-date', Date.now().toString());
+      headers.append('Cache-Control', 'public, max-age=31536000, immutable');
+      
+      const blob = await responseToCache.blob();
+      const cachedResponse = new Response(blob, {
+        status: responseToCache.status,
+        statusText: responseToCache.statusText,
+        headers: headers,
+      });
+      
+      cache.put(request, cachedResponse);
+      limitCacheSize(cacheName, maxSize);
+    }
+
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    return cached || new Response('Offline', { status: 503 });
+  }
+}
+
+// Stale-while-revalidate для entry bundle та динамічних ресурсів
+async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
+  try {
+    const cache = await caches.open(cacheName);
+    const cached = await cache.match(request);
+    
+    // Fetch в фоні для оновлення кешу
+    const fetchPromise = fetch(request).then(response => {
+      if (response && response.status === 200) {
+        const responseToCache = response.clone();
+        const headers = new Headers(responseToCache.headers);
+        headers.append('sw-cache-date', Date.now().toString());
+        
+        responseToCache.blob().then(blob => {
+          const cachedResponse = new Response(blob, {
+            status: responseToCache.status,
+            statusText: responseToCache.statusText,
+            headers: headers,
+          });
+          cache.put(request, cachedResponse);
+        });
+      }
+      return response;
+    }).catch(() => null);
+    
+    // Повертаємо кешовану версію одразу, якщо є
+    return cached || fetchPromise;
+  } catch {
+    const cached = await caches.match(request);
+    return cached || new Response('Offline', { status: 503 });
+  }
+}
+
+// Prefetch критичних JS chunks для travel pages
+async function prefetchCriticalResources() {
+  try {
+    const cache = await caches.open(CRITICAL_CACHE);
+    const scripts = await self.clients.matchAll().then(clients => {
+      if (clients.length === 0) return [];
+      return clients[0].url;
+    });
+    
+    // Знаходимо всі JS chunks на сторінці
+    const response = await fetch('/');
+    const html = await response.text();
+    const scriptMatches = html.matchAll(/<script[^>]+src="([^"]+)"/g);
+    
+    const criticalUrls = [];
+    for (const match of scriptMatches) {
+      const src = match[1];
+      // Перевіряємо чи це критичний chunk
+      if (CRITICAL_JS_CHUNKS.some(chunk => src.includes(chunk))) {
+        criticalUrls.push(src);
+      }
+    }
+    
+    // Prefetch критичних ресурсів
+    await Promise.all(
+      criticalUrls.map(url => 
+        fetch(url).then(res => {
+          if (res && res.status === 200) {
+            cache.put(url, res.clone());
+          }
+        }).catch(() => {})
+      )
+    );
+  } catch (error) {
+    console.info('SW: Prefetch failed', error);
   }
 }
 

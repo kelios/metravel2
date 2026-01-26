@@ -121,19 +121,27 @@ const compressResponse = (req, res, data, contentType) => {
   res.setHeader('Vary', 'Accept-Encoding')
 
   if (acceptEncoding.includes('br')) {
-    zlib.brotliCompress(data, (err, compressed) => {
-      if (err) {
-        res.end(data)
-        return
+    zlib.brotliCompress(
+      data,
+      {
+        params: {
+          [zlib.constants.BROTLI_PARAM_QUALITY]: 9,
+        },
+      },
+      (err, compressed) => {
+        if (err) {
+          res.end(data)
+          return
+        }
+        res.setHeader('Content-Encoding', 'br')
+        res.end(compressed)
       }
-      res.setHeader('Content-Encoding', 'br')
-      res.end(compressed)
-    })
+    )
     return
   }
 
   if (acceptEncoding.includes('gzip')) {
-    zlib.gzip(data, (err, compressed) => {
+    zlib.gzip(data, { level: 6 }, (err, compressed) => {
       if (err) {
         res.end(data)
         return
@@ -147,53 +155,86 @@ const compressResponse = (req, res, data, contentType) => {
   res.end(data)
 }
 
+const staticJsWebDir = path.join(buildDir, '_expo', 'static', 'js', 'web')
+
+const findHashedChunkPath = (prefix) => {
+  try {
+    if (!fs.existsSync(staticJsWebDir)) return null
+    const files = fs.readdirSync(staticJsWebDir)
+    const match = files.find((f) => typeof f === 'string' && f.startsWith(prefix) && f.endsWith('.js'))
+    return match ? `/_expo/static/js/web/${match}` : null
+  } catch {
+    return null
+  }
+}
+
+const travelDetailsChunkSrc = findHashedChunkPath('TravelDetailsContainer-')
+
 const injectEntryPreload = (html) => {
   try {
     if (typeof html !== 'string' || html.length === 0) return html
-    // Find the first entry bundle reference.
-    const match = html.match(/\/_expo\/static\/js\/web\/entry-[^"'\s>]+\.js/)
-    if (!match) return html
-    const entrySrc = match[0]
+    const findScriptSrc = (inputHtml, re) => {
+      const m = inputHtml.match(re)
+      return m ? m[0] : null
+    }
 
-    const entryScriptTagMatch = html.match(new RegExp(`<script[^>]*?src=["']${entrySrc}["'][^>]*?>`, 'i'))
-    const entryScriptTag = entryScriptTagMatch ? entryScriptTagMatch[0] : ''
-    const isModuleScript = /\btype\s*=\s*["']module["']/i.test(entryScriptTag)
+    const injectPreloadForSrc = (inputHtml, src, { patchScriptTag }) => {
+      if (!src) return inputHtml
 
-    // Patch the actual entry script tag as well (preload is not always respected).
-    const patchedHtml = html.replace(
-      new RegExp(`(<script[^>]*?src=["']${entrySrc}["'][^>]*?)>`, 'i'),
-      (m, prefix) => {
-        // Avoid double-adding attributes.
-        const hasFetchPriority = /fetchpriority\s*=/.test(prefix)
-        const hasImportance = /importance\s*=/.test(prefix)
-        const attrs =
-          `${prefix}` +
-          `${hasFetchPriority ? '' : ' fetchpriority="high"'}` +
-          `${hasImportance ? '' : ' importance="high"'}`
-        return `${attrs}>`
+      const scriptTagMatch = inputHtml.match(new RegExp(`<script[^>]*?src=["']${src}["'][^>]*?>`, 'i'))
+      const scriptTag = scriptTagMatch ? scriptTagMatch[0] : ''
+      const isModuleScript = /\btype\s*=\s*["']module["']/i.test(scriptTag)
+
+      let patched = inputHtml
+      if (patchScriptTag) {
+        patched = patched.replace(
+          new RegExp(`(<script[^>]*?src=["']${src}["'][^>]*?)>`, 'i'),
+          (m, prefix) => {
+            const hasFetchPriority = /fetchpriority\s*=/.test(prefix)
+            const hasImportance = /importance\s*=/.test(prefix)
+            const attrs =
+              `${prefix}` +
+              `${hasFetchPriority ? '' : ' fetchpriority="high"'}` +
+              `${hasImportance ? '' : ' importance="high"'}`
+            return `${attrs}>`
+          }
+        )
       }
-    )
 
-    // Avoid duplicate injections (but keep the entry <script> patched).
-    const hasPreload =
-      (patchedHtml.includes('rel="preload"') && patchedHtml.includes(entrySrc) && patchedHtml.includes('as="script"')) ||
-      (patchedHtml.includes('rel="modulepreload"') && patchedHtml.includes(entrySrc))
-    if (hasPreload) {
-      return patchedHtml
+      const hasPreload =
+        (patched.includes('rel="preload"') && patched.includes(src) && patched.includes('as="script"')) ||
+        (patched.includes('rel="modulepreload"') && patched.includes(src))
+      if (hasPreload) {
+        return patched
+      }
+
+      const preloadTag = isModuleScript
+        ? `<link rel="modulepreload" href="${src}" fetchpriority="high">`
+        : `<link rel="preload" as="script" href="${src}" fetchpriority="high">`
+
+      const headOpenMatch = patched.match(/<head[^>]*>/i)
+      if (headOpenMatch && typeof headOpenMatch.index === 'number') {
+        const insertAt = headOpenMatch.index + headOpenMatch[0].length
+        return patched.slice(0, insertAt) + preloadTag + patched.slice(insertAt)
+      }
+
+      return patched
     }
 
-    const preloadTag = isModuleScript
-      ? `<link rel="modulepreload" href="${entrySrc}" fetchpriority="high">`
-      : `<link rel="preload" as="script" href="${entrySrc}" fetchpriority="high">`
+    // Find the first entry bundle reference.
+    const entrySrc = findScriptSrc(html, /\/_expo\/static\/js\/web\/entry-[^"'\s>]+\.js/)
+    if (!entrySrc) return html
 
-    // Insert into <head> as early as possible.
-    const headOpenMatch = patchedHtml.match(/<head[^>]*>/i)
-    if (headOpenMatch && typeof headOpenMatch.index === 'number') {
-      const insertAt = headOpenMatch.index + headOpenMatch[0].length
-      return patchedHtml.slice(0, insertAt) + preloadTag + patchedHtml.slice(insertAt)
-    }
+    // 1) Always prioritize entry script.
+    let resultHtml = injectPreloadForSrc(html, entrySrc, { patchScriptTag: true })
 
-    return patchedHtml
+    // 2) Also preload the travel route chunk when present (TravelDetailsContainer-*.js).
+    // This chunk is often loaded via dynamic import and can otherwise be scheduled late.
+    resultHtml = injectPreloadForSrc(resultHtml, travelDetailsChunkSrc, { patchScriptTag: false })
+
+    return resultHtml
+
+    // (legacy code path removed; now handled by injectPreloadForSrc)
   } catch {
     return html
   }
@@ -281,29 +322,42 @@ const server = http.createServer((req, res) => {
     fs.readFile(resolvedPath, (err, data) => {
       if (err) {
         const travelFallbackPath = path.join(buildDir, 'travels', '[param].html')
+        const travelTabsFallbackPath = path.join(buildDir, '(tabs)', 'travels', '[param].html')
         const defaultIndexPath = path.join(buildDir, 'index.html')
 
         const rawPath = decodeURIComponent(url.pathname || '/')
         const shouldUseTravelFallback = rawPath.startsWith('/travels/')
 
-        const fallbackPath =
-          shouldUseTravelFallback && fs.existsSync(travelFallbackPath)
-            ? travelFallbackPath
-            : defaultIndexPath
+        const candidates = shouldUseTravelFallback
+          ? [travelFallbackPath, travelTabsFallbackPath, defaultIndexPath]
+          : [defaultIndexPath]
 
-        fs.readFile(fallbackPath, (fallbackErr, fallbackData) => {
-          if (fallbackErr) {
+        const firstExisting = candidates.find((p) => fs.existsSync(p))
+        const ordered = firstExisting
+          ? [firstExisting, ...candidates.filter((p) => p !== firstExisting)]
+          : candidates
+
+        const readFirstAvailable = (idx) => {
+          if (idx >= ordered.length) {
             res.statusCode = 404
             res.end('Not found')
             return
           }
-          const contentType = 'text/html; charset=utf-8'
-          res.setHeader('Content-Type', contentType)
-          applyCaching(res, pathname, '.html')
+          fs.readFile(ordered[idx], (fallbackErr, fallbackData) => {
+            if (fallbackErr) {
+              readFirstAvailable(idx + 1)
+              return
+            }
+            const contentType = 'text/html; charset=utf-8'
+            res.setHeader('Content-Type', contentType)
+            applyCaching(res, pathname, '.html')
 
-          const patched = injectEntryPreload(String(fallbackData))
-          compressResponse(req, res, Buffer.from(patched), contentType)
-        })
+            const patched = injectEntryPreload(String(fallbackData))
+            compressResponse(req, res, Buffer.from(patched), contentType)
+          })
+        }
+
+        readFirstAvailable(0)
         return
       }
 

@@ -129,6 +129,13 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return f?.width && f?.height ? f.width / f.height : aspectRatio
   }, [images, aspectRatio])
 
+  const shouldShowSideBlurPanels = useMemo(() => {
+    if (Platform.OS !== 'web') return false
+    if (!blurBackground) return false
+    const f = images[0]
+    return !(f?.width && f?.height)
+  }, [blurBackground, images])
+
   const computeHeight = useCallback(
     (w: number) => {
       if (!images.length) return 0
@@ -251,58 +258,14 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const isFirstSlide = index === 0
       const mainPriority = isFirstSlide ? 'high' : 'low'
 
-      let sideGap = 0
-      if (
-        Platform.OS === 'web' &&
-        blurBackground &&
-        item?.width &&
-        item?.height &&
-        containerW > 0 &&
-        containerH > 0
-      ) {
-        const scale = Math.min(containerW / item.width, containerH / item.height)
-        const displayW = item.width * scale
-        sideGap = Math.max(0, (containerW - displayW) / 2)
-      }
-
       return (
         <View style={[styles.slide, { width: containerW, height: containerH }]}>
-          {Platform.OS === 'web' && sideGap > 1 ? (
-            <>
-              <View style={[styles.sideBlurContainer, { left: 0, width: sideGap }]}>
-                <ImageCardMedia
-                  src={uri}
-                  fit="cover"
-                  blurBackground
-                  blurOnly
-                  priority={'low' as any}
-                  loading="lazy"
-                  transition={0}
-                  style={styles.sideBlurMedia}
-                  alt=""
-                />
-              </View>
-              <View style={[styles.sideBlurContainer, { right: 0, width: sideGap }]}>
-                <ImageCardMedia
-                  src={uri}
-                  fit="cover"
-                  blurBackground
-                  blurOnly
-                  priority={'low' as any}
-                  loading="lazy"
-                  transition={0}
-                  style={styles.sideBlurMedia}
-                  alt=""
-                />
-              </View>
-            </>
-          ) : null}
           <View style={styles.imageCardWrapper}>
             <View style={styles.imageCardSurface}>
               <ImageCardMedia
                 src={uri}
                 fit="contain"
-                blurBackground={false}
+                blurBackground={blurBackground}
                 priority={mainPriority as any}
                 loading={isFirstSlide ? 'eager' : 'lazy'}
                 transition={0}
@@ -324,10 +287,13 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         </View>
       )
     },
-    [blurBackground, containerH, containerW, imageProps, images.length, onFirstImageLoad, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.sideBlurContainer, styles.sideBlurMedia, styles.slide, uriMap]
+    [blurBackground, containerH, containerW, imageProps, images.length, onFirstImageLoad, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
   )
 
   if (!images.length) return null
+
+  const navInset = isMobile ? 8 : Math.max(insets.left || 0, insets.right || 0)
+  const navOffset = Math.max(44, 16 + navInset)
 
   return (
     <View style={styles.sliderStack}>
@@ -353,6 +319,25 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           />
         </View>
 
+        {Platform.OS === 'web' &&
+        shouldShowSideBlurPanels &&
+        showArrows &&
+        images.length > 1 &&
+        !(isMobile && hideArrowsOnMobile) ? (
+          <>
+            <View
+              pointerEvents="none"
+              style={styles.edgeScrimLeft}
+              testID={shouldShowSideBlurPanels ? `slider-side-blur-left-${currentIndex}` : undefined}
+            />
+            <View
+              pointerEvents="none"
+              style={styles.edgeScrimRight}
+              testID={shouldShowSideBlurPanels ? `slider-side-blur-right-${currentIndex}` : undefined}
+            />
+          </>
+        ) : null}
+
         {showArrows && images.length > 1 && !(isMobile && hideArrowsOnMobile) ? (
           <>
             <TouchableOpacity
@@ -360,10 +345,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               accessibilityLabel="Previous slide"
               onPress={prev}
               activeOpacity={0.8}
-              style={[styles.navBtn, { left: 16 + (isMobile ? 8 : insets.left) }]}
+              style={[styles.navBtn, { left: navOffset }]}
             >
               <View style={styles.arrowIconContainer}>
-                <Feather name="chevron-left" size={isMobile ? 20 : 24} color={colors.text} />
+                <Feather
+                  name="chevron-left"
+                  size={isMobile ? 20 : 24}
+                  color={colors.textOnDark}
+                  style={styles.arrowIcon}
+                />
               </View>
             </TouchableOpacity>
             <TouchableOpacity
@@ -371,10 +361,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               accessibilityLabel="Next slide"
               onPress={next}
               activeOpacity={0.8}
-              style={[styles.navBtn, { right: 16 + (isMobile ? 8 : insets.right) }]}
+              style={[styles.navBtn, { right: navOffset }]}
             >
               <View style={styles.arrowIconContainer}>
-                <Feather name="chevron-right" size={isMobile ? 20 : 24} color={colors.text} />
+                <Feather
+                  name="chevron-right"
+                  size={isMobile ? 20 : 24}
+                  color={colors.textOnDark}
+                  style={styles.arrowIcon}
+                />
               </View>
             </TouchableOpacity>
           </>
@@ -420,7 +415,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderWidth: 0,
       borderColor: 'transparent',
       ...(Platform.OS === 'web'
-        ? ({ boxShadow: colors.boxShadows.heavy } as any)
+        ? ({ boxShadow: colors.boxShadows.heavy, marginHorizontal: 'auto' } as any)
         : null),
     },
     clip: {
@@ -428,21 +423,22 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       overflow: 'hidden',
       borderRadius: 12,
       backgroundColor: 'transparent',
+      position: 'relative',
     },
     slide: {
       flex: 1,
       position: 'relative',
-      backgroundColor: 'transparent',
+      backgroundColor: colors.mutedBackground,
     },
     imageCardWrapper: {
-      flex: 1,
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: 0,
-      paddingVertical: 0,
-      alignSelf: 'stretch',
-      maxWidth: 1280,
-      width: '100%',
+      zIndex: 1,
     },
     imageCardSurface: {
       width: '100%',
@@ -464,35 +460,66 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     navBtn: {
       position: 'absolute',
       top: '50%',
-      marginTop: -24,
+      marginTop: -28,
       backgroundColor: colors.overlay,
       borderWidth: 1,
       borderColor: colors.borderStrong,
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
       zIndex: 50,
       justifyContent: 'center',
       alignItems: 'center',
       ...(Platform.OS === 'web'
-        ? ({ boxShadow: '0 8px 24px rgba(0,0,0,0.22)' } as any)
+        ? ({
+            boxShadow: '0 10px 28px rgba(0,0,0,0.28)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          } as any)
         : null),
     },
     arrowIconContainer: {
       justifyContent: 'center',
       alignItems: 'center',
     },
-    sideBlurContainer: {
+    arrowIcon: {
+      ...(Platform.OS === 'web'
+        ? ({
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.65))',
+          } as any)
+        : {
+            textShadowColor: 'rgba(0,0,0,0.65)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 4,
+          }),
+    },
+    edgeScrimLeft: {
       position: 'absolute',
       top: 0,
       bottom: 0,
-      zIndex: 0,
-      overflow: 'hidden',
-      pointerEvents: 'none',
+      left: 0,
+      width: 140,
+      zIndex: 20,
+      ...(Platform.OS === 'web'
+        ? ({
+            backgroundImage:
+              'linear-gradient(to right, rgba(0,0,0,0.45), rgba(0,0,0,0))',
+          } as any)
+        : null),
     },
-    sideBlurMedia: {
-      width: '100%',
-      height: '100%',
+    edgeScrimRight: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      right: 0,
+      width: 140,
+      zIndex: 20,
+      ...(Platform.OS === 'web'
+        ? ({
+            backgroundImage:
+              'linear-gradient(to left, rgba(0,0,0,0.45), rgba(0,0,0,0))',
+          } as any)
+        : null),
     },
     dots: {
       position: 'absolute',

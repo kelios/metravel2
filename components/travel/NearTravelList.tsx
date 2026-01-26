@@ -21,12 +21,14 @@ import { Title } from '@/src/ui/paper';
 import { Travel } from '@/src/types/types';
 import { fetchTravelsNear } from '@/src/api/map';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
-import MapClientSideComponent from '@/components/Map';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
-import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import Button from '@/components/ui/Button';
+
+// ✅ ОПТИМИЗАЦИЯ: Lazy imports для map-компонентов
+const MapClientSideComponent = React.lazy(() => import('@/components/Map'));
+const SegmentedControl = React.lazy(() => import('@/components/MapPage/SegmentedControl'));
 
 type Segment = 'list' | 'map';
 
@@ -194,10 +196,12 @@ const MapContainer = memo(({
       </View>
 
       <View style={mapStyles.mapWrapper}>
-        <MapClientSideComponent
-          showRoute={showRoute}
-          travel={{ data: points }}
-        />
+        <React.Suspense fallback={<ActivityIndicator size="small" color="#5D8C7C" />}>
+          <MapClientSideComponent
+            showRoute={showRoute}
+            travel={{ data: points }}
+          />
+        </React.Suspense>
       </View>
 
       <View style={mapStyles.mapFooter}>
@@ -739,12 +743,14 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
         {!isMobile ? (
           <>
-            <SegmentedControl
-              options={segmentOptions}
-              value={viewMode}
-              onChange={(key) => setViewMode(key as Segment)}
-              accessibilityLabel="Переключатель вида"
-            />
+            <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} />}>
+              <SegmentedControl
+                options={segmentOptions}
+                value={viewMode}
+                onChange={(key) => setViewMode(key as Segment)}
+                accessibilityLabel="Переключатель вида"
+              />
+            </React.Suspense>
 
             {viewMode === 'map' ? (
               <View style={styles.mobileMapColumn}>
@@ -801,12 +807,14 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           </>
         ) : (
           <>
-            <SegmentedControl
-              options={segmentOptions}
-              value={viewMode}
-              onChange={(key) => setViewMode(key as Segment)}
-              accessibilityLabel="Переключатель вида"
-            />
+            <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} />}>
+              <SegmentedControl
+                options={segmentOptions}
+                value={viewMode}
+                onChange={(key) => setViewMode(key as Segment)}
+                accessibilityLabel="Переключатель вида"
+              />
+            </React.Suspense>
 
             {viewMode === 'list' ? (
               <FlatList

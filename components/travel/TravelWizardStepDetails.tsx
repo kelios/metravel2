@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { lazy, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView } from 'react-native';
 
-import ArticleEditor from '@/components/ArticleEditor';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
@@ -10,6 +9,8 @@ import { TravelFormData } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+
+const ArticleEditor = lazy(() => import('@/components/ArticleEditor'));
 
 interface TravelWizardStepDetailsProps {
     currentStep: number;

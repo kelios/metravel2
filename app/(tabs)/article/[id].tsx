@@ -10,7 +10,6 @@ import { Stack, useLocalSearchParams } from 'expo-router'
 import { Article } from '@/src/types/types'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
-import { WebView } from 'react-native-webview'
 import { Card, Title } from '@/src/ui/paper'
 import { fetchArticle } from '@/src/api/articles'
 import { SafeHtml } from '@/components/SafeHtml'
@@ -21,6 +20,11 @@ export default function ArticleDetails() {
   const { width } = useResponsive()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
+
+  const NativeWebView = useMemo(() => {
+    if (Platform.OS === 'web') return null
+    return require('react-native-webview').WebView
+  }, [])
 
   const params = useLocalSearchParams()
   const id = typeof params.id === 'string' ? Number(params.id) : undefined
@@ -67,7 +71,7 @@ export default function ArticleDetails() {
                             contentWidth={width - 50}
                             renderers={{ iframe: IframeRenderer }}
                             customHTMLElementModels={{ iframe: iframeModel }}
-                            WebView={WebView}
+                            WebView={NativeWebView as any}
                             defaultWebViewProps={{}}
                             renderersProps={{
                               iframe: {

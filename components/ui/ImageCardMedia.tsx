@@ -115,16 +115,18 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
     const blurSize = 64;
-    return (
-      optimizeImageUrl(uri, {
-        width: blurSize,
-        height: blurSize,
-        quality: 30,
-        blur: 30,
-        fit: 'cover',
-        format: 'auto',
-      }) ?? uri
-    );
+    const optimized = optimizeImageUrl(uri, {
+      width: blurSize,
+      height: blurSize,
+      quality: 30,
+      blur: 30,
+      fit: 'contain',
+      format: 'auto',
+    }) ?? uri;
+    
+    // Add cache-busting parameter to force reload with new fit parameter
+    const separator = optimized.includes('?') ? '&' : '?';
+    return `${optimized}${separator}cb=contain`;
   }, [resolvedSource]);
   const webBlurFallbackUri = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -140,7 +142,7 @@ function ImageCardMedia({
         height: blurSize,
         quality: 30,
         blur: 30,
-        fit: 'cover',
+        fit: 'contain',
         format: 'auto',
       }) ?? fallback
     );
@@ -225,14 +227,23 @@ function ImageCardMedia({
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  filter: 'blur(18px)',
-                  transform: 'scale(1.18)',
+                  objectPosition: 'center',
+                  filter: 'blur(20px)',
+                  transform: 'scale(1.1)',
                   zIndex: 0,
                   borderRadius,
                   display: 'block',
                 }}
                 loading="eager"
                 decoding="async"
+                onError={(e) => {
+                  if (
+                    webBlurFallbackUri &&
+                    (e.target as HTMLImageElement).src !== webBlurFallbackUri
+                  ) {
+                    (e.target as HTMLImageElement).src = webBlurFallbackUri;
+                  }
+                }}
               />
             )}
           {(!blurOnly || Platform.OS !== 'web') && (

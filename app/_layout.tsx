@@ -4,11 +4,14 @@ import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import { FiltersProvider } from "@/providers/FiltersProvider";
 import { AuthProvider } from "@/context/AuthContext";
-import { FavoritesProvider } from "@/context/FavoritesContext";
+const FavoritesProviderLazy = React.lazy(() => import('@/context/FavoritesContext').then(m => ({ default: m.FavoritesProvider })));
+
+const FavoritesProviderFallback = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+
 import { QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SkipLinks from "@/components/SkipLinks";
-import { NetworkStatus } from "@/components/NetworkStatus";
+const NetworkStatusLazy = React.lazy(() => import('@/components/NetworkStatus').then(m => ({ default: m.NetworkStatus })));
 import ThemedPaperProvider from "@/components/ThemedPaperProvider";
 const FooterLazy = React.lazy(() => import('@/components/Footer'));
 const ConsentBannerLazy = React.lazy(() => import('@/components/ConsentBanner'));
@@ -214,9 +217,13 @@ function RootLayoutNav() {
     
     /** === SSR-safe Toast: рендерим только на клиенте === */
     const [isMounted, setIsMounted] = useState(false);
+    const [showConsentBanner, setShowConsentBanner] = useState(false);
     
     useEffect(() => {
         setIsMounted(true);
+        // Відкладаємо ConsentBanner на 2 секунди для покращення FCP/LCP
+        const timer = setTimeout(() => setShowConsentBanner(true), 2000);
+        return () => clearTimeout(timer);
     }, []);
 
 
@@ -325,6 +332,7 @@ function RootLayoutNav() {
             dockHeight={dockHeight}
             setDockHeight={setDockHeight}
             isMounted={isMounted}
+            showConsentBanner={showConsentBanner}
           />
         </ThemeProvider>
       </ErrorBoundary>
@@ -339,6 +347,7 @@ function ThemedContent({
   dockHeight,
   setDockHeight,
   isMounted,
+  showConsentBanner,
 }: {
   showMapBackground: boolean;
   showFooter: boolean;
@@ -346,6 +355,7 @@ function ThemedContent({
   dockHeight: number;
   setDockHeight: (h: number) => void;
   isMounted: boolean;
+  showConsentBanner: boolean;
 }) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -369,7 +379,8 @@ function ThemedContent({
   return (
     <ThemedPaperProvider>
               <AuthProvider>
-                  <FavoritesProvider>
+                  <React.Suspense fallback={<FavoritesProviderFallback>{null}</FavoritesProviderFallback>}>
+                    <FavoritesProviderLazy>
                       <QueryClientProvider client={queryClient}>
                           <FiltersProvider>
                               <View style={styles.container}>
@@ -391,7 +402,11 @@ function ThemedContent({
                               {Platform.OS === 'web' && <SkipLinks />}
 
                               {/* ✅ FIX-005: Индикатор статуса сети */}
-                              {(!isWeb || isMounted) && <NetworkStatus position="top" />}
+                              {(!isWeb || isMounted) && (
+                                <React.Suspense fallback={null}>
+                                  <NetworkStatusLazy position="top" />
+                                </React.Suspense>
+                              )}
 
                               <View style={[styles.content]}>
                                   <Stack screenOptions={{ headerShown: false }}>
@@ -403,7 +418,7 @@ function ThemedContent({
                               </View>
 
                               {/* Баннер согласия с компактным интерфейсом (web only) */}
-                              {(!isWeb || isMounted) && (
+                              {(!isWeb || showConsentBanner) && (
                                 <React.Suspense fallback={null}>
                                   <ConsentBannerLazy />
                                 </React.Suspense>
@@ -422,7 +437,8 @@ function ThemedContent({
                         </View>
                     </FiltersProvider>
                 </QueryClientProvider>
-            </FavoritesProvider>
+                    </FavoritesProviderLazy>
+                  </React.Suspense>
             </AuthProvider>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
             {isMounted && (

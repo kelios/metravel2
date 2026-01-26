@@ -1,7 +1,8 @@
-import { Suspense } from 'react'
+import { Suspense, lazy } from 'react'
 import { Platform, View } from 'react-native'
 import { useThemedColors } from '@/hooks/useTheme'
-import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer'
+
+const TravelDetailsWebLazy = lazy(() => import('@/components/travel/details/TravelDetailsContainer'))
 
 export default function TravelDetailsScreen() {
   const colors = useThemedColors()
@@ -26,7 +27,7 @@ export default function TravelDetailsScreen() {
         </View>
       }
     >
-      <TravelDetailsContainer />
+      <TravelDetailsWebLazy />
     </Suspense>
   )
 }

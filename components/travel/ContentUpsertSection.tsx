@@ -1,12 +1,13 @@
-import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, Dimensions } from 'react-native';
 import { TravelFormData } from '@/src/types/types';
 import TextInputComponent from '@/components/TextInputComponent';
-import ArticleEditor from '@/components/ArticleEditor';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+
+const ArticleEditor = lazy(() => import('@/components/ArticleEditor'));
 
 interface ContentUpsertSectionProps {
     formData: TravelFormData;
