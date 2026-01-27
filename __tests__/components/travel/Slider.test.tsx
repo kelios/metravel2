@@ -1,4 +1,3 @@
-import React from 'react'
 import { act, fireEvent, render, type RenderAPI } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import Slider, { type SliderImage } from '@/components/travel/Slider'
@@ -142,8 +141,8 @@ describe('Slider', () => {
       />
     )
 
-    expect(getByTestId('slider-blur-bg-0')).toBeTruthy()
-    expect(queryByTestId('slider-flat-bg-0')).toBeNull()
+    expect(getByTestId('slider-flat-bg-0')).toBeTruthy()
+    expect(queryByTestId('slider-blur-bg-0')).toBeNull()
 
     const img = getByTestId('slider-image-0')
     act(() => {
@@ -151,6 +150,7 @@ describe('Slider', () => {
     })
 
     expect(getByTestId('slider-blur-bg-0')).toBeTruthy()
+    expect(queryByTestId('slider-flat-bg-0')).toBeNull()
   })
 
   it('updates counter when navigating to the next slide via arrow', async () => {

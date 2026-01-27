@@ -58,7 +58,7 @@ config.resolver = {
   // Enable asset optimization
   assetExts: [
     ...config.resolver.assetExts,
-    'webp', 'avif', 'heic', 'heif'
+    'webp', 'avif', 'heic', 'heif', 'ico'
   ],
   // Source file extensions
   sourceExts: [

@@ -631,7 +631,7 @@ function TravelHeroSectionInner({
         </View>
       )}
 
-      {!isMobile && extrasReady && (
+      {extrasReady && (
         <View
           testID="travel-details-author"
           accessibilityRole="none"

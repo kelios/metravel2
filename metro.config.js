@@ -28,6 +28,7 @@ config.resolver = {
   // This avoids cases where packages (e.g. react-native-svg) resolve to an ESM build
   // that Metro/web ends up bundling incorrectly, leading to runtime export mismatches.
   resolverMainFields: ['react-native', 'browser', 'main', 'module'],
+  assetExts: Array.from(new Set([...(config.resolver.assetExts || []), 'ico'])),
   resolveRequest: (context, moduleName, platform, modulePath) => {
     // Блокируем импорт всех CSS файлов (Metro не может их обработать из-за lightningcss)
     if (moduleName.endsWith('.css')) {
