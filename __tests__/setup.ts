@@ -578,7 +578,10 @@ jest.mock('@expo/vector-icons/Feather', () => {
         React.createElement(Text, { testID: `feather-${name}`, ...props }, String(name ?? '')),
     }
   }
-  return globalAny.__expoVectorIconsMock.Feather
+  return {
+    __esModule: true,
+    default: globalAny.__expoVectorIconsMock.Feather,
+  }
 })
 
 jest.mock('@expo/vector-icons/MaterialIcons', () => {
@@ -592,7 +595,10 @@ jest.mock('@expo/vector-icons/MaterialIcons', () => {
         React.createElement(Text, { testID: `material-${name}`, ...props }, String(name ?? '')),
     }
   }
-  return globalAny.__expoVectorIconsMock.MaterialIcons
+  return {
+    __esModule: true,
+    default: globalAny.__expoVectorIconsMock.MaterialIcons,
+  }
 })
 
 jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
@@ -606,7 +612,10 @@ jest.mock('@expo/vector-icons/MaterialCommunityIcons', () => {
         React.createElement(Text, { testID: `mci-${name}`, ...props }, String(name ?? '')),
     }
   }
-  return globalAny.__expoVectorIconsMock.MaterialCommunityIcons
+  return {
+    __esModule: true,
+    default: globalAny.__expoVectorIconsMock.MaterialCommunityIcons,
+  }
 })
 
 jest.mock('@expo/vector-icons/FontAwesome5', () => {
@@ -620,7 +629,10 @@ jest.mock('@expo/vector-icons/FontAwesome5', () => {
         React.createElement(Text, { testID: `fa5-${name}`, ...props }, String(name ?? '')),
     }
   }
-  return globalAny.__expoVectorIconsMock.FontAwesome5
+  return {
+    __esModule: true,
+    default: globalAny.__expoVectorIconsMock.FontAwesome5,
+  }
 })
 
 // Mock react-native-paper Portal

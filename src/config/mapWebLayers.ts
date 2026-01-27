@@ -42,6 +42,26 @@ export interface WebMapLayerDefinition {
  */
 export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
   {
+    id: 'waymarked-hiking',
+    title: 'Маршруты (Waymarked Trails: hiking)',
+    kind: 'tile',
+    url: 'https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png',
+    attribution: '© waymarkedtrails.org, © OpenStreetMap contributors (ODbL)',
+    opacity: 0.95,
+    zIndex: 520,
+    defaultEnabled: false,
+  },
+  {
+    id: 'waymarked-cycling',
+    title: 'Маршруты (Waymarked Trails: cycling)',
+    kind: 'tile',
+    url: 'https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png',
+    attribution: '© waymarkedtrails.org, © OpenStreetMap contributors (ODbL)',
+    opacity: 0.95,
+    zIndex: 515,
+    defaultEnabled: false,
+  },
+  {
     id: 'osm-camping',
     title: 'Ночёвки/кемпинги (OSM: camp/shelter)',
     kind: 'osm-overpass-camping',

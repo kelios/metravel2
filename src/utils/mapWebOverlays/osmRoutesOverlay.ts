@@ -1,5 +1,6 @@
 import type { BBox, OSMLineFeature } from '@/src/utils/overpass';
 import { bboxAreaKm2, fetchOsmRoutes, overpassToLines } from '@/src/utils/overpass';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type LeafletMap = any;
 
@@ -11,6 +12,65 @@ export type OsmRoutesOverlayOptions = {
 const defaultOpts: Required<OsmRoutesOverlayOptions> = {
   maxAreaKm2: 1500,
   debounceMs: 750,
+};
+
+const normalizeColor = (input: unknown): string | null => {
+  const raw = String(input ?? '').trim();
+  if (!raw) return null;
+
+  // Basic sanity checks for common color formats.
+  // Allow: #rgb/#rrggbb/#rrggbbaa, rgb()/rgba(), hsl()/hsla(), and named colors.
+  const looksLikeHex = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(raw);
+  const looksLikeFunc = /^(rgb|rgba|hsl|hsla)\(/i.test(raw);
+  const looksLikeName = /^[a-z][a-z0-9\-\s]*$/i.test(raw);
+  if (!looksLikeHex && !looksLikeFunc && !looksLikeName) return null;
+
+  // Web: use native CSS parser as final validation.
+  try {
+    if (typeof window !== 'undefined' && (window as any)?.CSS?.supports) {
+      if (!(window as any).CSS.supports('color', raw)) return null;
+    }
+  } catch {
+    // noop
+  }
+
+  return raw;
+};
+
+const deriveRouteColor = (line: OSMLineFeature): string => {
+  const tags = line.tags || {};
+
+  const tagColor =
+    normalizeColor(tags.colour) ||
+    normalizeColor(tags.color) ||
+    normalizeColor((tags as any)['route:colour']) ||
+    normalizeColor((tags as any)['route:color']);
+  if (tagColor) return tagColor;
+
+  const route = String(tags.route || '').toLowerCase();
+  const network = String(tags.network || '').toLowerCase();
+
+  // Prefer semantic colors by route type.
+  if (route.includes('bicycle') || route.includes('cycling') || route.includes('mtb')) {
+    return DESIGN_TOKENS.colors.info;
+  }
+  if (route.includes('hiking') || route.includes('foot') || route.includes('walking')) {
+    return DESIGN_TOKENS.colors.success;
+  }
+  if (route.includes('horse')) {
+    return DESIGN_TOKENS.colors.accent;
+  }
+
+  // Some networks are used for cycling/hiking too.
+  if (network.endsWith('cn') || network.endsWith('ncn') || network.endsWith('rcn') || network.endsWith('lcn')) {
+    return DESIGN_TOKENS.colors.info;
+  }
+  if (network.endsWith('wn') || network.endsWith('nwn') || network.endsWith('rwn') || network.endsWith('lwn')) {
+    return DESIGN_TOKENS.colors.success;
+  }
+
+  // Fallback: keep previous orange-ish appearance but via tokens.
+  return DESIGN_TOKENS.colors.warning;
 };
 
 export const attachOsmRoutesOverlay = (L: any, map: LeafletMap, opts?: OsmRoutesOverlayOptions) => {
@@ -85,16 +145,17 @@ export const attachOsmRoutesOverlay = (L: any, map: LeafletMap, opts?: OsmRoutes
   const renderLines = (lines: OSMLineFeature[]) => {
     layerGroup.clearLayers();
 
-    const style = {
-      color: '#ff7a00',
-      weight: 4,
-      opacity: 0.85,
-    };
-
     for (const line of lines) {
       if (!line.coords?.length || line.coords.length < 2) continue;
 
-      const poly = L.polyline(line.coords.map((c: { lat: number; lng: number }) => [c.lat, c.lng]), style);
+      const poly = L.polyline(
+        line.coords.map((c: { lat: number; lng: number }) => [c.lat, c.lng]),
+        {
+          color: deriveRouteColor(line),
+          weight: 4,
+          opacity: 0.85,
+        }
+      );
 
       const routeType = line.tags.route || line.tags.network || '';
       const html = `

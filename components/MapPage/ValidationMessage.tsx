@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { AlertCircle, AlertTriangle } from 'lucide-react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface ValidationMessageProps {
@@ -50,12 +50,12 @@ const ValidationMessage: React.FC<ValidationMessageProps> = ({ type, messages })
   if (messages.length === 0) return null;
 
   const isError = type === 'error';
-  const IconComponent = isError ? AlertCircle : AlertTriangle;
+  const iconName = isError ? 'alert-circle' : 'alert-triangle';
   const iconColor = isError ? colors.danger : colors.warning;
 
   return (
     <View style={[styles.container, isError ? styles.errorContainer : styles.warningContainer]}>
-      <IconComponent size={18} color={iconColor} style={styles.icon} {...({} as any)} />
+      <Feather name={iconName} size={18} color={iconColor} style={styles.icon} />
       <View style={styles.textContainer}>
         {messages.map((message, index) => (
           <Text key={index} style={[styles.text, isError ? styles.errorText : styles.warningText]}>

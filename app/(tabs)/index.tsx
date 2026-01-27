@@ -29,20 +29,19 @@ function HomeScreen() {
         return buildCanonicalUrl(normalized);
     }, [buildCanonicalUrl, effectivePathname]);
 
-    if (!isFocused) {
-        return <View style={styles.container} />;
-    }
-
-    if (Platform.OS === 'web' && effectivePathname && effectivePathname !== '/' && effectivePathname !== '') {
-        return <View style={styles.container} />;
-    }
+    const shouldRenderSeo = useMemo(() => {
+        if (Platform.OS !== 'web') return false;
+        if (!isFocused) return false;
+        const p = String(effectivePathname ?? '').trim();
+        return p === '' || p === '/' || p === '/index';
+    }, [effectivePathname, isFocused]);
 
     const title = 'Твоя книга путешествий | Metravel';
     const description = 'Добавляй поездки, фото и заметки — и собирай красивую книгу в PDF для печати.';
 
     return (
         <>
-            {Platform.OS === 'web' && (
+            {shouldRenderSeo && (
                 <InstantSEO
                     headKey="home"
                     title={title}
