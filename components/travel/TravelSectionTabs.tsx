@@ -9,6 +9,7 @@ import {
   Modal,
 } from "react-native"
 import Feather from '@expo/vector-icons/Feather';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -188,7 +189,15 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
   if (!links.length) return null
 
   return (
-    <View style={[styles.wrapper, stickyStyles]}>
+    <View
+      style={[styles.wrapper, stickyStyles]}
+      {...(Platform.OS === 'web'
+        ? {
+            role: 'tablist',
+            'aria-label': 'Разделы путешествия',
+          }
+        : {})}
+    >
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -205,7 +214,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
                 isActive && styles.tabActive,
                 pressed && styles.tabPressed,
               ]}
-              accessibilityRole="button"
+              accessibilityRole="tab"
               accessibilityLabel={label}
               accessibilityState={{ selected: isActive }}
             >
@@ -289,7 +298,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
                       isActive && styles.modalItemActive,
                       pressed && styles.modalItemPressed,
                     ]}
-                    accessibilityRole="button"
+                    accessibilityRole="tab"
                     accessibilityLabel={label}
                     accessibilityState={{ selected: isActive }}
                   >

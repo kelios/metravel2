@@ -610,7 +610,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       // пока он не загрузился — используем плоский фон, чтобы избежать расхождений с тестами/LCP.
       const shouldRenderBlurBg =
         shouldBlur &&
-        status !== "error";
+        status !== "error" &&
+        !(Platform.OS === 'web' && isFirstSlide && status !== 'loaded');
 
       const useElevatedWrapper = Platform.OS === 'web' && !isMobile && (isPortrait || isSquareish);
       // Показываем всю картинку: используем contain на всех платформах

@@ -145,11 +145,20 @@ function RootLayoutNav() {
       if (!isWeb) return;
       if (typeof window === 'undefined') return;
 
+      let rafId: number | null = null;
       const update = () => setClientWidth(window.innerWidth);
-      update();
+
+      // Avoid updating state during React hydration (can trigger React error #421 with Suspense).
+      // Defer the initial read to the next frame.
+      rafId = window.requestAnimationFrame(() => update());
 
       window.addEventListener('resize', update);
-      return () => window.removeEventListener('resize', update);
+      return () => {
+        if (rafId != null) {
+          window.cancelAnimationFrame(rafId);
+        }
+        window.removeEventListener('resize', update);
+      };
     }, []);
 
     useEffect(() => {
@@ -218,10 +227,19 @@ function RootLayoutNav() {
     const [showConsentBanner, setShowConsentBanner] = useState(false);
     
     useEffect(() => {
-        setIsMounted(true);
+        let mountedTimer: ReturnType<typeof setTimeout> | null = null;
+        let consentTimer: ReturnType<typeof setTimeout> | null = null;
+
+        // Defer mount-only UI to avoid hydration-time updates (React error #421 with Suspense).
+        mountedTimer = setTimeout(() => setIsMounted(true), 0);
+
         // Відкладаємо ConsentBanner на 2 секунди для покращення FCP/LCP
-        const timer = setTimeout(() => setShowConsentBanner(true), 2000);
-        return () => clearTimeout(timer);
+        consentTimer = setTimeout(() => setShowConsentBanner(true), 2000);
+
+        return () => {
+          if (mountedTimer) clearTimeout(mountedTimer);
+          if (consentTimer) clearTimeout(consentTimer);
+        };
     }, []);
 
 
