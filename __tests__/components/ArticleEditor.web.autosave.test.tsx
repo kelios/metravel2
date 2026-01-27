@@ -30,11 +30,13 @@ jest.mock('@/components/QuillEditor.web', () => {
     default: React.forwardRef((props: any, ref: any) => {
       ;(globalThis as any).__quillProps__ = props
 
-      const root = {
+      const rootRef = React.useRef({
         innerHTML: props.value ?? '',
         addEventListener: jest.fn(),
         removeEventListener: jest.fn(),
-      }
+      })
+
+      const root = rootRef.current
 
       const editor: any = {
         root,
@@ -54,7 +56,7 @@ jest.mock('@/components/QuillEditor.web', () => {
       }
 
       React.useEffect(() => {
-        root.innerHTML = props.value ?? ''
+        rootRef.current.innerHTML = props.value ?? ''
       }, [props.value])
 
       React.useImperativeHandle(ref, () => ({
