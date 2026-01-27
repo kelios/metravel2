@@ -4,6 +4,7 @@ import { useLazyMap } from '@/hooks/useLazyMap';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
 import { MapSkeleton } from '@/components/SkeletonLoader';
+import { useDeferredMapLoad } from './MapOptimizations';
 import type { MapUiApi } from '@/src/types/mapUi';
 
 type LatLng = { latitude: number; longitude: number };
@@ -60,6 +61,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
     const themeColors = useThemedColors();
 
+    // ✅ ОПТИМИЗАЦИЯ: Отложенная загрузка карты для улучшения Lighthouse score
+    const shouldDeferLoad = useDeferredMapLoad(isWeb);
+
     // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты, изменяется при ремонтировании после ошибки
     const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
@@ -67,12 +71,12 @@ const MapPanel: React.FC<MapPanelProps> = ({
     const { shouldLoad, setElementRef } = useLazyMap({
         rootMargin: '200px',
         threshold: 0.1,
-        enabled: isWeb,
+        enabled: isWeb && shouldDeferLoad,
     });
 
     // Динамически импортируем веб-карту, только в браузере и когда нужно
     const [WebMap, setWebMap] = useState<React.ComponentType<any> | null>(null);
-    const [loading, setLoading] = useState(isWeb && shouldLoad);
+    const [loading, setLoading] = useState(isWeb && shouldLoad && shouldDeferLoad);
 
     useEffect(() => {
         let mounted = true;

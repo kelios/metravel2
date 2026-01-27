@@ -52,7 +52,6 @@ export default function TabLayout() {
 
     return (
         <Tabs
-            initialRouteName="index"
             tabBar={() => null}
             screenOptions={{
                 tabBarStyle: tabBarHiddenStyle,

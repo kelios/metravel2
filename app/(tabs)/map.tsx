@@ -72,13 +72,11 @@ export default function MapScreen() {
     const FiltersPanelComponent = filtersPanelProps?.Component;
 
     const mapPanelPlaceholder = useMemo(
-        () => (
-            <View style={styles.mapPlaceholder}>
-                <ActivityIndicator size="large" color={themedColors.primary} />
-                <Text style={styles.mapPlaceholderText}>Загружаем карту…</Text>
-            </View>
-        ),
-        [styles.mapPlaceholder, styles.mapPlaceholderText, themedColors.primary],
+        () => {
+            const { MapPageSkeleton } = require('@/components/MapPage/MapPageSkeleton');
+            return <MapPageSkeleton />;
+        },
+        [],
     );
 
     // Map component for mobile layout

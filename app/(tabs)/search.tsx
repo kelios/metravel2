@@ -1,6 +1,5 @@
-// ✅ УЛУЧШЕНИЕ: Страница поиска с DESIGN_TOKENS и useThemedColors
-import React, { Suspense, lazy, memo, useMemo } from 'react';
-import { StyleSheet, View, Platform, Text } from 'react-native';
+import { Suspense, lazy, memo, useMemo } from 'react';
+import { StyleSheet, View, Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -25,7 +24,6 @@ function SearchScreen() {
     const title = 'Поиск путешествий | Metravel';
     const description = 'Найдите путешествия по фильтрам и сохраните лучшие идеи в свою книгу.';
 
-    // ✅ ДИЗАЙН: Динамические стили с DESIGN_TOKENS
     const styles = useMemo(() => StyleSheet.create({
         container: {
             flex: 1,
@@ -36,12 +34,6 @@ function SearchScreen() {
             justifyContent: 'center',
             alignItems: 'center',
             padding: DESIGN_TOKENS.spacing.lg,
-        },
-        loading: {
-            padding: DESIGN_TOKENS.spacing.lg,
-        },
-        loadingText: {
-            color: colors.text,
         },
     }), [colors]);
 
@@ -75,9 +67,10 @@ function SearchScreen() {
                 >
                     <Suspense
                         fallback={
-                            <View style={styles.loading}>
-                                <Text style={styles.loadingText}>Загрузка…</Text>
-                            </View>
+                            (() => {
+                                const { SearchPageSkeleton } = require('@/components/listTravel/SearchPageSkeleton');
+                                return <SearchPageSkeleton />;
+                            })()
                         }
                     >
                         <ListTravel />

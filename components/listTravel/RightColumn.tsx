@@ -478,11 +478,11 @@ const RightColumn: React.FC<RightColumnProps> = memo(
               ItemSeparatorComponent={Platform.OS === 'web' ? RowSeparator : undefined}
               onEndReached={onEndReached}
               onEndReachedThreshold={onEndReachedThreshold}
-              removeClippedSubviews={false}
-              windowSize={Platform.OS === 'web' ? 5 : 10}
-              initialNumToRender={Platform.OS === 'web' ? 8 : 8} // Increased for better LCP
-              maxToRenderPerBatch={Platform.OS === 'web' ? 8 : 8} // Increased for smoother scrolling
-              updateCellsBatchingPeriod={Platform.OS === 'web' ? 50 : 16}
+              removeClippedSubviews={true}
+              windowSize={5}
+              initialNumToRender={6}
+              maxToRenderPerBatch={3}
+              updateCellsBatchingPeriod={100}
               contentContainerStyle={{
                 paddingHorizontal: contentPadding,
                 paddingTop: 8,

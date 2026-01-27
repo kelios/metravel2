@@ -385,9 +385,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Resource hints - critical domains */}
       <link rel="dns-prefetch" href="//cdn.metravel.by" />
       <link rel="dns-prefetch" href="//api.metravel.by" />
+      <link rel="dns-prefetch" href="//tile.openstreetmap.org" />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://images.weserv.nl" crossOrigin="anonymous" />
+      <link rel="preconnect" href="https://tile.openstreetmap.org" crossOrigin="anonymous" />
       
       {/* Icons */}
       <link rel="icon" href="/assets/icons/logo_yellow.ico" sizes="any" type="image/x-icon" />
@@ -585,4 +587,9 @@ html[data-theme="light"]{color-scheme:light;--color-text:#1a1a1a;--color-backgro
 [data-testid="footer-desktop-bar"]{justify-content:space-between !important}
 [data-testid^="footer-item-"]{display:inline-flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;flex:0 0 auto !important}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+[data-testid="map-container"]{min-height:400px;contain:layout style paint;background:var(--color-backgroundSecondary,#f5f5f5)}
+[data-testid="search-container"]{min-height:600px;contain:layout style paint}
+[data-testid="travel-card"]{contain:layout style paint;will-change:auto}
+[data-testid="map-skeleton"],[data-testid="search-skeleton"]{animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.7}}
 `;
