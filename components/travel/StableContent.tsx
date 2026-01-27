@@ -192,6 +192,21 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} p {
   margin: 0 0 1.25em;
 }
+.${WEB_RICH_TEXT_CLASS} a {
+  color: ${colors.primary};
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  word-break: break-word;
+}
+.${WEB_RICH_TEXT_CLASS} a:hover {
+  text-decoration-thickness: 2px;
+}
+.${WEB_RICH_TEXT_CLASS} a:focus-visible {
+  outline: 2px solid ${colors.focus};
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 .${WEB_RICH_TEXT_CLASS} h1,
 .${WEB_RICH_TEXT_CLASS} h2,
 .${WEB_RICH_TEXT_CLASS} h3 {
@@ -601,6 +616,10 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         marginTop: 12, 
         marginBottom: 12, 
         lineHeight: Math.round(BASE_FONT_SIZE * 1.6), // Межстрочный интервал 1.6
+      },
+      a: {
+        color: colors.primary,
+        textDecorationLine: 'underline',
       },
       strong: { fontWeight: "700" }, // ✅ Более жирный для выделения
       em: { fontStyle: "italic", color: colors.textMuted }, // ✅ Немного другой цвет для курсива

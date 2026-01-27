@@ -38,9 +38,8 @@ function HomeScreen() {
 
     const shouldRenderHomeContent = useMemo(() => {
         if (Platform.OS !== 'web') return true;
-        const p = String(effectivePathname ?? '').trim();
-        return p === '' || p === '/' || p === '/index';
-    }, [effectivePathname]);
+        return isFocused;
+    }, [isFocused]);
 
     const title = 'Твоя книга путешествий | Metravel';
     const description = 'Добавляй поездки, фото и заметки — и собирай красивую книгу в PDF для печати.';
