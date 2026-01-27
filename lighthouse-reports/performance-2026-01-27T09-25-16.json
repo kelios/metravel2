@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-01-27T09:25:49.519Z",
+  "url": "https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele",
+  "mobile": {
+    "performance": 51,
+    "accessibility": 92,
+    "bestPractices": 93,
+    "seo": 100,
+    "metrics": {
+      "fcp": 5957.298999999998,
+      "lcp": 12251.271999999997,
+      "tbt": 306,
+      "cls": 0.03212022689866895,
+      "si": 8205.756681576888
+    }
+  },
+  "desktop": {
+    "performance": 63,
+    "accessibility": 92,
+    "bestPractices": 93,
+    "seo": 100,
+    "metrics": {
+      "fcp": 1338.2820000000002,
+      "lcp": 10111.872,
+      "tbt": 326,
+      "cls": 0.03317437466787554,
+      "si": 5434.051576333879
+    }
+  }
+}

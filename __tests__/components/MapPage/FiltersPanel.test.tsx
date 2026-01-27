@@ -327,4 +327,38 @@ describe('FiltersPanel', () => {
     fireEvent.press(btn);
     expect(mapUiApi.centerOnUser).toHaveBeenCalled();
   });
+
+  it('renders Waymarked Trails overlays and toggles them via mapUiApi', async () => {
+    const mapUiApi = {
+      zoomIn: jest.fn(),
+      zoomOut: jest.fn(),
+      centerOnUser: jest.fn(),
+      fitToResults: jest.fn(),
+      exportGpx: jest.fn(),
+      exportKml: jest.fn(),
+      setBaseLayer: jest.fn(),
+      setOverlayEnabled: jest.fn(),
+      capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
+    };
+
+    const { getByTestId, getByLabelText } = renderWithTheme(
+      <FiltersPanel {...defaultProps} mapUiApi={mapUiApi as any} />
+    );
+
+    // Open section if needed (defaultOpen may not work in tests)
+    const collapsible = getByTestId('collapsible-Настройки карты');
+    if (collapsible.props.accessibilityState?.expanded === false) {
+      fireEvent.press(collapsible);
+    }
+
+    await waitFor(() => {
+      expect(getByLabelText('Маршруты (Waymarked Trails: hiking)')).toBeTruthy();
+    });
+
+    fireEvent.press(getByLabelText('Маршруты (Waymarked Trails: hiking)'));
+    expect(mapUiApi.setOverlayEnabled).toHaveBeenCalledWith('waymarked-hiking', true);
+
+    fireEvent.press(getByLabelText('Маршруты (Waymarked Trails: cycling)'));
+    expect(mapUiApi.setOverlayEnabled).toHaveBeenCalledWith('waymarked-cycling', true);
+  });
 });

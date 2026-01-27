@@ -256,7 +256,6 @@ jest.mock('@/components/MapPage/RoutingMachine', () => {
 
 // Mock UnifiedTravelCard
 jest.mock('@/components/ui/UnifiedTravelCard', () => {
-  const React = require('react')
   const RN = require('react-native')
   const View = RN.View
   const Pressable = RN.Pressable
@@ -758,10 +757,12 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       const { useMap } = require('react-leaflet')
       const mockFitBounds = jest.fn()
       const mockSetView = jest.fn()
+      const mockInvalidateSize = jest.fn()
       useMap.mockReturnValue({
         fitBounds: mockFitBounds,
         setView: mockSetView,
         closePopup: jest.fn(),
+        invalidateSize: mockInvalidateSize,
         getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.5667 })),
         getZoom: jest.fn(() => 11),
         on: jest.fn(),
@@ -788,6 +789,10 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       
       // В режиме route не должно быть автоматического зума
       expect(mockFitBounds).not.toHaveBeenCalled()
+      
+      await waitFor(() => {
+        expect(mockInvalidateSize).toHaveBeenCalled()
+      })
     })
 
     it('does not center on user location when in route mode', async () => {
@@ -849,9 +854,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       const { rerender } = renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
       
-      // Сохраняем текущую позицию
-      const _initialCenter = [0, 0];
-      const _initialZoom = 4;
       mockGetZoom()
       
       // Очищаем моки
@@ -1000,8 +1002,6 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       
       const { rerender } = renderWithProviders(<MapPageComponent {...props} />)
       await act(async () => {})
-      
-      const _initialSetViewCalls = mockSetView.mock.calls.length
       
       // Симулируем несколько обновлений (как при переключении вкладок)
       for (let i = 0; i < 3; i++) {

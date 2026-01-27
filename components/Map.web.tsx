@@ -6,8 +6,8 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
-import { buildDropMarkerHtml } from '@/src/utils/markerSvg';
 import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard';
+import { useLeafletIcons } from '@/components/MapPage/Map/useLeafletIcons';
 import { useAuth } from '@/context/AuthContext';
 import { showToast } from '@/src/utils/toast';
 import { userPointsApi } from '@/src/api/userPoints';
@@ -447,26 +447,12 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     coordinates?.longitude ?? 27.7273595,
   ];
 
-  // ✅ УЛУЧШЕНИЕ: Используем нашу фирменную каплевидную иконку
+  const leafletIcons = useLeafletIcons(L);
+
   const siteMarkerIcon = useMemo(() => {
-    if (!L) return null;
-    const size = 46;
-    const html = buildDropMarkerHtml({
-      size,
-      fill: '#c9772f',
-      stroke: '#a05d2b',
-      strokeWidth: 2,
-      innerColor: '#ffffff',
-      innerRadius: 4,
-    });
-    return L.divIcon({
-      html,
-      className: '',
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size],
-      popupAnchor: [0, -size + 8],
-    });
-  }, [L]);
+    if (leafletIcons?.meTravel) return leafletIcons.meTravel;
+    return null;
+  }, [leafletIcons]);
 
   const renderPlaceholder = () => (
     <View style={styles.mapContainer}>

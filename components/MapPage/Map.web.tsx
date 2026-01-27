@@ -423,6 +423,33 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [mode, onMapClick]
   );
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+    const raf = requestAnimationFrame(() => {
+      try {
+        map.invalidateSize?.();
+      } catch {
+        // noop
+      }
+
+      try {
+        const baseLayer = leafletBaseLayerRef.current;
+        if (baseLayer && !map.hasLayer?.(baseLayer)) {
+          baseLayer.addTo?.(map);
+        }
+      } catch {
+        // noop
+      }
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [mode, leafletBaseLayerRef]);
+
   // invalidateSize on resize
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -584,7 +611,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   return (
     <View style={styles.wrapper} testID="map-leaflet-wrapper">
-      {Platform.OS === 'web' && (
+      {Platform.OS === 'web' && !mapTilesReady && (
         <img
           alt=""
           aria-hidden="true"

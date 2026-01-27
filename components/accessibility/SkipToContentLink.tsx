@@ -25,7 +25,7 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
       position: 'absolute',
       top: '-40px',
       left: 0,
-      background: colors.primary,
+      background: colors.primaryDark,
       color: colors.textInverse,
       padding: `${DESIGN_TOKENS.spacing.xs}px ${DESIGN_TOKENS.spacing.sm}px`,
       textDecoration: 'none',
@@ -36,7 +36,7 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
       transition: `top ${DESIGN_TOKENS.animations.duration.normal}ms ${DESIGN_TOKENS.animations.easing.default}`,
     }),
     [
-      colors.primary,
+      colors.primaryDark,
       colors.textInverse,
     ]
   );

@@ -207,8 +207,8 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.xs,
   },
   backButton: {
-    minWidth: 40,
-    minHeight: 40,
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

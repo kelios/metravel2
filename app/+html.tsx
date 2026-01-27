@@ -396,7 +396,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       {process.env.NODE_ENV === 'production' ? (
         <link
-          rel="preload"
+          rel="prefetch"
           href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"
           as="font"
           type="font/ttf"

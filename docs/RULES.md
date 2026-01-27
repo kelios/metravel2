@@ -9,6 +9,9 @@
 ## Development workflow
 
 - Before starting any change, review relevant files in `docs/`.
+- Before deploying to production, validate the local code in production-like conditions:
+  - build a production web export (`dist/prod`)
+  - run checks against that build (not against a dev server)
 - After each logical change, run:
 
 ```bash

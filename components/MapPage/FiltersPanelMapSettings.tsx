@@ -9,6 +9,7 @@ import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/src/config/mapWeb
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { ThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import IconButton from '@/components/ui/IconButton';
 import Chip from '@/components/ui/Chip';
 
 const OSM_POI_CATEGORIES = [
@@ -135,44 +136,36 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       ) : null}
 
       <View style={styles.mapControlsRow}>
-        <Button
-          label="Zoom +"
+        <IconButton
+          label="Увеличить масштаб"
           icon={<MapIcon name="add" size={18} color={colors.text} />}
           onPress={() => safeMapUiCall(mapUiApi?.zoomIn)}
           disabled={!mapUiApi}
-          accessibilityLabel="Увеличить масштаб"
           size="sm"
-          variant="secondary"
         />
-        <Button
-          label="Zoom -"
+        <IconButton
+          label="Уменьшить масштаб"
           icon={<MapIcon name="remove" size={18} color={colors.text} />}
           onPress={() => safeMapUiCall(mapUiApi?.zoomOut)}
           disabled={!mapUiApi}
-          accessibilityLabel="Уменьшить масштаб"
           size="sm"
-          variant="secondary"
         />
-        <Button
-          label="Я"
+        <IconButton
+          label="Моё местоположение"
           icon={<MapIcon name="my-location" size={18} color={colors.text} />}
           onPress={() => {
             if (!mapUiApi || !canCenterOnUser) return;
             safeMapUiCall(mapUiApi?.centerOnUser);
           }}
           disabled={!mapUiApi || !canCenterOnUser}
-          accessibilityLabel="Моё местоположение"
           size="sm"
-          variant="secondary"
         />
-        <Button
-          label="Все"
+        <IconButton
+          label="Показать все результаты на карте"
           icon={<MapIcon name="zoom-out-map" size={18} color={colors.text} />}
           onPress={() => safeMapUiCall(mapUiApi?.fitToResults)}
           disabled={!mapUiApi || !canFitToResults}
-          accessibilityLabel="Показать все результаты на карте"
           size="sm"
-          variant="secondary"
         />
       </View>
 

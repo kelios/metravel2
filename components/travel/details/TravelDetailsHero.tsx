@@ -477,7 +477,6 @@ function TravelHeroSectionInner({
       <View
         testID="travel-details-hero"
         accessibilityRole="none"
-        accessibilityLabel="Галерея маршрута"
         style={[styles.sectionContainer, styles.contentStable]}
       >
         <View

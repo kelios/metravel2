@@ -604,8 +604,9 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     mapControlsRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      flexWrap: 'nowrap',
       gap: 8,
+      alignItems: 'center',
       marginTop: 8,
     },
     mapLayersSection: {

@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-01-27T09:30:25.637Z",
+  "url": "/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+  "mobile": {
+    "performance": 96,
+    "accessibility": 87,
+    "bestPractices": 96,
+    "seo": 100,
+    "metrics": {
+      "fcp": 1054.41655,
+      "lcp": 1354.45825,
+      "tbt": 163,
+      "cls": 0.03207894538695375,
+      "si": 4147.4323419645825
+    }
+  },
+  "desktop": {
+    "performance": 97,
+    "accessibility": 87,
+    "bestPractices": 96,
+    "seo": 100,
+    "metrics": {
+      "fcp": 1054.2906,
+      "lcp": 1354.329,
+      "tbt": 139,
+      "cls": 0.03207894538695375,
+      "si": 3666.0986053001443
+    }
+  }
+}

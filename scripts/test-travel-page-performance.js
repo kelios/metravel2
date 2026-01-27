@@ -5,12 +5,36 @@
  * Tests before and after optimization changes
  */
 
-const lighthouse = require('lighthouse');
-const chromeLauncher = require('chrome-launcher');
 const fs = require('fs');
 const path = require('path');
+const net = require('net');
+const { spawn } = require('child_process');
 
-const TRAVEL_URL = process.env.LIGHTHOUSE_URL || 'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
+const DEFAULT_TRAVEL_PATH =
+  '/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina';
+
+function resolveTravelPath() {
+  const explicitPath = String(process.env.LIGHTHOUSE_PATH || '').trim();
+  if (explicitPath) {
+    return explicitPath.startsWith('/') ? explicitPath : `/${explicitPath}`;
+  }
+
+  const rawUrl = String(process.env.LIGHTHOUSE_URL || '').trim();
+  if (rawUrl) {
+    try {
+      const parsed = new URL(rawUrl);
+      const p = String(parsed.pathname || '').trim();
+      return p ? p : DEFAULT_TRAVEL_PATH;
+    } catch {
+      // If user passed a relative-ish URL, treat it as a path.
+      return rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`;
+    }
+  }
+
+  return DEFAULT_TRAVEL_PATH;
+}
+
+const TRAVEL_PATH = resolveTravelPath();
 const OUTPUT_DIR = path.join(__dirname, '../lighthouse-reports');
 
 // Ensure output directory exists
@@ -20,63 +44,56 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 
 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
 
-const mobileConfig = {
-  extends: 'lighthouse:default',
-  settings: {
-    formFactor: 'mobile',
-    throttling: {
-      rttMs: 150,
-      throughputKbps: 1638.4,
-      cpuSlowdownMultiplier: 4,
-    },
-    screenEmulation: {
-      mobile: true,
-      width: 412,
-      height: 823,
-      deviceScaleFactor: 2.625,
-      disabled: false,
-    },
-    emulatedUserAgent: 'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-  },
-};
+async function findAvailablePort(startPort) {
+  const start = Number(startPort) || 4173;
 
-const desktopConfig = {
-  extends: 'lighthouse:default',
-  settings: {
-    formFactor: 'desktop',
-    throttling: {
-      rttMs: 40,
-      throughputKbps: 10240,
-      cpuSlowdownMultiplier: 1,
-    },
-    screenEmulation: {
-      mobile: false,
-      width: 1350,
-      height: 940,
-      deviceScaleFactor: 1,
-      disabled: false,
-    },
-    emulatedUserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  },
-};
+  const tryPort = (port) =>
+    new Promise((resolve) => {
+      const server = net.createServer();
+      server.unref();
+      server.on('error', () => resolve(null));
+      server.listen({ port, host: '127.0.0.1' }, () => {
+        const actualPort = server.address().port;
+        server.close(() => resolve(actualPort));
+      });
+    });
 
-async function runLighthouse(url, config) {
-  const chrome = await chromeLauncher.launch({
-    chromeFlags: ['--headless', '--disable-gpu', '--no-sandbox'],
+  for (let i = 0; i < 25; i += 1) {
+    const candidate = start + i;
+    const ok = await tryPort(candidate);
+    if (ok) return ok;
+  }
+  return start;
+}
+
+async function runLighthouseViaScript({ url, formFactor, port, reportPath }) {
+  const flags = [
+    '--only-categories=performance,accessibility,best-practices,seo',
+    `--emulated-form-factor=${formFactor}`,
+    '--throttling-method=simulate',
+  ];
+
+  return new Promise((resolve, reject) => {
+    const child = spawn('node', [path.join(__dirname, 'run-lighthouse.js')], {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        LIGHTHOUSE_HOST: '127.0.0.1',
+        LIGHTHOUSE_PORT: String(port),
+        LIGHTHOUSE_URL: url,
+        LIGHTHOUSE_REPORT: reportPath,
+        LIGHTHOUSE_FLAGS: flags.join(' '),
+        LIGHTHOUSE_API_INSECURE: process.env.LIGHTHOUSE_API_INSECURE || '1',
+      },
+    });
+
+    child.on('exit', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Lighthouse failed with exit code ${code}`));
+    });
+
+    child.on('error', (error) => reject(error));
   });
-
-  const options = {
-    logLevel: 'info',
-    output: 'html',
-    onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo'],
-    port: chrome.port,
-  };
-
-  const runnerResult = await lighthouse(url, options, config);
-
-  await chrome.kill();
-
-  return runnerResult;
 }
 
 function extractMetrics(lhr) {
@@ -95,6 +112,32 @@ function extractMetrics(lhr) {
       si: audits['speed-index'].numericValue,
     },
   };
+}
+
+function numberFromEnv(key, fallback) {
+  const raw = process.env[key];
+  if (raw == null) return fallback;
+  const str = String(raw).trim();
+  if (!str) return fallback;
+  const num = Number(str);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function assertThresholds(label, results, thresholds) {
+  const failed = [];
+
+  if (results.performance < thresholds.minPerf) failed.push(`${label}: Performance < ${thresholds.minPerf}`);
+  if (results.accessibility < thresholds.minA11y) failed.push(`${label}: Accessibility < ${thresholds.minA11y}`);
+  if (results.bestPractices < thresholds.minBest) failed.push(`${label}: Best Practices < ${thresholds.minBest}`);
+  if (results.seo < thresholds.minSeo) failed.push(`${label}: SEO < ${thresholds.minSeo}`);
+
+  if (results.metrics.lcp > thresholds.maxLcpMs) failed.push(`${label}: LCP > ${thresholds.maxLcpMs}ms`);
+  if (results.metrics.cls > thresholds.maxCls) failed.push(`${label}: CLS > ${thresholds.maxCls}`);
+  if (results.metrics.tbt > thresholds.maxTbtMs) failed.push(`${label}: TBT > ${thresholds.maxTbtMs}ms`);
+  if (results.metrics.fcp > thresholds.maxFcpMs) failed.push(`${label}: FCP > ${thresholds.maxFcpMs}ms`);
+  if (results.metrics.si > thresholds.maxSiMs) failed.push(`${label}: SI > ${thresholds.maxSiMs}ms`);
+
+  return failed;
 }
 
 function formatMetric(value, unit = 'ms') {
@@ -132,7 +175,7 @@ function printResults(formFactor, results) {
 function saveComparison(mobileResults, desktopResults) {
   const report = {
     timestamp: new Date().toISOString(),
-    url: TRAVEL_URL,
+    url: TRAVEL_PATH,
     mobile: mobileResults,
     desktop: desktopResults,
   };
@@ -144,27 +187,36 @@ function saveComparison(mobileResults, desktopResults) {
 
 async function main() {
   console.log(`\n🚀 Testing Travel Page Performance`);
-  console.log(`📍 URL: ${TRAVEL_URL}\n`);
+  console.log(`📍 Path: ${TRAVEL_PATH}\n`);
+
+  const port = await findAvailablePort(Number(process.env.LIGHTHOUSE_PORT || '4173'));
+  const localUrl = `http://127.0.0.1:${port}${TRAVEL_PATH}`;
 
   console.log('⏳ Running Mobile Lighthouse audit...');
-  const mobileResult = await runLighthouse(TRAVEL_URL, mobileConfig, 'mobile');
-  const mobileMetrics = extractMetrics(mobileResult.lhr);
-
-  // Save mobile HTML report
-  const mobileHtmlPath = path.join(OUTPUT_DIR, `mobile-${timestamp}.html`);
-  fs.writeFileSync(mobileHtmlPath, mobileResult.report);
-  console.log(`✅ Mobile HTML report: ${mobileHtmlPath}`);
+  const mobileJsonPath = path.join(OUTPUT_DIR, `mobile-${timestamp}.json`);
+  await runLighthouseViaScript({
+    url: localUrl,
+    formFactor: 'mobile',
+    port,
+    reportPath: mobileJsonPath,
+  });
+  const mobileJson = JSON.parse(fs.readFileSync(mobileJsonPath, 'utf8'));
+  const mobileMetrics = extractMetrics(mobileJson);
+  console.log(`✅ Mobile JSON report: ${mobileJsonPath}`);
 
   printResults('Mobile', mobileMetrics);
 
   console.log('\n⏳ Running Desktop Lighthouse audit...');
-  const desktopResult = await runLighthouse(TRAVEL_URL, desktopConfig, 'desktop');
-  const desktopMetrics = extractMetrics(desktopResult.lhr);
-
-  // Save desktop HTML report
-  const desktopHtmlPath = path.join(OUTPUT_DIR, `desktop-${timestamp}.html`);
-  fs.writeFileSync(desktopHtmlPath, desktopResult.report);
-  console.log(`✅ Desktop HTML report: ${desktopHtmlPath}`);
+  const desktopJsonPath = path.join(OUTPUT_DIR, `desktop-${timestamp}.json`);
+  await runLighthouseViaScript({
+    url: localUrl,
+    formFactor: 'desktop',
+    port,
+    reportPath: desktopJsonPath,
+  });
+  const desktopJson = JSON.parse(fs.readFileSync(desktopJsonPath, 'utf8'));
+  const desktopMetrics = extractMetrics(desktopJson);
+  console.log(`✅ Desktop JSON report: ${desktopJsonPath}`);
 
   printResults('Desktop', desktopMetrics);
 
@@ -174,25 +226,32 @@ async function main() {
   console.log('✅ Testing Complete!');
   console.log(`${'='.repeat(60)}\n`);
 
-  // Summary
-  const allGreen = 
-    mobileMetrics.performance >= 90 &&
-    desktopMetrics.performance >= 90 &&
-    mobileMetrics.accessibility >= 90 &&
-    desktopMetrics.accessibility >= 90;
+  // Summary: strict thresholds (fail if ANY condition is violated)
+  const thresholds = {
+    minPerf: numberFromEnv('LIGHTHOUSE_MIN_PERF', 90),
+    minA11y: numberFromEnv('LIGHTHOUSE_MIN_A11Y', 90),
+    minBest: numberFromEnv('LIGHTHOUSE_MIN_BEST', 90),
+    minSeo: numberFromEnv('LIGHTHOUSE_MIN_SEO', 90),
+
+    maxLcpMs: numberFromEnv('LIGHTHOUSE_MAX_LCP_MS', 2500),
+    maxCls: numberFromEnv('LIGHTHOUSE_MAX_CLS', 0.1),
+    maxTbtMs: numberFromEnv('LIGHTHOUSE_MAX_TBT_MS', 300),
+    maxFcpMs: numberFromEnv('LIGHTHOUSE_MAX_FCP_MS', 1800),
+    maxSiMs: numberFromEnv('LIGHTHOUSE_MAX_SI_MS', 4500),
+  };
+
+  const failures = [
+    ...assertThresholds('Mobile', mobileMetrics, thresholds),
+    ...assertThresholds('Desktop', desktopMetrics, thresholds),
+  ];
+
+  const allGreen = failures.length === 0;
 
   if (allGreen) {
-    console.log('🎉 EXCELLENT! All scores are in the green zone (90+)!');
+    console.log('🎉 EXCELLENT! All thresholds passed.');
   } else {
-    console.log('⚠️  Some scores need improvement to reach 90+');
-    
-    const improvements = [];
-    if (mobileMetrics.performance < 90) improvements.push('Mobile Performance');
-    if (desktopMetrics.performance < 90) improvements.push('Desktop Performance');
-    if (mobileMetrics.accessibility < 90) improvements.push('Mobile Accessibility');
-    if (desktopMetrics.accessibility < 90) improvements.push('Desktop Accessibility');
-    
-    console.log(`   Focus areas: ${improvements.join(', ')}`);
+    console.log('⚠️  Some thresholds failed:');
+    failures.forEach((line) => console.log(`   - ${line}`));
   }
 
   process.exit(allGreen ? 0 : 1);
