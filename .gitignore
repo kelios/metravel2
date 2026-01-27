@@ -54,6 +54,9 @@ upload-keystore.jks
 # Local tooling artifacts
 lighthouse-report*.json
 lighthouse*.json
+lighthouse-reports/local-*.json
+lighthouse-reports/local-*.html
+lighthouse-reports/local-*.png
 yarn-error.log
 
 # Android build files
