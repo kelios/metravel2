@@ -110,6 +110,7 @@ jest.mock('@/components/MapPage/Map/MapControls', () => {
   const Pressable = RN.Pressable
   return function MapControls(props: any) {
     // Provide the accessible control used by tests without pulling extra UI deps
+    if (!props.userLocation) return null
     return (
       <Pressable
         accessibilityRole="button"

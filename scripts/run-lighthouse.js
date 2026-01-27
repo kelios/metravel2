@@ -5,6 +5,7 @@ const https = require('https')
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
+const net = require('net')
 const { spawn } = require('child_process')
 
 const buildDir = (() => {
@@ -35,6 +36,33 @@ const defaultFlags = ['--only-categories=performance', '--emulated-form-factor=d
 const extraFlags = process.env.LIGHTHOUSE_FLAGS
   ? process.env.LIGHTHOUSE_FLAGS.split(' ').filter(Boolean)
   : defaultFlags
+
+const findFreePort = async (preferredPort) => {
+  const tryPort = (p) =>
+    new Promise((resolve) => {
+      const s = net.createServer()
+      s.unref()
+      s.on('error', () => resolve(null))
+      s.listen(p, '127.0.0.1', () => {
+        const addr = s.address()
+        const port = addr && typeof addr === 'object' ? addr.port : null
+        s.close(() => resolve(port))
+      })
+    })
+
+  if (preferredPort && Number.isFinite(preferredPort)) {
+    const ok = await tryPort(preferredPort)
+    if (ok) return ok
+  }
+
+  for (let i = 0; i < 20; i += 1) {
+    const candidate = 52000 + Math.floor(Math.random() * 10000)
+    const ok = await tryPort(candidate)
+    if (ok) return ok
+  }
+
+  return tryPort(0)
+}
 
 // Make Lighthouse runs deterministic on RNW/Expo pages.
 // FullPageScreenshot is a common source of PROTOCOL_TIMEOUT and is not needed for perf scoring.
@@ -432,32 +460,40 @@ server.listen(port, host, () => {
     return
   }
 
-  const args = [
-    lighthousePackage,
-    targetUrl,
-    '--output=json',
-    `--output-path=${reportPath}`,
-    ...extraFlags,
-    '--chrome-flags=--headless --no-sandbox',
-  ]
+  ;(async () => {
+    const chromePort = await findFreePort(Number(process.env.LIGHTHOUSE_CHROME_PORT || 0) || null)
 
-  const child = spawn('npx', args, {
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-  })
+    const args = [
+      lighthousePackage,
+      targetUrl,
+      '--output=json',
+      `--output-path=${reportPath}`,
+      `--port=${chromePort}`,
+      ...extraFlags,
+      '--chrome-flags=--headless --no-sandbox',
+    ]
 
-  const shutdown = (code) => {
-    server.close(() => {
-      if (typeof code === 'number') {
-        process.exit(code)
-      }
-      process.exit(1)
+    const child = spawn('npx', args, {
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
     })
-  }
 
-  child.on('exit', shutdown)
-  child.on('error', (error) => {
+    const shutdown = (code) => {
+      server.close(() => {
+        if (typeof code === 'number') {
+          process.exit(code)
+        }
+        process.exit(1)
+      })
+    }
+
+    child.on('exit', shutdown)
+    child.on('error', (error) => {
+      console.error('❌ Lighthouse execution failed:', error)
+      shutdown(1)
+    })
+  })().catch((error) => {
     console.error('❌ Lighthouse execution failed:', error)
-    shutdown(1)
+    server.close(() => process.exit(1))
   })
 })

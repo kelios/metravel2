@@ -325,6 +325,10 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const updateLoadStatus = useCallback((idx: number, status: LoadStatus) => {
     setLoadStatuses((prev) => {
+      // If the browser returns a cached image, onLoadStart can fire again.
+      // Avoid degrading an already-loaded image back to loading, which causes a visible
+      // blink/blur placeholder during slide switching.
+      if (status === 'loading' && prev[idx] === 'loaded') return prev;
       if (prev[idx] === status) return prev;
       const next = [...prev];
       next[idx] = status;

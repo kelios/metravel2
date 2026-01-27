@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.1.0';
+const CACHE_VERSION = 'v1.1.1';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -6,8 +6,6 @@ const JS_CACHE = `metravel-js-${CACHE_VERSION}`;
 const CRITICAL_CACHE = `metravel-critical-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
-  '/',
-  '/offline.html',
   '/manifest.json',
   '/favicon.ico',
   '/icon.svg',
@@ -32,7 +30,7 @@ const JS_CACHE_EXPIRATION_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days для JS 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE).then((cache) => {
-      return cache.addAll(STATIC_ASSETS.filter(asset => asset !== '/offline.html'));
+      return cache.addAll(STATIC_ASSETS);
     }).catch(() => {
       console.info('SW: Static cache install failed');
     })
@@ -65,12 +63,26 @@ self.addEventListener('message', (event) => {
   }
 });
 
+async function networkFirstDocument(request) {
+  try {
+    const response = await fetch(request);
+    return response;
+  } catch {
+    return new Response('Offline', { status: 503 });
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
   if (request.method !== 'GET') return;
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(networkFirstDocument(request));
+    return;
+  }
 
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));
@@ -91,8 +103,7 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(cacheFirstLongTerm(request, JS_CACHE, MAX_JS_CACHE_SIZE));
       return;
     }
-    
-    // Entry bundle та інші JS без hash — stale-while-revalidate
+
     event.respondWith(staleWhileRevalidate(request, JS_CACHE));
     return;
   }
@@ -171,7 +182,7 @@ async function networkFirst(request) {
     if (cached) return cached;
     
     if (request.destination === 'document') {
-      return caches.match('/offline.html') || new Response('Offline', { status: 503 });
+      return new Response('Offline', { status: 503 });
     }
     
     return new Response('Network error', { status: 503 });

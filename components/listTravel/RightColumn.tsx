@@ -11,10 +11,9 @@ import {
   Dimensions,
 } from 'react-native'
 
-import { useRouter } from 'expo-router'
-
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/EmptyState'
+import { TravelCardSkeleton } from '@/components/SkeletonLoader'
 import type { Travel } from '@/src/types/types'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
@@ -53,7 +52,6 @@ interface RightColumnProps {
   search: string
   setSearch: (value: string) => void
   onClearAll?: () => void
-  availableWidth?: number
   topContent?: React.ReactNode
   isRecommendationsVisible: boolean
   handleRecommendationsVisibilityChange: (visible: boolean) => void
@@ -88,7 +86,6 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      search,
      setSearch,
      onClearAll,
-     availableWidth,
      topContent,
      isRecommendationsVisible,
      handleRecommendationsVisibilityChange,
@@ -116,7 +113,6 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      cardSpacing = 16,
      listRef: externalListRef,
    }) => {
-    const router = useRouter()
     const localListRef = useRef<FlatList<Travel[]> | null>(null)
     const listRef = externalListRef ?? localListRef
     const recommendationsOffsetRef = useRef(0)
@@ -352,7 +348,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     const skeletonDelayMs = Platform.OS === 'web' ? 200 : 250
 
     const shouldShowSkeleton =
-      showDelayedSkeleton && showInitialLoading && travels.length === 0
+      showInitialLoading && travels.length === 0 && (Platform.OS === 'web' ? true : showDelayedSkeleton)
 
     useEffect(() => {
       if (!showInitialLoading || travels.length !== 0) {
@@ -383,13 +379,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
           <StickySearchBar
             search={search}
             onSearchChange={setSearch}
-            availableWidth={availableWidth}
             flush={Platform.OS === 'web'}
-            primaryAction={{
-              label: 'Создать',
-              onPress: () => router.push('/travel/new' as any),
-              accessibilityLabel: 'Создать путешествие',
-            }}
             onFiltersPress={onFiltersPress}
             onToggleRecommendations={() =>
               handleRecommendationsVisibilityChange(!showRecommendations)
@@ -423,15 +413,10 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
           {/* Initial Loading - Only show skeleton when actually loading initial data */}
           {shouldShowSkeleton && isWebMobile && (
-            <View
-              style={{
-                height: STABLE_PLACEHOLDER_HEIGHT,
-                justifyContent: 'center',
-                alignItems: 'center',
-                paddingHorizontal: contentPadding,
-              }}
-            >
-              <ActivityIndicator size="small" />
+            <View style={{ paddingHorizontal: contentPadding, paddingTop: 8 }}>
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <TravelCardSkeleton key={`travel-skeleton-${idx}`} />
+              ))}
             </View>
           )}
 

@@ -120,7 +120,16 @@ export function optimizeImageUrl(
       const host = String(url.hostname || '').trim().toLowerCase();
       if (!host) return false;
       if (isPrivateOrLocalHost(host)) return false;
-      if (host === 'metravel.by') return true;
+      if (host === 'metravel.by') {
+        if (Platform.OS === 'web') {
+          const p = String(url.pathname || '');
+          const dynamicPrefixes = ['/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/'];
+          if (dynamicPrefixes.some((prefix) => p.startsWith(prefix))) {
+            return false;
+          }
+        }
+        return true;
+      }
       if (host === 'cdn.metravel.by') return true;
       if (host === 'api.metravel.by') return true;
       if (host === 'images.weserv.nl') return true;
@@ -158,6 +167,8 @@ export function optimizeImageUrl(
     // Если URL уже содержит параметры оптимизации, обновляем их
     // Иначе добавляем новые
 
+    const isWeserv = String(url.hostname || '').toLowerCase() === 'images.weserv.nl';
+
     if (width) {
       url.searchParams.set('w', String(Math.round(width * dpr)));
     }
@@ -169,10 +180,19 @@ export function optimizeImageUrl(
     }
     const resolvedFormat = resolveImageFormat(format);
     if (resolvedFormat) {
-      url.searchParams.set('f', resolvedFormat);
+      if (isWeserv) {
+        url.searchParams.set('output', resolvedFormat);
+        url.searchParams.delete('f');
+      } else {
+        url.searchParams.set('f', resolvedFormat);
+      }
     }
     if (fit) {
-      url.searchParams.set('fit', fit);
+      if (isWeserv && fit === 'contain') {
+        url.searchParams.set('fit', 'inside');
+      } else {
+        url.searchParams.set('fit', fit);
+      }
     }
     if (typeof blur === 'number' && blur > 0) {
       url.searchParams.set('blur', String(Math.min(100, Math.round(blur))));
@@ -182,8 +202,16 @@ export function optimizeImageUrl(
     if (Platform.OS === 'web' && format === 'auto') {
       // Проверяем поддержку AVIF/WebP через canvas (если доступен)
       const preferred = getPreferredImageFormat();
-      if (preferred && !url.searchParams.has('f')) {
-        url.searchParams.set('f', preferred);
+      if (preferred) {
+        if (isWeserv) {
+          if (!url.searchParams.has('output')) {
+            url.searchParams.set('output', preferred);
+          }
+        } else {
+          if (!url.searchParams.has('f')) {
+            url.searchParams.set('f', preferred);
+          }
+        }
       }
     }
 

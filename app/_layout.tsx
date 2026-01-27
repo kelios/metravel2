@@ -318,7 +318,13 @@ function RootLayoutNav() {
 
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+          navigator.serviceWorker
+            .register('/sw.js', { updateViaCache: 'none' as any })
+            .then((registration) => {
+              // Ensure we check for an updated SW as soon as possible.
+              registration.update().catch(() => {});
+            })
+            .catch(() => {});
         });
       }
     }, []);

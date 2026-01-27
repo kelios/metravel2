@@ -14,7 +14,9 @@ if (!GA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'develo
 
 export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   if (!metrikaId || !gaId) {
-    return 'Analytics disabled: missing EXPO_PUBLIC_METRIKA_ID or EXPO_PUBLIC_GOOGLE_GA4';
+    return String.raw`(function(){
+  // Analytics disabled: missing EXPO_PUBLIC_METRIKA_ID or EXPO_PUBLIC_GOOGLE_GA4
+})();`;
   }
   return String.raw`
 (function(){

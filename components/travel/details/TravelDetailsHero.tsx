@@ -510,18 +510,17 @@ function TravelHeroSectionInner({
               onLoad={onFirstImageLoad}
             />
           ) : (
-              <Slider
-                key={`${isMobile ? 'mobile' : 'desktop'}`}
-                images={galleryImages}
-                showArrows={!isMobile}
-                hideArrowsOnMobile
-                showDots={isMobile}
-                autoPlay={false}
-                preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
-                blurBackground
-                fit="contain"
-                fullBleed={Platform.OS === 'web'}
-                aspectRatio={aspectRatio as number}
+            <Slider
+              images={galleryImages}
+              showArrows={!isMobile}
+              hideArrowsOnMobile
+              showDots={isMobile}
+              autoPlay={false}
+              preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
+              blurBackground
+              fit="contain"
+              fullBleed={Platform.OS === 'web'}
+              aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.6}
               onFirstImageLoad={onFirstImageLoad}
             />

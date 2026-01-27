@@ -60,7 +60,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
   const [mapInstance, setMapInstance] = useState<any>(null);
-  const [mapTilesReady, setMapTilesReady] = useState(false);
+  const [shouldLoadLeaflet, setShouldLoadLeaflet] = useState<boolean>(isTestEnv);
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
 
@@ -83,6 +83,39 @@ const MapPageComponent: React.FC<Props> = (props) => {
       zoom: Number.isFinite(zoomValue) ? zoomValue : 11,
     };
   }, [coordinates]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (isTestEnv) return;
+    if (shouldLoadLeaflet) return;
+
+    let cancelled = false;
+    let idleHandle: any = null;
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    const enable = () => {
+      if (cancelled) return;
+      setShouldLoadLeaflet(true);
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      idleHandle = (window as any).requestIdleCallback(enable, { timeout: 1200 });
+    } else {
+      timeoutHandle = setTimeout(enable, 600);
+    }
+
+    return () => {
+      cancelled = true;
+      try {
+        if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
+          (window as any).cancelIdleCallback(idleHandle);
+        }
+      } catch {
+        // noop
+      }
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    };
+  }, [shouldLoadLeaflet]);
 
   // Refs
   const mapRef = useRef<any>(null);
@@ -137,6 +170,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
+    if (!shouldLoadLeaflet) return;
     if (typeof document === 'undefined') return;
 
     try {
@@ -206,7 +240,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     } catch {
       // noop
     }
-  }, [safeCoordinates.latitude, safeCoordinates.longitude, safeCoordinates.zoom]);
+  }, [safeCoordinates.latitude, safeCoordinates.longitude, safeCoordinates.zoom, shouldLoadLeaflet]);
 
   const userLocationLatLng = useMemo(() => {
     if (!userLocation) return null;
@@ -262,6 +296,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // Load Leaflet
   useEffect(() => {
     if (Platform.OS !== 'web') return;
+    if (!shouldLoadLeaflet) return;
 
     let cancelled = false;
     setLoading(true);
@@ -288,46 +323,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!L || !rl) return;
-    if (mapTilesReady) return;
-    if (typeof document === 'undefined') return;
-
-    let cancelled = false;
-    const startAt = Date.now();
-    const maxMs = 12_000;
-
-    const tick = () => {
-      if (cancelled) return;
-      try {
-        const container = document.getElementById(mapContainerIdRef.current);
-        if (container) {
-          const tile = container.querySelector('img.leaflet-tile-loaded');
-          if (tile) {
-            setMapTilesReady(true);
-            return;
-          }
-        }
-      } catch {
-        // noop
-      }
-
-      if (Date.now() - startAt > maxMs) {
-        setMapTilesReady(true);
-        return;
-      }
-
-      setTimeout(tick, 120);
-    };
-
-    setTimeout(tick, 120);
-    return () => {
-      cancelled = true;
-    };
-  }, [L, rl, mapTilesReady, mapContainerIdRef]);
+  }, [shouldLoadLeaflet]);
 
   // Get user location
   useEffect(() => {
@@ -600,18 +596,21 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return travelData.length === 0;
   }, [mode, routePoints, travelData.length]);
 
-  // Early returns
-  if (loading) return renderLoader('Загрузка карты...');
-  if (!L || !rl) {
-    return renderLoader(errors.loadingModules ? 'Не удалось загрузить модули карты' : 'Загрузка карты...');
-  }
+  const canRenderMap = !!(L && rl);
+  const shouldShowLoadingOverlay = Platform.OS === 'web'
+    ? !shouldLoadLeaflet || loading || !canRenderMap
+    : loading || !canRenderMap;
+
+  const loaderMessage = errors.loadingModules
+    ? 'Не удалось загрузить модули карты'
+    : 'Загрузка карты...';
 
   const rlSafe = (rl ?? {}) as ReactLeafletNS;
   const { MapContainer, Marker, Popup, Circle, useMap, useMapEvents } = rlSafe;
 
   return (
     <View style={styles.wrapper} testID="map-leaflet-wrapper">
-      {Platform.OS === 'web' && !mapTilesReady && (
+      {Platform.OS === 'web' && (
         <img
           alt=""
           aria-hidden="true"
@@ -637,12 +636,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
             width: '100%',
             height: '100%',
             objectFit: 'cover',
-            // Keep a stable opacity so the LCP candidate does not change after map tiles load.
             opacity: 0.18,
             pointerEvents: 'none',
-            zIndex: 5,
+            zIndex: 0,
           }}
         />
+      )}
+
+      {shouldShowLoadingOverlay && (
+        <View style={{ position: 'absolute', inset: 0, zIndex: 10 } as any}>
+          {renderLoader(loaderMessage)}
+        </View>
       )}
       {Platform.OS === 'web' && (
         <style>
@@ -694,198 +698,200 @@ const MapPageComponent: React.FC<Props> = (props) => {
         </View>
       )}
 
-      <MapContainer
-        style={mapContainerStyle}
-        data-testid="map-leaflet-container"
-        id={mapContainerIdRef.current}
-        center={safeCenter}
-        zoom={initialZoomRef.current}
-        key={mapInstanceKeyRef.current}
-        zoomControl={false}
-      >
-        <MapLogicComponent
-          mapClickHandler={handleMapClick}
-          mode={mode}
-          coordinates={coordinatesLatLng}
-          userLocation={userLocationLatLng}
-          disableFitBounds={disableFitBounds}
-          L={L}
-          travelData={travelData}
-          setMapZoom={setMapZoom}
-          mapRef={mapRef}
-          onMapReady={setMapInstance}
-          savedMapViewRef={savedMapViewRef}
-          hasInitializedRef={hasInitializedRef}
-          lastModeRef={lastModeRef}
-          lastAutoFitKeyRef={lastAutoFitKeyRef}
-          leafletBaseLayerRef={leafletBaseLayerRef}
-          leafletOverlayLayersRef={leafletOverlayLayersRef}
-          leafletControlRef={leafletControlRef}
-          useMap={useMap}
-          useMapEvents={useMapEvents}
-        />
+      {canRenderMap && (
+        <MapContainer
+          style={mapContainerStyle}
+          data-testid="map-leaflet-container"
+          id={mapContainerIdRef.current}
+          center={safeCenter}
+          zoom={initialZoomRef.current}
+          key={mapInstanceKeyRef.current}
+          zoomControl={false}
+        >
+          <MapLogicComponent
+            mapClickHandler={handleMapClick}
+            mode={mode}
+            coordinates={coordinatesLatLng}
+            userLocation={userLocationLatLng}
+            disableFitBounds={disableFitBounds}
+            L={L}
+            travelData={travelData}
+            setMapZoom={setMapZoom}
+            mapRef={mapRef}
+            onMapReady={setMapInstance}
+            savedMapViewRef={savedMapViewRef}
+            hasInitializedRef={hasInitializedRef}
+            lastModeRef={lastModeRef}
+            lastAutoFitKeyRef={lastAutoFitKeyRef}
+            leafletBaseLayerRef={leafletBaseLayerRef}
+            leafletOverlayLayersRef={leafletOverlayLayersRef}
+            leafletControlRef={leafletControlRef}
+            useMap={useMap}
+            useMapEvents={useMapEvents}
+          />
 
-        {/* Radius circle - with strict validation */}
-        {(() => {
-          // Don't render Circle until map is ready
-          if (!mapInstance) return null;
+          {/* Radius circle - with strict validation */}
+          {(() => {
+            // Don't render Circle until map is ready
+            if (!mapInstance) return null;
 
-          const centerLat = circleCenter?.[0];
-          const centerLng = circleCenter?.[1];
-          const hasValidCenter =
-            centerLat != null &&
-            centerLng != null &&
-            Number.isFinite(centerLat) &&
-            Number.isFinite(centerLng) &&
-            centerLat >= -90 &&
-            centerLat <= 90 &&
-            centerLng >= -180 &&
-            centerLng <= 180;
+            const centerLat = circleCenter?.[0];
+            const centerLng = circleCenter?.[1];
+            const hasValidCenter =
+              centerLat != null &&
+              centerLng != null &&
+              Number.isFinite(centerLat) &&
+              Number.isFinite(centerLng) &&
+              centerLat >= -90 &&
+              centerLat <= 90 &&
+              centerLng >= -180 &&
+              centerLng <= 180;
 
-          const canRenderCircle =
-            mode === 'radius' &&
-            radiusInMeters != null &&
-            Number.isFinite(radiusInMeters) &&
-            radiusInMeters > 0 &&
-            hasValidCenter;
+            const canRenderCircle =
+              mode === 'radius' &&
+              radiusInMeters != null &&
+              Number.isFinite(radiusInMeters) &&
+              radiusInMeters > 0 &&
+              hasValidCenter;
 
-          if (!canRenderCircle) return null;
+            if (!canRenderCircle) return null;
 
-          return (
-            <Circle
-              key={`circle-${centerLat}-${centerLng}-${radiusInMeters}`}
-              center={[centerLat, centerLng]}
-              radius={radiusInMeters}
-              pathOptions={{
-                color: colors.primary,
-                fillColor: colors.primary,
-                fillOpacity: 0.08,
-                weight: 2,
-                dashArray: '6 6',
+            return (
+              <Circle
+                key={`circle-${centerLat}-${centerLng}-${radiusInMeters}`}
+                center={[centerLat, centerLng]}
+                radius={radiusInMeters}
+                pathOptions={{
+                  color: colors.primary,
+                  fillColor: colors.primary,
+                  fillOpacity: 0.08,
+                  weight: 2,
+                  dashArray: '6 6',
+                }}
+              />
+            );
+          })()}
+
+          {/* Route markers */}
+          {routePoints.length >= 1 &&
+           customIcons?.start &&
+           Number.isFinite(routePoints[0][0]) &&
+           Number.isFinite(routePoints[0][1]) &&
+           isValidCoordinate(routePoints[0][1], routePoints[0][0]) && (
+            <Marker
+              position={[routePoints[0][1], routePoints[0][0]]}
+              icon={customIcons.start}
+              eventHandlers={{
+                click: (e: any) => {
+                  e?.originalEvent?.stopPropagation?.();
+                },
+              }}
+            >
+              <Popup>Старт</Popup>
+            </Marker>
+          )}
+
+          {routePoints.length === 2 &&
+           customIcons?.end &&
+           Number.isFinite(routePoints[1][0]) &&
+           Number.isFinite(routePoints[1][1]) &&
+           isValidCoordinate(routePoints[1][1], routePoints[1][0]) && (
+            <Marker
+              position={[routePoints[1][1], routePoints[1][0]]}
+              icon={customIcons.end}
+              eventHandlers={{
+                click: (e: any) => {
+                  e?.originalEvent?.stopPropagation?.();
+                },
+              }}
+            >
+              <Popup>Финиш</Popup>
+            </Marker>
+          )}
+
+          {/* Routing */}
+          {mode === 'route' &&
+           routePoints.length >= 2 &&
+           rl &&
+           RoutingMachineWithMapInner &&
+           routePoints.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0])) && (
+            <RoutingMachineWithMapInner
+              routePoints={routePoints}
+              transportMode={transportMode}
+              setRoutingLoading={setRoutingLoading}
+              setErrors={setErrors}
+              setRouteDistance={setRouteDistance}
+              setFullRouteCoords={setFullRouteCoords}
+              ORS_API_KEY={ORS_API_KEY}
+            />
+          )}
+
+          {/* User location marker */}
+          {userLocationLatLng && customIcons?.userLocation && (
+            <Marker position={[userLocationLatLng.lat, userLocationLatLng.lng]} icon={customIcons.userLocation}>
+              <Popup>Ваше местоположение</Popup>
+            </Marker>
+          )}
+
+          {/* Travel markers (not clustered) */}
+          {customIcons?.meTravel && travelData.length > 0 && !shouldRenderClusters && PopupComponent && (
+            <MapMarkers
+              points={travelData}
+              icon={customIcons.meTravel}
+              Marker={Marker}
+              Popup={Popup}
+              PopupContent={PopupComponent}
+              onMarkerClick={handleMarkerZoom}
+              onMarkerInstance={(coord, marker) => {
+                try {
+                  const raw = String(coord ?? '').trim();
+                  if (!raw) return;
+                  const parsed = CoordinateConverter.fromLooseString(raw);
+                  const key = parsed ? CoordinateConverter.toString(parsed) : raw;
+                  if (marker) markerByCoordRef.current.set(key, marker);
+                  else markerByCoordRef.current.delete(key);
+                } catch {
+                  // noop
+                }
               }}
             />
-          );
-        })()}
+          )}
 
-        {/* Route markers */}
-        {routePoints.length >= 1 &&
-         customIcons?.start &&
-         Number.isFinite(routePoints[0][0]) &&
-         Number.isFinite(routePoints[0][1]) &&
-         isValidCoordinate(routePoints[0][1], routePoints[0][0]) && (
-          <Marker
-            position={[routePoints[0][1], routePoints[0][0]]}
-            icon={customIcons.start}
-            eventHandlers={{
-              click: (e: any) => {
-                e?.originalEvent?.stopPropagation?.();
-              },
-            }}
-          >
-            <Popup>Старт</Popup>
-          </Marker>
-        )}
-
-        {routePoints.length === 2 &&
-         customIcons?.end &&
-         Number.isFinite(routePoints[1][0]) &&
-         Number.isFinite(routePoints[1][1]) &&
-         isValidCoordinate(routePoints[1][1], routePoints[1][0]) && (
-          <Marker
-            position={[routePoints[1][1], routePoints[1][0]]}
-            icon={customIcons.end}
-            eventHandlers={{
-              click: (e: any) => {
-                e?.originalEvent?.stopPropagation?.();
-              },
-            }}
-          >
-            <Popup>Финиш</Popup>
-          </Marker>
-        )}
-
-        {/* Routing */}
-        {mode === 'route' &&
-         routePoints.length >= 2 &&
-         rl &&
-         RoutingMachineWithMapInner &&
-         routePoints.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0])) && (
-          <RoutingMachineWithMapInner
-            routePoints={routePoints}
-            transportMode={transportMode}
-            setRoutingLoading={setRoutingLoading}
-            setErrors={setErrors}
-            setRouteDistance={setRouteDistance}
-            setFullRouteCoords={setFullRouteCoords}
-            ORS_API_KEY={ORS_API_KEY}
-          />
-        )}
-
-        {/* User location marker */}
-        {userLocationLatLng && customIcons?.userLocation && (
-          <Marker position={[userLocationLatLng.lat, userLocationLatLng.lng]} icon={customIcons.userLocation}>
-            <Popup>Ваше местоположение</Popup>
-          </Marker>
-        )}
-
-        {/* Travel markers (not clustered) */}
-        {customIcons?.meTravel && travelData.length > 0 && !shouldRenderClusters && PopupComponent && (
-          <MapMarkers
-            points={travelData}
-            icon={customIcons.meTravel}
-            Marker={Marker}
-            Popup={Popup}
-            PopupContent={PopupComponent}
-            onMarkerClick={handleMarkerZoom}
-            onMarkerInstance={(coord, marker) => {
-              try {
-                const raw = String(coord ?? '').trim();
-                if (!raw) return;
-                const parsed = CoordinateConverter.fromLooseString(raw);
-                const key = parsed ? CoordinateConverter.toString(parsed) : raw;
-                if (marker) markerByCoordRef.current.set(key, marker);
-                else markerByCoordRef.current.delete(key);
-              } catch {
-                // noop
-              }
-            }}
-          />
-        )}
-
-        {/* Travel markers (clustered) */}
-        {customIcons?.meTravel && travelData.length > 0 && shouldRenderClusters && PopupComponent && (
-          <ClusterLayer
-            points={travelData}
-            Marker={Marker}
-            Popup={Popup}
-            PopupContent={PopupComponent}
-            markerIcon={customIcons.meTravel}
-            markerOpacity={travelMarkerOpacity}
-            grid={0.045}
-            expandedClusterKey={expandedCluster?.key}
-            expandedClusterItems={expandedCluster?.items}
-            renderer={canvasRenderer}
-            onMarkerClick={handleMarkerZoom}
-            onClusterZoom={({ bounds, key, items }) => {
-              if (!mapRef.current) return;
-              try {
-                const map = mapRef.current;
-                map.closePopup();
-                setExpandedCluster({ key, items });
-                map.fitBounds(
-                  [
-                    [bounds[0][0], bounds[0][1]],
-                    [bounds[1][0], bounds[1][1]],
-                  ],
-                  { padding: [40, 40], animate: true }
-                );
-              } catch {
-                // noop
-              }
-            }}
-          />
-        )}
-      </MapContainer>
+          {/* Travel markers (clustered) */}
+          {customIcons?.meTravel && travelData.length > 0 && shouldRenderClusters && PopupComponent && (
+            <ClusterLayer
+              points={travelData}
+              Marker={Marker}
+              Popup={Popup}
+              PopupContent={PopupComponent}
+              markerIcon={customIcons.meTravel}
+              markerOpacity={travelMarkerOpacity}
+              grid={0.045}
+              expandedClusterKey={expandedCluster?.key}
+              expandedClusterItems={expandedCluster?.items}
+              renderer={canvasRenderer}
+              onMarkerClick={handleMarkerZoom}
+              onClusterZoom={({ bounds, key, items }) => {
+                if (!mapRef.current) return;
+                try {
+                  const map = mapRef.current;
+                  map.closePopup();
+                  setExpandedCluster({ key, items });
+                  map.fitBounds(
+                    [
+                      [bounds[0][0], bounds[0][1]],
+                      [bounds[1][0], bounds[1][1]],
+                    ],
+                    { padding: [40, 40], animate: true }
+                  );
+                } catch {
+                  // noop
+                }
+              }}
+            />
+          )}
+        </MapContainer>
+      )}
 
       {/* Map controls */}
       <MapControls

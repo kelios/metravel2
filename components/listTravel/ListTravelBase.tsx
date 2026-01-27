@@ -1,5 +1,5 @@
 // ✅ УЛУЧШЕНИЕ: ListTravel.tsx - мигрирован на DESIGN_TOKENS и useThemedColors
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   FlatList,
@@ -320,29 +320,25 @@ function ListTravelBase({
     const isMeTravel = (route as any).name === "metravel";
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
-    const isTestEnv = process.env.NODE_ENV === 'test';
-
-    // ✅ Используем значения из useResponsive
-    const windowWidth = Platform.OS === 'web' && isTestEnv ? Math.max(width, 1024) : width;
 
     // ✅ АДАПТИВНОСТЬ: Определяем устройство и ориентацию
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
     const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
     // Cards layout rule: on mobile widths we always render a single column.
-    const isCardsSingleColumn = windowWidth < BREAKPOINTS.MOBILE;
+    const isCardsSingleColumn = width < BREAKPOINTS.MOBILE;
     const isTablet = isTabletSize;
     const isDesktop = isDesktopSize;
 
     const gapSize =
-      windowWidth < BREAKPOINTS.XS
+      width < BREAKPOINTS.XS
         ? 6
-        : windowWidth < BREAKPOINTS.SM
+        : width < BREAKPOINTS.SM
           ? 8
-          : windowWidth < BREAKPOINTS.MOBILE
+          : width < BREAKPOINTS.MOBILE
             ? 10
-            : windowWidth < BREAKPOINTS.TABLET
+            : width < BREAKPOINTS.TABLET
               ? 12
-              : windowWidth < BREAKPOINTS.DESKTOP
+              : width < BREAKPOINTS.DESKTOP
                 ? 14
                 : 16;
 
@@ -366,7 +362,7 @@ function ListTravelBase({
 
     // ✅ ОПТИМИЗАЦИЯ: Стабильные адаптивные отступы и ширина правой колонки
     // На мобильном layout используем полную ширину, на десктопе вычитаем ширину sidebar
-    const effectiveWidth = isDesktop ? windowWidth - 320 : windowWidth; // 320px ~ ширина sidebar (только когда sidebar реально видим)
+    const effectiveWidth = isDesktop ? width - 320 : width; // 320px ~ ширина sidebar (только когда sidebar реально видим)
 
     const contentPadding = useMemo(() => {
       // ✅ ОПТИМИЗАЦИЯ: Используем стабильные breakpoints для избежания лишних перерасчетов
@@ -385,7 +381,7 @@ function ListTravelBase({
       }
 
       if (isMobileDevice) {
-        return calculateColumns(windowWidth, isPortrait ? 'portrait' : 'landscape');
+        return calculateColumns(width, isPortrait ? 'portrait' : 'landscape');
       }
 
       if (!isTablet || !isPortrait) {
@@ -393,7 +389,7 @@ function ListTravelBase({
       }
 
       return calculateColumns(effectiveWidth, 'portrait');
-    }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, isPortrait, windowWidth]);
+    }, [effectiveWidth, isCardsSingleColumn, isMobileDevice, isTablet, isPortrait, width]);
 
     const [isRecommendationsVisible, setIsRecommendationsVisible] = useState<boolean>(() => {
         if (Platform.OS !== 'web') return false;
@@ -494,10 +490,15 @@ function ListTravelBase({
     const [showFilters, setShowFilters] = useState(false);
     const flatListRef = useRef<FlatList>(null);
 
+    const shouldFetchFilterOptions = useMemo(() => {
+      return !isMobileDevice || showFilters;
+    }, [isMobileDevice, showFilters]);
+
     /* Filters options - оптимизированный запрос с кэшированием */
     const { data: rawOptions, isLoading: filterOptionsLoading } = useQuery({
         queryKey: ["filter-options"],
         queryFn: fetchAllFiltersOptimized,
+        enabled: shouldFetchFilterOptions,
         staleTime: 10 * 60 * 1000,
     });
 
@@ -532,11 +533,12 @@ function ListTravelBase({
         user_id,
     });
 
-
-    const isQueryEnabled = useMemo(
+    const baseQueryEnabled = useMemo(
       () => (isMeTravel || isExport ? !!userId : true),
       [isMeTravel, isExport, userId]
     );
+
+    const isQueryEnabled = baseQueryEnabled;
 
     // Если для страницы требуется конкретный пользователь ("Мои путешествия" или экспорт),
     // то до загрузки userId блокируем основной запрос.
@@ -941,8 +943,8 @@ function ListTravelBase({
         setSearch={setSearch}
         resetFilters={resetFilters}
         isVisible={!isMobileDevice || showFilters}
-        isLoading={filterOptionsLoading || !options}
-        onClose={() => setShowFilters(false)}
+        isLoading={filterOptionsLoading}
+        onClose={isMobileDevice ? () => setShowFilters(false) : undefined}
         containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
       />
 
@@ -950,13 +952,9 @@ function ListTravelBase({
         search={search}
         setSearch={setSearch}
         onClearAll={() => {
-          setSearch('');
-          resetFilters();
-          if (isMobileDevice) {
-            setShowFilters(false);
-          }
+          setSearch('')
+          resetFilters()
         }}
-        availableWidth={effectiveWidth}
         topContent={null}
         isRecommendationsVisible={isRecommendationsVisible}
         handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
@@ -981,7 +979,9 @@ function ListTravelBase({
             ? [{ minHeight: 0, paddingHorizontal: contentPadding }]
             : [styles.searchHeader, { paddingHorizontal: contentPadding }]
         }
-        cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
+        cardsContainerStyle={
+          isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer
+        }
         cardsGridStyle={cardsGridDynamicStyle}
         cardSpacing={gapSize}
         footerLoaderStyle={styles.footerLoader}

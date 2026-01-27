@@ -1,5 +1,5 @@
 // app/map/index.tsx
-import React, { Suspense, lazy, useEffect, useMemo, useRef } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef } from 'react';
 import {
     SafeAreaView,
     View,
@@ -92,7 +92,12 @@ export default function MapScreen() {
                 )}
             </View>
         ),
-        [mapReady, mapPanelProps, mapPanelPlaceholder, styles.mapArea]
+        [
+            mapPanelPlaceholder,
+            mapPanelProps,
+            mapReady,
+            styles.mapArea,
+        ]
     );
 
     // Use mobile layout on small screens (including web), desktop keeps right panel
