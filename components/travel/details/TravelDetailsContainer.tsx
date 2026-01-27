@@ -38,7 +38,6 @@ import { SectionSkeleton } from '@/components/SectionSkeleton';
 import { TravelHeroSection, useLCPPreload, OptimizedLCPHero } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
-import { TravelDeferredSections } from "@/components/travel/details/TravelDetailsDeferred";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import SkipToContentLink from "@/components/accessibility/SkipToContentLink";
@@ -49,6 +48,11 @@ import { useThemedColors } from "@/hooks/useTheme";
 /* -------------------- helpers -------------------- */
 
 const CompactSideBarTravel = withLazy(() => import("@/components/travel/CompactSideBarTravel"));
+const TravelDeferredSections = withLazy(() =>
+  import("@/components/travel/details/TravelDetailsDeferred").then((m) => ({
+    default: m.TravelDeferredSections,
+  }))
+);
 
 /* -------------------- SuspenseList shim -------------------- */
 const SList: React.FC<{
@@ -175,14 +179,17 @@ export default function TravelDetailsContainer() {
         : typeof travel?.id === "number" || typeof travel?.id === "string"
           ? `https://metravel.by/travels/${travel.id}`
           : undefined;
-    const rawFirst = travel?.gallery?.[0];
+    const rawFirst = travel?.travel_image_thumb_url || travel?.gallery?.[0];
     const firstUrl = rawFirst
       ? typeof rawFirst === "string"
         ? rawFirst
         : rawFirst.url
       : undefined;
+    const rawFirstUpdatedAt =
+      rawFirst && typeof rawFirst !== "string" ? (rawFirst as any)?.updated_at : undefined;
+    const rawFirstId = rawFirst && typeof rawFirst !== "string" ? (rawFirst as any)?.id : undefined;
     const versioned = firstUrl
-      ? buildVersioned(firstUrl, (rawFirst as any)?.updated_at, (rawFirst as any)?.id)
+      ? buildVersioned(firstUrl, rawFirstUpdatedAt, rawFirstId)
       : undefined;
     const lcpMaxWidth = isMobile ? 480 : 960;
     const lcpWidths = isMobile ? [320, 420, 480] : [640, 768, 960];
