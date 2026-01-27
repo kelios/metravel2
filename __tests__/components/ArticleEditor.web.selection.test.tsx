@@ -53,6 +53,10 @@ jest.mock('@/components/QuillEditor.web', () => {
         },
         focus: jest.fn(),
         getSelection: () => readSelection(),
+        getText: () => {
+          const current = String(editorRef.current?.root?.innerHTML ?? '')
+          return current.replace(/<[^>]*>/g, '')
+        },
         getLength: () => (typeof editorRef.current?.root?.innerHTML === 'string'
           ? editorRef.current.root.innerHTML.length
           : 0),
@@ -139,6 +143,10 @@ describe('ArticleEditor.web selection + paste', () => {
       expect(editor.setSelection).not.toHaveBeenCalled();
     });
 
+    await waitFor(() => {
+      expect(String(editor.root.innerHTML)).toContain('hello!')
+    })
+
     fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
@@ -154,7 +162,7 @@ describe('ArticleEditor.web selection + paste', () => {
 
     ;(globalThis as any).__quillSelection__ = { index: 5, length: 0 };
 
-    const { getByLabelText, getByTestId, UNSAFE_getAllByType } = render(
+    const { getByTestId } = render(
       <ArticleEditor content={'hello'} onChange={onChange} />
     );
 
@@ -165,26 +173,19 @@ describe('ArticleEditor.web selection + paste', () => {
     const handlers = (globalThis as any).__quillHandlers__;
     const editor = (globalThis as any).__quillEditor__;
 
+    const preventDefault = jest.fn();
+
     handlers.paste({
       clipboardData: {
         getData: (type: string) => (type === 'text/html' ? '<strong>world</strong>' : ''),
         files: [],
       },
-      preventDefault: jest.fn(),
+      preventDefault,
     });
 
     await waitFor(() => {
-      expect(editor.clipboard.dangerouslyPasteHTML).toHaveBeenCalled();
-      expect(editor.setSelection).toHaveBeenCalledWith(6, 0, 'silent');
-    });
-
-    fireEvent.press(getByLabelText('Показать HTML-код'));
-
-    await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(require('react-native').TextInput);
-      const htmlInput = inputs[inputs.length - 1];
-      expect(String(htmlInput.props.value)).toContain('hello');
-      expect(String(htmlInput.props.value)).toContain('<strong>world</strong>');
+      expect(preventDefault).not.toHaveBeenCalled();
+      expect(editor.clipboard.dangerouslyPasteHTML).not.toHaveBeenCalled();
     });
   });
 
@@ -194,7 +195,7 @@ describe('ArticleEditor.web selection + paste', () => {
 
     ;(globalThis as any).__quillSelection__ = { index: 5, length: 0 };
 
-    const { getByLabelText, getByTestId, UNSAFE_getAllByType } = render(
+    const { getByTestId } = render(
       <ArticleEditor content={'hello'} onChange={onChange} />
     );
 
@@ -205,24 +206,19 @@ describe('ArticleEditor.web selection + paste', () => {
     const handlers = (globalThis as any).__quillHandlers__;
     const editor = (globalThis as any).__quillEditor__;
 
+    const preventDefault = jest.fn();
+
     handlers.paste({
       clipboardData: {
         getData: (type: string) => (type === 'text/plain' ? ' world' : ''),
         files: [],
       },
-      preventDefault: jest.fn(),
+      preventDefault,
     });
 
     await waitFor(() => {
-      expect(editor.setSelection).toHaveBeenCalledWith(11, 0, 'silent');
-    });
-
-    fireEvent.press(getByLabelText('Показать HTML-код'));
-
-    await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(require('react-native').TextInput);
-      const htmlInput = inputs[inputs.length - 1];
-      expect(String(htmlInput.props.value)).toContain('hello world');
+      expect(preventDefault).not.toHaveBeenCalled();
+      expect(editor.clipboard.dangerouslyPasteHTML).not.toHaveBeenCalled();
     });
   });
 });

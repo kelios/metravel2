@@ -198,7 +198,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     useEffect(() => {
         if (!isWeb || !win) return;
         if (!shouldLoadQuill) return;
-        const href = 'https://cdn.jsdelivr.net/npm/react-quill@2/dist/quill.snow.css';
+        const href = 'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css';
         if (!win.document.querySelector(`link[href="${href}"]`)) {
             const link = win.document.createElement('link');
             link.rel = 'stylesheet';
@@ -490,7 +490,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [html, onAutosave, autosaveDelay]);
 
     const fireChange = useCallback(
-        (val: string, selection?: { index: number; length: number } | null) => {
+        (val: string, selection?: { index: number; length: number } | null, markUserEdited: boolean = true) => {
             const clean = sanitizeHtml(val);
             if (clean === htmlRef.current) return;
 
@@ -498,7 +498,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 pendingSelectionRestoreRef.current = selection;
             }
 
-            hasUserEditedRef.current = true;
+            if (markUserEdited) {
+                hasUserEditedRef.current = true;
+            }
 
             lastEmittedHtmlRef.current = clean;
             htmlRef.current = clean;
@@ -620,33 +622,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 const file = Array.from(e.clipboardData?.files ?? [])[0];
                 if (file && typeof file.type === 'string' && file.type.startsWith('image/')) {
                     e.preventDefault();
+                    try {
+                        (e as any).stopImmediatePropagation?.();
+                    } catch (err) {
+                        void err;
+                    }
                     uploadAndInsert(file);
                     return;
-                }
-
-                const editorInstance = quillRef.current?.getEditor?.();
-                if (!editorInstance) return;
-
-                const htmlData = e.clipboardData?.getData('text/html');
-                const textData = e.clipboardData?.getData('text/plain');
-
-                if (htmlData && htmlData.trim().length > 0) {
-                    e.preventDefault();
-                    const normalized = normalizeHtmlForQuill(htmlData);
-                    const clean = sanitizeHtml(normalized);
-                    const range = resolveEditorSelection(editorInstance);
-                    editorInstance.clipboard?.dangerouslyPasteHTML?.(range.index, clean, 'user');
-                    editorInstance.setSelection?.(range.index + 1, 0, 'silent');
-                    fireChange(editorInstance.root.innerHTML, { index: range.index + 1, length: 0 });
-                    return;
-                }
-
-                if (textData && textData.trim().length > 0) {
-                    e.preventDefault();
-                    const range = resolveEditorSelection(editorInstance);
-                    editorInstance.insertText?.(range.index, textData, 'user');
-                    editorInstance.setSelection?.(range.index + textData.length, 0, 'silent');
-                    fireChange(editorInstance.root.innerHTML, { index: range.index + textData.length, length: 0 });
                 }
             };
 
@@ -658,7 +640,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             root.addEventListener('dragover', onDragOver);
             root.addEventListener('dragenter', onDragOver);
             root.addEventListener('drop', onDrop);
-            root.addEventListener('paste', onPaste);
+            root.addEventListener('paste', onPaste, true);
 
             if (typeof editor.on === 'function') {
                 editor.on('selection-change', onSelectionChange);
@@ -668,7 +650,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 root.removeEventListener('dragover', onDragOver);
                 root.removeEventListener('dragenter', onDragOver);
                 root.removeEventListener('drop', onDrop);
-                root.removeEventListener('paste', onPaste);
+                root.removeEventListener('paste', onPaste, true);
                 if (typeof editor.off === 'function') {
                     editor.off('selection-change', onSelectionChange);
                 }
@@ -990,7 +972,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             // For normal user typing Quill already maintains selection.
             // Restoring a cached selection here can override Quill's internal caret position
             // (often observed as jumping to the beginning on the first character).
-            fireChange(next);
+            fireChange(next, undefined, source === 'user');
         },
         [fireChange, html]
     );

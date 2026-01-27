@@ -66,7 +66,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
@@ -144,7 +144,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     <div id="editor"></div>
   </div>
 
-  <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
   <script>
     var INITIAL_PLACEHOLDER = ${safePlaceholder};
     var INITIAL_CONTENT = ${safeInitialContent};
@@ -299,6 +299,7 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
         
         // Отмечаем, что пользователь редактирует
         isUserEditingRef.current = true;
+        lastPropContentRef.current = newHtml;
         
         // Обновляем локальное состояние без санитизации (доверяем Quill)
         setHtml(newHtml);
@@ -335,8 +336,14 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
     // Проверяем, изменился ли prop контент
     if (content === lastPropContentRef.current) return;
     lastPropContentRef.current = content;
+    if (String(content ?? '').trim().length === 0 && String(html ?? '').trim().length > 0) {
+      return;
+    }
     
     const cleaned = sanitizeForEditor(content);
+    if (String(cleaned ?? '').trim().length === 0 && String(html ?? '').trim().length > 0) {
+      return;
+    }
     
     // Сравниваем с текущим состоянием (без HTML пробелов)
     const normalizeForComparison = (str: string) => 
