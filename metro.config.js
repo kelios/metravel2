@@ -27,7 +27,7 @@ config.resolver = {
   // Prefer CommonJS "main" over ESM for better compatibility on web.
   // This avoids cases where packages (e.g. react-native-svg) resolve to an ESM build
   // that Metro/web ends up bundling incorrectly, leading to runtime export mismatches.
-  resolverMainFields: ['react-native', 'browser', 'module', 'main'],
+  resolverMainFields: ['react-native', 'browser', 'main', 'module'],
   resolveRequest: (context, moduleName, platform, modulePath) => {
     // Блокируем импорт всех CSS файлов (Metro не может их обработать из-за lightningcss)
     if (moduleName.endsWith('.css')) {
@@ -37,9 +37,20 @@ config.resolver = {
       };
     }
 
+    // Fix ESM/CJS interop for TanStack React Query on web.
+    // Metro sometimes resolves the CJS entry (.cjs) for this package, which can drop named exports
+    // and cause runtime errors like: (0, r(...).useQuery) is not a function.
+    // Force the ESM build for web bundles.
+    const isWeb = platform === 'web' || (context && context.platform === 'web');
+    if (isWeb && moduleName === '@tanstack/react-query') {
+      return {
+        filePath: path.resolve(__dirname, 'node_modules/@tanstack/react-query/build/modern/index.js'),
+        type: 'sourceFile',
+      };
+    }
+
     // Avoid SVG icon stacks on web: lucide-react-native depends on react-native-svg.
     // If any web-rendered UI accidentally imports lucide-react-native, resolve it to a stub.
-    const isWeb = platform === 'web' || (context && context.platform === 'web');
     if (isWeb) {
       const normalizedModuleName = moduleName.replace(/\\/g, '/');
       if (

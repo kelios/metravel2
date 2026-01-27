@@ -58,12 +58,6 @@ const useAppFonts: any = isWeb
 /** Тема */
 // ✅ ИСПРАВЛЕНИЕ: Унифицирована цветовая палитра - используется DESIGN_TOKENS
 
-const queryClient = createOptimizedQueryClient({
-    mutations: {
-        retry: false,
-    },
-});
-
 /** Splash на native */
 if (!isWeb) {
     SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -140,6 +134,13 @@ function RootLayoutNav() {
       () => getThemedColors(colorScheme === 'dark'),
       [colorScheme],
     );
+
+    // ✅ FIX: Создаем queryClient внутри компонента для избежания проблем с SSR/гидрацией
+    const [queryClient] = useState(() => createOptimizedQueryClient({
+        mutations: {
+            retry: false,
+        },
+    }));
 
     useEffect(() => {
       if (!isWeb) return;
@@ -349,6 +350,7 @@ function RootLayoutNav() {
             setDockHeight={setDockHeight}
             isMounted={isMounted}
             showConsentBanner={showConsentBanner}
+            queryClient={queryClient}
           />
         </ThemeProvider>
       </ErrorBoundary>
@@ -364,6 +366,7 @@ function ThemedContent({
   setDockHeight,
   isMounted,
   showConsentBanner,
+  queryClient,
 }: {
   showMapBackground: boolean;
   showFooter: boolean;
@@ -372,6 +375,7 @@ function ThemedContent({
   setDockHeight: (h: number) => void;
   isMounted: boolean;
   showConsentBanner: boolean;
+  queryClient: any;
 }) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);

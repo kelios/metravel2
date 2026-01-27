@@ -9,6 +9,8 @@ const path = require('path');
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
+const originalResolveRequest = config.resolver.resolveRequest;
+
 // 1. Enable advanced optimizations
 config.transformer = {
   ...config.transformer,
@@ -34,6 +36,25 @@ config.resolver = {
   // This avoids cases where packages (e.g. react-native-svg) resolve to an ESM build
   // that Metro/web ends up bundling incorrectly, leading to runtime export mismatches.
   resolverMainFields: ['react-native', 'browser', 'main', 'module'],
+  resolveRequest: (context, moduleName, platform, modulePath) => {
+    const isWeb = platform === 'web' || (context && context.platform === 'web');
+
+    if (isWeb && moduleName === '@tanstack/react-query') {
+      return {
+        filePath: path.resolve(
+          __dirname,
+          'node_modules/@tanstack/react-query/build/modern/index.js'
+        ),
+        type: 'sourceFile',
+      };
+    }
+
+    if (originalResolveRequest) {
+      return originalResolveRequest(context, moduleName, platform, modulePath);
+    }
+
+    return context.resolveRequest(context, moduleName, platform, modulePath);
+  },
   // Enable asset optimization
   assetExts: [
     ...config.resolver.assetExts,

@@ -20,6 +20,26 @@ const normalizeString = (value: unknown, fallback = ''): string => {
   return String(value);
 };
 
+const normalizeImageUrl = (value: unknown): string => {
+  const url = normalizeString(value, '');
+  if (!url) return '';
+  
+  // Если URL уже абсолютный, возвращаем как есть
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // Если URL относительный, добавляем домен
+  if (url.startsWith('/')) {
+    const baseUrl = Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'https://metravel.by';
+    return `${baseUrl}${url}`;
+  }
+  
+  return url;
+};
+
 const normalizeLatLngString = (value: unknown): string => {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (typeof value === 'string') {
@@ -47,9 +67,8 @@ const normalizeTravelCoordsItem = (raw: any) => {
     ''
   );
 
-  const travelImageThumbUrl = normalizeString(
-    t.travelImageThumbUrl ?? t.travel_image_thumb_url ?? t.image ?? t.thumb,
-    ''
+  const travelImageThumbUrl = normalizeImageUrl(
+    t.travelImageThumbUrl ?? t.travel_image_thumb_url ?? t.image ?? t.thumb
   );
 
   const urlTravel = normalizeString(t.urlTravel ?? t.url_travel ?? t.url, '');

@@ -86,15 +86,43 @@ const normalizeTravelItem = (input: any): Travel => {
         out.countUnicIpView = String(t.countUnicIpView ?? t.count_unic_ip_view ?? '0');
     }
 
+    // Нормализация URL изображений (относительные -> абсолютные)
+    const normalizeImageUrl = (url: string | undefined): string => {
+        if (!url) return '';
+        const trimmed = url.trim();
+        if (!trimmed) return '';
+        
+        // Если URL уже абсолютный, возвращаем как есть
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+        }
+        
+        // Если URL относительный, добавляем домен
+        if (trimmed.startsWith('/')) {
+            const baseUrl = typeof window !== 'undefined' && window.location?.origin
+                ? window.location.origin
+                : 'https://metravel.by';
+            return `${baseUrl}${trimmed}`;
+        }
+        
+        return trimmed;
+    };
+
     if (typeof t.travel_image_thumb_url === 'undefined' && typeof t.travelImageThumbUrl !== 'undefined') {
-        out.travel_image_thumb_url = String(t.travelImageThumbUrl ?? '');
+        out.travel_image_thumb_url = normalizeImageUrl(String(t.travelImageThumbUrl ?? ''));
+    } else if (typeof t.travel_image_thumb_url !== 'undefined') {
+        out.travel_image_thumb_url = normalizeImageUrl(String(t.travel_image_thumb_url ?? ''));
     }
+    
     if (
         typeof t.travel_image_thumb_small_url === 'undefined' &&
         typeof t.travelImageThumbSmallUrl !== 'undefined'
     ) {
-        out.travel_image_thumb_small_url = String(t.travelImageThumbSmallUrl ?? '');
+        out.travel_image_thumb_small_url = normalizeImageUrl(String(t.travelImageThumbSmallUrl ?? ''));
+    } else if (typeof t.travel_image_thumb_small_url !== 'undefined') {
+        out.travel_image_thumb_small_url = normalizeImageUrl(String(t.travel_image_thumb_small_url ?? ''));
     }
+    
     if (
         typeof out.travel_image_thumb_small_url === 'undefined' &&
         typeof out.travel_image_thumb_url !== 'undefined'
