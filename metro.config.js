@@ -27,7 +27,7 @@ config.resolver = {
   // Prefer CommonJS "main" over ESM for better compatibility on web.
   // This avoids cases where packages (e.g. react-native-svg) resolve to an ESM build
   // that Metro/web ends up bundling incorrectly, leading to runtime export mismatches.
-  resolverMainFields: ['react-native', 'browser', 'main'],
+  resolverMainFields: ['react-native', 'browser', 'module', 'main'],
   resolveRequest: (context, moduleName, platform, modulePath) => {
     // Блокируем импорт всех CSS файлов (Metro не может их обработать из-за lightningcss)
     if (moduleName.endsWith('.css')) {
