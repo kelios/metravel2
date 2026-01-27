@@ -625,9 +625,11 @@ function TravelHeroSectionInner({
           accessibilityLabel="Поделиться маршрутом"
           style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
         >
-          <Suspense fallback={<View style={{ minHeight: 56 }} />}>
-            <ShareButtons travel={travel} />
-          </Suspense>
+          <View testID="travel-details-share" accessibilityLabel="Поделиться маршрутом">
+            <Suspense fallback={<View style={{ minHeight: 56 }} />}>
+              <ShareButtons travel={travel} />
+            </Suspense>
+          </View>
         </View>
       )}
 
