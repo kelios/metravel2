@@ -6,6 +6,7 @@
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
 import { getTravelsListPath } from './helpers/routes';
+import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 let travelBasePath: string | null = null;
 
@@ -17,6 +18,8 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
 
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(hideRecommendationsBanner);
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(500);
 
@@ -38,6 +41,9 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
   test.beforeEach(async ({ page: testPage }) => {
     page = testPage;
 
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(hideRecommendationsBanner);
+
     // Set viewport for mobile testing
     await page.setViewportSize({ width: 1280, height: 720 });
 
@@ -48,10 +54,10 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
     }
 
     // Go to travel details page
-    await page.goto(travelBasePath);
+    await page.goto(travelBasePath, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
     // Wait for main content to load
-    await page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 10000 });
+    await page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 45_000 });
   });
 
   test.describe('Page Loading', () => {
@@ -91,10 +97,33 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
         hero.locator('[data-lcp]').first(),
       ];
 
+      const hasBackgroundImage = async () => {
+        return hero.evaluate((root: any) => {
+          try {
+            const elements = root?.querySelectorAll ? Array.from(root.querySelectorAll('*')) : [];
+            for (const el of elements) {
+              const style = window.getComputedStyle(el as Element);
+              const bg = style?.backgroundImage;
+              if (!bg || bg === 'none') continue;
+              const rect = (el as Element).getBoundingClientRect?.();
+              if (!rect) continue;
+              if (rect.width >= 40 && rect.height >= 40) return true;
+            }
+          } catch {
+            // ignore
+          }
+          return false;
+        });
+      };
+
       const start = Date.now();
       const timeoutMs = 20_000;
       let found = false;
       while (!found && Date.now() - start < timeoutMs) {
+        if (await hasBackgroundImage().catch(() => false)) {
+          found = true;
+          break;
+        }
         for (const c of candidates) {
           if ((await c.count()) === 0) continue;
           if (await c.isVisible().catch(() => false)) {

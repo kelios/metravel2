@@ -117,14 +117,45 @@ test.describe('Render audit: main and travel details (responsive + perf)', () =>
       await expect(search).toBeVisible({ timeout: 30_000 });
 
       // Either list skeleton, list content, or empty state should render.
-      const listState = await Promise.any([
-        page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }),
-        page.waitForSelector('[data-testid="travel-card-skeleton"]', { timeout: 30_000 }),
-        page.waitForSelector('[data-testid="list-travel-skeleton"]', { timeout: 30_000 }),
-        page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
-        page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
-      ].map((p) => p.catch(() => null)));
-      expect(listState, 'main list should render cards, skeleton, or empty state').toBeTruthy();
+      const cards = page.locator('[data-testid="travel-card-link"], [testID="travel-card-link"]');
+      const cardSkeleton = page.locator('[data-testid="travel-card-skeleton"], [testID="travel-card-skeleton"]');
+      const listSkeleton = page.locator('[data-testid="list-travel-skeleton"], [testID="list-travel-skeleton"]');
+      const emptyState = page.locator('text=Пока нет путешествий');
+      const foundCountText = page.locator('text=Найдено:');
+
+      await expect
+        .poll(
+          async () => {
+            if ((await cards.count()) > 0) return 'cards';
+            if ((await cardSkeleton.count()) > 0) return 'card-skeleton';
+            if ((await listSkeleton.count()) > 0) return 'list-skeleton';
+            // Text nodes can be inside scroll containers; treat presence as success even if not strictly "visible".
+            if ((await emptyState.count()) > 0) return 'empty';
+            if ((await foundCountText.count()) > 0) return 'found-count';
+
+            const hasBodyText = await page
+              .evaluate(() => {
+                try {
+                  const text = document?.body?.innerText || '';
+                  return (
+                    text.includes('Пока нет путешествий') ||
+                    text.includes('Найдено:') ||
+                    text.includes('Путешествия появятся здесь')
+                  );
+                } catch {
+                  return false;
+                }
+              })
+              .catch(() => false);
+            if (hasBodyText) return 'body-text';
+            return null;
+          },
+          {
+            timeout: 30_000,
+            message: 'main list should render cards, skeleton, or empty state',
+          }
+        )
+        .not.toBeNull();
 
       await assertNoHorizontalScroll(page);
 

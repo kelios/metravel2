@@ -30,6 +30,12 @@ const mapIconName = (name: string): keyof typeof Feather.glyphMap => {
       return 'git-branch';
     case 'directions':
       return 'navigation';
+    case 'directions-car':
+      return 'truck';
+    case 'directions-walk':
+      return 'user';
+    case 'directions-bike':
+      return 'activity';
     case 'trip-origin':
       return 'circle';
     case 'swap-vert':

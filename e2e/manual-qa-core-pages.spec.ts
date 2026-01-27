@@ -3,7 +3,13 @@ import { getTravelsListPath } from './helpers/routes';
 
 type ApiMatch = string | RegExp;
 
-const waitForApiResponse = async (page: any, patterns: ApiMatch[], label: string) => {
+const waitForApiResponse = async (
+  page: any,
+  patterns: ApiMatch[],
+  label: string,
+  opts: { timeoutMs?: number } = {}
+) => {
+  const timeoutMs = Math.max(5_000, Number(opts.timeoutMs ?? 30_000));
   const response = await page.waitForResponse(
     (resp: any) => {
       const status = resp.status();
@@ -13,7 +19,7 @@ const waitForApiResponse = async (page: any, patterns: ApiMatch[], label: string
         typeof pattern === 'string' ? url.includes(pattern) : pattern.test(url)
       );
     },
-    { timeout: 30_000 }
+    { timeout: timeoutMs }
   );
 
   const status = response.status();
@@ -73,19 +79,34 @@ test.describe('Manual QA automation: core pages data', () => {
   });
 
   test('roulette loads filters and random results via API proxy', async ({ page }) => {
-    const filtersPromise = waitForApiResponse(
-      page,
-      [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//],
-      'roulette-filters'
-    );
     await page.goto('/roulette', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    await filtersPromise;
+
+    // Upstream API can be slow/flaky; allow a longer window for proxy responses.
+    await waitForApiResponse(page, [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//], 'roulette-filters', {
+      timeoutMs: 90_000,
+    });
 
     const spinButton = page.getByRole('button', { name: 'Подобрать маршруты' }).first();
     await expect(spinButton).toBeVisible({ timeout: 20_000 });
-    const resultsPromise = waitForApiResponse(page, [/\/api\/travels\/random\//, /\/api\/travels\//], 'roulette-results');
-    await spinButton.click();
 
-    await resultsPromise;
+    const patterns: ApiMatch[] = [/\/api\/travels\/random\//, /\/api\/travels\//];
+    let lastErr: any = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        await spinButton.click({ force: true });
+        await waitForApiResponse(page, patterns, 'roulette-results', { timeoutMs: 90_000 });
+        lastErr = null;
+        break;
+      } catch (err: any) {
+        lastErr = err;
+        // Retry once: reload to recover from transient proxy hiccups.
+        await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+        await waitForApiResponse(page, [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//], 'roulette-filters', {
+          timeoutMs: 90_000,
+        }).catch(() => null);
+      }
+    }
+
+    if (lastErr) throw lastErr;
   });
 });
