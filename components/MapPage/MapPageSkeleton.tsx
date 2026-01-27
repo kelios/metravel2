@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -26,6 +26,15 @@ export const MapPageSkeleton: React.FC = () => {
       right: DESIGN_TOKENS.spacing.md,
       gap: DESIGN_TOKENS.spacing.sm,
       zIndex: 10,
+    },
+    placeholderText: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: DESIGN_TOKENS.spacing.lg,
+      textAlign: 'center',
+      color: colors.textMuted,
+      fontSize: 16,
     },
     controlButton: {
       width: 44,
@@ -76,6 +85,7 @@ export const MapPageSkeleton: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.mapArea}>
         <SkeletonLoader width="100%" height={600} borderRadius={0} />
+        <Text style={styles.placeholderText}>Загружаем карту…</Text>
         
         <View style={styles.mapControls}>
           <View style={styles.controlButton}>

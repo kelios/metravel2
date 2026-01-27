@@ -51,34 +51,6 @@
 
 ---
 
-## 🔴 КРИТИЧНО - Сделать ДО релиза
-
-- [ ] **EAS Secrets Configuration**
-  ```bash
-  # Запустите скрипт для настройки секретов:
-  ./scripts/setup-eas-secrets.sh
-  
-  # Или вручную:
-  eas secret:create --scope project --name EXPO_PUBLIC_METRIKA_ID --value "YOUR_METRIKA_ID"
-  eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_GA4 --value "YOUR_GA4_ID"
-  eas secret:create --scope project --name ROUTE_SERVICE_KEY --value "YOUR_ORS_KEY"
-  ```
-  - [ ] Получить OpenRouteService API key (бесплатно): https://openrouteservice.org/dev/#/signup
-  - [ ] Получить Яндекс Метрика ID: https://metrika.yandex.ru/
-  - [ ] Получить Google GA4 ID: https://analytics.google.com/
-  - [ ] Настроить через скрипт или вручную
-
-- [ ] **EAS Submit Credentials**
-  - [ ] Обновить `eas.json` → `submit.production.ios.appleId` (сейчас: savran.juli@example.com)
-  - [ ] Обновить `eas.json` → `submit.production.ios.ascAppId`
-  - [ ] Обновить `eas.json` → `submit.production.ios.appleTeamId`
-  - [ ] Получить значения из: https://appstoreconnect.apple.com
-
-- [ ] **Android: google-play-service-account.json**
-  - [ ] Скачать из Google Play Console
-  - [ ] Поместить в корень проекта
-  - [ ] Проверить что в .gitignore
-
 - [ ] **Финальная проверка**
   ```bash
   npm run release:check
