@@ -246,13 +246,11 @@ select {
 /* Home hero layout guard (web): prevent vertical stacking on desktop/tablet due to hydration/breakpoint mismatch */
 [data-testid="home-hero-stack"] {
   display: flex !important;
-  flex-direction: column !important;
   width: 100% !important;
 }
 
 @media (min-width: 768px) {
   [data-testid="home-hero-stack"] {
-    flex-direction: row !important;
     align-items: center !important;
   }
 }

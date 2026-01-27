@@ -14,7 +14,7 @@ if (!GA_ID && typeof process !== 'undefined' && process.env.NODE_ENV === 'develo
 
 export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   if (!metrikaId || !gaId) {
-    return '// Analytics disabled: missing EXPO_PUBLIC_METRIKA_ID or EXPO_PUBLIC_GOOGLE_GA4';
+    return 'Analytics disabled: missing EXPO_PUBLIC_METRIKA_ID or EXPO_PUBLIC_GOOGLE_GA4';
   }
   return String.raw`
 (function(){
@@ -394,26 +394,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="apple-touch-icon" href="/assets/icons/logo_yellow.ico" />
       <link rel="manifest" href="/manifest.json" />
 
-      {process.env.NODE_ENV === 'production' ? (
-        <link
-          rel="prefetch"
-          href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"
-          as="font"
-          type="font/ttf"
-          crossOrigin="anonymous"
-        />
-      ) : null}
-
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
-
-      {process.env.NODE_ENV === 'production' ? (
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `@font-face{font-family:feather;src:url(/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf) format('truetype');font-weight:normal;font-style:normal;font-display:optional;}`,
-          }}
-        />
-      ) : null}
 
       {/* Ensure font-display=swap for dynamically injected icon fonts */}
       <script
@@ -567,7 +549,11 @@ img[fetchpriority="high"]{content-visibility:auto;will-change:transform}
 img[loading="lazy"]{content-visibility:auto}
 [data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,#f5f5f5)}
 [data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:cover}
-[data-testid="home-hero-stack"]{min-height:400px;contain:layout style paint}
+[data-testid="home-hero-stack"]{min-height:400px;contain:layout style paint;display:flex;flex-direction:column !important;width:100%}
+@media (min-width:768px){[data-testid="home-hero-stack"]{flex-direction:row !important;align-items:center}}
+[data-testid="home-hero-image-slot"]{display:none}
+@media (min-width:768px){[data-testid="home-hero-image-slot"]{display:flex !important;justify-content:center;align-items:center;flex:1;min-width:320px}}
+@media (min-width:768px){[data-testid="home-hero-image-slot"] > *{width:320px;height:400px}}
 [data-testid="home-hero-stack"] img{width:320px;height:400px;aspect-ratio:4/5;object-fit:cover}
 [data-testid*="travel-gallery"] img{aspect-ratio:16/9;contain:layout style paint;object-fit:cover}
 [style*="minHeight"]{contain:layout style paint}

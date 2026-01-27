@@ -94,6 +94,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const isMobile = isSmallPhone || isPhone;
   const showImage = hydrated && (isTablet || isLargeTablet || isDesktop);
+  const shouldRenderImageSlot = isWeb;
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -305,23 +306,30 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
             </ResponsiveStack>
           </View>
 
-          {showImage && (
-            <Pressable
-              onPress={handleOpenArticle}
-              accessibilityRole="link"
-              accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
-              style={styles.imageContainer}
-            >
-              <OptimizedImage
-                source={require('../../assets/images/pdf.webp')}
-                width={320}
-                height={400}
-                borderRadius={DESIGN_TOKENS.radii.lg}
-                alt="Пример книги путешествий"
-                loadingStrategy={Platform.OS === 'web' ? 'eager' : 'lazy'}
-                style={styles.bookImage}
-              />
-            </Pressable>
+          {shouldRenderImageSlot && (
+            showImage ? (
+              <Pressable
+                testID="home-hero-image-slot"
+                onPress={handleOpenArticle}
+                accessibilityRole="link"
+                accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
+                style={styles.imageContainer}
+              >
+                <OptimizedImage
+                  source={require('../../assets/images/pdf.webp')}
+                  width={320}
+                  height={400}
+                  borderRadius={DESIGN_TOKENS.radii.lg}
+                  alt="Пример книги путешествий"
+                  loadingStrategy={Platform.OS === 'web' ? 'eager' : 'lazy'}
+                  style={styles.bookImage}
+                />
+              </Pressable>
+            ) : (
+              <View testID="home-hero-image-slot" style={styles.imageContainer}>
+                <View style={styles.imagePlaceholder} />
+              </View>
+            )
           )}
         </ResponsiveStack>
       </ResponsiveContainer>
