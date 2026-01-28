@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -9,7 +9,10 @@ import {
   FlatList,
   Platform,
 } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { queryKeys } from '@/src/queryKeys';
 import type { LatLng } from '@/types/coordinates';
 import MapIcon from './MapIcon';
 import IconButton from '@/components/ui/IconButton';
@@ -37,34 +40,25 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   enableCoordinateInput = false,
 }) => {
   const [query, setQuery] = useState(value);
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [searchEnabled, setSearchEnabled] = useState(false);
+  const debouncedQuery = useDebouncedValue(query, 500);
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
-  const searchAddress = useCallback(async (searchQuery: string) => {
-    if (!searchQuery || searchQuery.length < 3) {
-      setResults([]);
-      return;
-    }
-
-    // Отменяем предыдущий запрос
-    abortControllerRef.current?.abort();
-
-    abortControllerRef.current = new AbortController();
-    setLoading(true);
-
-    try {
-      // Используем Nominatim для геокодинга
+  const { data: results = [], isFetching: loading } = useQuery<SearchResult[]>({
+    queryKey: queryKeys.addressSearch(debouncedQuery),
+    enabled: searchEnabled && debouncedQuery.length >= 3,
+    retry: false,
+    staleTime: 10_000,
+    gcTime: 60_000,
+    queryFn: async ({ signal } = {} as any) => {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?` +
-          `format=json&q=${encodeURIComponent(searchQuery)}&` +
+          `format=json&q=${encodeURIComponent(debouncedQuery)}&` +
           `limit=5&addressdetails=1&countrycodes=by`,
         {
-          signal: abortControllerRef.current?.signal,
+          signal,
           headers: {
             'User-Agent': 'MeTravel/1.0',
           },
@@ -75,31 +69,19 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         throw new Error('Ошибка поиска адреса');
       }
 
-      const data = await response.json();
-      setResults(data);
-      setShowResults(true);
-    } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        console.error('Ошибка поиска адреса:', error);
-        setResults([]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return response.json();
+    },
+  });
 
   const handleQueryChange = useCallback(
     (text: string) => {
       setQuery(text);
-
-      // Debounce поиска
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-
-      debounceRef.current = setTimeout(() => {
-        searchAddress(text);
-      }, 500);
+      setSearchEnabled(true);
+      if (text.length < 3) {
+        setShowResults(false);
+      }
     },
-    [searchAddress]
+    []
   );
 
   const handleSelectResult = useCallback(
@@ -109,8 +91,8 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
         lng: parseFloat(result.lon),
       };
       setQuery(result.display_name);
+      setSearchEnabled(false);
       setShowResults(false);
-      setResults([]);
       onAddressSelect(result.display_name, coords);
     },
     [onAddressSelect]
@@ -118,7 +100,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
 
   const handleClear = useCallback(() => {
     setQuery('');
-    setResults([]);
+    setSearchEnabled(false);
     setShowResults(false);
   }, []);
 
@@ -133,7 +115,6 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     const lat = a;
     const lng = b;
     const coords: LatLng = { lat, lng };
-    setResults([]);
     setShowResults(false);
     onAddressSelect(`${lat.toFixed(5)}, ${lng.toFixed(5)}`, coords);
     return true;
@@ -142,29 +123,15 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   useEffect(() => {
     // Синхронизируем внешнее значение (например, после swap/очистки)
     setQuery(value || '');
+    setSearchEnabled(false);
+    setShowResults(false);
   }, [value]);
 
-  // ✅ ИСПРАВЛЕНИЕ: Cleanup для debounce и AbortController
   useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-      // Отменяем текущий запрос при размонтировании
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
-  // ✅ НОВОЕ: Cleanup при изменении query для предотвращения race conditions
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [query]);
+    if (searchEnabled && query.length >= 3 && results.length > 0) {
+      setShowResults(true);
+    }
+  }, [query.length, results.length, searchEnabled]);
 
   return (
     <View style={styles.container}>
