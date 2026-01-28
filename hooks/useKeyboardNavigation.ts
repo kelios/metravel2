@@ -247,6 +247,8 @@ export const useScrollAnnounce = (containerId: string, sectionName: string) => {
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
     const handleScroll = () => {
       const scrollPercentage = Math.round(
         (container.scrollLeft / (container.scrollWidth - container.clientWidth)) * 100
@@ -257,16 +259,18 @@ export const useScrollAnnounce = (containerId: string, sectionName: string) => {
           `${sectionName}, ${scrollPercentage}% scrolled`
         );
 
-        const timeout = setTimeout(() => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
           setAnnouncement('');
         }, 1000);
-
-        return () => clearTimeout(timeout);
       }
     };
 
     container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (timeout) clearTimeout(timeout);
+    };
   }, [containerId, sectionName]);
 
   return announcement;
@@ -280,4 +284,3 @@ export default {
   useFocusVisible,
   useScrollAnnounce,
 };
-

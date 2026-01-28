@@ -110,7 +110,7 @@ function OptimizedImage({
           transition={300}
           {...(Platform.OS === 'web' ? {
             loading: loadingStrategy as any,
-            fetchpriority: (loadingStrategy === 'eager' ? 'high' : 'auto') as any,
+            fetchPriority: (loadingStrategy === 'eager' ? 'high' : 'auto') as any,
             alt: alt || '',
             decoding: 'async' as any,
           } : {})}

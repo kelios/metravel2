@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 
 export function useDebounce<T extends unknown[]>(fn: (...args: T) => void, ms = 300) {
-    const timeout = useRef<ReturnType<typeof setTimeout>>();
+    const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
     const fnRef = useRef(fn);
     fnRef.current = fn;
 

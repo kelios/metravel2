@@ -1,5 +1,5 @@
 // app/export.tsx (или соответствующий путь)
-import React, { Suspense, lazy, useEffect, useMemo } from 'react';
+import { Suspense, lazy, useEffect, useMemo } from 'react';
 import { Platform, Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { usePathname, useRouter } from 'expo-router';

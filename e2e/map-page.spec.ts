@@ -2,13 +2,9 @@ import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { seedNecessaryConsent } from './helpers/storage';
 
-const maybeRecoverFromWorkletError = async (page: any) => {
+const maybeRecoverFromMapErrorScreen = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
-  const workletError = page.getByText('_WORKLET is not defined', { exact: true });
-
-  const hasError =
-    (await errorTitle.isVisible().catch(() => false)) &&
-    (await workletError.isVisible().catch(() => false));
+  const hasError = await errorTitle.isVisible().catch(() => false);
 
   if (!hasError) return;
 
@@ -40,13 +36,16 @@ const waitForMapUi = async (page: any, timeoutMs: number) => {
   const hasUi =
     (await mapReady.isVisible().catch(() => false)) ||
     (await mobileMenu.isVisible().catch(() => false));
-  if (!hasUi) throw new Error('Map UI did not appear');
+  if (!hasUi) throw new Error(`Map UI did not appear (url=${page.url()})`);
 };
 
 const gotoMapWithRecovery = async (page: any) => {
   const mapReady = page.getByTestId('map-leaflet-wrapper');
   const mobileMenu = page.getByTestId('map-panel-open');
-  const workletError = page.getByText('_WORKLET is not defined', { exact: true });
+  const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
+  const homeHeadline = page.getByText('Пиши о своих путешествиях', { exact: true });
+  const mapTabLink = page.getByRole('link', { name: 'Карта' });
+  const mapDockItem = page.getByTestId('footer-item-map');
 
   const startedAt = Date.now();
   const maxTotalMs = 120_000;
@@ -60,10 +59,24 @@ const gotoMapWithRecovery = async (page: any) => {
       (await mobileMenu.isVisible().catch(() => false));
     if (hasUi) return;
 
-    // If worklet error is visible, try to recover and keep looping.
-    const hasWorkletError = await workletError.isVisible().catch(() => false);
-    if (hasWorkletError) {
-      await maybeRecoverFromWorkletError(page);
+    // Sometimes mobile web boots into the Home tab even after direct navigation.
+    // If we detect the Home hero, click the "Карта" tab to force the correct route.
+    const onHome = await homeHeadline.isVisible().catch(() => false);
+    if (onHome) {
+      if (await mapDockItem.isVisible().catch(() => false)) {
+        await mapDockItem.click({ force: true }).catch(() => null);
+      } else if (await mapTabLink.isVisible().catch(() => false)) {
+        await mapTabLink.click({ force: true }).catch(() => null);
+      }
+      await page.waitForURL(/\/map(\?|$)/, { timeout: 5_000 }).catch(() => null);
+      await page.waitForTimeout(500).catch(() => null);
+      continue;
+    }
+
+    // If an error screen is visible, try to recover and keep looping.
+    const hasErrorScreen = await errorTitle.isVisible().catch(() => false);
+    if (hasErrorScreen) {
+      await maybeRecoverFromMapErrorScreen(page);
       // Give the app a chance to reload after clicking.
       await page.waitForTimeout(800).catch(() => null);
       continue;
@@ -176,8 +189,8 @@ test.describe('Map Page (/map) - smoke e2e', () => {
   });
 
   test('mobile: menu button opens filters panel', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 720 });
     await gotoMapWithRecovery(page);
+    await page.setViewportSize({ width: 375, height: 720 });
 
     // На мобильном панель закрыта по умолчанию, должна быть видна кнопка меню
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
@@ -202,8 +215,8 @@ test.describe('Map Page (/map) - smoke e2e', () => {
   });
 
   test('mobile: overlay click closes panel', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 720 });
     await gotoMapWithRecovery(page);
+    await page.setViewportSize({ width: 375, height: 720 });
 
     await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
     await page.getByTestId('map-panel-open').click();
@@ -216,8 +229,8 @@ test.describe('Map Page (/map) - smoke e2e', () => {
   });
 
   test('mobile: double click on menu does not cause panel flicker (stays open)', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 720 });
     await gotoMapWithRecovery(page);
+    await page.setViewportSize({ width: 375, height: 720 });
 
     const toggle = page.getByTestId('map-panel-open');
     await expect(toggle).toBeVisible({ timeout: 20_000 });

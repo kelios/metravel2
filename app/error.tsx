@@ -1,5 +1,5 @@
 import { Stack, router } from 'expo-router'
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { Platform, Pressable, StyleSheet } from 'react-native'
 
 import { Text, View } from '@/components/Themed'

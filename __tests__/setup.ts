@@ -737,6 +737,13 @@ jest.mock('react-native/Libraries/EventEmitter/NativeEventEmitter', () => {
   return MockNativeEventEmitter
 })
 
+// React Native 0.8x+ pulls in DevMenu TurboModule from react-native entrypoint in some environments.
+// In Jest there is no native binary, so we stub the spec to avoid TurboModuleRegistry.getEnforcing('DevMenu').
+jest.mock('react-native/src/private/devsupport/devmenu/specs/NativeDevMenu', () => ({
+  __esModule: true,
+  default: {},
+}))
+
 // Mock react-native/Libraries/PushNotificationIOS/PushNotificationIOS
 export const mockRequestPermissions = jest.fn(() => Promise.resolve(true))
 export const mockGetInitialNotification = jest.fn(() => Promise.resolve())
@@ -763,6 +770,14 @@ jest.mock('react-native/Libraries/Settings/NativeSettingsManager', () => ({
 jest.mock('react-native', () => {
   const React = require('react')
   const RN = jest.requireActual('react-native')
+  const Linking =
+    RN.Linking ??
+    ({
+      openURL: jest.fn(() => Promise.resolve()),
+      canOpenURL: jest.fn(() => Promise.resolve(true)),
+      addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+      removeEventListener: jest.fn(),
+    } as any)
 
   const MockImage = React.forwardRef((props: any, ref: any) => {
     try {
@@ -817,6 +832,7 @@ jest.mock('react-native', () => {
     useWindowDimensions: jest.fn(() => ({ width: 1024, height: 768 })),
     Image: MockImage,
     Pressable,
+    Linking,
     Settings: {
       get: jest.fn(),
       set: jest.fn(),

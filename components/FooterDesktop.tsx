@@ -216,11 +216,11 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
       lineHeight: 8,
       fontWeight: "700",
     },
-    copy: {
-      color: colors.textSubtle,
-      fontSize: 10,
-      lineHeight: 12,
-    },
+	    copy: {
+	      color: colors.textMuted,
+	      fontSize: 10,
+	      lineHeight: 12,
+	    },
   }), [colors]);
 
   const Item = memo(function Item({

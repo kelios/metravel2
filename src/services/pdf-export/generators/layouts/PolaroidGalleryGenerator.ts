@@ -55,6 +55,7 @@ export class PolaroidGalleryGenerator {
     const captionFont = polaroidSettings.captionFont === 'handwritten' 
       ? 'font-family: "Comic Sans MS", cursive; font-style: italic;'
       : 'font-family: "Courier New", monospace;';
+    const imageFilter = (settings as any)?.theme?.imageFilter ?? (settings as any)?.imageFilter;
 
     return `
       <div class="polaroid" style="
@@ -80,7 +81,7 @@ export class PolaroidGalleryGenerator {
               width: 100%;
               height: 100%;
               object-fit: cover;
-              ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+              ${imageFilter ? `filter: ${imageFilter};` : ''}
             "
           />
         </div>

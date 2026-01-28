@@ -159,9 +159,9 @@ function OptimizedImage({
   const validSource = hasValidUriSource(activeSource as any);
   const [isLoading, setIsLoading] = useState(() => validSource);
   const [hasError, setHasError] = useState(false);
-  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [, setRetryAttempt] = useState(0);
+  const retryAttemptRef = useRef(0);
   const [lastUriKey, setLastUriKey] = useState('');
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const originalUriKey = useMemo(() => {
     if (typeof source === 'number') return '__asset__';
@@ -174,47 +174,28 @@ function OptimizedImage({
     return uri;
   }, [activeSource]);
 
+  // Clear retry/overrides when the actual source changes.
+  const lastOriginalUriKeyRef = useRef(originalUriKey);
   useEffect(() => {
-    if (!overrideUri) return;
-    if (originalUriKey && originalUriKey !== overrideUri) {
-      setOverrideUri(null);
-    }
-  }, [originalUriKey, overrideUri]);
+    if (lastOriginalUriKeyRef.current === originalUriKey) return;
+    lastOriginalUriKeyRef.current = originalUriKey;
+    setOverrideUri(null);
+    setRetryAttempt(0);
+    retryAttemptRef.current = 0;
+  }, [originalUriKey]);
 
   useEffect(() => {
     if (uriKey === lastUriKey) return;
     setLastUriKey(uriKey);
     setHasError(false);
-    setRetryAttempt(0);
     setIsLoading(Boolean(validSource));
-
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
   }, [uriKey, lastUriKey, validSource]);
 
   useEffect(() => {
     return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
-      }
+      // no-op
     };
   }, []);
-
-  const resolvedSource = useMemo(() => {
-    if (typeof activeSource === 'number') return activeSource;
-    const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
-    if (!uri) return activeSource;
-    if (/^(blob:|data:)/i.test(uri)) return activeSource;
-    if (!/^https?:\/\//i.test(uri)) return activeSource;
-
-    if (retryAttempt <= 0) return activeSource;
-
-    const glue = uri.includes('?') ? '&' : '?';
-    return { ...(activeSource as any), uri: `${uri}${glue}__retry=${retryAttempt}` };
-  }, [activeSource, retryAttempt]);
 
   const shouldDisableNetwork = useMemo(() => {
     if (!disableRemoteImages) return false;
@@ -258,25 +239,15 @@ function OptimizedImage({
 
   const handleError = () => {
     const uri = typeof (activeSource as any)?.uri === 'string' ? String((activeSource as any).uri).trim() : '';
-    if (!overrideUri && uri) {
-      const fallback = buildApiPrefixedUrl(uri);
-      if (fallback && fallback !== uri) {
-        setOverrideUri(fallback);
-        onError?.();
-        return;
+    const stripRetry = (value: string) => {
+      try {
+        const u = new URL(value);
+        u.searchParams.delete('__retry');
+        return u.toString();
+      } catch {
+        return value;
       }
-    }
-
-    // iOS: some servers return images as webp/avif via query param which can fail to decode.
-    // Retry once forcing JPG if the URL explicitly requests modern formats.
-    if (Platform.OS === 'ios' && uri && !overrideUri) {
-      const jpg = tryForceJpgFormat(uri);
-      if (jpg && jpg !== uri) {
-        setOverrideUri(jpg);
-        onError?.();
-        return;
-      }
-    }
+    };
 
     let isPrivateHost = false;
     try {
@@ -293,19 +264,49 @@ function OptimizedImage({
       !/^(blob:|data:)/i.test(uri) &&
       !isPrivateHost;
 
+    if (!overrideUri && uri) {
+      const fallback = buildApiPrefixedUrl(uri);
+      if (fallback && fallback !== uri) {
+        setIsLoading(true);
+        setHasError(false);
+        if (canRetry && retryAttemptRef.current < 6) {
+          const nextAttempt = Math.min(retryAttemptRef.current + 1, 6);
+          retryAttemptRef.current = nextAttempt;
+          const base = stripRetry(fallback);
+          const glue = base.includes('?') ? '&' : '?';
+          setOverrideUri(`${base}${glue}__retry=${nextAttempt}`);
+          setRetryAttempt(nextAttempt);
+        } else {
+          setOverrideUri(fallback);
+          setRetryAttempt(0);
+          retryAttemptRef.current = 0;
+        }
+        onError?.();
+        return;
+      }
+    }
+
+    // iOS: some servers return images as webp/avif via query param which can fail to decode.
+    // Retry once forcing JPG if the URL explicitly requests modern formats.
+    if (Platform.OS === 'ios' && uri && !overrideUri) {
+      const jpg = tryForceJpgFormat(uri);
+      if (jpg && jpg !== uri) {
+        setOverrideUri(jpg);
+        onError?.();
+        return;
+      }
+    }
+
     // Retry a few times with cache-busting query param.
-    if (canRetry && retryAttempt < 6) {
+    if (canRetry && retryAttemptRef.current < 6) {
       setIsLoading(true);
       setHasError(false);
-
-      if (!retryTimeoutRef.current) {
-        const delays = [300, 600, 1200, 2000, 2500, 3000];
-        const delayMs = delays[Math.min(retryAttempt, delays.length - 1)];
-        retryTimeoutRef.current = setTimeout(() => {
-          retryTimeoutRef.current = null;
-          setRetryAttempt((prev) => prev + 1);
-        }, delayMs);
-      }
+      const nextAttempt = Math.min(retryAttemptRef.current + 1, 6);
+      retryAttemptRef.current = nextAttempt;
+      const base = stripRetry(uri);
+      const glue = base.includes('?') ? '&' : '?';
+      setOverrideUri(`${base}${glue}__retry=${nextAttempt}`);
+      setRetryAttempt(nextAttempt);
 
       onError?.();
       return;
@@ -356,7 +357,7 @@ function OptimizedImage({
       {shouldRenderBlurBackground && (
         <>
           <ExpoImage
-            source={resolvedSource}
+            source={activeSource as any}
             contentFit="cover"
             transition={0}
             style={StyleSheet.absoluteFill}
@@ -380,7 +381,7 @@ function OptimizedImage({
       {!blurOnly && validSource && !webBlobOrDataUri && !shouldDisableNetwork && (
         <ExpoImage
           {...(imageProps as any)}
-          source={resolvedSource}
+          source={activeSource as any}
           contentFit={contentFit}
           placeholder={placeholder}
           transition={transition}
@@ -397,7 +398,7 @@ function OptimizedImage({
           {...(Platform.OS === 'web' && {
             // @ts-ignore - web-specific props
             loading,
-            fetchpriority: fetchPriority,
+            fetchPriority: fetchPriority,
             alt: alt || '',
             decoding: 'async',
             crossOrigin: webCrossOrigin,

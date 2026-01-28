@@ -48,8 +48,8 @@ function AboutAndContactScreen() {
   const [touched, setTouched] = useState<{ name?: boolean; email?: boolean; message?: boolean; agree?: boolean }>({});
   const [focused, setFocused] = useState<{ name?: boolean; email?: boolean; message?: boolean }>({});
 
-  const emailRef = useRef<TextInput>(null);
-  const messageRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput | null>(null);
+  const messageRef = useRef<TextInput | null>(null);
 
   const isEmailValid = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
 

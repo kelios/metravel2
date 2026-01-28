@@ -13,10 +13,12 @@ export class StyleGenerator {
    * Генерирует стиль для заголовка
    */
   heading(level: 1 | 2 | 3 | 4): string {
-    const config = this.theme.typography[`h${level}` as keyof typeof this.theme.typography];
-    if (!config || typeof config === 'string') {
-      return this.defaultHeading(level);
-    }
+    const typography = this.theme.typography;
+    const config =
+      level === 1 ? typography.h1
+      : level === 2 ? typography.h2
+      : level === 3 ? typography.h3
+      : typography.h4;
 
     return `
       font-size: ${config.size};
@@ -34,7 +36,7 @@ export class StyleGenerator {
     const { body } = this.theme.typography;
     return `
       font-size: ${body.size};
-      font-weight: ${body.weight};
+      font-weight: 400;
       line-height: ${body.lineHeight};
       color: ${this.theme.colors.text};
       margin: 0 0 1em 0;
@@ -60,7 +62,7 @@ export class StyleGenerator {
       min-height: 100vh;
       background: ${this.theme.colors.background};
       color: ${this.theme.colors.text};
-      font-family: ${this.theme.typography.fontFamily};
+      font-family: ${this.theme.typography.bodyFont};
       page-break-after: always;
       position: relative;
     `.trim();
@@ -71,7 +73,7 @@ export class StyleGenerator {
    */
   button(): string {
     return `
-      background: ${this.theme.colors.primary};
+      background: ${this.theme.colors.accentStrong};
       color: #fff;
       border: none;
       padding: 10px 20px;
@@ -105,7 +107,7 @@ export class StyleGenerator {
       }
       
       body {
-        font-family: ${this.theme.typography.fontFamily};
+        font-family: ${this.theme.typography.bodyFont};
         background: ${this.theme.colors.background};
         color: ${this.theme.colors.text};
         line-height: 1.6;
@@ -153,4 +155,3 @@ export class StyleGenerator {
     return margins[level - 1] || '1em 0 0.5em';
   }
 }
-

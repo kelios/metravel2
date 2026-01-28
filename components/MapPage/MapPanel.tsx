@@ -57,22 +57,24 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                setFullRouteCoords,
                                                radius,
                                                onMapUiApiReady,
-                                           }) => {
-    const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
-    const themeColors = useThemedColors();
+	                                           }) => {
+	    const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
+	    const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
+	    const themeColors = useThemedColors();
 
-    // ✅ ОПТИМИЗАЦИЯ: Отложенная загрузка карты для улучшения Lighthouse score
-    const shouldDeferLoad = useDeferredMapLoad(isWeb);
+	    // ✅ ОПТИМИЗАЦИЯ: Отложенная загрузка карты для улучшения Lighthouse score
+	    const shouldDeferLoad = useDeferredMapLoad(isWeb && !isE2E);
 
-    // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты, изменяется при ремонтировании после ошибки
-    const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+	    // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты, изменяется при ремонтировании после ошибки
+	    const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-    // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты с Intersection Observer
-    const { shouldLoad, setElementRef } = useLazyMap({
-        rootMargin: '200px',
-        threshold: 0.1,
-        enabled: isWeb && shouldDeferLoad,
-    });
+	    // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты с Intersection Observer
+	    const { shouldLoad, setElementRef } = useLazyMap({
+	        rootMargin: '200px',
+	        threshold: 0.1,
+	        // In e2e we always load immediately to avoid flaky IntersectionObserver behavior.
+	        enabled: isWeb && shouldDeferLoad && !isE2E,
+	    });
 
     // Динамически импортируем веб-карту, только в браузере и когда нужно
     const [WebMap, setWebMap] = useState<React.ComponentType<any> | null>(null);

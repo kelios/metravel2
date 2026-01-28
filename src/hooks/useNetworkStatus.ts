@@ -48,44 +48,45 @@ export function useNetworkStatus(): NetworkStatus {
         window.removeEventListener('online', updateStatus);
         window.removeEventListener('offline', updateStatus);
       };
-    } else {
-      // Для native используем NetInfo (требует установки @react-native-community/netinfo)
-      try {
-        const NetInfo = require('@react-native-community/netinfo');
-        
-        // Устанавливаем начальное состояние
-        NetInfo.fetch().then((state: any) => {
-          setNetworkStatus({
-            isConnected: state.isConnected ?? false,
-            isInternetReachable: state.isInternetReachable ?? null,
-            type: state.type ?? null,
-          });
-        });
+    }
 
-        // Подписываемся на изменения
-        const unsubscribe = NetInfo.addEventListener((state: any) => {
-          setNetworkStatus({
-            isConnected: state.isConnected ?? false,
-            isInternetReachable: state.isInternetReachable ?? null,
-            type: state.type ?? null,
-          });
-        });
+    // Для native используем NetInfo (требует установки @react-native-community/netinfo)
+    try {
+      const NetInfo = require('@react-native-community/netinfo');
 
-        return () => {
-          unsubscribe();
-        };
-      } catch {
-        // Если NetInfo не установлен, используем fallback
-        if (__DEV__) {
-          console.warn('@react-native-community/netinfo не установлен. Используется fallback.');
-        }
-        // Fallback: считаем, что соединение есть
+      // Устанавливаем начальное состояние
+      NetInfo.fetch().then((state: any) => {
         setNetworkStatus({
-          isConnected: true,
-          isInternetReachable: true,
-          type: 'unknown',
+          isConnected: state.isConnected ?? false,
+          isInternetReachable: state.isInternetReachable ?? null,
+          type: state.type ?? null,
         });
+      });
+
+      // Подписываемся на изменения
+      const unsubscribe = NetInfo.addEventListener((state: any) => {
+        setNetworkStatus({
+          isConnected: state.isConnected ?? false,
+          isInternetReachable: state.isInternetReachable ?? null,
+          type: state.type ?? null,
+        });
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    } catch {
+      // Если NetInfo не установлен, используем fallback
+      if (__DEV__) {
+        console.warn('@react-native-community/netinfo не установлен. Используется fallback.');
       }
+      // Fallback: считаем, что соединение есть
+      setNetworkStatus({
+        isConnected: true,
+        isInternetReachable: true,
+        type: 'unknown',
+      });
+      return;
     }
   }, []);
 

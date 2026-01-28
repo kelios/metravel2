@@ -25,6 +25,8 @@ const requireNativeModule = () => ({});
 const requireOptionalNativeModule = () => ({});
 
 module.exports = {
+  // Used by jest-expo preset setup (expo-modules-core/src/polyfill/dangerous-internal)
+  installExpoGlobalPolyfill: jest.fn(),
   EventEmitter,
   LegacyEventEmitter: EventEmitter,
   NativeModule,

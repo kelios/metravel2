@@ -6,12 +6,12 @@ import { Platform } from 'react-native';
 
 interface UseFocusTrapOptions {
   enabled?: boolean;
-  initialFocus?: RefObject<HTMLElement>;
-  returnFocus?: RefObject<HTMLElement>;
+  initialFocus?: RefObject<HTMLElement | null>;
+  returnFocus?: RefObject<HTMLElement | null>;
 }
 
 export function useFocusTrap(
-  containerRef: RefObject<HTMLElement>,
+  containerRef: RefObject<HTMLElement | null>,
   options: UseFocusTrapOptions = {}
 ) {
   const { enabled = true, initialFocus, returnFocus } = options;
@@ -91,4 +91,3 @@ export function useFocusTrap(
     };
   }, [enabled, containerRef, initialFocus, returnFocus]);
 }
-

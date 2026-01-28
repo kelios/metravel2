@@ -239,53 +239,6 @@ export class ContentParser {
   }
 
   /**
-   * Создает параграф из частей текста
-   */
-  private createParagraphFromParts(parts: string[]): ParagraphBlock {
-    const text = parts
-      .map(part => this.normalizeText(part))
-      .filter(part => part.length > 0)
-      .join(' ')
-      .trim();
-    
-    return {
-      type: 'paragraph',
-      text: text || '',
-    };
-  }
-
-  /**
-   * Объединяет соседние параграфы в один
-   */
-  private mergeAdjacentParagraphs(blocks: ParsedContentBlock[]): ParsedContentBlock[] {
-    const merged: ParsedContentBlock[] = [];
-    let currentParagraph: string[] = [];
-    
-    for (const block of blocks) {
-      if (block.type === 'paragraph') {
-        const text = this.normalizeText(block.text);
-        if (text && text.length > 0) {
-          currentParagraph.push(text);
-        }
-      } else {
-        // Если накоплен параграф, сохраняем его
-        if (currentParagraph.length > 0) {
-          merged.push(this.createParagraphFromParts(currentParagraph));
-          currentParagraph = [];
-        }
-        merged.push(block);
-      }
-    }
-    
-    // Сохраняем последний накопленный параграф
-    if (currentParagraph.length > 0) {
-      merged.push(this.createParagraphFromParts(currentParagraph));
-    }
-    
-    return merged;
-  }
-
-  /**
    * Парсит один DOM узел
    * ✅ ИСПРАВЛЕНИЕ: Не создает блоки для текстовых узлов отдельно
    */

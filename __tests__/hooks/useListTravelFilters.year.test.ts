@@ -24,7 +24,9 @@ describe('useListTravelFilters - Year Filter', () => {
       return null;
     };
 
-    TestRenderer.create(React.createElement(TestComponent));
+    act(() => {
+      TestRenderer.create(React.createElement(TestComponent));
+    });
 
     return { result: result as HookResult };
   };

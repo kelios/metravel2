@@ -232,7 +232,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 500
 ): (...args: Parameters<T>) => void {
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCallTime = useRef(0);
 
   return useCallback(
@@ -240,7 +240,7 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
       const now = performance.now();
       lastCallTime.current = now;
 
-      clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         const timeSinceLastCall = performance.now() - lastCallTime.current;
         if (timeSinceLastCall >= delay) {
@@ -391,4 +391,3 @@ export function useBatchedUpdates() {
     }
   }, []);
 }
-

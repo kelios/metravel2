@@ -51,7 +51,7 @@ export class PageGeneratorFactory {
 
     switch (type) {
       case PageType.COVER:
-        generator = new CoverPageGenerator(this.imageProcessor);
+        generator = new CoverPageGenerator(this.imageProcessor, undefined);
         break;
 
       case PageType.TOC:
@@ -63,7 +63,7 @@ export class PageGeneratorFactory {
         break;
 
       case PageType.GALLERY:
-        generator = new GalleryPageGenerator(this.imageProcessor);
+        generator = new GalleryPageGenerator();
         break;
 
       case PageType.MAP:
@@ -110,4 +110,3 @@ export class PageGeneratorFactory {
     return Object.values(PageType);
   }
 }
-

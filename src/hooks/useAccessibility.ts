@@ -57,15 +57,13 @@ export function useScreenReaderEnabled(): boolean {
         );
       };
       setEnabled(checkScreenReader());
-    } else {
-      // Для нативных платформ
-      AccessibilityInfo.isScreenReaderEnabled().then(setEnabled);
-      const subscription = AccessibilityInfo.addEventListener(
-        'screenReaderChanged',
-        setEnabled
-      );
-      return () => subscription.remove();
+      return;
     }
+
+    // Для нативных платформ
+    AccessibilityInfo.isScreenReaderEnabled().then(setEnabled);
+    const subscription = AccessibilityInfo.addEventListener('screenReaderChanged', setEnabled);
+    return () => subscription.remove();
   }, []);
 
   return enabled;

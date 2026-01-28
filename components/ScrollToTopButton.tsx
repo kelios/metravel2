@@ -22,14 +22,14 @@ export default function ScrollToTopButton({
 }: ScrollToTopButtonProps) {
   const colors = useThemedColors();
   const shouldUseNativeDriver = Platform.OS !== 'web';
-  const styles = useMemo(() => StyleSheet.create({
+	  const styles = useMemo(() => StyleSheet.create({
     container: {
       position: 'absolute',
       bottom: 80,
       right: 16,
       zIndex: 1000,
     },
-    button: {
+	    button: {
       width: 48,
       height: 48,
       minWidth: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная ширина для touch-целей
@@ -37,42 +37,38 @@ export default function ScrollToTopButton({
       borderRadius: 999,
       justifyContent: 'center',
       alignItems: 'center',
-      ...Platform.select({
-        web: {
-          boxShadow: colors.boxShadows.medium,
-          transition: 'all 0.2s ease',
-          // @ts-ignore
-          ':hover': {
-            backgroundColor: colors.primaryDark, // Темнее primary для hover
-            transform: 'translateY(-2px) scale(1.05)',
-          },
-        },
-        ios: {
-          ...colors.shadows.medium,
-        },
-        android: {
-          elevation: 4,
-        },
-      }),
-    },
-  }), [colors]);
+	      ...(Platform.OS === 'web'
+	        ? ({
+	            boxShadow: colors.boxShadows.medium,
+	            transition: 'all 0.2s ease',
+	            // @ts-ignore
+	            ':hover': {
+	              backgroundColor: colors.primaryDark, // Темнее primary для hover
+	              transform: 'translateY(-2px) scale(1.05)',
+	            },
+	          } as any)
+	        : Platform.OS === 'android'
+	          ? { elevation: 4 }
+	          : colors.shadows.medium),
+	    },
+	  }), [colors]);
   const [isVisible, setIsVisible] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const lastScrollValue = useRef(0);
 
-  useEffect(() => {
-    if (typeof forceVisible === 'boolean') {
-      setIsVisible(forceVisible);
-      return;
-    }
-
-    if (scrollY) {
-      const listener = scrollY.addListener(({ value }) => {
-        // Debounce scroll events to improve performance
-        if (Math.abs(value - lastScrollValue.current) < 5) {
-          return;
-        }
+	  useEffect(() => {
+	    if (typeof forceVisible === 'boolean') {
+	      setIsVisible(forceVisible);
+	      return;
+	    }
+	
+	    if (!scrollY) return;
+	    const listener = scrollY.addListener(({ value }) => {
+	        // Debounce scroll events to improve performance
+	        if (Math.abs(value - lastScrollValue.current) < 5) {
+	          return;
+	        }
         lastScrollValue.current = value;
         
         const visible = value > threshold;
@@ -90,15 +86,14 @@ export default function ScrollToTopButton({
               tension: 100,
               friction: 8,
             }),
-          ]).start();
-        }
-      });
-
-      return () => {
-        scrollY.removeListener(listener);
-      };
-    }
-  }, [scrollY, threshold, isVisible, fadeAnim, scaleAnim, forceVisible, shouldUseNativeDriver]);
+	          ]).start();
+	        }
+	      });
+	
+	    return () => {
+	      scrollY.removeListener(listener);
+	    };
+	  }, [scrollY, threshold, isVisible, fadeAnim, scaleAnim, forceVisible, shouldUseNativeDriver]);
 
   const scrollToTop = () => {
     if (scrollViewRef?.current) {

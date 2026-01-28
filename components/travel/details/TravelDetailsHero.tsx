@@ -113,7 +113,7 @@ export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
       if (responsive.sizes) preload.setAttribute('imagesizes', responsive.sizes)
       if (rel === 'preload') {
         preload.fetchPriority = 'high'
-        preload.setAttribute('fetchpriority', 'high')
+        preload.setAttribute('fetchPriority', 'high')
       }
       preload.crossOrigin = 'anonymous'
       document.head.appendChild(preload)
@@ -234,7 +234,7 @@ const OptimizedLCPHeroInner: React.FC<{
     if (!el) return
     try {
       ;(el as any).fetchPriority = 'high'
-      el.setAttribute('fetchpriority', 'high')
+      el.setAttribute('fetchPriority', 'high')
     } catch {
       // noop
     }
@@ -341,7 +341,7 @@ const OptimizedLCPHeroInner: React.FC<{
             loading="eager"
             decoding="async"
             // @ts-ignore
-            fetchpriority="high"
+            fetchPriority="high"
             // @ts-ignore
             ref={imgRef as any}
             crossOrigin="anonymous"

@@ -51,8 +51,8 @@ const ArticleEditorIOS: React.FC<ArticleEditorProps> = ({
   const webViewRef = useRef<WebView>(null);
   const lastPropContentRef = useRef<string>(content);
   const isUserEditingRef = useRef<boolean>(false);
-  const autosaveTimer = useRef<NodeJS.Timeout>();
-  const onChangeDebounceTimer = useRef<NodeJS.Timeout>();
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeDebounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingContentUpdateRef = useRef<string | null>(null);
   const { isAuthenticated } = useAuth();
 

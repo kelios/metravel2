@@ -56,7 +56,7 @@ export class BookHtmlExportService {
 
   private async getGenerator(template?: BookSettings['template']): Promise<EnhancedPdfGenerator> {
     const mod = await import('@/src/services/pdf-export/generators/EnhancedPdfGenerator');
-    return new mod.EnhancedPdfGenerator(template);
+    return new mod.EnhancedPdfGenerator(template || 'minimal');
   }
 
   private enhanceHtmlForPrintPreview(html: string): string {

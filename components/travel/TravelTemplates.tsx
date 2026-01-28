@@ -2,7 +2,7 @@ import React, { memo, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useTheme, useThemedColors } from '@/hooks/useTheme';
 
 export interface TravelTemplate {
   id: string;
@@ -149,12 +149,13 @@ interface TravelTemplatesProps {
 
 const TravelTemplates = ({ onSelectTemplate, onClose }: TravelTemplatesProps) => {
   const colors = useThemedColors();
+  const { isDark } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  const categories = [
+  const categories: Array<{ id: string; name: string; icon: keyof typeof Feather.glyphMap }> = [
     { id: 'all', name: 'Все', icon: 'grid' },
     { id: 'city', name: 'Город', icon: 'map-pin' },
-    { id: 'nature', name: 'Природа', icon: 'leaf' },
+    { id: 'nature', name: 'Природа', icon: 'activity' },
     { id: 'beach', name: 'Пляж', icon: 'sun' },
     { id: 'adventure', name: 'Приключения', icon: 'compass' },
     { id: 'culture', name: 'Культура', icon: 'book-open' },
@@ -236,20 +237,20 @@ const TravelTemplates = ({ onSelectTemplate, onClose }: TravelTemplatesProps) =>
       padding: 20,
       gap: 16,
     },
-    templateCard: {
+	    templateCard: {
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
-      ...Platform.select({
-        web: {
-          boxShadow: colors.isDark
-            ? '0 2px 8px rgba(0, 0, 0, 0.4)'
-            : '0 2px 8px rgba(0, 0, 0, 0.08)',
-        } as any,
-      }),
-    },
+	      ...Platform.select({
+	        web: {
+	          boxShadow: isDark
+	            ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+	            : '0 2px 8px rgba(0, 0, 0, 0.08)',
+	        } as any,
+	      }),
+	    },
     templateHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -325,7 +326,7 @@ const TravelTemplates = ({ onSelectTemplate, onClose }: TravelTemplatesProps) =>
       fontWeight: '600',
       color: colors.surface,
     },
-  }), [colors]);
+  }), [colors, isDark]);
 
   return (
     <View style={styles.container}>
@@ -403,23 +404,24 @@ interface TemplateCardProps {
 
 const TemplateCard = memo(({ template, onSelect }: TemplateCardProps) => {
   const colors = useThemedColors();
+  const { isDark } = useTheme();
   const [expanded, setExpanded] = useState(false);
 
   const cardStyles = useMemo(() => StyleSheet.create({
-    templateCard: {
+	    templateCard: {
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
-      ...Platform.select({
-        web: {
-          boxShadow: colors.isDark
-            ? '0 2px 8px rgba(0, 0, 0, 0.4)'
-            : '0 2px 8px rgba(0, 0, 0, 0.08)',
-        } as any,
-      }),
-    },
+	      ...Platform.select({
+	        web: {
+	          boxShadow: isDark
+	            ? '0 2px 8px rgba(0, 0, 0, 0.4)'
+	            : '0 2px 8px rgba(0, 0, 0, 0.08)',
+	        } as any,
+	      }),
+	    },
     templateHeader: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -495,7 +497,7 @@ const TemplateCard = memo(({ template, onSelect }: TemplateCardProps) => {
       fontWeight: '600',
       color: colors.surface,
     },
-  }), [colors]);
+	  }), [colors, isDark]);
 
   return (
     <View style={cardStyles.templateCard}>

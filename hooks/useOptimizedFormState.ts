@@ -46,8 +46,8 @@ export function useOptimizedFormState<T extends object>(
 
   // Refs for performance optimization
   const originalDataRef = useRef<T>(initialData);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
   // Cleanup on unmount

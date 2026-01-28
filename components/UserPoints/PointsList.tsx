@@ -900,7 +900,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 
       const blob = (result as any)?.blob as Blob;
       const text = await blob.text();
-      const uri = `${FileSystem.cacheDirectory}${filename}`;
+      const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
+      const uri = `${cacheDir}${filename}`;
       await FileSystem.writeAsStringAsync(uri, text);
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: contentType, dialogTitle: 'Экспорт точек' });

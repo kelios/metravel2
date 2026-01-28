@@ -16,18 +16,14 @@ export const getAccessibilityRole = (role: string): AccessibilityRole | undefine
   const roleMap: Record<string, AccessibilityRole> = {
     button: 'button',
     link: 'link',
-    navigation: 'navigation',
     search: 'search',
     tab: 'tab',
     tablist: 'tablist',
     heading: 'header',
-    article: 'article',
-    region: 'region',
     alert: 'alert',
-    banner: 'banner',
-    complementary: 'complementary',
-    contentinfo: 'contentinfo',
-    main: 'main',
+    // Web-leaning semantic roles (used by RN Web + our a11y helpers/tests).
+    article: 'article' as any,
+    region: 'region' as any,
   };
   return roleMap[role] as AccessibilityRole | undefined;
 };
@@ -386,4 +382,3 @@ export default {
   prefersReducedMotion,
   isGoodAltText,
 };
-

@@ -32,6 +32,7 @@ import Animated, {
   runOnJS,
   interpolate,
   Extrapolate,
+  type SharedValue,
 } from "react-native-reanimated";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
@@ -222,7 +223,7 @@ const Dot = memo(function Dot({
                                 reduceMotion,
 }: {
   i: number;
-  x: Animated.SharedValue<number>;
+  x: SharedValue<number>;
   containerW: number;
   total: number;
   reduceMotion: boolean;

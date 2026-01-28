@@ -1,4 +1,16 @@
 // @ts-check
+// Node < 20 does not implement Array.prototype.toReversed/toSorted/etc.
+// Metro's config loader uses `toReversed()` in recent versions.
+if (!Array.prototype.toReversed) {
+  Object.defineProperty(Array.prototype, 'toReversed', {
+    value: function toReversed() {
+      return Array.prototype.slice.call(this).reverse()
+    },
+    writable: true,
+    configurable: true,
+  })
+}
+
 const { getDefaultConfig } = require('expo/metro-config')
 const path = require('path')
 
@@ -30,6 +42,16 @@ config.resolver = {
   resolverMainFields: ['react-native', 'browser', 'main', 'module'],
   assetExts: Array.from(new Set([...(config.resolver.assetExts || []), 'ico'])),
   resolveRequest: (context, moduleName, platform, modulePath) => {
+    const isWeb = platform === 'web' || (context && context.platform === 'web');
+    
+    // Special handling for react-leaflet to ensure proper ES module resolution
+    if (isWeb && moduleName === 'react-leaflet') {
+      return {
+        filePath: path.resolve(__dirname, 'node_modules/react-leaflet/lib/index.js'),
+        type: 'sourceFile',
+      };
+    }
+    
     // Блокируем импорт всех CSS файлов (Metro не может их обработать из-за lightningcss)
     if (moduleName.endsWith('.css')) {
       return {
@@ -42,7 +64,6 @@ config.resolver = {
     // Metro sometimes resolves the CJS entry (.cjs) for this package, which can drop named exports
     // and cause runtime errors like: (0, r(...).useQuery) is not a function.
     // Force the ESM build for web bundles.
-    const isWeb = platform === 'web' || (context && context.platform === 'web');
     if (isWeb && moduleName === '@tanstack/react-query') {
       return {
         filePath: path.resolve(__dirname, 'node_modules/@tanstack/react-query/build/modern/index.js'),
@@ -118,6 +139,10 @@ config.resolver = {
           type: 'sourceFile',
         };
       }
+      
+      // Note: react-leaflet is NOT stubbed - Metro bundles it normally
+      // It depends on the leaflet stub which proxies to window.L loaded from CDN
+      
       if (
         moduleName === '@expo/vector-icons/MaterialCommunityIcons' ||
         normalizedModuleName === '@expo/vector-icons/MaterialCommunityIcons' ||
@@ -193,6 +218,7 @@ config.resolver = {
     ...(config.resolver.extraNodeModules || {}),
     'html2canvas': path.resolve(__dirname, 'metro-stubs/html2canvas.js'),
     'leaflet': path.resolve(__dirname, 'metro-stubs/leaflet.js'),
+    // Note: react-leaflet is NOT stubbed - Metro resolves it normally from node_modules
     '@expo/vector-icons/MaterialCommunityIcons': path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
     'react-native-vector-icons/MaterialCommunityIcons': path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
     'react-native-gesture-handler': path.resolve(
@@ -264,11 +290,37 @@ if (process.env.NODE_ENV === 'production') {
 const http = require('http');
 const https = require('https');
 const url = require('url');
+const fs = require('fs');
 
 config.server = {
   ...config.server,
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
+      // Serve static assets from public directory
+      if (req.url && req.url.startsWith('/assets/')) {
+        const publicPath = path.join(__dirname, 'public', req.url);
+        if (fs.existsSync(publicPath)) {
+          const ext = path.extname(publicPath).toLowerCase();
+          const contentTypes = {
+            '.ico': 'image/x-icon',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.webp': 'image/webp',
+            '.svg': 'image/svg+xml',
+            '.json': 'application/json',
+          };
+          const contentType = contentTypes[ext] || 'application/octet-stream';
+          
+          res.writeHead(200, {
+            'Content-Type': contentType,
+            'Cache-Control': 'public, max-age=31536000',
+          });
+          fs.createReadStream(publicPath).pipe(res);
+          return;
+        }
+      }
+
       // Проксируем запросы к изображениям на API сервер
       const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/'];
       const shouldProxy = proxyPaths.some(p => req.url && req.url.startsWith(p));

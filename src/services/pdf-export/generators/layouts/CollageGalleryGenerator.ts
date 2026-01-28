@@ -219,6 +219,7 @@ export class CollageGalleryGenerator {
     const borderRadius = settings.collage?.borderRadius || 8;
     const shadow = settings.collage?.shadow ? 'box-shadow: 0 4px 6px rgba(0,0,0,0.1);' : '';
     const showCaption = settings.showCaptions && photo.caption && settings.captionPosition === 'overlay';
+    const imageFilter = (settings as any)?.theme?.imageFilter ?? (settings as any)?.imageFilter;
 
     return `
       <div style="
@@ -237,7 +238,7 @@ export class CollageGalleryGenerator {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
+            ${imageFilter ? `filter: ${imageFilter};` : ''}
           "
         />
         ${showCaption ? this.generateCaption(photo) : ''}

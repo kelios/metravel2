@@ -57,17 +57,17 @@ export default function SkipLinks({ links = DEFAULT_LINKS }: SkipLinksProps) {
   }
 
   return (
-    <View style={styles.container}>
-      {links.map((link, index) => (
-        <Pressable
-          key={link.id}
-          style={[
-            createLinkStyle(colors),
-            focusedIndex === index && createLinkFocusedStyle(colors),
-          ]}
-          onPress={() => handleSkip(link.targetId)}
-          onFocus={() => setFocusedIndex(index)}
-          onBlur={() => {
+	    <View style={styles.container}>
+	      {links.map((link, index) => (
+	        <Pressable
+	          key={link.id}
+	          style={[
+	            createLinkStyle(colors) as any,
+	            focusedIndex === index && (createLinkFocusedStyle(colors) as any),
+	          ]}
+	          onPress={() => handleSkip(link.targetId)}
+	          onFocus={() => setFocusedIndex(index)}
+	          onBlur={() => {
             // Скрываем при потере фокуса, если не перешли на другой skip link
             setTimeout(() => {
               if (document.activeElement?.id !== link.targetId) {
@@ -108,7 +108,7 @@ const createLinkStyle = (colors: ThemedColors) => ({
   paddingVertical: DESIGN_TOKENS.spacing.sm,
   paddingHorizontal: DESIGN_TOKENS.spacing.lg,
   borderRadius: DESIGN_TOKENS.radii.md,
-  minHeight: DESIGN_TOKENS.minTouchTarget,
+  minHeight: DESIGN_TOKENS.touchTarget.minHeight,
   justifyContent: 'center' as const,
   alignItems: 'center' as const,
   ...Platform.select({

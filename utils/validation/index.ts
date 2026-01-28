@@ -11,11 +11,42 @@
 // Re-export auth validation from original file
 export * from '../validation';
 
-// Re-export travel form validation
-export * from '../formValidation';
+// Re-export travel form validation (avoid name collisions with wizard validation)
+export {
+  validateName,
+  validateDescription,
+  validateCountries,
+  validateCategories,
+  validateMarkers,
+  validateStep as validateTravelFormStep,
+  getModerationErrors,
+  getModerationIssues,
+} from '../formValidation';
 
-// Re-export wizard validation
-export * from '../travelWizardValidation';
+export type {
+  TravelFormValidation,
+  TravelFormLike,
+  ModerationIssue,
+  ModerationIssueKey,
+  ValidationError as TravelFormValidationError,
+  ValidationResult as TravelFormValidationResult,
+} from '../formValidation';
+
+// Re-export wizard validation (namespaced/aliased)
+export {
+  validateStep as validateWizardStep,
+  validateField,
+  getStepProgress,
+  isReadyForModeration,
+  STEP_VALIDATION_RULES,
+} from '../travelWizardValidation';
+
+export type {
+  ValidationError as WizardValidationError,
+  ValidationResult as WizardValidationResult,
+  ValidationWarning as WizardValidationWarning,
+  FieldValidationResult,
+} from '../travelWizardValidation';
 
 /**
  * Centralized validation helper

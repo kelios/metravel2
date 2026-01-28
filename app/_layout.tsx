@@ -125,11 +125,11 @@ export default function RootLayout() {
     return <RootLayoutNav />;
 }
 
-function RootLayoutNav() {
-    const pathname = usePathname();
-    const colorScheme = useColorScheme();
-    const { width } = useResponsive();
-    const [clientWidth, setClientWidth] = useState<number | null>(null);
+	function RootLayoutNav() {
+	    const pathname = usePathname();
+	    const colorScheme = useColorScheme();
+	    const { width } = useResponsive();
+	    const [clientWidth, setClientWidth] = useState<number | null>(null);
     const loadingColors = useMemo(
       () => getThemedColors(colorScheme === 'dark'),
       [colorScheme],
@@ -190,12 +190,12 @@ function RootLayoutNav() {
       }
     }, [pathname]);
 
-    // ✅ ИСПРАВЛЕНИЕ: Детерминированная ширина на SSR и первом клиентском рендере.
-    // На web `useResponsive()` может сразу вернуть реальную ширину на клиенте,
-    // но на SSR она всегда 0, что приводит к разному дереву и hydration mismatch.
-    // Поэтому до маунта используем только `clientWidth` (null/0), а после эффекта
-    // она обновится и UI адаптируется уже после гидрации.
-    const effectiveWidth = Platform.OS === 'web' ? (clientWidth ?? 0) : width;
+	    // ✅ ИСПРАВЛЕНИЕ: Детерминированная ширина на SSR и первом клиентском рендере.
+	    // На web `useResponsive()` может сразу вернуть реальную ширину на клиенте,
+	    // но на SSR она всегда 0, что приводит к разному дереву и hydration mismatch.
+	    // Поэтому до маунта используем только `clientWidth` (null/0), а после эффекта
+	    // она обновится и UI адаптируется уже после гидрации.
+	    const effectiveWidth = Platform.OS === 'web' ? (clientWidth ?? 0) : width;
     // Важно: на SSR/первом клиентском рендере effectiveWidth может быть 0.
     // Делаем детерминированное значение (не читаем window в рендере), чтобы избежать hydration mismatch.
     const isMobile =

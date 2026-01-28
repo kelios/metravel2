@@ -1,9 +1,9 @@
 // app/travelsby/index.tsx
-import React, { Suspense, lazy, useMemo } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import { Platform, StyleSheet, View, Text } from 'react-native';
 import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import {useIsFocused} from "@react-navigation/native";
+import { useIsFocused } from '@react-navigation/native';
 import { useThemedColors } from '@/hooks/useTheme';
 
 const isWeb = Platform.OS === 'web';

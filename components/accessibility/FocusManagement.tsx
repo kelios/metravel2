@@ -174,7 +174,10 @@ export function useFocusManagement() {
 /**
  * Hook для перемещения focus при открытии modal/dialog
  */
-export function useFocusTrap(isOpen: boolean, returnFocusRef?: React.RefObject<HTMLElement>) {
+export function useFocusTrap(
+  isOpen: boolean,
+  returnFocusRef?: React.RefObject<HTMLElement | null>
+) {
   const previousActiveElement = React.useRef<HTMLElement | null>(null);
 
   React.useEffect(() => {

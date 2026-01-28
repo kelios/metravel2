@@ -40,8 +40,8 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const debounceRef = useRef<NodeJS.Timeout>();
-  const abortControllerRef = useRef<AbortController>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
 
@@ -52,9 +52,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     }
 
     // Отменяем предыдущий запрос
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+    abortControllerRef.current?.abort();
 
     abortControllerRef.current = new AbortController();
     setLoading(true);
@@ -66,7 +64,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
           `format=json&q=${encodeURIComponent(searchQuery)}&` +
           `limit=5&addressdetails=1&countrycodes=by`,
         {
-          signal: abortControllerRef.current.signal,
+          signal: abortControllerRef.current?.signal,
           headers: {
             'User-Agent': 'MeTravel/1.0',
           },
@@ -95,9 +93,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       setQuery(text);
 
       // Debounce поиска
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
+      if (debounceRef.current) clearTimeout(debounceRef.current);
 
       debounceRef.current = setTimeout(() => {
         searchAddress(text);

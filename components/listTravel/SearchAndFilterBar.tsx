@@ -81,15 +81,14 @@ function SearchAndFilterBar({
 
     // ✅ ИСПРАВЛЕНИЕ: Закрываем подсказки при скролле страницы
     useEffect(() => {
-        if (Platform.OS === 'web' && showAutocomplete) {
-            const handleScroll = () => {
-                setShowAutocomplete(false);
-            };
-            window.addEventListener('scroll', handleScroll, true);
-            return () => {
-                window.removeEventListener('scroll', handleScroll, true);
-            };
-        }
+        if (Platform.OS !== 'web' || !showAutocomplete) return;
+        const handleScroll = () => {
+            setShowAutocomplete(false);
+        };
+        window.addEventListener('scroll', handleScroll, true);
+        return () => {
+            window.removeEventListener('scroll', handleScroll, true);
+        };
     }, [showAutocomplete]);
 
     const applySearch = useCallback(

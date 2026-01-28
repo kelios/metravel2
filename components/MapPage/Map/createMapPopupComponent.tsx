@@ -132,9 +132,11 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
 
     useEffect(() => {
       if (!normalizedCoord) return;
-      if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) return;
+      const uLat = typeof userLat === 'number' ? userLat : null;
+      const uLng = typeof userLng === 'number' ? userLng : null;
+      if (uLat === null || uLng === null) return;
 
-      const driveKey = `${userLat.toFixed(6)},${userLng.toFixed(6)}->${normalizedCoord.lat.toFixed(6)},${normalizedCoord.lng.toFixed(6)}`;
+      const driveKey = `${uLat.toFixed(6)},${uLng.toFixed(6)}->${normalizedCoord.lat.toFixed(6)},${normalizedCoord.lng.toFixed(6)}`;
       if (lastDriveKeyRef.current === driveKey) return;
       lastDriveKeyRef.current = driveKey;
 
@@ -148,7 +150,7 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
 
       const fetchDrive = async () => {
         try {
-          const coordsStr = `${userLng.toFixed(6)},${userLat.toFixed(6)};${normalizedCoord.lng.toFixed(6)},${normalizedCoord.lat.toFixed(6)}`;
+          const coordsStr = `${uLng.toFixed(6)},${uLat.toFixed(6)};${normalizedCoord.lng.toFixed(6)},${normalizedCoord.lat.toFixed(6)}`;
           const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=false`;
 
           const res = await fetch(url, { signal: abortController.signal });

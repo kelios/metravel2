@@ -20,11 +20,6 @@ export interface PageContext {
 /**
  * Интерфейс генератора страниц
  */
-export interface PageGenerator {
-  generate(context: PageContext): string | Promise<string>;
-  estimatePageCount(context: PageContext): number;
-}
-
 /**
  * Конфигурация обработчика изображений
  */
@@ -51,4 +46,3 @@ export interface GenerationContext extends PageContext {
   imageUrls: string[];
   quote?: any;
 }
-

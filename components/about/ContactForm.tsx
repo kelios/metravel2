@@ -31,8 +31,8 @@ type ContactFormProps = {
   onFocusMessage: () => void;
   onBlurMessage: () => void;
   onKeyPress: (e: any) => void;
-  emailRef: React.RefObject<TextInput>;
-  messageRef: React.RefObject<TextInput>;
+  emailRef: React.RefObject<TextInput | null>;
+  messageRef: React.RefObject<TextInput | null>;
   onSubmitEditingEmail: () => void;
   onSubmitEditingMessage: () => void;
 };

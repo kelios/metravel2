@@ -86,7 +86,11 @@ describe('TravelDetailsContainer performance (web)', () => {
       if (link.getAttribute('rel') === 'preload') {
         expect(link.getAttribute('fetchpriority')).toBe('high')
       }
-      expect(String(link.getAttribute('href') || '')).toContain('https://cdn.example.com/img.jpg')
+      const href = String(link.getAttribute('href') || '')
+      // Depending on EXPO_PUBLIC_API_URL, the app may rewrite to same-origin `/api/*` for caching/CORS.
+      expect(href).toMatch(/(https:\/\/cdn\.example\.com\/img\.jpg|\/api\/img\.jpg)/)
+      const srcSet = String(link.getAttribute('imagesrcset') || '')
+      expect(srcSet).toContain('https://cdn.example.com/img.jpg')
     })
   })
 })

@@ -1,6 +1,6 @@
 import { Link, Stack, router } from 'expo-router'
 import { Platform, Pressable, StyleSheet } from 'react-native'
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 
 import { Text, View } from '@/components/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'

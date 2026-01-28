@@ -764,9 +764,9 @@ function ListTravel({
         containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
       />
 
-      <RightColumn
-        search={search}
-        setSearch={setSearch}
+	      <RightColumn
+	        search={search}
+	        setSearch={setSearch}
         onClearAll={() => {
           setSearch('');
           resetFilters();
@@ -774,9 +774,8 @@ function ListTravel({
             setShowFilters(false);
           }
         }}
-        availableWidth={effectiveWidth}
-        topContent={
-          isExport ? (
+	        topContent={
+	          isExport ? (
             <ExportBar
               isMobile={isMobileDevice}
               selectedCount={selectionCount}
@@ -816,14 +815,13 @@ function ListTravel({
             ? [{ minHeight: 0, paddingHorizontal: contentPadding }]
             : [styles.searchHeader, { paddingHorizontal: contentPadding }]
         }
-        cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
-        cardsGridStyle={cardsGridDynamicStyle}
-        cardSpacing={gapSize}
-        footerLoaderStyle={styles.footerLoader}
-        renderItem={renderTravelListItem}
-        listRef={flatListRef as any}
-        testID="travels-list"
-      />
+	        cardsContainerStyle={isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer}
+	        cardsGridStyle={cardsGridDynamicStyle}
+	        cardSpacing={gapSize}
+	        renderItem={renderTravelListItem}
+	        listRef={flatListRef as any}
+	        testID="travels-list"
+	      />
     </View>
   );
 }

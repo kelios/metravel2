@@ -1,5 +1,5 @@
 import React from 'react'
-import { act, fireEvent, render } from '@testing-library/react-native'
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import OptimizedImage, { generateSizes, generateSrcSet } from '@/components/ui/OptimizedImage'
 
@@ -28,16 +28,7 @@ describe('OptimizedImage', () => {
     ;(Platform as any).OS = originalPlatform
   })
 
-  beforeEach(() => {
-    jest.useFakeTimers()
-  })
-
-  afterEach(() => {
-    jest.runOnlyPendingTimers()
-    jest.useRealTimers()
-  })
-
-  it('shows loading indicator and retries before error fallback', () => {
+  it('shows loading indicator and retries before error fallback', async () => {
     const { getByTestId, queryByTestId } = render(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} />
     )
@@ -48,26 +39,24 @@ describe('OptimizedImage', () => {
     fireEvent(image, 'onLoad')
     expect(queryByTestId('optimized-image-loading')).toBeNull()
 
-    const delays = [300, 600, 1200, 2000, 2500, 3000]
-
     // First error schedules retry (no fallback yet)
     act(() => {
       fireEvent(image, 'onError')
     })
     expect(queryByTestId('optimized-image-error')).toBeNull()
+    await waitFor(() => {
+      expect(String((getByTestId('expo-image') as any).props.source?.uri)).toContain('__retry=1')
+    })
 
-    // Drive retryAttempt from 0 -> 6 via backoff timers.
+    // Drive retryAttempt from 0 -> 6.
     // Note: When retryAttempt reaches 6, the *next* onError should show fallback.
-    for (let attempt = 1; attempt <= delays.length; attempt++) {
-      act(() => {
-        jest.advanceTimersByTime(delays[attempt - 1] + 1)
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      await waitFor(() => {
+        const img = getByTestId('expo-image') as any
+        expect(String(img.props.source?.uri)).toContain(`__retry=${attempt}`)
       })
 
-      const img = getByTestId('expo-image') as any
-      expect(String(img.props.source?.uri)).toContain(`__retry=${attempt}`)
-
-      if (attempt < delays.length) {
-        // Simulate that the new URL still fails, schedule next retry.
+      if (attempt < 6) {
         act(() => {
           fireEvent(getByTestId('expo-image'), 'onError')
         })
@@ -90,22 +79,16 @@ describe('OptimizedImage', () => {
     act(() => {
       fireEvent(getByTestId('expo-image'), 'onError')
     })
-    act(() => {
-      jest.advanceTimersByTime(301)
+    await waitFor(() => {
+      expect(String((getByTestId('expo-image') as any).props.source?.uri)).toContain('__retry=1')
     })
-
-    const img1 = getByTestId('expo-image') as any
-    expect(String(img1.props.source?.uri)).toContain('__retry=1')
 
     act(() => {
       fireEvent(getByTestId('expo-image'), 'onError')
     })
-    act(() => {
-      jest.advanceTimersByTime(601)
+    await waitFor(() => {
+      expect(String((getByTestId('expo-image') as any).props.source?.uri)).toContain('__retry=2')
     })
-
-    const img2 = getByTestId('expo-image') as any
-    expect(String(img2.props.source?.uri)).toContain('__retry=2')
   })
 
   it('resets error state when uri changes (regression: should recover without page reload)', async () => {
@@ -114,24 +97,20 @@ describe('OptimizedImage', () => {
     )
 
     // Exhaust retries -> error fallback
-    const delays = [300, 600, 1200, 2000, 2500, 3000]
-    act(() => {
-      fireEvent(getByTestId('expo-image'), 'onError')
-    })
-    for (let attempt = 1; attempt <= delays.length; attempt++) {
+    for (let attempt = 0; attempt < 6; attempt++) {
       act(() => {
-        jest.advanceTimersByTime(delays[attempt - 1] + 1)
+        fireEvent(getByTestId('expo-image'), 'onError')
       })
-      if (attempt < delays.length) {
-        act(() => {
-          fireEvent(getByTestId('expo-image'), 'onError')
-        })
-      }
+      await waitFor(() => {
+        expect(String((getByTestId('expo-image') as any).props.source?.uri)).toContain(`__retry=${attempt + 1}`)
+      })
     }
     act(() => {
       fireEvent(getByTestId('expo-image'), 'onError')
     })
-    expect(getByTestId('optimized-image-error')).toBeTruthy()
+    await waitFor(() => {
+      expect(getByTestId('optimized-image-error')).toBeTruthy()
+    })
 
     // Change uri -> should reset error and show loading again
     act(() => {
@@ -150,7 +129,7 @@ describe('OptimizedImage', () => {
 
     const image = getByTestId('expo-image')
     expect((image as any).props.loading).toBe('lazy')
-    expect((image as any).props.fetchpriority).toBe('high')
+    expect((image as any).props.fetchPriority).toBe('high')
     expect((image as any).props.alt).toBe('demo')
 
     const srcset = generateSrcSet('https://cdn.example.com/image', [320, 640])
@@ -167,17 +146,17 @@ describe('OptimizedImage', () => {
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="low" />
     )
 
-    expect((getByTestId('expo-image') as any).props.fetchpriority).toBe('low')
+    expect((getByTestId('expo-image') as any).props.fetchPriority).toBe('low')
 
     rerender(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="normal" />
     )
-    expect((getByTestId('expo-image') as any).props.fetchpriority).toBe('auto')
+    expect((getByTestId('expo-image') as any).props.fetchPriority).toBe('auto')
 
     rerender(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="high" />
     )
-    expect((getByTestId('expo-image') as any).props.fetchpriority).toBe('high')
+    expect((getByTestId('expo-image') as any).props.fetchPriority).toBe('high')
   })
 
   it('generateSizes uses defaults and allows overriding breakpoints', () => {

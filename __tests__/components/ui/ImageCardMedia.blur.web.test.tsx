@@ -27,16 +27,19 @@ describe('ImageCardMedia blur background (web)', () => {
   })
 
   it('renders a blurred background layer on web when enabled', () => {
-    const tree = renderer.create(
-      <ImageCardMedia
-        src="https://example.com/photo.jpg"
-        height={200}
-        blurBackground
-        fit="contain"
-      />,
-    )
+    let tree: renderer.ReactTestRenderer
+    renderer.act(() => {
+      tree = renderer.create(
+        <ImageCardMedia
+          src="https://example.com/photo.jpg"
+          height={200}
+          blurBackground
+          fit="contain"
+        />
+      )
+    })
 
-    const blurLayers = tree.root.findAll((node: any) => {
+    const blurLayers = tree!.root.findAll((node: any) => {
       if (node?.props?.['aria-hidden'] !== true) return false
       const filter = String(node?.props?.style?.filter || '')
       return filter.includes('blur')
@@ -45,7 +48,7 @@ describe('ImageCardMedia blur background (web)', () => {
     expect(blurLayers.length).toBeGreaterThan(0)
     expect(String(blurLayers[0].props.style?.filter || '')).toContain('blur')
 
-    const mainLayers = tree.root.findAll((node: any) => {
+    const mainLayers = tree!.root.findAll((node: any) => {
       if (node?.type !== 'img') return false
       if (node?.props?.['aria-hidden'] === true) return false
       return String(node?.props?.style?.objectFit || '') === 'contain'

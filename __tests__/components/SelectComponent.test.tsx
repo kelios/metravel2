@@ -8,16 +8,21 @@ const options = [
   { value: '2', label: 'Poland' },
 ];
 
-const renderComponent = (props = {}) =>
-  renderer.create(
-    <SelectComponent
-      label="Country"
-      options={options}
-      value=""
-      placeholder="Select option"
-      {...props}
-    />
-  );
+const renderComponent = (props = {}) => {
+  let tree: renderer.ReactTestRenderer;
+  renderer.act(() => {
+    tree = renderer.create(
+      <SelectComponent
+        label="Country"
+        options={options}
+        value=""
+        placeholder="Select option"
+        {...props}
+      />
+    );
+  });
+  return tree!;
+};
 
 describe('SelectComponent (web)', () => {
   const originalPlatform = Platform.OS;

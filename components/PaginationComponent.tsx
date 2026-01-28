@@ -346,18 +346,18 @@ function PaginationComponent({
                         accessibilityLabel="Предыдущая страница"
                       />
 
-                      <View style={styles.mobileInputContainer}>
-                          <TextInput
-                            style={styles.mobileInput}
-                            value={pageInput}
-                            keyboardType="number-pad"
-                            maxLength={4}
-                            onChangeText={(t) => setPageInput(t.replace(/[^0-9]/g, ""))}
-                            onSubmitEditing={onSubmit}
-                            onBlur={onSubmit}
-                            returnKeyType="done"
-                            accessibilityLabel="Текущая страница"
-                          />
+	                      <View style={styles.mobileInputContainer}>
+	                          <TextInput
+	                            style={styles.mobileInput}
+	                            value={pageInput}
+	                            keyboardType="number-pad"
+	                            maxLength={4}
+	                            onChangeText={(t) => setPageInput(t.replace(/[^0-9]/g, ""))}
+	                            onSubmitEditing={() => onSubmit()}
+	                            onBlur={() => onSubmit()}
+	                            returnKeyType="done"
+	                            accessibilityLabel="Текущая страница"
+	                          />
                           <Text style={styles.mobileTotal}>/ {totalPages}</Text>
                       </View>
 
@@ -419,20 +419,20 @@ function PaginationComponent({
                     accessibilityLabel="Предыдущая страница"
                   />
 
-                  <View style={styles.desktopInputContainer}>
-                      <Text style={styles.desktopLabel}>Стр.</Text>
-                      <TextInput
-                        style={styles.desktopInput}
-                        value={pageInput}
-                        keyboardType="number-pad"
-                        maxLength={4}
-                        onChangeText={(t) => setPageInput(t.replace(/[^0-9]/g, ""))}
-                        onSubmitEditing={onSubmit}
-                        onBlur={onSubmit}
-                        returnKeyType="done"
-                      />
-                      <Text style={styles.desktopTotal}>из {totalPages}</Text>
-                  </View>
+	                  <View style={styles.desktopInputContainer}>
+	                      <Text style={styles.desktopLabel}>Стр.</Text>
+	                      <TextInput
+	                        style={styles.desktopInput}
+	                        value={pageInput}
+	                        keyboardType="number-pad"
+	                        maxLength={4}
+	                        onChangeText={(t) => setPageInput(t.replace(/[^0-9]/g, ""))}
+	                        onSubmitEditing={() => onSubmit()}
+	                        onBlur={() => onSubmit()}
+	                        returnKeyType="done"
+	                      />
+	                      <Text style={styles.desktopTotal}>из {totalPages}</Text>
+	                  </View>
 
                   <IconButton
                     icon="chevron-right"
@@ -475,4 +475,3 @@ function PaginationComponent({
 }
 
 export default React.memo(PaginationComponent);
-

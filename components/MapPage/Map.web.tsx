@@ -199,7 +199,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         link.href = href;
         try {
           (link as any).fetchPriority = 'high';
-          link.setAttribute('fetchpriority', 'high');
+          link.setAttribute('fetchPriority', 'high');
         } catch {
           // noop
         }

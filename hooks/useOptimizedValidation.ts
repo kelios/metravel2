@@ -32,7 +32,7 @@ export function useOptimizedValidation<T extends object>(
     lastValidated: null,
   });
 
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
   const lastValidatedDataRef = useRef<T>(data);
 

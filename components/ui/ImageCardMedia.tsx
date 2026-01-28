@@ -205,7 +205,7 @@ function ImageCardMedia({
     link.crossOrigin = 'anonymous';
     if (shouldPreload) {
       link.fetchPriority = 'high';
-      link.setAttribute('fetchpriority', 'high');
+      link.setAttribute('fetchPriority', 'high');
     }
     document.head.appendChild(link);
 
@@ -257,7 +257,7 @@ function ImageCardMedia({
                 loading="lazy"
                 decoding="async"
                 // @ts-ignore
-                fetchpriority="low"
+                fetchPriority="low"
                 onError={(e) => {
                   if (
                     webBlurFallbackUri &&
@@ -288,7 +288,7 @@ function ImageCardMedia({
               loading={loading}
               decoding="async"
               // @ts-ignore
-              fetchpriority={priority === 'high' ? 'high' : 'auto'}
+              fetchPriority={priority === 'high' ? 'high' : 'auto'}
               onLoad={onLoad}
               onError={onError}
             />

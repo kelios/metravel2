@@ -8,9 +8,9 @@ import { View, ScrollView, Platform } from 'react-native';
 import React from 'react';
 
 export interface UseScrollNavigationReturn {
-  anchors: Record<string, React.RefObject<View>>;
+  anchors: Record<string, React.RefObject<View | null>>;
   scrollTo: (key: string) => void;
-  scrollRef: React.RefObject<ScrollView>;
+  scrollRef: React.RefObject<ScrollView | null>;
 }
 
 const SECTION_KEYS = [
@@ -28,12 +28,12 @@ const SECTION_KEYS = [
 ] as const;
 
 export function useScrollNavigation(): UseScrollNavigationReturn {
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
   const pendingRetriesRef = useRef<Record<string, Array<ReturnType<typeof setTimeout>>>>({});
 
   // ✅ АРХИТЕКТУРА: Создаем anchors объект из списка ключей
   const anchors = useMemo(() => {
-    const result: Record<string, React.RefObject<View>> = {};
+    const result: Record<string, React.RefObject<View | null>> = {};
     SECTION_KEYS.forEach((key) => {
       result[key] = React.createRef<View>();
     });

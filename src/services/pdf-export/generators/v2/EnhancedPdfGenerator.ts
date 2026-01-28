@@ -10,7 +10,6 @@ import { StyleGenerator } from './builders/StyleGenerator';
 import { PageGeneratorFactory } from './factories/PageGeneratorFactory';
 import { pickRandomQuote } from '../../quotes/travelQuotes';
 import { defaultConfig } from './config/defaults';
-import type { TravelQuote } from '../../quotes/travelQuotes';
 
 // Импортируем старый генератор для делегирования
 import { EnhancedPdfGenerator as V1Generator } from '../EnhancedPdfGenerator';
@@ -28,7 +27,6 @@ export class EnhancedPdfGenerator {
   private styleGenerator: StyleGenerator;
   private factory: PageGeneratorFactory;
   private v1Generator: V1Generator;
-  private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
 
   constructor(themeName: PdfThemeName | string) {
     this.theme = getThemeConfig(themeName);
@@ -68,7 +66,8 @@ export class EnhancedPdfGenerator {
     // Выбираем случайные цитаты
     const coverQuote = pickRandomQuote();
     const finalQuote = pickRandomQuote(coverQuote);
-    this.selectedQuotes = { cover: coverQuote, final: finalQuote };
+    void coverQuote;
+    void finalQuote;
 
     const pages: string[] = [];
 

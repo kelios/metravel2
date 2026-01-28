@@ -79,6 +79,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const [lastPreviewUrl, setLastPreviewUrl] = useState<string | null>(null);
     const [remoteRetryAttempt, setRemoteRetryAttempt] = useState(0);
     const remoteRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const ignoredOldImageRef = useRef<string | null>(null);
     const lastNotifiedPreviewRef = useRef<string | null>(null);
     const pendingUploadRef = useRef<File | { uri: string; name: string; type: string } | null>(null);
     const hasValidImage = Boolean(previewUrl || imageUri);
@@ -233,6 +234,17 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         console.info('PhotoUploadWithPreview: oldImage changed', { oldImage, isManuallySelected, isFirstRender, prevOldImage });
         
         if (isManuallySelected) {
+            return;
+        }
+
+        // If we previously detected an invalid blob/data URL and cleared it, do not immediately
+        // re-apply the same oldImage on the next render.
+        if (
+            oldImage &&
+            ignoredOldImageRef.current &&
+            oldImage === ignoredOldImageRef.current &&
+            /^(blob:|data:)/i.test(oldImage)
+        ) {
             return;
         }
         
@@ -536,16 +548,17 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                         return;
                                     }
 
-                                    const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
-                                    if (apiCandidate) {
-                                        applyFallback(apiCandidate);
-                                        return;
-                                    }
-
                                     if (/^(blob:|data:)/i.test(currentDisplayUrl)) {
                                         // Blob/data previews can become invalid after unmount/navigation.
                                         // Clear them to avoid repeated ERR_FILE_NOT_FOUND spam.
+                                        ignoredOldImageRef.current = currentDisplayUrl;
                                         handleRemoveImage();
+                                        return;
+                                    }
+
+                                    const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
+                                    if (apiCandidate) {
+                                        applyFallback(apiCandidate);
                                         return;
                                     }
 
@@ -571,16 +584,16 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                         return;
                                     }
 
-                                    const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
-                                    if (apiCandidate) {
-                                        applyFallback(apiCandidate);
-                                        return;
-                                    }
-
                                     if (/^(blob:|data:)/i.test(currentDisplayUrl)) {
                                         // Blob/data previews can become invalid after unmount/navigation.
                                         // Clear them to avoid repeated ERR_FILE_NOT_FOUND spam.
+                                        ignoredOldImageRef.current = currentDisplayUrl;
                                         handleRemoveImage();
+                                        return;
+                                    }
+                                    const apiCandidate = buildApiPrefixedUrl(currentDisplayUrl);
+                                    if (apiCandidate) {
+                                        applyFallback(apiCandidate);
                                         return;
                                     }
                                     // При повторной ошибке показываем placeholder

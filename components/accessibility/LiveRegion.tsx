@@ -35,6 +35,7 @@ export const LiveRegion: React.FC<LiveRegionProps> = ({
 }) => {
   const colors = useThemedColors();
   const liveRegionRef = useRef<HTMLDivElement>(null);
+  const ariaLive = role === 'alert' ? 'assertive' : role;
 
   useEffect(() => {
     if (!message || !liveRegionRef.current) return;
@@ -57,7 +58,7 @@ export const LiveRegion: React.FC<LiveRegionProps> = ({
     return (
       <View
         style={[styles.nativeRegion, !visible && styles.hidden]}
-        accessibilityLiveRegion={role === 'assertive' ? 'assertive' : 'polite'}
+        accessibilityLiveRegion={ariaLive === 'assertive' ? 'assertive' : 'polite'}
         accessibilityLabel={message}
       >
         <Text style={[styles.text, { color: colors.text }]}>{message}</Text>
@@ -69,12 +70,12 @@ export const LiveRegion: React.FC<LiveRegionProps> = ({
     <div
       ref={liveRegionRef}
       role="status"
-      aria-live={role}
+      aria-live={ariaLive}
       aria-atomic={atomic}
       style={{
-        ...styles.webRegion,
+        ...webRegionStyle,
         display: visible ? 'block' : 'none',
-      } as React.CSSProperties}
+      }}
       data-testid={testID}
     >
       {message}
@@ -88,7 +89,7 @@ export const LiveRegion: React.FC<LiveRegionProps> = ({
 export function useLiveRegion() {
   const [message, setMessage] = React.useState<string>('');
   const [role, setRole] = React.useState<LiveRegionRole>('polite');
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const announce = React.useCallback(
     (text: string, announceRole: LiveRegionRole = 'polite', duration = 3000) => {
@@ -196,18 +197,18 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 14,
   },
-  webRegion: {
-    position: 'absolute',
-    width: '1px',
-    height: '1px',
-    padding: 0,
-    margin: '-1px',
-    overflow: 'hidden',
-    clip: 'rect(0, 0, 0, 0)',
-    whiteSpace: 'nowrap',
-    border: 0,
-  } as React.CSSProperties,
 });
 
-export default LiveRegion;
+const webRegionStyle: React.CSSProperties = {
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
 
+export default LiveRegion;

@@ -45,7 +45,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
     const [showResults, setShowResults] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
     // Debounced search через Nominatim API

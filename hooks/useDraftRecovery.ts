@@ -65,7 +65,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     isRecovering: false,
   });
 
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checkedDraftKeyRef = useRef<string | null>(null);
   const draftKey = `${DRAFT_STORAGE_KEY}_${isNew ? 'new' : travelId}`;
 
@@ -255,4 +255,3 @@ async function removeStorageItem(key: string): Promise<void> {
 }
 
 export default useDraftRecovery;
-

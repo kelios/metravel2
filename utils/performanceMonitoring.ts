@@ -111,7 +111,7 @@ export class PerformanceMonitor {
           this.sendMetric('inp', maxInteraction);
         }
       });
-      observer.observe({ type: 'event', buffered: true, durationThreshold: 40 });
+      observer.observe({ type: 'event', buffered: true, durationThreshold: 40 } as any);
       this.observers.push(observer);
     } catch {
       console.warn('[Performance] INP measurement not supported');

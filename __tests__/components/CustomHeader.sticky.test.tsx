@@ -1,5 +1,5 @@
 import React from 'react';
-import renderer from 'react-test-renderer';
+import renderer, { act } from 'react-test-renderer';
 import { Platform, StyleSheet } from 'react-native';
 
 import CustomHeader from '@/components/CustomHeader';
@@ -34,7 +34,11 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 jest.mock('react-native-vector-icons/Feather', () => 'Feather');
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'MCIcon');
-jest.mock('@/components/HeaderContextBar', () => 'HeaderContextBar');
+jest.mock('@/components/HeaderContextBar', () => {
+  const React = require('react');
+  const Stub = () => React.createElement(React.Fragment, null);
+  return { __esModule: true, default: Stub };
+});
 
 describe('CustomHeader sticky behavior on web', () => {
   const originalOS = Platform.OS;
@@ -52,10 +56,13 @@ describe('CustomHeader sticky behavior on web', () => {
     Object.defineProperty(Platform, 'OS', { value: originalOS });
   });
 
-  it('applies sticky positioning with high z-index on web', () => {
+  it('applies sticky positioning with high z-index on web', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-    const tree = renderer.create(<CustomHeader />);
+    let tree: renderer.ReactTestRenderer;
+    await act(async () => {
+      tree = renderer.create(<CustomHeader />);
+    });
     const header = tree.root.findByProps({ testID: 'main-header' });
     const style = StyleSheet.flatten(header.props.style);
 

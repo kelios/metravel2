@@ -6,7 +6,11 @@ module.exports = function (api) {
     const isTest = env === 'test';
 
     return {
-        presets: ['babel-preset-expo'],
+        presets: [
+            ['babel-preset-expo', {
+                unstable_transformImportMeta: true
+            }]
+        ],
         plugins: [
             '@babel/plugin-transform-export-namespace-from',
             !isTest && 'react-native-web',

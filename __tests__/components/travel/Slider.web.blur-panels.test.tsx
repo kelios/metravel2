@@ -32,36 +32,38 @@ describe('Slider (web) side blur panels', () => {
   })
 
   it('renders side blur panels when blurBackground is enabled and image dimensions are missing (fallback)', async () => {
-    const tree = renderer.create(
-      <SliderWeb
-        images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
-        showArrows={false}
-        showDots={false}
-        autoPlay={false}
-        preloadCount={0}
-        blurBackground
-      />,
-    )
-
-    await act(async () => {})
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground
+        />,
+      )
+    })
 
     expect(tree.root.findByProps({ testID: 'slider-side-blur-left-0' })).toBeTruthy()
     expect(tree.root.findByProps({ testID: 'slider-side-blur-right-0' })).toBeTruthy()
   })
 
   it('does not render side blur panels when blurBackground is disabled', async () => {
-    const tree = renderer.create(
-      <SliderWeb
-        images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
-        showArrows={false}
-        showDots={false}
-        autoPlay={false}
-        preloadCount={0}
-        blurBackground={false}
-      />,
-    )
-
-    await act(async () => {})
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <SliderWeb
+          images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
+          showArrows={false}
+          showDots={false}
+          autoPlay={false}
+          preloadCount={0}
+          blurBackground={false}
+        />,
+      )
+    })
 
     const left = tree.root.findAllByProps({ testID: 'slider-side-blur-left-0' })
     const right = tree.root.findAllByProps({ testID: 'slider-side-blur-right-0' })

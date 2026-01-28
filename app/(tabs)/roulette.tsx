@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Text, View, Pressable, FlatList, Image } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname } from 'expo-router';

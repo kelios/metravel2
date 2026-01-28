@@ -269,7 +269,8 @@ export default function QuestFullMap({
             }
 
             const gpxContent = buildGPX(points);
-            const fileUri = `${FileSystem.cacheDirectory}${title.replace(/\s+/g, '_')}.gpx`;
+            const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
+            const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.gpx`;
 
             await FileSystem.writeAsStringAsync(fileUri, gpxContent);
 
@@ -292,7 +293,8 @@ export default function QuestFullMap({
             }
 
             const geoJsonContent = buildGeoJSON(points);
-            const fileUri = `${FileSystem.cacheDirectory}${title.replace(/\s+/g, '_')}.geojson`;
+            const cacheDir = (FileSystem as any).cacheDirectory ?? (FileSystem.Paths.cache as any).uri;
+            const fileUri = `${cacheDir}${title.replace(/\s+/g, '_')}.geojson`;
 
             await FileSystem.writeAsStringAsync(fileUri, geoJsonContent);
 

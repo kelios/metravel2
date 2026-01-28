@@ -6,6 +6,7 @@ const LEAFLET_JS_SRC = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
 
 let leafletPromise: Promise<LeafletNS> | null = null;
 let reactLeafletPromise: Promise<ReactLeafletNS> | null = null;
+let reactLeafletModule: ReactLeafletNS | null = null;
 
 const isTestEnv = () =>
   typeof process !== 'undefined' &&
@@ -147,7 +148,7 @@ export const ensureLeafletCSS = () => {
 export const preconnectLeafletOrigins = () => {
   if (typeof document === 'undefined') return;
 
-  const origins = ['https://unpkg.com'];
+  const origins = ['https://unpkg.com', 'https://esm.sh'];
   origins.forEach((origin) => {
     if (document.querySelector(`link[rel="preconnect"][href="${origin}"]`)) return;
     const link = document.createElement('link');
@@ -216,8 +217,52 @@ export const ensureLeaflet = async (): Promise<LeafletNS> => {
 };
 
 export const ensureReactLeaflet = async (): Promise<ReactLeafletNS> => {
+  if (reactLeafletModule) return reactLeafletModule;
+  
+  // Check if already loaded on window
+  if (typeof window !== 'undefined' && (window as any).__reactLeaflet) {
+    reactLeafletModule = (window as any).__reactLeaflet;
+    return reactLeafletModule;
+  }
+  
   if (reactLeafletPromise) return reactLeafletPromise;
-  reactLeafletPromise = import('react-leaflet');
+  
+  reactLeafletPromise = (async () => {
+    // Ensure Leaflet is loaded first (from CDN)
+    await ensureLeaflet();
+    
+    // Double-check after await in case another call completed
+    if (reactLeafletModule) return reactLeafletModule;
+    if (typeof window !== 'undefined' && (window as any).__reactLeaflet) {
+      reactLeafletModule = (window as any).__reactLeaflet;
+      return reactLeafletModule;
+    }
+    
+    try {
+      // Prefer `require()` over dynamic `import()` on web.
+      // Metro's async chunk loader (`fetchThenEval*`) can occasionally re-evaluate the same chunk and throw:
+      // "TypeError: Cannot redefine property: default".
+      // Keeping react-leaflet in the main bundle avoids that flakiness.
+      const mod = require('react-leaflet');
+      
+      // Handle both default and named exports
+      // Some bundlers wrap named exports in a default object
+      const actualMod = (mod as any).default || mod;
+      reactLeafletModule = actualMod;
+      
+      // Store on window for compatibility and to prevent re-imports
+      if (typeof window !== 'undefined') {
+        (window as any).__reactLeaflet = actualMod;
+      }
+      
+      return actualMod;
+    } catch (err) {
+      console.error('[Leaflet] Failed to load react-leaflet:', err);
+      reactLeafletPromise = null;
+      throw err;
+    }
+  })();
+  
   return reactLeafletPromise;
 };
 

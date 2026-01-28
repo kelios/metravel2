@@ -21,7 +21,7 @@ const getLegacyArray = (data: UnknownRecord, key: string): unknown[] => {
 
 export const useTravelPublishChecklist = (formData: TravelFormData) => {
   const routePoints = useMemo(() => {
-    const data = formData as UnknownRecord;
+    const data = formData as unknown as UnknownRecord;
     const coords = getLegacyArray(data, 'coordsMeTravel');
     if (coords.length > 0) return coords;
     return getLegacyArray(data, 'markers');

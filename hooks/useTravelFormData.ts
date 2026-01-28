@@ -705,8 +705,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         // ✅ FIX: Устанавливаем hasAccess в false при ошибке загрузки
         setHasAccess(false);
         router.replace('/');
-      } finally {
-        setIsInitialLoading(false);
       }
     },
     [formState, isNew, normalizeDraftPlaceholders, router, userId, isSuperAdmin]
@@ -719,6 +717,9 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
     return () => {
       mountedRef.current = false;
+      // React StrictMode can mount/unmount effects twice in development.
+      // Reset the initial-load guard so the next mount can re-trigger loading.
+      initialLoadKeyRef.current = null;
       // Отменяем все pending запросы
       if (saveAbortControllerRef.current) {
         saveAbortControllerRef.current.abort();
@@ -734,7 +735,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     initialLoadKeyRef.current = loadKey;
 
     if (!isNew && travelId) {
-      loadTravelData(travelId as string);
+      setIsInitialLoading(true);
+      void loadTravelData(travelId as string).finally(() => {
+        setIsInitialLoading(false);
+      });
     } else if (isNew) {
       setHasAccess(true);
       setIsInitialLoading(false);

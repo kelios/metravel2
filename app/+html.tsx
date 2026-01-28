@@ -148,8 +148,8 @@ const getEntryPreloadScript = () => String.raw`
       if (src.indexOf('/_expo/static/js/web/entry-') !== -1 && src.indexOf('.js') !== -1) {
         entrySrc = src;
         try {
-          if (!s.getAttribute('fetchpriority')) {
-            s.setAttribute('fetchpriority', 'high');
+          if (!s.getAttribute('fetchPriority')) {
+            s.setAttribute('fetchPriority', 'high');
           }
           if (typeof s.fetchPriority !== 'undefined') {
             s.fetchPriority = 'high';
@@ -164,7 +164,7 @@ const getEntryPreloadScript = () => String.raw`
     link.rel = 'preload';
     link.as = 'script';
     link.href = entrySrc;
-    link.setAttribute('fetchpriority', 'high');
+    link.setAttribute('fetchPriority', 'high');
     try { link.fetchPriority = 'high'; } catch (_e) {}
     document.head.appendChild(link);
   } catch (_e) {}
@@ -326,7 +326,7 @@ const getTravelHeroPreloadScript = () => String.raw`
         }
         try {
           link.fetchPriority = 'high';
-          link.setAttribute('fetchpriority', 'high');
+          link.setAttribute('fetchPriority', 'high');
         } catch (_e) {}
         link.crossOrigin = 'anonymous';
         document.head.appendChild(link);
@@ -479,8 +479,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
     try {
       const lcpImg = document.querySelector('[data-lcp]');
       if (!lcpImg) return;
-      if (!lcpImg.getAttribute('fetchpriority')) {
-        lcpImg.setAttribute('fetchpriority', 'high');
+      if (!lcpImg.getAttribute('fetchPriority')) {
+        lcpImg.setAttribute('fetchPriority', 'high');
       }
       if (lcpImg.decode && lcpImg.complete) {
         lcpImg.decode().catch(() => undefined);

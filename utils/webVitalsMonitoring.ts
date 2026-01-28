@@ -94,7 +94,8 @@ function trackLCP(): void {
       const entries = list.getEntries();
       const lastEntry = entries[entries.length - 1];
 
-      monitor.metrics.lcp = lastEntry.renderTime || lastEntry.loadTime;
+      const lcp = (lastEntry as any).renderTime ?? (lastEntry as any).loadTime ?? lastEntry?.startTime ?? 0;
+      monitor.metrics.lcp = lcp;
       notifyCallbacks();
     });
 
@@ -195,7 +196,7 @@ function trackINP(): void {
       notifyCallbacks();
     });
 
-    observer.observe({ type: 'event', buffered: true, durationThreshold: 40 });
+    observer.observe({ type: 'event', buffered: true, durationThreshold: 40 } as any);
   } catch (error) {
     console.warn('[trackINP] Error:', error);
   }
@@ -328,7 +329,7 @@ export function measurePerformance(startMark: string, endMark: string): number {
  * @example
  * const duration = trackComponentRender('MyComponent');
  */
-export function trackComponentRender(componentName: string): number {
+export function trackComponentRender(componentName: string): () => number {
   const startMark = `${componentName}-render-start`;
   const endMark = `${componentName}-render-end`;
 

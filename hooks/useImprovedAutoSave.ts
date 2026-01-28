@@ -48,8 +48,8 @@ export function useImprovedAutoSave<T>(
     isOnline: true,
   });
 
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
   const lastSavedDataRef = useRef<T>(originalData);
   const latestDataRef = useRef<T>(data);

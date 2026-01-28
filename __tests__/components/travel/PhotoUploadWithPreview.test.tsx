@@ -613,7 +613,9 @@ describe('PhotoUploadWithPreview', () => {
                     />
                 );
 
-                const expected = `${window.location.origin}/uploads/image.jpg`;
+                const baseRaw = process.env.EXPO_PUBLIC_API_URL || window.location.origin;
+                const prefix = String(baseRaw).replace(/\/+$/, '').replace(/\/api$/i, '');
+                const expected = `${prefix}/uploads/image.jpg`;
                 const imgNode = getWebPreviewImg(screen);
                 expect(String(imgNode.props.src)).toBe(expected);
             } finally {

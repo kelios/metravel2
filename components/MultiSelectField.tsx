@@ -1,5 +1,5 @@
 import React, { forwardRef, useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import SimpleMultiSelect from './SimpleMultiSelect';
 
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -11,7 +11,7 @@ type SimpleMultiSelectPassthroughProps = {
     placeholder?: string;
     searchPlaceholder?: string;
     search?: boolean;
-    style?: unknown;
+    style?: StyleProp<ViewStyle>;
     disabled?: boolean;
 };
 

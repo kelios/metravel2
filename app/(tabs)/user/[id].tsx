@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Pressable, Platform, Image, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -161,17 +161,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderRadius: DESIGN_TOKENS.radii.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.card,
-      },
-      ios: {
-        ...colors.shadows.light,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: colors.boxShadows.card } as any)
+      : Platform.OS === 'android'
+        ? { elevation: 2 }
+        : colors.shadows.light),
   },
   headerRow: {
     flexDirection: 'row',

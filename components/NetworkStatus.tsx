@@ -25,22 +25,25 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({
   const translateY = useSharedValue(isConnected ? -100 : 0);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     if (!isConnected) {
       setWasOffline(true);
       translateY.value = withTiming(0, { duration: 300 });
-    } else {
-      if (wasOffline) {
-        // Показываем сообщение о восстановлении соединения
-        translateY.value = withTiming(0, { duration: 300 });
-        const timer = setTimeout(() => {
-          translateY.value = withTiming(-100, { duration: 300 });
-          setTimeout(() => setWasOffline(false), 300);
-        }, 2000);
-        return () => clearTimeout(timer);
-      } else {
+    } else if (wasOffline) {
+      // Показываем сообщение о восстановлении соединения
+      translateY.value = withTiming(0, { duration: 300 });
+      timer = setTimeout(() => {
         translateY.value = withTiming(-100, { duration: 300 });
-      }
+        setTimeout(() => setWasOffline(false), 300);
+      }, 2000);
+    } else {
+      translateY.value = withTiming(-100, { duration: 300 });
     }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [isConnected, wasOffline, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({

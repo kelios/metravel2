@@ -18,7 +18,7 @@ import {
 
 export type Theme = 'light' | 'dark' | 'auto';
 
-interface ThemeContextType {
+export interface ThemeContextType {
   theme: Theme;
   isDark: boolean;
   setTheme: (theme: Theme) => void;

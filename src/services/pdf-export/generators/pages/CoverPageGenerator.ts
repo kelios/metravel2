@@ -277,30 +277,6 @@ export class CoverPageGenerator {
     `;
   }
 
-  private renderStats(count: number, label: string, yearRange?: string): string {
-    const { colors } = this.theme;
-    return `
-      <div style="display: flex; gap: 24mm; align-items: center; margin-bottom: 16mm;">
-        <div>
-          <div style="font-size: 32pt; font-weight: 800; color: ${colors.accent};">
-            ${count}
-          </div>
-          <div style="font-size: 13pt; text-transform: uppercase; letter-spacing: 0.08em;">
-            ${label}
-          </div>
-        </div>
-        ${yearRange ? `
-          <div style="border-left: 1px solid rgba(255,255,255,0.4); padding-left: 24mm;">
-            <div style="font-size: 32pt; font-weight: 700; color: ${colors.accent};">
-              ${yearRange}
-            </div>
-            <div style="font-size: 13pt; letter-spacing: 0.08em;">годы</div>
-          </div>
-        ` : ''}
-      </div>
-    `;
-  }
-
   private renderUserName(userName: string, textColor?: string): string {
     const { typography } = this.theme;
     return `

@@ -28,13 +28,15 @@ describe('UnifiedTravelCard blur background (web)', () => {
   })
 
   it('passes blur background and contain fit to ImageCardMedia', () => {
-    renderer.create(
-      <UnifiedTravelCard
-        title="Test travel"
-        imageUrl="https://example.com/photo.jpg"
-        onPress={() => {}}
-      />,
-    )
+    renderer.act(() => {
+      renderer.create(
+        <UnifiedTravelCard
+          title="Test travel"
+          imageUrl="https://example.com/photo.jpg"
+          onPress={() => {}}
+        />
+      )
+    })
 
     expect(mockImageCardMedia.mock.calls.length).toBeGreaterThan(0)
     const props = mockImageCardMedia.mock.calls[0]?.[0]

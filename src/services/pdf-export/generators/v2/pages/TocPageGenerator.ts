@@ -13,7 +13,7 @@ interface TravelSectionMeta {
  * Генератор оглавления
  */
 export class TocPageGenerator extends BasePageGenerator {
-  constructor(private meta: TravelSectionMeta[]) {
+  constructor(private meta: TravelSectionMeta[] = []) {
     super();
   }
 
@@ -133,4 +133,3 @@ export class TocPageGenerator extends BasePageGenerator {
     ];
   }
 }
-
