@@ -129,6 +129,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const listRef = useRef<FlatList<SliderImage>>(null)
   const indexRef = useRef(0)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web')
 
   const firstAR = useMemo(() => {
     const f = images[0]
@@ -180,12 +181,18 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return true
   }, [isMobile])
 
+  const effectivePreload = useMemo(() => {
+    if (!prefetchEnabled) return 0
+    const effective = Math.max(0, preloadCount)
+    if (Platform.OS === 'web') return effective > 0 ? effective : 1
+    return effective
+  }, [prefetchEnabled, preloadCount])
+
   const warmNeighbors = useCallback(
     (idx: number) => {
       if (!canPrefetchOnWeb) return
-      const effective = Math.max(0, preloadCount)
-      if (!effective) return
-      for (let d = -effective; d <= effective; d++) {
+      if (!effectivePreload) return
+      for (let d = -effectivePreload; d <= effectivePreload; d++) {
         if (d === 0) continue
         const t = idx + d
         if (t < 0 || t >= images.length) continue
@@ -193,8 +200,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         prefetchImage(u).catch(() => undefined)
       }
     },
-    [canPrefetchOnWeb, images.length, preloadCount, uriMap]
+    [canPrefetchOnWeb, effectivePreload, images.length, uriMap]
   )
+
+  const enablePrefetch = useCallback(() => {
+    if (Platform.OS !== 'web') return
+    if (prefetchEnabled) return
+    if (!canPrefetchOnWeb) return
+    setPrefetchEnabled(true)
+  }, [canPrefetchOnWeb, prefetchEnabled])
 
   const setActiveIndex = useCallback(
     (idx: number) => {
@@ -217,16 +231,18 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   )
 
   const next = useCallback(() => {
+    enablePrefetch()
     if (!images.length) return
     const target = (indexRef.current + 1) % images.length
     scrollTo(target)
-  }, [images.length, scrollTo])
+  }, [enablePrefetch, images.length, scrollTo])
 
   const prev = useCallback(() => {
+    enablePrefetch()
     if (!images.length) return
     const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length)
     scrollTo(target)
-  }, [images.length, scrollTo])
+  }, [enablePrefetch, images.length, scrollTo])
 
   useImperativeHandle(
     ref,
@@ -326,7 +342,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             windowSize={2 + Math.max(0, preloadCount)}
             maxToRenderPerBatch={1 + Math.max(0, preloadCount)}
             getItemLayout={getItemLayout}
+            onScrollBeginDrag={() => {
+              enablePrefetch()
+            }}
             onMomentumScrollEnd={(e) => {
+              enablePrefetch()
               const x = e?.nativeEvent?.contentOffset?.x ?? 0
               const idx = Math.round(x / (containerW || 1))
               setActiveIndex(idx)

@@ -262,6 +262,146 @@ const Dot = memo(function Dot({
   return <Animated.View style={[styles.dot, style]} />;
 });
 
+type SlideProps = {
+  item: SliderImage;
+  index: number;
+  uri: string;
+  containerW: number;
+  slideHeight: number;
+  imagesLength: number;
+  colors: ReturnType<typeof useSliderTheme>['colors'];
+  styles: ReturnType<typeof useSliderTheme>['styles'];
+  isMobile: boolean;
+  blurBackground: boolean;
+  reduceMotion: boolean;
+  aspectRatio: number;
+  imageProps?: any;
+  onFirstImageLoad?: () => void;
+};
+
+const Slide = memo(function Slide({
+  item,
+  index,
+  uri,
+  containerW,
+  slideHeight,
+  imagesLength,
+  colors,
+  styles,
+  isMobile,
+  blurBackground,
+  reduceMotion,
+  aspectRatio,
+  imageProps,
+  onFirstImageLoad,
+}: SlideProps) {
+  const [status, setStatus] = useState<LoadStatus>('loading');
+
+  const ratio = item.width && item.height ? item.width / item.height : aspectRatio;
+  const isPortrait = ratio < 0.95;
+  const isSquareish = ratio >= 0.95 && ratio <= 1.1;
+
+  const isFirstSlide = index === 0;
+  const mainPriority = isFirstSlide ? 'high' : 'low';
+
+  const shouldBlur = blurBackground;
+  const shouldRenderBlurBg =
+    shouldBlur &&
+    status !== 'error' &&
+    !(Platform.OS === 'web' && isFirstSlide && status !== 'loaded');
+
+  const useElevatedWrapper = Platform.OS === 'web' && !isMobile && (isPortrait || isSquareish);
+  const mainFit: 'cover' | 'contain' = 'contain';
+
+  const handleLoadStart = useCallback(() => {
+    setStatus((prev) => (prev === 'loaded' ? prev : 'loading'));
+  }, []);
+
+  const handleLoad = useCallback(() => {
+    setStatus('loaded');
+    if (isFirstSlide) {
+      onFirstImageLoad?.();
+    }
+  }, [isFirstSlide, onFirstImageLoad]);
+
+  const handleError = useCallback(() => {
+    setStatus('error');
+  }, []);
+
+  return (
+    <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
+      {shouldRenderBlurBg ? (
+        <>
+          <ImageCardMedia
+            testID={`slider-blur-bg-${index}`}
+            src={uri}
+            fit="cover"
+            blurBackground
+            blurRadius={12}
+            blurOnly
+            priority="low"
+            loading="lazy"
+            style={styles.blurBg}
+          />
+        </>
+      ) : (
+        <View style={styles.flatBackground} testID={`slider-flat-bg-${index}`} />
+      )}
+
+      <View
+        style={[
+          styles.imageCardWrapper,
+          useElevatedWrapper && styles.imageCardWrapperElevated,
+        ]}
+      >
+        <View style={styles.imageCardSurface}>
+          {status === 'error' ? (
+            <View
+              style={styles.neutralPlaceholder}
+              testID={`slider-neutral-placeholder-${index}`}
+            />
+          ) : (
+            <ImageCardMedia
+              src={uri}
+              fit={mainFit}
+              blurBackground={Platform.OS === 'web' ? shouldRenderBlurBg : shouldBlur}
+              priority={mainPriority as any}
+              loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
+              transition={reduceMotion ? 0 : 250}
+              style={styles.img}
+              alt={
+                item.width && item.height
+                  ? `Изображение ${index + 1} из ${imagesLength}`
+                  : `Фотография путешествия ${index + 1} из ${imagesLength}`
+              }
+              imageProps={{
+                ...(imageProps || {}),
+                contentPosition: 'center',
+                testID: `slider-image-${index}`,
+                accessibilityIgnoresInvertColors: true,
+                accessibilityRole: 'image',
+                accessibilityLabel:
+                  item.width && item.height
+                    ? `Изображение ${index + 1} из ${imagesLength}`
+                    : `Фотография путешествия ${index + 1} из ${imagesLength}`,
+                onLoadStart: handleLoadStart,
+              }}
+              onLoad={handleLoad}
+              onError={handleError}
+            />
+          )}
+
+          {status === 'loading' && (
+            <View style={[styles.loadingOverlay]} testID={`slider-loading-overlay-${index}`}>
+              <ActivityIndicator color={colors.textOnDark} />
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+});
+
 /* --------------------------------- Slider ---------------------------------- */
 
 // NOTE: avoid TS generics in forwardRef to prevent runtime parsing issues if the file is consumed untranspiled
@@ -307,34 +447,17 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const [reduceMotion, setReduceMotion] = useState(false);
   // ✅ УЛУЧШЕНИЕ: Состояние для текущего индекса (для счетчика)
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loadStatuses, setLoadStatuses] = useState<LoadStatus[]>(() =>
-    images.map(() => "loading")
-  );
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
   const [prefetchEnabled, setPrefetchEnabled] = useState(
     Platform.OS !== "web" ? true : false
   );
 
   useEffect(() => {
-    setLoadStatuses(images.map(() => "loading"));
     setShowSwipeHint(images.length > 1);
     // On web we avoid auto-prefetch during initial load (hurts PSI/LCP by pulling extra gallery images).
     // Prefetch can still be enabled later on explicit user interaction.
     setPrefetchEnabled(Platform.OS !== "web" ? true : false);
   }, [images, canPrefetchOnWeb]);
-
-  const updateLoadStatus = useCallback((idx: number, status: LoadStatus) => {
-    setLoadStatuses((prev) => {
-      // If the browser returns a cached image, onLoadStart can fire again.
-      // Avoid degrading an already-loaded image back to loading, which causes a visible
-      // blink/blur placeholder during slide switching.
-      if (status === 'loading' && prev[idx] === 'loaded') return prev;
-      if (prev[idx] === status) return prev;
-      const next = [...prev];
-      next[idx] = status;
-      return next;
-    });
-  }, []);
 
   const dismissSwipeHint = useCallback(() => setShowSwipeHint(false), []);
   useEffect(() => {
@@ -600,118 +723,31 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
       const uri = uriMap[index] ?? item.url;
-      const ratio = item.width && item.height ? item.width / item.height : aspectRatio;
-      const isPortrait = ratio < 0.95;
-      const isSquareish = ratio >= 0.95 && ratio <= 1.1;
-      // Фон всегда та же фотография, растянутая и заблюренная, если blurBackground включен
-
-      const shouldBlur = blurBackground;
       const slideHeight = containerH ?? computeHeight(containerW);
-      const status = loadStatuses[index] ?? "loading";
-      const isFirstSlide = index === 0;
-      const mainPriority = isFirstSlide ? "high" : "low";
-      // Показываем размытый фон на всех платформах, но сохраняем legacy-поведение для web первого слайда:
-      // пока он не загрузился — используем плоский фон, чтобы избежать расхождений с тестами/LCP.
-      const shouldRenderBlurBg =
-        shouldBlur &&
-        status !== "error" &&
-        !(Platform.OS === 'web' && isFirstSlide && status !== 'loaded');
-
-      const useElevatedWrapper = Platform.OS === 'web' && !isMobile && (isPortrait || isSquareish);
-      // Показываем всю картинку: используем contain на всех платформах
-      const mainFit: 'cover' | 'contain' = 'contain';
 
       return (
-        <View style={[styles.slide, { width: containerW, height: slideHeight }]}> 
-          {shouldRenderBlurBg ? (
-            <>
-              <ImageCardMedia
-                testID={`slider-blur-bg-${index}`}
-                src={uri}
-                // Фон должен полностью заполнять область — используем cover
-                fit="cover"
-                blurBackground
-                blurRadius={12}
-                blurOnly
-                priority="low"
-                loading="lazy"
-                style={styles.blurBg}
-              />
-            </>
-          ) : (
-            <View style={styles.flatBackground} testID={`slider-flat-bg-${index}`} />
-          )}
-
-          <View
-            style={[
-              styles.imageCardWrapper,
-              useElevatedWrapper && styles.imageCardWrapperElevated,
-            ]}
-          >
-            <View style={styles.imageCardSurface}>
-              {status === "error" ? (
-                <View
-                  style={styles.neutralPlaceholder}
-                  testID={`slider-neutral-placeholder-${index}`}
-                />
-              ) : (
-                <ImageCardMedia
-                  src={uri}
-                  fit={mainFit}
-                  // Background blur is rendered as a separate layer above.
-                  // Keeping blur here too can cause positioning/artifacts on mobile.
-                  blurBackground={Platform.OS === 'web' ? shouldRenderBlurBg : shouldBlur}
-                  priority={mainPriority as any}
-                  loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
-                  transition={reduceMotion ? 0 : 250}
-                  style={styles.img}
-                  alt={
-                    item.width && item.height
-                      ? `Изображение ${index + 1} из ${images.length}`
-                      : `Фотография путешествия ${index + 1} из ${images.length}`
-                  }
-                  imageProps={{
-                    ...(imageProps || {}),
-                    // Ensure contain images are centered across platforms.
-                    contentPosition: 'center',
-                    testID: `slider-image-${index}`,
-                    accessibilityIgnoresInvertColors: true,
-                    accessibilityRole: 'image',
-                    accessibilityLabel:
-                      item.width && item.height
-                        ? `Изображение ${index + 1} из ${images.length}`
-                        : `Фотография путешествия ${index + 1} из ${images.length}`,
-                    onLoadStart: () => updateLoadStatus(index, 'loading'),
-                  }}
-                  onLoad={() => {
-                    updateLoadStatus(index, "loaded");
-                    if (index === 0) {
-                      onFirstImageLoad?.();
-                    }
-                  }}
-                  onError={() => updateLoadStatus(index, "error")}
-                />
-              )}
-
-              {status === "loading" && (
-                <View
-                  style={[
-                    styles.loadingOverlay,
-                  ]}
-                  testID={`slider-loading-overlay-${index}`}
-                >
-                  <ActivityIndicator color={colors.textOnDark} />
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
+        <Slide
+          item={item}
+          index={index}
+          uri={uri}
+          containerW={containerW}
+          slideHeight={slideHeight}
+          imagesLength={images.length}
+          colors={colors}
+          styles={styles}
+          isMobile={isMobile}
+          blurBackground={blurBackground}
+          reduceMotion={reduceMotion}
+          aspectRatio={aspectRatio}
+          imageProps={imageProps}
+          onFirstImageLoad={onFirstImageLoad}
+        />
       );
     },
     [
       uriMap,
       blurBackground,
-      colors.textOnDark,
+      colors,
       containerW,
       containerH,
       computeHeight,
@@ -719,18 +755,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       imageProps,
       reduceMotion,
       images.length,
-      loadStatuses,
       aspectRatio,
-      styles.blurBg,
-      styles.flatBackground,
-      styles.imageCardSurface,
-      styles.imageCardWrapper,
-      styles.imageCardWrapperElevated,
-      styles.img,
-      styles.loadingOverlay,
-      styles.neutralPlaceholder,
-      styles.slide,
-      updateLoadStatus,
+      styles,
       isMobile,
     ]
   );
