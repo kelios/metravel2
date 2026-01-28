@@ -154,7 +154,7 @@ export function useMapTravels({
   } = useQuery<TravelCoords[]>({
     queryKey: ['travelsForMap', queryParams],
     enabled: isEnabled,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const parsedFilters = parseBackendFilters(queryParams.filtersKey);
 
       if (queryParams.mode === 'radius') {
@@ -163,7 +163,7 @@ export function useMapTravels({
           lng: queryParams.lng!.toString(),
           radius: queryParams.radius,
           categories: parsedFilters.categories,
-        });
+        }, { signal });
         return Object.values(result || {}) as TravelCoords[];
       }
 
@@ -176,7 +176,7 @@ export function useMapTravels({
 
         if (coords.length < 2) return [];
 
-        const result = await fetchTravelsNearRoute(coords, 2);
+        const result = await fetchTravelsNearRoute(coords, 2, { signal });
         if (result && typeof result === 'object') {
           return (Array.isArray(result) ? result : Object.values(result)) as TravelCoords[];
         }
@@ -215,4 +215,3 @@ export function useMapTravels({
     refetch,
   };
 }
-

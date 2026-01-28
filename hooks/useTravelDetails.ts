@@ -8,6 +8,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
 import type { Travel } from '@/src/types/types';
 import { Platform } from 'react-native';
+import { queryKeys } from '@/src/queryKeys';
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
@@ -38,9 +39,12 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     Boolean((navigator as any).webdriver);
 
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
-    queryKey: ['travel', cacheKey],
+    queryKey: queryKeys.travel(cacheKey),
     enabled: !isMissingParam,
-    queryFn: () => (isId ? fetchTravel(idNum) : fetchTravelBySlug(normalizedSlug)),
+    queryFn: ({ signal } = {} as any) =>
+      isId
+        ? fetchTravel(idNum, { signal })
+        : fetchTravelBySlug(normalizedSlug, { signal }),
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,
     // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала

@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { View, Text, StyleSheet, Pressable, FlatList, TextInput, Modal, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput, Modal, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -167,13 +168,14 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
       >
         <View style={styles.triggerContent}>
           {selectedItems.length > 0 ? (
-            <FlatList
+            <FlashList
               data={selectedItems}
               renderItem={renderSelectedChip}
               keyExtractor={(item) => String(item[valueField])}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsContainer}
+              drawDistance={600}
             />
           ) : (
             <Text style={styles.placeholder}>{placeholder}</Text>
@@ -230,16 +232,17 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
               </View>
             )}
 
-            <FlatList
+            <FlashList
               data={filteredData}
               renderItem={renderItem}
               keyExtractor={(item) => String(item[valueField])}
-              style={[styles.list, { flex: 1 }]}
+              style={StyleSheet.flatten([styles.list, { flex: 1 }]) as any}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={true}
               ListEmptyComponent={
                 <Text style={[styles.emptyText, { color: colors.textMuted }]}>Ничего не найдено</Text>
               }
+              drawDistance={Platform.OS === 'web' ? 900 : 600}
             />
 
             <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>

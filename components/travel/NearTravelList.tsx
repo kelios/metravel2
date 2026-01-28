@@ -27,6 +27,7 @@ import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Т�
 import Button from '@/components/ui/Button';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { queryConfigs } from '@/src/utils/reactQueryConfig';
+import { queryKeys } from '@/src/queryKeys';
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy imports для map-компонентов
 const MapClientSideComponent = React.lazy(() => import('@/components/Map'));
@@ -285,7 +286,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       error,
       refetch: refetchTravelsNear,
     } = useQuery<Travel[]>({
-      queryKey: ['travels-near', travelId],
+      queryKey: queryKeys.travelsNear(travelId as number),
       enabled: isQueryEnabled && travelId != null,
       queryFn: ({ signal }) => fetchTravelsNear(travelId as number, signal) as any,
       select: (data) => (Array.isArray(data) ? data.slice(0, 50) : []),

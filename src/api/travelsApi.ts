@@ -526,7 +526,10 @@ export const fetchRandomTravels = async (
     }
 };
 
-export const fetchTravel = async (id: number): Promise<Travel> => {
+export const fetchTravel = async (
+    id: number,
+    options?: { signal?: AbortSignal }
+): Promise<Travel> => {
     const token = await getSecureItem(TOKEN_KEY);
     const isAuthenticated = Boolean(token);
 
@@ -535,7 +538,7 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
     }
 
     try {
-        const travel = await apiClient.get<Travel>(`/travels/${id}/`, DEFAULT_TIMEOUT);
+        const travel = await apiClient.get<Travel>(`/travels/${id}/`, DEFAULT_TIMEOUT, { signal: options?.signal });
         const normalized = normalizeTravelItem(travel);
         if (!isAuthenticated) {
             travelCache.set(id, normalized);
@@ -550,10 +553,13 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
     }
 };
 
-export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
+export const fetchTravelBySlug = async (
+    slug: string,
+    options?: { signal?: AbortSignal }
+): Promise<Travel> => {
     try {
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
-        const travel = await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, DEFAULT_TIMEOUT);
+        const travel = await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, DEFAULT_TIMEOUT, { signal: options?.signal });
         return normalizeTravelItem(travel);
     } catch (e: any) {
         if (e?.name === 'AbortError') {

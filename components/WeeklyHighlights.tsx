@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
+import { queryConfigs } from '@/src/utils/reactQueryConfig';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 
@@ -75,8 +76,8 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
     // Получаем популярные путешествия месяца
     const { data: popularTravels } = useQuery({
         queryKey: ['travelsOfMonth'],
-        queryFn: fetchTravelsOfMonth,
-        staleTime: 3600000, // 1 час
+        queryFn: ({ signal }) => fetchTravelsOfMonth({ signal }),
+        ...queryConfigs.static,
         enabled,
     });
 

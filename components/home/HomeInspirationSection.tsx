@@ -13,12 +13,13 @@ import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
 import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 import Button from '@/components/ui/Button';
+import { queryConfigs } from '@/src/utils/reactQueryConfig';
 
 interface HomeSectionProps {
   title: string;
   subtitle?: string;
   queryKey: string;
-  fetchFn: () => Promise<any>;
+  fetchFn: (options?: { signal?: AbortSignal }) => Promise<any>;
   hideAuthor?: boolean;
   centerRowsOnWebDesktop?: boolean;
 }
@@ -47,8 +48,8 @@ function HomeInspirationSection({
 
   const { data: travelData = {}, isLoading } = useQuery({
     queryKey: [queryKey],
-    queryFn: fetchFn,
-    staleTime: 5 * 60 * 1000,
+    queryFn: ({ signal } = {} as any) => fetchFn({ signal }),
+    ...queryConfigs.dynamic,
   });
 
   const travelsList = useMemo(() => {
@@ -324,14 +325,14 @@ function HomeInspirationSections() {
             title="Куда отправиться в этом месяце"
             subtitle="Истории путешественников, которые вдохновляют"
             queryKey="home-travels-of-month"
-            fetchFn={() => fetchTravelsOfMonth()}
+            fetchFn={(options) => fetchTravelsOfMonth(options)}
           />
 
           <HomeInspirationSection
             title="Популярные направления"
             subtitle="Маршруты, которые выбирают чаще всего"
             queryKey="home-popular-travels"
-            fetchFn={() => fetchTravelsPopular()}
+            fetchFn={(options) => fetchTravelsPopular(options)}
             hideAuthor
           />
 
@@ -339,7 +340,7 @@ function HomeInspirationSections() {
             title="Случайный маршрут"
             subtitle="Идея для поездки, если не знаешь, куда поехать"
             queryKey="home-random-travels"
-            fetchFn={() => fetchTravelsRandom()}
+            fetchFn={(options) => fetchTravelsRandom(options)}
             hideAuthor
           />
         </View>

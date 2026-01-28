@@ -49,7 +49,7 @@ describe('useTravelDetails', () => {
     const { result } = renderHook(() => useTravelDetails());
 
     expect(result.current.isId).toBe(true);
-    expect(fetchTravel).toHaveBeenCalledWith(123);
+    expect(fetchTravel).toHaveBeenCalledWith(123, { signal: undefined });
     expect(result.current.travel).toEqual({ id: 123 });
   });
 
@@ -63,7 +63,7 @@ describe('useTravelDetails', () => {
     const { result } = renderHook(() => useTravelDetails());
 
     expect(result.current.isId).toBe(false);
-    expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip');
+    expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
     expect(result.current.slug).toBe('awesome-trip');
   });
 

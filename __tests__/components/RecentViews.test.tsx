@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import RecentViews from '@/components/RecentViews';
 import { Platform } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({
@@ -226,9 +227,9 @@ describe('RecentViews', () => {
     (Platform.OS as any) = 'web';
 
     const mockTravels = [createTravel({ id: 1 }), createTravel({ id: 2, title: 'Travel 2' })];
-    const { getByTestId } = render(<RecentViews initialTravels={mockTravels} />);
+    const utils = render(<RecentViews initialTravels={mockTravels} />);
 
-    const list = getByTestId('recent-views-list');
+    const list = await waitFor(() => utils.UNSAFE_getByType(FlashList));
     expect(list.props.horizontal).toBe(true);
     expect(typeof list.props.onWheel).toBe('function');
   });

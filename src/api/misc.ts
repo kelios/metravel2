@@ -255,34 +255,46 @@ export const deleteImage = async (imageId: string) => {
   }
 };
 
-export const fetchFilters = async (): Promise<Filters> => {
+export const fetchFilters = async (options?: { signal?: AbortSignal; throwOnError?: boolean }): Promise<Filters> => {
   try {
-    const res = await fetchWithTimeout(GET_FILTERS, {}, DEFAULT_TIMEOUT);
+    const res = await fetchWithTimeout(GET_FILTERS, { signal: options?.signal }, DEFAULT_TIMEOUT);
     const parsed = await safeJsonParse<Filters>(res, EMPTY_FILTERS);
     return parsed;
   } catch (e: any) {
     devError('Error fetching filters:', e);
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
+    if (options?.throwOnError) throw e;
     return EMPTY_FILTERS;
   }
 };
 
-export const fetchFiltersCountry = async () => {
+export const fetchFiltersCountry = async (options?: { signal?: AbortSignal; throwOnError?: boolean }) => {
   try {
-    const res = await fetchWithTimeout(GET_FILTERS_COUNTRY, {}, DEFAULT_TIMEOUT);
+    const res = await fetchWithTimeout(GET_FILTERS_COUNTRY, { signal: options?.signal }, DEFAULT_TIMEOUT);
     return await safeJsonParse<any[]>(res, []);
   } catch (e: any) {
     devError('Error fetching filters country:', e);
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
+    if (options?.throwOnError) throw e;
     return [];
   }
 };
 
-export const fetchAllCountries = async () => {
+export const fetchAllCountries = async (options?: { signal?: AbortSignal; throwOnError?: boolean }) => {
   try {
-    const res = await fetchWithTimeout(GET_ALL_COUNTRY, {}, DEFAULT_TIMEOUT);
+    const res = await fetchWithTimeout(GET_ALL_COUNTRY, { signal: options?.signal }, DEFAULT_TIMEOUT);
     const parsed = await safeJsonParse<any[]>(res, []);
     return parsed;
   } catch (e: any) {
     devError('Error fetching all countries:', e);
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
+    if (options?.throwOnError) throw e;
     return [];
   }
 };

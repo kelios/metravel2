@@ -7,6 +7,7 @@ import { useListTravelFilters } from '@/components/listTravel/hooks/useListTrave
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { deduplicateTravels, normalizeApiResponse } from '@/components/listTravel/utils/listTravelHelpers';
 import { fetchAllCountries, fetchAllFiltersOptimized } from '@/src/api/miscOptimized';
+import { queryConfigs } from '@/src/utils/reactQueryConfig';
 import type { Travel } from '@/src/types/types';
 import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
 
@@ -24,8 +25,8 @@ function shuffleTravels(items: Travel[]): Travel[] {
 export function useRoulette() {
   const { data: rawOptions, isLoading: filtersLoading } = useQuery({
     queryKey: ['filter-options'],
-    queryFn: fetchAllFiltersOptimized,
-    staleTime: 10 * 60 * 1000,
+    queryFn: ({ signal } = {} as any) => fetchAllFiltersOptimized({ signal }),
+    ...queryConfigs.static,
   });
 
   const options: FilterOptions | undefined = useMemo(() => {

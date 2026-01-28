@@ -3,9 +3,10 @@
 // ✅ РЕДИЗАЙН: Поддержка темной темы с useThemedColors
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import TravelCardCompact from '@/components/TravelCardCompact';
@@ -203,7 +204,7 @@ export default function RecentViews({
         </Pressable>
       </View>
 
-      <FlatList
+      <FlashList
         testID="recent-views-list"
         data={recentTravels}
         horizontal
@@ -216,6 +217,7 @@ export default function RecentViews({
         )}
         contentContainerStyle={styles.listContent}
         {...(Platform.OS === 'web' ? { onWheel: handleHorizontalWheel } : {})}
+        drawDistance={800}
       />
     </View>
   );

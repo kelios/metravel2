@@ -6,7 +6,7 @@ const filtersCache = new Map<string, any>();
 const cacheTimeout = 10 * 60 * 1000; // 10 минут
 
 // Оптимизированная функция для получения фильтров с кэшированием
-export const fetchFiltersOptimized = async () => {
+export const fetchFiltersOptimized = async (options?: { signal?: AbortSignal }) => {
   const cacheKey = 'filters';
   const now = Date.now();
   
@@ -18,7 +18,7 @@ export const fetchFiltersOptimized = async () => {
   
   // Если нет в кэше, делаем запрос
   try {
-    const data = await fetchFilters();
+    const data = await fetchFilters({ signal: options?.signal });
     filtersCache.set(cacheKey, {
       data,
       timestamp: now
@@ -35,7 +35,7 @@ export const fetchFiltersOptimized = async () => {
 };
 
 // Оптимизированная функция для получения стран с кэшированием
-export const fetchFiltersCountryOptimized = async () => {
+export const fetchFiltersCountryOptimized = async (options?: { signal?: AbortSignal }) => {
   const cacheKey = 'countries';
   const now = Date.now();
   
@@ -47,7 +47,7 @@ export const fetchFiltersCountryOptimized = async () => {
   
   // Если нет в кэше, делаем запрос
   try {
-    const data = await fetchFiltersCountry();
+    const data = await fetchFiltersCountry({ signal: options?.signal });
     filtersCache.set(cacheKey, {
       data,
       timestamp: now
@@ -64,7 +64,7 @@ export const fetchFiltersCountryOptimized = async () => {
 };
 
 // Объединенная функция для получения всех фильтров за один вызов
-export const fetchAllFiltersOptimized = async () => {
+export const fetchAllFiltersOptimized = async (options?: { signal?: AbortSignal }) => {
   const cacheKey = 'all-filters';
   const now = Date.now();
   
@@ -77,8 +77,8 @@ export const fetchAllFiltersOptimized = async () => {
   // Если нет в кэше, делаем запросы параллельно
   try {
     const [base, countries] = await Promise.all([
-      fetchFiltersOptimized(),
-      fetchFiltersCountryOptimized()
+      fetchFiltersOptimized(options),
+      fetchFiltersCountryOptimized(options)
     ]);
     
     const result = { ...base, countries };

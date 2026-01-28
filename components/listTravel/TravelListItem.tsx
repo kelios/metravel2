@@ -7,6 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
 import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
+import { queryKeys } from "@/src/queryKeys";
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
 import CardActionPressable from "@/components/ui/CardActionPressable";
 import { useThemedColors } from '@/hooks/useTheme';
@@ -261,12 +262,15 @@ function TravelListItem({
         const travelId = slug ?? id;
         const isId = !isNaN(Number(travelId));
 
-        const cachedData = queryClient.getQueryData(['travel', travelId]);
+        const cachedData = queryClient.getQueryData(queryKeys.travel(travelId));
         if (cachedData) return;
 
         queryClient.prefetchQuery({
-            queryKey: ['travel', travelId],
-            queryFn: () => isId ? fetchTravel(Number(travelId)) : fetchTravelBySlug(travelId as string),
+            queryKey: queryKeys.travel(travelId),
+            queryFn: ({ signal }) =>
+              isId
+                ? fetchTravel(Number(travelId), { signal })
+                : fetchTravelBySlug(travelId as string, { signal }),
             staleTime: 5 * 60 * 1000,
         });
     }, [slug, id, queryClient]);
@@ -313,13 +317,16 @@ function TravelListItem({
             
             if (ENABLE_TRAVEL_DETAILS_PREFETCH && Platform.OS === 'web') {
                 // Проверяем наличие в кеше перед prefetch
-                const cachedData = queryClient.getQueryData(['travel', travelId]);
+                const cachedData = queryClient.getQueryData(queryKeys.travel(travelId));
                 if (!cachedData) {
                     // Предзагружаем в фоне с небольшой задержкой
                     setTimeout(() => {
                         queryClient.prefetchQuery({
-                            queryKey: ['travel', travelId],
-                            queryFn: () => isId ? fetchTravel(Number(travelId)) : fetchTravelBySlug(travelId as string),
+                            queryKey: queryKeys.travel(travelId),
+                            queryFn: ({ signal }) =>
+                              isId
+                                ? fetchTravel(Number(travelId), { signal })
+                                : fetchTravelBySlug(travelId as string, { signal }),
                             staleTime: 5 * 60 * 1000, // 5 минут
                         });
                     }, 100);

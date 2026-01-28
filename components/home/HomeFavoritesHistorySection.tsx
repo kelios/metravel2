@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
+import { FlashList } from '@shopify/flash-list';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -148,7 +149,7 @@ function HorizontalCards({
   }
 
   return (
-    <FlatList
+    <FlashList
       testID={testID}
       horizontal
       data={data}
@@ -173,10 +174,10 @@ function HorizontalCards({
       nestedScrollEnabled={Platform.OS === 'android'}
       directionalLockEnabled={Platform.OS === 'ios'}
       keyboardShouldPersistTaps="handled"
-      removeClippedSubviews={false}
       bounces={Platform.OS === 'ios'}
       decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
       {...Platform.select({ web: { style: [styles.horizontalList, { touchAction: 'pan-x' } as any] } })}
+      drawDistance={800}
     />
   );
 }

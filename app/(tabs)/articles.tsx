@@ -12,6 +12,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { FlashList } from '@shopify/flash-list'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { queryConfigs } from '@/src/utils/reactQueryConfig'
+import { queryKeys } from '@/src/queryKeys'
 
 export default function TabOneScreen() {
   const initialPage = 0
@@ -43,7 +44,7 @@ export default function TabOneScreen() {
     error,
     refetch,
   } = useQuery<Articles>({
-    queryKey: ['articles', { page: currentPage, itemsPerPage, user_id }],
+    queryKey: queryKeys.articles({ page: currentPage, itemsPerPage, user_id }),
     queryFn: ({ signal }) =>
       fetchArticles(currentPage, itemsPerPage, { user_id }, { signal, throwOnError: true }) as any,
     placeholderData: keepPreviousData,

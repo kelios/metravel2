@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getQuestById } from '@/components/quests/registry';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
+import { queryKeys } from '@/src/queryKeys';
 
 const useGlobalSearchParamsSafe: typeof useGlobalSearchParams =
   typeof useGlobalSearchParams === 'function'
@@ -134,15 +135,22 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     return normalizeSlugPart(raw);
   }, [resolvedPathname]);
 
+  const travelCacheKey = useMemo(() => {
+    if (!travelSlug) return null;
+    const idNum = Number(travelSlug);
+    const isId = Number.isFinite(idNum) && idNum > 0;
+    return isId ? idNum : travelSlug;
+  }, [travelSlug]);
+
   const { data: travelData } = useQuery({
-    queryKey: ['travel', travelSlug],
-    queryFn: () => {
+    queryKey: queryKeys.travel(travelCacheKey as any),
+    queryFn: ({ signal } = {} as any) => {
       if (!travelSlug) return null;
       const idNum = Number(travelSlug);
       const isId = !Number.isNaN(idNum);
-      return isId ? fetchTravel(idNum) : fetchTravelBySlug(travelSlug);
+      return isId ? fetchTravel(idNum, { signal }) : fetchTravelBySlug(travelSlug, { signal });
     },
-    enabled: !!travelSlug,
+    enabled: travelCacheKey != null,
     staleTime: 600_000,
     gcTime: 10 * 60 * 1000,
   });

@@ -132,6 +132,8 @@ const GET_TRAVELS_OF_MONTH = `${URLAPI}/travels/of-month/`;
 const GET_TRAVELS_RANDOM = `${URLAPI}/travels/random/`;
 const SEARCH_TRAVELS_NEAR_ROUTE = `${URLAPI}/travels/near-route/`;
 
+type ApiOptions = { signal?: AbortSignal; throwOnError?: boolean };
+
 export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) => {
   try {
     const urlTravel = `${GET_TRAVELS}${travel_id}/near/`;
@@ -157,10 +159,10 @@ export const fetchTravelsNear = async (travel_id: number, signal?: AbortSignal) 
   }
 };
 
-export const fetchTravelsPopular = async (): Promise<TravelsMap> => {
+export const fetchTravelsPopular = async (options?: ApiOptions): Promise<TravelsMap> => {
   try {
     const urlTravel = `${GET_TRAVELS}popular/`;
-    const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
+    const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
     if (!res.ok) {
       // Keep behavior: return empty payload, but surface actionable info in dev.
       if (res.status === 404) {
@@ -168,34 +170,58 @@ export const fetchTravelsPopular = async (): Promise<TravelsMap> => {
         return {} as TravelsMap;
       }
 
+      const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
       devError('Error fetching travels popular: HTTP', res.status, res.statusText, urlTravel);
+      if (options?.throwOnError) throw err;
       return {} as TravelsMap;
     }
     return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
     devWarn('Error fetching travels popular:', { url: `${GET_TRAVELS}popular/`, error: e });
+    if (options?.throwOnError) throw e;
     return {} as TravelsMap;
   }
 };
 
-export const fetchTravelsOfMonth = async (): Promise<TravelsMap> => {
+export const fetchTravelsOfMonth = async (options?: ApiOptions): Promise<TravelsMap> => {
   try {
     const urlTravel = GET_TRAVELS_OF_MONTH;
-    const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
+    const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (options?.throwOnError) throw err;
+      return {} as TravelsMap;
+    }
     return await safeJsonParse<TravelsMap>(res, {} as TravelsMap);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
     devWarn('Error fetching fetchTravelsOfMonth:', e);
+    if (options?.throwOnError) throw e;
     return {} as TravelsMap;
   }
 };
 
-export const fetchTravelsRandom = async (): Promise<any[]> => {
+export const fetchTravelsRandom = async (options?: ApiOptions): Promise<any[]> => {
   try {
     const urlTravel = GET_TRAVELS_RANDOM;
-    const res = await fetchWithTimeout(urlTravel, {}, DEFAULT_TIMEOUT);
+    const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, DEFAULT_TIMEOUT);
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (options?.throwOnError) throw err;
+      return [];
+    }
     return await safeJsonParse<any[]>(res, []);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
     devWarn('Error fetching fetchTravelsRandom:', e);
+    if (options?.throwOnError) throw e;
     return [];
   }
 };
@@ -204,6 +230,7 @@ export const fetchTravelsForMap = async (
   page: number,
   itemsPerPage: number,
   filter: Record<string, any>,
+  options?: ApiOptions,
 ): Promise<TravelsForMap> => {
   try {
     const radius = parseInt(filter?.radius ?? '60', 10);
@@ -242,11 +269,20 @@ export const fetchTravelsForMap = async (
     const params = new URLSearchParams(paramsObj).toString();
 
     const urlTravel = `${SEARCH_TRAVELS_FOR_MAP}?${params}`;
-    const res = await fetchWithTimeout(urlTravel, {}, LONG_TIMEOUT);
+    const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, LONG_TIMEOUT);
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (options?.throwOnError) throw err;
+      return [] as unknown as TravelsForMap;
+    }
     const payload = await safeJsonParse<unknown>(res, [] as unknown as TravelsForMap);
     return normalizeTravelsForMapPayload(payload);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
     devWarn('Error fetching fetchTravelsForMap:', e);
+    if (options?.throwOnError) throw e;
     return [] as unknown as TravelsForMap;
   }
 };
@@ -254,6 +290,7 @@ export const fetchTravelsForMap = async (
 export const fetchTravelsNearRoute = async (
   routeCoords: [number, number][],
   toleranceKm: number = 2,
+  options?: ApiOptions,
 ): Promise<TravelsForMap> => {
   try {
     const toleranceMeters = toleranceKm * 1000;
@@ -269,6 +306,7 @@ export const fetchTravelsNearRoute = async (
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: options?.signal,
     }, LONG_TIMEOUT);
 
     if (!res.ok) {
@@ -276,20 +314,27 @@ export const fetchTravelsNearRoute = async (
       if (__DEV__) {
         devWarn('Ошибка при загрузке маршрута:', errorText);
       }
+      if (options?.throwOnError) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
       return [] as unknown as TravelsForMap;
     }
 
     const payload = await safeJsonParse<unknown>(res, [] as unknown as TravelsForMap);
     return normalizeTravelsForMapPayload(payload);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
     devWarn('Error fetching fetchTravelsNearRoute:', e);
+    if (options?.throwOnError) throw e;
     return [] as unknown as TravelsForMap;
   }
 };
 
-export const fetchFiltersMap = async (): Promise<Filters> => {
+export const fetchFiltersMap = async (options?: ApiOptions): Promise<Filters> => {
   try {
-    const res = await fetchWithTimeout(GET_FILTER_FOR_MAP, {}, DEFAULT_TIMEOUT);
+    const res = await fetchWithTimeout(GET_FILTER_FOR_MAP, { signal: options?.signal }, DEFAULT_TIMEOUT);
     // Возвращаем пустой объект фильтров вместо неправильного типа assertion
     const emptyFilters: Filters = {
       countries: [],
@@ -302,8 +347,16 @@ export const fetchFiltersMap = async (): Promise<Filters> => {
       transports: [],
       year: ''
     };
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (options?.throwOnError) throw err;
+      return emptyFilters;
+    }
     return await safeJsonParse<Filters>(res, emptyFilters);
-  } catch (e) {
+  } catch (e: any) {
+    if (e?.name === 'AbortError') {
+      throw e;
+    }
     devWarn('Error fetching filters:', e);
     const emptyFilters: Filters = {
       countries: [],
@@ -316,6 +369,7 @@ export const fetchFiltersMap = async (): Promise<Filters> => {
       transports: [],
       year: ''
     };
+    if (options?.throwOnError) throw e;
     return emptyFilters;
   }
 };

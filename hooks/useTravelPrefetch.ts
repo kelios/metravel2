@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
 import type { Travel } from '@/src/types/types';
+import { queryKeys } from '@/src/queryKeys';
 
 export function useTravelPrefetch() {
   const queryClient = useQueryClient();
@@ -14,8 +15,8 @@ export function useTravelPrefetch() {
   const prefetchBySlug = useCallback(
     (slug: string) => {
       return queryClient.prefetchQuery({
-        queryKey: ['travel', slug],
-        queryFn: () => fetchTravelBySlug(slug),
+        queryKey: queryKeys.travel(slug),
+        queryFn: ({ signal }) => fetchTravelBySlug(slug, { signal }),
         staleTime: 10 * 60 * 1000, // 10 минут
       });
     },
@@ -25,8 +26,8 @@ export function useTravelPrefetch() {
   const prefetchById = useCallback(
     (id: number) => {
       return queryClient.prefetchQuery({
-        queryKey: ['travel', id],
-        queryFn: () => fetchTravel(id),
+        queryKey: queryKeys.travel(id),
+        queryFn: ({ signal }) => fetchTravel(id, { signal }),
         staleTime: 10 * 60 * 1000,
       });
     },
@@ -52,7 +53,7 @@ export function useTravelPrefetch() {
 
   const getCachedTravel = useCallback(
     (slugOrId: string | number): Travel | undefined => {
-      return queryClient.getQueryData(['travel', slugOrId]);
+      return queryClient.getQueryData(queryKeys.travel(slugOrId));
     },
     [queryClient]
   );

@@ -496,7 +496,7 @@ function ListTravelBase({
     /* Filters options - оптимизированный запрос с кэшированием */
     const { data: rawOptions, isLoading: filterOptionsLoading } = useQuery({
         queryKey: ["filter-options"],
-        queryFn: fetchAllFiltersOptimized,
+        queryFn: ({ signal } = {} as any) => fetchAllFiltersOptimized({ signal }),
         enabled: shouldFetchFilterOptions,
         staleTime: 10 * 60 * 1000,
     });

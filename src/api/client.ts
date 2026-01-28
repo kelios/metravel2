@@ -523,8 +523,8 @@ class ApiClient {
     /**
      * GET запрос
      */
-    async get<T>(endpoint: string, timeout?: number): Promise<T> {
-        return this.request<T>(endpoint, { method: 'GET' }, timeout);
+    async get<T>(endpoint: string, timeout?: number, options?: RequestInit): Promise<T> {
+        return this.request<T>(endpoint, { method: 'GET', ...(options ?? {}) }, timeout);
     }
 
     /**

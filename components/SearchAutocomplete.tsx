@@ -2,8 +2,9 @@
 // ✅ УЛУЧШЕНИЕ: Компонент автодополнения для поиска
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -81,7 +82,7 @@ export default function SearchAutocomplete({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const selectedIndexRef = useRef(-1);
-  const listRef = useRef<FlatList>(null);
+  const listRef = useRef<any>(null);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -254,7 +255,7 @@ export default function SearchAutocomplete({
   return (
     <View style={styles.container}>
       <View style={styles.listContainer}>
-        <FlatList
+        <FlashList
           ref={listRef}
           data={suggestions}
           renderItem={renderItem}
@@ -262,9 +263,12 @@ export default function SearchAutocomplete({
           keyboardShouldPersistTaps="handled"
           style={styles.list}
           nestedScrollEnabled
+          drawDistance={600}
+          overrideItemLayout={(layout: any) => {
+            layout.size = 44;
+          }}
         />
       </View>
     </View>
   );
 }
-

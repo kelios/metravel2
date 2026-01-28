@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
-import { FlatList, Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText } from 'react-native'
+import { Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
+import { FlashList } from '@shopify/flash-list'
 
 import { PointsMap } from '@/components/UserPoints/PointsMap'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -95,11 +96,6 @@ export const PointsListGrid: React.FC<{
   const isWideScreen = isWeb && windowWidth >= 1024
   const themedColors = useThemedColors()
   const localStyles = useMemo(() => createLocalStyles(themedColors), [themedColors])
-  const removeClippedSubviews = Platform.OS !== 'web'
-  const listWindowSize = Platform.OS === 'web' ? 9 : 11
-  const listInitialNumToRender = Platform.OS === 'web' ? 8 : 12
-  const listMaxToRenderPerBatch = Platform.OS === 'web' ? 10 : 16
-  const listUpdateCellsBatchingPeriod = Platform.OS === 'web' ? 50 : 35
   const mapSettingsStyles = useMemo(
     () => getFiltersPanelStyles(themedColors as any, !isWideScreen, windowWidth),
     [themedColors, isWideScreen, windowWidth]
@@ -299,17 +295,12 @@ export const PointsListGrid: React.FC<{
 
   const renderListPanel = React.useCallback(
     () => (
-      <FlatList
+      <FlashList
         style={localStyles.rightPanelScroll}
         contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
         data={filteredPoints}
         keyExtractor={(item) => String((item as any)?.id)}
         testID="userpoints-panel-content-list"
-        removeClippedSubviews={removeClippedSubviews}
-        initialNumToRender={listInitialNumToRender}
-        windowSize={listWindowSize}
-        maxToRenderPerBatch={listMaxToRenderPerBatch}
-        updateCellsBatchingPeriod={listUpdateCellsBatchingPeriod}
         renderItem={({ item }) => {
           const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
           return (
@@ -327,14 +318,11 @@ export const PointsListGrid: React.FC<{
         }}
         ListHeaderComponent={renderListHeader()}
         showsVerticalScrollIndicator={true}
+        drawDistance={Platform.OS === 'web' ? 900 : 600}
       />
     ),
     [
       filteredPoints,
-      listInitialNumToRender,
-      listMaxToRenderPerBatch,
-      listUpdateCellsBatchingPeriod,
-      listWindowSize,
       localStyles.pointsList,
       localStyles.pointsListItem,
       localStyles.rightPanelContent,
@@ -342,7 +330,6 @@ export const PointsListGrid: React.FC<{
       localStyles.routeInfo,
       localStyles.routeInfoText,
       recommendedRoutes,
-      removeClippedSubviews,
       renderItem,
       renderListHeader,
       showingRecommendations,
@@ -474,9 +461,24 @@ export const PointsListGrid: React.FC<{
   if (viewMode === 'list') {
     const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
     return (
-      <FlatList
+      <FlashList
         data={filteredPoints}
-        renderItem={renderItem}
+        renderItem={({ item, index }: { item: any; index: number }) => {
+          if (columns <= 1) {
+            return renderItem({ item })
+          }
+          const gap = 12
+          const col = columns > 0 ? index % columns : 0
+          const isFirst = col === 0
+          const isLast = col === columns - 1
+          const paddingLeft = isFirst ? 0 : gap / 2
+          const paddingRight = isLast ? 0 : gap / 2
+          return (
+            <View style={{ paddingLeft, paddingRight }}>
+              {renderItem({ item })}
+            </View>
+          )
+        }}
         keyExtractor={(item) => String(item.id)}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={!isLoading ? renderEmpty : null}
@@ -484,14 +486,9 @@ export const PointsListGrid: React.FC<{
         numColumns={columns}
         key={String(columns)}
         contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}
-        columnWrapperStyle={columns > 1 ? styles.gridColumnWrapper : undefined}
-        removeClippedSubviews={removeClippedSubviews}
-        initialNumToRender={listInitialNumToRender}
-        windowSize={listWindowSize}
-        maxToRenderPerBatch={listMaxToRenderPerBatch}
-        updateCellsBatchingPeriod={listUpdateCellsBatchingPeriod}
         refreshing={isLoading}
         onRefresh={onRefresh}
+        drawDistance={Platform.OS === 'web' ? 900 : 600}
       />
     )
   }

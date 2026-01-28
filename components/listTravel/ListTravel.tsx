@@ -262,7 +262,7 @@ function ListTravel({
     /* Filters options - оптимизированный запрос с кэшированием */
     const { data: rawOptions, isLoading: filterOptionsLoading } = useQuery({
         queryKey: ["filter-options"],
-        queryFn: fetchAllFiltersOptimized,
+        queryFn: ({ signal } = {} as any) => fetchAllFiltersOptimized({ signal }),
         staleTime: 10 * 60 * 1000,
     });
 

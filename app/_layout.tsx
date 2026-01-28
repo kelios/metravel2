@@ -10,6 +10,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import SkipLinks from "@/components/SkipLinks";
 const NetworkStatusLazy = React.lazy(() => import('@/components/NetworkStatus').then(m => ({ default: m.NetworkStatus })));
+const ReactQueryDevtoolsLazy: any = React.lazy(() =>
+  import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
+);
 import ThemedPaperProvider from "@/components/ThemedPaperProvider";
 const FooterLazy = React.lazy(() => import('@/components/Footer'));
 const ConsentBannerLazy = React.lazy(() => import('@/components/ConsentBanner'));
@@ -441,6 +444,12 @@ function ThemedContent({
                                   {/* Прокладка: только высота док-строки футера */}
                                   <BottomGutter />
                               </View>
+
+                              {Platform.OS === 'web' && __DEV__ ? (
+                                <React.Suspense fallback={null}>
+                                  <ReactQueryDevtoolsLazy initialIsOpen={false} />
+                                </React.Suspense>
+                              ) : null}
 
                               {/* Баннер согласия с компактным интерфейсом (web only) */}
                               {(!isWeb || showConsentBanner) && (

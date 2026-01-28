@@ -16,10 +16,10 @@ import {
   ScrollView,
   Platform,
   Animated,
-  FlatList,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
+import { FlashList } from '@shopify/flash-list';
 
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -359,10 +359,10 @@ const RecommendationsTabs = memo(
                     ))}
                   </ScrollView>
                 ) : (
-                  <FlatList
+                  <FlashList
                     horizontal
                     data={favorites}
-                    renderItem={({ item }) => (
+                    renderItem={({ item }: any) => (
                       <TabTravelCard
                         item={{
                           id: item.id,
@@ -374,10 +374,11 @@ const RecommendationsTabs = memo(
                         onPress={() => router.push(item.url as any)}
                       />
                     )}
-                    keyExtractor={(item) => `${item.type || 'item'}-${item.id}`}
+                    keyExtractor={(item: any) => `${item.type || 'item'}-${item.id}`}
                     showsHorizontalScrollIndicator={false}
                     style={styles.horizontalList}
                     contentContainerStyle={styles.horizontalListContent}
+                    drawDistance={800}
                   />
                 )}
               </View>
@@ -459,10 +460,10 @@ const RecommendationsTabs = memo(
                     ))}
                   </ScrollView>
                 ) : (
-                  <FlatList
+                  <FlashList
                     horizontal
                     data={viewHistory}
-                    renderItem={({ item }) => (
+                    renderItem={({ item }: any) => (
                       <TabTravelCard
                         item={{
                           id: item.id,
@@ -479,10 +480,11 @@ const RecommendationsTabs = memo(
                         onPress={() => router.push(item.url as any)}
                       />
                     )}
-                    keyExtractor={(item) => `history-${item.id}-${item.viewedAt}`}
+                    keyExtractor={(item: any) => `history-${item.id}-${item.viewedAt}`}
                     showsHorizontalScrollIndicator={false}
                     style={styles.horizontalList}
                     contentContainerStyle={styles.horizontalListContent}
+                    drawDistance={800}
                   />
                 )}
               </View>
