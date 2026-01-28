@@ -1,13 +1,14 @@
 import React, {
   memo,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
   forwardRef,
 } from 'react'
-import { FlatList, Platform, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -126,10 +127,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const isMobile = isPhone || isLargePhone
 
   const [containerW, setContainerW] = useState(winW)
-  const listRef = useRef<FlatList<SliderImage>>(null)
+  const scrollRef = useRef<any>(null)
   const indexRef = useRef(0)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web')
+  const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const firstAR = useMemo(() => {
     const f = images[0]
@@ -224,7 +226,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const scrollTo = useCallback(
     (i: number, animated = true) => {
       const wrapped = clamp(i, 0, images.length - 1)
-      listRef.current?.scrollToOffset({ offset: wrapped * containerW, animated })
+      scrollRef.current?.scrollTo?.({ x: wrapped * containerW, y: 0, animated })
       setActiveIndex(wrapped)
     },
     [containerW, images.length, setActiveIndex]
@@ -263,16 +265,22 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [containerW]
   )
 
-  const keyExtractor = useCallback((it: SliderImage) => String(it.id), [])
+  useEffect(() => {
+    return () => {
+      if (scrollIdleTimerRef.current) {
+        clearTimeout(scrollIdleTimerRef.current)
+        scrollIdleTimerRef.current = null
+      }
+    }
+  }, [])
 
-  const getItemLayout = useCallback(
-    (_: any, i: number) => ({
-      length: containerW,
-      offset: containerW * i,
-      index: i,
-    }),
-    [containerW]
-  )
+  useEffect(() => {
+    const x = indexRef.current * (containerW || 0)
+    if (!Number.isFinite(x) || x <= 0) return
+    scrollRef.current?.scrollTo?.({ x, y: 0, animated: false })
+  }, [containerW])
+
+  const keyExtractor = useCallback((it: SliderImage) => String(it.id), [])
 
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
@@ -312,6 +320,19 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [blurBackground, containerH, containerW, fit, imageProps, images.length, onFirstImageLoad, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
   )
 
+  const handleScroll = useCallback(
+    (e: any) => {
+      enablePrefetch()
+      const x = e?.nativeEvent?.contentOffset?.x ?? 0
+      if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
+      scrollIdleTimerRef.current = setTimeout(() => {
+        const idx = Math.round((x || 0) / (containerW || 1))
+        setActiveIndex(idx)
+      }, 80)
+    },
+    [containerW, enablePrefetch, setActiveIndex]
+  )
+
   if (!images.length) return null
 
   const navInset = isMobile ? 8 : Math.max(insets.left || 0, insets.right || 0)
@@ -330,28 +351,24 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ]}
       >
         <View style={styles.clip}>
-          <FlatList
-            ref={listRef}
-            data={images}
-            keyExtractor={keyExtractor}
+          <ScrollView
+            ref={scrollRef}
             horizontal
-            pagingEnabled
             showsHorizontalScrollIndicator={false}
-            renderItem={renderItem}
-            initialNumToRender={1}
-            windowSize={2 + Math.max(0, preloadCount)}
-            maxToRenderPerBatch={1 + Math.max(0, preloadCount)}
-            getItemLayout={getItemLayout}
+            scrollEventThrottle={16}
+            style={styles.scrollView}
+            contentContainerStyle={[styles.scrollContent, { height: containerH }]}
             onScrollBeginDrag={() => {
               enablePrefetch()
             }}
-            onMomentumScrollEnd={(e) => {
-              enablePrefetch()
-              const x = e?.nativeEvent?.contentOffset?.x ?? 0
-              const idx = Math.round(x / (containerW || 1))
-              setActiveIndex(idx)
-            }}
-          />
+            onScroll={handleScroll}
+          >
+            {images.map((item, index) => (
+              <React.Fragment key={keyExtractor(item)}>
+                {renderItem({ item, index })}
+              </React.Fragment>
+            ))}
+          </ScrollView>
         </View>
 
         {Platform.OS === 'web' && shouldShowSideBlurPanels ? (
@@ -457,10 +474,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: 'transparent',
       position: 'relative',
     },
+    scrollView: {
+      flex: 1,
+      ...(Platform.OS === 'web'
+        ? ({ scrollSnapType: 'x mandatory' } as any)
+        : null),
+    },
+    scrollContent: {
+      ...(Platform.OS === 'web'
+        ? ({ scrollSnapType: 'x mandatory' } as any)
+        : null),
+    },
     slide: {
       flex: 1,
       position: 'relative',
       backgroundColor: colors.mutedBackground,
+      ...(Platform.OS === 'web'
+        ? ({ scrollSnapAlign: 'start', scrollSnapStop: 'always' } as any)
+        : null),
     },
     imageCardWrapper: {
       position: 'absolute',
