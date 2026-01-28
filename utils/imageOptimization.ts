@@ -120,16 +120,7 @@ export function optimizeImageUrl(
       const host = String(url.hostname || '').trim().toLowerCase();
       if (!host) return false;
       if (isPrivateOrLocalHost(host)) return false;
-      if (host === 'metravel.by') {
-        if (Platform.OS === 'web') {
-          const p = String(url.pathname || '');
-          const dynamicPrefixes = ['/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/'];
-          if (dynamicPrefixes.some((prefix) => p.startsWith(prefix))) {
-            return false;
-          }
-        }
-        return true;
-      }
+      if (host === 'metravel.by') return true;
       if (host === 'cdn.metravel.by') return true;
       if (host === 'api.metravel.by') return true;
       if (host === 'images.weserv.nl') return true;
