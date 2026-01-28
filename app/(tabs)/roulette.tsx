@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Text, View, Pressable, FlatList, Image } from 'react-native';
+import { Modal, Platform, Text, View, Pressable, Image } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -239,12 +240,13 @@ export default function RouletteScreen() {
                     </View>
                   </View>
                 ) : (
-                  <FlatList
+                  <FlashList
                     data={result}
                     keyExtractor={(item) => String(item.id)}
                     key="cols-1"
                     numColumns={1}
                     contentContainerStyle={[styles.cardsGrid, isMobile && styles.cardsGridMobile]}
+                    estimatedItemSize={420}
                     renderItem={({ item, index }) => (
                       <View style={styles.cardWrapper}>
                         <RenderTravelItem
