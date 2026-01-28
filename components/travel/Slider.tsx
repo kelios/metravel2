@@ -296,20 +296,10 @@ const Slide = memo(function Slide({
 }: SlideProps) {
   const [status, setStatus] = useState<LoadStatus>('loading');
 
-  const ratio = item.width && item.height ? item.width / item.height : aspectRatio;
-  const isPortrait = ratio < 0.95;
-  const isSquareish = ratio >= 0.95 && ratio <= 1.1;
-
   const isFirstSlide = index === 0;
   const mainPriority = isFirstSlide ? 'high' : 'low';
 
-  const shouldBlur = blurBackground;
-  const shouldRenderBlurBg =
-    shouldBlur &&
-    status !== 'error' &&
-    !(Platform.OS === 'web' && isFirstSlide && status !== 'loaded');
-
-  const useElevatedWrapper = Platform.OS === 'web' && !isMobile && (isPortrait || isSquareish);
+  const shouldRenderBlurBg = blurBackground && status === 'loaded';
   const mainFit: 'cover' | 'contain' = 'contain';
 
   const handleLoadStart = useCallback(() => {
@@ -329,74 +319,66 @@ const Slide = memo(function Slide({
 
   return (
     <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
+      {/* Blur background - only when image is loaded */}
       {shouldRenderBlurBg ? (
-        <>
-          <ImageCardMedia
-            testID={`slider-blur-bg-${index}`}
-            src={uri}
-            fit="cover"
-            blurBackground
-            blurRadius={12}
-            blurOnly
-            priority="low"
-            loading="lazy"
-            style={styles.blurBg}
-          />
-        </>
+        <ImageCardMedia
+          testID={`slider-blur-bg-${index}`}
+          src={uri}
+          fit="cover"
+          blurBackground
+          blurRadius={12}
+          blurOnly
+          priority="low"
+          loading="lazy"
+          style={styles.blurBg}
+        />
       ) : (
         <View style={styles.flatBackground} testID={`slider-flat-bg-${index}`} />
       )}
 
-      <View
-        style={[
-          styles.imageCardWrapper,
-          useElevatedWrapper && styles.imageCardWrapperElevated,
-        ]}
-      >
-        <View style={styles.imageCardSurface}>
-          {status === 'error' ? (
-            <View
-              style={styles.neutralPlaceholder}
-              testID={`slider-neutral-placeholder-${index}`}
-            />
-          ) : (
-            <ImageCardMedia
-              src={uri}
-              fit={mainFit}
-              blurBackground={Platform.OS === 'web' ? shouldRenderBlurBg : shouldBlur}
-              priority={mainPriority as any}
-              loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
-              transition={reduceMotion ? 0 : 250}
-              style={styles.img}
-              alt={
-                item.width && item.height
-                  ? `Изображение ${index + 1} из ${imagesLength}`
-                  : `Фотография путешествия ${index + 1} из ${imagesLength}`
-              }
-              imageProps={{
-                ...(imageProps || {}),
-                contentPosition: 'center',
-                testID: `slider-image-${index}`,
-                accessibilityIgnoresInvertColors: true,
-                accessibilityRole: 'image',
-                accessibilityLabel:
-                  item.width && item.height
-                    ? `Изображение ${index + 1} из ${imagesLength}`
-                    : `Фотография путешествия ${index + 1} из ${imagesLength}`,
-                onLoadStart: handleLoadStart,
-              }}
-              onLoad={handleLoad}
-              onError={handleError}
-            />
-          )}
+      {/* Main image - no blur, no transition effects */}
+      {status === 'error' ? (
+        <View
+          style={styles.neutralPlaceholder}
+          testID={`slider-neutral-placeholder-${index}`}
+        />
+      ) : (
+        <ImageCardMedia
+          src={uri}
+          fit={mainFit}
+          blurBackground={false}
+          priority={mainPriority as any}
+          loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
+          transition={0}
+          style={styles.img}
+          alt={
+            item.width && item.height
+              ? `Изображение ${index + 1} из ${imagesLength}`
+              : `Фотография путешествия ${index + 1} из ${imagesLength}`
+          }
+          imageProps={{
+            ...(imageProps || {}),
+            contentPosition: 'center',
+            testID: `slider-image-${index}`,
+            accessibilityIgnoresInvertColors: true,
+            accessibilityRole: 'image',
+            accessibilityLabel:
+              item.width && item.height
+                ? `Изображение ${index + 1} из ${imagesLength}`
+                : `Фотография путешествия ${index + 1} из ${imagesLength}`,
+            onLoadStart: handleLoadStart,
+          }}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      )}
 
-          {status === 'loading' && (
-            <View style={[styles.loadingOverlay]} testID={`slider-loading-overlay-${index}`}>
-              <ActivityIndicator color={colors.textOnDark} />
-            </View>
-          )}
+      {/* Loading indicator */}
+      {status === 'loading' && (
+        <View style={[styles.loadingOverlay]} testID={`slider-loading-overlay-${index}`}>
+          <ActivityIndicator color={colors.textOnDark} />
         </View>
-      </View>
+      )}
     </View>
   );
 });

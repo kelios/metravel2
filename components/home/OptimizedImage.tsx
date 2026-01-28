@@ -1,7 +1,6 @@
 import { memo, useState, useMemo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
-import { Asset } from 'expo-asset';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface OptimizedImageProps {
@@ -28,24 +27,16 @@ function OptimizedImage({
   const colors = useThemedColors();
 
   const resolvedSource = useMemo(() => {
-    if (!source) return null;
-    
-    // For web platform, resolve asset URI
-    if (Platform.OS === 'web' && typeof source === 'number') {
-      try {
-        const asset = Asset.fromModule(source);
-        return { uri: asset.uri || '' };
-      } catch (error) {
-        console.warn('Failed to resolve asset:', error);
-        return source;
-      }
+    if (!source) {
+      console.warn('[OptimizedImage] No source provided');
+      return null;
     }
     
-    // For native or already resolved sources
-    if (typeof source === 'object' && source.uri) {
-      return source;
+    // ExpoImage handles require() sources directly on web
+    // No need to manually resolve with Asset.fromModule
+    if (__DEV__) {
+      console.log('[OptimizedImage] Source type:', typeof source, 'Value:', source);
     }
-    
     return source;
   }, [source]);
 
@@ -111,8 +102,16 @@ function OptimizedImage({
             { width, height, borderRadius, opacity: isLoaded ? 1 : 0 },
             style,
           ]}
-          onLoad={() => setIsLoaded(true)}
-          onError={() => setHasError(true)}
+          onLoad={() => {
+            if (__DEV__) {
+              console.log('[OptimizedImage] Image loaded successfully');
+            }
+            setIsLoaded(true);
+          }}
+          onError={(error) => {
+            console.error('[OptimizedImage] Image failed to load:', error);
+            setHasError(true);
+          }}
           contentFit="cover"
           transition={300}
           {...(Platform.OS === 'web' ? {

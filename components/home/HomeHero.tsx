@@ -19,7 +19,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const colors = useThemedColors();
-  const { isSmallPhone, isPhone, isTablet, isLargeTablet, isDesktop } = useResponsive();
+  const { isSmallPhone, isPhone } = useResponsive();
   const articleUrl =
     'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
 
@@ -93,7 +93,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
-  const showImage = hydrated && (isTablet || isLargeTablet || isDesktop);
+  const showImage = hydrated; // Show image on all devices when hydrated
   const shouldRenderImageSlot = isWeb;
 
   useEffect(() => {
