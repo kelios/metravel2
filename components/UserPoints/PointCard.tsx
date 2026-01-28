@@ -263,6 +263,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
   return (
     <TouchableOpacity
+      testID={point?.id != null ? `userpoints-point-card-${String(point.id)}` : undefined}
       style={[
         styles.container,
         layout === 'grid' ? styles.containerGrid : null,

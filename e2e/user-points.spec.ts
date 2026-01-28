@@ -563,16 +563,18 @@ test.describe('User points', () => {
     return actionsDialog;
   }
 
-  test('list + selection mode + map view (smoke)', async ({ page }) => {
-    const pointNameA = uniqueName('E2E Point A');
-    const pointNameB = uniqueName('E2E Point B');
-
-    const api = await installUserPointsApiMock(page);
-
-    try {
-      await test.step('Open /userpoints', async () => {
-        await page.addInitScript(seedNecessaryConsent);
-        await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
+	  test('list + selection mode + map view (smoke)', async ({ page }) => {
+	    const pointNameA = uniqueName('E2E Point A');
+	    const pointNameB = uniqueName('E2E Point B');
+	
+	    const api = await installUserPointsApiMock(page);
+	    let pointA: MockPoint | null = null;
+	    let pointB: MockPoint | null = null;
+	
+	    try {
+	      await test.step('Open /userpoints', async () => {
+	        await page.addInitScript(seedNecessaryConsent);
+	        await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
         await expect(page).not.toHaveURL(/\/login/);
         await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
       });
@@ -580,21 +582,21 @@ test.describe('User points', () => {
       await test.step('Switch to list view', async () => {
         await openListPanelTab(page);
       });
-
-      await test.step('Seed 2 points via mock API', async () => {
-        api.addPoint({
-          name: pointNameA,
-          latitude: 52.2297,
-          longitude: 21.0122,
-          color: 'blue',
-          status: 'planning',
-          categoryIds: ['other'],
-        });
-        api.addPoint({
-          name: pointNameB,
-          latitude: 50.0647,
-          longitude: 19.945,
-          color: 'blue',
+	
+	      await test.step('Seed 2 points via mock API', async () => {
+	        pointA = api.addPoint({
+	          name: pointNameA,
+	          latitude: 52.2297,
+	          longitude: 21.0122,
+	          color: 'blue',
+	          status: 'planning',
+	          categoryIds: ['other'],
+	        });
+	        pointB = api.addPoint({
+	          name: pointNameB,
+	          latitude: 50.0647,
+	          longitude: 19.945,
+	          color: 'blue',
           status: 'planning',
           categoryIds: ['other'],
         });
@@ -604,22 +606,27 @@ test.describe('User points', () => {
         await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
       });
 
-      await test.step('Enter selection mode via actions menu', async () => {
-        const actionsDialog = await openActionsMenu(page);
-        await actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
-        await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
-      });
+	      await test.step('Enter selection mode via actions menu', async () => {
+	        const actionsDialog = await openActionsMenu(page);
+	        await actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
+	        await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
+	        await expect(page.getByRole('button', { name: 'Готово', exact: true })).toBeVisible({ timeout: 15_000 });
+	      });
+	
+	      await test.step('Select 2 points and go to map view', async () => {
+	        expect(pointA, 'mock pointA must be created before selecting').not.toBeNull();
+	        expect(pointB, 'mock pointB must be created before selecting').not.toBeNull();
+	        if (!pointA || !pointB) return;
 
-      await test.step('Select 2 points and go to map view', async () => {
-        await openListPanelTab(page);
-        await expect(page.getByText(pointNameA).first()).toBeVisible({ timeout: 30_000 });
-        await page.getByText(pointNameA).first().click({ force: true });
-        await expect(page.getByText(pointNameB).first()).toBeVisible({ timeout: 30_000 });
-        await page.getByText(pointNameB).first().click({ force: true });
-
-        await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
-
-        // Map-first UI: the map is already visible during selection mode.
+	        await openListPanelTab(page);
+	        await expect(page.getByTestId(`userpoints-point-card-${pointA.id}`)).toBeVisible({ timeout: 30_000 });
+	        await page.getByTestId(`userpoints-point-card-${pointA.id}`).click({ force: true });
+	        await expect(page.getByTestId(`userpoints-point-card-${pointB.id}`)).toBeVisible({ timeout: 30_000 });
+	        await page.getByTestId(`userpoints-point-card-${pointB.id}`).click({ force: true });
+	
+	        await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
+	
+	        // Map-first UI: the map is already visible during selection mode.
         await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
         await expect(page.getByRole('button', { name: 'Назад к списку' })).toBeVisible({ timeout: 30_000 });
       });
@@ -633,35 +640,35 @@ test.describe('User points', () => {
     }
   });
 
-  test('bulk update + delete selected + delete all (mock API)', async ({ page }) => {
-    const api = await installUserPointsApiMock(page);
-
-    const pointNameA = uniqueName('E2E Bulk A');
-    const pointNameB = uniqueName('E2E Bulk B');
-    const pointNameC = uniqueName('E2E Bulk C');
-
-    // Seed 3 points directly in mock storage (faster than UI for this test)
-    api.addPoint({
-      name: pointNameA,
-      latitude: 55.7,
-      longitude: 37.6,
-      color: 'blue',
-      status: 'planning',
-      categoryIds: ['other'],
-    });
-    api.addPoint({
-      name: pointNameB,
-      latitude: 55.71,
-      longitude: 37.61,
-      color: 'blue',
-      status: 'planning',
-      categoryIds: ['other'],
-    });
-    api.addPoint({
-      name: pointNameC,
-      latitude: 55.72,
-      longitude: 37.62,
-      color: 'blue',
+	  test('bulk update + delete selected + delete all (mock API)', async ({ page }) => {
+	    const api = await installUserPointsApiMock(page);
+	
+	    const pointNameA = uniqueName('E2E Bulk A');
+	    const pointNameB = uniqueName('E2E Bulk B');
+	    const pointNameC = uniqueName('E2E Bulk C');
+	
+	    // Seed 3 points directly in mock storage (faster than UI for this test)
+	    const pointA = api.addPoint({
+	      name: pointNameA,
+	      latitude: 55.7,
+	      longitude: 37.6,
+	      color: 'blue',
+	      status: 'planning',
+	      categoryIds: ['other'],
+	    });
+	    const pointB = api.addPoint({
+	      name: pointNameB,
+	      latitude: 55.71,
+	      longitude: 37.61,
+	      color: 'blue',
+	      status: 'planning',
+	      categoryIds: ['other'],
+	    });
+	    api.addPoint({
+	      name: pointNameC,
+	      latitude: 55.72,
+	      longitude: 37.62,
+	      color: 'blue',
       status: 'planning',
       categoryIds: ['other'],
     });
@@ -679,14 +686,14 @@ test.describe('User points', () => {
     const actionsDialog = await openActionsMenu(page);
     await actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
     await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
-
-    // Select A + B
-    await openListPanelTab(page);
-    await expect(page.getByText(pointNameA).first()).toBeVisible({ timeout: 30_000 });
-    await page.getByText(pointNameA).first().click({ force: true });
-    await expect(page.getByText(pointNameB).first()).toBeVisible({ timeout: 30_000 });
-    await page.getByText(pointNameB).first().click({ force: true });
-    await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
+	
+	    // Select A + B
+	    await openListPanelTab(page);
+	    await expect(page.getByTestId(`userpoints-point-card-${pointA.id}`)).toBeVisible({ timeout: 30_000 });
+	    await page.getByTestId(`userpoints-point-card-${pointA.id}`).click({ force: true });
+	    await expect(page.getByTestId(`userpoints-point-card-${pointB.id}`)).toBeVisible({ timeout: 30_000 });
+	    await page.getByTestId(`userpoints-point-card-${pointB.id}`).click({ force: true });
+	    await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
 
     // Bulk edit: set status to archived
     await page.getByRole('button', { name: 'Изменить' }).click();
@@ -742,10 +749,10 @@ test.describe('User points', () => {
     await actionsDialogAfterEdit.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
     await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
 
-    await openListPanelTab(page);
-    await page.getByText(pointNameA).first().click({ force: true });
-    await page.getByText(pointNameB).first().click({ force: true });
-    await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
+	    await openListPanelTab(page);
+	    await page.getByTestId(`userpoints-point-card-${pointA.id}`).click({ force: true });
+	    await page.getByTestId(`userpoints-point-card-${pointB.id}`).click({ force: true });
+	    await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
 
     // Delete selected
     await page.getByRole('button', { name: 'Удалить выбранные' }).click();
@@ -754,13 +761,13 @@ test.describe('User points', () => {
 
     await expect(page.getByText(pointNameA)).toHaveCount(0);
     await expect(page.getByText(pointNameB)).toHaveCount(0);
-    await expect(page.getByText(pointNameC).first()).toBeVisible({ timeout: 30_000 });
+	    await expect(page.getByText(pointNameC).first()).toBeVisible({ timeout: 30_000 });
 
     // Delete all via menu
     const actionsDialog2 = await openActionsMenu(page);
     await actionsDialog2.getByRole('button', { name: 'Удалить все точки', exact: true }).click();
     await expect(page.getByText('Удалить все точки?', { exact: true })).toBeVisible({ timeout: 30_000 });
     await page.getByRole('button', { name: 'Удалить все', exact: true }).click();
-    await expect(page.getByText(pointNameC)).toHaveCount(0);
-  });
-});
+	    await expect(page.getByText(pointNameC)).toHaveCount(0);
+	  });
+	});
