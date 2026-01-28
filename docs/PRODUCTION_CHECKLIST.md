@@ -1,75 +1,8 @@
 # ✅ Production Release Checklist
-
-## ✅ ИСПРАВЛЕНО - Критичні архітектурні проблеми
-
-### Google Maps заменен на бесплатные альтернативы
-
-- ✅ **Карты без Google Maps API**
-  - iOS: Apple Maps (нативные)
-  - Android: Google Maps (встроенные в устройство, без API key)
-  - Web: OpenStreetMap (бесплатный)
-  - См. `docs/MAPS_CONFIGURATION.md`
-
-### SEO/Meta архітектура оптимізована (25.01.2026)
-
-- ✅ **Усунуто дублі meta-тегів**
-  - Видалено fallback title/description/canonical з `app/_layout.tsx`
-  - Спрощено `InstantSEO.tsx` (тільки декларативний Head)
-  - Тепер 1 canonical, 1 description на сторінці
-  
-- ✅ **Виправлено consent compliance**
-  - Видалено `<noscript>` analytics блок (обходив баннер згоди)
-  - Analytics запускається ТІЛЬКИ після явної згоди користувача
-  
-- ✅ **Централізовані SEO утиліти**
-  - Новий модуль `utils/seo.ts` з функціями:
-    - `getSiteBaseUrl()` — нормалізований base URL
-    - `buildCanonicalUrl(pathname)` — правильний canonical
-    - `buildOgImageUrl(path)` — правильний OG image URL
-  - 21 файл мігровано на нові утиліти
-  
-- ✅ **Захист від індексації non-prod**
-  - `<meta name="robots" content="noindex,nofollow">` на staging/dev
-  - Автоматична перевірка hostname у `app/+html.tsx`
-  
-- ✅ **Fail-fast для analytics**
-  - Видалено дефолтні GA/Metrika ID
-  - На prod без env змінних аналітика вимкнена (не використовує чужі ID)
-  
-- 📖 **Документація:** `docs/SEO_MIGRATION.md`
-
-- ✅ **Bundle Identifiers обновлены**
-  - iOS: `by.metravel.app`
-  - Android: `by.metravel.app`
-
-- ✅ **Секреты удалены из .env.prod**
-  - Перенесены в EAS Secrets (см. ниже)
-
-- ✅ **Оптимизация зависимостей**
-  - Удалены дубликаты: jspdf, html2pdf.js, pdf-lib
-  - Удалены неиспользуемые: lint, format, deprecated-react-native-prop-types
-
----
-
 - [ ] **Финальная проверка**
   ```bash
   npm run release:check
   ```
-  - [ ] Lint passed
-  - [ ] Security check passed
-  - [ ] Audit passed
-  - [ ] Tests passed
-  - [ ] Build passed
-
----
-
-## 🟡 ВАЖНО - Сделать в течение недели
-
-- [ ] **Error Monitoring**
-  - [ ] Настроить Sentry
-  - [ ] Добавить Crashlytics (Firebase) - опционально
-  - [ ] Проверить error boundaries
-
 - [ ] **Testing**
   ```bash
   npm run test:coverage  # Цель: > 60%
@@ -115,38 +48,6 @@
   yarn lighthouse:produrl:summary
   yarn lighthouse:produrl:lcp
   ```
-
-- [ ] **Analytics**
-  - [ ] Настроить Google Analytics 4 (ключ уже в .env)
-  - [ ] Настроить Yandex Metrika (ID уже в .env)
-  - [ ] Проверить event tracking
-
----
-
-## 🟢 ЖЕЛАТЕЛЬНО - Сделать в течение месяца
-
-- [ ] **Performance**
-  - [ ] Lazy load react-native-maps
-  - [ ] Lazy load @react-pdf/renderer
-  - [ ] Lazy load react-quill
-  - [ ] Измерить bundle size до/после
-
-- [ ] **Documentation**
-  - [ ] Создать CHANGELOG.md
-  - [ ] Обновить API documentation
-  - [ ] Добавить troubleshooting guide
-
-- [ ] **Monitoring**
-  - [ ] Dashboard для метрик (Grafana/DataDog)
-  - [ ] Alerts для critical errors
-  - [ ] Uptime monitoring (Pingdom/UptimeRobot)
-
-- [ ] **Rollback Plan**
-  - [ ] Документировать процесс отката версии
-  - [ ] Подготовить hot-fix процедуру
-  - [ ] Настроить feature flags
-
----
 
 ## 📱 Релиз по платформам
 
