@@ -34,7 +34,7 @@ import Animated, {
   Extrapolate,
 } from "react-native-reanimated";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl, getPreferredImageFormat } from "@/utils/imageOptimization";
+import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -200,7 +200,6 @@ const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: n
     return (
       optimizeImageUrl(versionedUrl, {
         width: optimalSize.width,
-        format: getPreferredImageFormat(),
         quality,
         fit: "contain",
         ...(isWeb ? { dpr: 1 } : null),

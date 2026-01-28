@@ -91,6 +91,24 @@ const normalizeTravelItem = (input: any): Travel => {
         if (!url) return '';
         const trimmed = url.trim();
         if (!trimmed) return '';
+
+        if (/^http:\/\//i.test(trimmed)) {
+            try {
+                const parsed = new URL(trimmed);
+                const host = String(parsed.hostname || '').trim().toLowerCase();
+                const isPrivateOrLocal =
+                    host === 'localhost' ||
+                    host === '127.0.0.1' ||
+                    /^10\./.test(host) ||
+                    /^192\.168\./.test(host) ||
+                    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+                if (!isPrivateOrLocal) {
+                    return trimmed.replace(/^http:\/\//i, 'https://');
+                }
+            } catch {
+                return trimmed.replace(/^http:\/\//i, 'https://');
+            }
+        }
         
         // Если URL уже абсолютный, возвращаем как есть
         if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
@@ -128,6 +146,26 @@ const normalizeTravelItem = (input: any): Travel => {
         typeof out.travel_image_thumb_url !== 'undefined'
     ) {
         out.travel_image_thumb_small_url = out.travel_image_thumb_url;
+    }
+
+    if (Array.isArray((out as any).gallery)) {
+        out.gallery = (out as any).gallery
+            .map((item: any) => {
+                if (typeof item === 'string') {
+                    const normalized = normalizeImageUrl(item);
+                    return normalized || item;
+                }
+                if (item && typeof item === 'object') {
+                    const rawUrl = typeof (item as any).url === 'string' ? String((item as any).url) : '';
+                    const normalized = rawUrl ? normalizeImageUrl(rawUrl) : rawUrl;
+                    return {
+                        ...(item as any),
+                        ...(normalized ? { url: normalized } : null),
+                    };
+                }
+                return item;
+            })
+            .filter(Boolean);
     }
 
     return out as Travel;
@@ -498,10 +536,11 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
 
     try {
         const travel = await apiClient.get<Travel>(`/travels/${id}/`, DEFAULT_TIMEOUT);
+        const normalized = normalizeTravelItem(travel);
         if (!isAuthenticated) {
-            travelCache.set(id, travel);
+            travelCache.set(id, normalized);
         }
-        return travel;
+        return normalized;
     } catch (e: any) {
         if (e?.name === 'AbortError') {
             throw e;
@@ -514,7 +553,8 @@ export const fetchTravel = async (id: number): Promise<Travel> => {
 export const fetchTravelBySlug = async (slug: string): Promise<Travel> => {
     try {
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
-        return await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, DEFAULT_TIMEOUT);
+        const travel = await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, DEFAULT_TIMEOUT);
+        return normalizeTravelItem(travel);
     } catch (e: any) {
         if (e?.name === 'AbortError') {
             throw e;

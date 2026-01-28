@@ -22,6 +22,49 @@ const isPrivateOrLocalHost = (host: string): boolean => {
   return false;
 };
 
+const normalizeRemoteImageUri = (uri: string): string => {
+  const raw = String(uri || '').trim();
+  if (!raw) return raw;
+  if (/^(blob:|data:)/i.test(raw)) return raw;
+  if (!/^https?:\/\//i.test(raw)) return raw;
+  if (/^http:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      if (!isPrivateOrLocalHost(parsed.hostname)) {
+        return raw.replace(/^http:\/\//i, 'https://');
+      }
+    } catch {
+      return raw.replace(/^http:\/\//i, 'https://');
+    }
+  }
+  return raw;
+};
+
+const tryForceJpgFormat = (uri: string): string | null => {
+  const raw = String(uri || '').trim();
+  if (!raw) return null;
+  if (/^(blob:|data:)/i.test(raw)) return null;
+  if (!/^https?:\/\//i.test(raw)) return null;
+  try {
+    const u = new URL(raw);
+    const currentF = String(u.searchParams.get('f') || '').toLowerCase();
+    const currentOut = String(u.searchParams.get('output') || '').toLowerCase();
+
+    // Only rewrite if it explicitly requests webp/avif.
+    if (currentF === 'webp' || currentF === 'avif') {
+      u.searchParams.set('f', 'jpg');
+      return u.toString();
+    }
+    if (currentOut === 'webp' || currentOut === 'avif') {
+      u.searchParams.set('output', 'jpg');
+      return u.toString();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 const buildApiPrefixedUrl = (value: string): string | null => {
   try {
     const baseRaw =
@@ -108,7 +151,9 @@ function OptimizedImage({
   const [overrideUri, setOverrideUri] = useState<string | null>(null);
   const activeSource = useMemo(() => {
     if (typeof source === 'number') return source;
-    const uri = overrideUri ?? (typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '');
+    const uri = normalizeRemoteImageUri(
+      overrideUri ?? (typeof (source as any)?.uri === 'string' ? String((source as any).uri).trim() : '')
+    );
     return uri ? { ...(source as any), uri } : source;
   }, [source, overrideUri]);
   const validSource = hasValidUriSource(activeSource as any);
@@ -217,6 +262,17 @@ function OptimizedImage({
       const fallback = buildApiPrefixedUrl(uri);
       if (fallback && fallback !== uri) {
         setOverrideUri(fallback);
+        onError?.();
+        return;
+      }
+    }
+
+    // iOS: some servers return images as webp/avif via query param which can fail to decode.
+    // Retry once forcing JPG if the URL explicitly requests modern formats.
+    if (Platform.OS === 'ios' && uri && !overrideUri) {
+      const jpg = tryForceJpgFormat(uri);
+      if (jpg && jpg !== uri) {
+        setOverrideUri(jpg);
         onError?.();
         return;
       }
