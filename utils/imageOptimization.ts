@@ -555,7 +555,17 @@ export function buildVersionedImageUrl(
   if (!url) return url;
 
   try {
-    const imageUrl = new URL(url, Platform.OS === 'web' ? window.location.origin : 'https://metravel.by');
+    // Determine the base URL for resolving relative paths
+    let baseUrl: string;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      baseUrl = window.location.origin;
+    } else {
+      // For native or when window is not available, use API URL or fallback
+      const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'https://metravel.by/api';
+      baseUrl = apiUrl.replace(/\/api\/?$/, '');
+    }
+    
+    const imageUrl = new URL(url, baseUrl);
     
     // Добавляем версионирование для кэша
     if (updatedAt) {

@@ -658,6 +658,27 @@ const MapPageComponent: React.FC<Props> = (props) => {
             overscroll-behavior: none;
           }
 
+          .leaflet-popup-content-wrapper {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .leaflet-popup-content {
+            max-height: calc(100vh - 220px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          @media (max-width: 640px) {
+            .leaflet-popup-content-wrapper {
+              max-height: calc(100vh - 150px);
+            }
+            .leaflet-popup-content {
+              max-height: calc(100vh - 170px);
+            }
+          }
+
           html[data-theme='dark'] .leaflet-popup-content-wrapper,
           html[data-theme='dark'] .leaflet-popup-tip {
             background: ${(colors as any).surface} !important;
