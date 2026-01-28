@@ -36,10 +36,6 @@ export const defaultQueryOptions: DefaultOptions = {
     
     // Не перезагружать при монтировании, если данные свежие
     refetchOnMount: true,
-    
-    // ✅ НОВОЕ: Experimental features для React Query v5
-    // Включаем streaming для лучшей производительности
-    experimental_prefetchInRender: true,
   },
   mutations: {
     // Количество повторных попыток для мутаций
@@ -108,5 +104,11 @@ export const queryConfigs = {
     staleTime: 5 * 60 * 1000, // 5 минут
     gcTime: 10 * 60 * 1000, // 10 минут
     refetchOnMount: false,
+  },
+
+  // Включать точечно и только после измерений:
+  // может приводить к лишним запросам в StrictMode/повторных рендерах.
+  prefetchInRender: {
+    experimental_prefetchInRender: true,
   },
 };

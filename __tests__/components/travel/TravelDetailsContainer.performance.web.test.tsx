@@ -29,7 +29,7 @@ describe('TravelDetailsContainer performance (web)', () => {
     RN.Platform.select = (obj: any) => obj.web || obj.default
 
     // Important: require AFTER Platform.OS is set, and do not reset modules.
-    __testables = require('@/components/travel/details/TravelDetailsContainer').__testables
+    __testables = require('@/components/travel/details/TravelDetailsHero').__testables
   })
 
   beforeEach(() => {
@@ -59,7 +59,7 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.getAttribute('alt')).toBe('Hero image')
   })
 
-  it('useLCPPreload injects preload link for first gallery image', async () => {
+  it('useLCPPreload is now a no-op (preloading handled by inline script)', async () => {
     const travel: any = {
       id: 1,
       gallery: [
@@ -80,17 +80,11 @@ describe('TravelDetailsContainer performance (web)', () => {
 
     render(<Harness />)
 
+    // useLCPPreload should not create any preload links
+    // Preloading is now handled by the inline script in +html.tsx
     await waitFor(() => {
-      const link = document.head.querySelector('link[rel="preload"], link[rel="prefetch"]') as any
-      expect(link).toBeTruthy()
-      if (link.getAttribute('rel') === 'preload') {
-        expect(link.getAttribute('fetchpriority')).toBe('high')
-      }
-      const href = String(link.getAttribute('href') || '')
-      // Depending on EXPO_PUBLIC_API_URL, the app may rewrite to same-origin `/api/*` for caching/CORS.
-      expect(href).toMatch(/(https:\/\/cdn\.example\.com\/img\.jpg|\/api\/img\.jpg)/)
-      const srcSet = String(link.getAttribute('imagesrcset') || '')
-      expect(srcSet).toContain('https://cdn.example.com/img.jpg')
+      const links = document.head.querySelectorAll('link[rel="preload"], link[rel="prefetch"]')
+      expect(links.length).toBe(0)
     })
   })
 })

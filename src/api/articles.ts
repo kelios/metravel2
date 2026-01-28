@@ -29,8 +29,10 @@ export const fetchArticles = async (
   page: number,
   itemsPerPage: number,
   urlParams: Record<string, any>,
+  options?: { signal?: AbortSignal; throwOnError?: boolean },
 ): Promise<{ data: any[]; total: number }> => {
   try {
+    const signal = options?.signal;
     const whereObject: Record<string, any> = {
       ...urlParams,
     };
@@ -53,7 +55,15 @@ export const fetchArticles = async (
     }).toString();
 
     const urlArticles = `${GET_ARTICLES}?${params}`;
-    const res = await fetchWithTimeout(urlArticles, {}, LONG_TIMEOUT);
+    const res = await fetchWithTimeout(urlArticles, { signal }, LONG_TIMEOUT);
+    if (!res.ok) {
+      if (res.status === 404) {
+        return { data: [], total: 0 };
+      }
+      const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (options?.throwOnError) throw err;
+      return { data: [], total: 0 };
+    }
     const result = await safeJsonParse<any>(res, []);
 
     if (Array.isArray(result)) {
@@ -69,16 +79,38 @@ export const fetchArticles = async (
     return { data: [], total: 0 };
   } catch (e: any) {
     devError('Error fetching Articles:', e);
+    if (e?.name === 'AbortError') {
+      if (options?.throwOnError) throw e;
+      return { data: [], total: 0 };
+    }
+    if (options?.throwOnError) {
+      throw new Error('Не удалось загрузить статьи');
+    }
     return { data: [], total: 0 };
   }
 };
 
-export const fetchArticle = async (id: number): Promise<Article> => {
+export const fetchArticle = async (
+  id: number,
+  options?: { signal?: AbortSignal; throwOnError?: boolean }
+): Promise<Article> => {
   try {
-    const res = await fetchWithTimeout(`${GET_ARTICLES}/${id}`, {}, 10000);
+    const res = await fetchWithTimeout(`${GET_ARTICLES}/${id}`, { signal: options?.signal }, 10000);
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}: ${res.statusText}`);
+      if (options?.throwOnError) throw err;
+      return {} as Article;
+    }
     return await safeJsonParse<Article>(res, {} as Article);
   } catch (e: any) {
     devError('Error fetching Article:', e);
+    if (e?.name === 'AbortError') {
+      if (options?.throwOnError) throw e;
+      return {} as Article;
+    }
+    if (options?.throwOnError) {
+      throw new Error('Не удалось загрузить статью');
+    }
     return {} as Article;
   }
 };

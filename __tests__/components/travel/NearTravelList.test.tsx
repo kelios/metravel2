@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import NearTravelList from '@/components/travel/NearTravelList';
 import type { Travel } from '@/src/types/types';
@@ -27,15 +28,24 @@ describe('NearTravelList', () => {
   const { fetchTravelsNear } = jest.requireMock('@/src/api/map') as {
     fetchTravelsNear: jest.Mock;
   };
+  let queryClient: QueryClient;
 
   beforeEach(() => {
     jest.useFakeTimers();
     fetchTravelsNear.mockClear();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
   });
 
   afterEach(() => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
+    queryClient.clear();
   });
 
   const flush = async () => {
@@ -50,18 +60,30 @@ describe('NearTravelList', () => {
 
   it('fetches near travels only once per travel id', async () => {
     const travel: Pick<Travel, 'id'> = { id: 1 };
-    const { rerender } = render(<NearTravelList travel={travel} />);
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <NearTravelList travel={travel} />
+      </QueryClientProvider>
+    );
 
     await flush();
     expect(fetchTravelsNear).toHaveBeenCalledTimes(1);
 
     // rerender with the same id should not trigger another fetch
-    rerender(<NearTravelList travel={travel} />);
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <NearTravelList travel={travel} />
+      </QueryClientProvider>
+    );
     await flush();
     expect(fetchTravelsNear).toHaveBeenCalledTimes(1);
 
     // change id -> should fetch again
-    rerender(<NearTravelList travel={{ id: 2 }} />);
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <NearTravelList travel={{ id: 2 }} />
+      </QueryClientProvider>
+    );
     await flush();
     expect(fetchTravelsNear).toHaveBeenCalledTimes(2);
   });

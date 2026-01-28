@@ -2,7 +2,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
-  FlatList,
   Platform,
   StyleSheet,
   View,
@@ -488,7 +487,7 @@ function ListTravelBase({
     /* UI / dialogs */
     const [deleteId, setDelete] = useState<number | null>(null);
     const [showFilters, setShowFilters] = useState(false);
-    const flatListRef = useRef<FlatList>(null);
+    const flatListRef = useRef<any>(null);
 
     const shouldFetchFilterOptions = useMemo(() => {
       return !isMobileDevice || showFilters;

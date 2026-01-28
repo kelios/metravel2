@@ -1,5 +1,5 @@
 import { render, act } from '@testing-library/react-native';
-import { FlatList } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 
 import HistoryScreen from '@/app/(tabs)/history';
 
@@ -76,7 +76,7 @@ describe('HistoryScreen grid regression', () => {
     (global as any).__mockResponsive = { width: 500 };
 
     const utils = await renderLoaded();
-    const list = utils.UNSAFE_getByType(FlatList);
+    const list = utils.UNSAFE_getByType(FlashList);
 
     expect(list.props.numColumns).toBe(1);
   });
@@ -85,7 +85,7 @@ describe('HistoryScreen grid regression', () => {
     (global as any).__mockResponsive = { width: 700 };
 
     const utils = await renderLoaded();
-    const list = utils.UNSAFE_getByType(FlatList);
+    const list = utils.UNSAFE_getByType(FlashList);
 
     expect(list.props.numColumns).toBe(2);
   });
@@ -94,7 +94,7 @@ describe('HistoryScreen grid regression', () => {
     (global as any).__mockResponsive = { width: 1100 };
 
     const utils = await renderLoaded();
-    const list = utils.UNSAFE_getByType(FlatList);
+    const list = utils.UNSAFE_getByType(FlashList);
 
     expect(list.props.numColumns).toBe(3);
 

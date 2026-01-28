@@ -290,7 +290,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       queryFn: ({ signal }) => fetchTravelsNear(travelId as number, signal) as any,
       select: (data) => (Array.isArray(data) ? data.slice(0, 50) : []),
       placeholderData: keepPreviousData,
-      ...queryConfigs.dynamic,
+      ...queryConfigs.paginated,
       refetchOnMount: false,
     });
 

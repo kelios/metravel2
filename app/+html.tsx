@@ -293,14 +293,18 @@ const getTravelHeroPreloadScript = () => String.raw`
         // Desktop max width in component is 860, so we shouldn't preload 1080
         var highWidth = isMobile ? 400 : 860; 
         
-        var optimizedHref = buildOptimizedUrl(url, targetWidth, quality, updatedAt, id);
-        if (!optimizedHref) return;
+        // Only preload if page is still loading (not complete)
+        // This ensures the preload is used immediately when React renders
+        if (document.readyState === 'complete') return;
+        
+        var preloadHref = buildOptimizedUrl(url, targetWidth, quality, updatedAt, id);
+        if (!preloadHref) return;
         var optimizedHrefHigh = highWidth !== targetWidth
           ? buildOptimizedUrl(url, highWidth, quality, updatedAt, id)
           : null;
 
         try {
-          var resolved = new URL(optimizedHref, window.location.origin);
+          var resolved = new URL(preloadHref, window.location.origin);
           var origin = resolved.origin;
           if (origin && !document.querySelector('link[rel="preconnect"][href="' + origin + '"]')) {
             var pre = document.createElement('link');
@@ -311,17 +315,17 @@ const getTravelHeroPreloadScript = () => String.raw`
           }
         } catch (_e) {}
 
-        if (document.querySelector('link[rel="preload"][href="' + optimizedHref + '"]')) return;
+        if (document.querySelector('link[rel="preload"][href="' + preloadHref + '"]')) return;
         var link = document.createElement('link');
         link.rel = 'preload';
         link.as = 'image';
-        link.href = optimizedHref;
+        link.href = preloadHref;
         
         // Exact match with TravelDetailsHero.tsx sizes
         var sizesAttr = isMobile ? '100vw' : '(max-width: 1024px) 92vw, 860px';
         
         if (optimizedHrefHigh) {
-          link.setAttribute('imagesrcset', optimizedHref + ' ' + Math.round(targetWidth) + 'w, ' + optimizedHrefHigh + ' ' + Math.round(highWidth) + 'w');
+          link.setAttribute('imagesrcset', preloadHref + ' ' + Math.round(targetWidth) + 'w, ' + optimizedHrefHigh + ' ' + Math.round(highWidth) + 'w');
           link.setAttribute('imagesizes', sizesAttr);
         }
         try {

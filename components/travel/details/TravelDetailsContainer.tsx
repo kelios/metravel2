@@ -26,16 +26,15 @@ import { useResponsive } from '@/hooks/useResponsive';
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import { useTravelDetails } from "@/hooks/travel-details";
 import InstantSEO from "@/components/seo/LazyInstantSEO";
-import { createSafeJsonLd, stripHtml, createSafeImageUrl, getSafeOrigin } from "@/utils/travelDetailsSecure";
+import { createSafeJsonLd, stripHtml, getSafeOrigin } from "@/utils/travelDetailsSecure";
 import ScrollToTopButton from "@/components/ScrollToTopButton";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
 import TravelSectionsSheet from "@/components/travel/TravelSectionsSheet";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
-import { optimizeImageUrl, getPreferredImageFormat, buildResponsiveImageProps } from "@/utils/imageOptimization";
 import { SectionSkeleton } from '@/components/SectionSkeleton';
 
-import { TravelHeroSection, useLCPPreload, OptimizedLCPHero } from "@/components/travel/details/TravelDetailsSections";
+import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 
@@ -75,8 +74,6 @@ const SList: React.FC<{
 // Переадресация для обратной совместимости внутри компонента
 const stripToDescription = (html?: string) => stripHtml(html).slice(0, 160);
 const getOrigin = getSafeOrigin;
-const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
-  createSafeImageUrl(url, updated_at, id);
 
 /* -------------------- idle helper -------------------- */
 const rIC = (cb: () => void, timeout = 300) => {
@@ -149,11 +146,6 @@ export default function TravelDetailsContainer() {
   const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
     travelDetails.scroll
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
-  const lcpLinkRel = useMemo(() => {
-    if (Platform.OS !== "web") return "preload";
-    if (typeof document === "undefined") return "preload";
-    return "preload";
-  }, []);
   // Стабильный ключ для <Head>, чтобы избежать ReferenceError при отрисовке
   const headKey = useMemo(
     () => `travel-${travel?.id ?? slug ?? "unknown"}`,
@@ -165,8 +157,6 @@ export default function TravelDetailsContainer() {
     readyDesc,
     canonicalUrl,
     readyImage,
-    lcpPreloadImage: _lcpPreloadImage,
-    lcpPreloadProps,
     firstImgOrigin,
     firstImg,
     jsonLd,
@@ -185,38 +175,6 @@ export default function TravelDetailsContainer() {
         ? rawFirst
         : rawFirst.url
       : undefined;
-    const rawFirstUpdatedAt =
-      rawFirst && typeof rawFirst !== "string" ? (rawFirst as any)?.updated_at : undefined;
-    const rawFirstId = rawFirst && typeof rawFirst !== "string" ? (rawFirst as any)?.id : undefined;
-    const versioned = firstUrl
-      ? buildVersioned(firstUrl, rawFirstUpdatedAt, rawFirstId)
-      : undefined;
-    const lcpMaxWidth = isMobile ? 480 : 960;
-    const lcpWidths = isMobile ? [320, 420, 480] : [640, 768, 960];
-    const lcpTargetWidth =
-      typeof window !== "undefined"
-        ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
-        : lcpMaxWidth;
-    const lcpQuality = isMobile ? 45 : 50;
-    const lcpProps = versioned
-      ? buildResponsiveImageProps(versioned, {
-          maxWidth: lcpTargetWidth,
-          widths: lcpWidths,
-          quality: lcpQuality,
-          format: getPreferredImageFormat(),
-          fit: "contain",
-          sizes: isMobile ? "100vw" : "(max-width: 1024px) 92vw, 860px",
-        })
-      : undefined;
-    const lcpUrl =
-      lcpProps?.src ||
-      (versioned &&
-        optimizeImageUrl(versioned, {
-          width: lcpTargetWidth,
-          format: getPreferredImageFormat(),
-          quality: lcpQuality,
-          fit: "contain",
-        }));
     const origin = firstUrl ? getOrigin(firstUrl) : null;
 
     const structuredData = createSafeJsonLd(travel);
@@ -226,13 +184,11 @@ export default function TravelDetailsContainer() {
       readyDesc: desc,
       canonicalUrl: canonical,
       readyImage: firstUrl,
-      lcpPreloadImage: lcpUrl ?? versioned ?? firstUrl,
-      lcpPreloadProps: lcpProps,
       firstImgOrigin: origin,
       firstImg: firstUrl ? { url: firstUrl } : null,
       jsonLd: structuredData,
     };
-  }, [travel, isMobile]);
+  }, [travel]);
   const forceDeferMount = !!forceOpenKey;
 
   // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation
@@ -360,20 +316,8 @@ export default function TravelDetailsContainer() {
           ogType="article"
           additionalTags={
             <>
-              {firstImg?.url && (
-                <>
-                  {firstImgOrigin && <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />}
-                </>
-              )}
-              {Platform.OS === "web" && lcpPreloadProps?.src && (
-                <link
-                  rel={lcpLinkRel}
-                  as="image"
-                  href={lcpPreloadProps.src}
-                  {...(lcpPreloadProps.srcSet ? { imagesrcset: lcpPreloadProps.srcSet } : {})}
-                  {...(lcpPreloadProps.sizes ? { imagesizes: lcpPreloadProps.sizes } : {})}
-                  crossOrigin="anonymous"
-                />
+              {firstImg?.url && firstImgOrigin && (
+                <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />
               )}
               <meta name="theme-color" content={themedColors.background} />
               {jsonLd && (
@@ -553,7 +497,5 @@ export default function TravelDetailsContainer() {
 }
 
 export const __testables = {
-  OptimizedLCPHero,
-  useLCPPreload,
   TravelHeroSection,
 };

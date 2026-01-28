@@ -1,6 +1,6 @@
-import {ActivityIndicator, Dimensions, FlatList, SafeAreaView, StyleSheet, View} from 'react-native'
+import {ActivityIndicator, Dimensions, SafeAreaView, StyleSheet, View} from 'react-native'
 import ArticleListItem from '@/components/ArticleListItem'
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {useEffect, useMemo, useState} from 'react'
 import {Articles} from '@/src/types/types'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import {fetchArticles} from '@/src/api/articles'
@@ -9,6 +9,9 @@ import {useLocalSearchParams} from 'expo-router'
 import ErrorDisplay from '@/components/ErrorDisplay'
 import EmptyState from '@/components/EmptyState'
 import { useThemedColors } from '@/hooks/useTheme'
+import { FlashList } from '@shopify/flash-list'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { queryConfigs } from '@/src/utils/reactQueryConfig'
 
 export default function TabOneScreen() {
   const initialPage = 0
@@ -16,9 +19,6 @@ export default function TabOneScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(windowWidth, colors), [windowWidth, colors])
 
-  const [articles, setArticles] = useState<Articles | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const itemsPerPageOptions = [10, 20, 30, 50, 100]
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [itemsPerPage, setItemsPerPage] = useState(itemsPerPageOptions[2])
@@ -27,29 +27,6 @@ export default function TabOneScreen() {
   const params = useLocalSearchParams()
   const user_id = typeof params.user_id === 'string' ? params.user_id : undefined
 
-  const fetchMore = useCallback(async () => {
-    if (isLoading) return
-    setIsLoading(true)
-    setError(null)
-    try {
-    const newData = await fetchArticles(currentPage, itemsPerPage, {
-      user_id,
-    })
-    setArticles(newData)
-    } catch (err: any) {
-      const errorMessage = err?.message || 'Не удалось загрузить статьи'
-      setError(errorMessage)
-      console.error('Ошибка загрузки статей:', err)
-    } finally {
-    setIsLoading(false)
-    }
-  }, [isLoading, currentPage, itemsPerPage, user_id])
-
-  // 👇 загрузка данных при пагинации или изменении user_id
-  useEffect(() => {
-    fetchMore()
-  }, [currentPage, itemsPerPage, fetchMore])
-
   useEffect(() => {
     setCurrentPage(0)
   }, [itemsPerPage, user_id])
@@ -57,6 +34,22 @@ export default function TabOneScreen() {
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage)
   }
+
+  const {
+    data: articles,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useQuery<Articles>({
+    queryKey: ['articles', { page: currentPage, itemsPerPage, user_id }],
+    queryFn: ({ signal }) =>
+      fetchArticles(currentPage, itemsPerPage, { user_id }, { signal, throwOnError: true }) as any,
+    placeholderData: keepPreviousData,
+    ...queryConfigs.paginated,
+    refetchOnMount: false,
+  })
 
   // ✅ ИСПРАВЛЕНИЕ: Обработка состояний загрузки и ошибок
   if (isLoading && !articles) {
@@ -78,14 +71,14 @@ export default function TabOneScreen() {
     )
   }
 
-  if (error && !articles) {
+  if (isError && !articles) {
     return (
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           <View style={styles.content}>
             <ErrorDisplay
-              message={error}
-              onRetry={fetchMore}
+              message={error instanceof Error ? error.message : 'Не удалось загрузить статьи'}
+              onRetry={() => refetch()}
               variant="error"
             />
           </View>
@@ -115,25 +108,26 @@ export default function TabOneScreen() {
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           <View style={styles.content}>
-            {error && (
+            {isError && (
               <ErrorDisplay
-                message={error}
-                onRetry={fetchMore}
-                onDismiss={() => setError(null)}
+                message={error instanceof Error ? error.message : 'Не удалось загрузить статьи'}
+                onRetry={() => refetch()}
                 variant="warning"
               />
             )}
-            {isLoading && (
+            {isFetching && (
               <View style={styles.loadingOverlay}>
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
             )}
-            <FlatList
-                data={articles?.data}
-                renderItem={({ item }) => <ArticleListItem article={item} />}
-                keyExtractor={(item, index) => (item.id ? String(item.id) : String(index))}
-                refreshing={isLoading}
-                onRefresh={fetchMore}
+            <FlashList
+              data={articles?.data}
+              renderItem={({ item }: any) => <ArticleListItem article={item} />}
+              keyExtractor={(item: any, index: number) => (item?.id ? String(item.id) : String(index))}
+              refreshing={isFetching}
+              onRefresh={() => refetch()}
+              drawDistance={Dimensions.get('window').width > 900 ? 900 : 600}
+              style={{ flex: 1, alignSelf: 'stretch' }}
             />
             <View style={styles.containerPaginator}>
               <DataTable>

@@ -78,6 +78,8 @@ describe('useTravelDetailsPerformance', () => {
       jest.advanceTimersByTime(800)
     })
 
+    // useLCPPreload is now a no-op (preloading handled by inline script in +html.tsx)
+    // but it's still called to maintain the hook signature
     expect(useLCPPreload).toHaveBeenCalled()
     expect(injectCriticalStyles).toHaveBeenCalled()
     expect(initPerformanceMonitoring).toHaveBeenCalled()

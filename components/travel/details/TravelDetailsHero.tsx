@@ -14,8 +14,6 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
 import {
   createSafeImageUrl,
-  getSafeOrigin,
-  isSafePreconnectDomain,
 } from '@/utils/travelDetailsSecure'
 import {
   buildResponsiveImageProps,
@@ -36,7 +34,6 @@ const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
 const WeatherWidget = withLazy(() => import('@/components/WeatherWidget'))
 const HERO_QUICK_JUMP_KEYS = ['map', 'description', 'points'] as const
 
-const getOrigin = getSafeOrigin
 const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
   createSafeImageUrl(url, updated_at, id)
 
@@ -57,93 +54,12 @@ const buildApiPrefixedUrl = (value: string): string | null => {
 }
 
 export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
+  // No-op: Preloading is now handled by the inline script in +html.tsx
+  // which runs earlier and avoids the "preload not used" warning.
+  // The inline script preloads images before React hydration, ensuring
+  // they are used immediately when the component renders.
   useEffect(() => {
-    if (Platform.OS !== 'web') return
-    // global dedupe set to avoid creating duplicate preload/prefetch tags
-    if (!(window as any).__metravel_lcp_preloaded) {
-      (window as any).__metravel_lcp_preloaded = new Set<string>()
-    }
-    const createdLinks: HTMLLinkElement[] = []
-    const first = travel?.travel_image_thumb_url || travel?.gallery?.[0]
-    if (!first) return
-
-    const imageUrl = typeof first === 'string' ? first : first.url
-    const updatedAt = typeof first === 'string' ? undefined : first.updated_at
-    const id = typeof first === 'string' ? undefined : first.id
-
-    if (!imageUrl) return
-
-    const versionedHref = buildVersioned(imageUrl, updatedAt, id)
-    const lcpMaxWidth = isMobile ? 400 : 860
-    const lcpWidths = isMobile ? [320, 400] : [640, 860]
-    const targetWidth =
-      typeof window !== 'undefined'
-        ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
-        : lcpMaxWidth
-    const lcpQuality = isMobile ? 45 : 50
-    const responsive = buildResponsiveImageProps(versionedHref, {
-      maxWidth: targetWidth,
-      widths: lcpWidths,
-      quality: lcpQuality,
-      format: 'webp',
-      fit: 'cover',
-      sizes: isMobile ? '100vw' : '(max-width: 1024px) 92vw, 860px',
-    })
-    const _optimizedHref = responsive.src || versionedHref
-
-    const optimizedOrigin = (() => {
-      try {
-        return _optimizedHref ? new URL(_optimizedHref).origin : null
-      } catch {
-        return null
-      }
-    })()
-
-    const rel = document.readyState === 'complete' ? 'prefetch' : 'preload'
-    const preloadHref = buildApiPrefixedUrl(_optimizedHref) ?? _optimizedHref
-    const preloadKey = preloadHref
-    const already = (window as any).__metravel_lcp_preloaded.has(preloadKey)
-    if (preloadHref && !already && !document.querySelector(`link[rel="${rel}"][href="${preloadHref}"]`)) {
-      (window as any).__metravel_lcp_preloaded.add(preloadKey)
-      const preload = document.createElement('link')
-      preload.rel = rel
-      preload.as = 'image'
-      preload.href = preloadHref
-      if (responsive.srcSet) preload.setAttribute('imagesrcset', responsive.srcSet)
-      if (responsive.sizes) preload.setAttribute('imagesizes', responsive.sizes)
-      if (rel === 'preload') {
-        preload.fetchPriority = 'high'
-        preload.setAttribute('fetchPriority', 'high')
-      }
-      preload.crossOrigin = 'anonymous'
-      document.head.appendChild(preload)
-      createdLinks.push(preload)
-    }
-
-    const domains = [
-      getOrigin(imageUrl),
-      optimizedOrigin,
-    ].filter((d): d is string => isSafePreconnectDomain(d))
-
-    domains.forEach((d) => {
-      if (!document.querySelector(`link[rel="preconnect"][href="${d}"]`)) {
-        const l = document.createElement('link')
-        l.rel = 'preconnect'
-        l.href = d
-        l.crossOrigin = 'anonymous'
-        document.head.appendChild(l)
-        createdLinks.push(l)
-      }
-    })
-    return () => {
-      createdLinks.forEach((link) => {
-        try {
-          link.parentNode?.removeChild(link)
-        } catch {
-          // noop
-        }
-      })
-    }
+    // Intentionally empty - preload handled by inline script
   }, [isMobile, travel?.gallery, travel?.travel_image_thumb_url])
 }
 

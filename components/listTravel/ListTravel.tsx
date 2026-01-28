@@ -2,7 +2,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
-  FlatList,
   Platform,
   View,
   ViewStyle,
@@ -258,7 +257,7 @@ function ListTravel({
     /* UI / dialogs */
     const [deleteId, setDelete] = useState<number | null>(null);
     const [showFilters, setShowFilters] = useState(false);
-    const flatListRef = useRef<FlatList>(null);
+    const flatListRef = useRef<any>(null);
 
     /* Filters options - оптимизированный запрос с кэшированием */
     const { data: rawOptions, isLoading: filterOptionsLoading } = useQuery({

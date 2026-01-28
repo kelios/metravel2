@@ -1,10 +1,11 @@
 import { memo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Animated } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { getThemedColors, useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import { FlashList } from '@shopify/flash-list';
 
 const STORAGE_KEY_NOTIFICATIONS = 'user_notifications';
 const STORAGE_KEY_LAST_CHECK = 'notifications_last_check';
@@ -145,12 +146,13 @@ const NotificationSystem = ({ onNotificationPress }: NotificationSystemProps) =>
         )}
       </View>
 
-      <FlatList
+      <FlashList
         data={notifications}
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        drawDistance={Platform.OS === 'web' ? 800 : 500}
       />
     </View>
   );

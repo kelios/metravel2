@@ -7,9 +7,9 @@ import {
   Text,
   LayoutChangeEvent,
   StyleProp,
-  FlatList,
   Dimensions,
 } from 'react-native'
+import { FlashList } from '@shopify/flash-list'
 
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/EmptyState'
@@ -78,7 +78,7 @@ interface RightColumnProps {
   renderItem: (travel: Travel, index: number) => React.ReactNode
   cardSpacing?: number
   testID?: string
-  listRef?: React.RefObject<FlatList<Travel[]>>
+  listRef?: React.RefObject<any>
 }
 
 const RightColumn: React.FC<RightColumnProps> = memo(
@@ -113,7 +113,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      cardSpacing = 16,
      listRef: externalListRef,
    }) => {
-    const localListRef = useRef<FlatList<Travel[]> | null>(null)
+    const localListRef = useRef<any>(null)
     const listRef = externalListRef ?? localListRef
     const recommendationsOffsetRef = useRef(0)
     const prevVisibilityRef = useRef(isRecommendationsVisible)
@@ -453,7 +453,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
           {/* Travel Cards Grid - Only show when we have data */}
           {!showInitialLoading && !isError && !showEmptyState && travels.length > 0 && (
-            <FlatList
+            <FlashList
               ref={listRef as any}
               data={rows}
               renderItem={renderRow as any}
@@ -463,11 +463,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
               ItemSeparatorComponent={Platform.OS === 'web' ? RowSeparator : undefined}
               onEndReached={onEndReached}
               onEndReachedThreshold={onEndReachedThreshold}
-              removeClippedSubviews={true}
-              windowSize={5}
-              initialNumToRender={6}
-              maxToRenderPerBatch={3}
-              updateCellsBatchingPeriod={100}
+              drawDistance={Platform.OS === 'web' ? 900 : 600}
               contentContainerStyle={{
                 paddingHorizontal: contentPadding,
                 paddingTop: 8,

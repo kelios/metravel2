@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, FlatList, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
+import { FlashList } from '@shopify/flash-list';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -262,15 +263,23 @@ export default function FavoritesScreen() {
                 </View>
             </View>
 
-            <FlatList
+            <FlashList
                 data={data}
                 keyExtractor={(item: any) => `${item.type || 'travel'}-${item.id}`}
                 numColumns={numColumns}
                 key={numColumns}
                 contentContainerStyle={styles.listContent}
-                columnWrapperStyle={numColumns > 1 ? styles.gridRow : undefined}
-                renderItem={({ item }: { item: any }) => (
-                    <View style={styles.gridItem}>
+                drawDistance={Platform.OS === 'web' ? 800 : 500}
+                renderItem={({ item, index }: { item: any; index: number }) => {
+                    const gap = 14;
+                    const columnIndex = numColumns > 0 ? index % numColumns : 0;
+                    const isFirstColumn = numColumns <= 1 || columnIndex === 0;
+                    const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
+                    const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
+                    const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
+
+                    return (
+                    <View style={[styles.gridItem, numColumns > 1 ? { paddingLeft, paddingRight } : null]}>
                         <TabTravelCard
                             item={{
                                 id: item.id,
@@ -299,7 +308,8 @@ export default function FavoritesScreen() {
                             <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
                         </Pressable>
                     </View>
-                )}
+                    );
+                }}
             />
         </SafeAreaView>
     );
