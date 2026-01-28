@@ -13,9 +13,9 @@ import {
   Text,
   View,
   Platform,
-  FlatList,
   ScrollView,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { Title } from '@/src/ui/paper';
 
 import { Travel } from '@/src/types/types';
@@ -25,6 +25,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import Button from '@/components/ui/Button';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { queryConfigs } from '@/src/utils/reactQueryConfig';
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy imports для map-компонентов
 const MapClientSideComponent = React.lazy(() => import('@/components/Map'));
@@ -221,14 +223,12 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
      showHeader = true,
      embedded = false,
    }) => {
-    const [travelsNear, setTravelsNear] = useState<Travel[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<Segment>('list');
     const [visibleCount, setVisibleCount] = useState(6);
     const { isPhone, isLargePhone, isTablet, width } = useResponsive();
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const scrollViewRef = useRef<ScrollView>(null);
+    const [isQueryEnabled, setIsQueryEnabled] = useState(false);
     const segmentOptions = useMemo(
       () => [
         { key: 'list', label: 'Список' },
@@ -265,94 +265,39 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       return 8;
     }, [isMobile, isTablet]);
 
-    // ✅ ИСПРАВЛЕНИЕ: Используем useRef для предотвращения бесконечных запросов
-    const hasLoadedRef = useRef(false);
-    const onTravelsLoadedRef = useRef(onTravelsLoaded);
-    useEffect(() => {
-      onTravelsLoadedRef.current = onTravelsLoaded;
-    }, [onTravelsLoaded]);
-    const controllerRef = useRef<AbortController | null>(null);
-
-    // Оптимизированная загрузка данных с защитой от повторных запросов
-    const fetchNearbyTravels = useCallback(async () => {
-      const travelId = Number(travel.id);
-      if (!Number.isFinite(travelId) || hasLoadedRef.current) return;
-
-      // Отменяем предыдущий запрос, если он существует
-      if (controllerRef.current) {
-        controllerRef.current.abort();
-      }
-
-      const controller = new AbortController();
-      controllerRef.current = controller;
-      hasLoadedRef.current = true;
-
-      // Timeout for the fetch request
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-      }, 15000);
-
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const data = await fetchTravelsNear(travelId);
-        
-        if (!controller.signal.aborted) {
-          const travelsArray = Array.isArray(data) ? data.slice(0, 50) : [];
-          setTravelsNear(travelsArray);
-          onTravelsLoadedRef.current?.(travelsArray);
-        }
-      } catch (e: any) {
-        if (controller.signal.aborted) return;
-        
-        // Понятные сообщения об ошибках
-        if (e.name === 'AbortError') {
-          setError('Превышено время ожидания загрузки. Проверьте подключение к интернету.');
-        } else {
-          setError('Не удалось загрузить маршруты. Проверьте подключение и попробуйте позже.');
-        }
-        
-        if (__DEV__) {
-          console.error('Fetch error:', e);
-        }
-        hasLoadedRef.current = false; // Разрешаем повторную попытку при ошибке
-      } finally {
-        clearTimeout(timeoutId);
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-          controllerRef.current = null;
-        }
-      }
+    const travelId = useMemo(() => {
+      const id = Number(travel.id);
+      return Number.isFinite(id) && id > 0 ? id : null;
     }, [travel.id]);
 
-    // Загружаем данные только один раз при монтировании или изменении travel.id
+    // Small delay to prioritize main content rendering (keeps old behavior, but fetch is handled by React Query).
     useEffect(() => {
-      if (!travel.id) return;
-      
-      hasLoadedRef.current = false; // Сбрасываем флаг при изменении travel.id
-      setTravelsNear([]); // Reset previous data
-      setIsLoading(true);
-      setError(null);
-      
-      const timer = setTimeout(() => {
-        fetchNearbyTravels();
-      }, 300); // Small delay to prioritize main content rendering
-      
-      return () => {
-        clearTimeout(timer);
-        if (controllerRef.current) {
-          controllerRef.current.abort();
-        }
-      };
-    }, [travel.id, fetchNearbyTravels]);
+      setIsQueryEnabled(false);
+      setVisibleCount(6);
+      const timer = setTimeout(() => setIsQueryEnabled(true), 300);
+      return () => clearTimeout(timer);
+    }, [travelId]);
 
-    // ✅ ИСПРАВЛЕНИЕ: Вызываем onTravelsLoaded только после успешной загрузки
+    const {
+      data: travelsNear = [],
+      isLoading,
+      isError,
+      error,
+      refetch: refetchTravelsNear,
+    } = useQuery<Travel[]>({
+      queryKey: ['travels-near', travelId],
+      enabled: isQueryEnabled && travelId != null,
+      queryFn: ({ signal }) => fetchTravelsNear(travelId as number, signal) as any,
+      select: (data) => (Array.isArray(data) ? data.slice(0, 50) : []),
+      placeholderData: keepPreviousData,
+      ...queryConfigs.dynamic,
+      refetchOnMount: false,
+    });
+
     useEffect(() => {
-      if (travelsNear.length > 0 && onTravelsLoaded) {
-        onTravelsLoaded(travelsNear);
-      }
-    }, [travelsNear, onTravelsLoaded]);
+      if (!travelsNear.length) return;
+      onTravelsLoaded?.(travelsNear);
+    }, [onTravelsLoaded, travelsNear]);
 
     // Оптимизированное преобразование точек для карты
     const mapPoints = useMemo(() => {
@@ -718,13 +663,15 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       };
     }, [numColumns, width]);
 
-    if (error) {
+    if (isError) {
       return (
         <View style={styles.errorContainer} onLayout={onLayout}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>
+            {error instanceof Error ? error.message : 'Не удалось загрузить маршруты. Попробуйте позже.'}
+          </Text>
           <Button
             label="Повторить попытку"
-            onPress={fetchNearbyTravels}
+            onPress={() => refetchTravelsNear()}
             variant="primary"
             size="md"
             style={styles.retryButton}
@@ -822,19 +769,16 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
             </React.Suspense>
 
             {viewMode === 'list' ? (
-              <FlatList
+              <FlashList
                 data={displayedTravels}
                 keyExtractor={keyExtractor}
                 renderItem={renderTravelItem}
+                drawDistance={500}
                 contentContainerStyle={styles.mobileListContent}
                 scrollEnabled={!embedded}
-                nestedScrollEnabled={!embedded}
                 onEndReached={embedded ? undefined : handleLoadMore}
                 onEndReachedThreshold={embedded ? undefined : 0.2}
                 showsVerticalScrollIndicator={false}
-                initialNumToRender={6}
-                maxToRenderPerBatch={2}
-                windowSize={3}
                 ListFooterComponent={
                   visibleCount < travelsNear.length ? (
                     <View style={styles.loadMoreContainer}>

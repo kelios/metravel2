@@ -230,13 +230,15 @@ config.resolver = {
 }
 
 
-// Оптимизация для production
+// ✅ ОПТИМИЗАЦИЯ: Production конфигурация для Expo 54
 if (process.env.NODE_ENV === 'production') {
   config.transformer = {
     ...config.transformer,
     getTransformOptions: async () => ({
       transform: {
-        experimentalImportSupport: false,
+        // ✅ НОВОЕ: Включаем экспериментальную поддержку импортов для tree-shaking
+        experimentalImportSupport: true,
+        // Inline requires для уменьшения размера бандла
         inlineRequires: true,
       },
     }),
@@ -244,10 +246,19 @@ if (process.env.NODE_ENV === 'production') {
       ...config.transformer.minifierConfig,
       keep_classnames: false,
       keep_fnames: false,
+      // ✅ НОВОЕ: Агрессивная минификация
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug', 'console.info'],
+        passes: 2, // Два прохода минификации для лучшего результата
+      },
       mangle: {
         ...config.transformer.minifierConfig?.mangle,
         keep_classnames: false,
         keep_fnames: false,
+        // Сокращаем имена переменных
+        toplevel: true,
       },
     },
     // Enable CSS optimization
@@ -268,8 +279,16 @@ if (process.env.NODE_ENV === 'production') {
     },
   }
   
-  // Enable bundle splitting for better caching
+  // ✅ НОВОЕ: Bundle splitting для лучшего кеширования
   config.resolver.assetExts = [...config.resolver.assetExts, 'webp', 'avif']
+  
+  // ✅ НОВОЕ: Включаем новые возможности Expo 54
+  config.resolver.unstable_enablePackageExports = true;
+  config.resolver.unstable_conditionNames = [
+    'react-native',
+    'browser',
+    'require',
+  ];
   
   // Configure for better web performance
   if (process.env.EXPO_PLATFORM === 'web') {

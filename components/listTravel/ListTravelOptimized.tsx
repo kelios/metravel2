@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { FlatList, FlatListProps } from 'react-native';
+import { FlashList, FlashListProps } from '@shopify/flash-list';
 
 /**
  * Оптимизированные настройки для FlatList на странице поиска
@@ -27,16 +27,30 @@ export const OPTIMIZED_FLATLIST_CONFIG = {
   }),
 } as const;
 
+export const OPTIMIZED_FLASHLIST_CONFIG = {
+  // Расстояние отрисовки за пределами viewport
+  drawDistance: 500,
+  
+  // Оптимизация обновлений - фиксированная высота элемента
+  overrideItemLayout: (layout: { span?: number; size?: number }) => {
+    layout.size = 280; // Фиксированная высота для лучшей производительности
+  },
+} as const;
+
 /**
- * Оптимизированный FlatList wrapper с мемоизацией
+ * Оптимизированный FlashList wrapper с мемоизацией
  */
-export function OptimizedFlatList<T>(props: FlatListProps<T>) {
+export function OptimizedFlashList<T>(props: FlashListProps<T>) {
   const optimizedProps = useMemo(() => ({
-    ...OPTIMIZED_FLATLIST_CONFIG,
+    ...OPTIMIZED_FLASHLIST_CONFIG,
     ...props,
   }), [props]);
 
-  return <FlatList {...optimizedProps} />;
+  return <FlashList {...optimizedProps} />;
 }
 
-export const MemoizedOptimizedFlatList = memo(OptimizedFlatList) as typeof OptimizedFlatList;
+export const MemoizedOptimizedFlashList = memo(OptimizedFlashList) as typeof OptimizedFlashList;
+
+// Экспорт для обратной совместимости
+export const OptimizedFlatList = OptimizedFlashList;
+export const MemoizedOptimizedFlatList = MemoizedOptimizedFlashList;

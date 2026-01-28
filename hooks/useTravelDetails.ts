@@ -30,6 +30,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     .split('#')[0]
     .split('%23')[0];
   const isMissingParam = normalizedSlug.length === 0;
+  const cacheKey = isId ? idNum : normalizedSlug;
 
   const isWebAutomation =
     Platform.OS === 'web' &&
@@ -37,7 +38,7 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     Boolean((navigator as any).webdriver);
 
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
-    queryKey: ['travel', normalizedSlug],
+    queryKey: ['travel', cacheKey],
     enabled: !isMissingParam,
     queryFn: () => (isId ? fetchTravel(idNum) : fetchTravelBySlug(normalizedSlug)),
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер

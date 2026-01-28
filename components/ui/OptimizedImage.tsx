@@ -101,26 +101,42 @@ interface OptimizedImageProps {
   onLoad?: () => void;
   onError?: () => void;
   style?: any;
+  // ✅ НОВОЕ: Expo Image v3 features
+  recyclingKey?: string; // Для переиспользования в списках
+  responsivePolicy?: 'live' | 'initial'; // Адаптивная загрузка
 }
 
 /**
  * Оптимизированный компонент изображения
+ * Обновлено для Expo 54 и expo-image v3
  * 
  * Особенности:
  * - Автоматическая оптимизация для WebP/AVIF
  * - Lazy loading по умолчанию
  * - Placeholder с blurhash
  * - Индикатор загрузки
- * - Обработка ошибок
+ * - Обработка ошибок с retry
  * - Responsive sizing
+ * - ✅ НОВОЕ: Recycling для списков (expo-image v3)
+ * - ✅ НОВОЕ: Responsive policy для адаптивной загрузки
  * 
  * @example
+ * // Базовое использование
  * <OptimizedImage
  *   source={{ uri: imageUrl }}
  *   contentFit="cover"
  *   aspectRatio={16/9}
  *   placeholder={blurhash}
  *   loading="lazy"
+ * />
+ * 
+ * @example
+ * // В списках с recycling
+ * <OptimizedImage
+ *   source={{ uri: item.imageUrl }}
+ *   recyclingKey={item.id}
+ *   responsivePolicy="initial"
+ *   priority="low"
  * />
  */
 function OptimizedImage({
