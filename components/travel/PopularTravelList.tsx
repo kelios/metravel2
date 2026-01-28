@@ -5,7 +5,6 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
   type FC,
 } from "react";
 import {
@@ -16,6 +15,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useQuery } from '@tanstack/react-query';
 import { Title } from "@/src/ui/paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
 import { fetchTravelsPopular } from "@/src/api/map";
@@ -23,6 +23,8 @@ import type { TravelsMap } from "@/src/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // РЕДИЗАЙН: Темная тема
+import { queryKeys } from '@/src/queryKeys';
+import { queryConfigs } from '@/src/utils/reactQueryConfig';
 import {
   FLATLIST_CONFIG,
   FLATLIST_CONFIG_MOBILE,
@@ -48,13 +50,9 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
      showHeader = true,
      embedded = false,
    }) => {
-    const [travelsPopular, setTravelsPopular] = useState<TravelsMap>({});
-    const [isLoading, setIsLoading] = useState(true);
-    const [hasError, setHasError] = useState(false);
     const { width } = useResponsive();
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const mountedRef = useRef(true);
     const listConfig = Platform.OS === 'web' ? FLATLIST_CONFIG : FLATLIST_CONFIG_MOBILE;
 
     // ✅ УЛУЧШЕНИЕ: Более точные брейкпоинты для адаптивности
@@ -63,39 +61,16 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       if (width <= 1024) return Math.min(maxColumns, 2); // tablet (641–1024px)
       return Math.min(maxColumns, 3); // desktop (≥ 1025px)
     }, [width, maxColumns]);
-
-    const fetchPopularTravels = useCallback(async () => {
-      if (!mountedRef.current) return;
-
-      try {
-        setIsLoading(true);
-        setHasError(false);
-        const data = await fetchTravelsPopular();
-        if (mountedRef.current) {
-          setTravelsPopular(data);
-        }
-      } catch (error) {
-        if (mountedRef.current) {
-          setHasError(true);
-          if (__DEV__) {
-            console.error('Error fetching popular travels:', error);
-          }
-        }
-      } finally {
-        if (mountedRef.current) {
-          setIsLoading(false);
-        }
-      }
-    }, []);
-
-    useEffect(() => {
-      mountedRef.current = true;
-      fetchPopularTravels();
-
-      return () => {
-        mountedRef.current = false;
-      };
-    }, [fetchPopularTravels]);
+    
+    const {
+      data: travelsPopular = {} as TravelsMap,
+      isLoading,
+      isError: hasError,
+    } = useQuery({
+      queryKey: queryKeys.travelsPopular(),
+      ...queryConfigs.static,
+      queryFn: ({ signal } = {} as any) => fetchTravelsPopular({ signal, throwOnError: true }),
+    });
 
     const popularList = useMemo(() => {
       const list = Object.values(travelsPopular) as any[];
@@ -290,15 +265,13 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
     useEffect(() => {
       let timer: ReturnType<typeof setTimeout> | null = null;
 
-      if (!isLoading && popularList.length > 0 && mountedRef.current) {
+      if (!isLoading && popularList.length > 0) {
         timer = setTimeout(() => {
-          if (mountedRef.current) {
-            Animated.timing(fadeAnim, {
-              toValue: 1,
-              duration: 250, // Укороченная анимация
-              useNativeDriver: shouldUseNativeDriver,
-            }).start();
-          }
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 250, // Укороченная анимация
+            useNativeDriver: shouldUseNativeDriver,
+          }).start();
         }, 50); // Небольшая задержка для обеспечения плавности
       }
 

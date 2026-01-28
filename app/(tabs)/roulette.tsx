@@ -9,6 +9,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ModernFilters from '@/components/listTravel/ModernFilters';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';
+import type { Travel } from '@/src/types/types';
 
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouletteLogic } from '@/components/roulette/useRoulette';
@@ -240,13 +241,13 @@ export default function RouletteScreen() {
                     </View>
                   </View>
                 ) : (
-                  <FlashList
-                    data={result}
+                  <FlashList<Travel>
+                    data={result as Travel[]}
                     keyExtractor={(item) => String(item.id)}
                     key="cols-1"
                     numColumns={1}
                     contentContainerStyle={[styles.cardsGrid, isMobile && styles.cardsGridMobile]}
-                    estimatedItemSize={420}
+                    {...({ estimatedItemSize: 420 } as any)}
                     renderItem={({ item, index }) => (
                       <View style={styles.cardWrapper}>
                         <RenderTravelItem
