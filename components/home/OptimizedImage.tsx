@@ -1,14 +1,17 @@
-import React, { memo, useState, useMemo } from 'react';
-import { Image, View, StyleSheet, Platform, ImageProps } from 'react-native';
+import { memo, useState, useMemo } from 'react';
+import { View, StyleSheet, Platform } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
+import { Asset } from 'expo-asset';
 import { useThemedColors } from '@/hooks/useTheme';
 
-interface OptimizedImageProps extends Omit<ImageProps, 'source'> {
+interface OptimizedImageProps {
   source: any;
   width: number;
   height: number;
   borderRadius?: number;
   alt?: string;
   loadingStrategy?: 'lazy' | 'eager';
+  style?: any;
 }
 
 function OptimizedImage({
@@ -19,11 +22,32 @@ function OptimizedImage({
   alt,
   loadingStrategy = 'lazy',
   style,
-  ...props
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+  const colors = useThemedColors();
+
+  const resolvedSource = useMemo(() => {
+    if (!source) return null;
+    
+    // For web platform, resolve asset URI
+    if (Platform.OS === 'web' && typeof source === 'number') {
+      try {
+        const asset = Asset.fromModule(source);
+        return { uri: asset.uri || '' };
+      } catch (error) {
+        console.warn('Failed to resolve asset:', error);
+        return source;
+      }
+    }
+    
+    // For native or already resolved sources
+    if (typeof source === 'object' && source.uri) {
+      return source;
+    }
+    
+    return source;
+  }, [source]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -79,9 +103,9 @@ function OptimizedImage({
         <View style={[styles.placeholder, { borderRadius }]} />
       )}
 
-      {!hasError && (
-        <Image
-          source={source}
+      {!hasError && resolvedSource && (
+        <ExpoImage
+          source={resolvedSource}
           style={[
             styles.image,
             { width, height, borderRadius, opacity: isLoaded ? 1 : 0 },
@@ -89,14 +113,14 @@ function OptimizedImage({
           ]}
           onLoad={() => setIsLoaded(true)}
           onError={() => setHasError(true)}
-          resizeMode="cover"
+          contentFit="cover"
+          transition={300}
           {...(Platform.OS === 'web' ? {
             loading: loadingStrategy as any,
             fetchpriority: (loadingStrategy === 'eager' ? 'high' : 'auto') as any,
             alt: alt || '',
             decoding: 'async' as any,
           } : {})}
-          {...props}
         />
       )}
 
