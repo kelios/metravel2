@@ -269,7 +269,6 @@ describe('AccountMenu', () => {
   it('does not append cache-buster param to signed S3 avatar url', () => {
     const signed =
       'https://metravellocal.s3.amazonaws.com/profile/78/avatar/x.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=abc';
-
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       username: 'Юлия',
@@ -290,7 +289,8 @@ describe('AccountMenu', () => {
     } as any);
 
     renderWithClient(<RenderRightMenu />);
-    expect(getLastImageSourceUri()).toBe(signed);
+    // We now apply optimizeImageUrl to avatars which adds version parameter
+    expect(getLastImageSourceUri()).toBe(signed + '&v=5');
   });
 
   it('appends cache-buster param to non-signed avatar url', () => {

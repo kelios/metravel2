@@ -13,6 +13,7 @@ import { useFilters } from '@/providers/FiltersProvider';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
@@ -198,11 +199,20 @@ function AccountMenu() {
     }
 
     if (normalized.includes('X-Amz-') || normalized.includes('x-amz-')) {
-      return normalized;
+      const separator = normalized.includes('?') ? '&' : '?';
+      return `${normalized}${separator}v=${profileRefreshToken}`;
     }
 
     const separator = normalized.includes('?') ? '&' : '?';
-    return `${normalized}${separator}v=${profileRefreshToken}`;
+    const withVersion = `${normalized}${separator}v=${profileRefreshToken}`;
+    
+    // Apply image optimization for mobile web
+    return optimizeImageUrl(withVersion, {
+      width: 48,
+      height: 48,
+      quality: 85,
+      fit: 'cover',
+    }) || withVersion;
   }, [avatarLoadError, userAvatar, profileRefreshToken]);
 
   React.useEffect(() => {

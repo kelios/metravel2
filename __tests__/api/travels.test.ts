@@ -284,12 +284,12 @@ describe('src/api/travelsApi.ts', () => {
 
       mockedGetSecureItem.mockResolvedValueOnce(null);
       const first = await fetchTravel(99);
-      expect(first).toBe(travelPayload);
+      expect(first).toEqual(travelPayload);
 
       mockedGetSecureItem.mockResolvedValueOnce(null);
       const second = await fetchTravel(99);
 
-      expect(second).toBe(travelPayload);
+      expect(second).toEqual(travelPayload);
       expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
     });
 

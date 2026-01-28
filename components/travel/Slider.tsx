@@ -287,10 +287,7 @@ const Slide = memo(function Slide({
   imagesLength,
   colors,
   styles,
-  isMobile,
   blurBackground,
-  reduceMotion,
-  aspectRatio,
   imageProps,
   onFirstImageLoad,
 }: SlideProps) {

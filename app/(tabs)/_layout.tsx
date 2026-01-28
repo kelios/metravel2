@@ -57,9 +57,7 @@ export default function TabLayout() {
                 tabBarStyle: tabBarHiddenStyle,
                 header: () => <Header />, // кастомный заголовок
                 lazy: true,               // экраны создаются по первому фокусу
-                freezeOnBlur: Platform.OS !== 'web', // на web размонтируем неактивные экраны
-                unmountOnBlur: Platform.OS === 'web',
-                detachInactiveScreens: Platform.OS === 'web',
+                freezeOnBlur: false,      // не замораживаем экраны при потере фокуса
             }}
         >
             <Tabs.Screen name="index" />

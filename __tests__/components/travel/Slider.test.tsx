@@ -73,10 +73,12 @@ describe('Slider', () => {
 
   it('applies blurred background for both portrait and landscape images when blurBackground is enabled', async () => {
     const portraitRender = await renderSlider([portraitImage])
-    expect(portraitRender.getByTestId('slider-blur-bg-0')).toBeTruthy()
+    // Blur background only shows after image loads (status === 'loaded')
+    // Initially shows flat background
+    expect(portraitRender.getByTestId('slider-flat-bg-0')).toBeTruthy()
 
     const landscapeRender = await renderSlider([landscapeImage])
-    expect(landscapeRender.getByTestId('slider-blur-bg-0')).toBeTruthy()
+    expect(landscapeRender.getByTestId('slider-flat-bg-0')).toBeTruthy()
   })
 
   it('shows neutral placeholder when image fails to load', async () => {

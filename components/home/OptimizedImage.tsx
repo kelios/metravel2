@@ -34,9 +34,6 @@ function OptimizedImage({
     
     // ExpoImage handles require() sources directly on web
     // No need to manually resolve with Asset.fromModule
-    if (__DEV__) {
-      console.log('[OptimizedImage] Source type:', typeof source, 'Value:', source);
-    }
     return source;
   }, [source]);
 
@@ -103,9 +100,6 @@ function OptimizedImage({
             style,
           ]}
           onLoad={() => {
-            if (__DEV__) {
-              console.log('[OptimizedImage] Image loaded successfully');
-            }
             setIsLoaded(true);
           }}
           onError={(error) => {

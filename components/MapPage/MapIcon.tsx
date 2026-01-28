@@ -65,6 +65,16 @@ const mapIconName = (name: string): keyof typeof Feather.glyphMap => {
     case 'star':
       return 'star';
     
+    // Filters & categories
+    case 'grid':
+      return 'grid';
+    case 'radio':
+      return 'radio';
+    case 'list':
+      return 'list';
+    case 'filter-list':
+      return 'filter';
+    
     // Default: try to use the name as-is if it exists in Feather
     default:
       return name as keyof typeof Feather.glyphMap;
