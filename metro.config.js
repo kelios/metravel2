@@ -41,16 +41,12 @@ config.resolver = {
   // that Metro/web ends up bundling incorrectly, leading to runtime export mismatches.
   resolverMainFields: ['react-native', 'browser', 'main', 'module'],
   assetExts: Array.from(new Set([...(config.resolver.assetExts || []), 'ico'])),
+  // Disable package exports for react-leaflet to avoid ES module issues
+  // Metro's unstable_enablePackageExports can cause issues with packages that have "type": "module"
+  // because it respects the "exports" field which points to ES module files
+  unstable_enablePackageExports: false,
   resolveRequest: (context, moduleName, platform, modulePath) => {
     const isWeb = platform === 'web' || (context && context.platform === 'web');
-    
-    // Special handling for react-leaflet to ensure proper ES module resolution
-    if (isWeb && moduleName === 'react-leaflet') {
-      return {
-        filePath: path.resolve(__dirname, 'node_modules/react-leaflet/lib/index.js'),
-        type: 'sourceFile',
-      };
-    }
     
     // Блокируем импорт всех CSS файлов (Metro не может их обработать из-за lightningcss)
     if (moduleName.endsWith('.css')) {
@@ -282,8 +278,7 @@ if (process.env.NODE_ENV === 'production') {
   // ✅ НОВОЕ: Bundle splitting для лучшего кеширования
   config.resolver.assetExts = [...config.resolver.assetExts, 'webp', 'avif']
   
-  // ✅ НОВОЕ: Включаем новые возможности Expo 54
-  config.resolver.unstable_enablePackageExports = true;
+  // Note: unstable_enablePackageExports is disabled in the resolver configuration above to fix react-leaflet ES module issues
   config.resolver.unstable_conditionNames = [
     'react-native',
     'browser',
