@@ -180,7 +180,7 @@ test.describe('CLS audit', () => {
 
         try {
           const beforePath = testInfo.outputPath(`cls-${route.replace(/\W+/g, '_')}-before.png`);
-          await routePage.screenshot({ path: beforePath, fullPage: true });
+          await routePage.screenshot({ path: beforePath, fullPage: false });
           await testInfo.attach(`cls-${route}-before`, { path: beforePath, contentType: 'image/png' });
         } catch {
           // ignore screenshot errors
@@ -199,7 +199,7 @@ test.describe('CLS audit', () => {
 
         try {
           const afterPath = testInfo.outputPath(`cls-${route.replace(/\W+/g, '_')}-after.png`);
-          await routePage.screenshot({ path: afterPath, fullPage: true });
+          await routePage.screenshot({ path: afterPath, fullPage: false });
           await testInfo.attach(`cls-${route}-after`, { path: afterPath, contentType: 'image/png' });
         } catch {
           // ignore screenshot errors

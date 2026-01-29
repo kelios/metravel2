@@ -42,6 +42,8 @@ jest-results.json
 /playwright-report/
 .playwright-report-extracted/
 /e2e/.auth/
+.pwtrace_tmp*/
+.pwtrace_tmp/
 
 # Android sensitive files
 google-services.json

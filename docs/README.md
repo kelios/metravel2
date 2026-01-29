@@ -17,14 +17,14 @@
 ## Quick start
 
 ```bash
-npm install
-npm run start
+yarn
+yarn start
 ```
 
 ### Web
 
 ```bash
-npm run web
+yarn web
 ```
 
 ### Tests
@@ -32,25 +32,31 @@ npm run web
 - Watch mode:
 
 ```bash
-npm run test
+yarn test
 ```
 
 - Single run (recommended for CI/local checks):
 
 ```bash
-npm run test:run
+yarn test:run
 ```
 
 - Coverage:
 
 ```bash
-npm run test:coverage
+yarn test:coverage
+```
+
+### E2E (Playwright)
+
+```bash
+yarn e2e
 ```
 
 ### Lint
 
 ```bash
-npm run lint
+yarn lint
 ```
 
 ## Backend API

@@ -40,6 +40,7 @@ const contentTypes = {
 const apiProxyTarget = process.env.E2E_API_PROXY_TARGET || 'https://metravel.by'
 const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLowerCase() === 'true'
 const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/']
+const proxyTimeoutMs = Number(process.env.E2E_API_PROXY_TIMEOUT_MS || '20000')
 
 const proxyRequest = (req, res, target) => {
   try {
@@ -66,6 +67,16 @@ const proxyRequest = (req, res, target) => {
         proxyRes.pipe(res)
       }
     )
+
+    if (Number.isFinite(proxyTimeoutMs) && proxyTimeoutMs > 0) {
+      proxyReq.setTimeout(proxyTimeoutMs, () => {
+        try {
+          proxyReq.destroy(new Error(`Proxy timeout after ${proxyTimeoutMs}ms`))
+        } catch {
+          // ignore
+        }
+      })
+    }
 
     proxyReq.on('error', (error) => {
       console.error('❌ API proxy error:', error && error.message ? error.message : error)

@@ -216,6 +216,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [showMapSettings, setShowMapSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const viewMode: ViewMode = 'map'; // Fixed to map view only
+  const [panelTab, setPanelTab] = useState<'filters' | 'list'>('list');
   const [showActions, setShowActions] = useState(false);
   const [recommendedPointIds, setRecommendedPointIds] = useState<number[]>([]);
   const [showingRecommendations, setShowingRecommendations] = useState(false);
@@ -261,6 +262,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const { width: windowWidth } = useWindowDimensions();
   const isNarrow = windowWidth < 420;
   const isMobile = Platform.OS !== 'web';
+  const isWideScreenWeb = Platform.OS === 'web' && windowWidth >= 1024;
 
   const showPointTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeDriveAbortRef = useRef<AbortController | null>(null);
@@ -1433,27 +1435,32 @@ useEffect(() => {
     );
   }, [styles.emptyContainer, styles.emptyText]);
 
-  return (
-    <View style={styles.container}>
-      {selectionMode ? (
-        <View style={styles.bulkMapBar}>
-          <View style={styles.bulkMapBarRow}>
-            <Text style={styles.bulkMapBarText}>
-              {bulkProgress
-                ? `Удаляем: ${bulkProgress.current}/${bulkProgress.total}`
+	  return (
+	    <View style={styles.container}>
+	      {selectionMode ? (
+	        <View
+	          style={[
+	            styles.bulkMapBar,
+	            isWideScreenWeb ? { right: 420 + DESIGN_TOKENS.spacing.lg } : null,
+	          ]}
+	        >
+	          <View style={styles.bulkMapBarRow}>
+	            <Text style={styles.bulkMapBarText}>
+	              {bulkProgress
+	                ? `Удаляем: ${bulkProgress.current}/${bulkProgress.total}`
                 : selectedIds.length > 0
                   ? `Выбрано: ${selectedIds.length}`
                   : 'Выберите точки в списке'}
             </Text>
-            <View style={styles.bulkMapBarActions}>
-              <Button
-                label="Список"
-                onPress={() => {}}
-                disabled={isBulkWorking}
-                size="sm"
-                variant="secondary"
-                accessibilityLabel="Назад к списку"
-              />
+	            <View style={styles.bulkMapBarActions}>
+	              <Button
+	                label="Список"
+	                onPress={() => setPanelTab('list')}
+	                disabled={isBulkWorking}
+	                size="sm"
+	                variant="secondary"
+	                accessibilityLabel="Назад к списку"
+	              />
 
               {selectedIds.length > 0 ? (
                 <>
@@ -1502,16 +1509,20 @@ useEffect(() => {
         </View>
       ) : null}
 
-      <PointsListGrid
-        styles={styles}
-        colors={gridColors}
-        viewMode={viewMode}
-        isLoading={isLoading}
-        filteredPoints={visibleFilteredPoints}
-        numColumns={listColumns}
-        renderHeader={renderHeader}
-        renderItem={renderItem}
-        renderEmpty={renderEmpty}
+	      <PointsListGrid
+	        styles={styles}
+	        colors={gridColors}
+	        viewMode={viewMode}
+	        isLoading={isLoading}
+	        filteredPoints={visibleFilteredPoints}
+	        listExtraData={{ selectionMode, selectedIds }}
+	        listKey={selectionMode ? 'selection' : 'normal'}
+	        panelTab={panelTab}
+	        onPanelTabChange={setPanelTab}
+	        numColumns={listColumns}
+	        renderHeader={renderHeader}
+	        renderItem={renderItem}
+	        renderEmpty={renderEmpty}
         renderFooter={renderFooter}
         onRefresh={refetch}
         currentLocation={currentLocation}
@@ -1582,17 +1593,18 @@ useEffect(() => {
               style={styles.actionsButton}
             />
 
-            <Button
-              label="Выбрать точки"
-              onPress={() => {
-                setShowActions(false);
-                setSelectionMode(true);
-                setSelectedIds([]);
-              }}
-              accessibilityLabel="Выбрать точки"
-              fullWidth
-              style={styles.actionsButton}
-            />
+	            <Button
+	              label="Выбрать точки"
+	              onPress={() => {
+	                setShowActions(false);
+	                setSelectionMode(true);
+	                setSelectedIds([]);
+	                setPanelTab('list');
+	              }}
+	              accessibilityLabel="Выбрать точки"
+	              fullWidth
+	              style={styles.actionsButton}
+	            />
 
             <Button
               label="Удалить все точки"

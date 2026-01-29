@@ -4,6 +4,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
+const isWeb = Platform.OS === 'web' || typeof document !== 'undefined';
+
 interface SearchResult {
     place_id: string;
     display_name: string;
@@ -176,10 +178,21 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
             )}
 
             {showResults && results.length > 0 && (
-                <ScrollView style={styles.resultsContainer} nestedScrollEnabled>
+                <ScrollView
+                    testID="location-results"
+                    {...(isWeb ? ({ 'data-testid': 'location-results' } as any) : null)}
+                    style={styles.resultsContainer}
+                    nestedScrollEnabled
+                >
                     {results.map((result) => (
                         <Pressable
                             key={result.place_id}
+                            testID={`location-result-${result.place_id}`}
+                            accessibilityRole="button"
+                            accessibilityLabel={result.display_name}
+                            {...(isWeb
+                                ? ({ 'data-testid': `location-result-${result.place_id}` } as any)
+                                : null)}
                             style={({ pressed }) => [
                                 styles.resultItem,
                                 pressed && styles.resultItemPressed,

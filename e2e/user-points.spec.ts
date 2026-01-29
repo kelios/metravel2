@@ -45,46 +45,58 @@ test.describe('User points', () => {
   async function openFiltersPanelTab(page: any) {
     const legacyTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
     const segmentedTabButton = page.getByTestId('segmented-filters').first();
-    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
+    const panelTabs = page.getByRole('radiogroup', { name: 'Панель' }).first();
+    const filtersRadio = panelTabs.getByRole('radio', { name: 'Фильтры', exact: true }).first();
+    const actionsButton = page.getByTestId('userpoints-actions-open').first();
 
     for (let attempt = 0; attempt < 3; attempt++) {
-      const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
-      await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
-      await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      if ((await filtersRadio.count()) > 0) {
+        await filtersRadio.click({ timeout: 30_000, force: true }).catch(() => undefined);
+        await filtersRadio.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      } else {
+        const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
+        await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
+        await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      }
       await page.waitForTimeout(150);
 
-      if ((await searchBox.count()) > 0) {
-        await expect(searchBox).toBeVisible({ timeout: 5_000 });
+      if ((await actionsButton.count()) > 0) {
+        await expect(actionsButton).toBeVisible({ timeout: 5_000 });
         return;
       }
     }
 
-    await expect(searchBox).toBeVisible({ timeout: 30_000 });
+    await expect(actionsButton).toBeVisible({ timeout: 30_000 });
   }
 
   async function openListPanelTab(page: any) {
-    // On this screen there can be multiple "Список"-related buttons (e.g. selection-mode header "Назад к списку").
-    // Use a stable testID on the panel tab.
     const legacyTabButton = page.getByTestId('userpoints-panel-tab-list').first();
     const segmentedTabButton = page.getByTestId('segmented-list').first();
-    const searchBox = page.getByRole('textbox', { name: 'Поиск по названию...' });
-    const listContent = page.getByTestId('userpoints-panel-content-list');
+    const panelTabs = page.getByRole('radiogroup', { name: 'Панель' }).first();
+    const listRadio = panelTabs.getByRole('radio', { name: /^Список/, exact: false }).first();
+    const searchBox = page.getByTestId('userpoints-list-search').first();
+    const listContent = page.getByTestId('userpoints-panel-content-list').first();
 
     // RN-web overlays/animations can occasionally swallow the first click.
     for (let attempt = 0; attempt < 3; attempt++) {
-      const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
-      await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
-      // Fallback: sometimes Playwright click doesn't trigger RN-web onPress reliably.
-      await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      if ((await listRadio.count()) > 0) {
+        await listRadio.click({ timeout: 30_000, force: true }).catch(() => undefined);
+        await listRadio.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      } else {
+        const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
+        await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
+        // Fallback: sometimes Playwright click doesn't trigger RN-web onPress reliably.
+        await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+      }
       await page.waitForTimeout(150);
 
       if ((await listContent.count()) > 0 && (await searchBox.count()) > 0) {
-        await expect(searchBox).toBeVisible({ timeout: 5_000 });
+        await expect(listContent).toBeVisible({ timeout: 5_000 });
         return;
       }
     }
 
-    await expect(searchBox).toBeVisible({ timeout: 30_000 });
+    await expect(listContent).toBeVisible({ timeout: 30_000 });
   }
 
   async function installTileMock(page: any) {
@@ -606,27 +618,36 @@ test.describe('User points', () => {
         await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
       });
 
-	      await test.step('Enter selection mode via actions menu', async () => {
-	        const actionsDialog = await openActionsMenu(page);
-	        await actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
-	        await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
-	        await expect(page.getByRole('button', { name: 'Готово', exact: true })).toBeVisible({ timeout: 15_000 });
-	      });
+      await test.step('Enter selection mode via actions menu', async () => {
+        const actionsDialog = await openActionsMenu(page);
+        const selectPointsButton = actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true });
+        await selectPointsButton.click({ force: true }).catch(() => undefined);
+        await selectPointsButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+        await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
+        await expect(page.getByRole('button', { name: 'Готово', exact: true })).toBeVisible({ timeout: 15_000 });
+      });
 	
-	      await test.step('Select 2 points and go to map view', async () => {
-	        expect(pointA, 'mock pointA must be created before selecting').not.toBeNull();
-	        expect(pointB, 'mock pointB must be created before selecting').not.toBeNull();
-	        if (!pointA || !pointB) return;
+      await test.step('Select 2 points and go to map view', async () => {
+        expect(pointA, 'mock pointA must be created before selecting').not.toBeNull();
+        expect(pointB, 'mock pointB must be created before selecting').not.toBeNull();
+        if (!pointA || !pointB) return;
 
-	        await openListPanelTab(page);
-	        await expect(page.getByTestId(`userpoints-point-card-${pointA.id}`)).toBeVisible({ timeout: 30_000 });
-	        await page.getByTestId(`userpoints-point-card-${pointA.id}`).click({ force: true });
-	        await expect(page.getByTestId(`userpoints-point-card-${pointB.id}`)).toBeVisible({ timeout: 30_000 });
-	        await page.getByTestId(`userpoints-point-card-${pointB.id}`).click({ force: true });
-	
-	        await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
-	
-	        // Map-first UI: the map is already visible during selection mode.
+        const backToList = page.getByRole('button', { name: 'Назад к списку', exact: true });
+        await backToList.click({ force: true }).catch(() => undefined);
+        await backToList.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+        await expect(page.getByTestId('userpoints-panel-content-list').first()).toBeVisible({ timeout: 30_000 });
+        const cardA = page.getByTestId(`userpoints-point-card-${pointA.id}`);
+        const cardB = page.getByTestId(`userpoints-point-card-${pointB.id}`);
+
+        await expect(cardA).toBeVisible({ timeout: 30_000 });
+        await cardA.evaluate((el: any) => (el as HTMLElement)?.click?.());
+
+        await expect(cardB).toBeVisible({ timeout: 30_000 });
+        await cardB.evaluate((el: any) => (el as HTMLElement)?.click?.());
+
+        await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
+
+        // Map-first UI: the map is already visible during selection mode.
         await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
         await expect(page.getByRole('button', { name: 'Назад к списку' })).toBeVisible({ timeout: 30_000 });
       });
@@ -684,16 +705,25 @@ test.describe('User points', () => {
 
     // Enter selection mode
     const actionsDialog = await openActionsMenu(page);
-    await actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
+    const selectPointsButton = actionsDialog.getByRole('button', { name: 'Выбрать точки', exact: true });
+    await selectPointsButton.click({ force: true }).catch(() => undefined);
+    await selectPointsButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
     await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
-	
-	    // Select A + B
-	    await openListPanelTab(page);
-	    await expect(page.getByTestId(`userpoints-point-card-${pointA.id}`)).toBeVisible({ timeout: 30_000 });
-	    await page.getByTestId(`userpoints-point-card-${pointA.id}`).click({ force: true });
-	    await expect(page.getByTestId(`userpoints-point-card-${pointB.id}`)).toBeVisible({ timeout: 30_000 });
-	    await page.getByTestId(`userpoints-point-card-${pointB.id}`).click({ force: true });
-	    await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
+
+    // Select A + B
+    const backToList = page.getByRole('button', { name: 'Назад к списку', exact: true });
+    await backToList.click({ force: true }).catch(() => undefined);
+    await backToList.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+    await expect(page.getByTestId('userpoints-panel-content-list').first()).toBeVisible({ timeout: 30_000 });
+    const cardA = page.getByTestId(`userpoints-point-card-${pointA.id}`);
+    const cardB = page.getByTestId(`userpoints-point-card-${pointB.id}`);
+
+    await expect(cardA).toBeVisible({ timeout: 30_000 });
+    await cardA.evaluate((el: any) => (el as HTMLElement)?.click?.());
+
+    await expect(cardB).toBeVisible({ timeout: 30_000 });
+    await cardB.evaluate((el: any) => (el as HTMLElement)?.click?.());
+    await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
 
     // Bulk edit: set status to archived
     await page.getByRole('button', { name: 'Изменить' }).click();
@@ -746,13 +776,17 @@ test.describe('User points', () => {
 
     // App exits selection mode after bulk apply; re-enter selection mode to delete selected.
     const actionsDialogAfterEdit = await openActionsMenu(page);
-    await actionsDialogAfterEdit.getByRole('button', { name: 'Выбрать точки', exact: true }).click();
+    const selectPointsButton2 = actionsDialogAfterEdit.getByRole('button', { name: 'Выбрать точки', exact: true });
+    await selectPointsButton2.click({ force: true }).catch(() => undefined);
+    await selectPointsButton2.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
     await expect(page.getByText('Выберите точки в списке')).toBeVisible({ timeout: 15_000 });
 
-	    await openListPanelTab(page);
-	    await page.getByTestId(`userpoints-point-card-${pointA.id}`).click({ force: true });
-	    await page.getByTestId(`userpoints-point-card-${pointB.id}`).click({ force: true });
-	    await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
+    await backToList.click({ force: true }).catch(() => undefined);
+    await backToList.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
+    await expect(page.getByTestId('userpoints-panel-content-list').first()).toBeVisible({ timeout: 30_000 });
+    await cardA.evaluate((el: any) => (el as HTMLElement)?.click?.());
+    await cardB.evaluate((el: any) => (el as HTMLElement)?.click?.());
+    await expect(page.getByText(/Выбрано:\s*2/)).toBeVisible({ timeout: 15_000 });
 
     // Delete selected
     await page.getByRole('button', { name: 'Удалить выбранные' }).click();

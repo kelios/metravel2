@@ -23,6 +23,10 @@ export const PointsListGrid: React.FC<{
   viewMode: ViewMode
   isLoading: boolean
   filteredPoints: any[]
+  listExtraData?: any
+  listKey?: string
+  panelTab?: 'filters' | 'list'
+  onPanelTabChange?: (tab: 'filters' | 'list') => void
 
   numColumns?: number
 
@@ -65,6 +69,10 @@ export const PointsListGrid: React.FC<{
   viewMode,
   isLoading,
   filteredPoints,
+  listExtraData,
+  listKey,
+  panelTab: controlledPanelTab,
+  onPanelTabChange,
   numColumns,
   renderHeader,
   renderItem,
@@ -112,7 +120,9 @@ export const PointsListGrid: React.FC<{
     // (parent controls activePointId via list, this is a safe noop)
     void p
   }, [])
-  const [panelTab, setPanelTab] = React.useState<'filters' | 'list'>('list')
+  const [internalPanelTab, setInternalPanelTab] = React.useState<'filters' | 'list'>('list')
+  const panelTab = controlledPanelTab ?? internalPanelTab
+  const setPanelTab = onPanelTabChange ?? setInternalPanelTab
   const [showMobilePanel, setShowMobilePanel] = React.useState(() => !isWideScreen)
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce)
   const [mapUiApi, setMapUiApi] = React.useState<MapUiApi | null>(null)
@@ -287,6 +297,7 @@ export const PointsListGrid: React.FC<{
       onSearch,
       searchQuery,
       showingRecommendations,
+      setPanelTab,
       themedColors.text,
       themedColors.textMuted,
       themedColors.textOnPrimary,
@@ -296,9 +307,11 @@ export const PointsListGrid: React.FC<{
   const renderListPanel = React.useCallback(
     () => (
       <FlashList
+        key={listKey ?? 'userpoints-list'}
         style={localStyles.rightPanelScroll}
         contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
         data={filteredPoints}
+        extraData={listExtraData}
         keyExtractor={(item) => String((item as any)?.id)}
         testID="userpoints-panel-content-list"
         renderItem={({ item }) => {
@@ -323,6 +336,8 @@ export const PointsListGrid: React.FC<{
     ),
     [
       filteredPoints,
+      listExtraData,
+      listKey,
       localStyles.pointsList,
       localStyles.pointsListItem,
       localStyles.rightPanelContent,
@@ -341,7 +356,7 @@ export const PointsListGrid: React.FC<{
     if (showingRecommendations) {
       setPanelTab('list');
     }
-  }, [showingRecommendations]);
+  }, [setPanelTab, showingRecommendations]);
   
   // Listen to map panel toggle for mobile
   React.useEffect(() => {

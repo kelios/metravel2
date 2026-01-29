@@ -170,26 +170,33 @@ npm run build:all:prod     # Production builds
 ## 🧪 Testing
 
 ```bash
+# Recommended: use Yarn (repo uses Yarn v1). `npm run ...` also works.
+
 # Run tests (interactive watchAll)
-npm run test
+yarn test
 
 # Run tests with coverage
-npm run test:coverage
+yarn test:coverage
 
 # Single run (recommended for CI/automation)
-npm run test:run
+yarn test:run
 
 # Run only tests matching a pattern
-npm run test:run -- pdf
+yarn test:run -- pdf
 
 # Enforce image/card architecture rules
-npm run check:image-architecture
+yarn check:image-architecture
 
 # CI-style run (guard + tests)
-npm run test:ci
+yarn test:ci
+
+# E2E (Playwright)
+yarn e2e
+yarn e2e:headed
+yarn e2e:ui
 ```
 
-More details: see `docs/testing-guide.md`.
+More details: see `docs/TESTING.md`.
 
 ## 🖼 Images & Cards (важно)
 
