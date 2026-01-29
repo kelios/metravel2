@@ -151,6 +151,18 @@ describe('analytics inline script', () => {
     expect(windowMock.dataLayer.length).toBeGreaterThan(0)
   })
 
+  it('treats missing analytics field as allowed (backward compatible)', () => {
+    const { windowMock } = setupDomEnv({
+      consent: { necessary: true } as any,
+    })
+
+    runAnalyticsSnippet()
+
+    expect(windowMock.__metravelAnalyticsLoaded).toBe(true)
+    expect(windowMock.gtag).toBeDefined()
+    expect(windowMock.dataLayer.length).toBeGreaterThan(0)
+  })
+
   it('skips analytics injection on non-production hosts', () => {
     const { windowMock } = setupDomEnv({ host: 'localhost' })
 

@@ -25,9 +25,10 @@ function readConsent(): ConsentState | null {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
     if (!parsed.necessary) return null;
+    const analytics = typeof (parsed as any).analytics === 'boolean' ? (parsed as any).analytics : true;
     return {
       necessary: !!parsed.necessary,
-      analytics: !!parsed.analytics,
+      analytics: !!analytics,
       date: parsed.date || new Date().toISOString(),
     };
   } catch {

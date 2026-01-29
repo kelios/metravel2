@@ -39,7 +39,10 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       var data = JSON.parse(raw);
       if (!data || typeof data !== 'object') return null;
       if (!data.necessary) return null;
-      return { necessary: !!data.necessary, analytics: !!data.analytics };
+      // Backward compat: older stored objects might not have the analytics field.
+      // In opt-out model, missing field means "not decided" => allow analytics.
+      var analytics = (typeof data.analytics === 'boolean') ? data.analytics : true;
+      return { necessary: !!data.necessary, analytics: !!analytics };
     } catch (e) {
       return null;
     }

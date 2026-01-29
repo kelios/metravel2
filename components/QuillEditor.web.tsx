@@ -4,9 +4,9 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from 'react'
 import { View } from 'react-native'
-import Quill from 'quill'
 
 type QuillInstance = any
 
@@ -19,27 +19,85 @@ type Props = {
   style?: any
 }
 
-const ensureIdAttributeRegistered = (() => {
-  let done = false
-  return () => {
-    if (done) return
-    done = true
-    try {
-      const Parchment = (Quill as any).import('parchment')
-      const IdAttribute = new (Parchment as any).Attributor.Attribute('id', 'id', {
-        scope: (Parchment as any).Scope.INLINE,
-      })
-      ;(Quill as any).register(IdAttribute, true)
-    } catch (e) {
-      void e
-    }
+const QUILL_CDN_JS = 'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js'
+
+let quillLoadPromise: Promise<any> | null = null
+const loadQuillFromCdn = () => {
+  if (typeof window === 'undefined') {
+    return Promise.reject(new Error('Quill is only available in the browser'))
   }
-})()
+
+  const w = window as any
+  if (w.Quill) return Promise.resolve(w.Quill)
+  if (quillLoadPromise) return quillLoadPromise
+
+  quillLoadPromise = new Promise((resolve, reject) => {
+    try {
+      const existing = window.document.querySelector(`script[src="${QUILL_CDN_JS}"]`) as HTMLScriptElement | null
+      if (existing) {
+        const done = () => {
+          if (w.Quill) resolve(w.Quill)
+          else reject(new Error('Quill script loaded but window.Quill is missing'))
+        }
+        if ((existing as any).dataset?.loaded === 'true') return done()
+        existing.addEventListener('load', done, { once: true })
+        existing.addEventListener('error', () => reject(new Error('Failed to load Quill script')), { once: true })
+        return
+      }
+
+      const script = window.document.createElement('script')
+      script.async = true
+      script.defer = true
+      script.src = QUILL_CDN_JS
+      try {
+        script.dataset.loaded = 'false'
+      } catch {
+        // noop
+      }
+
+      script.addEventListener(
+        'load',
+        () => {
+          try {
+            ;(script as any).dataset.loaded = 'true'
+          } catch {
+            // noop
+          }
+          if (w.Quill) resolve(w.Quill)
+          else reject(new Error('Quill script loaded but window.Quill is missing'))
+        },
+        { once: true }
+      )
+      script.addEventListener('error', () => reject(new Error('Failed to load Quill script')), { once: true })
+      window.document.head.appendChild(script)
+    } catch (e: any) {
+      reject(e)
+    }
+  })
+
+  return quillLoadPromise
+}
+
+let idAttributeRegistered = false
+const ensureIdAttributeRegistered = (Quill: any) => {
+  if (idAttributeRegistered) return
+  idAttributeRegistered = true
+  try {
+    const Parchment = Quill.import('parchment')
+    const IdAttribute = new (Parchment as any).Attributor.Attribute('id', 'id', {
+      scope: (Parchment as any).Scope.INLINE,
+    })
+    Quill.register(IdAttribute, true)
+  } catch (e) {
+    void e
+  }
+}
 
 const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any) {
   const { theme, value, onChange, placeholder, style } = props
   const containerRef = useRef<HTMLDivElement | null>(null)
   const quillRef = useRef<QuillInstance | null>(null)
+  const [loadError, setLoadError] = useState<Error | null>(null)
   const lastHtmlRef = useRef<string>('')
   const isApplyingValueRef = useRef(false)
   const onChangeRef = useRef<Props['onChange']>(onChange)
@@ -52,9 +110,9 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
   }, [onChange])
 
   useEffect(() => {
-    ensureIdAttributeRegistered()
     if (!containerRef.current) return
 
+    let cancelled = false
     const containerEl = containerRef.current
     const parent = containerEl.parentElement
     if (parent) {
@@ -76,40 +134,61 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
 
     if (quillRef.current) return
 
-    const quill = new (Quill as any)(containerEl, {
-      theme: theme ?? 'snow',
-      modules,
-      placeholder,
-    })
+    setLoadError(null)
 
-    quillRef.current = quill
+    let quillInstance: any | null = null
+    let onTextChange: ((delta: unknown, _oldDelta: unknown, source: unknown) => void) | null = null
 
-    const initial = initialValueRef.current
-    lastHtmlRef.current = initial
-    try {
-      quill.clipboard?.dangerouslyPasteHTML?.(initial, 'silent')
-    } catch {
-      try {
-        quill.root.innerHTML = initial
-      } catch (e) {
-        void e
-      }
-    }
+    loadQuillFromCdn()
+      .then((Quill) => {
+        if (cancelled) return
+        ensureIdAttributeRegistered(Quill)
 
-    const onTextChange = (delta: unknown, _oldDelta: unknown, source: unknown) => {
-      if (isApplyingValueRef.current) return
-      const html = String(quill.root?.innerHTML ?? '')
-      lastHtmlRef.current = html
-      onChangeRef.current?.(html, delta, source)
-    }
+        const quill = new Quill(containerEl, {
+          theme: theme ?? 'snow',
+          modules,
+          placeholder,
+        })
 
-    quill.on('text-change', onTextChange)
+        quillInstance = quill
+        quillRef.current = quill
+
+        const initial = initialValueRef.current
+        lastHtmlRef.current = initial
+        try {
+          quill.clipboard?.dangerouslyPasteHTML?.(initial, 'silent')
+        } catch {
+          try {
+            quill.root.innerHTML = initial
+          } catch (e) {
+            void e
+          }
+        }
+
+        onTextChange = (delta: unknown, _oldDelta: unknown, source: unknown) => {
+          if (isApplyingValueRef.current) return
+          const html = String(quill.root?.innerHTML ?? '')
+          lastHtmlRef.current = html
+          onChangeRef.current?.(html, delta, source)
+        }
+
+        quill.on('text-change', onTextChange)
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setLoadError(e instanceof Error ? e : new Error(String(e)))
+      })
 
     return () => {
-      try {
-        quill.off('text-change', onTextChange)
-      } catch (e) {
-        void e
+      cancelled = true
+      const q = quillInstance
+      const handler = onTextChange
+      if (q && handler) {
+        try {
+          q.off('text-change', handler)
+        } catch (e) {
+          void e
+        }
       }
       quillRef.current = null
 
@@ -169,6 +248,11 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
   return (
     <View style={style}>
       <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
+      {loadError ? (
+        <div style={{ padding: 8, color: '#b00020', fontSize: 12 }}>
+          Не удалось загрузить редактор. Попробуйте обновить страницу.
+        </div>
+      ) : null}
     </View>
   )
 })
