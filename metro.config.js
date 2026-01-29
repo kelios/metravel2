@@ -278,7 +278,7 @@ if (process.env.NODE_ENV === 'production') {
   // ✅ НОВОЕ: Bundle splitting для лучшего кеширования
   config.resolver.assetExts = [...config.resolver.assetExts, 'webp', 'avif']
   
-  // Note: unstable_enablePackageExports is disabled globally above to fix react-leaflet ES module issues
+  // Note: unstable_enablePackageExports is disabled in the resolver configuration above to fix react-leaflet ES module issues
   config.resolver.unstable_conditionNames = [
     'react-native',
     'browser',
