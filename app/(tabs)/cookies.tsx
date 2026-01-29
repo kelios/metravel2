@@ -57,8 +57,8 @@ export default function CookieSettingsScreen() {
     if (existing) {
       setAnalyticsAllowed(existing.analytics);
     } else {
-      // Если ничего не сохранено, считаем, что пока только необходимые
-      setAnalyticsAllowed(false);
+      // Opt-out: если ничего не сохранено, по умолчанию аналитика включена
+      setAnalyticsAllowed(true);
     }
   }, []);
 
@@ -71,11 +71,21 @@ export default function CookieSettingsScreen() {
     };
     writeConsent(consent);
 
-    if (analyticsAllowed && typeof window !== 'undefined' && (window as any).metravelLoadAnalytics) {
-      try {
-        (window as any).metravelLoadAnalytics();
-      } catch {
-        // ignore
+    if (typeof window !== 'undefined') {
+      const gaId = (window as any).__metravelGaId;
+      if (gaId) {
+        try {
+          (window as any)[`ga-disable-${String(gaId)}`] = !analyticsAllowed;
+        } catch {
+          // ignore
+        }
+      }
+      if (analyticsAllowed && (window as any).metravelLoadAnalytics) {
+        try {
+          (window as any).metravelLoadAnalytics();
+        } catch {
+          // ignore
+        }
       }
     }
 

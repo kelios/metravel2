@@ -121,7 +121,7 @@ describe('analytics inline script', () => {
     expect(windowMock.dataLayer.length).toBeGreaterThan(0)
   })
 
-  it('exposes loader but does not auto-init without analytics consent', () => {
+  it('respects explicit analytics opt-out (does not init until user opts in)', () => {
     const { windowMock } = setupDomEnv({
       consent: { necessary: true, analytics: false },
     })
@@ -135,6 +135,15 @@ describe('analytics inline script', () => {
     expect(windowMock.gtag).toBeUndefined()
     expect(windowMock.dataLayer).toHaveLength(0)
 
+    windowMock.metravelLoadAnalytics()
+
+    expect(windowMock.__metravelAnalyticsLoaded).toBeUndefined()
+    expect(windowMock.gtag).toBeUndefined()
+    expect(windowMock.dataLayer).toHaveLength(0)
+    expect(windowMock[`ga-disable-${TEST_GA_ID}`]).toBe(true)
+
+    // Simulate user opt-in via banner/settings:
+    windowMock.localStorage.getItem = jest.fn(() => JSON.stringify({ necessary: true, analytics: true }))
     windowMock.metravelLoadAnalytics()
 
     expect(windowMock.__metravelAnalyticsLoaded).toBe(true)

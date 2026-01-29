@@ -95,6 +95,16 @@ export default function ConsentBanner() {
       date: new Date().toISOString(),
     };
     writeConsent(consent);
+    if (isWeb && typeof window !== 'undefined') {
+      const gaId = (window as any).__metravelGaId;
+      if (gaId) {
+        try {
+          (window as any)[`ga-disable-${String(gaId)}`] = false;
+        } catch {
+          // ignore
+        }
+      }
+    }
     if (isWeb && typeof window !== 'undefined' && (window as any).metravelLoadAnalytics) {
       try {
         (window as any).metravelLoadAnalytics();
@@ -112,6 +122,16 @@ export default function ConsentBanner() {
       date: new Date().toISOString(),
     };
     writeConsent(consent);
+    if (isWeb && typeof window !== 'undefined') {
+      const gaId = (window as any).__metravelGaId;
+      if (gaId) {
+        try {
+          (window as any)[`ga-disable-${String(gaId)}`] = true;
+        } catch {
+          // ignore
+        }
+      }
+    }
     setVisible(false);
   };
 

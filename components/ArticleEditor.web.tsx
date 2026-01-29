@@ -109,6 +109,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const [linkModalVisible, setLinkModalVisible] = useState(false);
     const [linkValue, setLinkValue] = useState('');
     const htmlSelectionRef = useRef<{ start: number; end: number }>({ start: 0, end: 0 });
+    const [htmlForcedSelection, setHtmlForcedSelection] = useState<{ start: number; end: number } | null>(null);
 
     const editorViewportRef = useRef<any>(null);
 
@@ -122,6 +123,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const hasUserEditedRef = useRef(false);
     const lastAutosavedHtmlRef = useRef<string>(typeof content === 'string' ? content : '');
+    const autosaveInFlightHtmlRef = useRef<string | null>(null);
+    const autosaveRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const autosaveIsMountedRef = useRef(true);
 
     const quillRef = useRef<any>(null);
     const tmpStoredRange = useRef<{ index: number; length: number } | null>(null);
@@ -477,22 +481,79 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     }, [colors]);
 
     useEffect(() => {
+        autosaveIsMountedRef.current = true;
+        return () => {
+            autosaveIsMountedRef.current = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!autosaveIsMountedRef.current) return;
         if (!onAutosave) return;
         if (!hasUserEditedRef.current) return;
         if (html === lastAutosavedHtmlRef.current) return;
+
+        if (autosaveRetryTimeoutRef.current) {
+            clearTimeout(autosaveRetryTimeoutRef.current);
+            autosaveRetryTimeoutRef.current = null;
+        }
+
+        let canceled = false;
+        const snapshot = html;
+
+        const attemptAutosave = async (failCount: number) => {
+            if (canceled || !autosaveIsMountedRef.current) return;
+            if (!onAutosave) return;
+            if (htmlRef.current !== snapshot) return;
+
+            // Avoid duplicate concurrent saves for the same content.
+            if (autosaveInFlightHtmlRef.current === snapshot) return;
+            autosaveInFlightHtmlRef.current = snapshot;
+
+            try {
+                await onAutosave(snapshot);
+                if (canceled || !autosaveIsMountedRef.current) return;
+                lastAutosavedHtmlRef.current = snapshot;
+                if (htmlRef.current === snapshot) {
+                    hasUserEditedRef.current = false;
+                }
+            } catch {
+                if (canceled || !autosaveIsMountedRef.current) return;
+                if (htmlRef.current !== snapshot) return;
+
+                // Retry with exponential backoff, but keep it bounded.
+                const exp = Math.min(4, Math.max(0, failCount));
+                const retryDelay = Math.min(60_000, autosaveDelay * Math.pow(2, exp));
+                autosaveRetryTimeoutRef.current = setTimeout(() => {
+                    void attemptAutosave(failCount + 1);
+                }, retryDelay);
+            } finally {
+                if (autosaveInFlightHtmlRef.current === snapshot) {
+                    autosaveInFlightHtmlRef.current = null;
+                }
+            }
+        };
+
         const t = setTimeout(() => {
-            void Promise.resolve(onAutosave(html)).finally(() => {
-                lastAutosavedHtmlRef.current = html;
-                hasUserEditedRef.current = false;
-            });
+            void attemptAutosave(0);
         }, autosaveDelay);
-        return () => clearTimeout(t);
+
+        return () => {
+            canceled = true;
+            clearTimeout(t);
+            if (autosaveRetryTimeoutRef.current) {
+                clearTimeout(autosaveRetryTimeoutRef.current);
+                autosaveRetryTimeoutRef.current = null;
+            }
+        };
     }, [html, onAutosave, autosaveDelay]);
 
     const fireChange = useCallback(
         (val: string, selection?: { index: number; length: number } | null, markUserEdited: boolean = true) => {
-            const clean = sanitizeHtml(val);
-            if (clean === htmlRef.current) return;
+            const raw = typeof val === 'string' ? val : '';
+            if (raw === htmlRef.current) return;
+
+            const cleanForEmit = sanitizeHtml(raw);
 
             if (selection) {
                 pendingSelectionRestoreRef.current = selection;
@@ -502,10 +563,13 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 hasUserEditedRef.current = true;
             }
 
-            lastEmittedHtmlRef.current = clean;
-            htmlRef.current = clean;
-            setHtml(prev => (prev === clean ? prev : clean));
-            debouncedParentChange(clean);
+            // Keep Quill "controlled value" identical to what Quill itself produced.
+            // This avoids value re-application (pasteHTML) loops that can cause caret jumps
+            // when sanitizeHtml removes attributes (e.g. Quill alignment classes).
+            lastEmittedHtmlRef.current = cleanForEmit;
+            htmlRef.current = raw;
+            setHtml(prev => (prev === raw ? prev : raw));
+            debouncedParentChange(cleanForEmit);
         },
         [debouncedParentChange]
     );
@@ -545,7 +609,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         const range = editor.getSelection() || { index: editor.getLength(), length: 0 };
         editor.insertEmbed(range.index, 'image', url);
         editor.setSelection(range.index + 1, 0, 'silent');
-        fireChange(editor.root.innerHTML);
+        fireChange(editor.root.innerHTML, { index: range.index + 1, length: 0 });
     }, [fireChange]);
 
     const openPreview = useCallback(() => {
@@ -568,6 +632,28 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             Alert.alert('Авторизация', 'Войдите, чтобы загружать изображения');
             return;
         }
+
+        const selectionSnapshot = (() => {
+            try {
+                const editor = quillRef.current?.getEditor?.();
+                if (!editor) return null;
+                const sel =
+                    typeof editor.getSelection === 'function'
+                        ? (() => {
+                              try {
+                                  return editor.getSelection(true);
+                              } catch {
+                                  return editor.getSelection();
+                              }
+                          })()
+                        : null;
+                if (sel && typeof sel.index === 'number') return sel;
+            } catch {
+                // noop
+            }
+            return null;
+        })();
+
         try {
             const form = new FormData();
             form.append('file', file);
@@ -575,6 +661,14 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             if (idTravel) form.append('id', idTravel);
             const res = await uploadImage(form);
             if (!res?.url) throw new Error('no url');
+            if (selectionSnapshot && quillRef.current?.getEditor) {
+                try {
+                    const editor = quillRef.current.getEditor();
+                    editor.setSelection(selectionSnapshot, 'silent');
+                } catch {
+                    // noop
+                }
+            }
             insertImage(res.url);
         } catch {
             Alert.alert('Ошибка', 'Не удалось загрузить изображение');
@@ -704,17 +798,21 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
                 editor.setSelection(range.index + selectedText.length, 0, 'silent');
             } else {
-                const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
+                const tokenText = `[#${id}]`;
+                const htmlSnippet = `<span id="${id}">${tokenText}</span>`;
                 editor.clipboard.dangerouslyPasteHTML(range.index, htmlSnippet, 'user');
-                editor.setSelection(range.index + 1, 0, 'silent');
+                editor.setSelection(range.index + tokenText.length, 0, 'silent');
             }
             tmpStoredRange.current = null;
-            fireChange(editor.root.innerHTML, { index: range.index + (range.length > 0 ? range.length : 1), length: 0 });
+            const nextIndex =
+                range.length > 0 ? range.index + range.length : range.index + `[#${id}]`.length;
+            fireChange(editor.root.innerHTML, { index: nextIndex, length: 0 });
         } catch (e) {
             try {
-                editor.insertText(range.index, `[#${id}] `, 'user');
+                const fallbackText = `[#${id}] `;
+                editor.insertText(range.index, fallbackText, 'user');
                 tmpStoredRange.current = null;
-                fireChange(editor.root.innerHTML, { index: range.index + 1, length: 0 });
+                fireChange(editor.root.innerHTML, { index: range.index + fallbackText.length, length: 0 });
             } catch (inner) {
                 if (__DEV__) {
                     console.warn('Failed to insert anchor into editor', { e, inner });
@@ -766,7 +864,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
             tmpStoredRange.current = null;
             tmpStoredLinkQuill.current = null;
-            const nextIndex = safeRange.index + Math.max(safeRange.length, url ? url.length : 1);
+            const nextIndex = url
+                ? (safeRange.length > 0 ? safeRange.index + safeRange.length : safeRange.index + url.length)
+                : safeRange.index + safeRange.length;
             fireChange(editor.root.innerHTML, { index: nextIndex, length: 0 });
         } catch {
             // noop
@@ -923,6 +1023,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     useEffect(() => {
         if (!fullscreen && !showHtml && tmpStoredRange.current && quillRef.current) {
             quillRef.current.getEditor().setSelection(tmpStoredRange.current, 'silent');
+            tmpStoredRange.current = null;
         }
     }, [fullscreen, showHtml]);
 
@@ -943,8 +1044,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
         // Quill sometimes mounts inside a Modal and renders blank even though value prop is non-empty.
         try {
-            const clean = sanitizeHtml(nextHtml);
-            editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
+            editor.clipboard?.dangerouslyPasteHTML?.(0, nextHtml, 'silent');
             editor.setSelection?.(0, 0, 'silent');
         } catch {
             // noop
@@ -1111,9 +1211,19 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             multiline
             value={html}
             onChangeText={text => fireChange(text)}
+            selection={htmlForcedSelection ?? undefined}
             onSelectionChange={(e) => {
                 const sel = e?.nativeEvent?.selection;
                 if (!sel) return;
+                if (
+                    htmlForcedSelection &&
+                    typeof sel.start === 'number' &&
+                    typeof sel.end === 'number' &&
+                    sel.start === htmlForcedSelection.start &&
+                    sel.end === htmlForcedSelection.end
+                ) {
+                    setHtmlForcedSelection(null);
+                }
                 htmlSelectionRef.current = {
                     start: typeof sel.start === 'number' ? sel.start : 0,
                     end: typeof sel.end === 'number' ? sel.end : 0,
@@ -1226,10 +1336,18 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                         if (to > from) {
                                             const selected = current.slice(from, to);
                                             const wrapped = `<span id="${id}">${escapeHtml(selected)}</span>`;
-                                            fireChange(`${current.slice(0, from)}${wrapped}${current.slice(to)}`);
+                                            const next = `${current.slice(0, from)}${wrapped}${current.slice(to)}`;
+                                            const caret = from + wrapped.length;
+                                            htmlSelectionRef.current = { start: caret, end: caret };
+                                            setHtmlForcedSelection({ start: caret, end: caret });
+                                            fireChange(next);
                                         } else {
                                             const htmlSnippet = `<span id="${id}">[#${id}]</span>`;
-                                            fireChange(`${current.slice(0, from)}${htmlSnippet}${current.slice(from)}`);
+                                            const next = `${current.slice(0, from)}${htmlSnippet}${current.slice(from)}`;
+                                            const caret = from + htmlSnippet.length;
+                                            htmlSelectionRef.current = { start: caret, end: caret };
+                                            setHtmlForcedSelection({ start: caret, end: caret });
+                                            fireChange(next);
                                         }
                                         return;
                                     }
