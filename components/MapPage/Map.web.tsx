@@ -608,6 +608,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const rlSafe = (rl ?? {}) as ReactLeafletNS;
   const { MapContainer, Marker, Popup, Circle, useMap, useMapEvents } = rlSafe;
 
+  const hasValidReactLeafletHooks = !!(
+    useMap && 
+    typeof useMap === 'function' && 
+    useMapEvents && 
+    typeof useMapEvents === 'function'
+  );
+
   return (
     <View style={styles.wrapper} testID="map-leaflet-wrapper">
       {Platform.OS === 'web' && (
@@ -719,7 +726,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         </View>
       )}
 
-      {canRenderMap && (
+      {canRenderMap && hasValidReactLeafletHooks && (
         <MapContainer
           style={mapContainerStyle}
           data-testid="map-leaflet-container"

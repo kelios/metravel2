@@ -270,13 +270,7 @@ export default function MapScreen() {
             )}
 
             <View style={styles.mapContainer}>
-                {mapComponent}
-                {rightPanelVisible && (
-                    <Animated.View style={[styles.overlay, overlayStyle]} />
-                )}
-            </View>
-
-            <Animated.View ref={panelRef} style={[styles.rightPanel, panelStyle]}>
+                <Animated.View ref={panelRef} style={[styles.rightPanel, panelStyle]}>
                 {panelHeader}
                 <View style={styles.panelContent}>
                     {rightPanelTab === 'filters' ? (
@@ -304,6 +298,12 @@ export default function MapScreen() {
                     )}
                 </View>
             </Animated.View>
+                
+                {mapComponent}
+                {rightPanelVisible && (
+                    <Animated.View style={[styles.overlay, overlayStyle]} />
+                )}
+            </View>
 
             {Platform.OS !== 'web' && (
                 <Pressable

@@ -13,6 +13,7 @@ if (!Array.prototype.toReversed) {
 
 const { getDefaultConfig } = require('expo/metro-config')
 const path = require('path')
+const fs = require('fs')
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname)
@@ -44,14 +45,31 @@ config.resolver = {
   resolveRequest: (context, moduleName, platform, modulePath) => {
     const isWeb = platform === 'web' || (context && context.platform === 'web');
     
-    // Special handling for react-leaflet to ensure proper ES module resolution
-    if (isWeb && moduleName === 'react-leaflet') {
-      return {
-        filePath: path.resolve(__dirname, 'node_modules/react-leaflet/lib/index.js'),
-        type: 'sourceFile',
-      };
+    // ✅ FIX: Force CJS resolution for @babel/runtime helpers on web
+    // @babel/runtime v7.26+ exports ESM by default via package.json "exports",
+    // but Metro/Expo bundler expects CJS format for helpers.
+    // Without this fix, you get: "TypeError: _objectWithoutPropertiesLoose is not a function"
+    if (moduleName.startsWith('@babel/runtime/helpers/')) {
+      const helperName = moduleName.replace('@babel/runtime/helpers/', '');
+      // Use the CJS version directly (not the ESM .js in exports)
+      const cjsPath = path.resolve(
+        __dirname,
+        'node_modules/@babel/runtime/helpers',
+        helperName + '.js'
+      );
+      // Check if file exists, otherwise fallback
+      if (fs.existsSync(cjsPath)) {
+        return {
+          filePath: cjsPath,
+          type: 'sourceFile',
+        };
+      }
     }
-    
+
+    // react-leaflet: Let Metro bundle it normally
+    // The "Cannot redefine property: default" error during hot-reload is handled
+    // by the Object.defineProperty patch in entry.js
+
     // Блокируем импорт всех CSS файлов (Metro не может их обработать из-за lightningcss)
     if (moduleName.endsWith('.css')) {
       return {
@@ -140,9 +158,9 @@ config.resolver = {
         };
       }
       
-      // Note: react-leaflet is NOT stubbed - Metro bundles it normally
-      // It depends on the leaflet stub which proxies to window.L loaded from CDN
-      
+      // Note: react-leaflet is ESM module, handled by Metro's ESM support
+      // It's loaded via async import() and depends on leaflet (stub) which proxies to window.L from CDN
+
       if (
         moduleName === '@expo/vector-icons/MaterialCommunityIcons' ||
         normalizedModuleName === '@expo/vector-icons/MaterialCommunityIcons' ||
@@ -218,7 +236,6 @@ config.resolver = {
     ...(config.resolver.extraNodeModules || {}),
     'html2canvas': path.resolve(__dirname, 'metro-stubs/html2canvas.js'),
     'leaflet': path.resolve(__dirname, 'metro-stubs/leaflet.js'),
-    // Note: react-leaflet is NOT stubbed - Metro resolves it normally from node_modules
     '@expo/vector-icons/MaterialCommunityIcons': path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
     'react-native-vector-icons/MaterialCommunityIcons': path.resolve(__dirname, 'metro-stubs/MaterialCommunityIcons.js'),
     'react-native-gesture-handler': path.resolve(
@@ -230,68 +247,69 @@ config.resolver = {
 }
 
 
-// ✅ ОПТИМИЗАЦИЯ: Production конфигурация для Expo 54
-if (process.env.NODE_ENV === 'production') {
-  config.transformer = {
-    ...config.transformer,
-    getTransformOptions: async () => ({
-      transform: {
-        // ✅ НОВОЕ: Включаем экспериментальную поддержку импортов для tree-shaking
-        experimentalImportSupport: true,
-        // Inline requires для уменьшения размера бандла
-        inlineRequires: true,
-      },
-    }),
-    minifierConfig: {
-      ...config.transformer.minifierConfig,
+// ✅ ОПТИМИЗАЦИЯ: Конфигурация transformer для Expo 54
+// Включаем поддержку ESM модулей (необходимо для react-leaflet v5)
+const isProd = process.env.NODE_ENV === 'production';
+const isWeb = process.env.EXPO_PLATFORM === 'web' || process.argv.some(arg => arg.includes('web'));
+
+// Базовая конфигурация transformer с поддержкой ESM
+const transformerConfig = {
+  ...config.transformer,
+  unstable_allowRequireContext: true,
+  getTransformOptions: async () => ({
+    transform: {
+      // ✅ Включаем экспериментальную поддержку импортов для ESM и tree-shaking
+      experimentalImportSupport: true,
+      // Inline requires только в production для оптимизации
+      inlineRequires: isProd,
+    },
+  }),
+};
+
+// Добавляем production-специфичные настройки
+if (isProd) {
+  transformerConfig.minifierConfig = {
+    ...config.transformer.minifierConfig,
+    keep_classnames: false,
+    keep_fnames: false,
+    // ✅ Агрессивная минификация
+    compress: {
+      drop_console: true,
+      drop_debugger: true,
+      pure_funcs: ['console.log', 'console.debug', 'console.info'],
+      passes: 2,
+    },
+    mangle: {
+      ...config.transformer.minifierConfig?.mangle,
       keep_classnames: false,
       keep_fnames: false,
-      // ✅ НОВОЕ: Агрессивная минификация
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.debug', 'console.info'],
-        passes: 2, // Два прохода минификации для лучшего результата
-      },
-      mangle: {
-        ...config.transformer.minifierConfig?.mangle,
-        keep_classnames: false,
-        keep_fnames: false,
-        // Сокращаем имена переменных
-        toplevel: true,
-      },
+      toplevel: true,
     },
-    // Enable CSS optimization
-    cssMinifierConfig: {
-      ...config.transformer.cssMinifierConfig,
-      // Remove unused CSS rules
-      unused: {
-        enable: true,
-        remove: true,
-      },
-      // Minify CSS
-      minify: {
-        enable: true,
-        removeWhitespace: true,
-        removeComments: true,
-        shortenIds: true,
-      },
-    },
+  };
+}
+
+// Применяем конфигурацию (используем Object.assign для обхода read-only)
+Object.assign(config.transformer, transformerConfig);
+
+// ✅ Для web платформы (как в dev, так и в prod) используем правильные условия для ESM разрешения
+// Это гарантирует, что ESM пакеты как react-leaflet загружаются корректно
+if (isProd || isWeb) {
+  // ✅ НОВОЕ: Bundle splitting для лучшего кеширования (только в prod)
+  if (isProd) {
+    config.resolver.assetExts = [...config.resolver.assetExts, 'webp', 'avif']
   }
-  
-  // ✅ НОВОЕ: Bundle splitting для лучшего кеширования
-  config.resolver.assetExts = [...config.resolver.assetExts, 'webp', 'avif']
-  
-  // ✅ НОВОЕ: Включаем новые возможности Expo 54
+
+  // ✅ Включаем ESM разрешение с правильными условиями для web
   config.resolver.unstable_enablePackageExports = true;
   config.resolver.unstable_conditionNames = [
     'react-native',
     'browser',
     'require',
+    'import', // ✅ Добавляем 'import' для явной поддержки ESM пакетов в dev режиме
   ];
   
   // Configure for better web performance
-  if (process.env.EXPO_PLATFORM === 'web') {
+  if (isWeb) {
     config.server = {
       ...config.server,
       // Enable gzip compression
@@ -309,7 +327,6 @@ if (process.env.NODE_ENV === 'production') {
 const http = require('http');
 const https = require('https');
 const url = require('url');
-const fs = require('fs');
 
 config.server = {
   ...config.server,

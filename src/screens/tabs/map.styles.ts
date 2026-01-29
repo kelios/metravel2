@@ -32,6 +32,23 @@ export const getStyles = (
         : null),
       backgroundColor: themedColors.background,
     },
+    mapContainer: {
+      flex: 1,
+      position: 'relative',
+      ...(Platform.OS === 'web'
+        ? ({
+            display: 'flex',
+            // row-reverse: панель слева, карта справа
+            flexDirection: isMobile ? 'column' : 'row-reverse',
+            columnGap: isMobile ? 0 : PANEL_GAP,
+            paddingHorizontal: isMobile ? 0 : METRICS.spacing.l,
+            paddingTop: isMobile ? 0 : METRICS.spacing.m,
+            paddingBottom: isMobile ? 0 : METRICS.spacing.m,
+            isolation: 'isolate',
+            transform: 'translateZ(0)',
+          } as any)
+        : null),
+    },
       content: {
         flex: 1,
         position: 'relative',
@@ -50,7 +67,7 @@ export const getStyles = (
       },
       mapArea: {
         flex: 1,
-        minHeight: 260,
+        minHeight: isMobile ? 260 : 500,
         position: 'relative',
         // ✅ КРИТИЧНО: Очень низкий zIndex, чтобы гарантировать, что карта под хедером
         zIndex: 0,
@@ -59,6 +76,7 @@ export const getStyles = (
           ? ({
               isolation: 'isolate',
               transform: 'translateZ(0)',
+              minWidth: isMobile ? 0 : '60%',
             } as any)
           : null),
       },

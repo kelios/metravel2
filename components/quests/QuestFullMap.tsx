@@ -15,6 +15,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
 
 type StepPoint = { lat: number; lng: number; title?: string };
 
@@ -147,42 +148,10 @@ export default function QuestFullMap({
     useEffect(() => {
         (async () => {
             try {
-                const ensureLeafletCSS = () => {
-                    const href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-                    if (!document.querySelector(`link[href="${href}"]`)) {
-                        const link = document.createElement('link');
-                        link.rel = 'stylesheet';
-                        link.href = href;
-                        document.head.appendChild(link);
-                    }
-                };
-
-                const ensureLeaflet = async (): Promise<any> => {
-                    const w = window as any;
-                    if (w.L) return w.L;
-
-                    ensureLeafletCSS();
-
-                    if (!(ensureLeaflet as any)._loader) {
-                        (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
-                            const script = document.createElement('script');
-                            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-                            script.async = true;
-                            script.onload = () => resolve();
-                            script.onerror = (err) => {
-                                (ensureLeaflet as any)._loader = null;
-                                reject(err);
-                            };
-                            document.body.appendChild(script);
-                        });
-                    }
-
-                    await (ensureLeaflet as any)._loader;
-                    return w.L;
-                };
-
-                const L = await ensureLeaflet();
-                const RL = await import('react-leaflet');
+                // Reuse the shared loader to avoid Metro's occasional double-eval
+                // when multiple components import react-leaflet concurrently in `lazy` dev mode.
+                // (See: "Cannot redefine property: default")
+                const { L, rl: RL } = await ensureLeafletAndReactLeaflet();
 
                 // default marker images (not used for numberIcon, but keep leaflet happy)
                 // @ts-ignore

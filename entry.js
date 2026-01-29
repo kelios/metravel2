@@ -1,5 +1,79 @@
 'use strict';
 
+// ✅ FIX: Patch Object.defineProperty FIRST, before any require/import
+// In Expo web dev with lazy=true, Metro can occasionally re-evaluate a chunk that contains
+// an ESM->CJS wrapper for some packages (notably react-leaflet). The wrapper re-defines
+// exports.default via Object.defineProperty, and the second evaluation throws:
+// "TypeError: Cannot redefine property: default"
+// We treat that specific case as idempotent and ignore the redefinition attempt.
+// This MUST be applied before any require() or import() of react-leaflet.
+(function() {
+  const isWebPlatform = typeof window !== 'undefined' || typeof document !== 'undefined';
+  if (!isWebPlatform) return;
+
+  const w = typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : {});
+  if (w.__metravelDefinePropertyPatched) return;
+  w.__metravelDefinePropertyPatched = true;
+
+  const originalDefineProperty = Object.defineProperty;
+  const originalDefineProperties = Object.defineProperties;
+  const originalReflectDefineProperty = typeof Reflect !== 'undefined' && Reflect.defineProperty
+    ? Reflect.defineProperty.bind(Reflect)
+    : null;
+
+  const shouldIgnoreDefaultRedefine = function(prop, err) {
+    const msg = err && (err.message || String(err));
+    if (typeof msg !== 'string') return false;
+    if (msg.indexOf('Cannot redefine property: default') === -1) return false;
+    return prop === 'default' || prop == null;
+  };
+
+  Object.defineProperty = function patchedDefineProperty(obj, prop, descriptor) {
+    try {
+      return originalDefineProperty(obj, prop, descriptor);
+    } catch (err) {
+      if (shouldIgnoreDefaultRedefine(prop, err)) {
+        return obj;
+      }
+      throw err;
+    }
+  };
+
+  Object.defineProperties = function patchedDefineProperties(obj, props) {
+    try {
+      return originalDefineProperties(obj, props);
+    } catch (err) {
+      if (props && typeof props === 'object') {
+        for (var key in props) {
+          if (Object.prototype.hasOwnProperty.call(props, key)) {
+            try {
+              originalDefineProperty(obj, key, props[key]);
+            } catch (e) {
+              if (shouldIgnoreDefaultRedefine(key, e)) continue;
+              throw e;
+            }
+          }
+        }
+        return obj;
+      }
+      throw err;
+    }
+  };
+
+  if (originalReflectDefineProperty) {
+    Reflect.defineProperty = function patchedReflectDefineProperty(obj, prop, attributes) {
+      try {
+        return originalReflectDefineProperty(obj, prop, attributes);
+      } catch (err) {
+        if (shouldIgnoreDefaultRedefine(prop, err)) {
+          return true;
+        }
+        throw err;
+      }
+    };
+  }
+})();
+
 // Import gesture handler at the very top for proper initialization
 if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
   require('react-native-gesture-handler');
@@ -112,5 +186,6 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     }
   });
 }
+
 
 require('expo-router/entry');

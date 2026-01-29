@@ -13,7 +13,7 @@ const isTestEnv = () =>
   (process as any).env &&
   (process as any).env.NODE_ENV === 'test';
 
- const patchLeafletLatLngGuards = (L: any) => {
+const patchLeafletLatLngGuards = (L: any) => {
    if (!L) return;
    if ((L as any).__metravelCirclePatched) return;
 
@@ -171,7 +171,7 @@ export const ensureLeaflet = async (): Promise<LeafletNS> => {
   // In tests we mock/alias Leaflet; avoid waiting for CDN.
   if (isTestEnv()) {
     try {
-      const req = (0, eval)('require') as NodeRequire;
+      const req: NodeRequire = eval('require');
       const leafletMod = req('leaflet');
       w.L = leafletMod?.default ?? leafletMod;
       return w.L;
@@ -229,33 +229,75 @@ export const ensureReactLeaflet = async (): Promise<ReactLeafletNS> => {
   
   reactLeafletPromise = (async () => {
     // Ensure Leaflet is loaded first (from CDN)
-    await ensureLeaflet();
-    
+    const L = await ensureLeaflet();
+
     // Double-check after await in case another call completed
     if (reactLeafletModule) return reactLeafletModule;
-    if (typeof window !== 'undefined' && (window as any).__reactLeaflet) {
-      reactLeafletModule = (window as any).__reactLeaflet;
+
+    const w = window as any;
+    if (w.__reactLeaflet) {
+      reactLeafletModule = w.__reactLeaflet;
       return reactLeafletModule;
     }
-    
+
+    // Expose Leaflet on window (required by react-leaflet)
+    if (!w.L && L) {
+      w.L = L;
+    }
+
+    // Load react-leaflet via Metro dynamic import
+    // Handle "Cannot redefine property: default" error during hot-reload
     try {
-      // Prefer `require()` over dynamic `import()` on web.
-      // Metro's async chunk loader (`fetchThenEval*`) can occasionally re-evaluate the same chunk and throw:
-      // "TypeError: Cannot redefine property: default".
-      // Keeping react-leaflet in the main bundle avoids that flakiness.
-      const mod = require('react-leaflet');
-      
-      // Handle both default and named exports
-      // Some bundlers wrap named exports in a default object
-      const actualMod = (mod as any).default || mod;
-      reactLeafletModule = actualMod;
-      
-      // Store on window for compatibility and to prevent re-imports
-      if (typeof window !== 'undefined') {
-        (window as any).__reactLeaflet = actualMod;
+      let rlModule: any;
+
+      try {
+        rlModule = await import('react-leaflet');
+      } catch (importErr: any) {
+        const errMsg = importErr?.message || String(importErr);
+
+        // If it's the "Cannot redefine property: default" error, the module might
+        // already be cached on window from a previous load attempt
+        if (errMsg.includes('Cannot redefine property')) {
+          // Check if module was actually loaded despite the error
+          if (w.__reactLeaflet && w.__reactLeaflet.MapContainer) {
+            console.warn('[Leaflet] Recovered from redefine error using cached module');
+            reactLeafletModule = w.__reactLeaflet;
+            return reactLeafletModule;
+          }
+
+          // Try to get it from Metro's module cache via require
+          try {
+            const requireMod = require('react-leaflet');
+            if (requireMod && requireMod.MapContainer) {
+              rlModule = requireMod;
+            }
+          } catch {
+            // Ignore require error
+          }
+        }
+
+        // If we still don't have a module, rethrow
+        if (!rlModule) {
+          throw importErr;
+        }
+      }
+
+      // Ensure we have a valid module
+      if (!rlModule || typeof rlModule !== 'object') {
+        reactLeafletPromise = null;
+        throw new Error('Invalid react-leaflet module received');
       }
       
-      return actualMod;
+      // Check for essential exports
+      if (!rlModule.MapContainer) {
+        reactLeafletPromise = null;
+        throw new Error('Missing react-leaflet MapContainer export');
+      }
+      
+      reactLeafletModule = rlModule as ReactLeafletNS;
+      w.__reactLeaflet = rlModule;
+
+      return rlModule as ReactLeafletNS;
     } catch (err) {
       console.error('[Leaflet] Failed to load react-leaflet:', err);
       reactLeafletPromise = null;
