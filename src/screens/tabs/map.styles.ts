@@ -1,3 +1,4 @@
+// src/screens/tabs/map.styles.ts
 import { Platform, StyleSheet } from 'react-native';
 import { LAYOUT, METRICS } from '@/constants/layout';
 import type { ThemedColors } from '@/hooks/useTheme';

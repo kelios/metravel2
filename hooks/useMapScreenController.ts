@@ -8,7 +8,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useThemedColors } from '@/hooks/useTheme';
-import { getStyles } from '@/app/(tabs)/map.styles';
+import { getStyles } from '@/src/screens/tabs/map.styles';
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { TravelCoords } from '@/src/types/types';
 import { logMessage } from '@/src/utils/logger';

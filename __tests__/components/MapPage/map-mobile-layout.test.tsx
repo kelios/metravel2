@@ -1,6 +1,6 @@
 // __tests__/components/MapPage/map-mobile-layout.test.tsx
 import { Platform } from 'react-native';
-import { getStyles } from '@/app/(tabs)/map.styles';
+import { getStyles } from '@/src/screens/tabs/map.styles';
 import { LAYOUT } from '@/constants/layout';
 
 // Mock themed colors

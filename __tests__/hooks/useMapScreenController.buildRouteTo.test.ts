@@ -83,7 +83,7 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }))
 
-jest.mock('@/app/(tabs)/map.styles', () => ({
+jest.mock('@/src/screens/tabs/map.styles', () => ({
   getStyles: () => ({}),
 }))
 

@@ -1,7 +1,7 @@
 import { render, waitFor, fireEvent, act } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Platform } from 'react-native'
-import MapScreen from '@/app/(tabs)/map'
+import MapScreen from '@/src/screens/tabs/MapScreen'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
@@ -97,12 +97,12 @@ jest.mock('@/components/MapPage/TravelListPanel', () => {
   const { View, Text } = require('react-native')
   return {
     __esModule: true,
-    default: ({ travelsData }: any) =>
+    default: ({ items, isFetching }: any) =>
       React.createElement(
         View,
         { testID: 'travel-list-panel' },
-        React.createElement(Text, null, 'TravelListPanel'),
-        React.createElement(Text, { testID: 'list-count' }, travelsData?.length ?? 0),
+        isFetching ? React.createElement(Text, null, 'Загрузка...') : React.createElement(Text, null, 'TravelListPanel'),
+        React.createElement(Text, { testID: 'list-count' }, items?.length ?? 0),
       ),
   }
 })
@@ -152,7 +152,7 @@ jest.mock('@/components/ErrorDisplay', () => {
 });
 
 jest.mock('@/src/utils/networkErrorHandler', () => ({
-  getUserFriendlyNetworkError: () => 'Сетевая ошибка',
+  getUserFriendlyNetworkError: () => ({ message: 'Сетевая ошибка' }),
 }));
 
 // Утилита для клиента React Query
@@ -287,7 +287,7 @@ describe('MapScreen (map tab)', () => {
     mockFetchTravelsForMap.mockImplementation(() => slowPromise);
 
     const utils = renderWithClient();
-    const { getByText } = utils;
+    const { getByTestId } = utils;
 
     // Запрос на данные карты начинается только после получения геолокации
     await waitFor(() => {
@@ -298,7 +298,7 @@ describe('MapScreen (map tab)', () => {
     await openPanelAndGoToListTab(utils);
 
     // Пока запрос не завершён, должен отображаться лоадер
-    expect(getByText('Загрузка...')).toBeTruthy();
+    expect(getByTestId('map-loading-overlay')).toBeTruthy();
 
     // Завершаем запрос, чтобы избежать зависаний
     resolveRequest!({});
@@ -334,9 +334,6 @@ describe('MapScreen (map tab)', () => {
     await waitFor(() => {
       expect(mockFetchTravelsForMap).toHaveBeenCalled();
     });
-
-    // Переключаемся на вкладку "Список" (на mobile панель закрыта по умолчанию)
-    await openPanelAndGoToListTab(utils);
 
     // Ожидаем отображение компонента ошибки
     await waitFor(() => {

@@ -42,7 +42,7 @@ describe('UserPointsScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('should not show auth required message while auth is not ready', () => {
+  it('should not show auth required message while auth is not ready', async () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       username: '',
@@ -65,11 +65,11 @@ describe('UserPointsScreen', () => {
 
     render(<UserPointsScreen />);
 
+    expect(await screen.findByTestId('userpoints-auth-loading')).toBeTruthy();
     expect(screen.queryByText('Требуется авторизация')).toBeNull();
-    expect(screen.getByTestId('userpoints-auth-loading')).toBeTruthy();
   });
 
-  it('should show auth required message when user is not authenticated', () => {
+  it('should show auth required message when user is not authenticated', async () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       username: '',
@@ -92,12 +92,12 @@ describe('UserPointsScreen', () => {
 
     render(<UserPointsScreen />);
 
-    expect(screen.getByText('Требуется авторизация')).toBeTruthy();
+    expect(await screen.findByText('Требуется авторизация')).toBeTruthy();
     expect(screen.getByText('Для использования этой функции необходимо войти в систему')).toBeTruthy();
     expect(screen.getByText('Войти')).toBeTruthy();
   });
 
-  it('should redirect to login when login button is pressed', () => {
+  it('should redirect to login when login button is pressed', async () => {
     const { router } = require('expo-router');
     
     mockUseAuth.mockReturnValue({
@@ -122,13 +122,13 @@ describe('UserPointsScreen', () => {
 
     render(<UserPointsScreen />);
 
-    const loginButton = screen.getByText('Войти');
+    const loginButton = await screen.findByText('Войти');
     fireEvent.press(loginButton);
 
     expect(router.push).toHaveBeenCalledWith('/login');
   });
 
-  it('should render PointsList when user is authenticated', () => {
+  it('should render PointsList when user is authenticated', async () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       username: 'testuser',
@@ -153,7 +153,7 @@ describe('UserPointsScreen', () => {
     
     expect(() => screen.getByText('Требуется авторизация')).toThrow();
 
-    expect(screen.getByLabelText('Добавить')).toBeTruthy();
+    expect(await screen.findByLabelText('Добавить')).toBeTruthy();
     expect(screen.getByTestId('icon-add')).toBeTruthy();
     expect(screen.queryByText('Добавить')).toBeNull();
   });
