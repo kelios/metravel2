@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.1.1';
+const CACHE_VERSION = 'v1.1.2';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -59,7 +59,8 @@ self.addEventListener('activate', (event) => {
 // Prefetch критичних ресурсів для travel pages
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'PREFETCH_TRAVEL_RESOURCES') {
-    event.waitUntil(prefetchCriticalResources());
+    const url = event.data.url;
+    event.waitUntil(prefetchCriticalResources(url));
   }
 });
 
@@ -260,35 +261,60 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
 }
 
 // Prefetch критичних JS chunks для travel pages
-async function prefetchCriticalResources() {
+async function prefetchCriticalResources(pageUrl) {
   try {
-    const cache = await caches.open(CRITICAL_CACHE);
+    // NOTE: CRITICAL_CACHE is kept for backwards compatibility, but scripts are stored in JS_CACHE
+    // so they are actually served by the SW fetch handler.
+    const cache = await caches.open(JS_CACHE);
     await self.clients.matchAll().catch(() => []);
     
-    // Знаходимо всі JS chunks на сторінці
-    const response = await fetch('/');
+    const safeUrl = (() => {
+      try {
+        const base = self.location && self.location.origin ? self.location.origin : '';
+        const u = new URL(pageUrl || '/', base);
+        // Only allow same-origin prefetch.
+        if (base && u.origin !== base) return new URL('/', base).toString();
+        return u.toString();
+      } catch {
+        return '/';
+      }
+    })();
+
+    // Знаходимо всі JS chunks на сторінці (для поточної сторінки, а не лише '/')
+    const response = await fetch(safeUrl, { method: 'GET', credentials: 'omit' });
     const html = await response.text();
     const scriptMatches = html.matchAll(/<script[^>]+src="([^"]+)"/g);
     
     const criticalUrls = [];
     for (const match of scriptMatches) {
       const src = match[1];
-      // Перевіряємо чи це критичний chunk
-      if (CRITICAL_JS_CHUNKS.some(chunk => src.includes(chunk))) {
-        criticalUrls.push(src);
-      }
+      if (!src) continue;
+      // Keep it tight: only same-origin Expo web JS.
+      if (!src.startsWith('/_expo/static/js/web/')) continue;
+      if (!src.endsWith('.js')) continue;
+
+      // Перевіряємо чи це критичний chunk (або entry/common)
+      const isCriticalNamed = CRITICAL_JS_CHUNKS.some((chunk) => src.includes(chunk));
+      const isEntryOrCommon = src.includes('/entry-') || src.includes('/__common-');
+      if (isCriticalNamed || isEntryOrCommon) criticalUrls.push(src);
     }
-    
+
     // Prefetch критичних ресурсів
+    const uniq = Array.from(new Set(criticalUrls));
     await Promise.all(
-      criticalUrls.map(url => 
-        fetch(url).then(res => {
-          if (res && res.status === 200) {
-            cache.put(url, res.clone());
-          }
-        }).catch(() => {})
+      uniq.map((url) =>
+        fetch(url, { method: 'GET', credentials: 'omit' })
+          .then((res) => {
+            if (res && res.status === 200) {
+              cache.put(url, res.clone());
+            }
+          })
+          .catch(() => {})
       )
     );
+
+    // Keep JS cache size bounded.
+    limitCacheSize(JS_CACHE, MAX_JS_CACHE_SIZE);
   } catch (error) {
     console.info('SW: Prefetch failed', error);
   }
