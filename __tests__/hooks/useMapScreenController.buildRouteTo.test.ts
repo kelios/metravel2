@@ -145,7 +145,10 @@ describe('useMapScreenController.buildRouteTo', () => {
       jest.advanceTimersByTime(420)
     })
 
-    expect(openPopupForCoord).toHaveBeenCalledWith('50.061947,19.936856')
+    const popupCalls = openPopupForCoord.mock.calls.map((call) => call[0])
+    expect(popupCalls).toEqual(
+      expect.arrayContaining(['50.0619474,19.9368564', '50.061947,19.936856'])
+    )
 
     // Critical regression guard: we must not update global search coordinates
     expect(mockUpdateCoordinates).not.toHaveBeenCalled()

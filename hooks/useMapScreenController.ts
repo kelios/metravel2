@@ -191,8 +191,16 @@ export function useMapScreenController() {
     (item: TravelCoords) => {
       if (!item?.coord) return;
       const rawCoordStr = String(item.coord);
-      const parsed = CoordinateConverter.fromLooseString(rawCoordStr);
-      const coordStr = parsed ? CoordinateConverter.toString(parsed) : rawCoordStr;
+      const cleanedCoordStr = rawCoordStr.replace(/;/g, ',').replace(/\s+/g, '');
+      const parsed = CoordinateConverter.fromLooseString(cleanedCoordStr);
+      // Keep the focus string normalized for stable zooming.
+      const coordStr = parsed ? CoordinateConverter.toString(parsed) : cleanedCoordStr;
+
+      // Popup matching can be sensitive to exact string keys (e.g. full precision).
+      // Try a small set of candidates in a stable order.
+      const popupCoordCandidates = Array.from(
+        new Set([cleanedCoordStr, rawCoordStr, coordStr].filter(Boolean))
+      );
 
       try {
         mapUiApi?.focusOnCoord?.(coordStr, { zoom: 14 });
@@ -203,10 +211,12 @@ export function useMapScreenController() {
       try {
         // Open popup after the map starts moving so user immediately sees the exact point.
         setTimeout(() => {
-          try {
-            mapUiApi?.openPopupForCoord?.(coordStr);
-          } catch {
-            // noop
+          for (const candidate of popupCoordCandidates) {
+            try {
+              mapUiApi?.openPopupForCoord?.(candidate);
+            } catch {
+              // noop
+            }
           }
         }, 420);
       } catch {

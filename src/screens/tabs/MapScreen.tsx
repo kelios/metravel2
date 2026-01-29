@@ -288,14 +288,19 @@ export default function MapScreen() {
                             </View>
                         )
                     ) : (
-                        <Suspense fallback={null}>
-                            <LazyTravelListPanel
-                                items={travelsData}
-                                isFetching={isFetching}
-                                isPlaceholderData={isPlaceholderData}
-                                onItemPress={buildRouteTo}
-                            />
-                        </Suspense>
+                        <View testID="map-travels-tab" style={{ flex: 1 }}>
+                            <Suspense fallback={null}>
+                                <LazyTravelListPanel
+                                    travelsData={travelsData}
+                                    buildRouteTo={buildRouteTo}
+                                    isMobile={isMobile}
+                                    isLoading={loading || isFetching}
+                                    isRefreshing={isFetching && isPlaceholderData}
+                                    userLocation={coordinates}
+                                    transportMode={transportMode}
+                                />
+                            </Suspense>
+                        </View>
                     )}
                 </View>
             </Animated.View>

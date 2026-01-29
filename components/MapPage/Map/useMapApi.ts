@@ -177,13 +177,34 @@ export function useMapApi({
         try {
           const rawKey = String(coord ?? '').trim();
           if (!rawKey) return;
-          const parsed = CoordinateConverter.fromLooseString(rawKey);
-          const key = parsed ? CoordinateConverter.toString(parsed) : rawKey;
 
           const markerIndex: Map<string, any> | undefined =
             (leafletControlRef as any)?.current?.markerByCoord ?? (leafletControlRef as any)?.markerByCoord;
-          const marker = markerIndex?.get?.(key) ?? markerIndex?.get?.(rawKey);
-          if (!marker) return;
+
+          const tryFindMarker = () => {
+            const parsed = CoordinateConverter.fromLooseString(rawKey);
+            const key = parsed ? CoordinateConverter.toString(parsed) : rawKey;
+            return markerIndex?.get?.(key) ?? markerIndex?.get?.(rawKey) ?? null;
+          };
+
+          const marker = tryFindMarker();
+          if (!marker) {
+            // Marker refs can appear shortly after flyTo/cluster recompute; retry once.
+            setTimeout(() => {
+              try {
+                const nextMarker = tryFindMarker();
+                if (!nextMarker) return;
+                try {
+                  nextMarker.openPopup?.();
+                } catch {
+                  // noop
+                }
+              } catch {
+                // noop
+              }
+            }, 500);
+            return;
+          }
 
           try {
             marker.setZIndexOffset?.(1000);

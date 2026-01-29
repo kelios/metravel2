@@ -97,12 +97,12 @@ jest.mock('@/components/MapPage/TravelListPanel', () => {
   const { View, Text } = require('react-native')
   return {
     __esModule: true,
-    default: ({ items, isFetching }: any) =>
+    default: ({ travelsData, isLoading }: any) =>
       React.createElement(
         View,
         { testID: 'travel-list-panel' },
-        isFetching ? React.createElement(Text, null, 'Загрузка...') : React.createElement(Text, null, 'TravelListPanel'),
-        React.createElement(Text, { testID: 'list-count' }, items?.length ?? 0),
+        isLoading ? React.createElement(Text, null, 'Загрузка...') : React.createElement(Text, null, 'TravelListPanel'),
+        React.createElement(Text, { testID: 'list-count' }, travelsData?.length ?? 0),
       ),
   }
 })

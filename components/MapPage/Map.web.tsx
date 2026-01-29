@@ -892,6 +892,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
               expandedClusterItems={expandedCluster?.items}
               renderer={canvasRenderer}
               onMarkerClick={handleMarkerZoom}
+              onMarkerInstance={(coord, marker) => {
+                try {
+                  const raw = String(coord ?? '').trim();
+                  if (!raw) return;
+                  const parsed = CoordinateConverter.fromLooseString(raw);
+                  const key = parsed ? CoordinateConverter.toString(parsed) : raw;
+                  if (marker) markerByCoordRef.current.set(key, marker);
+                  else markerByCoordRef.current.delete(key);
+                } catch {
+                  // noop
+                }
+              }}
               onClusterZoom={({ bounds, key, items }) => {
                 if (!mapRef.current) return;
                 try {

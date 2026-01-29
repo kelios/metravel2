@@ -11,6 +11,7 @@ interface ClusterLayerProps {
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
+  onMarkerInstance?: (coord: string, marker: any | null) => void;
   onClusterZoom: (payload: {
     center: [number, number];
     bounds: [[number, number], [number, number]];
@@ -36,6 +37,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   Popup,
   PopupContent,
   onMarkerClick,
+  onMarkerInstance,
   onClusterZoom,
   expandedClusterKey,
   expandedClusterItems,
@@ -303,6 +305,13 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                   position: [ll[1], ll[0]],
                   icon: markerIcon,
                   opacity: markerOpacity,
+                  ref: (marker: any) => {
+                    try {
+                      onMarkerInstance?.(String(item.coord ?? ''), marker ?? null);
+                    } catch {
+                      // noop
+                    }
+                  },
                   eventHandlers: {
                     click: (e: any) => handleMarkerClick(e, item, { lat: ll[1], lng: ll[0] }),
                   },
@@ -332,6 +341,13 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             position: [ll[1], ll[0]],
             icon: markerIcon,
             opacity: markerOpacity,
+            ref: (marker: any) => {
+              try {
+                onMarkerInstance?.(String(item.coord ?? ''), marker ?? null);
+              } catch {
+                // noop
+              }
+            },
             eventHandlers: {
               click: (e: any) => handleMarkerClick(e, item, { lat: ll[1], lng: ll[0] }),
             },
