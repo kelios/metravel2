@@ -36,6 +36,7 @@ jest-results.json
 *.log
 .eslintcache
 .tsbuildinfo
+eslint-report.json
 
 # Playwright artifacts
 /test-results/

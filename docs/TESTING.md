@@ -10,6 +10,17 @@
 - This repo uses Yarn v1 (`packageManager: yarn@1.22.x`). Prefer `yarn ...`.
 - `npm run ...` usually works too, but examples below use Yarn.
 
+## Node.js version
+
+- React Native `0.81.5` requires Node `>= 20.19.4`.
+- Recommended: use `nvm` and the repo `.nvmrc`.
+
+```bash
+nvm install
+nvm use
+yarn install
+```
+
 ## Unit / integration tests (Jest)
 
 Commands:
@@ -82,3 +93,12 @@ yarn test:ci
 ```
 
 Includes `npm run check:image-architecture` and then runs Jest in CI mode.
+
+## Known peer dependency warnings
+
+You may see warnings during `yarn install`:
+
+- `react-leaflet@4.x` declares peer deps for React 18, while this repo uses React 19.
+- `@react-pdf/renderer@3.x` declares peer deps up to React 18.
+
+At the moment we keep them as-is because the app works and tests pass, but treat these as “watch items” after upgrades.

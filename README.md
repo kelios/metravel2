@@ -171,6 +171,7 @@ npm run build:all:prod     # Production builds
 
 ```bash
 # Recommended: use Yarn (repo uses Yarn v1). `npm run ...` also works.
+# React Native `0.81.5` requires Node `>= 20.19.4` (see `.nvmrc`).
 
 # Run tests (interactive watchAll)
 yarn test

@@ -21,6 +21,10 @@ yarn
 yarn start
 ```
 
+## Node.js
+
+- React Native `0.81.5` requires Node `>= 20.19.4` (see `.nvmrc`).
+
 ### Web
 
 ```bash
