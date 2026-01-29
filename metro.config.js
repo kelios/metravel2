@@ -44,14 +44,6 @@ config.resolver = {
   resolveRequest: (context, moduleName, platform, modulePath) => {
     const isWeb = platform === 'web' || (context && context.platform === 'web');
     
-    // Special handling for react-leaflet to ensure proper ES module resolution
-    if (isWeb && moduleName === 'react-leaflet') {
-      return {
-        filePath: path.resolve(__dirname, 'node_modules/react-leaflet/lib/index.js'),
-        type: 'sourceFile',
-      };
-    }
-    
     // Блокируем импорт всех CSS файлов (Metro не может их обработать из-за lightningcss)
     if (moduleName.endsWith('.css')) {
       return {
