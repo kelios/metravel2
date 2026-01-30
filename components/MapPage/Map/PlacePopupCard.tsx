@@ -43,8 +43,8 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   addLabel = 'Мои точки',
-  width = 380,
-  imageHeight = 86,
+  width = 320,
+  imageHeight = 72,
 }) => {
   const colors = useThemedColors();
   const hasCoord = !!coord;
@@ -66,12 +66,12 @@ const PlacePopupCard: React.FC<Props> = ({
   const isCompactPopup = viewportWidth <= 640;
   const isNarrowPopup = viewportWidth <= 480;
   const compactLabel = isNarrowPopup ? 'В мои точки' : addLabel;
-  const maxPopupWidth = Math.min(width, Math.max(280, viewportWidth - (isNarrowPopup ? 32 : 64)));
-  const thumbSize = isNarrowPopup ? 64 : isCompactPopup ? 72 : imageHeight;
+  const maxPopupWidth = Math.min(width, Math.max(260, viewportWidth - (isNarrowPopup ? 28 : 56)));
+  const thumbSize = isNarrowPopup ? 60 : isCompactPopup ? 68 : imageHeight;
 
   return (
-    <View style={{ width: '100%', maxWidth: maxPopupWidth, gap: isCompactPopup ? 6 : 10 }}>
-      <View style={{ flexDirection: 'row', gap: isCompactPopup ? 8 : 12 }}>
+    <View style={{ width: '100%', maxWidth: maxPopupWidth, gap: isCompactPopup ? 4 : 8 }}>
+      <View style={{ flexDirection: 'row', gap: isCompactPopup ? 6 : 10 }}>
         <View
           style={{
             width: thumbSize,
@@ -137,7 +137,7 @@ const PlacePopupCard: React.FC<Props> = ({
                 alignItems: 'center',
                 gap: 6,
                 paddingVertical: isNarrowPopup ? 0 : isCompactPopup ? 1 : 2,
-                paddingHorizontal: isNarrowPopup ? 5 : isCompactPopup ? 6 : 8,
+                paddingHorizontal: isNarrowPopup ? 4 : isCompactPopup ? 6 : 7,
                 borderRadius: 999,
                 borderWidth: 1,
                 borderColor: colors.borderLight ?? colors.border,
@@ -221,7 +221,7 @@ const PlacePopupCard: React.FC<Props> = ({
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: isCompactPopup ? 5 : 8 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: isCompactPopup ? 4 : 6 }}>
         {hasCoord && onOpenGoogleMaps && (
           <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
@@ -231,8 +231,8 @@ const PlacePopupCard: React.FC<Props> = ({
               flexDirection: 'row',
               alignItems: 'center',
               gap: 6,
-              paddingVertical: isNarrowPopup ? 4 : isCompactPopup ? 5 : 6,
-              paddingHorizontal: isNarrowPopup ? 6 : isCompactPopup ? 6 : 8,
+              paddingVertical: isNarrowPopup ? 3 : isCompactPopup ? 4 : 5,
+              paddingHorizontal: isNarrowPopup ? 5 : isCompactPopup ? 6 : 7,
               borderRadius: isNarrowPopup ? 6 : isCompactPopup ? 7 : 8,
               borderWidth: 1,
               borderColor: colors.border,
@@ -358,8 +358,8 @@ const PlacePopupCard: React.FC<Props> = ({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            paddingVertical: isNarrowPopup ? 5 : isCompactPopup ? 6 : 7,
-            paddingHorizontal: isNarrowPopup ? 8 : isCompactPopup ? 8 : 10,
+            paddingVertical: isNarrowPopup ? 4 : isCompactPopup ? 5 : 6,
+            paddingHorizontal: isNarrowPopup ? 7 : isCompactPopup ? 8 : 9,
             borderRadius: isNarrowPopup ? 8 : isCompactPopup ? 9 : 10,
             backgroundColor: addDisabled || isAdding ? 'rgba(0,0,0,0.08)' : colors.primary,
             opacity: pressed ? 0.92 : 1,

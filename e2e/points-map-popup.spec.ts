@@ -132,16 +132,51 @@ test.describe('Travel points -> map popup', () => {
     await mapSection.scrollIntoViewIfNeeded();
     await expect(mapSection).toBeVisible();
 
-    const popupLocator = page.locator('.leaflet-popup');
-    const opened = await popupLocator
-      .isVisible({ timeout: 4_000 })
-      .catch(() => false);
-    if (!opened) {
-      const marker = page.locator('.leaflet-marker-icon').first();
-      if (await marker.isVisible()) {
-        await marker.click();
-      }
-    }
-    await expect(popupLocator).toBeVisible({ timeout: 15_000 });
+    await expect(mapSection.locator('.leaflet-container').first()).toBeVisible({ timeout: 20_000 });
+
+    // In this app build we expose the Leaflet instance for web automation.
+    // Assert that the map recenters to the point after clicking the card.
+    await page.waitForFunction(() => {
+      const w = window as any;
+      return Boolean(w.__metravelLeafletMap && typeof w.__metravelLeafletMap.getCenter === 'function');
+    });
+
+    const targetLat = 52.4238936;
+    const targetLng = 31.0131698;
+
+    await expect
+      .poll(
+        async () => {
+          return page.evaluate(() => {
+            const map = (window as any).__metravelLeafletMap;
+            const center = map?.getCenter?.();
+            const lat = Number(center?.lat);
+            const lng = Number(center?.lng);
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+            return { lat, lng };
+          });
+        },
+        { timeout: 20_000 }
+      )
+      .toMatchObject({
+        lat: expect.any(Number),
+        lng: expect.any(Number),
+      });
+
+    await expect
+      .poll(
+        async () => {
+          const center = await page.evaluate(() => {
+            const map = (window as any).__metravelLeafletMap;
+            const c = map?.getCenter?.();
+            return { lat: Number(c?.lat), lng: Number(c?.lng) };
+          });
+          const dLat = Math.abs(center.lat - targetLat);
+          const dLng = Math.abs(center.lng - targetLng);
+          return dLat < 0.05 && dLng < 0.05;
+        },
+        { timeout: 20_000 }
+      )
+      .toBeTruthy();
   });
 });

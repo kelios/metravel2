@@ -300,7 +300,7 @@ export default function MapScreen() {
             </Animated.View>
                 
                 {mapComponent}
-                {rightPanelVisible && (
+                {rightPanelVisible && isMobile && (
                     <Animated.View style={[styles.overlay, overlayStyle]} />
                 )}
             </View>

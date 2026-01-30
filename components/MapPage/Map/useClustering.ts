@@ -18,9 +18,9 @@ interface ClusterItem {
   items: Point[];
 }
 
-const CLUSTER_THRESHOLD = 25;
-const CLUSTER_GRID = 0.045; // ~5 км ячейка на широте 55-60
-const CLUSTER_EXPAND_ZOOM = 15;
+const CLUSTER_THRESHOLD = 12;
+const CLUSTER_GRID = 0.04; // ~4-5 км ячейка на широте 55-60
+const CLUSTER_EXPAND_ZOOM = 14;
 
 const getClusterGridForZoom = (zoom: number) => {
   if (!Number.isFinite(zoom)) return CLUSTER_GRID;
@@ -30,7 +30,9 @@ const getClusterGridForZoom = (zoom: number) => {
   if (zoom >= 13) return 0.01;
   if (zoom >= 12) return 0.02;
   if (zoom >= 11) return 0.03;
-  return CLUSTER_GRID;
+  if (zoom >= 10) return 0.04;
+  if (zoom >= 9) return 0.05;
+  return 0.06;
 };
 
 const buildClusterKey = (center: [number, number], count: number) =>

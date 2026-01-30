@@ -59,7 +59,11 @@ interface FavoritesContextType {
     ensureServerData?: (kind: 'favorites' | 'history' | 'recommendations' | 'all') => Promise<void>;
 }
 
-const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
+const globalForFavoritesContext = globalThis as any;
+const FavoritesContext: ReturnType<typeof createContext<FavoritesContextType | undefined>> =
+    globalForFavoritesContext.__metravelFavoritesContext ??
+    createContext<FavoritesContextType | undefined>(undefined);
+globalForFavoritesContext.__metravelFavoritesContext = FavoritesContext;
 
 const AUTH_REQUIRED_ERROR = 'AUTH_REQUIRED';
 

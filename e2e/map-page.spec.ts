@@ -96,6 +96,20 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await page.addInitScript(seedNecessaryConsent);
   });
 
+  test('desktop: map tiles are visible (screenshot)', async ({ page }) => {
+    await gotoMapWithRecovery(page);
+
+    const mapWrapper = page.getByTestId('map-leaflet-wrapper');
+    await expect(mapWrapper).toBeVisible({ timeout: 60_000 });
+
+    const tile = page.locator('.leaflet-tile').first();
+    await tile.waitFor({ state: 'visible', timeout: 60_000 });
+
+    await expect(mapWrapper).toHaveScreenshot('map-visible.png', {
+      maxDiffPixelRatio: 0.08,
+    });
+  });
+
   test('desktop: loads map and shows filters panel', async ({ page }) => {
     await gotoMapWithRecovery(page);
 

@@ -188,6 +188,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!shouldLoadLeaflet) return;
     if (typeof document === 'undefined') return;
 
+    const ENABLE_OSM_TILE_PRELOAD = false;
+
     try {
       const zoomCandidate = Number.isFinite(safeCoordinates.zoom)
         ? Number(safeCoordinates.zoom)
@@ -207,6 +209,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       };
 
       const ensurePreload = (href: string) => {
+        if (!ENABLE_OSM_TILE_PRELOAD) return;
         if (document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) return;
         const link = document.createElement('link');
         link.rel = 'preload';
@@ -224,6 +227,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
       ensurePreconnect('https://a.tile.openstreetmap.org');
       ensurePreconnect('https://b.tile.openstreetmap.org');
       ensurePreconnect('https://c.tile.openstreetmap.org');
+
+      if (!ENABLE_OSM_TILE_PRELOAD) return;
 
       const n = Math.pow(2, zoom);
       const xRaw = Math.floor(((lng + 180) / 360) * n);
@@ -447,6 +452,65 @@ const MapPageComponent: React.FC<Props> = (props) => {
     };
   }, [mode, leafletBaseLayerRef]);
 
+  // Invalidate size when the map container changes size (e.g. animated right panel).
+  // window.resize is not enough on web because layout can change without a viewport resize.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (!mapRef.current) return;
+
+    const map = mapRef.current;
+    const containerId = mapContainerIdRef.current;
+
+    const safeInvalidate = () => {
+      try {
+        map.invalidateSize?.({ animate: false } as any);
+      } catch {
+        // noop
+      }
+    };
+
+    let rafId: number | null = null;
+    const scheduleInvalidate = () => {
+      if (rafId != null) {
+        cancelAnimationFrame(rafId);
+      }
+      rafId = requestAnimationFrame(() => safeInvalidate());
+    };
+
+    // Kick a few times after mount to catch late layout (fonts, panel animations, etc.)
+    const t1 = setTimeout(scheduleInvalidate, 50);
+    const t2 = setTimeout(scheduleInvalidate, 250);
+    const t3 = setTimeout(scheduleInvalidate, 1000);
+
+    const el = document.getElementById(containerId);
+    let ro: ResizeObserver | null = null;
+
+    if (el && typeof (window as any).ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => scheduleInvalidate());
+      try {
+        ro.observe(el);
+        if (el.parentElement) ro.observe(el.parentElement);
+      } catch {
+        // noop
+      }
+    }
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      try {
+        ro?.disconnect();
+      } catch {
+        // noop
+      }
+      if (rafId != null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [mapContainerIdRef, mapInstance]);
+
   // invalidateSize on resize
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -659,6 +723,42 @@ const MapPageComponent: React.FC<Props> = (props) => {
       {Platform.OS === 'web' && (
         <style>
           {`
+          /* Leaflet core layout: ensure panes/tiles are positioned correctly.
+             Without these rules, tiles can render as "islands" even if they load successfully. */
+          .leaflet-container {
+            position: relative;
+            overflow: hidden !important;
+            outline: 0;
+          }
+
+          .leaflet-container img.leaflet-tile {
+            max-width: none !important;
+          }
+
+          .leaflet-pane,
+          .leaflet-map-pane,
+          .leaflet-tile-pane,
+          .leaflet-overlay-pane,
+          .leaflet-shadow-pane,
+          .leaflet-marker-pane,
+          .leaflet-tooltip-pane,
+          .leaflet-popup-pane {
+            position: absolute !important;
+            top: 0;
+            left: 0;
+          }
+
+          .leaflet-tile {
+            position: absolute !important;
+            width: 256px;
+            height: 256px;
+            opacity: 0;
+          }
+
+          .leaflet-tile.leaflet-tile-loaded {
+            opacity: 1;
+          }
+
           /* Mobile: ensure Leaflet receives touch drag gestures instead of page scroll */
           .leaflet-container {
             touch-action: none;

@@ -29,7 +29,10 @@ interface AuthProviderProps {
     children: ReactNode;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const globalForAuthContext = globalThis as any;
+const AuthContext: ReturnType<typeof createContext<AuthContextType | undefined>> =
+    globalForAuthContext.__metravelAuthContext ?? createContext<AuthContextType | undefined>(undefined);
+globalForAuthContext.__metravelAuthContext = AuthContext;
 
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     // Вызов хуков (useState, useEffect) строго на верхнем уровне

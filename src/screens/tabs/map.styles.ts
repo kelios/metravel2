@@ -41,11 +41,14 @@ export const getStyles = (
             // row-reverse: панель слева, карта справа
             flexDirection: isMobile ? 'column' : 'row-reverse',
             columnGap: isMobile ? 0 : PANEL_GAP,
-            paddingHorizontal: isMobile ? 0 : METRICS.spacing.l,
-            paddingTop: isMobile ? 0 : METRICS.spacing.m,
-            paddingBottom: isMobile ? 0 : METRICS.spacing.m,
+            paddingLeft: isMobile ? 0 : METRICS.spacing.l,
+            paddingRight: 0,
+            paddingTop: 0,
+            paddingBottom: 0,
+            minHeight: 0,
+            minWidth: 0,
+            alignItems: 'stretch',
             isolation: 'isolate',
-            transform: 'translateZ(0)',
           } as any)
         : null),
     },
@@ -60,8 +63,6 @@ export const getStyles = (
               columnGap: isMobile ? 0 : PANEL_GAP,
               paddingHorizontal: isMobile ? 0 : METRICS.spacing.l,
               isolation: 'isolate',
-              // transform создает новый stacking context
-              transform: 'translateZ(0)',
             } as any)
           : null),
       },
@@ -75,8 +76,7 @@ export const getStyles = (
         ...(Platform.OS === 'web'
           ? ({
               isolation: 'isolate',
-              transform: 'translateZ(0)',
-              minWidth: isMobile ? 0 : '60%',
+              minWidth: 0,
             } as any)
           : null),
       },
@@ -124,6 +124,9 @@ export const getStyles = (
         maxWidth: isMobile ? '100%' : PANEL_WIDTH_DESKTOP + 40,
         maxHeight: isMobile ? '75vh' : undefined,
         backgroundColor: themedColors.surface,
+        minHeight: 0,
+        minWidth: 0,
+        flexShrink: 0,
         ...(Platform.OS === 'web'
           ? ({
               boxShadow: themedColors.boxShadows.heavy,

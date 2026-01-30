@@ -87,6 +87,8 @@ const PointMarkerWeb = React.memo(
     requestDriveInfo: (args: { pointId: number; pointLat: number; pointLng: number }) => void;
     onMarkerReady?: (args: { pointId: number; marker: any | null }) => void;
   }) => {
+    const markerInstanceRef = React.useRef<any | null>(null);
+
     const hasCoords =
       Number.isFinite((point as any)?.latitude) &&
       Number.isFinite((point as any)?.longitude);
@@ -222,6 +224,12 @@ const PointMarkerWeb = React.memo(
       }
 
       try {
+        markerInstanceRef.current?.openPopup?.();
+      } catch {
+        // noop
+      }
+
+      try {
         const pointId = Number((point as any)?.id);
         const userLat = Number(centerOverride?.lat);
         const userLng = Number(centerOverride?.lng);
@@ -260,6 +268,7 @@ const PointMarkerWeb = React.memo(
     const markerRefCb = React.useCallback(
       (marker: any | null) => {
         if (!Number.isFinite(pointId)) return;
+        markerInstanceRef.current = marker;
         onMarkerReady?.({ pointId, marker });
       },
       [onMarkerReady, pointId]
@@ -734,6 +743,11 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
+  const isWebAutomation =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    Boolean((navigator as any).webdriver);
+
   const [mapInstance, setMapInstance] = React.useState<any>(null);
   const baseLayerFallbackIndexRef = React.useRef(0);
   const baseLayerFallbackSwitchingRef = React.useRef(false);
@@ -1125,11 +1139,15 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     try {
       const currentZoom = typeof mapInstance.getZoom === 'function' ? mapInstance.getZoom() : 12;
       const nextZoom = Math.max(14, Number.isFinite(currentZoom) ? currentZoom : 14);
-      mapInstance.setView([target.latitude, target.longitude], nextZoom, { animate: true } as any);
+      mapInstance.setView(
+        [target.latitude, target.longitude],
+        nextZoom,
+        { animate: !isWebAutomation } as any
+      );
     } catch {
       // noop
     }
-  }, [activePointId, mapInstance, safePoints]);
+  }, [activePointId, isWebAutomation, mapInstance, safePoints]);
 
   React.useEffect(() => {
     const id = Number(activePointId);
@@ -1158,15 +1176,18 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     try {
       if (safePoints.length === 1) {
         const p = safePoints[0];
-        mapInstance.setView([p.latitude, p.longitude], 14, { animate: true } as any);
+        mapInstance.setView([p.latitude, p.longitude], 14, { animate: !isWebAutomation } as any);
       } else {
         const bounds = L.latLngBounds(safePoints.map((p: any) => [p.latitude, p.longitude]));
-        mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: true } as any);
+        mapInstance.fitBounds(
+          bounds,
+          { padding: [40, 40], maxZoom: 14, animate: !isWebAutomation } as any
+        );
       }
     } catch {
       // noop
     }
-  }, [activePointId, mapInstance, mods?.L, safePoints]);
+  }, [activePointId, isWebAutomation, mapInstance, mods?.L, safePoints]);
 
   // Hooks must run unconditionally (before any return).
   const center = React.useMemo(() => {
@@ -1188,8 +1209,16 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
   const handleMapReady = React.useCallback(
     (map: any) => {
       setMapInstance((prev: any) => (prev === map ? prev : map));
+
+      if (isWebAutomation && typeof window !== 'undefined') {
+        try {
+          (window as any).__metravelUserPointsMap = map;
+        } catch {
+          // noop
+        }
+      }
     },
-    [setMapInstance]
+    [isWebAutomation, setMapInstance]
   );
 
   const polylinePathOptions = React.useMemo(() => {

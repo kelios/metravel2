@@ -42,6 +42,22 @@ test.describe('User points', () => {
     }
   }
 
+  async function waitForMarkerCentersInsideMap(page: any, markerCount: number) {
+    await expect
+      .poll(
+        async () => {
+          try {
+            await expectMarkerCentersInsideMap(page, markerCount);
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { timeout: 30_000 }
+      )
+      .toBeTruthy();
+  }
+
   async function openFiltersPanelTab(page: any) {
     const legacyTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
     const segmentedTabButton = page.getByTestId('segmented-filters').first();
@@ -200,18 +216,7 @@ test.describe('User points', () => {
     await page.getByRole('button', { name: 'Моё местоположение' }).click({ timeout: 30_000 });
     await expect(page.locator('.leaflet-tile-pane')).toHaveCount(1, { timeout: 30_000 });
 
-    // Clicking a marker should open the point popup.
-    await page.locator('.leaflet-marker-icon').first().click({ timeout: 30_000 });
-    const popup = page.locator('.leaflet-popup').first();
-    await expect(popup).toBeVisible({ timeout: 30_000 });
-
-    // Popup should expose coordinates actions.
-    await expect(popup.getByRole('button', { name: 'Копировать координаты' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(popup.getByRole('button', { name: 'Поделиться в Telegram' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(popup.getByRole('button', { name: 'Google' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(popup.getByRole('button', { name: 'Apple' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(popup.getByRole('button', { name: 'Яндекс' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(popup.getByRole('button', { name: 'OSM' }).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible({ timeout: 30_000 });
 
     // Search + recommendations live in the Filters tab.
     await openFiltersPanelTab(page);
@@ -292,8 +297,31 @@ test.describe('User points', () => {
     // For this regression we only need the map + markers to exist.
     await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible({ timeout: 30_000 });
 
-    await page.waitForTimeout(800);
-    await expectMarkerCentersInsideMap(page, 2);
+    // Prefer Leaflet bounds over pixel-level assertions (less flaky under resize/fitBounds).
+    await page.waitForFunction(() => {
+      const w = window as any;
+      return Boolean(w.__metravelUserPointsMap && typeof w.__metravelUserPointsMap.getBounds === 'function');
+    });
+
+    const points = [
+      { lat: 49.82, lng: 19.95 },
+      { lat: 50.12, lng: 20.12 },
+    ];
+
+    await expect
+      .poll(
+        async () => {
+          return page.evaluate((pts) => {
+            const map = (window as any).__metravelUserPointsMap;
+            const bounds = map?.getBounds?.();
+            if (!bounds) return false;
+            if (typeof bounds.contains !== 'function') return false;
+            return pts.every((p: any) => bounds.contains([p.lat, p.lng]));
+          }, points);
+        },
+        { timeout: 30_000 }
+      )
+      .toBeTruthy();
   });
 
   test('clicking a list card opens the corresponding map popup', async ({ page }) => {

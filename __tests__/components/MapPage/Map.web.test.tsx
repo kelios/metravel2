@@ -338,6 +338,20 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     await act(async () => {})
   })
 
+  it('renders map container on web and hides loading overlay', async () => {
+    const { getByTestId, queryByText } = renderWithProviders(
+      <MapPageComponent {...defaultProps} />
+    )
+    await act(async () => {})
+
+    const mapContainer = getByTestId('map-container')
+    expect(mapContainer).toBeTruthy()
+
+    await waitFor(() => {
+      expect(queryByText(/(Loading map|Загрузка карты)/i)).toBeNull()
+    })
+  })
+
   it('auto-requests user location on web (permission + current position)', async () => {
     const prevNodeEnv = process.env.NODE_ENV
     ;(process.env as any).NODE_ENV = 'test'

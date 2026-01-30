@@ -120,7 +120,7 @@ export const WEB_MAP_BASE_LAYERS: WebMapLayerDefinition[] = [
     id: 'osm',
     title: 'OpenStreetMap',
     kind: 'tile',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; OpenStreetMap contributors',
     defaultEnabled: true,
   },
