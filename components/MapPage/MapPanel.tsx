@@ -58,15 +58,21 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                radius,
                                                onMapUiApiReady,
 	                                           }) => {
-	    const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
-	    const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
-	    const themeColors = useThemedColors();
+	    const [hydrated, setHydrated] = useState(false);
+    const isWeb = Platform.OS === 'web' && hydrated;
+    const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
+    const themeColors = useThemedColors();
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        setHydrated(true);
+    }, []);
 
 	    // ✅ ОПТИМИЗАЦИЯ: Отложенная загрузка карты для улучшения Lighthouse score
 	    const shouldDeferLoad = useDeferredMapLoad(isWeb && !isE2E);
 
-	    // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты, изменяется при ремонтировании после ошибки
-	    const [mapKey, setMapKey] = useState(() => `map-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+	    // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты без недетерминированного SSR
+    const [mapKeyVersion, setMapKeyVersion] = useState(0);
 
 	    // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты с Intersection Observer
 	    const { shouldLoad, setElementRef } = useLazyMap({
@@ -113,7 +119,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
     // ✅ ИСПРАВЛЕНИЕ: Функция для обработки ошибок и регенерации ключа карты
     const handleMapError = useCallback(() => {
         console.warn('[MapPanel] Map error occurred, regenerating map key...');
-        setMapKey(`map-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+        setMapKeyVersion((prev) => prev + 1);
     }, []);
 
     // Early returns - AFTER all hooks
@@ -141,7 +147,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
         >
             <MapErrorBoundary onError={handleMapError}>
                 <WebMap
-                    key={mapKey}
+                    key={`map-${mapKeyVersion}`}
                     travel={travelProp}
                     coordinates={safeCoordinates}
                     routePoints={routePoints}

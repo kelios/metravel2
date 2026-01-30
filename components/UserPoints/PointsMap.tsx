@@ -725,7 +725,7 @@ export const PointsMap: React.FC<PointsMapProps> = ({
 };
 
 // Web версия с Leaflet
-const PointsMapWeb: React.FC<PointsMapProps> = ({
+export const PointsMapWeb: React.FC<PointsMapProps> = ({
   points,
   center: centerOverride,
   searchMarker,
@@ -1332,6 +1332,53 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
             -ms-touch-action: none;
             overscroll-behavior: none;
           }
+
+          .leaflet-popup-content-wrapper {
+            background: ${colors.surface} !important;
+            border: 1px solid ${colors.border} !important;
+            border-radius: 16px !important;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+          }
+
+          .leaflet-popup-content {
+            margin: 0 !important;
+            padding: 12px !important;
+            color: ${colors.text} !important;
+            width: min(340px, calc(100vw - 48px)) !important;
+            box-sizing: border-box;
+          }
+
+          .leaflet-popup-tip {
+            background: ${colors.surface} !important;
+            border: 1px solid ${colors.border} !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+          }
+
+          .leaflet-popup-close-button {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 28px !important;
+            height: 28px !important;
+            line-height: 26px !important;
+            position: absolute !important;
+            top: 6px !important;
+            right: 6px !important;
+            margin: 0 !important;
+            border-radius: 999px !important;
+            border: 1px solid ${colors.border} !important;
+            background: ${colors.surface} !important;
+            color: ${colors.textMuted} !important;
+            font-size: 18px !important;
+            z-index: 2 !important;
+          }
+
+          .leaflet-popup-close-button:hover {
+            color: ${colors.text} !important;
+            background: ${colors.backgroundSecondary} !important;
+          }
           `}
         </style>
       )}
@@ -1341,6 +1388,18 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
         whenCreated={handleMapReady as any}
         style={{ height: '100%', width: '100%' }}
       >
+        {/* Base tile layer */}
+        {(() => {
+          const TileLayer = (ReactLeaflet as any)?.TileLayer
+          if (!TileLayer) return null
+          return (
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
+            />
+          )
+        })()}
+        
         <WebMapInstanceBinder useMap={mods.useMap} onMapReady={handleMapReady} />
         <WebMapFixSize useMap={mods.useMap} />
         <WebMapClickHandler useMapEvents={mods.useMapEvents} onMapPress={onMapPress} />

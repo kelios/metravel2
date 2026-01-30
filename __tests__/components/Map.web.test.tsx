@@ -151,6 +151,13 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
     expect(rendered.toJSON()).toBeTruthy();
   });
 
+  it('matches snapshot on web', () => {
+    mockPlatform.OS = 'web';
+
+    const rendered = renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
+    expect(rendered.toJSON()).toMatchSnapshot();
+  });
+
   it('uses expected tile layer URL', () => {
     const fs = require('fs');
     const path = require('path');

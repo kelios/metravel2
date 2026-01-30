@@ -1,12 +1,12 @@
 // components/MapPage/map/useMapCleanup.ts
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { Platform } from 'react-native';
 import { LEAFLET_MAP_CONTAINER_ID_PREFIX } from './constants';
-import { generateUniqueId } from './utils';
 
 export const useMapCleanup = () => {
-  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${generateUniqueId()}`);
-  const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${generateUniqueId()}`);
+  const reactId = useId();
+  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${reactId}`);
+  const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${reactId}`);
 
   // Глобальная очистка старых контейнеров при монтировании
   useEffect(() => {

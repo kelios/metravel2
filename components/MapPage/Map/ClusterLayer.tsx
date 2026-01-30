@@ -10,6 +10,7 @@ interface ClusterLayerProps {
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
+  popupProps?: Record<string, unknown>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
   onMarkerInstance?: (coord: string, marker: any | null) => void;
   onClusterZoom: (payload: {
@@ -36,6 +37,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   Marker,
   Popup,
   PopupContent,
+  popupProps,
   onMarkerClick,
   onMarkerInstance,
   onClusterZoom,
@@ -356,7 +358,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
           return (
             <Marker key={`cluster-single-${idx}`} {...singleMarkerProps}>
-              <Popup>
+              <Popup {...(popupProps || {})}>
                 <PopupContent point={item} />
               </Popup>
             </Marker>

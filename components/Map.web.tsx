@@ -854,16 +854,16 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         }
         .metravel-travel-map .leaflet-popup-content-wrapper {
           color: ${(colors as any).text} !important;
-          border-radius: ${DESIGN_TOKENS.radii.md}px !important;
-          box-shadow: ${DESIGN_TOKENS.shadows.modal} !important;
+          border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
           border: 1px solid ${(colors as any).border} !important;
-          max-height: 260px !important;
+          max-height: 280px !important;
           overflow: hidden !important;
         }
         .metravel-travel-map .leaflet-popup-content {
           margin: ${DESIGN_TOKENS.spacing.md}px !important;
           color: ${(colors as any).text} !important;
-          max-height: 240px !important;
+          max-height: 260px !important;
           overflow-y: auto !important;
           width: 320px !important;
         }
@@ -881,9 +881,13 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           z-index: 2 !important;
           color: ${(colors as any).textMuted} !important;
           cursor: pointer !important;
+          font-size: 18px !important;
+          transition: all 0.2s !important;
         }
         .metravel-travel-map .leaflet-popup-close-button:hover {
           color: ${(colors as any).text} !important;
+          background: ${(colors as any).backgroundSecondary} !important;
+          transform: scale(1.05) !important;
         }
         @media (max-width: 640px) {
           .metravel-travel-map .leaflet-popup {

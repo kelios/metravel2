@@ -1,5 +1,5 @@
 // src/screens/tabs/MapScreen.tsx
-import { Suspense, lazy, useEffect, useMemo, useRef } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import {
     SafeAreaView,
     View,
@@ -15,6 +15,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import { useMapScreenController } from '@/hooks/useMapScreenController';
+import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
@@ -24,6 +25,7 @@ const LazyMapMobileLayout = lazy(() =>
 );
 
 export default function MapScreen() {
+    const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
     const {
         canonical,
         isFocused,
@@ -56,6 +58,11 @@ export default function MapScreen() {
         coordinates,
         transportMode,
     } = useMapScreenController();
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        setHydrated(true);
+    }, []);
 
     const openNonce = useMapPanelStore((s) => s.openNonce);
 
@@ -102,6 +109,10 @@ export default function MapScreen() {
 
     // Use mobile layout on small screens (including web), desktop keeps right panel
     const useMobileLayout = isMobile;
+
+    if (!hydrated && Platform.OS === 'web') {
+        return <MapPageSkeleton />;
+    }
 
     if (useMobileLayout) {
         return (

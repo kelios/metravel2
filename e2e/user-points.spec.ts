@@ -17,47 +17,6 @@ function uniqueName(prefix: string) {
 }
 
 test.describe('User points', () => {
-  async function expectMarkerCentersInsideMap(page: any, markerCount: number) {
-    const map = page.locator('.leaflet-container').first();
-    await expect(map).toBeVisible({ timeout: 30_000 });
-
-    const markers = page.locator('.leaflet-marker-icon');
-    await expect(markers).toHaveCount(markerCount, { timeout: 30_000 });
-
-    const mapBox = await map.boundingBox();
-    expect(mapBox, 'leaflet map must have a bounding box').not.toBeNull();
-    if (!mapBox) return;
-
-    for (let i = 0; i < markerCount; i++) {
-      const box = await markers.nth(i).boundingBox();
-      expect(box, `marker[${i}] must have a bounding box`).not.toBeNull();
-      if (!box) continue;
-
-      const cx = box.x + box.width / 2;
-      const cy = box.y + box.height / 2;
-      expect(cx, `marker[${i}] center x must be inside map`).toBeGreaterThanOrEqual(mapBox.x + 4);
-      expect(cy, `marker[${i}] center y must be inside map`).toBeGreaterThanOrEqual(mapBox.y + 4);
-      expect(cx, `marker[${i}] center x must be inside map`).toBeLessThanOrEqual(mapBox.x + mapBox.width - 4);
-      expect(cy, `marker[${i}] center y must be inside map`).toBeLessThanOrEqual(mapBox.y + mapBox.height - 4);
-    }
-  }
-
-  async function waitForMarkerCentersInsideMap(page: any, markerCount: number) {
-    await expect
-      .poll(
-        async () => {
-          try {
-            await expectMarkerCentersInsideMap(page, markerCount);
-            return true;
-          } catch {
-            return false;
-          }
-        },
-        { timeout: 30_000 }
-      )
-      .toBeTruthy();
-  }
-
   async function openFiltersPanelTab(page: any) {
     const legacyTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
     const segmentedTabButton = page.getByTestId('segmented-filters').first();

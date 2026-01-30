@@ -206,6 +206,31 @@ const server = http.createServer((req, res) => {
 
     fs.readFile(resolvedPath, (err, data) => {
       if (err) {
+        const hasExtension = path.extname(pathname) !== ''
+        const htmlCandidate = hasExtension ? null : `${resolvedPath}.html`
+
+        if (htmlCandidate) {
+          fs.readFile(htmlCandidate, (htmlErr, htmlData) => {
+            if (!htmlErr) {
+              res.setHeader('Content-Type', 'text/html; charset=utf-8')
+              res.end(htmlData)
+              return
+            }
+
+            const indexPath = path.join(buildDir, 'index.html')
+            fs.readFile(indexPath, (fallbackErr, fallbackData) => {
+              if (fallbackErr) {
+                res.statusCode = 404
+                res.end('Not found')
+                return
+              }
+              res.setHeader('Content-Type', 'text/html; charset=utf-8')
+              res.end(fallbackData)
+            })
+          })
+          return
+        }
+
         const indexPath = path.join(buildDir, 'index.html')
         fs.readFile(indexPath, (fallbackErr, fallbackData) => {
           if (fallbackErr) {

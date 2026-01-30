@@ -17,6 +17,7 @@ interface MapMarkersProps {
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
+  popupProps?: Record<string, unknown>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
   onMarkerInstance?: (coord: string, marker: any | null) => void;
 }
@@ -27,6 +28,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   Marker,
   Popup,
   PopupContent,
+  popupProps,
   onMarkerClick,
   onMarkerInstance,
 }) => {
@@ -112,7 +114,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             click: (e: any) => handleMarkerClick(e, point, coords),
           }}
         >
-          <Popup>
+          <Popup {...(popupProps || {})}>
             <PopupContent point={point} />
           </Popup>
         </Marker>

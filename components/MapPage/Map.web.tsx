@@ -638,6 +638,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return [lat, lng];
   }, [safeCenter]);
 
+  const circleCenterLatLng = useMemo(
+    () => (circleCenter ? { lat: circleCenter[0], lng: circleCenter[1] } : null),
+    [circleCenter]
+  );
+
   const hasWarnedInvalidCircleRef = useRef(false);
   useEffect(() => {
     if (hasWarnedInvalidCircleRef.current) return;
@@ -657,6 +662,21 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!rl) return null;
     return createMapPopupComponent({ useMap: rl.useMap, userLocation: userLocationLatLng });
   }, [rl, userLocationLatLng]);
+
+  const popupAutoPanPadding = useMemo(() => ({
+    autoPan: true,
+    keepInView: true,
+    autoPanPaddingTopLeft: [24, 140],
+    autoPanPaddingBottomRight: [360, 220],
+  }), []);
+
+  const fitBoundsPadding = useMemo(
+    () => ({
+      paddingTopLeft: [24, 140],
+      paddingBottomRight: [360, 220],
+    }),
+    []
+  );
 
   const noPointsAlongRoute = useMemo(() => {
     if (mode !== 'route') return false;
@@ -770,15 +790,54 @@ const MapPageComponent: React.FC<Props> = (props) => {
           }
 
           .leaflet-popup-content-wrapper {
+            background: ${(colors as any).surface} !important;
+            border: 1px solid ${(colors as any).border} !important;
+            border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+            padding: 0 !important;
             max-height: calc(100vh - 200px);
+            overflow: hidden;
+            -webkit-overflow-scrolling: touch;
+          }
+
+          .leaflet-popup-tip {
+            background: ${(colors as any).surface} !important;
+            border: 1px solid ${(colors as any).border} !important;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+          }
+
+          .leaflet-popup-content {
+            box-sizing: border-box;
+            margin: 0 !important;
+            padding: ${DESIGN_TOKENS.spacing.md}px !important;
+            width: min(380px, calc(100vw - 48px)) !important;
+            max-height: calc(100vh - 220px);
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
           }
 
-          .leaflet-popup-content {
-            max-height: calc(100vh - 220px);
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+          .leaflet-popup-close-button {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 28px !important;
+            height: 28px !important;
+            line-height: 26px !important;
+            position: absolute !important;
+            top: 8px !important;
+            right: 8px !important;
+            margin: 0 !important;
+            border-radius: 999px !important;
+            border: 1px solid ${(colors as any).border} !important;
+            background: ${(colors as any).surface} !important;
+            color: ${(colors as any).textMuted} !important;
+            font-size: 18px !important;
+            z-index: 2 !important;
+          }
+
+          .leaflet-popup-close-button:hover {
+            color: ${(colors as any).text} !important;
+            background: ${(colors as any).backgroundSecondary} !important;
           }
 
           @media (max-width: 640px) {
@@ -798,8 +857,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
           html[data-theme='dark'] .leaflet-popup-content-wrapper {
             color: ${(colors as any).text} !important;
-            border-radius: ${DESIGN_TOKENS.radii.md}px !important;
-            box-shadow: ${DESIGN_TOKENS.shadows.modal} !important;
+            border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15) !important;
             border: 1px solid ${(colors as any).border} !important;
           }
 
@@ -810,11 +869,22 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
           html[data-theme='dark'] .leaflet-popup-close-button {
             display: block !important;
+            width: 28px !important;
+            height: 28px !important;
+            line-height: 26px !important;
+            text-align: center !important;
+            border-radius: 999px !important;
+            border: 1px solid ${(colors as any).border} !important;
+            background: ${(colors as any).surface} !important;
             color: ${(colors as any).textMuted} !important;
+            font-size: 18px !important;
+            transition: all 0.2s !important;
           }
 
           html[data-theme='dark'] .leaflet-popup-close-button:hover {
             color: ${(colors as any).text} !important;
+            background: ${(colors as any).backgroundSecondary} !important;
+            transform: scale(1.05) !important;
           }
           `}
         </style>
@@ -840,6 +910,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
           key={mapInstanceKeyRef.current}
           zoomControl={false}
         >
+          {/* Base tile layer */}
+          {(() => {
+            const TileLayer = (rl as any)?.TileLayer
+            if (!TileLayer) return null
+            return (
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution="&copy; OpenStreetMap contributors"
+              />
+            )
+          })()}
+          
           <MapLogicComponent
             mapClickHandler={handleMapClick}
             mode={mode}
@@ -848,6 +930,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
             disableFitBounds={disableFitBounds}
             L={L}
             travelData={travelData}
+            circleCenter={circleCenterLatLng}
+            radiusInMeters={radiusInMeters}
+            fitBoundsPadding={fitBoundsPadding}
             setMapZoom={setMapZoom}
             mapRef={mapRef}
             onMapReady={setMapInstance}
@@ -973,6 +1058,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
               Marker={Marker}
               Popup={Popup}
               PopupContent={PopupComponent}
+              popupProps={popupAutoPanPadding}
               onMarkerClick={handleMarkerZoom}
               onMarkerInstance={(coord, marker) => {
                 try {
@@ -996,6 +1082,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
               Marker={Marker}
               Popup={Popup}
               PopupContent={PopupComponent}
+              popupProps={popupAutoPanPadding}
               markerIcon={customIcons.meTravel}
               markerOpacity={travelMarkerOpacity}
               grid={0.045}

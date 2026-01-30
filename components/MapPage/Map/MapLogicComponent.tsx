@@ -19,6 +19,9 @@ interface MapLogicProps {
   disableFitBounds: boolean;
   L: any;
   travelData: Point[];
+  circleCenter?: LatLng | null;
+  radiusInMeters?: number | null;
+  fitBoundsPadding?: { paddingTopLeft?: [number, number]; paddingBottomRight?: [number, number] } | null;
   setMapZoom: (z: number) => void;
   mapRef: React.MutableRefObject<any>;
   onMapReady: (map: any) => void;
@@ -48,6 +51,9 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   disableFitBounds,
   L,
   travelData,
+  circleCenter,
+  radiusInMeters,
+  fitBoundsPadding,
   setMapZoom,
   mapRef,
   onMapReady,
@@ -209,7 +215,10 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const dataKey = (travelData || [])
       .map((p) => (p.id != null ? `id:${p.id}` : `c:${p.coord}`))
       .join('|');
-    const autoFitKey = `${mode}:${dataKey}:${userLocation ? `${userLocation.lat},${userLocation.lng}` : 'no-user'}`;
+    const radiusKey = circleCenter && Number.isFinite(radiusInMeters)
+      ? `r:${circleCenter.lat.toFixed(4)},${circleCenter.lng.toFixed(4)}:${Number(radiusInMeters).toFixed(0)}`
+      : 'no-radius';
+    const autoFitKey = `${mode}:${dataKey}:${userLocation ? `${userLocation.lat},${userLocation.lng}` : 'no-user'}:${radiusKey}`;
     if (lastAutoFitKeyRef.current === autoFitKey) return;
 
     const coords = travelData
@@ -220,16 +229,43 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       coords.push([userLocation.lng, userLocation.lat]);
     }
 
+    if (circleCenter && Number.isFinite(radiusInMeters) && Number(radiusInMeters) > 0) {
+      try {
+        const circle = (L as any).circle([circleCenter.lat, circleCenter.lng], {
+          radius: Number(radiusInMeters),
+        });
+        const circleBounds = circle.getBounds();
+        const sw = circleBounds.getSouthWest();
+        const ne = circleBounds.getNorthEast();
+        coords.push([sw.lng, sw.lat]);
+        coords.push([ne.lng, ne.lat]);
+      } catch {
+        // noop
+      }
+    }
+
     if (coords.length === 0) return;
 
     try {
       const bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
-      map.fitBounds(bounds.pad(0.2), { animate: false });
+      const padding = fitBoundsPadding ?? {};
+      map.fitBounds(bounds.pad(0.2), { animate: false, ...padding });
       lastAutoFitKeyRef.current = autoFitKey;
     } catch {
       // noop
     }
-  }, [map, disableFitBounds, mode, L, travelData, userLocation, lastAutoFitKeyRef]);
+  }, [
+    map,
+    disableFitBounds,
+    mode,
+    L,
+    travelData,
+    userLocation,
+    circleCenter,
+    radiusInMeters,
+    fitBoundsPadding,
+    lastAutoFitKeyRef,
+  ]);
 
   return null;
 };
