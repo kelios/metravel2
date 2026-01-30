@@ -5,7 +5,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+// Leaflet/react-leaflet через Metro (без CDN)
+import Leaflet from 'leaflet';
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+} from 'react-leaflet';
+import '@/src/utils/leafletFix';
+
 import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard';
 import { useLeafletIcons } from '@/components/MapPage/Map/useLeafletIcons';
 import { useAuth } from '@/context/AuthContext';
@@ -163,8 +173,7 @@ const getLatLng = (latlng: string): [number, number] | null => {
   return isNaN(lat) || isNaN(lng) ? null : [lat, lng];
 };
 
-type LeafletNS = any;
-type RL = typeof import('react-leaflet');
+type LeafletNS = typeof import('leaflet');
 
 const hasMapPane = (map: any) => !!map && !!(map as any)._mapPane;
 
@@ -178,7 +187,6 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const queryClient = useQueryClient();
 
   const [L, setL] = useState<LeafletNS | null>(null);
-  const [rl, setRl] = useState<RL | null>(null);
 
   const rootRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
@@ -413,28 +421,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
     if (!isWeb) return;
-    let cancelled = false;
 
-    const load = async () => {
-      try {
-        const { L, rl: rlMod } = await ensureLeafletAndReactLeaflet();
-        if (!cancelled) {
-          setL(L);
-          setRl(rlMod);
-        }
-      } catch (error) {
-        console.warn('Leaflet web load failed', error);
-      }
-    };
-
-    if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(load, { timeout: 2000 });
-    } else {
-      const t = setTimeout(load, 1200);
-      return () => clearTimeout(t);
-    }
-
-    return () => { cancelled = true; };
+    setL(Leaflet);
   }, []);
 
   const travelData = useMemo(() => {
@@ -464,11 +452,10 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     return <Text style={{ padding: 20 }}>Карта доступна только в браузере</Text>;
   }
 
-  if (!L || !rl || !siteMarkerIcon) {
+  if (!L || !siteMarkerIcon) {
     return renderPlaceholder();
   }
 
-  const { MapContainer, TileLayer, Marker, Popup, useMap } = rl;
 
   const FitBoundsOnData: React.FC<{ data: Point[] }> = ({ data }) => {
     const map = useMap();
@@ -503,7 +490,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           return;
         }
 
-        const bounds = L.latLngBounds(coords);
+        const bounds = Leaflet.latLngBounds(coords);
         if (!bounds.isValid()) return;
 
         try {
@@ -756,8 +743,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       }
 
       const idsFromPoint = getPointCategoryIds(point);
-      const idsFromNames = resolvedCategoryIdsFromNames;
-      const combinedIds = Array.from(new Set([...idsFromPoint, ...idsFromNames]));
+      const combinedIds = Array.from(new Set([...idsFromPoint, ...resolvedCategoryIdsFromNames]));
       const filteredIds = stripCountryFromCategoryIds(
         combinedIds,
         point.address,

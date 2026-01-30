@@ -1,9 +1,12 @@
 import { test, expect } from './fixtures';
+import { seedNecessaryConsent } from './helpers/storage';
 
 const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
 
 test.describe('Article anchors (TOC -> section)', () => {
   test('clicking TOC anchor scrolls to the target paragraph', async ({ page }) => {
+    await page.addInitScript(seedNecessaryConsent);
+
     const slug = 'e2e-anchor-scroll';
     const targetId = 'desc';
 

@@ -349,8 +349,8 @@ export default function RootLayout() {
       (pathname?.includes('roulette') || pathname?.includes('random'));
 
     return (
-      <ErrorBoundary>
-        <ThemeProvider>
+      <ThemeProvider>
+        <ErrorBoundary>
           <ThemedContent
             showMapBackground={showMapBackground}
             showFooter={showFooter}
@@ -361,8 +361,8 @@ export default function RootLayout() {
             showConsentBanner={showConsentBanner}
             queryClient={queryClient}
           />
-        </ThemeProvider>
-      </ErrorBoundary>
+        </ErrorBoundary>
+      </ThemeProvider>
     );
 }
 

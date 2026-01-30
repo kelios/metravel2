@@ -4,7 +4,12 @@ import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
 import type { PointColor } from '@/types/userPoints';
 import { buildDropMarkerHtml } from '@/src/utils/markerSvg';
-import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+
+// Leaflet/react-leaflet через Metro (без CDN)
+import Leaflet from 'leaflet';
+import * as ReactLeaflet from 'react-leaflet';
+import '@/src/utils/leafletFix';
+
 import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/src/utils/toast';
 import type { MapUiApi } from '@/src/types/mapUi';
@@ -769,34 +774,21 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
     if (Platform.OS !== 'web') return;
 
     let cancelled = false;
-    (async () => {
-      const { L, rl } = await ensureLeafletAndReactLeaflet();
+
+    try {
       if (cancelled) return;
-
-      try {
-        if (L?.Icon?.Default?.prototype) {
-          // @ts-ignore
-          delete L.Icon.Default.prototype._getIconUrl;
-          L.Icon.Default.mergeOptions({
-            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-          });
-        }
-      } catch {
-        // noop
-      }
-
       setMods({
-        L,
-        MapContainer: (rl as any).MapContainer,
-        Marker: (rl as any).Marker,
-        Popup: (rl as any).Popup,
-        Polyline: (rl as any).Polyline,
-        useMap: (rl as any).useMap,
-        useMapEvents: (rl as any).useMapEvents,
+        L: Leaflet,
+        MapContainer: (ReactLeaflet as any).MapContainer,
+        Marker: (ReactLeaflet as any).Marker,
+        Popup: (ReactLeaflet as any).Popup,
+        Polyline: (ReactLeaflet as any).Polyline,
+        useMap: (ReactLeaflet as any).useMap,
+        useMapEvents: (ReactLeaflet as any).useMapEvents,
       });
-    })();
+    } catch {
+      if (!cancelled) setMods(null);
+    }
 
     return () => {
       cancelled = true;

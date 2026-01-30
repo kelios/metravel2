@@ -17,19 +17,21 @@ const mockLeaflet = {
   latLng: jest.fn((lat, lng) => ({ lat, lng, distanceTo: jest.fn(() => 1000) })),
 };
 
-jest.mock('@/src/utils/leafletWebLoader', () => ({
-  ensureLeafletAndReactLeaflet: jest.fn().mockResolvedValue({
-    L: mockLeaflet,
-    rl: {
-      MapContainer: ({ children }: any) => children,
-      Marker: () => null,
-      Popup: () => null,
-      Circle: () => null,
-      useMap: () => mockLeaflet.map(),
-      useMapEvents: () => null,
-    },
-  }),
+jest.mock('leaflet', () => ({
+  __esModule: true,
+  default: mockLeaflet,
 }));
+
+jest.mock('react-leaflet', () => ({
+  MapContainer: ({ children }: any) => children,
+  Marker: () => null,
+  Popup: () => null,
+  Circle: () => null,
+  useMap: () => mockLeaflet.map(),
+  useMapEvents: () => null,
+}));
+
+jest.mock('leaflet/dist/leaflet.css', () => ({}), { virtual: true });
 
 jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
@@ -192,10 +194,10 @@ describe('Map.web - Safety Tests', () => {
   describe('Invalid Travel Data Handling', () => {
     it('handles travel data with invalid coordinates', async () => {
       const invalidTravelData = [
-        { id: 1, coord: 'invalid', address: 'Test 1' },
-        { id: 2, coord: '91,27.56', address: 'Test 2' }, // invalid lat
-        { id: 3, coord: '53.9,181', address: 'Test 3' }, // invalid lng
-        { id: 4, coord: '53.9,27.56', address: 'Test 4' }, // valid
+        { id: 1, coord: 'invalid', address: 'Test 1', travelImageThumbUrl: '', categoryName: '' },
+        { id: 2, coord: '91,27.56', address: 'Test 2', travelImageThumbUrl: '', categoryName: '' }, // invalid lat
+        { id: 3, coord: '53.9,181', address: 'Test 3', travelImageThumbUrl: '', categoryName: '' }, // invalid lng
+        { id: 4, coord: '53.9,27.56', address: 'Test 4', travelImageThumbUrl: '', categoryName: '' }, // valid
       ];
 
       const { root } = render(

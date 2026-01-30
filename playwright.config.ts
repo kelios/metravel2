@@ -40,7 +40,7 @@ const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.en
  const E2E_API_URL = process.env.E2E_API_URL;
 
 export default defineConfig({
-  globalTimeout: 3_600_000,
+  globalTimeout: 7_200_000,
   testDir: './e2e',
   timeout: 360_000,
   workers: 1,

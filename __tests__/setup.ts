@@ -45,6 +45,30 @@ console.info = (message, ...args) => {
 
 require('@testing-library/jest-native/extend-expect')
 
+// react-leaflet ships ESM and expects a real browser environment.
+// For unit tests we only need lightweight stubs.
+jest.mock('react-leaflet', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+
+  const makeComp = (testID: string) => ({ children, ...props }: any) =>
+    React.createElement(View, { testID, ...props }, children)
+
+  return {
+    __esModule: true,
+    MapContainer: makeComp('react-leaflet-MapContainer'),
+    TileLayer: makeComp('react-leaflet-TileLayer'),
+    Marker: makeComp('react-leaflet-Marker'),
+    Popup: makeComp('react-leaflet-Popup'),
+    useMap: () => ({
+      setView: jest.fn(),
+      fitBounds: jest.fn(),
+      getZoom: jest.fn(() => 13),
+    }),
+    useMapEvents: jest.fn(() => null),
+  }
+})
+
 jest.mock('@/src/utils/imageAnalysis', () => {
   return {
     __esModule: true,

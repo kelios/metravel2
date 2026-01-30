@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
-import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+
+// Leaflet/react-leaflet через Metro (без CDN)
+import Leaflet from 'leaflet';
+import * as ReactLeaflet from 'react-leaflet';
+import '@/src/utils/leafletFix';
+
 import RoutingMachine from './RoutingMachine';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -55,6 +60,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     routing: false,
   });
   const [loading, setLoading] = useState(false);
+  const [showInitialLoader, setShowInitialLoader] = useState(true);
   const [_routingLoading, setRoutingLoading] = useState(false);
   const [disableFitBounds, _setDisableFitBounds] = useState(false);
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
@@ -66,6 +72,15 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setShowInitialLoader(false);
+    }, 0);
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, []);
   const mapContainerStyle = useMemo(() => {
     const base = StyleSheet.flatten(styles.map as any) as any;
     if (Platform.OS !== 'web') return base;
@@ -298,31 +313,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (Platform.OS !== 'web') return;
     if (!shouldLoadLeaflet) return;
 
-    let cancelled = false;
+    // Через Metro модули доступны синхронно.
     setLoading(true);
-
-    const load = () => {
-      ensureLeafletAndReactLeaflet()
-        .then(({ L: leaflet, rl: reactLeaflet }) => {
-          if (cancelled) return;
-          setL(leaflet);
-          setRl(reactLeaflet);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error('[Map] Failed to load Leaflet:', err);
-          if (cancelled) return;
-          setErrors((prev) => ({ ...prev, loadingModules: true }));
-          setLoading(false);
-        });
-    };
-
-    // Start loading immediately to avoid delaying the first visible map tile (LCP on /map).
-    load();
-
-    return () => {
-      cancelled = true;
-    };
+    try {
+      setL(Leaflet);
+      setRl(ReactLeaflet);
+    } catch (err) {
+      console.error('[Map] Failed to init Leaflet:', err);
+      setErrors((prev) => ({ ...prev, loadingModules: true }));
+    } finally {
+      setLoading(false);
+    }
   }, [shouldLoadLeaflet]);
 
   // Get user location
@@ -598,8 +599,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const canRenderMap = !!(L && rl);
   const shouldShowLoadingOverlay = Platform.OS === 'web'
-    ? !shouldLoadLeaflet || loading || !canRenderMap
-    : loading || !canRenderMap;
+    ? showInitialLoader || !shouldLoadLeaflet || loading || !canRenderMap
+    : showInitialLoader || loading || !canRenderMap;
 
   const loaderMessage = errors.loadingModules
     ? 'Не удалось загрузить модули карты'

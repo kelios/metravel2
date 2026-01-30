@@ -330,15 +330,11 @@ html[data-theme="dark"] .modal-select option {
 .leaflet-tooltip-pane,
 .leaflet-popup-pane {
   z-index: auto !important;
-  max-height: 100%;
-  position: relative !important;
 }
 
 /* Контейнер карты должен создавать новый stacking context */
 .leaflet-container {
   isolation: isolate;
-  transform: translateZ(0);
-  contain: layout style paint;
 }
 
 html[data-theme="light"] .leaflet-tile {

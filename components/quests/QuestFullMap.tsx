@@ -15,7 +15,11 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+
+// Leaflet/react-leaflet через Metro (без CDN)
+import Leaflet from 'leaflet';
+import * as ReactLeaflet from 'react-leaflet';
+import '@/src/utils/leafletFix';
 
 type StepPoint = { lat: number; lng: number; title?: string };
 
@@ -146,38 +150,22 @@ export default function QuestFullMap({
         return coords.length ? coords : undefined;
     }, [steps]);
     useEffect(() => {
-        (async () => {
-            try {
-                // Reuse the shared loader to avoid Metro's occasional double-eval
-                // when multiple components import react-leaflet concurrently in `lazy` dev mode.
-                // (See: "Cannot redefine property: default")
-                const { L, rl: RL } = await ensureLeafletAndReactLeaflet();
+        if (Platform.OS !== 'web') return;
 
-                // default marker images (not used for numberIcon, but keep leaflet happy)
-                // @ts-ignore
-                delete L.Icon.Default.prototype._getIconUrl;
-                L.Icon.Default.mergeOptions({
-                    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-                    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-                });
-
-                // CSS загружается через CDN в других компонентах
-
-                setMods({
-                    L,
-                    MapContainer: (RL as any).MapContainer,
-                    TileLayer: (RL as any).TileLayer,
-                    Marker: (RL as any).Marker,
-                    Polyline: (RL as any).Polyline,
-                    Popup: (RL as any).Popup,
-                    FeatureGroup: (RL as any).FeatureGroup,
-                    useMap: (RL as any).useMap,
-                });
-            } catch (error) {
-                console.error('Error loading map modules:', error);
-            }
-        })();
+        try {
+            setMods({
+                L: Leaflet,
+                MapContainer: (ReactLeaflet as any).MapContainer,
+                TileLayer: (ReactLeaflet as any).TileLayer,
+                Marker: (ReactLeaflet as any).Marker,
+                Polyline: (ReactLeaflet as any).Polyline,
+                Popup: (ReactLeaflet as any).Popup,
+                FeatureGroup: (ReactLeaflet as any).FeatureGroup,
+                useMap: (ReactLeaflet as any).useMap,
+            });
+        } catch (error) {
+            console.error('Error loading map modules:', error);
+        }
     }, []);
 
     const points = useMemo(

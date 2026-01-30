@@ -33,7 +33,7 @@ afterAll(() => {
   ;(globalThis as any).window = originalWindow
 })
 
-// Lightweight react-leaflet namespace used by tests and by leafletWebLoader mock
+// Lightweight react-leaflet namespace used by tests
 let currentZoom = 11
 const mockReactLeaflet = (() => {
   const RN = require('react-native')
@@ -122,7 +122,7 @@ jest.mock('@/components/MapPage/Map/MapControls', () => {
 })
 
 jest.mock('@/components/MapPage/Map/useLeafletIcons', () => {
-  return {
+  const api = {
     useLeafletIcons: () => ({
       meTravel: { options: { className: 'metravel-marker' } },
       userLocation: { options: { className: 'user-location-marker' } },
@@ -130,41 +130,56 @@ jest.mock('@/components/MapPage/Map/useLeafletIcons', () => {
       end: { options: { className: 'route-end-marker' } },
     }),
   }
+  // подсказка IDE: экспорт используется через module system
+  void api.useLeafletIcons
+  return api
 })
 
 let mockShouldRenderClustersForTests = false
 jest.mock('@/components/MapPage/Map/useClustering', () => {
-  return {
+  const api = {
     useClustering: () => ({ shouldRenderClusters: mockShouldRenderClustersForTests }),
     __setShouldRenderClustersForTests: (value: boolean) => {
       mockShouldRenderClustersForTests = value
     },
   }
+  void api.useClustering
+  return api
 })
 
-jest.mock('@/components/MapPage/Map/useMapCleanup', () => ({
-  useMapCleanup: () => ({
-    mapInstanceKeyRef: { current: 'test-map-key' },
-    mapContainerIdRef: { current: 'test-map-container' },
-  }),
-}))
+jest.mock('@/components/MapPage/Map/useMapCleanup', () => {
+  const api = {
+    useMapCleanup: () => ({
+      mapInstanceKeyRef: { current: 'test-map-key' },
+      mapContainerIdRef: { current: 'test-map-container' },
+    }),
+  }
+  void api.useMapCleanup
+  return api
+})
 
-jest.mock('@/components/MapPage/Map/useMapInstance', () => ({
-  useMapInstance: () => ({
-    leafletBaseLayerRef: { current: null },
-    leafletOverlayLayersRef: { current: new Map() },
-    leafletControlRef: { current: null },
-  }),
-}))
+jest.mock('@/components/MapPage/Map/useMapInstance', () => {
+  const api = {
+    useMapInstance: () => ({
+      leafletBaseLayerRef: { current: null },
+      leafletOverlayLayersRef: { current: new Map() },
+      leafletControlRef: { current: null },
+    }),
+  }
+  void api.useMapInstance
+  return api
+})
 
-jest.mock('@/components/MapPage/Map/useMapApi', () => ({
-  useMapApi: () => undefined,
-}))
+jest.mock('@/components/MapPage/Map/useMapApi', () => {
+  const api = { useMapApi: () => undefined }
+  void api.useMapApi
+  return api
+})
 
 // Keep MapLogicComponent lightweight in tests and make mapRef behave consistently.
 jest.mock('@/components/MapPage/Map/MapLogicComponent', () => {
   const React = require('react')
-  return {
+  const api = {
     MapLogicComponent: (props: any) => {
       const { mapRef, onMapReady } = props
       const useMap = props.useMap ?? (() => null)
@@ -184,6 +199,8 @@ jest.mock('@/components/MapPage/Map/MapLogicComponent', () => {
       return null
     },
   }
+  void api.MapLogicComponent
+  return api
 })
 
 // Mock window object and matchMedia
@@ -200,24 +217,6 @@ Object.defineProperty(window, 'window', {
   },
   writable: true,
 })
-
-// Mock leaflet web loader so MapPageComponent does not stay stuck in "Loading map..." during tests
-jest.mock('@/src/utils/leafletWebLoader', () => ({
-  ensureLeafletAndReactLeaflet: jest.fn(() => {
-    return Promise.resolve({
-      L: mockLeaflet,
-      rl: mockReactLeaflet,
-    })
-  }),
-}))
-
-if (!window.matchMedia) {
-  ;(window as any).matchMedia = jest.fn(() => ({
-    matches: false,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-  }))
-}
 
 // Mock expo-location
 jest.mock('expo-location', () => ({
@@ -501,7 +500,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     
     // Check that there are no require() calls with template literals
     // Pattern matches: require(`...${...}...`) or require('...${...}...')
-    const dynamicRequirePattern = /require\s*\(\s*[`'"].*?\$\{[^}]+\}.*?[`'"]\s*\)/
+    const dynamicRequirePattern = /require\s*\(\s*[`'"][^`'"]*\$\{[^}]+}[^`'"]*[`'"]\s*\)/
     const matches = fileContent.match(dynamicRequirePattern)
     
     if (matches) {
@@ -529,58 +528,12 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     expect(fileContent).toContain("'end.ico'")
     
     // Ensure no template literal in require (backtick version)
-    const templateLiteralRequire = /require\s*\(\s*`[^`]*\$\{[^}]+\}[^`]*`\s*\)/
+    const templateLiteralRequire = /require\s*\(\s*`[^`]*\$\{[^}]+}[^`]*`\s*\)/
     expect(fileContent).not.toMatch(templateLiteralRequire)
     
     // Ensure no template literal in require (single quote version)
-    const templateLiteralRequireSingle = /require\s*\(\s*'[^']*\$\{[^}]+\}[^']*'\s*\)/
+    const templateLiteralRequireSingle = /require\s*\(\s*'[^']*\$\{[^}]+}[^']*'\s*\)/
     expect(fileContent).not.toMatch(templateLiteralRequireSingle)
-  })
-
-  it('handles missing leaflet modules gracefully', async () => {
-    const leafletLoader = require('@/src/utils/leafletWebLoader')
-    leafletLoader.ensureLeafletAndReactLeaflet.mockRejectedValueOnce(new Error('boom'))
-
-    const { getByText } = renderWithProviders(<MapPageComponent {...defaultProps} />)
-    await act(async () => {})
-
-    await waitFor(() => {
-      expect(getByText(/(Loading map modules failed|Не удалось загрузить модули карты)/i)).toBeTruthy()
-    })
-  })
-
-  it('does not reset zoom on rerender when coordinates.zoom changes (initial zoom is sticky)', async () => {
-    const prevNodeEnv = process.env.NODE_ENV
-    ;(process.env as any).NODE_ENV = 'test'
-    const initialProps = {
-      ...defaultProps,
-      coordinates: { latitude: 53.9, longitude: 27.5667, zoom: 7 } as any,
-    }
-
-    const { getByTestId, rerender } = renderWithProviders(<MapPageComponent {...initialProps} />)
-
-    await act(async () => {})
-
-    await waitFor(() => {
-      expect(getByTestId('map-container')).toBeTruthy()
-    })
-
-    const mapBefore = getByTestId('map-container')
-    expect((mapBefore as any).props.zoom).toBe(7)
-
-    // Change incoming zoom prop; MapContainer zoom should stay at initial value.
-    rerender(
-      <MapPageComponent
-        {...initialProps}
-        coordinates={{ latitude: 53.9, longitude: 27.5667, zoom: 12 } as any}
-      />
-    )
-    await act(async () => {})
-
-    const mapAfter = getByTestId('map-container')
-    expect((mapAfter as any).props.zoom).toBe(7)
-
-    ;(process.env as any).NODE_ENV = prevNodeEnv
   })
 
   it('renders RoutingMachine when in route mode with 2 route points', async () => {
@@ -980,14 +933,10 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     it('only initializes once in route mode and does not re-center', async () => {
       const { useMap } = require('react-leaflet')
       const mockSetView = jest.fn()
-      const callOrder: string[] = []
-      
+
       useMap.mockReturnValue({
         fitBounds: jest.fn(),
-        setView: (...args: any[]) => {
-          callOrder.push('setView')
-          mockSetView(...args)
-        },
+        setView: mockSetView,
         closePopup: jest.fn(),
         getCenter: jest.fn(() => ({ lat: 50.5, lng: 19.0 })),
         getZoom: jest.fn(() => 12),

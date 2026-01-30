@@ -2,7 +2,12 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import MarkersListComponent from '../MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { ensureLeafletAndReactLeaflet } from '@/src/utils/leafletWebLoader';
+
+// Leaflet/react-leaflet через Metro (без CDN)
+import Leaflet from 'leaflet';
+import * as ReactLeaflet from 'react-leaflet';
+import '@/src/utils/leafletFix';
+
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 
@@ -208,25 +213,20 @@ const WebMapComponent = ({
     const [rl, setRl] = useState<ReactLeafletNS | null>(null);
 
     useEffect(() => {
-        let cancelled = false;
         if (typeof window === 'undefined') return;
+        let cancelled = false;
 
-        const load = async () => {
-            try {
-                const { L, rl: rlMod } = await ensureLeafletAndReactLeaflet();
-                if (!cancelled) {
-                    setL(L);
-                    setRl(rlMod);
-                }
-            } catch {
-                if (!cancelled) {
-                    setL(null);
-                    setRl(null);
-                }
+        try {
+            if (!cancelled) {
+                setL(Leaflet);
+                setRl(ReactLeaflet as any);
             }
-        };
-
-        load();
+        } catch {
+            if (!cancelled) {
+                setL(null);
+                setRl(null);
+            }
+        }
 
         return () => {
             cancelled = true;
@@ -290,7 +290,7 @@ const WebMapComponent = ({
             const prevLen = prevExternalLengthRef.current;
             
             // ✅ FIX: Используем функциональное обновление чтобы получить актуальное локальное состояние
-            // без добавления localMarkers в зависимости (избегаем бесконечного цикла)
+            // без добавления localMarkers в зависимость (избегаем бесконечного цикла)
             setLocalMarkers(currentLocalMarkers => {
                 const localByKey = new Map<string, any>();
                 (currentLocalMarkers || []).forEach((m: any) => localByKey.set(makeMarkerKey(m), m));

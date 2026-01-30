@@ -1,41 +1,46 @@
 #!/usr/bin/env node
 
 /**
- * Быстрая проверка настройки react-leaflet для Expo
+ * Быстрая проверка настройки Leaflet/react-leaflet для Expo Web (без CDN).
  */
 
 const fs = require('fs');
 const path = require('path');
 
-console.log('\n📋 Проверка react-leaflet 5.0.0 для Expo\n');
+const root = path.join(__dirname, '..');
 
-// 1. Проверка зависимостей
-console.log('✓ react-leaflet установлен: 5.0.0');
-console.log('✓ leaflet установлен: ^1.9.4');
+console.log('\n📋 Проверка Leaflet/react-leaflet (Metro, без CDN)\n');
 
-// 2. Проверка metro.config.js
-const metroConfig = fs.readFileSync(path.join(__dirname, '../metro.config.js'), 'utf8');
-if (metroConfig.includes("moduleName === 'react-leaflet'") && metroConfig.includes('unstable_enablePackageExports: false')) {
-  console.log('✓ Metro конфигурация для react-leaflet: OK');
+// 1) dependencies
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const deps = packageJson.dependencies || {};
+
+const hasLeaflet = Boolean(deps.leaflet);
+const hasReactLeaflet = Boolean(deps['react-leaflet']);
+
+console.log(`${hasReactLeaflet ? '✓' : '✗'} react-leaflet установлен: ${deps['react-leaflet'] || 'нет'}`);
+console.log(`${hasLeaflet ? '✓' : '✗'} leaflet установлен: ${deps.leaflet || 'нет'}`);
+
+// 2) metro.config.js sanity
+const metroConfig = fs.readFileSync(path.join(root, 'metro.config.js'), 'utf8');
+const hasCssIgnore = metroConfig.includes("moduleName.endsWith('.css')") && metroConfig.includes('metro-stubs/empty.js');
+const hasRnMapsStub = metroConfig.includes("moduleName.startsWith('react-native-maps')") && metroConfig.includes('metro-stubs/react-native-maps.js');
+
+console.log(`${hasCssIgnore ? '✓' : '⚠'} Metro: игнор CSS (.css -> empty stub): ${hasCssIgnore ? 'OK' : 'не найдено'}`);
+console.log(`${hasRnMapsStub ? '✓' : '⚠'} Metro: react-native-maps stub только для web: ${hasRnMapsStub ? 'OK' : 'не найдено'}`);
+
+// 3) Leaflet CSS import
+const layoutWebPath = path.join(root, 'app/_layout.web.tsx');
+if (fs.existsSync(layoutWebPath)) {
+  const layoutWeb = fs.readFileSync(layoutWebPath, 'utf8');
+  const hasLeafletCssImport = layoutWeb.includes("leaflet/dist/leaflet.css");
+  console.log(`${hasLeafletCssImport ? '✓' : '✗'} app/_layout.web.tsx импортирует leaflet CSS`);
 } else {
-  console.log('✗ Metro конфигурация: ОТСУТСТВУЕТ');
+  console.log('⚠ app/_layout.web.tsx не найден (пропускаю проверку CSS импорта)');
 }
 
-// 3. Проверка leafletWebLoader
-const loader = fs.readFileSync(path.join(__dirname, '../src/utils/leafletWebLoader.ts'), 'utf8');
-if (loader.includes('ensureLeafletAndReactLeaflet')) {
-  console.log('✓ leafletWebLoader: OK (ensureLeafletAndReactLeaflet найдена)');
-} else {
-  console.log('✗ leafletWebLoader: ОТСУТСТВУЕТ');
-}
+const ok = hasLeaflet && hasReactLeaflet;
 
-// 4. Проверка Map.web.tsx
-const mapWeb = fs.readFileSync(path.join(__dirname, '../components/MapPage/Map.web.tsx'), 'utf8');
-if (mapWeb.includes('ensureLeafletAndReactLeaflet')) {
-  console.log('✓ Map.web.tsx: OK (использует ensureLeafletAndReactLeaflet)');
-} else {
-  console.log('✗ Map.web.tsx: НЕ использует loader');
-}
-
-console.log('\n✅ Все проверки пройдены! React-leaflet готов к использованию.\n');
-console.log('Для запуска:\n  yarn web\n');
+console.log('\n' + (ok ? '✅ Базовая настройка выглядит корректно.' : '❌ Не хватает зависимостей (leaflet/react-leaflet).'));
+console.log('Запуск: yarn web\n');
+process.exit(ok ? 0 : 1);

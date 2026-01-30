@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Скрипт проверки react-leaflet настройки для Expo
+ * Скрипт проверки настройки Leaflet/react-leaflet для Expo Web (без CDN).
  *
  * Использование:
  *   node scripts/verify-react-leaflet-setup.js
@@ -26,148 +26,95 @@ const log = {
   section: (msg) => console.log(`\n${colors.blue}${msg}${colors.reset}`),
 };
 
+const root = path.join(__dirname, '..');
 const checks = [];
 
-// Проверка 1: react-leaflet в package.json
 log.section('1. Проверка зависимостей');
-const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 
-if (packageJson.dependencies['react-leaflet']) {
-  const version = packageJson.dependencies['react-leaflet'];
-  if (version.includes('5.0.0') || version.startsWith('5.')) {
-    log.pass(`react-leaflet установлен: ${version}`);
-    checks.push(true);
-  } else {
-    log.warn(`react-leaflet версия ${version} (рекомендуется 5.0.0)`);
-    checks.push(true);
-  }
+if (packageJson.dependencies?.['react-leaflet']) {
+  log.pass(`react-leaflet установлен: ${packageJson.dependencies['react-leaflet']}`);
+  checks.push(true);
 } else {
   log.fail('react-leaflet НЕ найден в dependencies');
   checks.push(false);
 }
 
-if (packageJson.dependencies['leaflet']) {
-  const version = packageJson.dependencies['leaflet'];
-  log.pass(`leaflet установлен: ${version}`);
+if (packageJson.dependencies?.leaflet) {
+  log.pass(`leaflet установлен: ${packageJson.dependencies.leaflet}`);
   checks.push(true);
 } else {
   log.fail('leaflet НЕ найден в dependencies');
   checks.push(false);
 }
 
-// Проверка 2: metro.config.js конфигурация
 log.section('2. Проверка Metro конфигурации');
-const metroConfig = fs.readFileSync(path.join(__dirname, '../metro.config.js'), 'utf8');
+const metroConfig = fs.readFileSync(path.join(root, 'metro.config.js'), 'utf8');
 
-const hasReactLeafletConfig = metroConfig.includes("moduleName === 'react-leaflet'") &&
-                              metroConfig.includes('unstable_enablePackageExports: false');
-if (hasReactLeafletConfig) {
-  log.pass('Конфигурация для react-leaflet найдена');
+// В актуальной схеме: css игнорируем, react-native-maps stub только на web.
+const hasCssIgnore = metroConfig.includes("moduleName.endsWith('.css')") && metroConfig.includes('metro-stubs/empty.js');
+if (hasCssIgnore) {
+  log.pass('CSS игнорируется через metro-stubs/empty.js (OK)');
   checks.push(true);
 } else {
-  log.fail('Конфигурация для react-leaflet НЕ найдена');
-  log.info('Необходимо добавить в metro.config.js:');
-  console.log(`
-  if (isWeb && (moduleName === 'react-leaflet' || moduleName.startsWith('react-leaflet/'))) {
-    return context.resolveRequest(
-      {
-        ...context,
-        unstable_enablePackageExports: false,
-      },
-      moduleName,
-      platform,
-    );
-  }
-  `);
-  checks.push(false);
-}
-
-const hasReactLeafletCoreConfig = metroConfig.includes("moduleName === '@react-leaflet/core'") &&
-                                  metroConfig.includes('unstable_enablePackageExports: false');
-if (hasReactLeafletCoreConfig) {
-  log.pass('Конфигурация для @react-leaflet/core найдена');
-  checks.push(true);
-} else {
-  log.warn('Конфигурация для @react-leaflet/core НЕ найдена (опционально)');
+  log.warn('Не найдено правило игнора CSS (может сломать leaflet.css импорты, если Metro будет пытаться их грузить)');
   checks.push(true);
 }
 
-// Проверка 3: leafletWebLoader
-log.section('3. Проверка leafletWebLoader');
-const loaderPath = path.join(__dirname, '../src/utils/leafletWebLoader.ts');
-if (fs.existsSync(loaderPath)) {
-  const loader = fs.readFileSync(loaderPath, 'utf8');
+const hasRnMapsStub = metroConfig.includes("moduleName.startsWith('react-native-maps')") && metroConfig.includes('metro-stubs/react-native-maps.js');
+if (hasRnMapsStub) {
+  log.pass('react-native-maps застаблен на web (OK)');
+  checks.push(true);
+} else {
+  log.warn('Не найден web-stub для react-native-maps (может ломать web сборку)');
+  checks.push(true);
+}
 
-  if (loader.includes('ensureLeaflet')) {
-    log.pass('ensureLeaflet функция найдена');
+// Старые "metro-хаки" должны отсутствовать.
+const forbidden = [
+  'unstable_enablePackageExports',
+  'unstable_conditionNames',
+  'experimentalImportSupport',
+];
+const presentForbidden = forbidden.filter((s) => metroConfig.includes(s));
+if (presentForbidden.length === 0) {
+  log.pass('Старые unstable/experimental Metro настройки не используются');
+  checks.push(true);
+} else {
+  log.warn(`В metro.config.js найдены спорные настройки: ${presentForbidden.join(', ')}`);
+  checks.push(true);
+}
+
+log.section('3. Проверка импорта Leaflet CSS');
+const layoutWebPath = path.join(root, 'app/_layout.web.tsx');
+if (fs.existsSync(layoutWebPath)) {
+  const layoutWeb = fs.readFileSync(layoutWebPath, 'utf8');
+  if (layoutWeb.includes("leaflet/dist/leaflet.css")) {
+    log.pass('app/_layout.web.tsx импортирует leaflet/dist/leaflet.css');
     checks.push(true);
   } else {
-    log.fail('ensureLeaflet функция НЕ найдена');
-    checks.push(false);
-  }
-
-  if (loader.includes('ensureReactLeaflet')) {
-    log.pass('ensureReactLeaflet функция найдена');
-    checks.push(true);
-  } else {
-    log.fail('ensureReactLeaflet функция НЕ найдена');
-    checks.push(false);
-  }
-
-  if (loader.includes('ensureLeafletAndReactLeaflet')) {
-    log.pass('ensureLeafletAndReactLeaflet функция найдена');
-    checks.push(true);
-  } else {
-    log.fail('ensureLeafletAndReactLeaflet функция НЕ найдена');
+    log.fail('app/_layout.web.tsx НЕ импортирует leaflet/dist/leaflet.css');
     checks.push(false);
   }
 } else {
-  log.fail(`Файл ${loaderPath} НЕ найден`);
-  checks.push(false);
+  log.warn('app/_layout.web.tsx не найден (пропускаю)');
+  checks.push(true);
 }
 
-// Проверка 4: Использование в компонентах
-log.section('4. Проверка использования в компонентах');
-const mapWebPath = path.join(__dirname, '../components/MapPage/Map.web.tsx');
-if (fs.existsSync(mapWebPath)) {
-  const mapWeb = fs.readFileSync(mapWebPath, 'utf8');
-
-  if (mapWeb.includes('ensureLeafletAndReactLeaflet')) {
-    log.pass('Map.web.tsx использует ensureLeafletAndReactLeaflet');
-    checks.push(true);
-  } else {
-    log.warn('Map.web.tsx НЕ использует ensureLeafletAndReactLeaflet');
-    checks.push(true);
-  }
+log.section('4. Проверка отсутствия старых stub-ов для leaflet/react-leaflet');
+const stubPaths = [
+  path.join(root, 'metro-stubs/leaflet.js'),
+  path.join(root, 'metro-stubs/react-leaflet.js'),
+];
+const existingStubs = stubPaths.filter((p) => fs.existsSync(p));
+if (existingStubs.length === 0) {
+  log.pass('Stub-файлы leaflet/react-leaflet отсутствуют (OK)');
+  checks.push(true);
 } else {
-  log.fail(`Файл ${mapWebPath} НЕ найден`);
-  checks.push(false);
+  log.warn(`Stub-файлы ещё существуют (можно удалить): ${existingStubs.map((p) => path.relative(root, p)).join(', ')}`);
+  checks.push(true);
 }
 
-// Проверка 5: TypeScript конфигурация
-log.section('5. Проверка TypeScript конфигурации');
-const tsconfigPath = path.join(__dirname, '../tsconfig.json');
-if (fs.existsSync(tsconfigPath)) {
-  try {
-    // tsconfig может содержать комментарии, используем простую проверку текста
-    const tsconfigText = fs.readFileSync(tsconfigPath, 'utf8');
-    if (tsconfigText.includes('compilerOptions')) {
-      log.pass('TypeScript конфигурация найдена');
-      checks.push(true);
-    } else {
-      log.warn('TypeScript конфигурация может быть неполной');
-      checks.push(true);
-    }
-  } catch {
-    log.warn('Не удалось прочитать TypeScript конфигурацию');
-    checks.push(true);
-  }
-} else {
-  log.fail(`Файл ${tsconfigPath} НЕ найден`);
-  checks.push(false);
-}
-
-// Итоги
 log.section('ИТОГИ');
 const passed = checks.filter(Boolean).length;
 const total = checks.length;
@@ -176,12 +123,13 @@ const percentage = Math.round((passed / total) * 100);
 if (percentage === 100) {
   log.pass(`Все проверки пройдены! (${passed}/${total})`);
   process.exit(0);
-} else if (percentage >= 80) {
-  log.warn(`Большинство проверок пройдено (${passed}/${total}, ${percentage}%)`);
-  log.info('Рекомендуется устранить предупреждения перед production deploymentом');
-  process.exit(0);
-} else {
-  log.fail(`Не все проверки пройдены (${passed}/${total}, ${percentage}%)`);
-  log.info('Обратитесь к docs/REACT_LEAFLET_EXPO_SETUP.md для помощи');
-  process.exit(1);
 }
+
+if (percentage >= 80) {
+  log.warn(`Большинство проверок пройдено (${passed}/${total}, ${percentage}%)`);
+  log.info('Рекомендуется устранить предупреждения перед production deployment-ом');
+  process.exit(0);
+}
+
+log.fail(`Не все проверки пройдены (${passed}/${total}, ${percentage}%)`);
+process.exit(1);
