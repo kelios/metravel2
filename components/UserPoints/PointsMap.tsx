@@ -1290,6 +1290,51 @@ const PointsMapWeb: React.FC<PointsMapProps> = ({
 
   return (
     <View style={styles.container}>
+      {Platform.OS === 'web' && (
+        <style>
+          {`
+          .leaflet-container {
+            position: relative;
+            overflow: hidden !important;
+            outline: 0;
+          }
+
+          .leaflet-container img.leaflet-tile {
+            max-width: none !important;
+          }
+
+          .leaflet-pane,
+          .leaflet-map-pane,
+          .leaflet-tile-pane,
+          .leaflet-overlay-pane,
+          .leaflet-shadow-pane,
+          .leaflet-marker-pane,
+          .leaflet-tooltip-pane,
+          .leaflet-popup-pane {
+            position: absolute !important;
+            top: 0;
+            left: 0;
+          }
+
+          .leaflet-tile {
+            position: absolute !important;
+            width: 256px;
+            height: 256px;
+            opacity: 0;
+          }
+
+          .leaflet-tile.leaflet-tile-loaded {
+            opacity: 1;
+          }
+
+          .leaflet-container {
+            touch-action: none;
+            -ms-touch-action: none;
+            overscroll-behavior: none;
+          }
+          `}
+        </style>
+      )}
       <mods.MapContainer
         center={[center.lat, center.lng]}
         zoom={safePoints.length > 0 ? 10 : 5}

@@ -49,10 +49,15 @@ export class OSMParser {
   }
   
   private static parseGeoJSON(text: string): ParsedPoint[] {
-    const data = JSON.parse(text);
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error('Не удалось прочитать GeoJSON файл.');
+    }
     const points: ParsedPoint[] = [];
     
-    const features = data.features || [];
+    const features = Array.isArray(data?.features) ? data.features : [];
     
     for (const feature of features) {
       const props = feature.properties || {};
@@ -60,7 +65,19 @@ export class OSMParser {
       const coords = feature.geometry?.coordinates;
       
       if (geometryType !== 'Point') continue;
-      if (!coords || coords.length < 2) continue;
+      if (!Array.isArray(coords) || coords.length < 2) continue;
+
+      const lat = Number(coords[1]);
+      const lng = Number(coords[0]);
+      const hasValidCoords =
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180;
+
+      if (!hasValidCoords) continue;
 
       const color =
         this.normalizeColor(props.color) ??
@@ -74,8 +91,8 @@ export class OSMParser {
         id: this.generateId(),
         name: props.name || 'Без названия',
         description: props.description,
-        latitude: coords[1],
-        longitude: coords[0],
+        latitude: lat,
+        longitude: lng,
         color,
         categoryIds: [],
         status,

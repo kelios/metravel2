@@ -51,16 +51,33 @@ export class GoogleMapsParser {
   }
   
   private static parseJSON(text: string): ParsedPoint[] {
-    const data = JSON.parse(text);
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error('Не удалось прочитать JSON файл Google Maps.');
+    }
     const points: ParsedPoint[] = [];
     
-    const features = data.features || [];
+    const features = Array.isArray(data?.features) ? data.features : [];
     
     for (const feature of features) {
       const props = feature.properties || {};
       const coords = feature.geometry?.coordinates;
       
-      if (!coords || coords.length < 2) continue;
+      if (!Array.isArray(coords) || coords.length < 2) continue;
+
+      const lat = Number(coords[1]);
+      const lng = Number(coords[0]);
+      const hasValidCoords =
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 &&
+        lat <= 90 &&
+        lng >= -180 &&
+        lng <= 180;
+
+      if (!hasValidCoords) continue;
 
       const location = props.Location || props.location || {};
       const address = props.address ?? props.Address ?? location.Address ?? location.address;
@@ -69,8 +86,8 @@ export class GoogleMapsParser {
         id: this.generateId(),
         name: props.Title || props.name || 'Без названия',
         description: props.description,
-        latitude: coords[1],
-        longitude: coords[0],
+        latitude: lat,
+        longitude: lng,
         address,
         color: this.mapGoogleCategoryToColor(props.Category),
         categoryIds: [],

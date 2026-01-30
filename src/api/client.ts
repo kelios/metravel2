@@ -12,10 +12,12 @@ import {
     removeSecureItems 
 } from '@/src/utils/secureStorage';
 
+const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
 const rawApiUrl: string =
+    envApiUrl ||
     (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
         ? `${window.location.origin}/api`
-        : process.env.EXPO_PUBLIC_API_URL) ||
+        : '') ||
     (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');

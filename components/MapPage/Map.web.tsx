@@ -91,10 +91,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
     const fallback = { latitude: 53.8828449, longitude: 27.7273595 };
     const source = coordinates && typeof coordinates === 'object' ? coordinates : fallback;
     const zoomValue = (source as any)?.zoom;
+    const latCandidate = Number((source as any)?.latitude);
+    const lngCandidate = Number((source as any)?.longitude);
+    const hasValidLatLng = isValidCoordinate(latCandidate, lngCandidate);
 
     return {
-      latitude: Number.isFinite(source.latitude) ? source.latitude : fallback.latitude,
-      longitude: Number.isFinite(source.longitude) ? source.longitude : fallback.longitude,
+      latitude: hasValidLatLng ? latCandidate : fallback.latitude,
+      longitude: hasValidLatLng ? lngCandidate : fallback.longitude,
       zoom: Number.isFinite(zoomValue) ? zoomValue : 11,
     };
   }, [coordinates]);

@@ -12,6 +12,17 @@ if (typeof window !== 'undefined') {
         shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
       })
     }
+
+    if (anyL?.DomUtil?.getPosition && anyL?.Point && !anyL.DomUtil.__metravelPatchedGetPosition) {
+      const originalGetPosition = anyL.DomUtil.getPosition
+      anyL.DomUtil.getPosition = (el: any) => {
+        if (!el) {
+          return new anyL.Point(0, 0)
+        }
+        return originalGetPosition(el)
+      }
+      anyL.DomUtil.__metravelPatchedGetPosition = true
+    }
   } catch {
     // noop
   }

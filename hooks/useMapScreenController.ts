@@ -99,6 +99,7 @@ export function useMapScreenController() {
     points: routeStorePoints,
     isBuilding: routingLoading,
     error: routingError,
+    addPoint,
   } = routeStore;
 
   const didRestorePersistedUiStateRef = useMemo(() => ({ current: false }), []);
@@ -179,11 +180,12 @@ export function useMapScreenController() {
       }
 
       if (mode === 'route' && routePoints.length < 2) {
-        const newPoint: [number, number] = [lng, lat];
-        setRoutePoints([...routePoints, newPoint]);
+        const coords = { lat, lng };
+        const address = CoordinateConverter.formatCoordinates(coords);
+        addPoint(coords, address);
       }
     },
-    [mode, routePoints, setRoutePoints]
+    [mode, routePoints.length, addPoint]
   );
 
   // Build route to travel item

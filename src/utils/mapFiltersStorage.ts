@@ -69,6 +69,13 @@ export function loadMapFilterValues(storage: StorageLike): MapFilterValues {
   try {
     const saved = storage.getItem(STORAGE_KEY);
     if (!saved || saved.length === 0 || saved.length >= MAX_JSON_LENGTH) {
+      if (saved && saved.length >= MAX_JSON_LENGTH) {
+        try {
+          storage.removeItem(STORAGE_KEY);
+        } catch {
+          // noop
+        }
+      }
       return {
         categories: [],
         radius: '60',
@@ -100,7 +107,11 @@ export function saveMapFilterValues(storage: StorageLike, values: MapFilterValue
   const sanitized = sanitizeMapFilterValues(values);
   const jsonString = JSON.stringify(sanitized);
   if (jsonString.length >= MAX_JSON_LENGTH) return;
-  storage.setItem(STORAGE_KEY, jsonString);
+  try {
+    storage.setItem(STORAGE_KEY, jsonString);
+  } catch {
+    // noop
+  }
 }
 
 
