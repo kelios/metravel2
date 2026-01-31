@@ -45,6 +45,7 @@ export const buildTravelSectionLinks = (
   pushIf(hasTravelAddress, links, { key: "points", icon: "list", label: "Координаты" })
   links.push({ key: "near", icon: "map-pin", label: "Рядом", meta: "~60км" })
   links.push({ key: "popular", icon: "star", label: "Популярное" })
+  links.push({ key: "comments", icon: "message-circle", label: "Комментарии" })
 
   return links
 }

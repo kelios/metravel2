@@ -12,6 +12,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
 import type { Coordinates, MapMode, MapProps, Point } from './Map/types';
 
@@ -165,9 +166,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // Radius calculation
   const radiusInMeters = useMemo(() => {
     if (mode !== 'radius') return null;
-    const radiusValue = radius || '60';
+    const radiusValue = radius || String(DEFAULT_RADIUS_KM);
     const radiusKm = parseInt(radiusValue, 10);
-    if (isNaN(radiusKm) || radiusKm <= 0) return 60000;
+    if (isNaN(radiusKm) || radiusKm <= 0) return DEFAULT_RADIUS_KM * 1000;
     return radiusKm * 1000;
   }, [mode, radius]);
 
@@ -645,7 +646,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     mapZoom,
     hintCenterLatLng
   );
-  const shouldRenderClusters = shouldRenderClustersBase;
+  const shouldRenderClusters = shouldRenderClustersBase && Array.isArray(clusters) && clusters.length > 0;
 
   const hasWarnedInvalidCircleRef = useRef(false);
   useEffect(() => {

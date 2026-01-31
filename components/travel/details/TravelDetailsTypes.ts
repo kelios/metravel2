@@ -12,4 +12,5 @@ export type AnchorsMap = {
   near: RefObject<any>
   popular: RefObject<any>
   excursions: RefObject<any>
+  comments: RefObject<any>
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Animated, InteractionManager, Platform } from 'react-native'
+import { Animated, InteractionManager, Platform, View } from 'react-native'
 import type { Travel } from '@/src/types/types'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
@@ -7,6 +7,7 @@ import { TravelDetailsContentSection } from './sections/TravelDetailsContentSect
 import { TravelDetailsMapSection } from './sections/TravelDetailsMapSection'
 import { TravelDetailsSidebarSection } from './sections/TravelDetailsSidebarSection'
 import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSection'
+import { CommentsSection } from '@/components/travel/CommentsSection'
 
 const rIC = (cb: () => void, timeout = 300) => {
   if (typeof (window as any)?.requestIdleCallback === 'function') {
@@ -75,6 +76,16 @@ export const TravelDeferredSections: React.FC<{
         viewportHeight={viewportHeight}
         canRenderHeavy={canRenderHeavy}
       />
+
+      {canRenderHeavy && travel?.id && (
+        <View 
+          ref={anchors.comments} 
+          collapsable={false}
+          {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
+        >
+          <CommentsSection travelId={travel.id} />
+        </View>
+      )}
 
       <TravelEngagementSection travel={travel} isMobile={isMobile} />
     </>

@@ -6,6 +6,7 @@ import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import type { ThemedColors } from '@/hooks/useTheme';
 import Chip from '@/components/ui/Chip';
 import IconButton from '@/components/ui/IconButton';
+import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 
@@ -187,7 +188,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
       {filters.radius.length > 0 && (
         <CollapsibleSection
           title="Радиус поиска"
-          badge={`${filterValue.radius || '60'} км`}
+          badge={`${filterValue.radius || DEFAULT_RADIUS_KM} км`}
           defaultOpen={true}
           icon="radio"
         >

@@ -4,6 +4,7 @@ import { devError, devWarn } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
+import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 
 const normalizeCoordString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -52,12 +53,64 @@ const normalizeLatLngString = (value: unknown): string => {
 const normalizeTravelCoordsItem = (raw: any) => {
   const t = raw && typeof raw === 'object' ? raw : {};
 
-  const lat = normalizeLatLngString(t.lat ?? t.latitude);
-  const lng = normalizeLatLngString(t.lng ?? t.longitude);
+  let lat = normalizeLatLngString(t.lat ?? t.latitude);
+  let lng = normalizeLatLngString(t.lng ?? t.longitude);
 
-  const coord =
-    normalizeCoordString(t.coord) ??
-    (lat && lng ? `${lat},${lng}` : undefined);
+  // If we have explicit lat/lng fields, use them to build coord in "lat,lng" format
+  let coord: string | undefined;
+  if (lat && lng) {
+    coord = `${lat},${lng}`;
+  } else {
+    // Otherwise, try to parse from coord field
+    const rawCoord = normalizeCoordString(t.coord);
+    if (rawCoord) {
+      // Try to extract lat/lng from coord string
+      const parts = rawCoord.split(',').map(s => s.trim());
+      if (parts.length === 2) {
+        const a = parseFloat(parts[0]);
+        const b = parseFloat(parts[1]);
+        if (Number.isFinite(a) && Number.isFinite(b)) {
+          // Determine if it's lat,lng or lng,lat based on valid ranges
+          // Latitude: -90 to 90, Longitude: -180 to 180
+          const isFirstLat = Math.abs(a) <= 90;
+          const isSecondLat = Math.abs(b) <= 90;
+          
+          if (isFirstLat && !isSecondLat) {
+            // First is lat, second is lng
+            lat = String(a);
+            lng = String(b);
+            coord = `${lat},${lng}`;
+          } else if (!isFirstLat && isSecondLat) {
+            // First is lng, second is lat (old format)
+            lat = String(b);
+            lng = String(a);
+            coord = `${lat},${lng}`;
+          } else {
+            // Both could be lat or both could be lng, use as-is but prefer lat,lng
+            lat = String(a);
+            lng = String(b);
+            coord = `${lat},${lng}`;
+          }
+        } else {
+          coord = rawCoord;
+        }
+      } else {
+        coord = rawCoord;
+      }
+    }
+  }
+
+  // Debug: log first few items to see coordinate format
+  if (__DEV__ && Math.random() < 0.05) {
+    console.log('[normalizeTravelCoordsItem] Sample:', {
+      rawLat: t.lat,
+      rawLng: t.lng,
+      rawCoord: t.coord,
+      normalizedLat: lat,
+      normalizedLng: lng,
+      finalCoord: coord,
+    });
+  }
 
   const address =
     normalizeString(t.address ?? t.adress ?? t.full_address ?? t.name, '').trim() || undefined;
@@ -242,9 +295,11 @@ export const fetchTravelsForMap = async (
   options?: ApiOptions,
 ): Promise<TravelsForMap> => {
   try {
-    const radius = parseInt(filter?.radius ?? '60', 10);
-    const lat = filter?.lat ?? '53.9006';
-    const lng = filter?.lng ?? '27.5590';
+    const radius = parseInt(filter?.radius ?? String(DEFAULT_RADIUS_KM), 10);
+    const latRaw = filter?.lat ?? '53.9006';
+    const lngRaw = filter?.lng ?? '27.5590';
+    const lat = typeof latRaw === 'string' ? latRaw : String(latRaw);
+    const lng = typeof lngRaw === 'string' ? lngRaw : String(lngRaw);
 
     const whereObject: Record<string, any> = {
       lat,
@@ -277,6 +332,13 @@ export const fetchTravelsForMap = async (
     };
     const params = new URLSearchParams(paramsObj).toString();
 
+    if (__DEV__) {
+      console.log('[fetchTravelsForMap] Request params:', {
+        whereObject,
+        url: `${SEARCH_TRAVELS_FOR_MAP}?${params}`,
+      });
+    }
+
     const urlTravel = `${SEARCH_TRAVELS_FOR_MAP}?${params}`;
     const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, LONG_TIMEOUT);
     if (!res.ok) {
@@ -285,6 +347,21 @@ export const fetchTravelsForMap = async (
       return [] as unknown as TravelsForMap;
     }
     const payload = await safeJsonParse<unknown>(res, [] as unknown as TravelsForMap);
+    
+    // Debug: log sample of raw backend response
+    if (__DEV__ && payload) {
+      const sample = Array.isArray(payload) ? payload[0] : Object.values(payload)[0];
+      if (sample) {
+        console.log('[fetchTravelsForMap] Backend response sample:', {
+          lat: sample.lat,
+          lng: sample.lng,
+          coord: sample.coord,
+          latitude: sample.latitude,
+          longitude: sample.longitude,
+        });
+      }
+    }
+    
     return normalizeTravelsForMapPayload(payload);
   } catch (e: any) {
     if (e?.name === 'AbortError') {

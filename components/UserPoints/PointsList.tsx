@@ -11,7 +11,10 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import * as Location from 'expo-location';
+let Location: typeof import('expo-location') | undefined;
+if (Platform.OS !== 'web') {
+  Location = require('expo-location');
+}
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { userPointsApi } from '@/src/api/userPoints';
@@ -318,6 +321,9 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
             lng: pos.coords.longitude,
           });
         } else {
+          if (!Location) {
+            return;
+          }
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status !== 'granted') {
             return;

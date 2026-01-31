@@ -16,6 +16,8 @@ import JSZip from 'jszip';
 
 type FileInput = File | DocumentPickerAsset;
 
+ const USER_POINTS_LIST_TIMEOUT_MS = 30000;
+
 const normalizeImportPointsResult = (raw: any): ImportPointsResult => {
   if (!raw || typeof raw !== 'object') {
     return {
@@ -233,7 +235,7 @@ export const userPointsApi = {
     const queryString = params.toString();
     const endpoint = queryString ? `/user-points/?${queryString}` : '/user-points/';
 
-    const raw = await apiClient.get<any>(endpoint);
+    const raw = await apiClient.get<any>(endpoint, USER_POINTS_LIST_TIMEOUT_MS);
     if (Array.isArray(raw)) return raw as ImportedPoint[];
     if (raw && typeof raw === 'object') {
       const data = (raw as any).data;

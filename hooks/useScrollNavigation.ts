@@ -25,6 +25,7 @@ const SECTION_KEYS = [
   'near',
   'popular',
   'excursions',
+  'comments',
 ] as const;
 
 export function useScrollNavigation(): UseScrollNavigationReturn {

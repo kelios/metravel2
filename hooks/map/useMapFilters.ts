@@ -8,6 +8,7 @@ import {
   type StorageLike,
 } from '@/src/utils/mapFiltersStorage';
 import { fetchFiltersMap } from '@/src/api/map';
+import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS } from '@/constants/mapConfig';
 
 export interface FiltersData {
   categories: { id: string; name: string }[];
@@ -17,17 +18,9 @@ export interface FiltersData {
 
 const DEFAULT_FILTER_VALUES: MapFilterValues = {
   categories: [],
-  radius: '60',
+  radius: String(DEFAULT_RADIUS_KM),
   address: '',
 };
-
-const DEFAULT_RADIUS_OPTIONS = [
-  { id: '60', name: '60' },
-  { id: '100', name: '100' },
-  { id: '200', name: '200' },
-  { id: '500', name: '500' },
-  { id: '600', name: '600' },
-];
 
 function getWebStorage(): StorageLike | null {
   if (Platform.OS !== 'web') return null;
@@ -62,7 +55,7 @@ export function useMapFilters() {
 
   const [filters, setFilters] = useState<FiltersData>({
     categories: [],
-    radius: DEFAULT_RADIUS_OPTIONS,
+    radius: [...RADIUS_OPTIONS],
     address: '',
   });
 
@@ -93,7 +86,7 @@ export function useMapFilters() {
 
         setFilters({
           categories,
-          radius: DEFAULT_RADIUS_OPTIONS,
+          radius: [...RADIUS_OPTIONS],
           address: data.categoryTravelAddress?.[0] || '',
         });
       } catch (err) {

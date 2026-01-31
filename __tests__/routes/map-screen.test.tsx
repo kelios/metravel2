@@ -118,13 +118,45 @@ jest.mock('expo-location', () => ({
 
 // Мокаем сетевые запросы карты (можно перенастраивать в тестах)
 const mockFetchTravelsForMap = jest.fn().mockResolvedValue({
-  a: { id: 1, categoryName: 'Категория 1' },
-  b: { id: 2, categoryName: 'Категория 2' },
+  a: {
+    id: 1,
+    categoryName: 'Категория 1',
+    coord: '53.95,27.60',
+    lat: '53.95',
+    lng: '27.60',
+    travelImageThumbUrl: '',
+    urlTravel: '',
+  },
+  b: {
+    id: 2,
+    categoryName: 'Категория 2',
+    coord: '53.92,27.55',
+    lat: '53.92',
+    lng: '27.55',
+    travelImageThumbUrl: '',
+    urlTravel: '',
+  },
 });
 
 const defaultTravelsForMapResponse = {
-  a: { id: 1, categoryName: 'Категория 1' },
-  b: { id: 2, categoryName: 'Категория 2' },
+  a: {
+    id: 1,
+    categoryName: 'Категория 1',
+    coord: '53.95,27.60',
+    lat: '53.95',
+    lng: '27.60',
+    travelImageThumbUrl: '',
+    urlTravel: '',
+  },
+  b: {
+    id: 2,
+    categoryName: 'Категория 2',
+    coord: '53.92,27.55',
+    lat: '53.92',
+    lng: '27.55',
+    travelImageThumbUrl: '',
+    urlTravel: '',
+  },
 };
 
 jest.mock('@/src/api/map', () => ({

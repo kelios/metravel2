@@ -64,6 +64,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 }) => {
   const map = useMap();
   const hasCalledOnMapReadyRef = useRef(false);
+  const lastUserLocationKeyRef = useRef<string | null>(null);
 
   // Handle map events
   useMapEvents({
@@ -184,6 +185,17 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       return;
     }
 
+    // Radius mode: when userLocation becomes available/changes, allow auto-fit to run again.
+    // This keeps default behavior: show results around current position (radius default is handled upstream).
+    if (mode === 'radius' && hasValidUserLocation) {
+      const key = `${userLocation!.lat.toFixed(6)},${userLocation!.lng.toFixed(6)}`;
+      if (lastUserLocationKeyRef.current !== key) {
+        lastUserLocationKeyRef.current = key;
+        hasInitializedRef.current = false;
+        lastAutoFitKeyRef.current = null;
+      }
+    }
+
     if (lastModeRef.current === 'route' && mode === 'radius') {
       hasInitializedRef.current = false;
     }
@@ -199,7 +211,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     }
 
     lastModeRef.current = mode;
-  }, [map, mode, coordinates, userLocation, hasInitializedRef, lastModeRef]);
+  }, [map, mode, coordinates, userLocation, hasInitializedRef, lastModeRef, lastAutoFitKeyRef]);
 
   // Fit bounds to all travel points (radius mode only)
   useEffect(() => {

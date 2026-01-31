@@ -41,7 +41,19 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         try {
           const ll = strToLatLng(String(point.coord), hintCenter);
           if (!ll) return null;
+          // strToLatLng returns [lng, lat], so we extract them correctly
           const coords = { lat: ll[1], lng: ll[0] };
+          
+          // Debug: log first few points
+          if (__DEV__ && index < 3) {
+            console.log(`[MapMarkers] Point ${index}:`, {
+              rawCoord: point.coord,
+              parsedLL: ll,
+              finalCoords: coords,
+              llFormat: '[lng, lat]',
+            });
+          }
+          
           if (!CoordinateConverter.isValid(coords)) return null;
           return {
             point,

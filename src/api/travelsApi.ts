@@ -11,6 +11,7 @@ import { Platform } from 'react-native';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
+const envApiUrl = process.env.EXPO_PUBLIC_API_URL || '';
 const webOriginApi =
     Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
         ? `${window.location.origin}/api`
@@ -19,11 +20,13 @@ const webOriginApi =
 const rawApiUrl: string =
     process.env.NODE_ENV === 'test'
         ? 'http://example.test/api'
-        : (Platform.OS === 'web' && isE2E && webOriginApi
-            ? webOriginApi
-            : (Platform.OS === 'web' && !isLocalApi && webOriginApi
+        : (envApiUrl
+            ? envApiUrl
+            : (Platform.OS === 'web' && isE2E && webOriginApi
                 ? webOriginApi
-                : (process.env.EXPO_PUBLIC_API_URL || '')));
+                : (Platform.OS === 'web' && !isLocalApi && webOriginApi
+                    ? webOriginApi
+                    : '')));
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }
@@ -545,7 +548,7 @@ export const fetchTravel = async (
     }
 
     try {
-        const travel = await apiClient.get<Travel>(`/travels/${id}/`, DEFAULT_TIMEOUT, { signal: options?.signal });
+        const travel = await apiClient.get<Travel>(`/travels/${id}/`, LONG_TIMEOUT, { signal: options?.signal });
         const normalized = normalizeTravelItem(travel);
         if (!isAuthenticated) {
             travelCache.set(id, normalized);
@@ -566,7 +569,7 @@ export const fetchTravelBySlug = async (
 ): Promise<Travel> => {
     try {
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
-        const travel = await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, DEFAULT_TIMEOUT, { signal: options?.signal });
+        const travel = await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, LONG_TIMEOUT, { signal: options?.signal });
         return normalizeTravelItem(travel);
     } catch (e: any) {
         if (e?.name === 'AbortError') {
