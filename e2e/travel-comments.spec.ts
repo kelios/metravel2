@@ -3,8 +3,8 @@ import { loginAsUser, loginAsAdmin, createTestTravel, cleanupTestData } from './
 
 test.describe('Travel Comments', () => {
   let testTravelId: number;
-  let testUserId: string;
-  let adminUserId: string;
+  let _testUserId: string;
+  let _adminUserId: string;
 
   test.beforeAll(async () => {
     // Create test travel for comments
@@ -413,7 +413,7 @@ test.describe('Travel Comments', () => {
       });
       
       // Get initial comment count
-      const initialCount = await page.locator('[data-testid="comment-item"]').count();
+      const _initialCount = await page.locator('[data-testid="comment-item"]').count();
       
       // Simulate refresh (reload page)
       await page.reload();

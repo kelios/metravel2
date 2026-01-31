@@ -28,9 +28,12 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
   const isLiked = comment.is_liked;
 
   const handleLikeToggle = () => {
+    console.log('Like toggle:', { commentId: comment.id, isLiked, likes_count: comment.likes_count });
     if (isLiked) {
+      console.log('Unliking comment:', comment.id);
       unlikeComment.mutate(comment.id);
     } else {
+      console.log('Liking comment:', comment.id);
       likeComment.mutate(comment.id);
     }
   };
@@ -46,7 +49,8 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
     : '';
 
   return (
-    <View style={[styles.container, level > 0 && styles.nested]} testID="comment-item">
+    <View style={styles.wrapper}>
+      <View style={[styles.container, level > 0 && styles.nested]} testID="comment-item">
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <View style={styles.avatar}>
@@ -150,11 +154,23 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
           </Pressable>
         )}
       </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  threadLine: {
+    position: 'absolute',
+    left: 32,
+    top: 48,
+    bottom: DESIGN_TOKENS.spacing.sm,
+    width: 2,
+    backgroundColor: DESIGN_TOKENS.colors.borderLight,
+  },
   container: {
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.sm,
@@ -165,8 +181,10 @@ const styles = StyleSheet.create({
     } : DESIGN_TOKENS.shadowsNative.light),
   },
   nested: {
-    marginLeft: DESIGN_TOKENS.spacing.lg,
+    marginLeft: 48,
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    borderLeftWidth: 3,
+    borderLeftColor: DESIGN_TOKENS.colors.primary,
   },
   header: {
     flexDirection: 'row',

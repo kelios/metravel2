@@ -76,7 +76,6 @@ export default function MapScreen() {
         openRightPanelRef.current();
     }, [openNonce]);
 
-    const FiltersPanelComponent = filtersPanelProps?.Component;
 
     const mapPanelPlaceholder = useMemo(
         () => {
@@ -219,7 +218,7 @@ export default function MapScreen() {
                     style={({ pressed }) => [styles.closePanelButton, pressed && { opacity: 0.7 }]}
                     onPress={() => {
                         selectFiltersTab();
-                        const reset = (filtersPanelProps as any)?.props?.resetFilters;
+                        const reset = filtersPanelProps?.contextValue?.resetFilters;
                         if (typeof reset === 'function') reset();
                     }}
                     hitSlop={10}
@@ -258,8 +257,7 @@ export default function MapScreen() {
                 )}
                 <ErrorDisplay
                     title="Не удалось загрузить карту"
-                    message={friendly?.message || 'Проверьте соединение и попробуйте ещё раз'}
-                    actionText="Повторить"
+                    message={friendly || 'Проверьте соединение и попробуйте ещё раз'}
                     onRetry={() => {
                         invalidateTravelsQuery();
                         refetchMapData();
@@ -285,8 +283,10 @@ export default function MapScreen() {
                 {panelHeader}
                 <View style={styles.panelContent}>
                     {rightPanelTab === 'filters' ? (
-                        FiltersPanelComponent ? (
-                            <FiltersPanelComponent {...filtersPanelProps.props} />
+                        filtersPanelProps?.Component ? (
+                            <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
+                                <filtersPanelProps.Panel />
+                            </filtersPanelProps.Component>
                         ) : (
                             <View style={styles.panelPlaceholder}>
                                 <Text style={styles.panelPlaceholderText}>Загрузка фильтров…</Text>

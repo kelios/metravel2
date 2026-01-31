@@ -6,7 +6,6 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -27,7 +26,7 @@ interface CommentsSectionProps {
 }
 
 export function CommentsSection({ travelId }: CommentsSectionProps) {
-  const { isAuthenticated, userId } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [replyTo, setReplyTo] = useState<TravelComment | null>(null);
   const [editComment, setEditComment] = useState<TravelComment | null>(null);
 

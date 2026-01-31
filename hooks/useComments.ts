@@ -107,7 +107,7 @@ export function useDeleteComment() {
 
   return useMutation({
     mutationFn: (commentId: number) => commentsApi.deleteComment(commentId),
-    onSuccess: (_, commentId) => {
+    onSuccess: (_, _commentId) => {
       queryClient.invalidateQueries({
         queryKey: commentKeys.all,
       });
@@ -237,7 +237,7 @@ export function useReplyToComment() {
   return useMutation({
     mutationFn: ({ commentId, data }: { commentId: number; data: TravelCommentCreate }) =>
       commentsApi.replyToComment(commentId, data),
-    onSuccess: (newComment) => {
+    onSuccess: (_newComment) => {
       // Invalidate all comment queries to show new reply immediately
       queryClient.invalidateQueries({
         queryKey: commentKeys.all,

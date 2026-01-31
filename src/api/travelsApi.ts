@@ -37,7 +37,6 @@ const URLAPI = (() => {
     return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
 })();
 
-const DEFAULT_TIMEOUT = 10000; // 10 секунд
 const LONG_TIMEOUT = 30000; // 30 секунд для тяжелых запросов
 
 // Base travels endpoint with trailing slash
