@@ -44,8 +44,27 @@ export function useRouteStoreAdapter() {
 
     // Explicitly clear when empty array is provided
     if (points.length === 0) {
-      store.clearRoute();
+      if (store.points.length > 0) {
+        store.clearRoute();
+      }
       return;
+    }
+
+    // Check if points are already the same - avoid infinite loop
+    const currentPoints = store.points;
+    if (currentPoints.length === points.length) {
+      const allMatch = points.every((point, index) => {
+        const [lng, lat] = point;
+        const current = currentPoints[index];
+        return current && 
+               Math.abs(current.coordinates.lng - lng) < 0.000001 && 
+               Math.abs(current.coordinates.lat - lat) < 0.000001;
+      });
+      
+      if (allMatch) {
+        console.info('[setRoutePoints] Points unchanged, skipping update');
+        return;
+      }
     }
 
     // Clear existing points
@@ -131,16 +150,31 @@ export function useRouteStoreAdapter() {
 
   const handleAddressSelect = useCallback((address: string, coords: LatLng, isStart: boolean) => {
     if (isStart) {
-      // Remove existing start point if any
-      const existingStart = store.getStartPoint();
+      const existingStart = store.getStartPoint() ?? store.points[0];
       if (existingStart) {
-        store.removePoint(existingStart.id);
+        store.updatePoint(existingStart.id, { coordinates: coords, address });
+        return;
       }
-      // Add new start point at beginning
       store.addPoint(coords, address);
-    } else {
-      // Add as end point
-      store.addPoint(coords, address);
+      return;
+    }
+
+    const existingEnd = store.getEndPoint();
+    if (existingEnd && store.points.length >= 2) {
+      store.updatePoint(existingEnd.id, { coordinates: coords, address });
+      return;
+    }
+
+    store.addPoint(coords, address);
+  }, [store]);
+
+  const handleAddressClear = useCallback((isStart: boolean) => {
+    const target = isStart
+      ? (store.getStartPoint() ?? store.points[0])
+      : (store.getEndPoint() ?? store.points[store.points.length - 1]);
+
+    if (target) {
+      store.removePoint(target.id);
     }
   }, [store]);
 
@@ -169,6 +203,7 @@ export function useRouteStoreAdapter() {
     handleRemoveRoutePoint,
     handleClearRoute,
     handleAddressSelect,
+    handleAddressClear,
     
     // Direct store actions for new code
     addPoint: store.addPoint,

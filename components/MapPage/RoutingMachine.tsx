@@ -70,7 +70,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     
     // Если точек меньше двух — сбрасываем состояние и выходим (без лишних setState на каждом рендере)
     useEffect(() => {
-        if (!hasTwoPoints) {
+        if (hasTwoPoints) {
             clearedNoPointsRef.current = false
             return
         }

@@ -23,6 +23,7 @@ interface AddressSearchProps {
   value?: string;
   label?: string;
   enableCoordinateInput?: boolean;
+  onClear?: () => void;
 }
 
 interface SearchResult {
@@ -38,6 +39,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
   value = '',
   label,
   enableCoordinateInput = false,
+  onClear,
 }) => {
   const [query, setQuery] = useState(value);
   const [showResults, setShowResults] = useState(false);
@@ -102,7 +104,8 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
     setQuery('');
     setSearchEnabled(false);
     setShowResults(false);
-  }, []);
+    onClear?.();
+  }, [onClear]);
 
   const trySubmitCoords = useCallback(() => {
     if (!enableCoordinateInput) return false;

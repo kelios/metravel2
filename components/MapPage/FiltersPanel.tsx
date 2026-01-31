@@ -46,6 +46,7 @@ interface FiltersPanelProps {
   routeHintDismissed?: boolean;
   onRouteHintDismiss?: () => void;
   onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void;
+  onAddressClear?: (isStart: boolean) => void;
   routingLoading?: boolean;
   routingError?: string | boolean | null;
   onBuildRoute?: () => void;
@@ -81,6 +82,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
                                                      routeHintDismissed = false,
                                                      onRouteHintDismiss,
                                                      onAddressSelect,
+                                                     onAddressClear,
                                                      routingLoading,
                                                      routingError,
                                                      onBuildRoute,
@@ -164,6 +166,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         onRemoveRoutePoint={safeRemoveRoutePoint}
         onClearRoute={onClearRoute}
         onAddressSelect={onAddressSelect}
+        onAddressClear={onAddressClear}
         userLocation={userLocation}
         onPlaceSelect={onPlaceSelect}
       />

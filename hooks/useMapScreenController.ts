@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -96,6 +96,7 @@ export function useMapScreenController() {
     setFullRouteCoords,
     handleClearRoute,
     handleAddressSelect,
+    handleAddressClear,
     points: routeStorePoints,
     isBuilding: routingLoading,
     error: routingError,
@@ -179,13 +180,13 @@ export function useMapScreenController() {
         return;
       }
 
-      if (mode === 'route' && routePoints.length < 2) {
+      if (mode === 'route') {
         const coords = { lat, lng };
         const address = CoordinateConverter.formatCoordinates(coords);
         addPoint(coords, address);
       }
     },
-    [mode, routePoints.length, addPoint]
+    [mode, addPoint]
   );
 
   // Build route to travel item
@@ -252,6 +253,27 @@ export function useMapScreenController() {
       pointsLength: routeStorePoints.length,
     });
   }, [routeStorePoints, setRoutePoints]);
+
+  // Automatically build route when points are added
+  const lastPointsCountRef = useRef(0);
+  useEffect(() => {
+    if (mode === 'route' && routeStorePoints.length >= 2) {
+      // Only trigger if the number of points actually changed
+      if (lastPointsCountRef.current !== routeStorePoints.length) {
+        lastPointsCountRef.current = routeStorePoints.length;
+        
+        const points: [number, number][] = routeStorePoints.map((p) => [
+          p.coordinates.lng,
+          p.coordinates.lat,
+        ]);
+        console.info('[useMapScreenController] Auto-building route with points:', points);
+        setRoutePoints(points);
+      }
+    } else {
+      lastPointsCountRef.current = 0;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, routeStorePoints.length]);
 
   // Canonical URL
   const canonical = buildCanonicalUrl(pathname || '/map');
@@ -335,6 +357,7 @@ export function useMapScreenController() {
       routeHintDismissed,
       onRouteHintDismiss: setRouteHintDismissedTrue,
       onAddressSelect: handleAddressSelect,
+      onAddressClear: handleAddressClear,
       routingLoading,
       routingError,
       onBuildRoute: handleBuildRoute,

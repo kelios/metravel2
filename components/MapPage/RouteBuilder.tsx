@@ -24,6 +24,7 @@ interface RouteBuilderProps {
   startAddress: string;
   endAddress: string;
   onAddressSelect: (address: string, coords: LatLng, isStart: boolean) => void;
+  onAddressClear?: (isStart: boolean) => void;
   onSwap?: () => void;
   onClear?: () => void;
   compact?: boolean;
@@ -33,6 +34,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
   startAddress,
   endAddress,
   onAddressSelect,
+  onAddressClear,
   onSwap,
   onClear,
   compact = false,
@@ -83,6 +85,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               value={startAddress}
               onAddressSelect={(addr, coords) => onAddressSelect(addr, coords, true)}
               enableCoordinateInput
+              onClear={() => onAddressClear?.(true)}
             />
           </SafeView>
         </SafeView>
@@ -112,6 +115,7 @@ const RouteBuilder: React.FC<RouteBuilderProps> = ({
               value={endAddress}
               onAddressSelect={(addr, coords) => onAddressSelect(addr, coords, false)}
               enableCoordinateInput
+              onClear={() => onAddressClear?.(false)}
             />
           </SafeView>
         </SafeView>

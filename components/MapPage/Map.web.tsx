@@ -1008,13 +1008,38 @@ const MapPageComponent: React.FC<Props> = (props) => {
             </Marker>
           )}
 
-          {routePoints.length === 2 &&
+          {/* Waypoint markers (intermediate points) */}
+          {routePoints.length > 2 &&
+           routePoints.slice(1, -1).map((point, index) => {
+             if (!Number.isFinite(point[0]) || !Number.isFinite(point[1]) || !isValidCoordinate(point[1], point[0])) {
+               return null;
+             }
+             return (
+               <Marker
+                 key={`waypoint-${index}`}
+                 position={[point[1], point[0]]}
+                 eventHandlers={{
+                   click: (e: any) => {
+                     e?.originalEvent?.stopPropagation?.();
+                   },
+                 }}
+               >
+                 <Popup>Точка {index + 2}</Popup>
+               </Marker>
+             );
+           })}
+
+          {/* End marker - show for any route with 2+ points */}
+          {routePoints.length >= 2 &&
            customIcons?.end &&
-           Number.isFinite(routePoints[1][0]) &&
-           Number.isFinite(routePoints[1][1]) &&
-           isValidCoordinate(routePoints[1][1], routePoints[1][0]) && (
+           (() => {
+             const lastPoint = routePoints[routePoints.length - 1];
+             return Number.isFinite(lastPoint[0]) &&
+                    Number.isFinite(lastPoint[1]) &&
+                    isValidCoordinate(lastPoint[1], lastPoint[0]);
+           })() && (
             <Marker
-              position={[routePoints[1][1], routePoints[1][0]]}
+              position={[routePoints[routePoints.length - 1][1], routePoints[routePoints.length - 1][0]]}
               icon={customIcons.end}
               eventHandlers={{
                 click: (e: any) => {
@@ -1027,21 +1052,37 @@ const MapPageComponent: React.FC<Props> = (props) => {
           )}
 
           {/* Routing */}
-          {mode === 'route' &&
-           routePoints.length >= 2 &&
-           rl &&
-           RoutingMachineWithMapInner &&
-           routePoints.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0])) && (
-            <RoutingMachineWithMapInner
-              routePoints={routePoints}
-              transportMode={transportMode}
-              setRoutingLoading={setRoutingLoading}
-              setErrors={setErrors}
-              setRouteDistance={setRouteDistance}
-              setFullRouteCoords={setFullRouteCoords}
-              ORS_API_KEY={ORS_API_KEY}
-            />
-          )}
+          {(() => {
+            const shouldRenderRouting = mode === 'route' &&
+              routePoints.length >= 2 &&
+              rl &&
+              RoutingMachineWithMapInner &&
+              routePoints.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0]));
+            
+            console.info('[Map.web.tsx] Routing check:', {
+              mode,
+              routePointsLength: routePoints.length,
+              routePoints,
+              hasRL: !!rl,
+              hasRoutingMachine: !!RoutingMachineWithMapInner,
+              allValid: routePoints.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0])),
+              shouldRender: shouldRenderRouting
+            });
+            
+            if (!shouldRenderRouting) return null;
+            
+            return (
+              <RoutingMachineWithMapInner
+                routePoints={routePoints}
+                transportMode={transportMode}
+                setRoutingLoading={setRoutingLoading}
+                setErrors={setErrors}
+                setRouteDistance={setRouteDistance}
+                setFullRouteCoords={setFullRouteCoords}
+                ORS_API_KEY={ORS_API_KEY}
+              />
+            );
+          })()}
 
           {/* User location marker */}
           {userLocationLatLng && customIcons?.userLocation && (

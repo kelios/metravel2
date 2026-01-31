@@ -42,6 +42,7 @@ interface FiltersPanelBodyProps {
   onRemoveRoutePoint: (id: string) => void;
   onClearRoute?: () => void;
   onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void;
+  onAddressClear?: (isStart: boolean) => void;
   userLocation?: { latitude: number; longitude: number } | null;
   onPlaceSelect?: (place: any) => void;
 }
@@ -69,6 +70,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   onRemoveRoutePoint,
   onClearRoute,
   onAddressSelect,
+  onAddressClear,
   userLocation,
   onPlaceSelect,
 }) => {
@@ -103,6 +105,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           onRemoveRoutePoint={onRemoveRoutePoint}
           onClearRoute={onClearRoute}
           onAddressSelect={onAddressSelect}
+          onAddressClear={onAddressClear}
         />
       )}
 

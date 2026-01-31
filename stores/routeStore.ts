@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { RoutePoint, RouteData, TransportMode } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
+import { RouteValidator } from '@/utils/routeValidator';
 
 interface RouteState {
   // Mode
@@ -82,6 +83,12 @@ export const useRouteStore = create<RouteState>()(
           timestamp: Date.now(),
         };
 
+        const validation = RouteValidator.canAddPoint(points, newPoint);
+        if (!validation.valid) {
+          set({ error: RouteValidator.getErrorMessage(validation), isBuilding: false });
+          return;
+        }
+
         set({ 
           points: [...get().points, newPoint],
           route: null,
@@ -103,6 +110,7 @@ export const useRouteStore = create<RouteState>()(
         set({ 
           points: updatedPoints,
           route: null,
+          error: null,
         });
       },
 

@@ -10,13 +10,20 @@ import { apiClient } from '@/src/api/client';
 import { Platform } from 'react-native';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
+const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
+const webOriginApi =
+    Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
+        ? `${window.location.origin}/api`
+        : '';
 
 const rawApiUrl: string =
     process.env.NODE_ENV === 'test'
         ? 'http://example.test/api'
-        : (Platform.OS === 'web' && !isLocalApi && typeof window !== 'undefined' && window.location?.origin
-            ? `${window.location.origin}/api`
-            : (process.env.EXPO_PUBLIC_API_URL || ''));
+        : (Platform.OS === 'web' && isE2E && webOriginApi
+            ? webOriginApi
+            : (Platform.OS === 'web' && !isLocalApi && webOriginApi
+                ? webOriginApi
+                : (process.env.EXPO_PUBLIC_API_URL || '')));
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }

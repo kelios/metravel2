@@ -28,6 +28,7 @@ interface FiltersPanelRouteSectionProps {
   onRemoveRoutePoint?: (id: string) => void;
   onClearRoute?: () => void;
   onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void;
+  onAddressClear?: (isStart: boolean) => void;
 }
 
 const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
@@ -42,6 +43,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
   onRemoveRoutePoint,
   onClearRoute,
   onAddressSelect,
+  onAddressClear,
 }) => {
   const routeStepState = {
     startSelected: !!routePoints[0],
@@ -107,15 +109,16 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
           startAddress={startAddress}
           endAddress={endAddress}
           onAddressSelect={onAddressSelect}
+          onAddressClear={onAddressClear}
           onClear={onClearRoute}
           compact
         />
       )}
 
-      {mode === 'route' && routePoints.length > 0 && (
+      {mode === 'route' && routePoints.length > 2 && (
         <View style={styles.routePointsList} testID="route-points-list">
-          {routePoints.map((p, index) => {
-            const label = String(p?.address || '').trim() || `Точка ${index + 1}`;
+          {routePoints.slice(1, -1).map((p, index) => {
+            const label = String(p?.address || '').trim() || `Точка ${index + 2}`;
             const canRemove = typeof onRemoveRoutePoint === 'function' && Boolean(p?.id);
             return (
               <View key={String(p?.id ?? index)} style={styles.routePointRow}>
