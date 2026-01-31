@@ -55,7 +55,9 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
             </Text>
           </View>
           <View>
-            <Text style={styles.userName}>{comment.user_name || 'Пользователь'}</Text>
+            <Text style={styles.userName}>
+              {comment.user_name || `Пользователь #${comment.user}`}
+            </Text>
             <Text style={styles.date}>{formattedDate}</Text>
           </View>
         </View>

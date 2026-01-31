@@ -121,40 +121,54 @@ export function useLikeComment() {
   return useMutation({
     mutationFn: (commentId: number) => commentsApi.likeComment(commentId),
     onMutate: async (commentId) => {
-      const commentQueryKey = commentKeys.comment(commentId);
-      await queryClient.cancelQueries({ queryKey: commentQueryKey });
+      // Cancel outgoing queries
+      await queryClient.cancelQueries({ queryKey: commentKeys.all });
 
-      const previousComment = queryClient.getQueryData<TravelComment>(commentQueryKey);
+      // Snapshot previous values
+      const previousData: any = {};
 
-      if (previousComment) {
-        queryClient.setQueryData<TravelComment>(commentQueryKey, {
-          ...previousComment,
-          likes_count: previousComment.likes_count + 1,
-          is_liked: true,
-        });
-      }
+      // Update all queries that contain this comment
+      queryClient.getQueryCache().findAll({ queryKey: commentKeys.all }).forEach((query) => {
+        const data = query.state.data;
+        if (!data) return;
 
-      return { previousComment };
-    },
-    onError: (err, commentId, context) => {
-      if (context?.previousComment) {
-        queryClient.setQueryData(
-          commentKeys.comment(commentId),
-          context.previousComment
-        );
-      }
-    },
-    onSettled: (data) => {
-      if (data) {
-        queryClient.invalidateQueries({
-          queryKey: commentKeys.comment(data.id),
-        });
-        if (data.thread) {
-          queryClient.invalidateQueries({
-            queryKey: commentKeys.comments(data.thread),
+        // Handle single comment query
+        if (Array.isArray(data)) {
+          const comments = data as TravelComment[];
+          const index = comments.findIndex((c) => c.id === commentId);
+          if (index !== -1) {
+            previousData[JSON.stringify(query.queryKey)] = data;
+            const newComments = [...comments];
+            newComments[index] = {
+              ...newComments[index],
+              likes_count: newComments[index].likes_count + 1,
+              is_liked: true,
+            };
+            queryClient.setQueryData(query.queryKey, newComments);
+          }
+        } else if ((data as TravelComment).id === commentId) {
+          previousData[JSON.stringify(query.queryKey)] = data;
+          queryClient.setQueryData(query.queryKey, {
+            ...(data as TravelComment),
+            likes_count: (data as TravelComment).likes_count + 1,
+            is_liked: true,
           });
         }
+      });
+
+      return { previousData };
+    },
+    onError: (err, commentId, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        Object.entries(context.previousData).forEach(([key, value]) => {
+          queryClient.setQueryData(JSON.parse(key), value);
+        });
       }
+    },
+    onSettled: () => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: commentKeys.all });
     },
   });
 }
@@ -165,33 +179,54 @@ export function useUnlikeComment() {
   return useMutation({
     mutationFn: (commentId: number) => commentsApi.unlikeComment(commentId),
     onMutate: async (commentId) => {
-      const commentQueryKey = commentKeys.comment(commentId);
-      await queryClient.cancelQueries({ queryKey: commentQueryKey });
+      // Cancel outgoing queries
+      await queryClient.cancelQueries({ queryKey: commentKeys.all });
 
-      const previousComment = queryClient.getQueryData<TravelComment>(commentQueryKey);
+      // Snapshot previous values
+      const previousData: any = {};
 
-      if (previousComment) {
-        queryClient.setQueryData<TravelComment>(commentQueryKey, {
-          ...previousComment,
-          likes_count: Math.max(0, previousComment.likes_count - 1),
-          is_liked: false,
-        });
-      }
+      // Update all queries that contain this comment
+      queryClient.getQueryCache().findAll({ queryKey: commentKeys.all }).forEach((query) => {
+        const data = query.state.data;
+        if (!data) return;
 
-      return { previousComment };
+        // Handle comments list
+        if (Array.isArray(data)) {
+          const comments = data as TravelComment[];
+          const index = comments.findIndex((c) => c.id === commentId);
+          if (index !== -1) {
+            previousData[JSON.stringify(query.queryKey)] = data;
+            const newComments = [...comments];
+            newComments[index] = {
+              ...newComments[index],
+              likes_count: Math.max(0, newComments[index].likes_count - 1),
+              is_liked: false,
+            };
+            queryClient.setQueryData(query.queryKey, newComments);
+          }
+        } else if ((data as TravelComment).id === commentId) {
+          previousData[JSON.stringify(query.queryKey)] = data;
+          queryClient.setQueryData(query.queryKey, {
+            ...(data as TravelComment),
+            likes_count: Math.max(0, (data as TravelComment).likes_count - 1),
+            is_liked: false,
+          });
+        }
+      });
+
+      return { previousData };
     },
     onError: (err, commentId, context) => {
-      if (context?.previousComment) {
-        queryClient.setQueryData(
-          commentKeys.comment(commentId),
-          context.previousComment
-        );
+      // Rollback on error
+      if (context?.previousData) {
+        Object.entries(context.previousData).forEach(([key, value]) => {
+          queryClient.setQueryData(JSON.parse(key), value);
+        });
       }
     },
-    onSettled: (_, __, commentId) => {
-      queryClient.invalidateQueries({
-        queryKey: commentKeys.comment(commentId),
-      });
+    onSettled: () => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: commentKeys.all });
     },
   });
 }
@@ -203,16 +238,10 @@ export function useReplyToComment() {
     mutationFn: ({ commentId, data }: { commentId: number; data: TravelCommentCreate }) =>
       commentsApi.replyToComment(commentId, data),
     onSuccess: (newComment) => {
-      if (newComment.thread) {
-        queryClient.invalidateQueries({
-          queryKey: commentKeys.comments(newComment.thread),
-        });
-      }
-      if (newComment.sub_thread) {
-        queryClient.invalidateQueries({
-          queryKey: commentKeys.comments(newComment.sub_thread),
-        });
-      }
+      // Invalidate all comment queries to show new reply immediately
+      queryClient.invalidateQueries({
+        queryKey: commentKeys.all,
+      });
     },
   });
 }

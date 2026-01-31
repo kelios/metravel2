@@ -157,7 +157,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
         </Text>
       </View>
 
-      {hasError && (
+      {hasError && comments.length === 0 && (
         <View style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>⚠️ Не удалось загрузить комментарии</Text>
           <Text style={styles.errorBannerSubtext}>

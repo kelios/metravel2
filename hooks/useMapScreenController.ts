@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
+import { FiltersProvider } from '@/contexts/FiltersContext';
 import type { MapUiApi } from '@/src/types/mapUi';
 
 // Модульные хуки для карты
@@ -155,9 +156,10 @@ export function useMapScreenController() {
     ]
   );
 
-  // Filters panel props
+  // Filters panel props (now using FiltersProvider pattern)
   const filtersPanelProps = useMemo(() => {
-    const props = {
+    // Context value for FiltersProvider
+    const contextValue = {
       filters: {
         categories: filters.categories
           .filter((c) => c && c.name)
@@ -198,9 +200,12 @@ export function useMapScreenController() {
       userLocation: coordinates,
       onPlaceSelect: buildRouteTo,
       onOpenList: selectTravelsTab,
+      hideTopControls: false,
+      hideFooterCta: false,
+      hideFooterReset: false,
     };
 
-    return { Component: FiltersPanel, props };
+    return { Component: FiltersProvider, contextValue, Panel: FiltersPanel };
   }, [
     filters,
     filterValues,

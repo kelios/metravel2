@@ -68,7 +68,7 @@ export function CommentForm({
       {replyTo && (
         <View style={styles.replyBanner}>
           <Text style={styles.replyText}>
-            Ответ на комментарий {replyTo.user_name || 'пользователя'}
+            Ответ на комментарий {replyTo.user_name || `пользователя #${replyTo.user}`}
           </Text>
         </View>
       )}

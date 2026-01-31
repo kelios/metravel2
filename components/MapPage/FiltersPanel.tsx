@@ -5,95 +5,68 @@ import FiltersPanelFooter from '@/components/MapPage/FiltersPanelFooter';
 import FiltersPanelHeader from '@/components/MapPage/FiltersPanelHeader';
 import FiltersPanelBody from '@/components/MapPage/FiltersPanelBody';
 import useFiltersPanelModel from '@/components/MapPage/useFiltersPanelModel';
-import type { RoutePoint } from '@/types/route';
-import type { LatLng } from '@/types/coordinates';
-import type { MapUiApi } from '@/src/types/mapUi';
+import { useFiltersContext } from '@/contexts/FiltersContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type CategoryOption = string | { id?: string | number; name?: string; value?: string };
-
+/**
+ * Simplified FiltersPanel - uses FiltersContext instead of props
+ *
+ * Props reduced from 30+ to just visibility flags.
+ * All state comes from FiltersContext.
+ *
+ * @example
+ * ```typescript
+ * <FiltersProvider filters={...} filterValue={...} ...>
+ *   <FiltersPanel hideTopControls={false} />
+ * </FiltersProvider>
+ * ```
+ */
 interface FiltersPanelProps {
-  filters: {
-    categories: CategoryOption[];
-    radius: { id: string; name: string }[];
-    address: string;
-  };
-  filterValue: {
-    categories: CategoryOption[];
-    radius: string;
-    address: string;
-  };
-  onFilterChange: (field: string, value: any) => void;
-  resetFilters: () => void;
-  travelsData: { categoryName?: string }[]; // Все данные для подсчета категорий
-  filteredTravelsData?: { categoryName?: string }[]; // Отфильтрованные данные для отображения количества
-  isMobile: boolean;
-  closeMenu: () => void;
-  mode: 'radius' | 'route';
-  setMode: (m: 'radius' | 'route') => void;
-  transportMode: 'car' | 'bike' | 'foot';
-  setTransportMode: (m: 'car' | 'bike' | 'foot') => void;
-  startAddress: string;
-  endAddress: string;
-  routeDistance: number | null;
-  routePoints?: RoutePoint[];
-  onRemoveRoutePoint?: (id: string) => void;
-  onClearRoute?: () => void;
-  swapStartEnd?: () => void;
-  routeHintDismissed?: boolean;
-  onRouteHintDismiss?: () => void;
-  onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void;
-  onAddressClear?: (isStart: boolean) => void;
-  routingLoading?: boolean;
-  routingError?: string | boolean | null;
-  onBuildRoute?: () => void;
-  mapUiApi?: MapUiApi | null;
-  userLocation?: { latitude: number; longitude: number } | null;
-  onPlaceSelect?: (place: any) => void;
-  onOpenList?: () => void;
   hideTopControls?: boolean;
   hideFooterCta?: boolean;
   hideFooterReset?: boolean;
 }
 
 const FiltersPanel: React.FC<FiltersPanelProps> = ({
-                                                     filters,
-                                                     filterValue,
-                                                     onFilterChange,
-                                                     resetFilters,
-                                                     travelsData,
-                                                     filteredTravelsData, // Отфильтрованные данные для отображения
-                                                     isMobile,
-                                                     closeMenu,
-                                                     mode,
-                                                     setMode,
-                                                     transportMode,
-                                                     setTransportMode,
-                                                     startAddress,
-                                                     endAddress,
-                                                     routeDistance,
-                                                     routePoints = [],
-                                                     onRemoveRoutePoint,
-                                                     onClearRoute,
-                                                     swapStartEnd: _swapStartEnd,
-                                                     routeHintDismissed = false,
-                                                     onRouteHintDismiss,
-                                                     onAddressSelect,
-                                                     onAddressClear,
-                                                     routingLoading,
-                                                     routingError,
-                                                     onBuildRoute,
-                                                     mapUiApi,
-                                                     userLocation,
-                                                     onPlaceSelect,
-                                                     onOpenList,
-                                                     hideTopControls = false,
-                                                     hideFooterCta = false,
-                                                     hideFooterReset = false,
+  hideTopControls = false,
+  hideFooterCta = false,
+  hideFooterReset = false,
 }) => {
+  // Get all state from context (instead of props)
+  const {
+    filters,
+    filterValue,
+    onFilterChange,
+    resetFilters,
+    travelsData,
+    filteredTravelsData,
+    isMobile,
+    closeMenu,
+    mode,
+    setMode,
+    transportMode,
+    setTransportMode,
+    startAddress,
+    endAddress,
+    routeDistance,
+    routePoints,
+    onRemoveRoutePoint,
+    onClearRoute,
+    routeHintDismissed,
+    onRouteHintDismiss,
+    onAddressSelect,
+    onAddressClear,
+    routingLoading,
+    routingError,
+    onBuildRoute,
+    mapUiApi,
+    userLocation,
+    onPlaceSelect,
+    onOpenList,
+  } = useFiltersContext();
   const {
     colors,
     styles,
