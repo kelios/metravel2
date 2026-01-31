@@ -2,11 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
 import * as Location from 'expo-location';
 
-// Leaflet/react-leaflet через Metro (без CDN)
-import Leaflet from 'leaflet';
-import * as ReactLeaflet from 'react-leaflet';
-import '@/src/utils/leafletFix';
-
 import RoutingMachine from './RoutingMachine';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -21,11 +16,16 @@ import { useMapCleanup } from '@/components/MapPage/Map/useMapCleanup';
 import { useLeafletIcons } from './Map/useLeafletIcons';
 import { useMapInstance } from './Map/useMapInstance';
 import { useMapApi } from './Map/useMapApi';
-import { useClustering } from './Map/useClustering';
 import { MapLogicComponent } from './Map/MapLogicComponent';
 import MapMarkers from './Map/MapMarkers';
 import ClusterLayer from './Map/ClusterLayer';
 import MapControls from './Map/MapControls';
+import { MapLayers } from './Map/MapLayers';
+import { RouteMarkersLayer } from './Map/RouteMarkersLayer';
+
+// New optimized hooks
+import { useLeafletLoader } from '@/hooks/useLeafletLoader';
+import { useMapMarkers } from '@/hooks/useMapMarkers';
 
 type ReactLeafletNS = typeof import('react-leaflet');
 
@@ -51,23 +51,20 @@ const MapPageComponent: React.FC<Props> = (props) => {
     radius,
   } = props;
 
-  // State
-  const [L, setL] = useState<any>(null);
-  const [rl, setRl] = useState<any>(null);
-  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
-  const [errors, setErrors] = useState({
-    location: false,
-    loadingModules: false,
-    routing: false,
+  // Leaflet loader (replaces manual loading logic)
+  const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } = useLeafletLoader({
+    enabled: Platform.OS === 'web',
+    useIdleCallback: true,
   });
-  const [loading, setLoading] = useState(false);
+
+  // State
+  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [showInitialLoader, setShowInitialLoader] = useState(true);
   const [_routingLoading, setRoutingLoading] = useState(false);
   const [disableFitBounds, _setDisableFitBounds] = useState(false);
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
   const [mapInstance, setMapInstance] = useState<any>(null);
-  const [shouldLoadLeaflet, setShouldLoadLeaflet] = useState<boolean>(isTestEnv);
 
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
 
@@ -103,38 +100,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     };
   }, [coordinates]);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (isTestEnv) return;
-    if (shouldLoadLeaflet) return;
-
-    let cancelled = false;
-    let idleHandle: any = null;
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-
-    const enable = () => {
-      if (cancelled) return;
-      setShouldLoadLeaflet(true);
-    };
-
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleHandle = (window as any).requestIdleCallback(enable, { timeout: 1200 });
-    } else {
-      timeoutHandle = setTimeout(enable, 600);
-    }
-
-    return () => {
-      cancelled = true;
-      try {
-        if (idleHandle && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
-          (window as any).cancelIdleCallback(idleHandle);
-        }
-      } catch {
-        // noop
-      }
-      if (timeoutHandle) clearTimeout(timeoutHandle);
-    };
-  }, [shouldLoadLeaflet]);
 
   // Refs
   const mapRef = useRef<any>(null);
@@ -161,7 +126,25 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [travel?.data]
   );
 
-  const travelMarkerOpacity = mode === 'route' ? 0.45 : 1;
+  // Convert coordinates to LatLng format for hooks (with safety checks)
+  const coordinatesLatLng = useMemo(() => ({
+    lat: safeCoordinates.latitude,
+    lng: safeCoordinates.longitude,
+  }), [safeCoordinates.latitude, safeCoordinates.longitude]);
+
+  // Use new markers hook
+  const {
+    shouldRenderClusters,
+    clusters,
+    markers,
+    markerOpacity: travelMarkerOpacity,
+  } = useMapMarkers({
+    travelData,
+    mapZoom,
+    expandedClusterKey: expandedCluster?.key,
+    mode,
+    hintCenter: coordinatesLatLng,
+  });
 
   // Radius calculation
   const radiusInMeters = useMemo(() => {
@@ -172,15 +155,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return radiusKm * 1000;
   }, [mode, radius]);
 
-  // Convert coordinates to LatLng format for hooks (with safety checks)
-  const coordinatesLatLng = useMemo(() => ({
-    lat: safeCoordinates.latitude,
-    lng: safeCoordinates.longitude,
-  }), [safeCoordinates.latitude, safeCoordinates.longitude]);
-
+  // OSM tile preconnect for better performance
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    if (!shouldLoadLeaflet) return;
+    if (!leafletReady) return;
     if (typeof document === 'undefined') return;
 
     const ENABLE_OSM_TILE_PRELOAD = false;
@@ -255,7 +233,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     } catch {
       // noop
     }
-  }, [safeCoordinates.latitude, safeCoordinates.longitude, safeCoordinates.zoom, shouldLoadLeaflet]);
+  }, [safeCoordinates.latitude, safeCoordinates.longitude, safeCoordinates.zoom, leafletReady]);
 
   const userLocationLatLng = useMemo(() => {
     if (!userLocation) return null;
@@ -281,6 +259,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
       // noop
     }
   }, [mapZoom]);
+
+  // Routing error handler (stub for RoutingMachine)
+  const handleRoutingError = useCallback((err: any) => {
+    console.error('[Map] Routing error:', err);
+  }, []);
 
   // Custom hooks
   const customIcons = useLeafletIcons(L);
@@ -308,23 +291,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     leafletControlRef,
   });
 
-  // Load Leaflet
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!shouldLoadLeaflet) return;
-
-    // Через Metro модули доступны синхронно.
-    setLoading(true);
-    try {
-      setL(Leaflet);
-      setRl(ReactLeaflet);
-    } catch (err) {
-      console.error('[Map] Failed to init Leaflet:', err);
-      setErrors((prev) => ({ ...prev, loadingModules: true }));
-    } finally {
-      setLoading(false);
-    }
-  }, [shouldLoadLeaflet]);
 
   // Get user location
   useEffect(() => {
@@ -344,7 +310,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status !== 'granted' || cancelled) {
-            setErrors((prev) => ({ ...prev, location: true }));
+            console.warn('[Map] Location permission not granted');
             return;
           }
 
@@ -356,13 +322,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
           if (isValidCoordinate(lat, lng)) {
             setUserLocation({ latitude: lat, longitude: lng });
           } else {
-            setErrors((prev) => ({ ...prev, location: true }));
+            console.warn('[Map] Invalid location coordinates:', { lat, lng });
           }
         } catch (err) {
           console.error('[Map] Location error:', err);
-          if (!cancelled) {
-            setErrors((prev) => ({ ...prev, location: true }));
-          }
         }
       })();
     };
@@ -640,14 +603,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return coordinatesLatLng;
   }, [mode, circleCenterLatLng, coordinatesLatLng]);
 
-  // Clustering (needs hint center and validated circle center)
-  const { shouldRenderClusters: shouldRenderClustersBase, clusters } = useClustering(
-    travelData,
-    mapZoom,
-    hintCenterLatLng
-  );
-  const shouldRenderClusters = shouldRenderClustersBase && Array.isArray(clusters) && clusters.length > 0;
-
   const hasWarnedInvalidCircleRef = useRef(false);
   useEffect(() => {
     if (hasWarnedInvalidCircleRef.current) return;
@@ -689,17 +644,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return travelData.length === 0;
   }, [mode, routePoints, travelData.length]);
 
-  const canRenderMap = !!(L && rl);
+  const canRenderMap = leafletReady && !!(L && rl);
   const shouldShowLoadingOverlay = Platform.OS === 'web'
-    ? showInitialLoader || !shouldLoadLeaflet || loading || !canRenderMap
-    : showInitialLoader || loading || !canRenderMap;
+    ? showInitialLoader || leafletLoading || !canRenderMap
+    : showInitialLoader || leafletLoading || !canRenderMap;
 
-  const loaderMessage = errors.loadingModules
+  const loaderMessage = leafletError
     ? 'Не удалось загрузить модули карты'
     : 'Загрузка карты...';
 
   const rlSafe = (rl ?? {}) as ReactLeafletNS;
-  const { MapContainer, Marker, Popup, Circle, useMap, useMapEvents } = rlSafe;
+  const { MapContainer, Marker, Popup, Circle, TileLayer, useMap, useMapEvents } = rlSafe;
 
   const hasValidReactLeafletHooks = !!(
     useMap && 
@@ -915,18 +870,20 @@ const MapPageComponent: React.FC<Props> = (props) => {
           key={mapInstanceKeyRef.current}
           zoomControl={false}
         >
-          {/* Base tile layer */}
-          {(() => {
-            const TileLayer = (rl as any)?.TileLayer
-            if (!TileLayer) return null
-            return (
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap contributors"
-              />
-            )
-          })()}
-          
+          {/* Map layers (tiles, circle, user location) */}
+          <MapLayers
+            TileLayer={TileLayer}
+            Circle={Circle}
+            Marker={Marker}
+            Popup={Popup}
+            mode={mode}
+            circleCenter={circleCenterLatLng}
+            radiusInMeters={radiusInMeters}
+            userLocation={userLocationLatLng}
+            userLocationIcon={customIcons?.userLocation}
+            mapInstance={mapInstance}
+          />
+
           <MapLogicComponent
             mapClickHandler={handleMapClick}
             mode={mode}
@@ -953,47 +910,16 @@ const MapPageComponent: React.FC<Props> = (props) => {
             hintCenter={hintCenterLatLng}
           />
 
-          {/* Radius circle - with strict validation */}
-          {(() => {
-            // Don't render Circle until map is ready
-            if (!mapInstance) return null;
-
-            const centerLat = circleCenter?.[0];
-            const centerLng = circleCenter?.[1];
-            const hasValidCenter =
-              centerLat != null &&
-              centerLng != null &&
-              Number.isFinite(centerLat) &&
-              Number.isFinite(centerLng) &&
-              centerLat >= -90 &&
-              centerLat <= 90 &&
-              centerLng >= -180 &&
-              centerLng <= 180;
-
-            const canRenderCircle =
-              mode === 'radius' &&
-              radiusInMeters != null &&
-              Number.isFinite(radiusInMeters) &&
-              radiusInMeters > 0 &&
-              hasValidCenter;
-
-            if (!canRenderCircle) return null;
-
-            return (
-              <Circle
-                key={`circle-${centerLat}-${centerLng}-${radiusInMeters}`}
-                center={[centerLat, centerLng]}
-                radius={radiusInMeters}
-                pathOptions={{
-                  color: colors.primary,
-                  fillColor: colors.primary,
-                  fillOpacity: 0.08,
-                  weight: 2,
-                  dashArray: '6 6',
-                }}
-              />
-            );
-          })()}
+          {/* Route markers */}
+          <RouteMarkersLayer
+            Marker={Marker}
+            Popup={Popup}
+            routePoints={routePoints}
+            icons={{
+              start: customIcons?.start,
+              end: customIcons?.end,
+            }}
+          />
 
           {/* Route markers */}
           {routePoints.length >= 1 &&
@@ -1082,7 +1008,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
                 routePoints={routePoints}
                 transportMode={transportMode}
                 setRoutingLoading={setRoutingLoading}
-                setErrors={setErrors}
+                setErrors={handleRoutingError}
                 setRouteDistance={setRouteDistance}
                 setFullRouteCoords={setFullRouteCoords}
                 ORS_API_KEY={ORS_API_KEY}
@@ -1098,9 +1024,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
           )}
 
           {/* Travel markers (not clustered) */}
-          {customIcons?.meTravel && travelData.length > 0 && !shouldRenderClusters && PopupComponent && (
+          {customIcons?.meTravel && markers.length > 0 && !shouldRenderClusters && PopupComponent && (
             <MapMarkers
-              points={travelData}
+              points={markers}
               icon={customIcons.meTravel}
               Marker={Marker}
               Popup={Popup}
@@ -1124,7 +1050,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           )}
 
           {/* Travel markers (clustered) */}
-          {customIcons?.meTravel && travelData.length > 0 && shouldRenderClusters && PopupComponent && (
+          {customIcons?.meTravel && markers.length > 0 && shouldRenderClusters && PopupComponent && (
             <ClusterLayer
               clusters={clusters as any}
               Marker={Marker}

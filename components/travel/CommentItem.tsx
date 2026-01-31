@@ -1,12 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
-
-const Lucide = Platform.OS === 'web' ? require('lucide-react') : require('lucide-react-native');
-const Heart = (Lucide as any).Heart as any;
-const MessageCircle = (Lucide as any).MessageCircle as any;
-const Edit2 = (Lucide as any).Edit2 as any;
-const Trash2 = (Lucide as any).Trash2 as any;
-const MoreVertical = (Lucide as any).MoreVertical as any;
+import { Feather } from '@expo/vector-icons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
 import { useLikeComment, useUnlikeComment, useDeleteComment } from '../../hooks/useComments';
@@ -70,7 +65,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
             style={styles.moreButton}
             accessibilityLabel="Действия с комментарием"
           >
-            <MoreVertical size={20} color="#666" />
+            <Feather name="more-vertical" size={20} color={DESIGN_TOKENS.colors.textMuted} />
           </Pressable>
         )}
       </View>
@@ -88,7 +83,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
               style={styles.actionButton}
               accessibilityLabel="Редактировать комментарий"
             >
-              <Edit2 size={16} color="#007AFF" />
+              <Feather name="edit-2" size={16} color={DESIGN_TOKENS.colors.primary} />
               <Text style={styles.actionText}>Редактировать</Text>
             </Pressable>
           )}
@@ -100,10 +95,10 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
               accessibilityLabel="Удалить комментарий"
             >
               {deleteComment.isPending ? (
-                <ActivityIndicator size="small" color="#FF3B30" />
+                <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.danger} />
               ) : (
                 <>
-                  <Trash2 size={16} color="#FF3B30" />
+                  <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />
                   <Text style={[styles.actionText, styles.deleteText]}>
                     {isSuperuser && !isAuthor ? 'Удалить (Админ)' : 'Удалить'}
                   </Text>
@@ -122,10 +117,10 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
             disabled={likeComment.isPending || unlikeComment.isPending}
             accessibilityLabel={isLiked ? 'Убрать лайк' : 'Поставить лайк'}
           >
-            <Heart
+            <Feather
+              name="heart"
               size={18}
-              color={isLiked ? '#FF3B30' : '#666'}
-              fill={isLiked ? '#FF3B30' : 'none'}
+              color={isLiked ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.textMuted}
             />
             {comment.likes_count > 0 && (
               <Text style={[styles.footerText, isLiked && styles.likedText]}>
@@ -137,7 +132,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
 
         {!isAuthenticated && comment.likes_count > 0 && (
           <View style={styles.footerButton}>
-            <Heart size={18} color="#666" fill="none" />
+            <Feather name="heart" size={18} color={DESIGN_TOKENS.colors.textMuted} />
             <Text style={styles.footerText}>{comment.likes_count}</Text>
           </View>
         )}
@@ -148,7 +143,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
             style={styles.footerButton}
             accessibilityLabel="Ответить на комментарий"
           >
-            <MessageCircle size={18} color="#666" />
+            <Feather name="message-circle" size={18} color={DESIGN_TOKENS.colors.textMuted} />
             <Text style={styles.footerText}>Ответить</Text>
           </Pressable>
         )}
@@ -159,25 +154,23 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    padding: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: DESIGN_TOKENS.shadows.light,
+    } : DESIGN_TOKENS.shadowsNative.light),
   },
   nested: {
-    marginLeft: 24,
-    backgroundColor: '#f8f9fa',
+    marginLeft: DESIGN_TOKENS.spacing.lg,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   userInfo: {
     flexDirection: 'row',
@@ -187,77 +180,77 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#007AFF',
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: DESIGN_TOKENS.spacing.sm,
   },
   avatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.textOnPrimary,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
   userName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+    color: DESIGN_TOKENS.colors.text,
     marginBottom: 2,
   },
   date: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm - 1,
+    color: DESIGN_TOKENS.colors.textMuted,
   },
   moreButton: {
-    padding: 4,
+    padding: DESIGN_TOKENS.spacing.xxs,
   },
   text: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
     lineHeight: 22,
-    color: '#000',
-    marginBottom: 12,
+    color: DESIGN_TOKENS.colors.text,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   actions: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-    paddingTop: 8,
+    gap: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+    paddingTop: DESIGN_TOKENS.spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: '#e5e5e5',
+    borderTopColor: DESIGN_TOKENS.colors.border,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: 6,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   actionText: {
-    fontSize: 14,
-    color: '#007AFF',
-    fontWeight: '500',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.primary,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   deleteText: {
-    color: '#FF3B30',
+    color: DESIGN_TOKENS.colors.danger,
   },
   footer: {
     flexDirection: 'row',
-    gap: 16,
+    gap: DESIGN_TOKENS.spacing.md,
   },
   footerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 4,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs,
   },
   footerText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.textMuted,
   },
   likedText: {
-    color: '#FF3B30',
-    fontWeight: '600',
+    color: DESIGN_TOKENS.colors.danger,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
 });

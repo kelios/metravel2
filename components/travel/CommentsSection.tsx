@@ -8,9 +8,8 @@ import {
   RefreshControl,
   Platform,
 } from 'react-native';
-
-const Lucide = Platform.OS === 'web' ? require('lucide-react') : require('lucide-react-native');
-const MessageCircle = (Lucide as any).MessageCircle as any;
+import { Feather } from '@expo/vector-icons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { CommentItem } from './CommentItem';
 import { CommentForm } from './CommentForm';
 import {
@@ -138,7 +137,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   if (isLoading && !isRefreshing) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
       </View>
     );
   }
@@ -152,7 +151,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   return (
     <View style={styles.container} nativeID="comments">
       <View style={styles.header}>
-        <MessageCircle size={24} color="#000" />
+        <Feather name="message-circle" size={24} color={DESIGN_TOKENS.colors.text} />
         <Text style={styles.title}>
           Комментарии {comments.length > 0 && `(${comments.length})`}
         </Text>
@@ -193,13 +192,13 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
       >
         {hasError && topLevel.length === 0 ? (
           <View style={styles.emptyState}>
-            <MessageCircle size={48} color="#ccc" />
+            <Feather name="message-circle" size={48} color={DESIGN_TOKENS.colors.disabled} />
             <Text style={styles.emptyText}>Комментарии недоступны</Text>
             <Text style={styles.emptySubtext}>Попробуйте обновить страницу</Text>
           </View>
         ) : topLevel.length === 0 ? (
           <View style={styles.emptyState}>
-            <MessageCircle size={48} color="#ccc" />
+            <Feather name="message-circle" size={48} color={DESIGN_TOKENS.colors.disabled} />
             <Text style={styles.emptyText}>Пока нет комментариев</Text>
             <Text style={styles.emptySubtext}>Будьте первым, кто оставит комментарий!</Text>
           </View>
@@ -232,81 +231,81 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    padding: 16,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    padding: DESIGN_TOKENS.spacing.md,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: DESIGN_TOKENS.spacing.xl,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.md,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000',
+    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontWeight: DESIGN_TOKENS.typography.weights.bold,
+    color: DESIGN_TOKENS.colors.text,
   },
   loginPrompt: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    padding: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
     alignItems: 'center',
   },
   loginText: {
-    fontSize: 15,
-    color: '#666',
+    fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
+    color: DESIGN_TOKENS.colors.textMuted,
   },
   commentsList: {
     flex: 1,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 48,
+    paddingVertical: DESIGN_TOKENS.spacing.xxl,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#666',
-    marginTop: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.lg - 2,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+    color: DESIGN_TOKENS.colors.textMuted,
+    marginTop: DESIGN_TOKENS.spacing.md,
   },
   emptySubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 8,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.textSubtle,
+    marginTop: DESIGN_TOKENS.spacing.xs,
   },
   errorText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 16,
+    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    color: DESIGN_TOKENS.colors.textMuted,
+    marginTop: DESIGN_TOKENS.spacing.md,
   },
   errorSubtext: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 8,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.textSubtle,
+    marginTop: DESIGN_TOKENS.spacing.xs,
   },
   errorBanner: {
-    backgroundColor: '#fff3cd',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: DESIGN_TOKENS.colors.warningSoft,
+    borderRadius: DESIGN_TOKENS.radii.sm - 4,
+    padding: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.md,
     borderLeftWidth: 4,
-    borderLeftColor: '#ffc107',
+    borderLeftColor: DESIGN_TOKENS.colors.warning,
   },
   errorBannerText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#856404',
-    marginBottom: 4,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+    color: DESIGN_TOKENS.colors.warningDark,
+    marginBottom: DESIGN_TOKENS.spacing.xxs,
   },
   errorBannerSubtext: {
-    fontSize: 12,
-    color: '#856404',
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    color: DESIGN_TOKENS.colors.warningDark,
   },
 });

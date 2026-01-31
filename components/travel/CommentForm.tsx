@@ -8,10 +8,8 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-
-const Lucide = Platform.OS === 'web' ? require('lucide-react') : require('lucide-react-native');
-const Send = (Lucide as any).Send as any;
-const X = (Lucide as any).X as any;
+import { Feather } from '@expo/vector-icons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { TravelComment } from '../../types/comments';
 
 interface CommentFormProps {
@@ -97,22 +95,23 @@ export function CommentForm({
             <Pressable
               onPress={handleCancel}
               style={styles.cancelButton}
-              disabled={isSubmitting}
               accessibilityLabel="Отменить"
+              accessibilityRole="button"
             >
-              <X size={20} color="#666" />
+              <Feather name="x" size={20} color={DESIGN_TOKENS.colors.textMuted} />
             </Pressable>
           )}
           <Pressable
             onPress={handleSubmit}
-            style={[styles.submitButton, !text.trim() && styles.submitButtonDisabled]}
             disabled={!text.trim() || isSubmitting}
+            style={[styles.sendButton, (!text.trim() || isSubmitting) && styles.sendButtonDisabled]}
             accessibilityLabel={editComment ? 'Сохранить изменения' : 'Отправить комментарий'}
+            accessibilityRole="button"
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.textOnPrimary} />
             ) : (
-              <Send size={20} color="#fff" />
+              <Feather name="send" size={20} color={DESIGN_TOKENS.colors.textOnPrimary} />
             )}
           </Pressable>
         </View>
@@ -128,37 +127,35 @@ export function CommentForm({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    padding: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: DESIGN_TOKENS.shadows.light,
+    } : DESIGN_TOKENS.shadowsNative.light),
   },
   replyBanner: {
-    backgroundColor: '#e3f2fd',
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 8,
+    backgroundColor: DESIGN_TOKENS.colors.infoSoft,
+    padding: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.sm - 6,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   replyText: {
-    fontSize: 13,
-    color: '#1976d2',
-    fontWeight: '500',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm - 1,
+    color: DESIGN_TOKENS.colors.info,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   editBanner: {
-    backgroundColor: '#fff3e0',
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 8,
+    backgroundColor: DESIGN_TOKENS.colors.warningSoft,
+    padding: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.sm - 6,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   editText: {
-    fontSize: 13,
-    color: '#f57c00',
-    fontWeight: '500',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm - 1,
+    color: DESIGN_TOKENS.colors.warning,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -169,43 +166,43 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 40,
     maxHeight: 120,
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
     lineHeight: 20,
-    color: '#000',
+    color: DESIGN_TOKENS.colors.text,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 20,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: DESIGN_TOKENS.colors.border,
   },
   actions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   cancelButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f8f9fa',
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  submitButton: {
+  sendButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#007AFF',
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: DESIGN_TOKENS.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  submitButtonDisabled: {
-    backgroundColor: '#ccc',
+  sendButtonDisabled: {
+    backgroundColor: DESIGN_TOKENS.colors.disabled,
   },
   charCount: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    color: DESIGN_TOKENS.colors.textSubtle,
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: DESIGN_TOKENS.spacing.xxs,
   },
 });

@@ -60,12 +60,25 @@ export function useCreateComment() {
 
   return useMutation({
     mutationFn: (data: TravelCommentCreate) => commentsApi.createComment(data),
-    onSuccess: (newComment) => {
+    onSuccess: (newComment, variables) => {
+      // Invalidate the thread queries to fetch the newly created thread
+      if (variables.travel_id) {
+        queryClient.invalidateQueries({
+          queryKey: commentKeys.mainThread(variables.travel_id),
+        });
+      }
+      
+      // Invalidate the comments list for this thread
       if (newComment.thread) {
         queryClient.invalidateQueries({
           queryKey: commentKeys.comments(newComment.thread),
         });
       }
+      
+      // Invalidate all comment queries to be safe
+      queryClient.invalidateQueries({
+        queryKey: commentKeys.all,
+      });
     },
   });
 }

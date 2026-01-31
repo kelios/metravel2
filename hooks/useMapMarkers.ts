@@ -95,7 +95,7 @@ export function useMapMarkers(options: UseMapMarkersOptions): UseMapMarkersResul
   const {
     travelData,
     mapZoom,
-    expandedClusterKey = null,
+    expandedClusterKey: _expandedClusterKey = null,
     mode = 'radius',
     hintCenter,
   } = options;
