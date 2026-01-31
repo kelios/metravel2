@@ -20,6 +20,10 @@ export function useMainThread(travelId: number) {
     queryKey: commentKeys.mainThread(travelId),
     queryFn: () => commentsApi.getMainThread(travelId),
     enabled: !!travelId && travelId > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -36,6 +40,10 @@ export function useComments(threadId: number) {
     queryKey: commentKeys.comments(threadId),
     queryFn: () => commentsApi.getComments(threadId),
     enabled: !!threadId && threadId > 0,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1,
+    refetchOnWindowFocus: false,
   });
 }
 

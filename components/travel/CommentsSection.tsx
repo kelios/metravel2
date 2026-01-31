@@ -82,12 +82,14 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
           { travel_id: travelId, text },
           {
             onSuccess: () => {
+              // Refetch comments after creating a new one
+              refetch();
             },
           }
         );
       }
     },
-    [travelId, replyTo, editComment, createComment, updateComment, replyToComment]
+    [travelId, replyTo, editComment, createComment, updateComment, replyToComment, refetch]
   );
 
   const handleReply = useCallback((comment: TravelComment) => {
@@ -141,21 +143,10 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     );
   }
 
-  if (error) {
-    console.error('Comments error:', error);
-    return (
-      <View style={styles.container} nativeID="comments">
-        <View style={styles.header}>
-          <MessageCircle size={24} color="#000" />
-          <Text style={styles.title}>Комментарии</Text>
-        </View>
-        <View style={styles.centerContainer}>
-          <MessageCircle size={48} color="#ccc" />
-          <Text style={styles.errorText}>Не удалось загрузить комментарии</Text>
-          <Text style={styles.errorSubtext}>{error?.message || 'Попробуйте позже'}</Text>
-        </View>
-      </View>
-    );
+  // Show error but still allow creating comments
+  const hasError = !!error;
+  if (hasError) {
+    console.error('Comments error:', { threadError, commentsError, mainThread, travelId });
   }
 
   return (
@@ -166,6 +157,15 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
           Комментарии {comments.length > 0 && `(${comments.length})`}
         </Text>
       </View>
+
+      {hasError && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>⚠️ Не удалось загрузить комментарии</Text>
+          <Text style={styles.errorBannerSubtext}>
+            {threadError?.message || commentsError?.message || 'Проверьте подключение'}
+          </Text>
+        </View>
+      )}
 
       {isAuthenticated && (
         <CommentForm
@@ -191,7 +191,13 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
         }
       >
-        {topLevel.length === 0 ? (
+        {hasError && topLevel.length === 0 ? (
+          <View style={styles.emptyState}>
+            <MessageCircle size={48} color="#ccc" />
+            <Text style={styles.emptyText}>Комментарии недоступны</Text>
+            <Text style={styles.emptySubtext}>Попробуйте обновить страницу</Text>
+          </View>
+        ) : topLevel.length === 0 ? (
           <View style={styles.emptyState}>
             <MessageCircle size={48} color="#ccc" />
             <Text style={styles.emptyText}>Пока нет комментариев</Text>
@@ -284,5 +290,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 8,
+  },
+  errorBanner: {
+    backgroundColor: '#fff3cd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ffc107',
+  },
+  errorBannerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#856404',
+    marginBottom: 4,
+  },
+  errorBannerSubtext: {
+    fontSize: 12,
+    color: '#856404',
   },
 });
