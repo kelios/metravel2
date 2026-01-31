@@ -156,15 +156,6 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
         </Text>
       </View>
 
-      {hasError && comments.length === 0 && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>⚠️ Не удалось загрузить комментарии</Text>
-          <Text style={styles.errorBannerSubtext}>
-            {threadError?.message || commentsError?.message || 'Проверьте подключение'}
-          </Text>
-        </View>
-      )}
-
       {isAuthenticated && (
         <CommentForm
           onSubmit={handleSubmitComment}
@@ -288,23 +279,5 @@ const styles = StyleSheet.create({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: DESIGN_TOKENS.colors.textSubtle,
     marginTop: DESIGN_TOKENS.spacing.xs,
-  },
-  errorBanner: {
-    backgroundColor: DESIGN_TOKENS.colors.warningSoft,
-    borderRadius: DESIGN_TOKENS.radii.sm - 4,
-    padding: DESIGN_TOKENS.spacing.sm,
-    marginBottom: DESIGN_TOKENS.spacing.md,
-    borderLeftWidth: 4,
-    borderLeftColor: DESIGN_TOKENS.colors.warning,
-  },
-  errorBannerText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
-    color: DESIGN_TOKENS.colors.warningDark,
-    marginBottom: DESIGN_TOKENS.spacing.xxs,
-  },
-  errorBannerSubtext: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: DESIGN_TOKENS.colors.warningDark,
   },
 });

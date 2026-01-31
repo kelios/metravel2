@@ -62,6 +62,16 @@ export const TravelDeferredSections: React.FC<{
         scrollRef={scrollRef}
       />
 
+      {canRenderHeavy && travel?.id && (
+        <View 
+          ref={anchors.comments} 
+          collapsable={false}
+          {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
+        >
+          <CommentsSection travelId={travel.id} />
+        </View>
+      )}
+
       <TravelDetailsMapSection
         travel={travel}
         anchors={anchors}
@@ -76,16 +86,6 @@ export const TravelDeferredSections: React.FC<{
         viewportHeight={viewportHeight}
         canRenderHeavy={canRenderHeavy}
       />
-
-      {canRenderHeavy && travel?.id && (
-        <View 
-          ref={anchors.comments} 
-          collapsable={false}
-          {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
-        >
-          <CommentsSection travelId={travel.id} />
-        </View>
-      )}
 
       <TravelEngagementSection travel={travel} isMobile={isMobile} />
     </>
