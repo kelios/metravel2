@@ -9,7 +9,6 @@ const distIndex = path.join(rootDir, 'dist', 'index.html');
 const distJsDir = path.join(rootDir, 'dist', '_expo', 'static', 'js', 'web');
 const envPath = path.join(rootDir, '.env');
 const e2ePublicFlagLine = 'EXPO_PUBLIC_E2E=true';
-const e2eLocalApiFlagLine = 'EXPO_PUBLIC_IS_LOCAL_API=false';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -73,17 +72,11 @@ async function main() {
   // Ensure EXPO_PUBLIC_E2E is present for the Expo env loader (it only prints/exports vars from .env files).
   // We patch .env temporarily for the build and restore it afterwards.
   let originalEnvFile = null;
-  let originalApiUrl = null;
   try {
     if (fs.existsSync(envPath)) {
       originalEnvFile = fs.readFileSync(envPath, 'utf8');
     } else {
       originalEnvFile = '';
-    }
-
-    const apiMatch = originalEnvFile.match(/^\s*EXPO_PUBLIC_API_URL\s*=\s*(.+)\s*$/m);
-    if (apiMatch && apiMatch[1]) {
-      originalApiUrl = apiMatch[1].replace(/^['"]|['"]$/g, '').trim();
     }
 
     let envLines = originalEnvFile.split(/\r?\n/);

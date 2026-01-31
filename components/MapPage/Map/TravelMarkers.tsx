@@ -11,6 +11,7 @@ interface TravelMarkersProps {
   PopupContent: React.ComponentType<{ point: Point }>;
   markerOpacity?: number;
   renderer?: any;
+  hintCenter?: { lat: number; lng: number } | null;
 }
 
 const TravelMarkers: React.FC<TravelMarkersProps> = ({
@@ -20,7 +21,8 @@ const TravelMarkers: React.FC<TravelMarkersProps> = ({
   Popup,
   PopupContent,
   markerOpacity = 1,
-  renderer
+  renderer,
+  hintCenter,
 }) => {
   return (
     <>
@@ -30,7 +32,7 @@ const TravelMarkers: React.FC<TravelMarkersProps> = ({
           return null;
         }
 
-        const coords = strToLatLng(point.coord);
+        const coords = strToLatLng(point.coord, hintCenter);
         if (!coords || !point.coord) {
           return null;
         }
@@ -67,6 +69,10 @@ export default React.memo(TravelMarkers, (prev, next) => {
   if (prev.icon !== next.icon || prev.Marker !== next.Marker ||
       prev.Popup !== next.Popup || prev.PopupContent !== next.PopupContent ||
       prev.renderer !== next.renderer) {
+    return false;
+  }
+
+  if (prev.hintCenter?.lat !== next.hintCenter?.lat || prev.hintCenter?.lng !== next.hintCenter?.lng) {
     return false;
   }
 

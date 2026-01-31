@@ -1,26 +1,44 @@
 // components/MapPage/map/utils.ts
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import { CLUSTER_GRID } from './constants';
 
-export const strToLatLng = (s: string): [number, number] | null => {
-  const parsed = CoordinateConverter.fromLooseString(s);
-  if (!parsed) return null;
-  if (!CoordinateConverter.isValid(parsed)) return null;
-  return [parsed.lng, parsed.lat];
-};
+export const strToLatLng = (
+  s: string,
+  hintCenter?: { lat: number; lng: number } | null
+): [number, number] | null => {
+  const raw = typeof s === 'string' ? s.trim() : '';
+  if (!raw) return null;
 
-export const buildClusterKey = (center: [number, number], count: number) =>
-  `${center[0].toFixed(5)}|${center[1].toFixed(5)}|${count}`;
+  const cleaned = raw.replace(/;/g, ',').replace(/\s+/g, '');
 
-export const getClusterGridForZoom = (zoom: number): number => {
-  if (!Number.isFinite(zoom)) return CLUSTER_GRID;
-  if (zoom >= 16) return 0.0015;
-  if (zoom >= 15) return 0.0025;
-  if (zoom >= 14) return 0.005;
-  if (zoom >= 13) return 0.01;
-  if (zoom >= 12) return 0.02;
-  if (zoom >= 11) return 0.03;
-  return CLUSTER_GRID;
+  const base = CoordinateConverter.fromLooseString(cleaned);
+  const baseValid = base && CoordinateConverter.isValid(base) ? base : null;
+
+  let swappedValid: { lat: number; lng: number } | null = null;
+  const parts = cleaned.split(',');
+  if (parts.length === 2) {
+    const a = Number(parts[0]);
+    const b = Number(parts[1]);
+    if (Number.isFinite(a) && Number.isFinite(b)) {
+      const swapped = { lat: b, lng: a };
+      if (CoordinateConverter.isValid(swapped)) swappedValid = swapped;
+    }
+  }
+
+  if (!baseValid && !swappedValid) return null;
+  if (!hintCenter || !CoordinateConverter.isValid(hintCenter)) {
+    const chosen = baseValid ?? swappedValid;
+    return chosen ? [chosen.lng, chosen.lat] : null;
+  }
+
+  if (baseValid && swappedValid) {
+    const dBase = CoordinateConverter.distance(hintCenter, baseValid);
+    const dSwapped = CoordinateConverter.distance(hintCenter, swappedValid);
+    const chosen = dSwapped < dBase ? swappedValid : baseValid;
+    return [chosen.lng, chosen.lat];
+  }
+
+  const chosen = baseValid ?? swappedValid;
+  return chosen ? [chosen.lng, chosen.lat] : null;
 };
 
 export const generateUniqueId = () =>

@@ -160,15 +160,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [travel?.data]
   );
 
-  // Clustering
-  const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
-  const { shouldRenderClusters: shouldRenderClustersBase } = useClustering(
-    travelData,
-    mapZoom,
-    expandedCluster?.key || null
-  );
-  const shouldRenderClusters = isE2E ? false : shouldRenderClustersBase;
-
   const travelMarkerOpacity = mode === 'route' ? 0.45 : 1;
 
   // Radius calculation
@@ -643,6 +634,19 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [circleCenter]
   );
 
+  const hintCenterLatLng = useMemo(() => {
+    if (mode === 'radius' && circleCenterLatLng) return circleCenterLatLng;
+    return coordinatesLatLng;
+  }, [mode, circleCenterLatLng, coordinatesLatLng]);
+
+  // Clustering (needs hint center and validated circle center)
+  const { shouldRenderClusters: shouldRenderClustersBase, clusters } = useClustering(
+    travelData,
+    mapZoom,
+    hintCenterLatLng
+  );
+  const shouldRenderClusters = shouldRenderClustersBase;
+
   const hasWarnedInvalidCircleRef = useRef(false);
   useEffect(() => {
     if (hasWarnedInvalidCircleRef.current) return;
@@ -672,8 +676,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const fitBoundsPadding = useMemo(
     () => ({
-      paddingTopLeft: [24, 140],
-      paddingBottomRight: [360, 220],
+      paddingTopLeft: [24, 140] as [number, number],
+      paddingBottomRight: [360, 220] as [number, number],
     }),
     []
   );
@@ -945,6 +949,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
             leafletControlRef={leafletControlRef}
             useMap={useMap}
             useMapEvents={useMapEvents}
+            hintCenter={hintCenterLatLng}
           />
 
           {/* Radius circle - with strict validation */}
@@ -1101,6 +1106,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
               PopupContent={PopupComponent}
               popupProps={popupAutoPanPadding}
               onMarkerClick={handleMarkerZoom}
+              hintCenter={hintCenterLatLng}
               onMarkerInstance={(coord, marker) => {
                 try {
                   const raw = String(coord ?? '').trim();
@@ -1119,17 +1125,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
           {/* Travel markers (clustered) */}
           {customIcons?.meTravel && travelData.length > 0 && shouldRenderClusters && PopupComponent && (
             <ClusterLayer
-              points={travelData}
+              clusters={clusters as any}
               Marker={Marker}
               Popup={Popup}
               PopupContent={PopupComponent}
               popupProps={popupAutoPanPadding}
               markerIcon={customIcons.meTravel}
               markerOpacity={travelMarkerOpacity}
-              grid={0.045}
               expandedClusterKey={expandedCluster?.key}
               expandedClusterItems={expandedCluster?.items}
               renderer={canvasRenderer}
+              hintCenter={hintCenterLatLng}
               onMarkerClick={handleMarkerZoom}
               onMarkerInstance={(coord, marker) => {
                 try {

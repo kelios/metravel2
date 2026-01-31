@@ -1,7 +1,7 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
 import React, { useEffect, useRef } from 'react';
-import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { LatLng } from '@/types/coordinates';
+import { strToLatLng } from './utils';
 
 interface Point {
   id?: number;
@@ -34,14 +34,8 @@ interface MapLogicProps {
   leafletControlRef: React.MutableRefObject<any>;
   useMap: () => any;
   useMapEvents: (handlers: any) => any;
+  hintCenter?: LatLng | null;
 }
-
-const strToLatLng = (s: string): [number, number] | null => {
-  const parsed = CoordinateConverter.fromLooseString(s);
-  if (!parsed) return null;
-  if (!CoordinateConverter.isValid(parsed)) return null;
-  return [parsed.lng, parsed.lat];
-};
 
 export const MapLogicComponent: React.FC<MapLogicProps> = ({
   mapClickHandler,
@@ -66,6 +60,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   leafletControlRef: _leafletControlRef,
   useMap,
   useMapEvents,
+  hintCenter,
 }) => {
   const map = useMap();
   const hasCalledOnMapReadyRef = useRef(false);
@@ -222,11 +217,15 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     if (lastAutoFitKeyRef.current === autoFitKey) return;
 
     const coords = travelData
-      .map((p) => strToLatLng(p.coord))
+      .map((p) => strToLatLng(p.coord, hintCenter))
       .filter(Boolean) as [number, number][];
 
-    if (coords.length === 0 && userLocation) {
-      coords.push([userLocation.lng, userLocation.lat]);
+    if (coords.length === 0) {
+      if (circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng)) {
+        coords.push([circleCenter.lng, circleCenter.lat]);
+      } else if (userLocation) {
+        coords.push([userLocation.lng, userLocation.lat]);
+      }
     }
 
     if (circleCenter && Number.isFinite(radiusInMeters) && Number(radiusInMeters) > 0) {
@@ -265,6 +264,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     radiusInMeters,
     fitBoundsPadding,
     lastAutoFitKeyRef,
+    hintCenter,
   ]);
 
   return null;

@@ -12,6 +12,7 @@ import { getStyles } from '@/src/screens/tabs/map.styles';
 import type { MapUiApi } from '@/src/types/mapUi';
 import type { TravelCoords } from '@/src/types/types';
 import { logMessage } from '@/src/utils/logger';
+import { useRouteStore } from '@/stores/routeStore';
 
 import {
   loadMapFilterValues,
@@ -101,6 +102,7 @@ export function useMapScreenController() {
     isBuilding: routingLoading,
     error: routingError,
     addPoint,
+    updatePoint,
   } = routeStore;
 
   const didRestorePersistedUiStateRef = useMemo(() => ({ current: false }), []);
@@ -112,7 +114,9 @@ export function useMapScreenController() {
     didRestorePersistedUiStateRef.current = true;
 
     const persisted = loadMapFilterValues(webStorage);
-    if (persisted.lastMode) setMode(persisted.lastMode);
+    // Keep default UX: /map should start in radius mode (60km) on load.
+    // We still restore transport mode, but do not restore lastMode to avoid
+    // surprising starts in route mode.
     if (persisted.transportMode) setTransportMode(persisted.transportMode);
   }, [setMode, setTransportMode, webStorage, didRestorePersistedUiStateRef]);
 
@@ -166,6 +170,7 @@ export function useMapScreenController() {
   }, [resetFiltersBase, routeStore, setMode]);
 
   // Handle map click for route building
+  const lastRouteClickRef = useRef<{ lng: number; lat: number; ts: number } | null>(null);
   const handleMapClick = useCallback(
     (lng: number, lat: number) => {
       if (
@@ -181,12 +186,61 @@ export function useMapScreenController() {
       }
 
       if (mode === 'route') {
+        // Guard against duplicate click events fired by the map layer.
+        const now = Date.now();
+        const prev = lastRouteClickRef.current;
+        if (
+          prev &&
+          now - prev.ts < 250 &&
+          Math.abs(prev.lng - lng) < 0.000001 &&
+          Math.abs(prev.lat - lat) < 0.000001
+        ) {
+          return;
+        }
+        lastRouteClickRef.current = { lng, lat, ts: now };
+
         const coords = { lat, lng };
         const address = CoordinateConverter.formatCoordinates(coords);
+
+        // Read the latest store points (avoid stale closures).
+        const currentPoints = useRouteStore.getState().points;
+
+        // Native-like UX: keep only start + end points.
+        // 1st click -> start, 2nd click -> end, 3rd click -> replace end.
+        if (currentPoints.length === 0) {
+          addPoint(coords, address);
+          return;
+        }
+
+        if (currentPoints.length === 1) {
+          addPoint(coords, address);
+          return;
+        }
+
+        const endPoint = currentPoints[currentPoints.length - 1];
+        const startPoint = currentPoints[0];
+
+        // If we somehow have more than 2 points, reset to start + new end.
+        if (currentPoints.length > 2) {
+          const startCoords = startPoint?.coordinates;
+          const startAddr = startPoint?.address;
+          routeStore.clearRoute();
+          if (startCoords && startAddr) {
+            addPoint(startCoords, startAddr);
+          }
+          addPoint(coords, address);
+          return;
+        }
+
+        if (endPoint) {
+          updatePoint(endPoint.id, { coordinates: coords, address });
+          return;
+        }
+
         addPoint(coords, address);
       }
     },
-    [mode, addPoint]
+    [mode, addPoint, routeStore, updatePoint]
   );
 
   // Build route to travel item
@@ -244,7 +298,7 @@ export function useMapScreenController() {
         p.coordinates.lng,
         p.coordinates.lat,
       ]);
-      setRoutePoints(points);
+      setRoutePoints(points, { force: true });
       return;
     }
     logMessage('[map] Not enough route points to build route', 'warning', {
@@ -391,6 +445,7 @@ export function useMapScreenController() {
     routeHintDismissed,
     setRouteHintDismissedTrue,
     handleAddressSelect,
+    handleAddressClear,
     routingLoading,
     routingError,
     handleBuildRoute,

@@ -2,11 +2,11 @@
 import React, { useMemo, useCallback } from 'react';
 import { View, Text } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
-import { strToLatLng, buildClusterKey } from './utils';
+import { strToLatLng } from './utils';
 import type { Point, ClusterData } from './types';
 
 interface ClusterLayerProps {
-  points: Point[];
+  clusters: ClusterData[];
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
@@ -23,8 +23,8 @@ interface ClusterLayerProps {
   expandedClusterItems?: Point[] | null;
   markerIcon?: any;
   markerOpacity?: number;
-  grid: number;
   renderer?: any;
+  hintCenter?: { lat: number; lng: number } | null;
 }
 
 const sanitizeCssValue = (val: string | undefined) => {
@@ -33,7 +33,7 @@ const sanitizeCssValue = (val: string | undefined) => {
 };
 
 const ClusterLayer: React.FC<ClusterLayerProps> = ({
-  points,
+  clusters,
   Marker,
   Popup,
   PopupContent,
@@ -45,67 +45,14 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   expandedClusterItems,
   markerIcon,
   markerOpacity = 1,
-  grid,
   renderer,
+  hintCenter,
 }) => {
   const colors = useThemedColors();
 
-  const clusters = useMemo(() => {
-    const byCell: Record<string, {
-      items: Point[];
-      minLat: number;
-      maxLat: number;
-      minLng: number;
-      maxLng: number;
-    }> = {};
-
-    points.forEach((p) => {
-      const ll = strToLatLng(p.coord);
-      if (!ll) return;
-      const [lng, lat] = ll;
-      const cellLat = Math.floor(lat / grid) * grid;
-      const cellLng = Math.floor(lng / grid) * grid;
-      const key = `${cellLat.toFixed(3)}|${cellLng.toFixed(3)}`;
-
-      if (!byCell[key]) {
-        byCell[key] = { items: [], minLat: lat, maxLat: lat, minLng: lng, maxLng: lng };
-      }
-      byCell[key].items.push(p);
-      byCell[key].minLat = Math.min(byCell[key].minLat, lat);
-      byCell[key].maxLat = Math.max(byCell[key].maxLat, lat);
-      byCell[key].minLng = Math.min(byCell[key].minLng, lng);
-      byCell[key].maxLng = Math.max(byCell[key].maxLng, lng);
-    });
-
-    return Object.values(byCell).map((cell): ClusterData => {
-      const count = cell.items.length;
-      const centerLat = (cell.minLat + cell.maxLat) / 2;
-      const centerLng = (cell.minLng + cell.maxLng) / 2;
-      if (!Number.isFinite(centerLat) || !Number.isFinite(centerLng)) {
-        return {
-          key: `invalid|${String(count)}`,
-          count: 0,
-          center: [0, 0],
-          bounds: [
-            [0, 0],
-            [0, 0],
-          ],
-          items: [],
-        };
-      }
-      const key = buildClusterKey([centerLat, centerLng], count);
-      return {
-        key,
-        count,
-        center: [centerLat, centerLng],
-        bounds: [
-          [cell.minLat, cell.minLng],
-          [cell.maxLat, cell.maxLng],
-        ],
-        items: cell.items,
-      };
-    });
-  }, [points, grid]);
+  const safeClusters = useMemo(() => {
+    return Array.isArray(clusters) ? clusters : [];
+  }, [clusters]);
 
   const clusterIconsCache = useMemo(() => {
     if (!(window as any)?.L?.divIcon) return new Map();
@@ -287,7 +234,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
   return (
     <>
-      {clusters.map((cluster, idx) => {
+      {safeClusters.map((cluster, idx) => {
         if (!Number.isFinite(cluster.center[0]) || !Number.isFinite(cluster.center[1])) return null;
 
         // Expanded cluster: render individual markers
@@ -296,7 +243,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           return (
             <React.Fragment key={`expanded-${cluster.key}-${idx}`}>
               {items.map((item, itemIdx) => {
-                const ll = strToLatLng(item.coord);
+                const ll = strToLatLng(item.coord, hintCenter);
                 if (!ll) return null;
                 if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null;
                 const markerKey = item.id
@@ -335,7 +282,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         const icon = clusterIcon(cluster.count);
         if (cluster.count === 1 && cluster.items[0]) {
           const item = cluster.items[0];
-          const ll = strToLatLng(item.coord);
+          const ll = strToLatLng(item.coord, hintCenter);
           if (!ll) return null;
           if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null;
 

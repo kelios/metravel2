@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { strToLatLng } from './utils';
 
 interface Point {
   id?: number;
@@ -20,6 +21,7 @@ interface MapMarkersProps {
   popupProps?: Record<string, unknown>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
   onMarkerInstance?: (coord: string, marker: any | null) => void;
+  hintCenter?: { lat: number; lng: number } | null;
 }
 
 const MapMarkers: React.FC<MapMarkersProps> = ({
@@ -31,13 +33,15 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
   popupProps,
   onMarkerClick,
   onMarkerInstance,
+  hintCenter,
 }) => {
   const validPoints = useMemo(() => {
     return points
       .map((point, index) => {
         try {
-          const coords = CoordinateConverter.fromLooseString(String(point.coord));
-          if (!coords) return null;
+          const ll = strToLatLng(String(point.coord), hintCenter);
+          if (!ll) return null;
+          const coords = { lat: ll[1], lng: ll[0] };
           if (!CoordinateConverter.isValid(coords)) return null;
           return {
             point,
@@ -51,7 +55,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
         }
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
-  }, [points]);
+  }, [points, hintCenter]);
 
   const handleMarkerClick = useCallback(
     (e: any, point: Point, coords: { lat: number; lng: number }) => {

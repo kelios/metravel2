@@ -999,6 +999,22 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       expect(circleProps.radius).toBe(60000)
     })
 
+    it('matches snapshot in radius mode with circle', async () => {
+      const { Platform } = require('react-native')
+      ;(Platform as any).OS = 'web'
+
+      const props = {
+        ...defaultProps,
+        mode: 'radius' as const,
+        radius: '60',
+      }
+
+      const result = renderWithProviders(<MapPageComponent {...props} />)
+      await act(async () => {})
+
+      expect(result.toJSON()).toMatchSnapshot()
+    })
+
     it('uses provided radius prop (in km) and converts it to meters', async () => {
       const { Platform } = require('react-native')
       ;(Platform as any).OS = 'web'

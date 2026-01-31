@@ -35,7 +35,10 @@ export function useRouteStoreAdapter() {
   }, [store.route?.coordinates]);
 
   // Adapter methods
-  const setRoutePoints = useCallback((points: [number, number][]) => {
+  const setRoutePoints = useCallback((
+    points: [number, number][],
+    options?: { force?: boolean }
+  ) => {
     // ✅ ИСПРАВЛЕНИЕ: Проверяем, что points - это массив
     if (!Array.isArray(points)) {
       console.warn('[setRoutePoints] Invalid points array:', points);
@@ -44,15 +47,13 @@ export function useRouteStoreAdapter() {
 
     // Explicitly clear when empty array is provided
     if (points.length === 0) {
-      if (store.points.length > 0) {
-        store.clearRoute();
-      }
+      store.clearRoute();
       return;
     }
 
     // Check if points are already the same - avoid infinite loop
     const currentPoints = store.points;
-    if (currentPoints.length === points.length) {
+    if (!options?.force && currentPoints.length === points.length) {
       const allMatch = points.every((point, index) => {
         const [lng, lat] = point;
         const current = currentPoints[index];
@@ -149,10 +150,16 @@ export function useRouteStoreAdapter() {
   }, [store]);
 
   const handleAddressSelect = useCallback((address: string, coords: LatLng, isStart: boolean) => {
+    const canUpdate = typeof (store as any).updatePoint === 'function';
     if (isStart) {
       const existingStart = store.getStartPoint() ?? store.points[0];
       if (existingStart) {
-        store.updatePoint(existingStart.id, { coordinates: coords, address });
+        if (canUpdate) {
+          (store as any).updatePoint(existingStart.id, { coordinates: coords, address });
+        } else {
+          store.removePoint(existingStart.id);
+          store.addPoint(coords, address);
+        }
         return;
       }
       store.addPoint(coords, address);
@@ -161,7 +168,12 @@ export function useRouteStoreAdapter() {
 
     const existingEnd = store.getEndPoint();
     if (existingEnd && store.points.length >= 2) {
-      store.updatePoint(existingEnd.id, { coordinates: coords, address });
+      if (canUpdate) {
+        (store as any).updatePoint(existingEnd.id, { coordinates: coords, address });
+      } else {
+        store.removePoint(existingEnd.id);
+        store.addPoint(coords, address);
+      }
       return;
     }
 
@@ -208,6 +220,7 @@ export function useRouteStoreAdapter() {
     // Direct store actions for new code
     addPoint: store.addPoint,
     removePoint: store.removePoint,
+    updatePoint: store.updatePoint,
     clearRoute: store.clearRoute,
     swapStartEnd: store.swapStartEnd,
   };

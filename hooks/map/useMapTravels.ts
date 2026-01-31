@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/src/api/map';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 import type { TravelCoords } from '@/src/types/types';
 import { logError } from '@/src/utils/logger';
 import type { Coordinates } from './useMapCoordinates';
@@ -176,7 +177,14 @@ export function useMapTravels({
 
         if (coords.length < 2) return [];
 
-        const result = await fetchTravelsNearRoute(coords, 2, { signal });
+        const corridorKmRaw = parseInt(String(queryParams.radius || '10'), 10);
+        // Corridor must be narrow enough to be meaningful, but not too narrow.
+        // Use a conservative clamp to avoid accidental "worldwide" queries.
+        const corridorKm = Number.isFinite(corridorKmRaw)
+          ? Math.min(20, Math.max(5, corridorKmRaw))
+          : 10;
+
+        const result = await fetchTravelsNearRoute(coords, corridorKm, { signal });
         if (result && typeof result === 'object') {
           return (Array.isArray(result) ? result : Object.values(result)) as TravelCoords[];
         }
@@ -199,10 +207,44 @@ export function useMapTravels({
   }, [rawTravelsData]);
 
   // Фильтруем по категориям на клиенте
-  const filteredTravelsData = useMemo(
-    () => filterTravelsByCategories(allTravelsData, filterValues.categories),
-    [allTravelsData, filterValues.categories]
-  );
+  const filteredTravelsData = useMemo(() => {
+    const byCategory = filterTravelsByCategories(allTravelsData, filterValues.categories);
+
+    if (mode !== 'radius') return byCategory;
+
+    const radiusKm = parseInt(String(filterValues.radius || '60'), 10);
+    const radiusMeters = Number.isFinite(radiusKm) && radiusKm > 0 ? radiusKm * 1000 : 60000;
+
+    const centerLat = coordinates?.latitude;
+    const centerLng = coordinates?.longitude;
+    if (typeof centerLat !== 'number' || typeof centerLng !== 'number') return byCategory;
+    if (!CoordinateConverter.isValid({ lat: centerLat, lng: centerLng })) return byCategory;
+
+    const center = { lat: centerLat, lng: centerLng };
+
+    return byCategory.filter((travel) => {
+      try {
+        const coordStr = typeof travel?.coord === 'string' ? travel.coord : '';
+        const parsedFromCoord = coordStr ? CoordinateConverter.fromLooseString(coordStr) : null;
+        const parsed =
+          parsedFromCoord && CoordinateConverter.isValid(parsedFromCoord)
+            ? parsedFromCoord
+            : {
+                lat: Number(travel?.lat),
+                lng: Number(travel?.lng),
+              };
+
+        // If we cannot determine coordinates for an item, keep it (backward compatible).
+        // Map markers will still skip invalid points, but list UI may still render items.
+        if (!CoordinateConverter.isValid(parsed as any)) return true;
+
+        const dist = CoordinateConverter.distance(center, parsed as any);
+        return Number.isFinite(dist) && dist <= radiusMeters;
+      } catch {
+        return true;
+      }
+    });
+  }, [allTravelsData, coordinates?.latitude, coordinates?.longitude, filterValues.categories, filterValues.radius, mode]);
 
   return {
     allTravelsData,
