@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { usePathname, useRouter } from 'expo-router';
 import { CommentItem } from './CommentItem';
 import { CommentForm } from './CommentForm';
 import {
@@ -28,6 +30,8 @@ interface CommentsSectionProps {
 
 export function CommentsSection({ travelId }: CommentsSectionProps) {
   const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   const [replyTo, setReplyTo] = useState<TravelComment | null>(null);
   const [editComment, setEditComment] = useState<TravelComment | null>(null);
   const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set());
@@ -233,6 +237,17 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   const isSubmitting =
     createComment.isPending || updateComment.isPending || replyToComment.isPending;
 
+  const handleLoginPress = useCallback(() => {
+    sendAnalyticsEvent('AuthCtaClicked', {
+      source: 'comments',
+      intent: 'comment',
+      travelId,
+    });
+
+    const redirectPath = `${pathname || '/'}#comments`;
+    router.push(`/login?intent=comment&redirect=${encodeURIComponent(redirectPath)}` as any);
+  }, [pathname, router, travelId]);
+
   if (isLoading && !isRefreshing) {
     return (
       <View style={styles.centerContainer}>
@@ -296,9 +311,14 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
       )}
 
       {!isAuthenticated && (
-        <View style={styles.loginPrompt}>
+        <Pressable
+          onPress={handleLoginPress}
+          style={styles.loginPrompt}
+          accessibilityRole="button"
+          accessibilityLabel="Войти, чтобы оставить комментарий"
+        >
           <Text style={styles.loginText}>Войдите, чтобы оставить комментарий</Text>
-        </View>
+        </Pressable>
       )}
 
       <ScrollView
