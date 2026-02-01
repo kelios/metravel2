@@ -433,27 +433,38 @@ export function buildResponsiveImageProps(
   const widths = options.widths ?? getResponsiveSizes(options.maxWidth ?? 1920);
   const widest = widths.length > 0 ? widths[widths.length - 1] : options.maxWidth ?? 1920;
   const format = options.format ?? 'auto';
-  const resolvedDpr = Platform.OS === 'web' ? options.dpr ?? 1 : options.dpr;
 
-  const src =
-    optimizeImageUrl(baseUrl, {
-      width: widest,
-      quality: options.quality ?? 75,
-      format,
-      fit: options.fit,
-      dpr: resolvedDpr,
-    }) || baseUrl;
+  // Don't pass dpr explicitly if not provided - let optimizeImageUrl use its default logic
+  const optimizeOptions: ImageOptimizationOptions = {
+    width: widest,
+    quality: options.quality ?? 75,
+    format,
+    fit: options.fit,
+  };
+
+  // Only add dpr if explicitly provided
+  if (options.dpr !== undefined) {
+    optimizeOptions.dpr = options.dpr;
+  }
+
+  const src = optimizeImageUrl(baseUrl, optimizeOptions) || baseUrl;
 
   if (Platform.OS !== 'web') {
     return { src };
   }
 
-  const srcSet = generateSrcSet(baseUrl, widths, {
+  const srcSetOptions: Omit<ImageOptimizationOptions, 'width' | 'height'> = {
     format,
     quality: options.quality ?? 75,
     fit: options.fit,
-    dpr: resolvedDpr,
-  });
+  };
+
+  // Only add dpr to srcSet options if explicitly provided
+  if (options.dpr !== undefined) {
+    srcSetOptions.dpr = options.dpr;
+  }
+
+  const srcSet = generateSrcSet(baseUrl, widths, srcSetOptions);
 
   return {
     src,

@@ -106,9 +106,6 @@ export const MapSection: React.FC<MapSectionProps> = memo(({
           >
             Карта маршрута
           </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
-            Посмотрите последовательность точек на живой карте
-          </Text>
         </View>
       </View>
 

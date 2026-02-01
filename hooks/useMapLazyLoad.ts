@@ -135,6 +135,10 @@ export function useMapLazyLoad(options: UseMapLazyLoadOptions = {}): UseMapLazyL
       );
 
       observerRef.current.observe(target);
+    } else if (target && typeof IntersectionObserver === 'undefined') {
+      // Fallback: IntersectionObserver not supported, show immediately
+      console.info('[useMapLazyLoad] IntersectionObserver not supported, showing map immediately');
+      setIsVisible(true);
     }
   }, [enabled, canRenderHeavy, isVisible, rootMargin, threshold]);
 
@@ -148,6 +152,18 @@ export function useMapLazyLoad(options: UseMapLazyLoadOptions = {}): UseMapLazyL
     if (elementRef.current) {
       setElementRef(elementRef.current);
     }
+
+    // Fallback: if IntersectionObserver doesn't trigger within 3 seconds, show map anyway
+    const fallbackTimer = setTimeout(() => {
+      if (!isVisible) {
+        console.info('[useMapLazyLoad] Fallback timeout: forcing map visibility');
+        setIsVisible(true);
+      }
+    }, 3000);
+
+    return () => {
+      clearTimeout(fallbackTimer);
+    };
   }, [canRenderHeavy, isVisible, setElementRef]);
 
   // Track if map has been mounted

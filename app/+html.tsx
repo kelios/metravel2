@@ -251,6 +251,18 @@ const getTravelHeroPreloadScript = () => String.raw`
       ? apiBase + '/api/travels/' + encodeURIComponent(slug) + '/'
       : apiBase + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
 
+    // Detect AVIF support (same logic as utils/imageOptimization.ts)
+    function supportsAvif() {
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        return canvas.toDataURL('image/avif').indexOf('data:image/avif') === 0;
+      } catch (_e) {
+        return false;
+      }
+    }
+
     function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id) {
       try {
         var resolved = new URL(rawUrl, window.location.origin);
@@ -267,10 +279,23 @@ const getTravelHeroPreloadScript = () => String.raw`
         // Force proxy for metravel domains to ensure resizing
         var allowed = host === 'images.weserv.nl';
         
+        // Match format detection with optimizeImageUrl (format: 'auto')
+        var preferredFormat = supportsAvif() ? 'avif' : 'webp';
+        
+        // Apply DPR (match optimizeImageUrl logic: Math.min(dpr, 2) for web)
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var actualWidth = width ? Math.round(width * dpr) : width;
+        
         if (allowed) {
-          if (width) resolved.searchParams.set('w', String(Math.round(width)));
+          if (actualWidth) resolved.searchParams.set('w', String(actualWidth));
           if (quality) resolved.searchParams.set('q', String(quality));
-          resolved.searchParams.set('f', 'webp');
+          // images.weserv.nl is NOT isWeserv in the logic (allowed means it's already weserv host)
+          // But wait - if host === 'images.weserv.nl', in optimizeImageUrl it's detected as isWeserv
+          // and uses 'output' param. Let me re-check...
+          // Actually: if original URL is already images.weserv.nl, we don't proxy again.
+          // So 'allowed' here means the URL is already on weserv, which means isWeserv=true in component.
+          // Therefore we should use 'output' param.
+          resolved.searchParams.set('output', preferredFormat);
           resolved.searchParams.set('fit', 'cover');
           return resolved.toString();
         } else {
@@ -278,9 +303,10 @@ const getTravelHeroPreloadScript = () => String.raw`
           var proxy = new URL('https://images.weserv.nl/');
           var cleanUrl = resolved.toString().replace(/^https?:\/\//i, '');
           proxy.searchParams.set('url', cleanUrl);
-          if (width) proxy.searchParams.set('w', String(Math.round(width)));
+          if (actualWidth) proxy.searchParams.set('w', String(actualWidth));
           if (quality) proxy.searchParams.set('q', String(quality));
-          proxy.searchParams.set('output', 'webp');
+          // For weserv proxy, use 'output' param
+          proxy.searchParams.set('output', preferredFormat);
           proxy.searchParams.set('fit', 'cover');
           return proxy.toString();
         }
@@ -330,7 +356,8 @@ const getTravelHeroPreloadScript = () => String.raw`
         var viewport = Math.max(320, Math.min(window.innerWidth || 400, 860));
         var isMobile = (window.innerWidth || 0) <= 540;
         var targetWidth = isMobile ? Math.min(viewport, 400) : Math.min(viewport, 860);
-        var quality = isMobile ? 45 : 50;
+        // Match quality with OptimizedLCPHero component (lcpQuality = isMobile ? 60 : 65)
+        var quality = isMobile ? 60 : 65;
         // Desktop max width in component is 860, so we shouldn't preload 1080
         var highWidth = isMobile ? 400 : 860; 
         

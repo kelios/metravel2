@@ -5,7 +5,7 @@
  * @module components/MapPage/TravelMap
  */
 
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
@@ -88,14 +88,23 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 }) => {
   const colors = useThemedColors();
   const mapRef = useRef<any>(null);
+  const containerRef = useRef<any>(null);
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
   const mountedRef = useRef(true);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
       // защитимся от утечек/устаревших ссылок при размонтировании (особенно в React StrictMode)
+      if (mapRef.current) {
+        try {
+          mapRef.current.remove();
+        } catch (e) {
+          console.warn('[TravelMap] Error removing map:', e);
+        }
+      }
       mapRef.current = null;
     };
   }, []);
@@ -193,6 +202,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     }
   }, [highlightedPoint]);
 
+  // Invalidate size when map opens or resizes
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!mapRef.current) return;
@@ -202,23 +212,63 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     const invalidate = () => {
       try {
         if (map && typeof map.invalidateSize === 'function') {
-          map.invalidateSize(true);
+          map.invalidateSize({ animate: true, pan: false });
+          console.info('[TravelMap] invalidateSize called, trigger:', resizeTrigger);
         }
-      } catch {
-        // noop
+      } catch (e) {
+        console.warn('[TravelMap] Error invalidating size:', e);
       }
     };
 
+    // Multiple attempts to ensure map resizes properly
     if (typeof requestAnimationFrame !== 'undefined') {
       requestAnimationFrame(() => invalidate());
-      requestAnimationFrame(() => invalidate());
+      requestAnimationFrame(() => {
+        setTimeout(invalidate, 50);
+      });
     } else {
       invalidate();
     }
 
-    const t = setTimeout(() => invalidate(), 200);
-    return () => clearTimeout(t);
+    const timeouts = [
+      setTimeout(invalidate, 100),
+      setTimeout(invalidate, 300),
+      setTimeout(invalidate, 500),
+    ];
+
+    return () => {
+      timeouts.forEach(t => clearTimeout(t));
+    };
   }, [resizeTrigger]);
+
+  // Also invalidate when map becomes ready
+  useEffect(() => {
+    if (!mapReady || !mapRef.current) return;
+
+    const map = mapRef.current;
+    const invalidate = () => {
+      try {
+        if (map && typeof map.invalidateSize === 'function') {
+          map.invalidateSize({ animate: false, pan: false });
+          console.info('[TravelMap] invalidateSize on ready');
+        }
+      } catch (e) {
+        console.warn('[TravelMap] Error invalidating size on ready:', e);
+      }
+    };
+
+    // Aggressively call invalidateSize when map is ready
+    const timeouts = [
+      setTimeout(invalidate, 0),
+      setTimeout(invalidate, 100),
+      setTimeout(invalidate, 300),
+      setTimeout(invalidate, 600),
+    ];
+
+    return () => {
+      timeouts.forEach(t => clearTimeout(t));
+    };
+  }, [mapReady]);
 
   // Map styles
   const mapHeight = height || (compact ? 400 : 600);
@@ -257,6 +307,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   return (
     <View
+      ref={containerRef}
       style={[styles.mapContainer, mapContainerStyle]}
       testID="travel-map"
       {...(Platform.OS === 'web' ? { 'data-testid': 'travel-map' } : {})}
@@ -264,13 +315,35 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       <MapContainer
         center={center as [number, number]}
         zoom={initialZoom}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', minHeight: mapHeight }}
         zoomControl={!compact}
         scrollWheelZoom={!compact}
         dragging={!compact}
-        whenCreated={(map: any) => {
+        ref={(map: any) => {
           if (!mountedRef.current) return;
-          mapRef.current = map;
+          if (map && !mapRef.current) {
+            mapRef.current = map;
+            console.info('[TravelMap] Map ref set');
+
+            // Invalidate size immediately after map is set
+            setTimeout(() => {
+              if (map && typeof map.invalidateSize === 'function') {
+                map.invalidateSize({ animate: false, pan: false });
+                console.info('[TravelMap] Initial invalidateSize after ref');
+              }
+            }, 100);
+          }
+        }}
+        whenReady={() => {
+          if (!mountedRef.current) return;
+          console.info('[TravelMap] Map ready event fired');
+          setMapReady(true);
+
+          // Additional invalidateSize when ready event fires
+          if (mapRef.current && typeof mapRef.current.invalidateSize === 'function') {
+            mapRef.current.invalidateSize({ animate: false, pan: false });
+            console.info('[TravelMap] invalidateSize in whenReady');
+          }
         }}
       >
         {/* Base tile layer */}
@@ -327,6 +400,8 @@ const styles = StyleSheet.create({
   mapContainer: {
     width: '100%',
     overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#f0f0f0',
   },
   loadingContainer: {
     alignItems: 'center',

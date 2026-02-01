@@ -128,8 +128,8 @@ export const TravelDetailsMapSection: React.FC<{
     enabled: true,
     hasData: hasMapData,
     canRenderHeavy,
-    rootMargin: isWebAutomation ? '800px 0px 800px 0px' : '0px',
-    threshold: isWebAutomation ? 0 : 0.2,
+    rootMargin: isWebAutomation ? '800px 0px 800px 0px' : '400px 0px 400px 0px',
+    threshold: isWebAutomation ? 0 : 0.1,
   })
 
   const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
@@ -199,13 +199,12 @@ export const TravelDetailsMapSection: React.FC<{
           : {})}
       >
         <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
-        <Text style={styles.sectionSubtitle}>Посмотрите последовательность точек на живой карте</Text>
         <View style={{ marginTop: 12 }}>
           {hasMapData ? (
             <ToggleableMap
               initiallyOpen={!isMobileWeb}
               keepMounted={Platform.OS === 'web'}
-              isLoading={isLoading}
+              isLoading={isLoading && !shouldRender}
               loadingLabel="Подгружаем карту маршрута..."
               forceOpenTrigger={mapOpenTrigger || undefined}
               onOpenChange={(open) => {
@@ -225,7 +224,9 @@ export const TravelDetailsMapSection: React.FC<{
                     height={isMobileWeb ? 400 : 500}
                   />
                 </Suspense>
-              ) : null}
+              ) : (
+                <MapFallback />
+              )}
             </ToggleableMap>
           ) : (
             <View style={styles.mapEmptyState}>
