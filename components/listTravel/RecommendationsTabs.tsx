@@ -30,13 +30,29 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 /* ---------------- Lazy Components ---------------- */
 
-const PersonalizedRecommendations = lazy(() =>
-  import('@/components/PersonalizedRecommendations') as any
-);
+type WeeklyHighlightsComponent = React.ComponentType<{
+  showHeader?: boolean;
+  enabled?: boolean;
+  forceVisible?: boolean;
+  onVisibilityChange?: (visible: boolean) => void;
+}>;
 
-const WeeklyHighlights = lazy(() =>
-  import('@/components/WeeklyHighlights') as any
-);
+type PersonalizedRecommendationsComponent = React.ComponentType<{
+  showHeader?: boolean;
+  onlyRecommendations?: boolean;
+  forceVisible?: boolean;
+  onVisibilityChange?: (visible: boolean) => void;
+}>;
+
+const PersonalizedRecommendations = lazy(async () => {
+  const m: any = await import('@/components/PersonalizedRecommendations');
+  return { default: (m?.default ?? m?.PersonalizedRecommendations) as PersonalizedRecommendationsComponent };
+});
+
+const WeeklyHighlights = lazy(async () => {
+  const m: any = await import('@/components/WeeklyHighlights');
+  return { default: (m?.default ?? m?.WeeklyHighlights) as WeeklyHighlightsComponent };
+});
 
 /* ---------------- Types ---------------- */
 

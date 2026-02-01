@@ -37,7 +37,10 @@ const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8085');
 const baseURL = process.env.BASE_URL || `http://127.0.0.1:${E2E_WEB_PORT}`;
 const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.env.BASE_URL;
 
- const E2E_API_URL = process.env.E2E_API_URL;
+ // For local E2E we hardcode dev API by default to avoid env drift.
+ // Override with E2E_API_URL or switch to real API by setting E2E_USE_REAL_API=1.
+ const E2E_API_URL =
+   process.env.E2E_API_URL || (process.env.E2E_USE_REAL_API === '1' ? '' : 'http://192.168.50.36');
 
 export default defineConfig({
   globalTimeout: 7_200_000,
@@ -56,6 +59,7 @@ export default defineConfig({
           ...process.env,
           E2E_WEB_PORT: String(E2E_WEB_PORT),
           E2E_API_PROXY_INSECURE: process.env.E2E_API_PROXY_INSECURE || 'true',
+          ...(E2E_API_URL ? { E2E_API_PROXY_TARGET: E2E_API_URL } : null),
           EXPO_PUBLIC_E2E: 'true',
           EXPO_PUBLIC_IS_LOCAL_API: 'false',
           ...(E2E_API_URL

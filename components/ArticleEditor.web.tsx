@@ -913,7 +913,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                                 const editor = quillRef.current?.getEditor?.();
                                 const currentFromQuill = String(editor?.root?.innerHTML ?? '');
                                 if (currentFromQuill) {
-                                    fireChange(currentFromQuill);
+                                    fireChange(currentFromQuill, undefined, false);
                                 }
                             } catch {
                                 // noop

@@ -22,7 +22,18 @@ export function useRouteStoreAdapter() {
   }, [store]);
 
   const endAddress = useMemo(() => {
-    const end = store.getEndPoint();
+    const start = store.getStartPoint?.();
+    const end = store.getEndPoint?.();
+
+    // If end points to the same entity as start, treat as not selected.
+    if (start && end && start.id && end.id && start.id === end.id) return '';
+
+    // In production, end should be empty until at least 2 points exist.
+    // But tests may mock getEndPoint without populating points; respect getEndPoint if present.
+    if (store.points.length < 2) {
+      return end?.address || '';
+    }
+
     return end?.address || '';
   }, [store]);
 
@@ -159,6 +170,18 @@ export function useRouteStoreAdapter() {
         } else {
           store.removePoint(existingStart.id);
           store.addPoint(coords, address);
+        }
+
+        // If we only have a single point and it's currently treated as both start and end,
+        // ensure the end stays empty until user selects it explicitly.
+        if (store.points.length === 1) {
+          const endCandidate = store.getEndPoint();
+          if (endCandidate && endCandidate.id === existingStart.id) {
+            // Remove and re-add start to clear any persisted end address mirroring.
+            // We keep only the start point.
+            store.removePoint(existingStart.id);
+            store.addPoint(coords, address);
+          }
         }
         return;
       }

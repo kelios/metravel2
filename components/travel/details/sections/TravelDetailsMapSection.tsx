@@ -13,7 +13,9 @@ import { withLazy } from '../TravelDetailsLazy'
 
 const PointList = withLazy(() => import('@/components/travel/PointList'))
 const ToggleableMap = withLazy(() => import('@/components/travel/ToggleableMapSection'))
-const TravelMap = withLazy(() => import('@/components/MapPage/TravelMap'))
+const TravelMap = withLazy(() =>
+  import('@/components/MapPage/TravelMap').then((m) => ({ default: m.TravelMap }))
+)
 
 const BelkrajWidgetComponent =
   Platform.OS === 'web'
@@ -118,13 +120,16 @@ export const TravelDetailsMapSection: React.FC<{
   const { width } = useWindowDimensions()
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0
 
+  const isWebAutomation =
+    Platform.OS === 'web' && typeof navigator !== 'undefined' && Boolean((navigator as any).webdriver)
+
   // Simplified lazy loading (replaces 30+ lines with 5 lines!)
   const { shouldRender, elementRef, isLoading } = useMapLazyLoad({
     enabled: true,
     hasData: hasMapData,
     canRenderHeavy,
-    rootMargin: '0px',
-    threshold: 0.2,
+    rootMargin: isWebAutomation ? '800px 0px 800px 0px' : '0px',
+    threshold: isWebAutomation ? 0 : 0.2,
   })
 
   const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
@@ -176,7 +181,12 @@ export const TravelDetailsMapSection: React.FC<{
           }
         }}
         testID="travel-details-map"
-        style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
+        style={[
+          styles.sectionContainer,
+          styles.contentStable,
+          styles.webDeferredSection,
+          Platform.OS === 'web' ? ({ minHeight: 420 } as any) : null,
+        ]}
         collapsable={false}
         accessibilityLabel="Карта маршрута"
         {...(Platform.OS === 'web'

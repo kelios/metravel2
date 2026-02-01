@@ -213,6 +213,9 @@ const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: n
 const clamp = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, v));
 
+const clampInt = (v: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, Math.round(v)));
+
 /* ------------------------------ Dot component ------------------------------ */
 
 const Dot = memo(function Dot({
@@ -407,6 +410,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const isMobile = isPhone || isLargePhone;
 
   const isTestEnv = process.env.NODE_ENV === 'test';
+  const isWeb = Platform.OS === 'web';
   const canPrefetchOnWeb = useMemo(() => {
     if (Platform.OS !== 'web') return true;
     if (isMobile) return false;
@@ -541,6 +545,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [images.length, onIndexChanged, warmNeighbors]
   );
 
+  const setActiveIndexFromOffset = useCallback(
+    (offsetX: number) => {
+      if (!Number.isFinite(offsetX)) return;
+      const idx = clampInt(offsetX / (containerW || 1), 0, Math.max(0, images.length - 1));
+      if (indexRef.current !== idx) setActiveIndex(idx);
+    },
+    [containerW, images.length, setActiveIndex]
+  );
+
   // автоплей
   const appState = useRef(AppState.currentState);
   const pausedByAppState = useRef(false);
@@ -617,6 +630,14 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       x.value = e.contentOffset.x;
     },
   });
+
+  const onMomentumScrollEnd = useCallback(
+    (e: any) => {
+      const offsetX = e?.nativeEvent?.contentOffset?.x ?? 0;
+      setActiveIndexFromOffset(offsetX);
+    },
+    [setActiveIndexFromOffset]
+  );
 
   // imperative API
   const scrollTo = useCallback(
@@ -695,8 +716,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   ).current;
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 60,
-    minimumViewTime: 50,
+    itemVisiblePercentThreshold: 90,
+    minimumViewTime: 80,
   }).current;
 
   const renderItem = useCallback(
@@ -761,7 +782,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onScroll={onScroll}
-            scrollEventThrottle={Platform.OS === "web" ? 32 : 16}
+            scrollEventThrottle={isWeb ? 64 : 16}
             renderItem={renderItem}
             initialNumToRender={isTestEnv ? images.length : 1}
             windowSize={isTestEnv ? images.length : 2 + Math.max(0, effectivePreload)}
@@ -772,6 +793,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             getItemLayout={getItemLayout}
             bounces={false}
             decelerationRate={Platform.OS === "ios" ? "fast" : 0.98}
+            removeClippedSubviews={!isWeb}
+            updateCellsBatchingPeriod={isTestEnv ? 0 : 50}
+            initialScrollIndex={isTestEnv ? undefined : indexRef.current || 0}
             onScrollBeginDrag={() => {
               pausedByTouch.current = true;
               clearAutoplay();
@@ -786,6 +810,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               pausedByTouch.current = false;
               scheduleAutoplay();
             }}
+            onMomentumScrollEnd={onMomentumScrollEnd}
             onViewableItemsChanged={onViewableItemsChanged}
             viewabilityConfig={viewabilityConfig}
           />

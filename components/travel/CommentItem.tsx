@@ -102,6 +102,7 @@ export function CommentItem({ comment, onReply, onEdit, onOpenThread, level = 0 
             onPress={() => setShowActions(!showActions)}
             style={styles.moreButton}
             accessibilityLabel="Действия с комментарием"
+            testID="comment-actions-trigger"
           >
             <Feather name="more-vertical" size={20} color={DESIGN_TOKENS.colors.textMuted} />
           </Pressable>
@@ -120,6 +121,7 @@ export function CommentItem({ comment, onReply, onEdit, onOpenThread, level = 0 
               }}
               style={styles.actionButton}
               accessibilityLabel="Редактировать комментарий"
+              testID="comment-actions-edit"
             >
               <Feather name="edit-2" size={20} color={DESIGN_TOKENS.colors.primary} />
             </Pressable>
@@ -130,6 +132,7 @@ export function CommentItem({ comment, onReply, onEdit, onOpenThread, level = 0 
               style={styles.actionButton}
               disabled={deleteComment.isPending}
               accessibilityLabel="Удалить комментарий"
+              testID="comment-actions-delete"
             >
               {deleteComment.isPending ? (
                 <ActivityIndicator
@@ -152,6 +155,7 @@ export function CommentItem({ comment, onReply, onEdit, onOpenThread, level = 0 
             style={styles.footerButton}
             disabled={likeComment.isPending || unlikeComment.isPending}
             accessibilityLabel={isLiked ? 'Убрать лайк' : 'Поставить лайк'}
+            testID="comment-like"
           >
             <Feather
               name="heart"
@@ -178,6 +182,7 @@ export function CommentItem({ comment, onReply, onEdit, onOpenThread, level = 0 
             onPress={() => onReply(comment)}
             style={styles.footerButton}
             accessibilityLabel="Ответить на комментарий"
+            testID="comment-reply"
           >
             <Feather name="message-circle" size={18} color={DESIGN_TOKENS.colors.textMuted} />
             <Text style={styles.footerText}>Ответить</Text>

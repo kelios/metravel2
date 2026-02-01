@@ -66,6 +66,11 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const hasCalledOnMapReadyRef = useRef(false);
   const lastUserLocationKeyRef = useRef<string | null>(null);
 
+  const hasRadiusResults = (travelData ?? []).length > 0;
+  const canAutoFitRadiusView =
+    hasRadiusResults ||
+    (circleCenter && Number.isFinite(radiusInMeters) && Number(radiusInMeters) > 0);
+
   // Helper: ensure mapZoom state matches real leaflet zoom even after programmatic moves.
   const syncZoomFromMap = useCallback(() => {
     try {
@@ -217,8 +222,18 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       hasInitializedRef.current = false;
     }
 
-    if (!hasInitializedRef.current) {
-      if (hasValidUserLocation) {
+    // Radius mode: do NOT apply an initial zoom/center until radius results are ready.
+    // The intended UX is to set the view only after points in the radius have been computed.
+    if (!hasInitializedRef.current && hasRadiusResults) {
+      // Prefer explicit circleCenter (radius mode), then user location, then provided coordinates.
+      const hasValidCircleCenter =
+        circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng);
+
+      if (hasValidCircleCenter) {
+        map.setView([circleCenter!.lat, circleCenter!.lng], 11, { animate: false });
+        requestAnimationFrame(() => syncZoomFromMap());
+        hasInitializedRef.current = true;
+      } else if (hasValidUserLocation) {
         map.setView([userLocation.lat, userLocation.lng], 11, { animate: false });
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
@@ -230,13 +245,28 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     }
 
     lastModeRef.current = mode;
-  }, [map, mode, coordinates, userLocation, hasInitializedRef, lastModeRef, lastAutoFitKeyRef, syncZoomFromMap]);
+  }, [
+    map,
+    mode,
+    coordinates,
+    userLocation,
+    hasInitializedRef,
+    lastModeRef,
+    lastAutoFitKeyRef,
+    syncZoomFromMap,
+    hasRadiusResults,
+    circleCenter,
+  ]);
 
   // Fit bounds to all travel points (radius mode only)
   useEffect(() => {
     if (!map) return;
     if (disableFitBounds || mode === 'route') return;
     if (!L || typeof (L as any).latLngBounds !== 'function' || typeof (L as any).latLng !== 'function') return;
+
+    // Avoid auto-fit while radius view is not ready yet.
+    // We allow fit to the radius circle even if no travel points returned.
+    if (!canAutoFitRadiusView) return;
 
     const dataKey = (travelData || [])
       .map((p) => (p.id != null ? `id:${p.id}` : `c:${p.coord}`))
@@ -299,6 +329,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     lastAutoFitKeyRef,
     hintCenter,
     syncZoomFromMap,
+    hasRadiusResults,
+    canAutoFitRadiusView,
   ]);
 
   return null;

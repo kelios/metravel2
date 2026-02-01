@@ -245,26 +245,60 @@ export async function listUserPoints(ctx: E2EApiContext): Promise<any[]> {
   return [];
 }
 
-export async function loginAsUser(page: any): Promise<void> {
+async function getUserIdFromPage(page: any): Promise<string> {
+  try {
+    const raw = await page.evaluate(() => {
+      try {
+        return (
+          window.localStorage.getItem('secure_userId') ||
+          window.localStorage.getItem('userId') ||
+          window.localStorage.getItem('secure_user_id') ||
+          ''
+        );
+      } catch {
+        return '';
+      }
+    });
+    const v = String(raw || '').trim();
+    if (!v) return '';
+    // secure_userId may be encrypted the same way as secure_userToken; try to decrypt.
+    try {
+      const decrypted = simpleDecrypt(v, 'metravel_encryption_key_v1').trim();
+      return decrypted || v;
+    } catch {
+      return v;
+    }
+  } catch {
+    return '';
+  }
+}
+
+export async function loginAsUser(page: any): Promise<{ userId?: string }> {
   const email = process.env.E2E_EMAIL || '';
   const password = process.env.E2E_PASSWORD || '';
   
   await page.goto('/login');
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL('**/');
+  await page.getByRole('button', { name: /^войти$/i }).click();
+  await page.waitForURL('**/*');
+
+  const userId = await getUserIdFromPage(page);
+  return userId ? { userId } : {};
 }
 
-export async function loginAsAdmin(page: any): Promise<void> {
+export async function loginAsAdmin(page: any): Promise<{ userId?: string }> {
   const email = process.env.E2E_ADMIN_EMAIL || process.env.E2E_EMAIL || '';
   const password = process.env.E2E_ADMIN_PASSWORD || process.env.E2E_PASSWORD || '';
   
   await page.goto('/login');
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
-  await page.click('button[type="submit"]');
-  await page.waitForURL('**/');
+  await page.getByRole('button', { name: /^войти$/i }).click();
+  await page.waitForURL('**/*');
+
+  const userId = await getUserIdFromPage(page);
+  return userId ? { userId } : {};
 }
 
 export async function createTestTravel(): Promise<any> {
