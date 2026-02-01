@@ -134,9 +134,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }), [safeCoordinates.latitude, safeCoordinates.longitude]);
 
   const hintCenterForMarkers = useMemo(() => {
-    if (mode === 'radius' && userLocationLatLng) return userLocationLatLng;
+    if (mode === 'radius' && userLocation && isValidCoordinate(userLocation.latitude, userLocation.longitude)) {
+      return { lat: userLocation.latitude, lng: userLocation.longitude };
+    }
     return coordinatesLatLng;
-  }, [coordinatesLatLng, mode, userLocationLatLng]);
+  }, [coordinatesLatLng, mode, userLocation]);
 
   // Use new markers hook
   const {
