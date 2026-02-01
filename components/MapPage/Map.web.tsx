@@ -49,6 +49,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     setRouteDistance,
     setFullRouteCoords,
     radius,
+    onUserLocationChange,
   } = props;
 
   // Leaflet loader (replaces manual loading logic)
@@ -240,6 +241,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (!isValidCoordinate(userLocation.latitude, userLocation.longitude)) return null;
     return { lat: userLocation.latitude, lng: userLocation.longitude };
   }, [userLocation]);
+
+  useEffect(() => {
+    try {
+      onUserLocationChange?.(userLocation);
+    } catch {
+      // noop
+    }
+  }, [onUserLocationChange, userLocation]);
 
   const handleMarkerZoom = useCallback((_point: Point, coords: { lat: number; lng: number }) => {
     if (!mapRef.current) return;
@@ -587,11 +596,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [coordinates]);
 
   const circleCenter = useMemo<[number, number] | null>(() => {
+    // Prefer actual current location (web Leaflet) as circle center in radius mode.
+    if (mode === 'radius' && userLocationLatLng) {
+      const lat = Number(userLocationLatLng.lat);
+      const lng = Number(userLocationLatLng.lng);
+      if (isValidCoordinate(lat, lng)) return [lat, lng];
+    }
+
     const lat = Number(safeCenter?.[0]);
     const lng = Number(safeCenter?.[1]);
     if (!isValidCoordinate(lat, lng)) return null;
     return [lat, lng];
-  }, [safeCenter]);
+  }, [mode, safeCenter, userLocationLatLng]);
 
   const circleCenterLatLng = useMemo(
     () => (circleCenter ? { lat: circleCenter[0], lng: circleCenter[1] } : null),

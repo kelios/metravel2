@@ -93,6 +93,26 @@ export function useMapTravels({
     );
   }, [coordinates]);
 
+  // Условие активации запроса
+  const isEnabled = useMemo(() => {
+    if (!isFocused) return false;
+
+    const hasValidCoordinates =
+      typeof coordinates?.latitude === 'number' &&
+      typeof coordinates?.longitude === 'number' &&
+      !Number.isNaN(coordinates.latitude) &&
+      !Number.isNaN(coordinates.longitude);
+
+    if (!hasValidCoordinates) return false;
+
+    // In radius mode we should query around the user's real current location.
+    // Avoid sending a query with placeholder default coords (e.g. Minsk), which results in irrelevant points.
+    if (mode === 'radius') return !isDefaultCoordinates;
+    if (mode === 'route' && fullRouteCoords.length >= 2) return true;
+
+    return false;
+  }, [isFocused, coordinates, mode, fullRouteCoords.length, isDefaultCoordinates]);
+
   // Вычисляем нормализованные ID категорий
   const normalizedCategoryIds = useMemo(
     () => mapCategoryNamesToIds(filterValues.categories, filters.categories),
@@ -129,7 +149,7 @@ export function useMapTravels({
         filtersKey: JSON.stringify(backendFilters),
       };
       
-      if (__DEV__) {
+      if (__DEV__ && isEnabled) {
         console.info('[useMapTravels] Query params:', {
           lat: params.lat,
           lng: params.lng,
@@ -147,28 +167,9 @@ export function useMapTravels({
       mode,
       routeSignature,
       backendFilters,
+      isEnabled,
     ]
   );
-
-  // Условие активации запроса
-  const isEnabled = useMemo(() => {
-    if (!isFocused) return false;
-
-    const hasValidCoordinates =
-      typeof coordinates?.latitude === 'number' &&
-      typeof coordinates?.longitude === 'number' &&
-      !Number.isNaN(coordinates.latitude) &&
-      !Number.isNaN(coordinates.longitude);
-
-    if (!hasValidCoordinates) return false;
-
-    // In radius mode we should query around the user's real current location.
-    // Avoid sending a query with placeholder default coords (e.g. Minsk), which results in irrelevant points.
-    if (mode === 'radius') return !isDefaultCoordinates;
-    if (mode === 'route' && fullRouteCoords.length >= 2) return true;
-
-    return false;
-  }, [isFocused, coordinates, mode, fullRouteCoords.length, isDefaultCoordinates]);
 
   const {
     data: rawTravelsData = [],

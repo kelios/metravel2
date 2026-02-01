@@ -27,6 +27,18 @@ export function useMapScreenController() {
   // Coordinates
   const { coordinates } = useMapCoordinates();
 
+  // Actual current user location reported by the map implementation (web Leaflet).
+  // This should be the primary source for radius-mode queries.
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
+    null
+  );
+  const handleUserLocationChange = useCallback(
+    (loc: { latitude: number; longitude: number } | null) => {
+      setUserLocation(loc);
+    },
+    []
+  );
+
   // Filters
   const {
     filters,
@@ -92,8 +104,12 @@ export function useMapScreenController() {
   }, []);
 
   // Data Controller
+  const queryCoordinates = useMemo(() => {
+    return userLocation ?? coordinates;
+  }, [userLocation, coordinates]);
+
   const dataController = useMapDataController({
-    coordinates,
+    coordinates: queryCoordinates,
     filterValues,
     filters,
     mode,
@@ -152,6 +168,7 @@ export function useMapScreenController() {
       setFullRouteCoords,
       onMapClick: handleMapClick,
       onMapUiApiReady: handleMapUiApiReady,
+      onUserLocationChange: handleUserLocationChange,
     }),
     [
       travelsData,
@@ -165,6 +182,7 @@ export function useMapScreenController() {
       setFullRouteCoords,
       handleMapClick,
       handleMapUiApiReady,
+      handleUserLocationChange,
     ]
   );
 
@@ -217,7 +235,7 @@ export function useMapScreenController() {
       },
       mapUiApi,
       closeMenu: closeRightPanel,
-      userLocation: coordinates,
+      userLocation: queryCoordinates,
       onPlaceSelect: buildRouteToStable,
       onOpenList: selectTravelsTab,
       hideTopControls: false,
@@ -252,6 +270,7 @@ export function useMapScreenController() {
     mapUiApi,
     closeRightPanel,
     coordinates,
+    queryCoordinates,
     buildRouteToStable,
     selectTravelsTab,
   ]);

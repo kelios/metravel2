@@ -4,7 +4,7 @@
  */
 
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { useMapTravels } from '@/hooks/map';
+import { useMapTravels } from './useMapTravels';
 
 interface UseMapDataControllerOptions {
   /**

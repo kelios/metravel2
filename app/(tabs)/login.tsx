@@ -55,7 +55,7 @@ export default function Login() {
     React.useEffect(() => {
         if (!isFocused) return;
         if (!intent) return;
-        sendAnalyticsEvent('AuthViewed', { source: 'home', intent });
+        sendAnalyticsEvent('AuthViewed', { source: String(intent || 'unknown'), intent });
     }, [intent, isFocused]);
 
     /* ---------- actions ---------- */
@@ -92,7 +92,7 @@ export default function Login() {
             const ok = await login(values.email.trim(), values.password);
             if (ok) {
                 if (intent) {
-                    sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });
+                    sendAnalyticsEvent('AuthSuccess', { source: String(intent || 'unknown'), intent });
                 }
                 // ✅ Intent-редирект: обработка разных сценариев
                 let targetPath = '/';
@@ -100,6 +100,10 @@ export default function Login() {
                     targetPath = '/travel/new';
                 } else if (intent === 'build-pdf') {
                     targetPath = '/export';
+                } else if (intent === 'comment') {
+                    if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
+                        targetPath = redirect;
+                    }
                 } else if (redirect && typeof redirect === 'string' && redirect.startsWith('/')) {
                     targetPath = redirect;
                 }

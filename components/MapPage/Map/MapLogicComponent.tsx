@@ -306,6 +306,25 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
     if (coords.length === 0) return;
 
+    if (__DEV__ && mode === 'radius') {
+      try {
+        const samples = (travelData || []).slice(0, 5).map((p) => {
+          const parsed = strToLatLng(p.coord, hintCenter);
+          return { coord: p.coord, parsed };
+        });
+        // eslint-disable-next-line no-console
+        console.info('[MapLogicComponent] radius fitBounds debug', {
+          travelCount: (travelData || []).length,
+          circleCenter,
+          radiusInMeters,
+          userLocation,
+          sample: samples,
+        });
+      } catch {
+        // noop
+      }
+    }
+
     try {
       const bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
       const padding = fitBoundsPadding ?? {};

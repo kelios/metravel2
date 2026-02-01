@@ -32,6 +32,7 @@ export interface MapProps {
   setFullRouteCoords: (coords: [number, number][]) => void;
   radius?: string;
   onMapUiApiReady?: (api: MapUiApi | null) => void;
+  onUserLocationChange?: (loc: Coordinates | null) => void;
 }
 
 export interface ClusterData {

@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useMapPanelState, useMapResponsive } from '@/hooks/map';
+import { useMapPanelState, useMapResponsive } from './useMapPanelState';
 import { getStyles } from '@/src/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
 
