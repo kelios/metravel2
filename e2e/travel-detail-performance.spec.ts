@@ -375,17 +375,31 @@ test.describe('Travel Details - Image Optimization', () => {
     // Проверяем изображения
     const imageStats = await page.evaluate(() => {
       const images = Array.from(document.querySelectorAll('img'));
+
+      // Consider only "content" images:
+      // - exclude tiny icon-like images
+      // - exclude data URIs (often placeholders/icons)
+      const contentImages = images.filter((img) => {
+        const w = img.clientWidth || 0;
+        const h = img.clientHeight || 0;
+        const src = String(img.getAttribute('src') || '');
+        if (src.startsWith('data:')) return false;
+        if (w > 0 && h > 0 && w <= 32 && h <= 32) return false;
+        return true;
+      });
       const stats = {
-        total: images.length,
-        withAlt: 0,
+        total: contentImages.length,
+        withAltAttr: 0,
         withSrc: 0,
         loaded: 0,
         oversized: 0,
       };
 
-      images.forEach((img) => {
-        if (img.alt) stats.withAlt++;
-        if (img.src) stats.withSrc++;
+      contentImages.forEach((img) => {
+        // For accessibility, the alt attribute should exist.
+        // It may be empty (alt="") for decorative images.
+        if (img.hasAttribute('alt')) stats.withAltAttr++;
+        if (img.getAttribute('src')) stats.withSrc++;
         if (img.complete && img.naturalHeight !== 0) stats.loaded++;
 
         // Проверяем, не загружаем ли слишком большие изображения
@@ -408,9 +422,9 @@ test.describe('Travel Details - Image Optimization', () => {
     // Все изображения должны иметь src
     expect(imageStats.withSrc).toBe(imageStats.total);
 
-    // Большинство изображений должны иметь alt (accessibility)
+    // Большинство контентных изображений должны иметь alt-атрибут (accessibility)
     if (imageStats.total > 0) {
-      expect(imageStats.withAlt / imageStats.total).toBeGreaterThan(0.8);
+      expect(imageStats.withAltAttr / imageStats.total).toBeGreaterThan(0.8);
     }
   });
 
