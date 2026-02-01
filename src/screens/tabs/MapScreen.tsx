@@ -1,7 +1,6 @@
 // src/screens/tabs/MapScreen.tsx
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    SafeAreaView,
     View,
     Text,
     ActivityIndicator,
@@ -9,7 +8,7 @@ import {
     Pressable,
     Animated,
 } from 'react-native';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { Feather } from '@expo/vector-icons';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
@@ -53,7 +52,6 @@ export default function MapScreen() {
         invalidateTravelsQuery,
         buildRouteTo,
         centerOnUser,
-        filtersTabRef,
         panelRef,
         coordinates,
         transportMode,
@@ -149,7 +147,6 @@ export default function MapScreen() {
             )}
             <View style={styles.tabsSegment}>
                 <Pressable
-                    ref={filtersTabRef}
                     testID="map-panel-tab-filters"
                     style={({ pressed }) => [
                         styles.tab,
@@ -163,8 +160,8 @@ export default function MapScreen() {
                     accessibilityState={{ selected: rightPanelTab === 'filters' }}
                     accessibilityLabel="Фильтры"
                 >
-                    <MaterialIcons
-                        name="filter-list"
+                    <Feather
+                        name="filter"
                         size={isMobile ? 22 : 18}
                         color={rightPanelTab === 'filters' ? themedColors.textInverse : themedColors.text}
                     />
@@ -194,7 +191,7 @@ export default function MapScreen() {
                     accessibilityState={{ selected: rightPanelTab === 'travels' }}
                     accessibilityLabel="Список"
                 >
-                    <MaterialIcons
+                    <Feather
                         name="list"
                         size={isMobile ? 22 : 18}
                         color={rightPanelTab === 'travels' ? themedColors.textInverse : themedColors.text}
@@ -225,7 +222,7 @@ export default function MapScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Сбросить фильтры"
                 >
-                    <MaterialIcons name="refresh" size={20} color={themedColors.textMuted} />
+                    <Feather name="refresh-cw" size={20} color={themedColors.textMuted} />
                 </Pressable>
             ) : (
                 <Pressable
@@ -236,7 +233,7 @@ export default function MapScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Закрыть панель"
                 >
-                    <MaterialIcons name="close" size={22} color={themedColors.textMuted} />
+                    <Feather name="x" size={22} color={themedColors.textMuted} />
                 </Pressable>
             )}
         </View>
@@ -245,10 +242,9 @@ export default function MapScreen() {
     // Error state
     if (mapError) {
         const friendly = getUserFriendlyNetworkError(mapErrorDetails || mapError);
-        const friendlyMessage =
-            typeof friendly === 'string' ? friendly : (friendly as any)?.message;
+        const friendlyMessage = (friendly as any)?.message ?? String(friendly || '');
         return (
-            <SafeAreaView style={styles.container}>
+            <View style={styles.container}>
                 {isFocused && Platform.OS === 'web' && (
                     <InstantSEO
                         headKey="map-error"
@@ -265,12 +261,12 @@ export default function MapScreen() {
                         refetchMapData();
                     }}
                 />
-            </SafeAreaView>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             {isFocused && Platform.OS === 'web' && (
                 <InstantSEO
                     headKey="map"
@@ -325,7 +321,7 @@ export default function MapScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Открыть панель"
                 >
-                    <MaterialIcons name="tune" size={24} color={themedColors.textOnPrimary} />
+                    <Feather name="sliders" size={24} color={themedColors.textOnPrimary} />
                 </Pressable>
             )}
 
@@ -334,6 +330,6 @@ export default function MapScreen() {
                     <ActivityIndicator color={themedColors.primary} />
                 </View>
             )}
-        </SafeAreaView>
+        </View>
     );
 }

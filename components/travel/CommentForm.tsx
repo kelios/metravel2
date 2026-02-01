@@ -38,10 +38,12 @@ export function CommentForm({
   useEffect(() => {
     if (editComment) {
       setText(editComment.text);
-    } else {
-      setText('');
+      return;
     }
-  }, [editComment]);
+
+    // When switching to reply mode (or back to normal), start from a clean input.
+    setText('');
+  }, [editComment, replyTo]);
 
   const handleSubmit = () => {
     const trimmedText = text.trim();
@@ -125,7 +127,7 @@ export function CommentForm({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Record<string, any>>({
   container: {
     backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: DESIGN_TOKENS.radii.sm,

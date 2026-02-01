@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { TravelComment } from '../../types/comments';
@@ -28,20 +28,29 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
   const isLiked = comment.is_liked;
 
   const handleLikeToggle = () => {
-    console.log('Like toggle:', { commentId: comment.id, isLiked, likes_count: comment.likes_count });
     if (isLiked) {
-      console.log('Unliking comment:', comment.id);
       unlikeComment.mutate(comment.id);
     } else {
-      console.log('Liking comment:', comment.id);
       likeComment.mutate(comment.id);
     }
   };
 
-  const handleDelete = () => {
-    if (confirm('Вы уверены, что хотите удалить комментарий?')) {
-      deleteComment.mutate(comment.id);
+  const confirmDelete = (onConfirm: () => void) => {
+    if (Platform.OS === 'web') {
+      if (confirm('Вы уверены, что хотите удалить комментарий?')) onConfirm();
+      return;
     }
+
+    Alert.alert('Удалить комментарий?', 'Вы уверены, что хотите удалить комментарий?', [
+      { text: 'Отмена', style: 'cancel' },
+      { text: 'Удалить', style: 'destructive', onPress: onConfirm },
+    ]);
+  };
+
+  const handleDelete = () => {
+    confirmDelete(() => {
+      deleteComment.mutate(comment.id);
+    });
   };
 
   const formattedDate = comment.created_at
@@ -163,7 +172,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
   );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Record<string, any>>({
   wrapper: {
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },

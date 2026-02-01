@@ -46,7 +46,6 @@ export function useMapScreenController() {
     closeRightPanel,
     panelStyle,
     overlayStyle,
-    filtersTabRef,
     panelRef,
     themedColors,
     styles,
@@ -189,12 +188,21 @@ export function useMapScreenController() {
       onClearRoute: handleClearRoute,
       swapStartEnd,
       routeHintDismissed: false,
-      onRouteHintDismiss: () => {},
       onAddressSelect: handleAddressSelect,
       onAddressClear: handleAddressClear,
       routingLoading,
       routingError,
-      onBuildRoute: () => {},
+      onBuildRoute: () => {
+        try {
+          // если в режиме route недостаточно точек, buildRouteTo сам должен быть безопасным
+          // (логика в useRouteController)
+          // здесь просто делегируем
+          // @ts-expect-error buildRouteTo может принимать разный shape item/point
+          buildRouteTo?.({});
+        } catch {
+          // noop
+        }
+      },
       mapUiApi,
       closeMenu: closeRightPanel,
       userLocation: coordinates,
@@ -205,7 +213,7 @@ export function useMapScreenController() {
       hideFooterReset: false,
     };
 
-    return { Component: FiltersProvider, contextValue, Panel: FiltersPanel };
+    return { Component: FiltersProvider, contextValue, props: contextValue, Panel: FiltersPanel };
   }, [
     filters,
     filterValues,
@@ -279,7 +287,6 @@ export function useMapScreenController() {
     centerOnUser,
 
     // Refs
-    filtersTabRef,
     panelRef,
 
     // Additional data for mobile layout

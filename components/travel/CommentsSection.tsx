@@ -66,28 +66,37 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
             },
           }
         );
-      } else if (replyTo) {
+        return;
+      }
+
+      if (replyTo) {
+        // Backend reply endpoint can require thread context.
+        // Always include thread_id if we have it, and travel_id as a safe fallback.
         replyToComment.mutate(
-          { commentId: replyTo.id, data: { text } },
+          {
+            commentId: replyTo.id,
+            data: {
+              text,
+              thread_id: replyTo.thread,
+              travel_id: travelId,
+            },
+          },
           {
             onSuccess: () => {
               setReplyTo(null);
             },
           }
         );
-      } else {
-        createComment.mutate(
-          { travel_id: travelId, text },
-          {
-            onSuccess: () => {
-              // Refetch comments after creating a new one
-              refetch();
-            },
-          }
-        );
+        return;
       }
+
+      // Prefer thread_id once the main thread is known; otherwise fall back to travel_id.
+      createComment.mutate({
+        text,
+        ...(mainThread?.id ? { thread_id: mainThread.id } : { travel_id: travelId }),
+      });
     },
-    [travelId, replyTo, editComment, createComment, updateComment, replyToComment, refetch]
+    [travelId, mainThread?.id, replyTo, editComment, createComment, updateComment, replyToComment]
   );
 
   const handleReply = useCallback((comment: TravelComment) => {
@@ -222,7 +231,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<Record<string, any>>({
   container: {
     flex: 1,
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,

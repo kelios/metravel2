@@ -66,18 +66,26 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const hasCalledOnMapReadyRef = useRef(false);
   const lastUserLocationKeyRef = useRef<string | null>(null);
 
+  // Helper: ensure mapZoom state matches real leaflet zoom even after programmatic moves.
+  const syncZoomFromMap = () => {
+    try {
+      if (!map) return;
+      const z = map.getZoom?.();
+      if (Number.isFinite(z)) setMapZoom(z);
+    } catch {
+      // noop
+    }
+  };
+
   // Handle map events
   useMapEvents({
     click: mapClickHandler,
     zoomend: () => {
-      try {
-        if (map) {
-          const z = map.getZoom();
-          setMapZoom(z);
-        }
-      } catch {
-        // noop
-      }
+      syncZoomFromMap();
+    },
+    moveend: () => {
+      // fitBounds can sometimes update zoom while zoomend isn't our first reliable signal
+      syncZoomFromMap();
     },
     zoomstart: () => {
       try {
@@ -114,6 +122,13 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
     try {
       setMapZoom(map.getZoom());
+    } catch {
+      // noop
+    }
+
+    try {
+      // map.whenReady may fire before first layout; we still sync zoom right after.
+      syncZoomFromMap();
     } catch {
       // noop
     }
@@ -168,7 +183,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     };
   }, [map, mode, savedMapViewRef]);
 
-  // Route mode: keep map stable (no auto fitBounds)
+  // Route mode + initial setView + radius initial setView
   useEffect(() => {
     if (!map) return;
 
@@ -179,6 +194,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     if (mode === 'route') {
       if (!hasInitializedRef.current && hasValidCoords) {
         map.setView([coordinates.lat, coordinates.lng], 13, { animate: false });
+        // ensure clusters get correct zoom after programmatic set
+        requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       }
       lastModeRef.current = mode;
@@ -203,9 +220,11 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     if (!hasInitializedRef.current) {
       if (hasValidUserLocation) {
         map.setView([userLocation.lat, userLocation.lng], 11, { animate: false });
+        requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       } else if (hasValidCoords) {
         map.setView([coordinates.lat, coordinates.lng], 11, { animate: false });
+        requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       }
     }
@@ -261,6 +280,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       const bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
       const padding = fitBoundsPadding ?? {};
       map.fitBounds(bounds.pad(0.2), { animate: false, ...padding });
+      // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
+      requestAnimationFrame(() => syncZoomFromMap());
       lastAutoFitKeyRef.current = autoFitKey;
     } catch {
       // noop
