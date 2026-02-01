@@ -272,14 +272,46 @@ export async function createTestTravel(): Promise<any> {
   if (!ctx) {
     throw new Error('Cannot create test travel: API context not available');
   }
-  
+
+  // Keep payload in sync with the backend expectations for /api/travels/upsert/.
+  // See e2e/travel-crud.spec.ts for the minimal shape that the API accepts.
   const payload = {
+    id: null,
     name: `Test Travel ${Date.now()}`,
     description: 'Test travel for e2e tests',
-    is_public: true,
-    category: 1,
+    countries: [],
+    cities: [],
+    over_nights_stay: [],
+    complexity: [],
+    companions: [],
+    recommendation: null,
+    plus: null,
+    minus: null,
+    youtube_link: null,
+    gallery: [],
+    categories: [],
+    countryIds: [],
+    travelAddressIds: [],
+    travelAddressCity: [],
+    travelAddressCountry: [],
+    travelAddressAdress: [],
+    travelAddressCategory: [],
+    coordsMeTravel: [],
+    thumbs200ForCollectionArr: [],
+    travelImageThumbUrlArr: [],
+    travelImageAddress: [],
+    categoriesIds: [],
+    transports: [],
+    month: [],
+    year: String(new Date().getFullYear()),
+    budget: '',
+    number_peoples: '2',
+    number_days: '3',
+    visa: false,
+    publish: false,
+    moderation: false,
   };
-  
+
   return createOrUpdateTravel(ctx, payload);
 }
 

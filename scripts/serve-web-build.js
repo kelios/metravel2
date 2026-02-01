@@ -37,7 +37,8 @@ const contentTypes = {
   '.map': 'application/json; charset=utf-8',
 }
 
-const apiProxyTarget = process.env.E2E_API_PROXY_TARGET || 'https://metravel.by'
+const defaultProxyTarget = (process.env.E2E_API_URL || process.env.EXPO_PUBLIC_API_URL || '').trim()
+const apiProxyTarget = process.env.E2E_API_PROXY_TARGET || defaultProxyTarget || 'https://metravel.by'
 const allowInsecureProxy = String(process.env.E2E_API_PROXY_INSECURE || '').toLowerCase() === 'true'
 const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/gallery/', '/uploads/', '/media/']
 // Default timeout is intentionally generous: in CI/local E2E the upstream can be slow,
@@ -98,6 +99,7 @@ const proxyRequest = (req, res, target) => {
         method: req.method,
         agent: isHttps ? httpsAgent : httpAgent,
         headers: buildProxyHeaders(req.headers, upstreamUrl.host),
+        ...(isHttps && allowInsecureProxy ? { rejectUnauthorized: false } : null),
       },
       (proxyRes) => {
         if (clientClosed) {
