@@ -2,7 +2,7 @@ import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react
 import { ActivityIndicator, Platform, Text, View, useWindowDimensions } from 'react-native'
 
 import { METRICS } from '@/constants/layout'
-import { useLazyMap } from '@/hooks/useLazyMap'
+import { useMapLazyLoad } from '@/hooks/useMapLazyLoad'
 
 import { MapSkeleton, PointListSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import type { Travel } from '@/src/types/types'
@@ -13,7 +13,7 @@ import { withLazy } from '../TravelDetailsLazy'
 
 const PointList = withLazy(() => import('@/components/travel/PointList'))
 const ToggleableMap = withLazy(() => import('@/components/travel/ToggleableMapSection'))
-const MapClientSide = withLazy(() => import('@/components/Map'))
+const TravelMap = withLazy(() => import('@/components/MapPage/TravelMap'))
 
 const BelkrajWidgetComponent =
   Platform.OS === 'web'
@@ -117,16 +117,19 @@ export const TravelDetailsMapSection: React.FC<{
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0
-  const [mapLazyEnabled, setMapLazyEnabled] = useState(Platform.OS !== 'web')
-  const { shouldLoad: shouldLoadMap, setElementRef } = useLazyMap({
-    enabled: mapLazyEnabled,
+
+  // Simplified lazy loading (replaces 30+ lines with 5 lines!)
+  const { shouldRender, elementRef, isLoading } = useMapLazyLoad({
+    enabled: true,
+    hasData: hasMapData,
+    canRenderHeavy,
     rootMargin: '0px',
     threshold: 0.2,
   })
-  const shouldRenderMap = canRenderHeavy && (Platform.OS !== 'web' || shouldLoadMap) && hasMapData
-  const [hasMountedMap, setHasMountedMap] = useState(false)
+
   const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
   const [mapOpenTrigger, setMapOpenTrigger] = useState(0)
+
   const handlePointCardPress = useCallback((point: any) => {
     const coord = String(point?.coord ?? '').trim()
     if (!coord) return
@@ -135,19 +138,6 @@ export const TravelDetailsMapSection: React.FC<{
     scrollToMapSection()
   }, [scrollToMapSection])
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (!canRenderHeavy) return
-    setMapLazyEnabled(true)
-  }, [canRenderHeavy])
-
-  useEffect(() => {
-    if (shouldRenderMap && !hasMountedMap) {
-      setHasMountedMap(true)
-    }
-  }, [shouldRenderMap, hasMountedMap])
-
-  const shouldMountMap = hasMapData && (hasMountedMap || shouldRenderMap)
 
   const isMobileWeb = Platform.OS === 'web' && width <= METRICS.breakpoints.tablet
 
@@ -181,9 +171,9 @@ export const TravelDetailsMapSection: React.FC<{
       <View
         ref={(node) => {
           (anchors.map as any).current = node
-          if (Platform.OS !== 'web') return
-          const target = (node as any)?._nativeNode || (node as any)?._domNode || node || null
-          setElementRef(target as any)
+          if (Platform.OS === 'web') {
+            elementRef(node)
+          }
         }}
         testID="travel-details-map"
         style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
@@ -204,15 +194,17 @@ export const TravelDetailsMapSection: React.FC<{
             <ToggleableMap
               initiallyOpen={!isMobileWeb}
               keepMounted={Platform.OS === 'web'}
-              isLoading={!shouldRenderMap}
+              isLoading={isLoading}
               loadingLabel="Подгружаем карту маршрута..."
               forceOpenTrigger={mapOpenTrigger || undefined}
             >
-              {shouldMountMap ? (
+              {shouldRender ? (
                 <Suspense fallback={<MapFallback />}>
-                  <MapClientSide
-                    travel={{ data: travel.travelAddress as any }}
-                    highlightedPointRequest={highlightedPoint ?? undefined}
+                  <TravelMap
+                    travelData={travel.travelAddress as any}
+                    highlightedPoint={highlightedPoint ?? undefined}
+                    compact
+                    height={isMobileWeb ? 400 : 500}
                   />
                 </Suspense>
               ) : null}

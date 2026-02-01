@@ -6,6 +6,7 @@
   "scripts": {
     "check-deps": "node scripts/check-dependencies.js",
     "check:image-architecture": "node scripts/check-image-architecture.js",
+    "test:cors": "node scripts/test-cors-proxy.js",
     "start": "npx expo start",
     "android": "npx expo start --android",
     "ios": "npx expo start --ios",

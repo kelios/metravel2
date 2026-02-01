@@ -1016,13 +1016,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
             );
           })()}
 
-          {/* User location marker */}
-          {userLocationLatLng && customIcons?.userLocation && (
-            <Marker position={[userLocationLatLng.lat, userLocationLatLng.lng]} icon={customIcons.userLocation}>
-              <Popup>Ваше местоположение</Popup>
-            </Marker>
-          )}
-
           {/* Travel markers (not clustered) */}
           {customIcons?.meTravel && markers.length > 0 && !shouldRenderClusters && PopupComponent && (
             <MapMarkers

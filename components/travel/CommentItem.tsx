@@ -101,7 +101,11 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
               accessibilityLabel="Удалить комментарий"
             >
               {deleteComment.isPending ? (
-                <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.danger} />
+                <ActivityIndicator
+                  testID="activity-indicator"
+                  size="small"
+                  color={DESIGN_TOKENS.colors.danger}
+                />
               ) : (
                 <>
                   <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />

@@ -2,7 +2,16 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CommentsSection } from '@/components/travel/CommentsSection';
-import { useMainThread, useComments, useCreateComment } from '@/hooks/useComments';
+import {
+  useMainThread,
+  useComments,
+  useCreateComment,
+  useUpdateComment,
+  useReplyToComment,
+  useLikeComment,
+  useUnlikeComment,
+  useDeleteComment,
+} from '@/hooks/useComments';
 import { useAuth } from '@/context/AuthContext';
 
 jest.mock('@/hooks/useComments');
@@ -11,6 +20,11 @@ jest.mock('@/context/AuthContext');
 const mockUseMainThread = useMainThread as jest.MockedFunction<typeof useMainThread>;
 const mockUseComments = useComments as jest.MockedFunction<typeof useComments>;
 const mockUseCreateComment = useCreateComment as jest.MockedFunction<typeof useCreateComment>;
+const mockUseUpdateComment = useUpdateComment as jest.MockedFunction<typeof useUpdateComment>;
+const mockUseReplyToComment = useReplyToComment as jest.MockedFunction<typeof useReplyToComment>;
+const mockUseLikeComment = useLikeComment as jest.MockedFunction<typeof useLikeComment>;
+const mockUseUnlikeComment = useUnlikeComment as jest.MockedFunction<typeof useUnlikeComment>;
+const mockUseDeleteComment = useDeleteComment as jest.MockedFunction<typeof useDeleteComment>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
 const createTestQueryClient = () =>
@@ -30,6 +44,12 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 describe('CommentsSection', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockUseCreateComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
+    mockUseUpdateComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
+    mockUseReplyToComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
+    mockUseLikeComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
+    mockUseUnlikeComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
+    mockUseDeleteComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
   });
 
   describe('Unauthenticated users', () => {
@@ -235,7 +255,7 @@ describe('CommentsSection', () => {
 
       render(<CommentsSection travelId={123} />, { wrapper });
 
-      expect(screen.getByText('Не удалось загрузить комментарии')).toBeTruthy();
+      expect(screen.getByText('Комментарии недоступны')).toBeTruthy();
     });
   });
 

@@ -136,7 +136,11 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   if (isLoading && !isRefreshing) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={DESIGN_TOKENS.colors.primary} />
+        <ActivityIndicator
+          testID="activity-indicator"
+          size="large"
+          color={DESIGN_TOKENS.colors.primary}
+        />
       </View>
     );
   }

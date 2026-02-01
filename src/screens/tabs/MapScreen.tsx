@@ -245,6 +245,8 @@ export default function MapScreen() {
     // Error state
     if (mapError) {
         const friendly = getUserFriendlyNetworkError(mapErrorDetails || mapError);
+        const friendlyMessage =
+            typeof friendly === 'string' ? friendly : (friendly as any)?.message;
         return (
             <SafeAreaView style={styles.container}>
                 {isFocused && Platform.OS === 'web' && (
@@ -257,7 +259,7 @@ export default function MapScreen() {
                 )}
                 <ErrorDisplay
                     title="Не удалось загрузить карту"
-                    message={friendly || 'Проверьте соединение и попробуйте ещё раз'}
+                    message={friendlyMessage || 'Проверьте соединение и попробуйте ещё раз'}
                     onRetry={() => {
                         invalidateTravelsQuery();
                         refetchMapData();

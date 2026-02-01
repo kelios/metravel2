@@ -5,9 +5,13 @@
 
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
+import { FiltersProvider } from '@/contexts/FiltersContext';
+import { ThemeProvider } from '@/hooks/useTheme';
+import { makeFiltersContext } from '@/__tests__/utils/makeFiltersContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 describe('FiltersPanel - Safety Tests', () => {
-  const defaultProps = {
+  const defaultContext = makeFiltersContext({
     filters: {
       categories: [
         { id: 1, name: 'Категория 1' },
@@ -24,20 +28,25 @@ describe('FiltersPanel - Safety Tests', () => {
       radius: '60',
       address: '',
     },
-    onFilterChange: jest.fn(),
-    resetFilters: jest.fn(),
-    travelsData: [],
-    filteredTravelsData: [],
-    isMobile: false,
-    closeMenu: jest.fn(),
-    mode: 'radius' as const,
-    setMode: jest.fn(),
-    transportMode: 'car' as const,
-    setTransportMode: jest.fn(),
-    startAddress: '',
-    endAddress: '',
-    routeDistance: null,
-    routePoints: [],
+  });
+
+  const renderWithProviders = (contextOverrides: Parameters<typeof makeFiltersContext>[0] = {}) => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const context = makeFiltersContext({ ...defaultContext, ...contextOverrides });
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <FiltersProvider {...context}>
+            <FiltersPanel />
+          </FiltersProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    );
   };
 
   beforeEach(() => {
@@ -46,60 +55,48 @@ describe('FiltersPanel - Safety Tests', () => {
 
   describe('Invalid Filter Data Handling', () => {
     it('handles empty categories array', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          filters={{ ...defaultProps.filters, categories: [] }}
-        />
-      );
+      const { root } = renderWithProviders({
+        filters: { ...defaultContext.filters, categories: [] },
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles categories with missing names', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          filters={{
-            ...defaultProps.filters,
-            categories: [
-              { id: 1, name: '' },
-              { id: 2, name: null as any },
-              { id: 3, name: undefined as any },
-            ],
-          }}
-        />
-      );
+      const { root } = renderWithProviders({
+        filters: {
+          ...defaultContext.filters,
+          categories: [
+            { id: 1, name: '' },
+            { id: 2, name: null as any },
+            { id: 3, name: undefined as any },
+          ],
+        },
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles malformed category objects', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          filters={{
-            ...defaultProps.filters,
-            categories: [
-              null as any,
-              undefined as any,
-              {} as any,
-              { id: 'test' } as any,
-            ],
-          }}
-        />
-      );
+      const { root } = renderWithProviders({
+        filters: {
+          ...defaultContext.filters,
+          categories: [
+            null as any,
+            undefined as any,
+            {} as any,
+            { id: 'test' } as any,
+          ],
+        },
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles invalid radius values', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          filterValue={{ ...defaultProps.filterValue, radius: 'invalid' }}
-        />
-      );
+      const { root } = renderWithProviders({
+        filterValue: { ...defaultContext.filterValue, radius: 'invalid' },
+      });
 
       expect(root).toBeTruthy();
     });
@@ -107,66 +104,49 @@ describe('FiltersPanel - Safety Tests', () => {
 
   describe('Route Mode Safety', () => {
     it('handles invalid route points', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mode="route"
-          routePoints={[
-            { id: '1', coordinates: { lat: NaN, lng: 27.56 }, address: 'Test' },
-            { id: '2', coordinates: { lat: 53.9, lng: Infinity }, address: 'Test 2' },
-          ] as any}
-        />
-      );
+      const { root } = renderWithProviders({
+        mode: 'route',
+        routePoints: [
+          { id: '1', coordinates: { lat: NaN, lng: 27.56 }, address: 'Test' },
+          { id: '2', coordinates: { lat: 53.9, lng: Infinity }, address: 'Test 2' },
+        ] as any,
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles empty route points in route mode', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mode="route"
-          routePoints={[]}
-        />
-      );
+      const { root } = renderWithProviders({
+        mode: 'route',
+        routePoints: [],
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles single route point', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mode="route"
-          routePoints={[
-            { id: '1', coordinates: { lat: 53.9, lng: 27.56 }, address: 'Test' },
-          ] as any}
-        />
-      );
+      const { root } = renderWithProviders({
+        mode: 'route',
+        routePoints: [{ id: '1', coordinates: { lat: 53.9, lng: 27.56 }, address: 'Test' }] as any,
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles negative route distance', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mode="route"
-          routeDistance={-100}
-        />
-      );
+      const { root } = renderWithProviders({
+        mode: 'route',
+        routeDistance: -100,
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles NaN route distance', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mode="route"
-          routeDistance={NaN}
-        />
-      );
+      const { root } = renderWithProviders({
+        mode: 'route',
+        routeDistance: NaN,
+      });
 
       expect(root).toBeTruthy();
     });
@@ -174,36 +154,27 @@ describe('FiltersPanel - Safety Tests', () => {
 
   describe('Callback Safety', () => {
     it('handles missing onFilterChange callback', () => {
-      const { getByTestId } = render(
-        <FiltersPanel
-          {...defaultProps}
-          onFilterChange={undefined as any}
-        />
-      );
+      const { getByTestId } = renderWithProviders({
+        onFilterChange: undefined as any,
+      });
 
       const radiusOption = getByTestId('radius-option-30');
       expect(() => fireEvent.press(radiusOption)).not.toThrow();
     });
 
     it('handles missing resetFilters callback', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          resetFilters={undefined as any}
-        />
-      );
+      const { root } = renderWithProviders({
+        resetFilters: undefined as any,
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles missing closeMenu callback', () => {
-      const { queryByTestId } = render(
-        <FiltersPanel
-          {...defaultProps}
-          isMobile={true}
-          closeMenu={undefined as any}
-        />
-      );
+      const { queryByTestId } = renderWithProviders({
+        isMobile: true,
+        closeMenu: undefined as any,
+      });
 
       const closeButton = queryByTestId('filters-panel-close-button');
       if (closeButton) {
@@ -216,40 +187,26 @@ describe('FiltersPanel - Safety Tests', () => {
 
   describe('Data Consistency', () => {
     it('handles mismatched travelsData and filteredTravelsData', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          travelsData={[
-            { categoryName: 'Cat1' },
-            { categoryName: 'Cat2' },
-          ]}
-          filteredTravelsData={[
-            { categoryName: 'Cat3' },
-          ]}
-        />
-      );
+      const { root } = renderWithProviders({
+        travelsData: [{ categoryName: 'Cat1' }, { categoryName: 'Cat2' }],
+        filteredTravelsData: [{ categoryName: 'Cat3' }],
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles null travelsData', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          travelsData={null as any}
-        />
-      );
+      const { root } = renderWithProviders({
+        travelsData: null as any,
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles undefined filteredTravelsData', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          filteredTravelsData={undefined}
-        />
-      );
+      const { root } = renderWithProviders({
+        filteredTravelsData: undefined,
+      });
 
       expect(root).toBeTruthy();
     });
@@ -258,20 +215,11 @@ describe('FiltersPanel - Safety Tests', () => {
   describe('Category Selection Safety', () => {
     it('handles selecting already selected category', async () => {
       const onFilterChange = jest.fn();
-      const { getByText } = render(
-        <FiltersPanel
-          {...defaultProps}
-          onFilterChange={onFilterChange}
-          filterValue={{
-            ...defaultProps.filterValue,
-            categories: ['Категория 1'],
-          }}
-          travelsData={[
-            { categoryName: 'Категория 1' },
-            { categoryName: 'Категория 2' },
-          ]}
-        />
-      );
+      const { getByText } = renderWithProviders({
+        onFilterChange,
+        filterValue: { ...defaultContext.filterValue, categories: ['Категория 1'] },
+        travelsData: [{ categoryName: 'Категория 1' }, { categoryName: 'Категория 2' }],
+      });
 
       // Проверяем, что компонент отрисовался
       expect(getByText(/Категории/)).toBeTruthy();
@@ -279,24 +227,24 @@ describe('FiltersPanel - Safety Tests', () => {
 
     it('handles rapid category selection changes', async () => {
       const onFilterChange = jest.fn();
-      const { rerender } = render(
-        <FiltersPanel
-          {...defaultProps}
-          onFilterChange={onFilterChange}
-        />
-      );
+      const { rerender } = renderWithProviders({
+        onFilterChange,
+      });
 
       // Быстрые изменения
       for (let i = 0; i < 10; i++) {
         rerender(
-          <FiltersPanel
-            {...defaultProps}
-            onFilterChange={onFilterChange}
-            filterValue={{
-              ...defaultProps.filterValue,
-              categories: [`Category${i}`],
-            }}
-          />
+          <ThemeProvider>
+            <FiltersProvider
+              {...makeFiltersContext({
+                ...defaultContext,
+                onFilterChange,
+                filterValue: { ...defaultContext.filterValue, categories: [`Category${i}`] },
+              })}
+            >
+              <FiltersPanel />
+            </FiltersProvider>
+          </ThemeProvider>
         );
       }
 
@@ -308,23 +256,17 @@ describe('FiltersPanel - Safety Tests', () => {
 
   describe('MapUiApi Safety', () => {
     it('handles null mapUiApi', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mapUiApi={null}
-        />
-      );
+      const { root } = renderWithProviders({
+        mapUiApi: null,
+      });
 
       expect(root).toBeTruthy();
     });
 
     it('handles mapUiApi with missing methods', () => {
-      const { root } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mapUiApi={{} as any}
-        />
-      );
+      const { root } = renderWithProviders({
+        mapUiApi: {} as any,
+      });
 
       expect(root).toBeTruthy();
     });
@@ -337,12 +279,9 @@ describe('FiltersPanel - Safety Tests', () => {
         capabilities: { canCenterOnUser: true },
       };
 
-      const { getByTestId, queryByLabelText } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mapUiApi={mapUiApi as any}
-        />
-      );
+      const { getByTestId, queryByLabelText } = renderWithProviders({
+        mapUiApi: mapUiApi as any,
+      });
 
       // The section is defaultOpen in the component; only open it if needed.
       let zoomButton = queryByLabelText('Увеличить масштаб');

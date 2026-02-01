@@ -138,7 +138,12 @@ jest.mock('@/components/MapPage/Map/useLeafletIcons', () => {
 let mockShouldRenderClustersForTests = false
 jest.mock('@/components/MapPage/Map/useClustering', () => {
   const api = {
-    useClustering: () => ({ shouldRenderClusters: mockShouldRenderClustersForTests }),
+    useClustering: () => ({
+      shouldRenderClusters: mockShouldRenderClustersForTests,
+      clusters: mockShouldRenderClustersForTests
+        ? [{ key: 'test-cluster', bounds: [[53.9, 27.5], [54.0, 27.6]], items: [] }]
+        : [],
+    }),
     __setShouldRenderClustersForTests: (value: boolean) => {
       mockShouldRenderClustersForTests = value
     },

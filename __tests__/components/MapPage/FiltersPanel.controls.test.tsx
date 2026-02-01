@@ -3,7 +3,9 @@
  */
 import { render, fireEvent } from '@testing-library/react-native';
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
+import { FiltersProvider } from '@/contexts/FiltersContext';
 import type { MapUiApi } from '@/src/types/mapUi';
+import { makeFiltersContext } from '@/__tests__/utils/makeFiltersContext';
 
 // All mocks must be at the top
 jest.mock('@/hooks/useTheme', () => ({
@@ -70,8 +72,23 @@ jest.mock('@/components/MapPage/AddressSearch', () => {
 
 jest.mock('@/components/MapPage/RouteBuilder', () => {
   const { View, Text } = require('react-native');
-  return function MockRouteBuilder({ startAddress, endAddress }: any) {
-    return <View testID="route-builder"><Text>Start: {startAddress}</Text><Text>End: {endAddress}</Text></View>;
+  return function MockRouteBuilder({ startAddress, endAddress, routePoints = [], onRemoveRoutePoint }: any) {
+    return (
+      <View testID="route-builder">
+        <Text>Start: {startAddress}</Text>
+        <Text>End: {endAddress}</Text>
+        <View testID="route-points-list">
+          {routePoints.map((p: any) => (
+            <View key={p.id}>
+              <Text>{p.address}</Text>
+              <Text testID={`route-point-remove-${p.id}`} onPress={() => onRemoveRoutePoint?.(p.id)}>
+                X
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
   };
 });
 
@@ -142,28 +159,6 @@ describe('FiltersPanel Controls', () => {
     address: '',
   };
 
-  const defaultProps = {
-    filters: mockFilters,
-    filterValue: mockFilterValue,
-    onFilterChange: jest.fn(),
-    resetFilters: jest.fn(),
-    travelsData: [],
-    filteredTravelsData: [],
-    isMobile: false,
-    closeMenu: jest.fn(),
-    mode: 'radius' as const,
-    setMode: jest.fn(),
-    transportMode: 'car' as const,
-    setTransportMode: jest.fn(),
-    startAddress: '',
-    endAddress: '',
-    routeDistance: null,
-    routePoints: [],
-    onClearRoute: jest.fn(),
-    swapStartEnd: jest.fn(),
-    mapUiApi: null,
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -172,18 +167,23 @@ describe('FiltersPanel Controls', () => {
     it('renders route points as pills and calls onRemoveRoutePoint when X is pressed', () => {
       const onRemoveRoutePoint = jest.fn();
 
+      const context = makeFiltersContext({
+        filters: mockFilters,
+        filterValue: mockFilterValue,
+        mode: 'route',
+        onRemoveRoutePoint,
+        onAddressSelect: undefined as any,
+        onAddressClear: undefined as any,
+        routePoints: [
+          { id: 'p1', coordinates: { lat: 50.0, lng: 19.9 }, address: 'Kraków', type: 'start', timestamp: Date.now() },
+          { id: 'p2', coordinates: { lat: 50.1, lng: 20.0 }, address: 'Rynek Główny', type: 'end', timestamp: Date.now() },
+        ],
+      });
+
       const { getByTestId, getByText } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mode="route"
-          startAddress=""
-          endAddress=""
-          onRemoveRoutePoint={onRemoveRoutePoint}
-          routePoints={[
-            { id: 'p1', coordinates: { lat: 50.0, lng: 19.9 }, address: 'Kraków', type: 'start', timestamp: Date.now() },
-            { id: 'p2', coordinates: { lat: 50.1, lng: 20.0 }, address: 'Rynek Główny', type: 'end', timestamp: Date.now() },
-          ]}
-        />
+        <FiltersProvider {...context}>
+          <FiltersPanel />
+        </FiltersProvider>
       );
 
       expect(getByTestId('route-points-list')).toBeTruthy();
@@ -197,18 +197,22 @@ describe('FiltersPanel Controls', () => {
   describe('Transport Mode Controls', () => {
     it('should call setTransportMode when transport button clicked and route is ready', () => {
       const setTransportMode = jest.fn();
+      const context = makeFiltersContext({
+        filters: mockFilters,
+        filterValue: mockFilterValue,
+        mode: 'route',
+        setTransportMode,
+        routePoints: [
+          { id: '1', coordinates: { lat: 53.9, lng: 27.5 }, address: 'Start', type: 'start', timestamp: Date.now() },
+          { id: '2', coordinates: { lat: 54.0, lng: 28.0 }, address: 'End', type: 'end', timestamp: Date.now() },
+        ],
+        startAddress: 'Start Address',
+        endAddress: 'End Address',
+      });
       const { getByText } = render(
-        <FiltersPanel
-          {...defaultProps}
-          mode="route"
-          setTransportMode={setTransportMode}
-          routePoints={[
-            { id: '1', coordinates: { lat: 53.9, lng: 27.5 }, address: 'Start', type: 'start', timestamp: Date.now() },
-            { id: '2', coordinates: { lat: 54.0, lng: 28.0 }, address: 'End', type: 'end', timestamp: Date.now() },
-          ]}
-          startAddress="Start Address"
-          endAddress="End Address"
-        />
+        <FiltersProvider {...context}>
+          <FiltersPanel />
+        </FiltersProvider>
       );
 
       const bikeTabText: any = getByText('Велосипед');
@@ -220,8 +224,17 @@ describe('FiltersPanel Controls', () => {
 
     it('should NOT call setTransportMode when no route points', () => {
       const setTransportMode = jest.fn();
+      const context = makeFiltersContext({
+        filters: mockFilters,
+        filterValue: mockFilterValue,
+        mode: 'route',
+        setTransportMode,
+        routePoints: [],
+      });
       const { getByText } = render(
-        <FiltersPanel {...defaultProps} mode="route" setTransportMode={setTransportMode} />
+        <FiltersProvider {...context}>
+          <FiltersPanel />
+        </FiltersProvider>
       );
 
       const carTabText: any = getByText('Авто');
@@ -235,8 +248,16 @@ describe('FiltersPanel Controls', () => {
   describe('Mode Switching', () => {
     it('should call setMode when switching to route mode', () => {
       const setMode = jest.fn();
+      const context = makeFiltersContext({
+        filters: mockFilters,
+        filterValue: mockFilterValue,
+        mode: 'radius',
+        setMode,
+      });
       const { getByTestId } = render(
-        <FiltersPanel {...defaultProps} mode="radius" setMode={setMode} />
+        <FiltersProvider {...context}>
+          <FiltersPanel />
+        </FiltersProvider>
       );
 
       const routeTab = getByTestId('segmented-route');
@@ -247,8 +268,16 @@ describe('FiltersPanel Controls', () => {
 
     it('should call setMode when switching to radius mode', () => {
       const setMode = jest.fn();
+      const context = makeFiltersContext({
+        filters: mockFilters,
+        filterValue: mockFilterValue,
+        mode: 'route',
+        setMode,
+      });
       const { getByTestId } = render(
-        <FiltersPanel {...defaultProps} mode="route" setMode={setMode} />
+        <FiltersProvider {...context}>
+          <FiltersPanel />
+        </FiltersProvider>
       );
 
       const radiusTab = getByTestId('segmented-radius');
@@ -278,8 +307,15 @@ describe('FiltersPanel Controls', () => {
     it('should pass mapUiApi to component without errors', () => {
       // Zoom buttons are inside a collapsed section by default
       // This test verifies the component renders with mapUiApi prop
+      const context = makeFiltersContext({
+        filters: mockFilters,
+        filterValue: mockFilterValue,
+        mapUiApi: mockMapUiApi,
+      });
       const { getByTestId } = render(
-        <FiltersPanel {...defaultProps} mapUiApi={mockMapUiApi} />
+        <FiltersProvider {...context}>
+          <FiltersPanel />
+        </FiltersProvider>
       );
 
       // Component should render without errors
@@ -290,8 +326,16 @@ describe('FiltersPanel Controls', () => {
   describe('Reset Filters', () => {
     it('should call resetFilters when reset button pressed', () => {
       const resetFilters = jest.fn();
+      const context = makeFiltersContext({
+        filters: mockFilters,
+        filterValue: mockFilterValue,
+        mode: 'radius',
+        resetFilters,
+      });
       const { getByTestId } = render(
-        <FiltersPanel {...defaultProps} resetFilters={resetFilters} />
+        <FiltersProvider {...context}>
+          <FiltersPanel />
+        </FiltersProvider>
       );
 
       const resetButton = getByTestId('filters-reset-button');

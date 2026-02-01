@@ -9,7 +9,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
 import Button from '@/components/ui/Button';
-import OptimizedImage from './OptimizedImage';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface HomeHeroProps {
   travelsCount?: number;
@@ -315,13 +315,15 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                 accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
                 style={styles.imageContainer}
               >
-                <OptimizedImage
+                <ImageCardMedia
                   source={require('../../assets/images/pdf.webp')}
                   width={320}
                   height={400}
                   borderRadius={DESIGN_TOKENS.radii.lg}
+                  fit="cover"
                   alt="Пример книги путешествий"
-                  loadingStrategy={Platform.OS === 'web' ? 'eager' : 'lazy'}
+                  loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
+                  transition={300}
                   style={styles.bookImage}
                 />
               </Pressable>

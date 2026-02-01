@@ -244,3 +244,58 @@ export async function listUserPoints(ctx: E2EApiContext): Promise<any[]> {
   if (Array.isArray((json as any)?.data)) return (json as any).data;
   return [];
 }
+
+export async function loginAsUser(page: any): Promise<void> {
+  const email = process.env.E2E_EMAIL || '';
+  const password = process.env.E2E_PASSWORD || '';
+  
+  await page.goto('/login');
+  await page.fill('input[type="email"]', email);
+  await page.fill('input[type="password"]', password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL('**/');
+}
+
+export async function loginAsAdmin(page: any): Promise<void> {
+  const email = process.env.E2E_ADMIN_EMAIL || process.env.E2E_EMAIL || '';
+  const password = process.env.E2E_ADMIN_PASSWORD || process.env.E2E_PASSWORD || '';
+  
+  await page.goto('/login');
+  await page.fill('input[type="email"]', email);
+  await page.fill('input[type="password"]', password);
+  await page.click('button[type="submit"]');
+  await page.waitForURL('**/');
+}
+
+export async function createTestTravel(): Promise<any> {
+  const ctx = await apiContextFromEnv();
+  if (!ctx) {
+    throw new Error('Cannot create test travel: API context not available');
+  }
+  
+  const payload = {
+    name: `Test Travel ${Date.now()}`,
+    description: 'Test travel for e2e tests',
+    is_public: true,
+    category: 1,
+  };
+  
+  return createOrUpdateTravel(ctx, payload);
+}
+
+export async function cleanupTestData(options: { travelId?: number; pointIds?: (string | number)[] } = {}): Promise<void> {
+  const ctx = await apiContextFromEnv();
+  if (!ctx) {
+    return;
+  }
+  
+  if (options.travelId) {
+    await deleteTravel(ctx, options.travelId).catch(() => {});
+  }
+  
+  if (options.pointIds && options.pointIds.length > 0) {
+    for (const pointId of options.pointIds) {
+      await deleteUserPoint(ctx, pointId).catch(() => {});
+    }
+  }
+}

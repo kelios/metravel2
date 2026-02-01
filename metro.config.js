@@ -97,6 +97,72 @@ config.server = {
       try {
         const url = typeof req.url === 'string' ? req.url : ''
         const pathname = url.split('?')[0] || ''
+
+        // CORS proxy for API requests
+        if (pathname.startsWith('/api/')) {
+          const apiHost = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.36';
+          const targetUrl = `${apiHost}${url}`;
+
+          // Use node's http/https module for proxying
+          const http = require('http');
+          const https = require('https');
+          const urlModule = require('url');
+          const parsedUrl = urlModule.parse(targetUrl);
+          const protocol = parsedUrl.protocol === 'https:' ? https : http;
+
+          const proxyReq = protocol.request(
+            {
+              hostname: parsedUrl.hostname,
+              port: parsedUrl.port,
+              path: parsedUrl.path,
+              method: req.method,
+              headers: {
+                ...req.headers,
+                host: parsedUrl.hostname,
+              },
+            },
+            (proxyRes) => {
+              // Add CORS headers
+              res.setHeader('Access-Control-Allow-Origin', '*');
+              res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+              res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+              // Copy status and headers from proxy response
+              res.statusCode = proxyRes.statusCode || 200;
+              Object.keys(proxyRes.headers).forEach((key) => {
+                const value = proxyRes.headers[key];
+                if (value && key.toLowerCase() !== 'transfer-encoding') {
+                  res.setHeader(key, value);
+                }
+              });
+
+              // Pipe response
+              proxyRes.pipe(res);
+            }
+          );
+
+          proxyReq.on('error', (err) => {
+            console.error('[Metro CORS Proxy] Error:', err.message);
+            res.statusCode = 502;
+            res.end('Bad Gateway');
+          });
+
+          // Handle OPTIONS preflight
+          if (req.method === 'OPTIONS') {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          // Pipe request body
+          req.pipe(proxyReq);
+          return;
+        }
+
+        // Serve static files from public/
         const shouldServe =
           pathname === '/manifest.json' ||
           pathname.startsWith('/assets/') ||
@@ -116,8 +182,8 @@ config.server = {
             return
           }
         }
-      } catch {
-        // noop
+      } catch (err) {
+        console.error('[Metro middleware] Error:', err);
       }
 
       return baseMiddleware(req, res, next)
