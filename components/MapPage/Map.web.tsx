@@ -133,6 +133,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
     lng: safeCoordinates.longitude,
   }), [safeCoordinates.latitude, safeCoordinates.longitude]);
 
+  const hintCenterForMarkers = useMemo(() => {
+    if (mode === 'radius' && userLocationLatLng) return userLocationLatLng;
+    return coordinatesLatLng;
+  }, [coordinatesLatLng, mode, userLocationLatLng]);
+
   // Use new markers hook
   const {
     shouldRenderClusters,
@@ -144,7 +149,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     mapZoom,
     expandedClusterKey: expandedCluster?.key,
     mode,
-    hintCenter: hintCenterLatLng,
+    hintCenter: hintCenterForMarkers,
   });
 
   // Radius calculation
