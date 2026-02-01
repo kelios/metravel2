@@ -12,11 +12,18 @@ import { getUserFriendlyError } from '@/src/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/src/utils/retry';
 import { getSecureItem, setSecureItem } from '@/src/utils/secureStorage';
 
-const rawApiUrl: string =
-    (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
+const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
+const webOriginApi =
+    Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
         ? `${window.location.origin}/api`
-        : process.env.EXPO_PUBLIC_API_URL) ||
-    (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
+        : '';
+const rawApiUrl: string =
+    Platform.OS === 'web'
+        ? (isE2E
+            ? (webOriginApi || envApiUrl || '')
+            : (envApiUrl || ''))
+        : (envApiUrl || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : ''));
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }

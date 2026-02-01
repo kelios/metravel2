@@ -18,8 +18,10 @@ if (!globalThis.expo) {
 
 globalThis.process = globalThis.process || {};
 globalThis.process.env = globalThis.process.env || {};
+// В тестах по умолчанию используем реальный dev API, чтобы не было фоллбэка на window.location.origin (127.0.0.1:8085).
+// Если нужно другое окружение, задайте EXPO_PUBLIC_API_URL перед запуском Jest.
 globalThis.process.env.EXPO_PUBLIC_API_URL =
-  globalThis.process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api';
+  globalThis.process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.36';
 
 globalThis.expo.EventEmitter = globalThis.expo.EventEmitter || MockEventEmitter;
 globalThis.expo.NativeModule = globalThis.expo.NativeModule || MockNativeModule;

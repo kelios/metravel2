@@ -277,9 +277,21 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const autoFitKey = `${mode}:${dataKey}:${userLocation ? `${userLocation.lat},${userLocation.lng}` : 'no-user'}:${radiusKey}`;
     if (lastAutoFitKeyRef.current === autoFitKey) return;
 
-    const coords = travelData
-      .map((p) => strToLatLng(p.coord, hintCenter))
-      .filter(Boolean) as [number, number][];
+    // Prefer fitting to the radius circle itself if we have a valid center + radius.
+    // This avoids wild zoom-outs if the backend returns outlier points or if any coord parsing is off.
+    const shouldFitToCircle =
+      mode === 'radius' &&
+      circleCenter &&
+      Number.isFinite(circleCenter.lat) &&
+      Number.isFinite(circleCenter.lng) &&
+      Number.isFinite(radiusInMeters) &&
+      Number(radiusInMeters) > 0;
+
+    const coords = shouldFitToCircle
+      ? ([] as [number, number][]) // will be filled by circle bounds below
+      : ((travelData
+          .map((p) => strToLatLng(p.coord, hintCenter))
+          .filter(Boolean) as [number, number][]) ?? []);
 
     if (coords.length === 0) {
       if (circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng)) {
@@ -289,7 +301,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       }
     }
 
-    if (circleCenter && Number.isFinite(radiusInMeters) && Number(radiusInMeters) > 0) {
+    if (shouldFitToCircle) {
       try {
         const circle = (L as any).circle([circleCenter.lat, circleCenter.lng], {
           radius: Number(radiusInMeters),
@@ -318,6 +330,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           circleCenter,
           radiusInMeters,
           userLocation,
+          fitMode: shouldFitToCircle ? 'circle' : 'points',
           sample: samples,
         });
       } catch {

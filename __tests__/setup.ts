@@ -266,9 +266,13 @@ console.error = (message, ...args) => {
 };
 
 // Ensure critical Expo env vars exist for API clients referenced in tests
-process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://example.test/api'
+process.env.EXPO_PUBLIC_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.50.36'
 process.env.EXPO_PUBLIC_GOOGLE_GA4 = process.env.EXPO_PUBLIC_GOOGLE_GA4 || 'test-ga4'
 process.env.EXPO_PUBLIC_GOOGLE_API_SECRET = process.env.EXPO_PUBLIC_GOOGLE_API_SECRET || 'test-secret'
+
+// Guardrail: unit/integration tests must NOT call the local Playwright webserver/proxy.
+// If you see this, something is resolving API base from window.location.origin instead of EXPO_PUBLIC_API_URL.
+const FORBIDDEN_JEST_API_PREFIX = 'http://127.0.0.1:8085/api'
 
 if (typeof (global as any).fetch !== 'function') {
   ;(global as any).fetch = jest.fn(async () => ({
@@ -278,6 +282,22 @@ if (typeof (global as any).fetch !== 'function') {
     json: async () => ({}),
     text: async () => '',
   }))
+}
+
+// Wrap fetch to fail fast on forbidden localhost API usage.
+{
+  const originalFetch = (global as any).fetch
+  ;(global as any).fetch = jest.fn(async (input: any, init?: any) => {
+    const url = typeof input === 'string' ? input : input?.url
+    if (typeof url === 'string' && url.startsWith(FORBIDDEN_JEST_API_PREFIX)) {
+      throw new Error(
+        `Forbidden API base in Jest: ${url}. ` +
+          `Unit tests must use EXPO_PUBLIC_API_URL=${process.env.EXPO_PUBLIC_API_URL}. ` +
+          `The 127.0.0.1:8085 /api proxy is only for Playwright E2E.`
+      )
+    }
+    return originalFetch(input as any, init as any)
+  })
 }
 
 // JSDOM has window.scrollBy/scrollTo but they may throw "Not implemented".

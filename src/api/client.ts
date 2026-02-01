@@ -19,9 +19,11 @@ const webOriginApi =
         ? `${window.location.origin}/api`
         : '';
 const rawApiUrl: string =
-    (Platform.OS === 'web' && isE2E && webOriginApi
-        ? webOriginApi
-        : envApiUrl || webOriginApi || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : ''));
+    Platform.OS === 'web'
+        ? (isE2E
+            ? (webOriginApi || envApiUrl || '')
+            : (envApiUrl || ''))
+        : (envApiUrl || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : ''));
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }

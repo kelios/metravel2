@@ -42,6 +42,16 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
       .then(() => true)
       .catch(() => null),
     page
+      // Map page often shows "0 мест" in the list tab header when no items match.
+      .waitForSelector('text=/\b0\s+мест\b/i', { timeout: 30_000 })
+      .then(() => true)
+      .catch(() => null),
+    page
+      // Some map builds show an informational empty-state header.
+      .waitForSelector('text=Это всё поблизости', { timeout: 30_000 })
+      .then(() => true)
+      .catch(() => null),
+    page
       .waitForSelector('text=Найдено: 0', { timeout: 30_000 })
       .then(() => true)
       .catch(() => null),
@@ -88,6 +98,12 @@ test.describe('Integration: core data flows (web)', () => {
     const travelsTab = page.getByTestId('map-panel-tab-travels');
     if (await travelsTab.isVisible().catch(() => false)) {
       await travelsTab.click();
+    } else {
+      // Fallback: some layouts render tabs without testIDs.
+      const listTab = page.getByRole('tab', { name: /Список/i }).first();
+      if (await listTab.isVisible().catch(() => false)) {
+        await listTab.click();
+      }
     }
 
     await expectListNonEmptyOrEmptyState(page, page.getByTestId('map-travel-card'), 'map');

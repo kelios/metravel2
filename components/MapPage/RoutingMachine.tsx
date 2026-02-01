@@ -192,16 +192,31 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             ? routingState.coords
             : (hasTwoPoints ? routePoints : [])
 
-        // Фильтруем невалидные координаты
-        const validCoords = coordsToDraw.filter(([lng, lat]) =>
-            Number.isFinite(lng) &&
-            Number.isFinite(lat) &&
-            lng >= -180 && lng <= 180 &&
-            lat >= -90 && lat <= 90
-        )
+        // App-level invariant: routePoints / routingState.coords are expected to be [lat, lng]
+        // (same as Leaflet's default). Some external sources can return [lng, lat].
+        // Normalize everything to [lat, lng] so polyline + bounds are correct.
+        const normalizeLatLng = (tuple: [number, number]): [number, number] => {
+            const a = tuple?.[0]
+            const b = tuple?.[1]
+            if (!Number.isFinite(a) || !Number.isFinite(b)) return tuple
+            const looksLikeLatLng = a >= -90 && a <= 90 && b >= -180 && b <= 180
+            const looksLikeLngLat = a >= -180 && a <= 180 && b >= -90 && b <= 90
+            // If it looks like [lng, lat] (and not ambiguously like both), swap to [lat, lng]
+            if (looksLikeLngLat && !looksLikeLatLng) return [b, a]
+            return tuple
+        }
+
+        const validCoords = coordsToDraw
+            .map((p) => normalizeLatLng(p))
+            .filter(([lat, lng]) =>
+                Number.isFinite(lat) &&
+                Number.isFinite(lng) &&
+                lat >= -90 && lat <= 90 &&
+                lng >= -180 && lng <= 180
+            )
 
         if (validCoords.length >= 2) {
-            const latlngs = validCoords.map(([lng, lat]) => L.latLng(lat, lng))
+            const latlngs = validCoords.map(([lat, lng]) => L.latLng(lat, lng))
 
             // Определяем цвет линии в зависимости от статуса
             const isOptimal = routingState.error === false || routingState.error === ''

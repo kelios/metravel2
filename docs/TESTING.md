@@ -34,6 +34,7 @@ yarn test:coverage
 Related config:
 
 - `jest.config.js`
+- `jest.expo-globals.js`
 - `__tests__/setup.ts`
 
 Notes:
@@ -41,6 +42,23 @@ Notes:
 - Test environment is `jsdom`.
 - Aliases: `@/*` resolves to the project root (`tsconfig.json` + `jest.config.js`).
 - Many native/web APIs are mocked in `__tests__/setup.ts`. If a new test fails due to missing browser/native APIs, add a targeted mock there.
+
+### API base URL rule for Jest
+
+- **Jest must never rely on `window.location.origin` for API calls.**
+- In unit/integration tests the API base must come from `EXPO_PUBLIC_API_URL`.
+- The local webserver origin (usually `http://127.0.0.1:8085`) is an **E2E concern** (Playwright) and must not leak into Jest.
+
+Defaults:
+
+- `jest.expo-globals.js` and `__tests__/setup.ts` set a safe default `EXPO_PUBLIC_API_URL` to the dev server: `http://192.168.50.36`.
+- If you need a different server for tests, override before running Jest (shell env wins).
+
+If you see an error like:
+
+- `Forbidden API base in Jest: http://127.0.0.1:8085/api/...`
+
+it means some code path is building API URLs from `window.location.origin` instead of `process.env.EXPO_PUBLIC_API_URL`.
 
 ## E2E tests (Playwright)
 
