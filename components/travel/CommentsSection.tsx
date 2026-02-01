@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   const [replyTo, setReplyTo] = useState<TravelComment | null>(null);
   const [editComment, setEditComment] = useState<TravelComment | null>(null);
   const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set());
+  const didWarnAllSubThread = useRef(false);
 
   const {
     data: mainThread,
@@ -135,21 +136,30 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     });
 
     comments.forEach((comment) => {
-      if (comment.sub_thread) {
-        // Это ответ - добавляем в replies
-        if (!replies[comment.sub_thread]) {
-          replies[comment.sub_thread] = [];
+      const parentId = comment.sub_thread;
+      const isReply =
+        typeof parentId === 'number' &&
+        parentId > 0 &&
+        parentId !== comment.id &&
+        !!allComments[parentId];
+
+      if (isReply) {
+        if (!replies[parentId]) {
+          replies[parentId] = [];
         }
-        replies[comment.sub_thread].push(comment);
-      } else {
-        // Это комментарий верхнего уровня
-        topLevel.push(comment);
+        replies[parentId].push(comment);
+        return;
       }
+
+      topLevel.push(comment);
     });
 
     // ⚠️ ВАЖНО: Если topLevel пустой, но есть комментарии - это баг!
     if (topLevel.length === 0 && comments.length > 0) {
-      console.warn('⚠️ BUG: All comments have sub_thread! Showing them anyway.');
+      if (!didWarnAllSubThread.current) {
+        console.warn('⚠️ BUG: All comments have sub_thread! Showing them anyway.');
+        didWarnAllSubThread.current = true;
+      }
       return { topLevel: comments, replies: {}, allComments };
     }
 
@@ -161,9 +171,19 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   // Функция для получения полной цепочки родительских комментариев
   const getParentChain = useCallback((commentId: number): TravelComment[] => {
     const chain: TravelComment[] = [];
+    const visited = new Set<number>();
     let currentComment = allComments[commentId];
 
     while (currentComment && currentComment.sub_thread) {
+      if (visited.has(currentComment.id)) {
+        break;
+      }
+      visited.add(currentComment.id);
+
+      if (currentComment.sub_thread === currentComment.id) {
+        break;
+      }
+
       const parentComment = allComments[currentComment.sub_thread];
       if (parentComment) {
         chain.unshift(parentComment); // Добавляем в начало

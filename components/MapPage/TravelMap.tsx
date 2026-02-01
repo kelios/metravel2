@@ -45,6 +45,8 @@ interface TravelMapProps {
    * Enable clustering (recommended for >25 points)
    */
   enableClustering?: boolean;
+
+  resizeTrigger?: number;
 }
 
 /**
@@ -82,6 +84,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   initialZoom = 11,
   height,
   enableClustering = false,
+  resizeTrigger,
 }) => {
   const colors = useThemedColors();
   const mapRef = useRef<any>(null);
@@ -189,6 +192,33 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       console.warn('[TravelMap] Failed to highlight point:', err);
     }
   }, [highlightedPoint]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!mapRef.current) return;
+    if (resizeTrigger === undefined) return;
+
+    const map = mapRef.current;
+    const invalidate = () => {
+      try {
+        if (map && typeof map.invalidateSize === 'function') {
+          map.invalidateSize(true);
+        }
+      } catch {
+        // noop
+      }
+    };
+
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => invalidate());
+      requestAnimationFrame(() => invalidate());
+    } else {
+      invalidate();
+    }
+
+    const t = setTimeout(() => invalidate(), 200);
+    return () => clearTimeout(t);
+  }, [resizeTrigger]);
 
   // Map styles
   const mapHeight = height || (compact ? 400 : 600);

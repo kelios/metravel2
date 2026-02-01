@@ -134,6 +134,7 @@ export const TravelDetailsMapSection: React.FC<{
 
   const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
   const [mapOpenTrigger, setMapOpenTrigger] = useState(0)
+  const [mapResizeTrigger, setMapResizeTrigger] = useState(0)
 
   const handlePointCardPress = useCallback((point: any) => {
     const coord = String(point?.coord ?? '').trim()
@@ -207,12 +208,19 @@ export const TravelDetailsMapSection: React.FC<{
               isLoading={isLoading}
               loadingLabel="Подгружаем карту маршрута..."
               forceOpenTrigger={mapOpenTrigger || undefined}
+              onOpenChange={(open) => {
+                if (Platform.OS !== 'web') return
+                if (open) {
+                  setMapResizeTrigger((prev) => prev + 1)
+                }
+              }}
             >
               {shouldRender ? (
                 <Suspense fallback={<MapFallback />}>
                   <TravelMap
                     travelData={travel.travelAddress as any}
                     highlightedPoint={highlightedPoint ?? undefined}
+                    resizeTrigger={mapResizeTrigger}
                     compact
                     height={isMobileWeb ? 400 : 500}
                   />

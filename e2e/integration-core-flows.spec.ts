@@ -43,7 +43,7 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
       .catch(() => null),
     page
       // Map page often shows "0 мест" in the list tab header when no items match.
-      .waitForSelector('text=/\b0\s+мест\b/i', { timeout: 30_000 })
+      .waitForSelector('text=/\\b0\\s+мест\\b/i', { timeout: 30_000 })
       .then(() => true)
       .catch(() => null),
     page

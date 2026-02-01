@@ -12,6 +12,7 @@ type ToggleableMapSectionProps = {
     loadingLabel?: string;
     keepMounted?: boolean;
     forceOpenTrigger?: number;
+    onOpenChange?: (open: boolean) => void;
 };
 
 const ToggleableMapSection = ({
@@ -21,6 +22,7 @@ const ToggleableMapSection = ({
     loadingLabel = 'Загружаем карту...',
     keepMounted = false,
     forceOpenTrigger,
+    onOpenChange,
 }: ToggleableMapSectionProps) => {
     const [showMap, setShowMap] = useState(initiallyOpen);
     const [hasOpened, setHasOpened] = useState(initiallyOpen);
@@ -44,6 +46,7 @@ const ToggleableMapSection = ({
             if (next && !hasOpened) {
                 setHasOpened(true);
             }
+            onOpenChange?.(next);
             return next;
         });
     };
@@ -52,7 +55,8 @@ const ToggleableMapSection = ({
         if (forceOpenTrigger === undefined) return;
         setShowMap(true);
         setHasOpened(true);
-    }, [forceOpenTrigger]);
+        onOpenChange?.(true);
+    }, [forceOpenTrigger, onOpenChange]);
 
     return (
         <View style={styles.wrapper}>
