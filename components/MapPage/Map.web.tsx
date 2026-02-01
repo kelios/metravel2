@@ -144,7 +144,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     mapZoom,
     expandedClusterKey: expandedCluster?.key,
     mode,
-    hintCenter: coordinatesLatLng,
+    hintCenter: hintCenterLatLng,
   });
 
   // Radius calculation
