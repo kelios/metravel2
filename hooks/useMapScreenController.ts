@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { FiltersProvider } from '@/contexts/FiltersContext';
@@ -20,6 +20,9 @@ import {
 export function useMapScreenController() {
   // Map API reference
   const [mapUiApi, setMapUiApi] = useState<MapUiApi | null>(null);
+  const handleMapUiApiReady = useCallback((api: MapUiApi | null) => {
+    setMapUiApi(api);
+  }, []);
 
   // Coordinates
   const { coordinates } = useMapCoordinates();
@@ -78,6 +81,15 @@ export function useMapScreenController() {
     handleMapClick,
     buildRouteTo,
   } = routeController;
+
+  // buildRouteTo depends on mapUiApi; mapUiApi is typically attached after first render.
+  // Keep an always-fresh reference to avoid stale closures for consumers of this hook.
+  const buildRouteToRef = useRef(buildRouteTo);
+  buildRouteToRef.current = buildRouteTo;
+
+  const buildRouteToStable = useCallback((item: any) => {
+    return buildRouteToRef.current?.(item);
+  }, []);
 
   // Data Controller
   const dataController = useMapDataController({
@@ -139,7 +151,7 @@ export function useMapScreenController() {
       setRouteDistance,
       setFullRouteCoords,
       onMapClick: handleMapClick,
-      onMapUiApiReady: setMapUiApi,
+      onMapUiApiReady: handleMapUiApiReady,
     }),
     [
       travelsData,
@@ -152,6 +164,7 @@ export function useMapScreenController() {
       setRouteDistance,
       setFullRouteCoords,
       handleMapClick,
+      handleMapUiApiReady,
     ]
   );
 
@@ -197,8 +210,7 @@ export function useMapScreenController() {
           // если в режиме route недостаточно точек, buildRouteTo сам должен быть безопасным
           // (логика в useRouteController)
           // здесь просто делегируем
-          // @ts-expect-error buildRouteTo может принимать разный shape item/point
-          buildRouteTo?.({});
+          buildRouteToStable?.({});
         } catch {
           // noop
         }
@@ -206,7 +218,7 @@ export function useMapScreenController() {
       mapUiApi,
       closeMenu: closeRightPanel,
       userLocation: coordinates,
-      onPlaceSelect: buildRouteTo,
+      onPlaceSelect: buildRouteToStable,
       onOpenList: selectTravelsTab,
       hideTopControls: false,
       hideFooterCta: false,
@@ -240,7 +252,7 @@ export function useMapScreenController() {
     mapUiApi,
     closeRightPanel,
     coordinates,
-    buildRouteTo,
+    buildRouteToStable,
     selectTravelsTab,
   ]);
 
@@ -283,7 +295,7 @@ export function useMapScreenController() {
     invalidateTravelsQuery,
 
     // Route actions
-    buildRouteTo,
+    buildRouteTo: buildRouteToStable,
     centerOnUser,
 
     // Refs

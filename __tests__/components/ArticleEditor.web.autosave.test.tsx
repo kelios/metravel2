@@ -38,7 +38,8 @@ jest.mock('@/components/QuillEditor.web', () => {
 
       const root = rootRef.current
 
-      const editorRef = React.useRef<any>(null)
+      const editorRef = (React as any).useRef(null)
+
       if (!editorRef.current) {
         editorRef.current = {
           root,

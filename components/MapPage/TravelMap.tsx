@@ -6,7 +6,7 @@
  */
 
 import React, { useMemo, useEffect, useRef } from 'react';
-import { Platform, StyleSheet, View, ActivityIndicator } from 'react-native';
+import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -86,6 +86,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const colors = useThemedColors();
   const mapRef = useRef<any>(null);
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      // защитимся от утечек/устаревших ссылок при размонтировании (особенно в React StrictMode)
+      mapRef.current = null;
+    };
+  }, []);
 
   // Lazy load Leaflet
   const { L, RL: rl, loading: leafletLoading, ready: leafletReady } = useLeafletLoader({
@@ -216,7 +226,11 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const shouldCluster = enableClustering && shouldRenderClusters;
 
   return (
-    <View style={[styles.mapContainer, mapContainerStyle]}>
+    <View
+      style={[styles.mapContainer, mapContainerStyle]}
+      testID="travel-map"
+      {...(Platform.OS === 'web' ? { 'data-testid': 'travel-map' } : {})}
+    >
       <MapContainer
         center={center as [number, number]}
         zoom={initialZoom}
@@ -224,7 +238,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         zoomControl={!compact}
         scrollWheelZoom={!compact}
         dragging={!compact}
-        ref={mapRef}
+        whenCreated={(map: any) => {
+          if (!mountedRef.current) return;
+          mapRef.current = map;
+        }}
       >
         {/* Base tile layer */}
         <TileLayer
@@ -259,29 +276,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         {/* Travel markers (clustered) */}
         {customIcons?.meTravel && markers.length > 0 && shouldCluster && PopupComponent && (
           <ClusterLayer
-            clusters={clusters as any}
+            clusters={clusters}
             Marker={rl.Marker}
             Popup={rl.Popup}
             PopupContent={PopupComponent}
             popupProps={popupProps}
-            markerIcon={customIcons.meTravel}
             markerOpacity={markerOpacity}
-            expandedClusterKey={null}
-            expandedClusterItems={null}
-            renderer={null}
-            hintCenter={{ lat: center[0], lng: center[1] }}
-            onMarkerClick={() => {}}
-            onMarkerInstance={(coord, marker) => {
-              try {
-                const key = String(coord ?? '').trim();
-                if (!key) return;
-                if (marker) markerByCoordRef.current.set(key, marker);
-                else markerByCoordRef.current.delete(key);
-              } catch {
-                // noop
-              }
+            onClusterZoom={() => {
+              // In travel details compact map we don't support expanding clusters yet
             }}
-            onClusterZoom={() => {}}
+            hintCenter={{ lat: center[0], lng: center[1] }}
           />
         )}
       </MapContainer>
@@ -291,19 +295,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
 const styles = StyleSheet.create({
   mapContainer: {
-    width: '100%' as any,
+    width: '100%',
     overflow: 'hidden',
   },
   loadingContainer: {
-    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
   },
   emptyContainer: {
-    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fafafa',
+    justifyContent: 'center',
   },
 });
 
-export default React.memo(TravelMap);
