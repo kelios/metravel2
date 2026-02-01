@@ -61,24 +61,20 @@ export const LazyPopup = memo<LazyPopupProps>(({
   popupProps = {},
   userLocation,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
   const [hasBeenOpened, setHasBeenOpened] = useState(false);
 
   // Listen to popup open/close events
   const handlePopupOpen = useCallback(() => {
-    setIsOpen(true);
     setHasBeenOpened(true);
   }, []);
 
   const handlePopupClose = useCallback(() => {
-    setIsOpen(false);
   }, []);
 
   useEffect(() => {
     // We need access to the actual Leaflet popup instance
     // This is a bit hacky but necessary for event listening
     return () => {
-      setIsOpen(false);
       setHasBeenOpened(false);
     };
   }, []);

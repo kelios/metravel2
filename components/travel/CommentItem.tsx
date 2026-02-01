@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
-import { useLikeComment, useUnlikeComment, useDeleteComment } from '../../hooks/useComments';
+import { useLikeComment, useUnlikeComment, useDeleteComment, useThread, useComments } from '../../hooks/useComments';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -12,15 +12,28 @@ interface CommentItemProps {
   comment: TravelComment;
   onReply?: (comment: TravelComment) => void;
   onEdit?: (comment: TravelComment) => void;
+  onOpenThread?: (threadId: number) => void;
   level?: number;
 }
 
-export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItemProps) {
+export function CommentItem({ comment, onReply, onEdit, onOpenThread, level = 0 }: CommentItemProps) {
   const { userId, isSuperuser, isAuthenticated } = useAuth();
   const [showActions, setShowActions] = useState(false);
+  const [showThread, setShowThread] = useState(false);
+
   const likeComment = useLikeComment();
   const unlikeComment = useUnlikeComment();
   const deleteComment = useDeleteComment();
+
+  // Загружаем тред если комментарий имеет sub_thread
+  const hasSubThread = !!comment.sub_thread;
+  const subThreadId = comment.sub_thread ?? 0;
+  const threadQuery = useThread(subThreadId);
+  const commentsQuery = useComments(subThreadId);
+  const threadData = hasSubThread ? (threadQuery as any)?.data : undefined;
+  const isLoadingThread = hasSubThread ? (threadQuery as any)?.isLoading : false;
+  const threadComments = hasSubThread ? ((commentsQuery as any)?.data ?? []) : [];
+  const isLoadingComments = hasSubThread ? (commentsQuery as any)?.isLoading : false;
 
   const isAuthor = userId && Number(userId) === comment.user;
   const canDelete = isAuthor || isSuperuser;
@@ -32,6 +45,16 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
       unlikeComment.mutate(comment.id);
     } else {
       likeComment.mutate(comment.id);
+    }
+  };
+
+  const handleOpenThread = () => {
+    if (comment.sub_thread) {
+      if (onOpenThread) {
+        onOpenThread(comment.sub_thread);
+      } else {
+        setShowThread(!showThread);
+      }
     }
   };
 
@@ -98,8 +121,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
               style={styles.actionButton}
               accessibilityLabel="Редактировать комментарий"
             >
-              <Feather name="edit-2" size={16} color={DESIGN_TOKENS.colors.primary} />
-              <Text style={styles.actionText}>Редактировать</Text>
+              <Feather name="edit-2" size={20} color={DESIGN_TOKENS.colors.primary} />
             </Pressable>
           )}
           {canDelete && (
@@ -116,12 +138,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
                   color={DESIGN_TOKENS.colors.danger}
                 />
               ) : (
-                <>
-                  <Feather name="trash-2" size={16} color={DESIGN_TOKENS.colors.danger} />
-                  <Text style={[styles.actionText, styles.deleteText]}>
-                    {isSuperuser && !isAuthor ? 'Удалить (Админ)' : 'Удалить'}
-                  </Text>
-                </>
+                <Feather name="trash-2" size={20} color={DESIGN_TOKENS.colors.danger} />
               )}
             </Pressable>
           )}
@@ -166,7 +183,54 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
             <Text style={styles.footerText}>Ответить</Text>
           </Pressable>
         )}
+
+        {/* Кнопка открытия треда если есть sub_thread */}
+        {hasSubThread && (
+          <Pressable
+            onPress={handleOpenThread}
+            style={styles.footerButton}
+            disabled={isLoadingThread}
+            accessibilityLabel="Открыть тред"
+          >
+            <Feather name="link" size={18} color={DESIGN_TOKENS.colors.primary} />
+            <Text style={[styles.footerText, styles.threadLinkText]}>
+              {showThread ? 'Скрыть тред' : 'Открыть тред'}
+            </Text>
+          </Pressable>
+        )}
       </View>
+
+      {/* Отображение загруженного треда */}
+      {hasSubThread && showThread && (
+        <View style={styles.threadContainer}>
+          {isLoadingThread || isLoadingComments ? (
+            <View style={styles.threadLoading}>
+              <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.primary} />
+              <Text style={styles.threadLoadingText}>Загрузка треда...</Text>
+            </View>
+          ) : threadData && threadComments.length > 0 ? (
+            <View style={styles.threadContent}>
+              {threadComments.map((threadComment: TravelComment) => (
+                <CommentItem
+                  key={threadComment.id}
+                  comment={threadComment}
+                  onReply={onReply}
+                  onEdit={onEdit}
+                  level={level + 1}
+                />
+              ))}
+            </View>
+          ) : threadData ? (
+            <View style={styles.threadEmpty}>
+              <Text style={styles.threadEmptyText}>Тред загружен, но комментариев нет</Text>
+            </View>
+          ) : (
+            <View style={styles.threadError}>
+              <Text style={styles.threadErrorText}>Не удалось загрузить тред</Text>
+            </View>
+          )}
+        </View>
+      )}
       </View>
     </View>
   );
@@ -260,14 +324,6 @@ const styles = StyleSheet.create<Record<string, any>>({
     borderRadius: 6,
     backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
-  actionText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.primary,
-    fontWeight: DESIGN_TOKENS.typography.weights.medium,
-  },
-  deleteText: {
-    color: DESIGN_TOKENS.colors.danger,
-  },
   footer: {
     flexDirection: 'row',
     gap: DESIGN_TOKENS.spacing.md,
@@ -285,5 +341,47 @@ const styles = StyleSheet.create<Record<string, any>>({
   likedText: {
     color: DESIGN_TOKENS.colors.danger,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+  },
+  threadLinkText: {
+    color: DESIGN_TOKENS.colors.primary,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
+  },
+  threadContainer: {
+    marginTop: DESIGN_TOKENS.spacing.md,
+    padding: DESIGN_TOKENS.spacing.md,
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: DESIGN_TOKENS.colors.primary,
+  },
+  threadLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    padding: DESIGN_TOKENS.spacing.sm,
+  },
+  threadLoadingText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.textMuted,
+  },
+  threadContent: {
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  threadEmpty: {
+    padding: DESIGN_TOKENS.spacing.md,
+    alignItems: 'center',
+  },
+  threadEmptyText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.textMuted,
+    fontStyle: 'italic',
+  },
+  threadError: {
+    padding: DESIGN_TOKENS.spacing.md,
+    alignItems: 'center',
+  },
+  threadErrorText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.danger,
   },
 });

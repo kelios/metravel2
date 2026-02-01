@@ -1,5 +1,5 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
 import { strToLatLng } from './utils';
 
@@ -67,7 +67,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const lastUserLocationKeyRef = useRef<string | null>(null);
 
   // Helper: ensure mapZoom state matches real leaflet zoom even after programmatic moves.
-  const syncZoomFromMap = () => {
+  const syncZoomFromMap = useCallback(() => {
     try {
       if (!map) return;
       const z = map.getZoom?.();
@@ -75,7 +75,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     } catch {
       // noop
     }
-  };
+  }, [map, setMapZoom]);
 
   // Handle map events
   useMapEvents({
@@ -137,7 +137,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       cancelled = true;
       hasCalledOnMapReadyRef.current = false;
     };
-  }, [map, mapRef, onMapReady, setMapZoom]);
+  }, [map, mapRef, onMapReady, setMapZoom, syncZoomFromMap]);
 
   // Close popup on map click or zoom
   useEffect(() => {
@@ -230,7 +230,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     }
 
     lastModeRef.current = mode;
-  }, [map, mode, coordinates, userLocation, hasInitializedRef, lastModeRef, lastAutoFitKeyRef]);
+  }, [map, mode, coordinates, userLocation, hasInitializedRef, lastModeRef, lastAutoFitKeyRef, syncZoomFromMap]);
 
   // Fit bounds to all travel points (radius mode only)
   useEffect(() => {
@@ -298,6 +298,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     fitBoundsPadding,
     lastAutoFitKeyRef,
     hintCenter,
+    syncZoomFromMap,
   ]);
 
   return null;

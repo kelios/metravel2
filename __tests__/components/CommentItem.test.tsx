@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CommentItem } from '@/components/travel/CommentItem';
-import { useLikeComment, useUnlikeComment, useDeleteComment } from '@/hooks/useComments';
+import { useLikeComment, useUnlikeComment, useDeleteComment, useThread, useComments } from '@/hooks/useComments';
 import { useAuth } from '@/context/AuthContext';
 import type { TravelComment } from '@/types/comments';
 
@@ -12,6 +12,8 @@ jest.mock('@/context/AuthContext');
 const mockUseLikeComment = useLikeComment as jest.MockedFunction<typeof useLikeComment>;
 const mockUseUnlikeComment = useUnlikeComment as jest.MockedFunction<typeof useUnlikeComment>;
 const mockUseDeleteComment = useDeleteComment as jest.MockedFunction<typeof useDeleteComment>;
+const mockUseThread = useThread as jest.MockedFunction<typeof useThread>;
+const mockUseComments = useComments as jest.MockedFunction<typeof useComments>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
 const createTestQueryClient = () =>
@@ -58,6 +60,16 @@ describe('CommentItem', () => {
     mockUseDeleteComment.mockReturnValue({
       mutate: jest.fn(),
       isPending: false,
+    } as any);
+
+    mockUseThread.mockReturnValue({
+      data: null,
+      isLoading: false,
+    } as any);
+
+    mockUseComments.mockReturnValue({
+      data: [],
+      isLoading: false,
     } as any);
   });
 
@@ -295,7 +307,12 @@ describe('CommentItem', () => {
     });
 
     it('should handle delete with confirmation', async () => {
-      global.confirm = jest.fn(() => true);
+      const Alert = require('react-native').Alert;
+      Alert.alert = jest.fn((title, message, buttons) => {
+        // Симулируем нажатие кнопки "Удалить"
+        buttons[1].onPress();
+      });
+
       const mutateMock = jest.fn();
       mockUseDeleteComment.mockReturnValue({
         mutate: mutateMock,
@@ -311,13 +328,18 @@ describe('CommentItem', () => {
       fireEvent.press(deleteButton);
 
       await waitFor(() => {
-        expect(global.confirm).toHaveBeenCalled();
+        expect(Alert.alert).toHaveBeenCalled();
         expect(mutateMock).toHaveBeenCalledWith(1);
       });
     });
 
     it('should not delete if confirmation cancelled', async () => {
-      global.confirm = jest.fn(() => false);
+      const Alert = require('react-native').Alert;
+      Alert.alert = jest.fn((_title, _message, _buttons) => {
+        // Симулируем нажатие кнопки "Отмена"
+        // Не вызываем никакой callback
+      });
+
       const mutateMock = jest.fn();
       mockUseDeleteComment.mockReturnValue({
         mutate: mutateMock,
@@ -333,8 +355,73 @@ describe('CommentItem', () => {
       fireEvent.press(deleteButton);
 
       await waitFor(() => {
-        expect(global.confirm).toHaveBeenCalled();
+        expect(Alert.alert).toHaveBeenCalled();
         expect(mutateMock).not.toHaveBeenCalled();
+      });
+    });
+
+    it('should be able to unlike own liked comment', async () => {
+      const unlikeMock = jest.fn();
+      const likeMock = jest.fn();
+
+      mockUseUnlikeComment.mockReturnValue({
+        mutate: unlikeMock,
+        isPending: false,
+      } as any);
+
+      mockUseLikeComment.mockReturnValue({
+        mutate: likeMock,
+        isPending: false,
+      } as any);
+
+      const likedComment = { ...mockComment, is_liked: true };
+      render(<CommentItem comment={likedComment} />, { wrapper });
+
+      const unlikeButton = screen.getByLabelText('Убрать лайк');
+      fireEvent.press(unlikeButton);
+
+      await waitFor(() => {
+        expect(unlikeMock).toHaveBeenCalledWith(1);
+        expect(likeMock).not.toHaveBeenCalled(); // Проверяем что НЕ вызывается like
+      });
+    });
+
+    it('should toggle between like and unlike correctly', async () => {
+      const unlikeMock = jest.fn();
+      const likeMock = jest.fn();
+
+      mockUseUnlikeComment.mockReturnValue({
+        mutate: unlikeMock,
+        isPending: false,
+      } as any);
+
+      mockUseLikeComment.mockReturnValue({
+        mutate: likeMock,
+        isPending: false,
+      } as any);
+
+      // Сначала комментарий не лайкнут
+      const { rerender } = render(<CommentItem comment={mockComment} />, { wrapper });
+
+      const likeButton = screen.getByLabelText('Поставить лайк');
+      fireEvent.press(likeButton);
+
+      await waitFor(() => {
+        expect(likeMock).toHaveBeenCalledWith(1);
+        expect(unlikeMock).not.toHaveBeenCalled();
+      });
+
+      // Теперь симулируем что комментарий лайкнут
+      const likedComment = { ...mockComment, is_liked: true };
+      rerender(<CommentItem comment={likedComment} />);
+
+      const unlikeButton = screen.getByLabelText('Убрать лайк');
+      fireEvent.press(unlikeButton);
+
+      await waitFor(() => {
+        expect(unlikeMock).toHaveBeenCalledWith(1);
+        // likeMock уже был вызван 1 раз, проверяем что больше не вызывается
+        expect(likeMock).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -367,13 +454,14 @@ describe('CommentItem', () => {
       expect(screen.getByLabelText('Действия с комментарием')).toBeTruthy();
     });
 
-    it('should show delete button with admin label for other users comments', () => {
+    it('should show delete button for other users comments', () => {
       render(<CommentItem comment={mockComment} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
       fireEvent.press(menuButton);
 
-      expect(screen.getByText('Удалить (Админ)')).toBeTruthy();
+      // Кнопка удаления отображается как иконка, проверяем по accessibility label
+      expect(screen.getByLabelText('Удалить комментарий')).toBeTruthy();
     });
 
     it('should not show edit button for other users comments', () => {
@@ -387,7 +475,12 @@ describe('CommentItem', () => {
     });
 
     it('should be able to delete any comment', async () => {
-      global.confirm = jest.fn(() => true);
+      const Alert = require('react-native').Alert;
+      Alert.alert = jest.fn((title, message, buttons) => {
+        // Симулируем нажатие кнопки "Удалить"
+        buttons[1].onPress();
+      });
+
       const mutateMock = jest.fn();
       mockUseDeleteComment.mockReturnValue({
         mutate: mutateMock,

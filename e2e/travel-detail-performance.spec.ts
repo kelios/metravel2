@@ -17,13 +17,6 @@ test.describe('Travel Details - Performance Metrics', () => {
   test('TC-024: метрики производительности в пределах нормы', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
 
-    // Собираем метрики производительности
-    const performanceMetrics: {
-      lcp?: number;
-      fcp?: number;
-      ttfb?: number;
-      cls?: number;
-    } = {};
 
     // Отслеживаем Web Vitals через Performance API
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
@@ -122,7 +115,7 @@ test.describe('Travel Details - Performance Metrics', () => {
               break;
             default:
               resourceSizes.other += size;
-          resourceSizes.other += size;
+          }
         }
       } catch {
         // Игнорируем ошибки парсинга

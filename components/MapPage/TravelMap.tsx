@@ -10,7 +10,6 @@ import { Platform, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
 import { useThemedColors } from '@/hooks/useTheme';
-import { MapLayers } from './Map/MapLayers';
 import MapMarkers from './Map/MapMarkers';
 import ClusterLayer from './Map/ClusterLayer';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
@@ -183,17 +182,16 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   // Map styles
   const mapHeight = height || (compact ? 400 : 600);
-  const mapStyle = useMemo(() => ({
-    width: '100%',
-    height: mapHeight,
-    borderRadius: compact ? 12 : 16,
-    overflow: 'hidden' as const,
-  }), [compact, mapHeight]);
+  const mapBorderRadius = compact ? 12 : 16;
+  const mapContainerStyle = useMemo(
+    () => ({ height: mapHeight, borderRadius: mapBorderRadius }),
+    [mapBorderRadius, mapHeight]
+  );
 
   // Loading state
   if (!leafletReady || leafletLoading) {
     return (
-      <View style={[mapStyle, styles.loadingContainer]}>
+      <View style={[styles.mapContainer, mapContainerStyle, styles.loadingContainer]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -202,7 +200,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // No data state
   if (!travelData || travelData.length === 0) {
     return (
-      <View style={[mapStyle, styles.emptyContainer]}>
+      <View style={[styles.mapContainer, mapContainerStyle, styles.emptyContainer]}>
         <ActivityIndicator size="small" color={colors.textMuted} />
       </View>
     );
@@ -211,14 +209,14 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // Render map
   if (!L || !rl) return null;
 
-  const { MapContainer, TileLayer, useMap } = rl;
+  const { MapContainer, TileLayer } = rl;
 
   if (!MapContainer || !TileLayer) return null;
 
   const shouldCluster = enableClustering && shouldRenderClusters;
 
   return (
-    <View style={mapStyle}>
+    <View style={[styles.mapContainer, mapContainerStyle]}>
       <MapContainer
         center={center as [number, number]}
         zoom={initialZoom}
@@ -292,6 +290,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 };
 
 const styles = StyleSheet.create({
+  mapContainer: {
+    width: '100%' as any,
+    overflow: 'hidden',
+  },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',

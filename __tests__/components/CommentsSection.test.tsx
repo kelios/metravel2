@@ -189,10 +189,10 @@ describe('CommentsSection', () => {
       fireEvent.press(submitButton);
 
       await waitFor(() => {
-        expect(mutateMock).toHaveBeenCalledWith(
-          { travel_id: 123, text: 'New comment' },
-          expect.any(Object)
-        );
+        expect(mutateMock).toHaveBeenCalledWith({
+          text: 'New comment',
+          thread_id: 1,
+        });
       });
     });
   });
@@ -364,7 +364,9 @@ describe('CommentsSection', () => {
       render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Top level comment')).toBeTruthy();
-      expect(screen.getByText('Reply to comment 1')).toBeTruthy();
+      // Replies are collapsed by default; the UI shows the toggle with count.
+      expect(screen.getByText('Показать ответы (1)')).toBeTruthy();
+      expect(screen.queryByText('Reply to comment 1')).toBeNull();
     });
   });
 });

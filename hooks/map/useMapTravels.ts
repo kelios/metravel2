@@ -119,7 +119,7 @@ export function useMapTravels({
       };
       
       if (__DEV__) {
-        console.log('[useMapTravels] Query params:', {
+        console.info('[useMapTravels] Query params:', {
           lat: params.lat,
           lng: params.lng,
           radius: params.radius,

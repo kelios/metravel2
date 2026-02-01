@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Pressable,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -29,6 +30,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   const { isAuthenticated } = useAuth();
   const [replyTo, setReplyTo] = useState<TravelComment | null>(null);
   const [editComment, setEditComment] = useState<TravelComment | null>(null);
+  const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set());
 
   const {
     data: mainThread,
@@ -42,6 +44,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     error: commentsError,
     refetch,
   } = useComments(mainThread?.id || 0);
+
 
   const createComment = useCreateComment();
   const updateComment = useUpdateComment();
@@ -120,22 +123,110 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   const organizeComments = (comments: TravelComment[]) => {
     const topLevel: TravelComment[] = [];
     const replies: { [key: number]: TravelComment[] } = {};
+    const allComments: { [key: number]: TravelComment } = {};
+
+    // Сначала индексируем все комментарии по ID
+    comments.forEach((comment) => {
+      allComments[comment.id] = comment;
+    });
 
     comments.forEach((comment) => {
       if (comment.sub_thread) {
+        // Это ответ - добавляем в replies
         if (!replies[comment.sub_thread]) {
           replies[comment.sub_thread] = [];
         }
         replies[comment.sub_thread].push(comment);
       } else {
+        // Это комментарий верхнего уровня
         topLevel.push(comment);
       }
     });
 
-    return { topLevel, replies };
+    // ⚠️ ВАЖНО: Если topLevel пустой, но есть комментарии - это баг!
+    if (topLevel.length === 0 && comments.length > 0) {
+      console.warn('⚠️ BUG: All comments have sub_thread! Showing them anyway.');
+      return { topLevel: comments, replies: {}, allComments };
+    }
+
+    return { topLevel, replies, allComments };
   };
 
-  const { topLevel, replies } = organizeComments(comments);
+  const { topLevel, replies, allComments } = organizeComments(comments);
+
+  // Функция для получения полной цепочки родительских комментариев
+  const getParentChain = useCallback((commentId: number): TravelComment[] => {
+    const chain: TravelComment[] = [];
+    let currentComment = allComments[commentId];
+
+    while (currentComment && currentComment.sub_thread) {
+      const parentComment = allComments[currentComment.sub_thread];
+      if (parentComment) {
+        chain.unshift(parentComment); // Добавляем в начало
+        currentComment = parentComment;
+      } else {
+        break;
+      }
+    }
+
+    return chain;
+  }, [allComments]);
+
+  // Функция для рендеринга комментария с его родительской цепочкой
+  const renderCommentWithParents = useCallback((comment: TravelComment, showParents: boolean = false) => {
+    if (!showParents || !comment.sub_thread) {
+      return null;
+    }
+
+    const parentChain = getParentChain(comment.id);
+
+    if (parentChain.length === 0) {
+      return null;
+    }
+
+    return (
+      <View style={styles.parentChainContainer}>
+        <View style={styles.parentChainHeader}>
+          <Feather name="corner-down-right" size={16} color={DESIGN_TOKENS.colors.textMuted} />
+          <Text style={styles.parentChainLabel}>
+            Ответ в треде (показаны {parentChain.length + 1} из {parentChain.length + 1 + (replies[comment.id]?.length || 0)} сообщений)
+          </Text>
+        </View>
+        {parentChain.map((parentComment, index) => (
+          <CommentItem
+            key={parentComment.id}
+            comment={parentComment}
+            onReply={isAuthenticated ? handleReply : undefined}
+            onEdit={isAuthenticated ? handleEdit : undefined}
+            level={index}
+          />
+        ))}
+      </View>
+    );
+  }, [getParentChain, replies, isAuthenticated, handleReply, handleEdit]);
+
+  const toggleThread = useCallback((commentId: number) => {
+    setExpandedThreads((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(commentId)) {
+        newSet.delete(commentId);
+      } else {
+        newSet.add(commentId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const expandAllThreads = useCallback(() => {
+    const allThreadIds = topLevel
+      .filter((comment) => replies[comment.id] && replies[comment.id].length > 0)
+      .map((comment) => comment.id);
+    setExpandedThreads(new Set(allThreadIds));
+  }, [topLevel, replies]);
+
+  const collapseAllThreads = useCallback(() => {
+    setExpandedThreads(new Set());
+  }, []);
 
   const isLoading = isLoadingThread || isLoadingComments;
   const error = threadError || commentsError;
@@ -168,6 +259,29 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
           Комментарии {comments.length > 0 && `(${comments.length})`}
         </Text>
       </View>
+
+      {/* Управление тредами - если есть вложенные комментарии */}
+      {Object.keys(replies).length > 0 && (
+        <View style={styles.threadControls}>
+          <Pressable
+            onPress={expandAllThreads}
+            style={styles.threadControlButton}
+            accessibilityLabel="Развернуть все треды"
+          >
+            <Feather name="maximize-2" size={16} color={DESIGN_TOKENS.colors.primary} />
+            <Text style={styles.threadControlText}>Развернуть все</Text>
+          </Pressable>
+          <Pressable
+            onPress={collapseAllThreads}
+            style={styles.threadControlButton}
+            accessibilityLabel="Свернуть все треды"
+          >
+            <Feather name="minimize-2" size={16} color={DESIGN_TOKENS.colors.primary} />
+            <Text style={styles.threadControlText}>Свернуть все</Text>
+          </Pressable>
+        </View>
+      )}
+
 
       {isAuthenticated && (
         <CommentForm
@@ -206,25 +320,82 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
             <Text style={styles.emptySubtext}>Будьте первым, кто оставит комментарий!</Text>
           </View>
         ) : (
-          topLevel.map((comment) => (
-            <View key={comment.id}>
-              <CommentItem
-                comment={comment}
-                onReply={isAuthenticated ? handleReply : undefined}
-                onEdit={isAuthenticated ? handleEdit : undefined}
-                level={0}
-              />
-              {replies[comment.id]?.map((reply) => (
+          topLevel.map((comment) => {
+            const hasReplies = replies[comment.id] && replies[comment.id].length > 0;
+            const isExpanded = expandedThreads.has(comment.id);
+
+            return (
+              <View key={comment.id} style={styles.commentThread}>
                 <CommentItem
-                  key={reply.id}
-                  comment={reply}
+                  comment={comment}
                   onReply={isAuthenticated ? handleReply : undefined}
                   onEdit={isAuthenticated ? handleEdit : undefined}
-                  level={1}
+                  level={0}
                 />
-              ))}
-            </View>
-          ))
+
+                {hasReplies && (
+                  <>
+                    <Pressable
+                      onPress={() => toggleThread(comment.id)}
+                      style={styles.toggleThreadButton}
+                      accessibilityLabel={isExpanded ? 'Свернуть ответы' : 'Показать ответы'}
+                    >
+                      <View style={styles.threadLine} />
+                      <Feather
+                        name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                        size={20}
+                        color={DESIGN_TOKENS.colors.primary}
+                      />
+                      <Text style={styles.toggleThreadText}>
+                        {isExpanded
+                          ? `Свернуть ответы (${replies[comment.id].length})`
+                          : `Показать ответы (${replies[comment.id].length})`}
+                      </Text>
+                    </Pressable>
+
+                    {isExpanded && (
+                      <View style={styles.repliesContainer}>
+                        {replies[comment.id].map((reply) => {
+                          // Проверяем, есть ли у ответа свой sub_thread (вложенный ответ)
+                          const hasParentChain = reply.sub_thread && reply.sub_thread !== comment.id;
+
+                          return (
+                            <View key={reply.id}>
+                              {/* Если это ответ на ответ, показываем родительскую цепочку */}
+                              {hasParentChain && renderCommentWithParents(reply, true)}
+
+                              {/* Сам комментарий */}
+                              <CommentItem
+                                comment={reply}
+                                onReply={isAuthenticated ? handleReply : undefined}
+                                onEdit={isAuthenticated ? handleEdit : undefined}
+                                level={hasParentChain ? getParentChain(reply.id).length : 1}
+                              />
+
+                              {/* Рекурсивно показываем ответы на этот комментарий */}
+                              {replies[reply.id] && replies[reply.id].length > 0 && (
+                                <View style={styles.nestedRepliesContainer}>
+                                  {replies[reply.id].map((nestedReply) => (
+                                    <CommentItem
+                                      key={nestedReply.id}
+                                      comment={nestedReply}
+                                      onReply={isAuthenticated ? handleReply : undefined}
+                                      onEdit={isAuthenticated ? handleEdit : undefined}
+                                      level={2}
+                                    />
+                                  ))}
+                                </View>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </View>
@@ -292,5 +463,88 @@ const styles = StyleSheet.create<Record<string, any>>({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: DESIGN_TOKENS.colors.textSubtle,
     marginTop: DESIGN_TOKENS.spacing.xs,
+  },
+  threadControls: {
+    flexDirection: 'row',
+    gap: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+  },
+  threadControlButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+  },
+  threadControlText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.primary,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
+  },
+  commentThread: {
+    marginBottom: DESIGN_TOKENS.spacing.md,
+  },
+  toggleThreadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    marginLeft: DESIGN_TOKENS.spacing.xl,
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
+  },
+  threadLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: DESIGN_TOKENS.colors.primary + '30',
+  },
+  toggleThreadText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.primary,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
+  },
+  repliesContainer: {
+    marginLeft: DESIGN_TOKENS.spacing.md,
+    paddingLeft: DESIGN_TOKENS.spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: DESIGN_TOKENS.colors.border,
+  },
+  nestedRepliesContainer: {
+    marginLeft: DESIGN_TOKENS.spacing.lg,
+    paddingLeft: DESIGN_TOKENS.spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: DESIGN_TOKENS.colors.border + '80', // Lighter for nested
+    marginTop: DESIGN_TOKENS.spacing.xs,
+  },
+  parentChainContainer: {
+    backgroundColor: DESIGN_TOKENS.colors.surface + '40', // Subtle background
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    padding: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: DESIGN_TOKENS.colors.primary + '50',
+  },
+  parentChainHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
+    paddingBottom: DESIGN_TOKENS.spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: DESIGN_TOKENS.colors.border,
+  },
+  parentChainLabel: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.textMuted,
+    fontStyle: 'italic',
   },
 });

@@ -387,10 +387,10 @@ test.describe('Travel Comments', () => {
         await page.getByRole('button', { name: /отправить комментарий/i }).click();
         await expect(page.getByText(level2Text)).toBeVisible({ timeout: 5000 });
         
-        // Level 2 comment should not have reply button (max depth reached)
+        // Level 2 comment should now have reply button (no depth limit)
         const level2Comment = page.locator(`text=${level2Text}`).locator('..').locator('..');
         const level2ReplyButton = level2Comment.getByRole('button', { name: /ответить/i });
-        await expect(level2ReplyButton).not.toBeVisible();
+        await expect(level2ReplyButton).toBeVisible();
       }
     });
   });

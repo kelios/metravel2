@@ -46,7 +46,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           
           // Debug: log first few points
           if (__DEV__ && index < 3) {
-            console.log(`[MapMarkers] Point ${index}:`, {
+            console.info(`[MapMarkers] Point ${index}:`, {
               rawCoord: point.coord,
               parsedLL: ll,
               finalCoords: coords,

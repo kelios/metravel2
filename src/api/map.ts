@@ -102,7 +102,7 @@ const normalizeTravelCoordsItem = (raw: any) => {
 
   // Debug: log first few items to see coordinate format
   if (__DEV__ && Math.random() < 0.05) {
-    console.log('[normalizeTravelCoordsItem] Sample:', {
+    console.info('[normalizeTravelCoordsItem] Sample:', {
       rawLat: t.lat,
       rawLng: t.lng,
       rawCoord: t.coord,
@@ -333,7 +333,7 @@ export const fetchTravelsForMap = async (
     const params = new URLSearchParams(paramsObj).toString();
 
     if (__DEV__) {
-      console.log('[fetchTravelsForMap] Request params:', {
+      console.info('[fetchTravelsForMap] Request params:', {
         whereObject,
         url: `${SEARCH_TRAVELS_FOR_MAP}?${params}`,
       });
@@ -352,7 +352,7 @@ export const fetchTravelsForMap = async (
     if (__DEV__ && payload) {
       const sample = Array.isArray(payload) ? payload[0] : Object.values(payload)[0];
       if (sample) {
-        console.log('[fetchTravelsForMap] Backend response sample:', {
+        console.info('[fetchTravelsForMap] Backend response sample:', {
           lat: sample.lat,
           lng: sample.lng,
           coord: sample.coord,

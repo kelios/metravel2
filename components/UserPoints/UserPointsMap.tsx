@@ -5,8 +5,8 @@
  * @module components/UserPoints/UserPointsMap
  */
 
-import React, { useMemo, useCallback, useState } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { TravelMap } from '@/components/MapPage/TravelMap';
 import type { ImportedPoint } from '@/types/userPoints';
 import type { MapUiApi } from '@/src/types/mapUi';
@@ -117,15 +117,15 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
   center,
   searchMarker,
   activePointId,
-  onPointPress,
-  onEditPoint,
-  onDeletePoint,
-  onMapPress,
-  onCenterChange,
-  pendingMarker,
-  pendingMarkerColor,
-  onMapUiApiReady,
-  routeLines,
+  onPointPress: _onPointPress,
+  onEditPoint: _onEditPoint,
+  onDeletePoint: _onDeletePoint,
+  onMapPress: _onMapPress,
+  onCenterChange: _onCenterChange,
+  pendingMarker: _pendingMarker,
+  pendingMarkerColor: _pendingMarkerColor,
+  onMapUiApiReady: _onMapUiApiReady,
+  routeLines: _routeLines,
   height = 600,
   enableClustering,
 }) => {
@@ -145,9 +145,7 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
         coord: `${lat},${lng}`,
         address: point.address || point.name || '',
         travelImageThumbUrl: point.photo || '',
-        categoryName: Array.isArray(point.categoryNames)
-          ? point.categoryNames.join(', ')
-          : (point.category || ''),
+        categoryName: point.category || '',
         // User-specific data
         _userPoint: point, // Keep original for callbacks
         color: point.color,
@@ -155,34 +153,6 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
       };
     }).filter(Boolean) as any[];
   }, [points]);
-
-  // Calculate center from points or use provided
-  const mapCenter = useMemo(() => {
-    if (center) {
-      return [center.lat, center.lng] as [number, number];
-    }
-
-    if (searchMarker) {
-      return [searchMarker.lat, searchMarker.lng] as [number, number];
-    }
-
-    if (travelData.length > 0) {
-      // Calculate center from points
-      const coords = travelData.map(p => {
-        const [lat, lng] = p.coord.split(',').map(Number);
-        return { lat, lng };
-      }).filter(c => Number.isFinite(c.lat) && Number.isFinite(c.lng));
-
-      if (coords.length > 0) {
-        const avgLat = coords.reduce((sum, c) => sum + c.lat, 0) / coords.length;
-        const avgLng = coords.reduce((sum, c) => sum + c.lng, 0) / coords.length;
-        return [avgLat, avgLng] as [number, number];
-      }
-    }
-
-    // Default: Minsk
-    return [53.9006, 27.559] as [number, number];
-  }, [center, searchMarker, travelData]);
 
   // Highlighted point (active or search)
   const highlightedPoint = useMemo(() => {
@@ -209,14 +179,6 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
 
     return undefined;
   }, [activePointId, points, searchMarker]);
-
-  // Handle point press - extract user point and callback
-  const handlePointPress = useCallback((travelPoint: any) => {
-    const userPoint = travelPoint._userPoint;
-    if (userPoint && onPointPress) {
-      onPointPress(userPoint);
-    }
-  }, [onPointPress]);
 
   // Auto-enable clustering for many points
   const shouldCluster = enableClustering ?? (points.length > 25);

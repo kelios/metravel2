@@ -10,7 +10,6 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { ImportedPoint } from '@/types/userPoints';
 import { showToast } from '@/src/utils/toast';
-import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -87,9 +86,6 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
   }, [lat, lng]);
 
   const categoryLabel = useMemo(() => {
-    if (Array.isArray(point.categoryNames) && point.categoryNames.length > 0) {
-      return point.categoryNames.join(', ');
-    }
     return point.category || '';
   }, [point]);
 
@@ -267,7 +263,6 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     width: 300,
-    maxWidth: '90vw',
     padding: 12,
   },
   header: {
@@ -303,7 +298,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     gap: 6,
     padding: 8,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: colors.surface,
     borderRadius: 6,
     marginBottom: 8,
   },
@@ -343,11 +338,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   editButton: {
     borderColor: colors.primary,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: colors.surface,
   },
   deleteButton: {
     borderColor: colors.danger,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: colors.surface,
   },
   actionText: {
     fontSize: 13,
@@ -389,7 +384,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.primary,
-    backgroundColor: colors.surfaceVariant,
+    backgroundColor: colors.surface,
   },
 });
 
