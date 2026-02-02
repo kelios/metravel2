@@ -65,6 +65,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const map = useMap();
   const hasCalledOnMapReadyRef = useRef(false);
   const lastUserLocationKeyRef = useRef<string | null>(null);
+  const lastRadiusKeyRef = useRef<string | null>(null);
 
   const hasRadiusResults = (travelData ?? []).length > 0;
   const canAutoFitRadiusView =
@@ -218,6 +219,18 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       }
     }
 
+    // Radius mode: if the selected radius changes, recompute the auto-fit view.
+    // Otherwise switching between radius options may keep the previous zoom.
+    if (mode === 'radius') {
+      const r = Number(radiusInMeters);
+      const radiusKey = Number.isFinite(r) && r > 0 ? String(Math.round(r)) : 'invalid-radius';
+      if (lastRadiusKeyRef.current !== radiusKey) {
+        lastRadiusKeyRef.current = radiusKey;
+        hasInitializedRef.current = false;
+        lastAutoFitKeyRef.current = null;
+      }
+    }
+
     if (lastModeRef.current === 'route' && mode === 'radius') {
       hasInitializedRef.current = false;
     }
@@ -256,6 +269,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     syncZoomFromMap,
     hasRadiusResults,
     circleCenter,
+    radiusInMeters,
   ]);
 
   // Fit bounds to all travel points (radius mode only)

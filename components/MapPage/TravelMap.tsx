@@ -176,6 +176,35 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     autoPanPaddingBottomRight: [24, 60],
   }), []);
 
+  // Convert travel data to route line coordinates
+  const routeLineCoords = useMemo(() => {
+    if (!travelData || travelData.length < 2) return [];
+
+    const coords: [number, number][] = [];
+    for (const point of travelData) {
+      const coordStr = String(point?.coord || '').trim();
+      if (!coordStr) continue;
+
+      try {
+        const cleaned = coordStr.replace(/;/g, ',').replace(/\s+/g, '');
+        const parts = cleaned.split(',');
+
+        if (parts.length === 2) {
+          const lat = parseFloat(parts[0]);
+          const lng = parseFloat(parts[1]);
+
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            coords.push([lat, lng]);
+          }
+        }
+      } catch {
+        // Skip invalid coordinates
+      }
+    }
+
+    return coords;
+  }, [travelData]);
+
   // Highlight point when requested
   useEffect(() => {
     if (!highlightedPoint || !mapRef.current) return;
@@ -299,7 +328,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // Render map
   if (!L || !rl) return null;
 
-  const { MapContainer, TileLayer } = rl;
+  const { MapContainer, TileLayer, Polyline } = rl;
 
   if (!MapContainer || !TileLayer) return null;
 
@@ -351,6 +380,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution="&copy; OpenStreetMap contributors"
         />
+
+        {/* Route line connecting travel points */}
+        {Polyline && routeLineCoords.length >= 2 && (
+          <Polyline
+            positions={routeLineCoords}
+            color={colors.primary}
+            weight={4}
+            opacity={0.7}
+            lineJoin="round"
+            lineCap="round"
+          />
+        )}
 
         {/* Travel markers (not clustered) */}
         {customIcons?.meTravel && markers.length > 0 && !shouldCluster && PopupComponent && (
