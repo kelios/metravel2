@@ -1,7 +1,13 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
+
+const isTestEnv =
+  typeof process !== 'undefined' &&
+  (process as any).env &&
+  (process as any).env.NODE_ENV === 'test';
 
 interface Point {
   id?: number;
@@ -291,9 +297,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const autoFitKey = `${mode}:${dataKey}:${userLocation ? `${userLocation.lat},${userLocation.lng}` : 'no-user'}:${radiusKey}`;
     if (lastAutoFitKeyRef.current === autoFitKey) return;
 
-    // Prefer fitting to the radius circle itself if we have a valid center + radius.
-    // This avoids wild zoom-outs if the backend returns outlier points or if any coord parsing is off.
-    const shouldFitToCircle =
+    const hasValidCircle =
       mode === 'radius' &&
       circleCenter &&
       Number.isFinite(circleCenter.lat) &&
@@ -301,11 +305,45 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       Number.isFinite(radiusInMeters) &&
       Number(radiusInMeters) > 0;
 
-    const coords = shouldFitToCircle
-      ? ([] as [number, number][]) // will be filled by circle bounds below
-      : ((travelData
-          .map((p) => strToLatLng(p.coord, hintCenter))
-          .filter(Boolean) as [number, number][]) ?? []);
+    const radiusMeters = hasValidCircle ? Number(radiusInMeters) : null;
+
+    // Prefer fitting to actual point bounds when we have results.
+    // Filter out extreme outliers, and (when circle is known) filter to points within the radius.
+    const parsedPointCoords = (travelData || [])
+      .map((p) => strToLatLng(p.coord, hintCenter))
+      .filter(Boolean) as [number, number][];
+
+    const filteredPointCoords = hasValidCircle
+      ? parsedPointCoords.filter(([lng, lat]) => {
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+          if (!CoordinateConverter.isValid({ lat, lng })) return false;
+          try {
+            const d = CoordinateConverter.distance(
+              { lat: circleCenter!.lat, lng: circleCenter!.lng },
+              { lat, lng }
+            );
+            // small tolerance to avoid dropping borderline points due to rounding
+            return radiusMeters != null ? d <= radiusMeters * 1.05 : true;
+          } catch {
+            return false;
+          }
+        })
+      : parsedPointCoords.filter(([lng, lat]) => CoordinateConverter.isValid({ lat, lng }));
+
+    const shouldIgnoreRadiusFilter =
+      hasValidCircle &&
+      parsedPointCoords.length >= 20 &&
+      filteredPointCoords.length > 0 &&
+      filteredPointCoords.length < Math.max(10, Math.floor(parsedPointCoords.length * 0.2));
+
+    // If filtering removed everything (or looks suspiciously small), fall back to unfiltered points.
+    const usablePointCoords =
+      filteredPointCoords.length === 0 || shouldIgnoreRadiusFilter
+        ? parsedPointCoords
+        : filteredPointCoords;
+
+    const shouldFitToPoints = usablePointCoords.length > 0;
+    const coords = shouldFitToPoints ? usablePointCoords : ([] as [number, number][]);
 
     if (coords.length === 0) {
       if (circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng)) {
@@ -315,7 +353,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       }
     }
 
-    if (shouldFitToCircle) {
+    // If we ended up with no usable points, fit to the circle bounds as a safe fallback.
+    if (!shouldFitToPoints && hasValidCircle) {
       try {
         const circle = (L as any).circle([circleCenter.lat, circleCenter.lng], {
           radius: Number(radiusInMeters),
@@ -338,13 +377,12 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           const parsed = strToLatLng(p.coord, hintCenter);
           return { coord: p.coord, parsed };
         });
-        // eslint-disable-next-line no-console
         console.info('[MapLogicComponent] radius fitBounds debug', {
           travelCount: (travelData || []).length,
           circleCenter,
           radiusInMeters,
           userLocation,
-          fitMode: shouldFitToCircle ? 'circle' : 'points',
+          fitMode: shouldFitToPoints ? 'points' : hasValidCircle ? 'circle' : 'none',
           sample: samples,
         });
       } catch {
@@ -355,10 +393,35 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     try {
       const bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
       const padding = fitBoundsPadding ?? {};
-      map.fitBounds(bounds.pad(0.2), { animate: false, ...padding });
-      // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
-      requestAnimationFrame(() => syncZoomFromMap());
-      lastAutoFitKeyRef.current = autoFitKey;
+
+      // On web, layout (side panels, ResizeObserver, fonts) can change without a window resize.
+      // If fitBounds runs before Leaflet sees the final container size, it may compute a wrong (too close) zoom.
+      try {
+        map.invalidateSize?.({ animate: false } as any);
+      } catch {
+        // noop
+      }
+
+      const runFit = () => {
+        try {
+          map.invalidateSize?.({ animate: false } as any);
+        } catch {
+          // noop
+        }
+
+        const maxZoom = mode === 'radius' ? 13 : undefined;
+        map.fitBounds(bounds.pad(0.2), { animate: false, maxZoom, ...padding } as any);
+
+        // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
+        requestAnimationFrame(() => syncZoomFromMap());
+        lastAutoFitKeyRef.current = autoFitKey;
+      };
+
+      if (isTestEnv || typeof requestAnimationFrame !== 'function') {
+        runFit();
+      } else {
+        requestAnimationFrame(runFit);
+      }
     } catch {
       // noop
     }

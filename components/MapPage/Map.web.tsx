@@ -754,6 +754,19 @@ const MapPageComponent: React.FC<Props> = (props) => {
             left: 0;
           }
 
+          .leaflet-marker-icon,
+          .leaflet-marker-shadow {
+            position: absolute !important;
+            left: 0;
+            top: 0;
+            display: block !important;
+          }
+
+          .leaflet-div-icon {
+            background: transparent;
+            border: none;
+          }
+
           .leaflet-tile {
             position: absolute !important;
             width: 256px;
@@ -1068,6 +1081,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           {/* Travel markers (clustered) */}
           {customIcons?.meTravel && markers.length > 0 && shouldRenderClusters && PopupComponent && (
             <ClusterLayer
+              L={L}
               clusters={clusters as any}
               Marker={Marker}
               Popup={Popup}

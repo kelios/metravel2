@@ -77,7 +77,7 @@ jest.mock('@/components/QuillEditor.web', () => {
         rootRef.current.innerHTML = props.value ?? ''
       }, [props.value])
 
-      const instance = React.useMemo(() => ({ getEditor: () => editorRef.current }), [])
+      const instance = React.useMemo(() => ({ getEditor: () => editorRef.current }), [editorRef])
 
       React.useLayoutEffect(() => {
         if (!ref) return

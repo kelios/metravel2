@@ -192,23 +192,27 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             ? routingState.coords
             : (hasTwoPoints ? routePoints : [])
 
-        // App-level invariant: routePoints / routingState.coords are expected to be [lat, lng]
-        // (same as Leaflet's default). Some external sources can return [lng, lat].
-        // Normalize everything to [lat, lng] so polyline + bounds are correct.
-        const normalizeLatLng = (tuple: [number, number]): [number, number] => {
+        const normalizeLngLat = (tuple: [number, number]): [number, number] => {
             const a = tuple?.[0]
             const b = tuple?.[1]
             if (!Number.isFinite(a) || !Number.isFinite(b)) return tuple
-            const looksLikeLatLng = a >= -90 && a <= 90 && b >= -180 && b <= 180
-            const looksLikeLngLat = a >= -180 && a <= 180 && b >= -90 && b <= 90
-            // If it looks like [lng, lat] (and not ambiguously like both), swap to [lat, lng]
-            if (looksLikeLngLat && !looksLikeLatLng) return [b, a]
+
+            const aIsLatOnly = a >= -90 && a <= 90
+            const bIsLatOnly = b >= -90 && b <= 90
+            const aIsLngOnly = a >= -180 && a <= 180
+            const bIsLngOnly = b >= -180 && b <= 180
+
+            // If it looks like [lat, lng] (non-ambiguous), swap to [lng, lat].
+            // Ambiguous pairs like [27,53] should keep the current order, since app state uses [lng, lat].
+            const looksLikeLatLngNonAmbiguous = aIsLatOnly && bIsLngOnly && !(aIsLngOnly && bIsLatOnly)
+            if (looksLikeLatLngNonAmbiguous) return [b, a]
+
             return tuple
         }
 
         const validCoords = coordsToDraw
-            .map((p) => normalizeLatLng(p))
-            .filter(([lat, lng]) =>
+            .map((p) => normalizeLngLat(p))
+            .filter(([lng, lat]) =>
                 Number.isFinite(lat) &&
                 Number.isFinite(lng) &&
                 lat >= -90 && lat <= 90 &&
@@ -216,7 +220,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             )
 
         if (validCoords.length >= 2) {
-            const latlngs = validCoords.map(([lat, lng]) => L.latLng(lat, lng))
+            const latlngs = validCoords.map(([lng, lat]) => L.latLng(lat, lng))
 
             // Определяем цвет линии в зависимости от статуса
             const isOptimal = routingState.error === false || routingState.error === ''

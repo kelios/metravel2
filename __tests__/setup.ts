@@ -1,5 +1,6 @@
 // Suppress React Native deprecation warnings
 ;(global as any).__DEV__ = false
+;(process as any).noDeprecation = true
 
 const originalWarn = console.warn;
 console.warn = (message, ...args) => {
@@ -7,6 +8,9 @@ console.warn = (message, ...args) => {
   // Suppress specific deprecation warnings
   if (/(ProgressBarAndroid|Clipboard|PushNotificationIOS) has been extracted/.test(text)) {
     return;
+  }
+  if (text.includes('SafeAreaView has been deprecated')) {
+    return
   }
   if (text.includes('Tried to use the icon') && text.includes('react-native-paper')) {
     return

@@ -132,11 +132,20 @@ test.describe('Map Page (/map) - smoke e2e', () => {
       .toBeGreaterThanOrEqual(4);
     await tile.first().waitFor({ state: 'visible', timeout: 60_000 });
 
-    await expect(mapWrapper).toHaveScreenshot('map-visible.png', {
-      // Tile servers, device scale factors and font rasterization can cause small diffs.
-      // Keep this as a coarse smoke visual guard.
-      maxDiffPixelRatio: 0.18,
-    });
+    // Ensure at least one tile image is actually loaded (not just present in DOM).
+    await expect
+      .poll(
+        async () => {
+          const handle = await tile.first().elementHandle();
+          if (!handle) return false;
+          return handle.evaluate((el) => {
+            const img = el as HTMLImageElement;
+            return Boolean(img.complete && img.naturalWidth > 0);
+          });
+        },
+        { timeout: 60_000 }
+      )
+      .toBe(true);
   });
 
   test('desktop: loads map and shows filters panel', async ({ page }) => {

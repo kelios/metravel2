@@ -57,6 +57,15 @@ describe('RoutingMachine', () => {
     expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
   });
 
+  it('converts routePoints [lng,lat] to Leaflet latLng(lat,lng) (prevents Africa jump)', async () => {
+    render(<RoutingMachine {...defaultProps} />);
+
+    await waitFor(() => {
+      // First point in defaultProps is [27.5590, 53.9006] => lat=53.9006, lng=27.5590
+      expect(mockLeaflet.latLng).toHaveBeenCalledWith(53.9006, 27.559);
+    });
+  });
+
   it('should not call setRoutingLoading when less than 2 points', async () => {
     const props = {
       ...defaultProps,

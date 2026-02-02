@@ -6,6 +6,7 @@ import { strToLatLng } from './utils';
 import type { Point, ClusterData } from './types';
 
 interface ClusterLayerProps {
+  L?: any;
   clusters: ClusterData[];
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
@@ -33,6 +34,7 @@ const sanitizeCssValue = (val: string | undefined) => {
 };
 
 const ClusterLayer: React.FC<ClusterLayerProps> = ({
+  L,
   clusters,
   Marker,
   Popup,
@@ -55,7 +57,8 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   }, [clusters]);
 
   const clusterIconsCache = useMemo(() => {
-    if (!(window as any)?.L?.divIcon) return new Map();
+    const leaflet = L ?? (window as any)?.L;
+    if (!leaflet?.divIcon) return new Map();
 
     const cache = new Map();
     const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
@@ -77,7 +80,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     const badgeTextColor = textOnDark || '#FFFFFF';
 
     [2, 5, 10, 20, 50, 100, 200].forEach(count => {
-      const icon = (window as any).L.divIcon({
+      const icon = leaflet.divIcon({
         className: 'metravel-cluster-icon',
         html: `
           <div style="
@@ -126,11 +129,12 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     });
 
     return cache;
-  }, [colors]);
+  }, [L, colors]);
 
   const clusterIcon = useCallback(
     (count: number) => {
-      if (!(window as any)?.L?.divIcon) return undefined;
+      const leaflet = L ?? (window as any)?.L;
+      if (!leaflet?.divIcon) return undefined;
 
       if (!Number.isFinite(count) || count < 0 || count > 10000) {
         console.warn('[Map] Invalid cluster count:', count);
@@ -162,7 +166,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
       const safeCount = Math.floor(count);
 
-      return (window as any).L.divIcon({
+      return leaflet.divIcon({
         className: 'metravel-cluster-icon',
         html: `
           <div style="
@@ -208,7 +212,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         iconAnchor: [28, 28],
       });
     },
-    [colors, clusterIconsCache]
+    [L, colors, clusterIconsCache]
   );
 
   const handleMarkerClick = useCallback(

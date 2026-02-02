@@ -269,7 +269,6 @@ export function useMapScreenController() {
     routingError,
     mapUiApi,
     closeRightPanel,
-    coordinates,
     queryCoordinates,
     buildRouteToStable,
     selectTravelsTab,
