@@ -10,6 +10,7 @@ export const clearResolvedRouteKeys = () => resolvedRouteKeys.clear()
 interface RouteResult {
     coords: [number, number][]
     distance: number
+    duration: number
     isOptimal: boolean
 }
 
@@ -17,6 +18,7 @@ interface RoutingState {
     loading: boolean
     error: string | boolean
     distance: number
+    duration: number
     coords: [number, number][]
 }
 
@@ -49,8 +51,18 @@ export const useRouting = (
         loading: false,
         error: false,
         distance: 0,
+        duration: 0,
         coords: [],
     })
+
+    const estimateDurationSeconds = useCallback((meters: number, mode: 'car' | 'bike' | 'foot') => {
+        const speedsKmh = { car: 60, bike: 20, foot: 5 }
+        const speed = speedsKmh[mode] ?? 60
+        if (!Number.isFinite(meters) || meters <= 0) return 0
+        const hours = (meters / 1000) / speed
+        const seconds = Math.round(hours * 3600)
+        return Number.isFinite(seconds) ? seconds : 0
+    }, [])
 
     const abortRef = useRef<AbortController | null>(null)
     const lastRouteKeyRef = useRef<string | null>(null)
@@ -192,6 +204,7 @@ export const useRouting = (
             return {
                 coords: geometry.coordinates as [number, number][],
                 distance: summary?.distance || 0,
+                duration: summary?.duration || 0,
                 isOptimal: true,
             }
         }, 3, 1000); // 3 попытки с начальной задержкой 1с
@@ -247,11 +260,12 @@ export const useRouting = (
                 return total
             })()
             // Кэшируем мок, чтобы повторные вызовы не давали новые ссылки массива
-            routeCache.set(points, transportMode, coords, distance)
+            routeCache.set(points, transportMode, coords, distance, estimateDurationSeconds(distance, mode))
             if (routeKey) resolvedRouteKeys.add(routeKey)
             return {
                 coords,
                 distance,
+                duration: estimateDurationSeconds(distance, mode),
                 isOptimal: true,
             }
         }
@@ -292,9 +306,10 @@ export const useRouting = (
         return {
             coords: route.geometry.coordinates as [number, number][],
             distance: route.distance || 0,
+            duration: route.duration || 0,
             isOptimal: true,
         }
-    }, [isTestEnv, routeKey, transportMode])
+    }, [estimateDurationSeconds, isTestEnv, routeKey, transportMode])
 
     // Бесплатный routing через Valhalla (Mapzen/Mapbox альтернатива)
     // Используем публичный инстанс valhalla.openstreetmap.de
@@ -398,10 +413,13 @@ export const useRouting = (
 
         // distance в kilometers, конвертируем в метры
         const distanceKm = trip.summary?.length || 0;
+        // time in seconds (Valhalla)
+        const duration = Number(trip.summary?.time) || 0;
 
         return {
             coords: allCoords,
             distance: distanceKm * 1000,
+            duration,
             isOptimal: true,
         };
     }, []);
@@ -450,6 +468,7 @@ export const useRouting = (
                 loading: false,
                 error: false,
                 distance: 0,
+                duration: 0,
                 coords: [],
             })
             return
@@ -465,6 +484,7 @@ export const useRouting = (
                 loading: false,
                 error: 'Для пешего/веломаршрута нужен ключ OpenRouteService (EXPO_PUBLIC_ORS_API_KEY)',
                 distance: directDistance,
+                duration: estimateDurationSeconds(directDistance, transportMode),
                 coords: routePointsRef.current,
             })
             return
@@ -485,9 +505,10 @@ export const useRouting = (
                 loading: false,
                 error: false,
                 distance: cached.distance,
+                duration: cached.duration || estimateDurationSeconds(cached.distance, transportMode),
                 coords: cached.coords,
             })
-            return
+            // Важное: НЕ делаем return, т.к. возможна смена transportMode.
         }
 
         // Skip if already processing this exact route
@@ -497,213 +518,104 @@ export const useRouting = (
 
         const currentPoints = routePointsRef.current
 
-        // Тестовая среда: возвращаем контролируемый результат без реальных запросов
-        if (isTestEnv) {
-            lastRouteKeyRef.current = routeKey
-            isProcessingRef.current = true
-            setState({
-                loading: true,
-                error: false,
-                distance: 0,
-                coords: [],
-            })
-            ;(async () => {
-                try {
-                    const testResult = await fetchOSRM(currentPoints, transportMode, new AbortController().signal)
-                    routeCache.set(currentPoints, transportMode, testResult.coords, testResult.distance)
-                    resolvedRouteKeys.add(routeKey)
-                    setState({
-                        loading: false,
-                        error: false,
-                        distance: testResult.distance,
-                        coords: testResult.coords,
-                    })
-                } catch (testError: any) {
-                    if (testError?.name === 'AbortError') return
-                    const distance = calculateDirectDistance(currentPoints)
-                    const msg = testError?.message || 'Не удалось построить маршрут'
-                    setState({
-                        loading: false,
-                        error: msg,
-                        distance,
-                        coords: currentPoints,
-                    })
-                } finally {
-                    isProcessingRef.current = false
-                }
-            })()
-            return
+        // Debounce + abort previous routing request
+        if (abortRef.current) {
+            abortRef.current.abort()
         }
+        const abortController = new AbortController()
+        abortRef.current = abortController
 
-        const mockOsrmEnabled =
-            typeof process !== 'undefined' &&
-            (
-                (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === '1' ||
-                (process.env as any)?.EXPO_PUBLIC_OSRM_MOCK === 'true'
-            )
-
-        if (mockOsrmEnabled) {
-            const coords = currentPoints.map(([lng, lat]) => [lng, lat] as [number, number])
-            const distance = calculateDirectDistance(coords)
-            routeCache.set(currentPoints, transportMode, coords, distance)
-            if (routeKey) resolvedRouteKeys.add(routeKey)
-
-            setState({
-                loading: true,
-                error: false,
-                distance: 0,
-                coords: [],
-            })
-            setTimeout(() => {
-                setState({
-                    loading: false,
-                    error: false,
-                    distance,
-                    coords,
-                })
-                isProcessingRef.current = false
-            }, 0)
-            return
-        }
-
-        const cachedRoute = routeKey ? routeCache.get(currentPoints, transportMode) : null
-        if (cachedRoute) {
-            setState({
-                loading: false,
-                error: false,
-                distance: cachedRoute.distance,
-                coords: cachedRoute.coords,
-            })
-            if (routeKey) {
-                resolvedRouteKeys.add(routeKey)
-            }
-            isProcessingRef.current = false
-            return
-        }
-
+        // Rate limiting (avoid spamming free endpoints)
         if (!isTestEnv && !routeCache.canMakeRequest()) {
             const waitTime = routeCache.getTimeUntilNextRequest()
             if (rateLimitKeyRef.current !== routeKey) {
                 rateLimitKeyRef.current = routeKey
-                const directCoords = currentPoints
-                const directDistance = calculateDirectDistance(directCoords)
-                setState(prev => ({
+                const directDistance = calculateDirectDistance(currentPoints)
+                setState((prev) => ({
                     ...prev,
+                    loading: false,
                     error: `Слишком много запросов. Подождите ${Math.ceil(waitTime / 1000)}с`,
-                    coords: directCoords,
                     distance: directDistance,
+                    duration: estimateDurationSeconds(directDistance, transportMode),
+                    coords: currentPoints,
                 }))
             }
             return
         }
 
-        // Abort previous request
-        if (abortRef.current) {
-            abortRef.current.abort()
-            isProcessingRef.current = false
+        // schedule route build
+        if (rateLimitTimerRef.current) {
+            clearTimeout(rateLimitTimerRef.current)
+            rateLimitTimerRef.current = null
         }
 
-        const abortController = new AbortController()
-        abortRef.current = abortController
-        isProcessingRef.current = true
-        lastRouteKeyRef.current = routeKey
-
         const fetchRoute = async () => {
+            isProcessingRef.current = true
+            lastRouteKeyRef.current = routeKey
+
             try {
-                setState(prev => ({ ...prev, loading: true, error: false }))
+                setState((prev) => ({ ...prev, loading: true, error: false }))
                 routeCache.recordRequest()
 
                 let result: RouteResult
+                const shouldUseORS = !!ORS_API_KEY && !forceOsrm
 
-                try {
-                    const shouldUseORS = !!ORS_API_KEY && !forceOsrm
-
-                    if (shouldUseORS) {
-                        // ORS поддерживает все режимы
-                        result = await fetchORS(currentPoints, transportMode, abortController.signal)
-                    } else if (transportMode === 'car') {
-                        // OSRM поддерживает только driving
-                        result = await fetchOSRM(currentPoints, transportMode, abortController.signal)
-                    } else {
-                        // Для bike/foot используем бесплатный Valhalla
-                        result = await fetchValhalla(currentPoints, transportMode, abortController.signal)
-                    }
-                } catch (primaryError: any) {
-                    if (primaryError?.name === 'AbortError') throw primaryError
-
-                    // Пробуем fallback сервисы
-                    try {
-                        if (transportMode === 'car') {
-                            // Для авто пробуем Valhalla как fallback
-                            result = await fetchValhalla(currentPoints, transportMode, abortController.signal)
-                        } else {
-                            // Для bike/foot пробуем OSRM с профилем driving (хоть какой-то маршрут)
-                            result = await fetchOSRM(currentPoints, 'car', abortController.signal)
-                            // Помечаем как неоптимальный, т.к. это автомобильный маршрут
-                            result.isOptimal = false
-                        }
-                    } catch (fallbackError: any) {
-                        if (fallbackError?.name === 'AbortError') throw fallbackError
-
-                        const distance = calculateDirectDistance(currentPoints)
-                        result = {
-                            coords: currentPoints,
-                            distance,
-                            isOptimal: false,
-                        }
-
-                        setState({
-                            loading: false,
-                            error: 'Используется прямая линия (сервисы маршрутизации недоступны)',
-                            distance,
-                            coords: currentPoints,
-                        })
-                        resolvedRouteKeys.add(routeKey)
-                        isProcessingRef.current = false
-                        return
-                    }
+                if (shouldUseORS) {
+                    result = await fetchORS(currentPoints, transportMode, abortController.signal)
+                } else if (transportMode === 'car') {
+                    result = await fetchOSRM(currentPoints, transportMode, abortController.signal)
+                } else {
+                    result = await fetchValhalla(currentPoints, transportMode, abortController.signal)
                 }
 
-                routeCache.set(currentPoints, transportMode, result.coords, result.distance)
+                const duration = result.duration || estimateDurationSeconds(result.distance, transportMode)
+                routeCache.set(currentPoints, transportMode, result.coords, result.distance, duration)
                 resolvedRouteKeys.add(routeKey)
 
                 setState({
                     loading: false,
                     error: false,
                     distance: result.distance,
+                    duration,
                     coords: result.coords,
                 })
-            } catch (error: any) {
-                if (error?.name === 'AbortError') {
-                    return
-                }
+            } catch (primaryError: any) {
+                if (primaryError?.name === 'AbortError') return
 
-                const distance = calculateDirectDistance(currentPoints)
-                const errorMessage = error?.message || 'Не удалось построить маршрут'
+                // Fallback: direct line
+                const directDistance = calculateDirectDistance(currentPoints)
+                const duration = estimateDurationSeconds(directDistance, transportMode)
+                const msg = primaryError?.message || 'Не удалось построить маршрут'
+
                 setState({
                     loading: false,
-                    error: errorMessage,
-                    distance,
+                    error: msg,
+                    distance: directDistance,
+                    duration,
                     coords: currentPoints,
                 })
-                if (routeKey) {
-                    resolvedRouteKeys.add(routeKey)
-                    routeCache.set(currentPoints, transportMode, currentPoints, distance)
-                }
+                resolvedRouteKeys.add(routeKey)
+                routeCache.set(currentPoints, transportMode, currentPoints, directDistance, duration)
             } finally {
                 isProcessingRef.current = false
             }
         }
 
-        fetchRoute()
+        // Slight debounce to coalesce quick successive changes (clicks, swap, etc.)
+        rateLimitTimerRef.current = setTimeout(fetchRoute, isTestEnv ? 0 : 80)
 
         return () => {
             if (rateLimitTimerRef.current) {
                 clearTimeout(rateLimitTimerRef.current)
                 rateLimitTimerRef.current = null
             }
+            try {
+                abortController.abort()
+            } catch {
+                // noop
+            }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv, supportsPublicOsrmProfile])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, estimateDurationSeconds, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv, supportsPublicOsrmProfile])
 
     useEffect(() => {
         return () => {

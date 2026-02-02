@@ -5,11 +5,13 @@ import { useThemedColors } from '@/hooks/useTheme'
 
 interface RoutingMachineProps {
     map: any
+    L?: any
     routePoints: [number, number][]
     transportMode: 'car' | 'bike' | 'foot'
     setRoutingLoading: (loading: boolean) => void
     setErrors: (errors: any) => void
     setRouteDistance: (distance: number) => void
+    setRouteDuration?: (durationSeconds: number) => void
     setFullRouteCoords: (coords: [number, number][]) => void
     ORS_API_KEY: string | undefined
 }
@@ -30,11 +32,13 @@ interface RoutingMachineProps {
 
 const RoutingMachine: React.FC<RoutingMachineProps> = ({
     map,
+    L: leafletFromProps,
     routePoints,
     transportMode,
     setRoutingLoading,
     setErrors,
     setRouteDistance,
+    setRouteDuration,
     setFullRouteCoords,
     ORS_API_KEY,
 }) => {
@@ -44,12 +48,14 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         loading: boolean
         error: string | boolean
         distance: number
+        duration: number
         coords: string
     } | null>(null)
     const lastSentRef = useRef<{
         loading: boolean
         error: string | boolean
         distance: number
+        duration: number
         coords: string
     } | null>(null)
 
@@ -78,7 +84,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         if (clearedNoPointsRef.current) return
         clearedNoPointsRef.current = true
 
-        setErrors((prev: any) => ({ ...prev, routing: false }))
+        try {
+            setErrors({ routing: false })
+        } catch {
+            // noop
+        }
         setRouteDistance(0)
         setFullRouteCoords([])
 
@@ -104,6 +114,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             loading: routingState.loading,
             error: routingState.error,
             distance: routingState.distance,
+            duration: routingState.duration,
             coords: coordsKeyForSync,
         }
 
@@ -117,6 +128,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             prevState.loading !== currentState.loading ||
             prevState.error !== currentState.error ||
             prevState.distance !== currentState.distance ||
+            prevState.duration !== currentState.duration ||
             prevState.coords !== currentState.coords
 
         if (hasChanged) {
@@ -128,6 +140,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 lastSent.loading !== currentState.loading ||
                 lastSent.error !== currentState.error ||
                 lastSent.distance !== currentState.distance ||
+                lastSent.duration !== currentState.duration ||
                 lastSent.coords !== currentState.coords
 
             if (!isNew) return
@@ -139,12 +152,25 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             
             // Передаем ошибку только если она есть
             if (typeof routingState.error === 'string' && routingState.error) {
-                setErrors((prev: any) => ({ ...prev, routing: routingState.error }))
+                try {
+                    setErrors({ routing: routingState.error })
+                } catch {
+                    // noop
+                }
             } else {
-                setErrors((prev: any) => ({ ...prev, routing: false }))
+                try {
+                    setErrors({ routing: false })
+                } catch {
+                    // noop
+                }
             }
             
             setRouteDistance(routingState.distance)
+            try {
+                setRouteDuration?.(routingState.duration)
+            } catch {
+                // noop
+            }
             setFullRouteCoords(routingState.coords)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -170,8 +196,8 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         if (!hasTwoPoints) return
         if (!map || typeof window === 'undefined') return
 
-        const L = (window as any).L
-        if (!L) return
+        const leaflet = leafletFromProps ?? (window as any).L
+        if (!leaflet) return
 
         let cancelled = false
         // Remove old polyline
@@ -220,7 +246,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             )
 
         if (validCoords.length >= 2) {
-            const latlngs = validCoords.map(([lng, lat]) => L.latLng(lat, lng))
+            const latlngs = validCoords.map(([lng, lat]) => leaflet.latLng(lat, lng))
 
             // Определяем цвет линии в зависимости от статуса
             const isOptimal = routingState.error === false || routingState.error === ''
@@ -229,15 +255,30 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             const opacity = isOptimal ? 0.85 : 0.65
             const dashArray = isOptimal ? null : '10, 10' // Пунктирная линия для неоптимального маршрута
 
-            const addLineWhenReady = () => {
-                if (cancelled) return
-                // Во время fast-refresh/unmount карта может быть в промежуточном состоянии:
-                // - map.getPane('overlayPane') ещё не создан
-                // - или map уже удалён, но ссылка ещё жива
-                const overlayPane = typeof map.getPane === 'function' ? map.getPane('overlayPane') : null
-                if (!overlayPane) return
+            const schedule = (fn: () => void) => {
+                if (typeof requestAnimationFrame === 'function') {
+                    requestAnimationFrame(fn)
+                } else {
+                    setTimeout(fn, 0)
+                }
+            }
 
-                const line = L.polyline(latlngs, {
+            const addLineWhenReady = (attemptsLeft: number) => {
+                if (cancelled) return
+                // Во время fast-refresh/unmount карта может быть в промежуточном состоянии.
+                // Ранее мы просто возвращались, если overlayPane ещё не готов, и линия могла
+                // вообще никогда не появиться. Теперь делаем несколько ретраев.
+                if (typeof map.getPane === 'function') {
+                    const overlayPane = map.getPane('overlayPane')
+                    if (!overlayPane) {
+                        if (attemptsLeft > 0) {
+                            schedule(() => addLineWhenReady(attemptsLeft - 1))
+                        }
+                        return
+                    }
+                }
+
+                const line = leaflet.polyline(latlngs, {
                     color,
                     weight,
                     opacity,
@@ -289,16 +330,16 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             // Leaflet гарантирует, что whenReady вызовется когда готовы panes/renderer.
             // Но при гонках (error boundary, hot reload) дополнительно проверяем overlayPane.
             if (typeof map.whenReady === 'function') {
-                map.whenReady(addLineWhenReady)
+                map.whenReady(() => addLineWhenReady(12))
             } else {
-                addLineWhenReady()
+                addLineWhenReady(12)
             }
         }
 
         return () => {
             cancelled = true
         }
-    }, [map, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routePoints, routingState.coords, info, warning])
+    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routePoints, routingState.coords, info, warning])
 
     // Cleanup on unmount
     useEffect(() => {

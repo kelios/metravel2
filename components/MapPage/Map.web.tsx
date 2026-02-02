@@ -47,6 +47,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     mode,
     transportMode,
     setRouteDistance,
+    setRouteDuration,
     setFullRouteCoords,
     radius,
     onUserLocationChange,
@@ -62,6 +63,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [showInitialLoader, setShowInitialLoader] = useState(true);
   const [_routingLoading, setRoutingLoading] = useState(false);
+  const [errors, setErrors] = useState<any>({ routing: false });
   const [disableFitBounds, _setDisableFitBounds] = useState(false);
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
   const [mapZoom, setMapZoom] = useState<number>(11);
@@ -276,10 +278,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
     }
   }, [mapZoom]);
 
-  // Routing error handler (stub for RoutingMachine)
-  const handleRoutingError = useCallback((err: any) => {
-    console.error('[Map] Routing error:', err);
-  }, []);
+  useEffect(() => {
+    if (!errors?.routing) return;
+    try {
+      console.error('[Map] Routing error:', errors.routing);
+    } catch {
+      // noop
+    }
+  }, [errors?.routing]);
 
   // Custom hooks
   const customIcons = useLeafletIcons(L);
@@ -526,9 +532,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
       const map = useMap();
       // Don't render RoutingMachine until map is available
       if (!map) return null;
-      return <RoutingMachine {...routeProps} map={map} />;
+      return <RoutingMachine {...routeProps} map={map} L={L} />;
     };
-  }, [rl]);
+  }, [rl, L]);
 
   const renderLoader = useCallback(
     (message: string) => (
@@ -1044,8 +1050,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
                 routePoints={routePoints}
                 transportMode={transportMode}
                 setRoutingLoading={setRoutingLoading}
-                setErrors={handleRoutingError}
+                setErrors={setErrors}
                 setRouteDistance={setRouteDistance}
+                setRouteDuration={setRouteDuration}
                 setFullRouteCoords={setFullRouteCoords}
                 ORS_API_KEY={ORS_API_KEY}
               />

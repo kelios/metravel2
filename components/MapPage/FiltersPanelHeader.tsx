@@ -18,6 +18,7 @@ interface FiltersPanelHeaderProps {
   routingLoading?: boolean;
   routingError?: string | boolean | null;
   routeDistance: number | null;
+  routeDuration?: number | null;
   transportMode: 'car' | 'bike' | 'foot';
 }
 
@@ -33,6 +34,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
   routingLoading,
   routingError,
   routeDistance,
+  routeDuration,
   transportMode,
 }) => {
   return (
@@ -70,6 +72,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
             isLoading={!!routingLoading}
             error={routingError || null}
             distance={routeDistance}
+            duration={routeDuration ?? null}
             transportMode={transportMode}
           />
         </View>

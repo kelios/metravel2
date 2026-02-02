@@ -65,6 +65,11 @@ interface UseRouteControllerResult {
   routeDistance: number | null;
 
   /**
+   * Route duration in seconds
+   */
+  routeDuration: number | null;
+
+  /**
    * Full route coordinates
    */
   fullRouteCoords: [number, number][];
@@ -78,6 +83,11 @@ interface UseRouteControllerResult {
    * Set route distance
    */
   setRouteDistance: (distance: number) => void;
+
+  /**
+   * Set route duration (seconds)
+   */
+  setRouteDuration: (durationSeconds: number) => void;
 
   /**
    * Set full route coordinates
@@ -167,9 +177,11 @@ export function useRouteController(
     startAddress,
     endAddress,
     routeDistance,
+    routeDuration,
     fullRouteCoords,
     setRoutePoints,
     setRouteDistance,
+    setRouteDuration,
     setFullRouteCoords,
     handleClearRoute,
     handleAddressSelect,
@@ -326,9 +338,11 @@ export function useRouteController(
     startAddress,
     endAddress,
     routeDistance,
+    routeDuration,
     fullRouteCoords,
     setRoutePoints,
     setRouteDistance,
+    setRouteDuration,
     setFullRouteCoords,
     handleClearRoute,
     handleAddressSelect,

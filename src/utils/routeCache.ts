@@ -1,6 +1,7 @@
 interface CacheEntry {
   coords: [number, number][];
   distance: number;
+  duration: number;
   timestamp: number;
 }
 
@@ -53,12 +54,14 @@ class RouteCache {
     points: [number, number][],
     transportMode: string,
     coords: [number, number][],
-    distance: number
+    distance: number,
+    duration: number = 0
   ): void {
     const key = this.generateKey(points, transportMode);
     this.cache.set(key, {
       coords,
       distance,
+      duration,
       timestamp: Date.now(),
     });
   }

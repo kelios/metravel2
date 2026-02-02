@@ -57,6 +57,21 @@ describe('RoutingMachine', () => {
     expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
   });
 
+  it('draws polyline using L prop when window.L is not available', async () => {
+    const prevWindowL = (window as any).L;
+    try {
+      ;(window as any).L = undefined;
+
+      render(<RoutingMachine {...defaultProps} L={mockLeaflet} />);
+
+      await waitFor(() => {
+        expect(mockLeaflet.polyline).toHaveBeenCalled();
+      });
+    } finally {
+      ;(window as any).L = prevWindowL;
+    }
+  });
+
   it('converts routePoints [lng,lat] to Leaflet latLng(lat,lng) (prevents Africa jump)', async () => {
     render(<RoutingMachine {...defaultProps} />);
 

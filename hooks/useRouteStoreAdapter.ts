@@ -39,6 +39,7 @@ export function useRouteStoreAdapter() {
 
   // Get route data
   const routeDistance = store.route?.distance ?? null;
+  const routeDuration = store.route?.duration ?? null;
   
   const fullRouteCoords = useMemo(() => {
     if (!store.route?.coordinates) return [];
@@ -110,6 +111,8 @@ export function useRouteStoreAdapter() {
     const existingCoords =
       store.route?.coordinates ?? store.points.map((p) => p.coordinates);
 
+    const existingDuration = store.route?.duration ?? 0;
+
     const prevDistance = store.route?.distance;
     const sameDistance = typeof prevDistance === 'number' && prevDistance === distance;
 
@@ -121,7 +124,20 @@ export function useRouteStoreAdapter() {
     store.setRoute({
       coordinates: existingCoords,
       distance,
-      duration: 0,
+      duration: existingDuration,
+      isOptimal: true,
+    });
+  }, [store]);
+
+  const setRouteDuration = useCallback((durationSeconds: number) => {
+    const existingCoords =
+      store.route?.coordinates ?? store.points.map((p) => p.coordinates);
+    const existingDistance = store.route?.distance ?? 0;
+
+    store.setRoute({
+      coordinates: existingCoords,
+      distance: existingDistance,
+      duration: Number(durationSeconds) || 0,
       isOptimal: true,
     });
   }, [store]);
@@ -129,6 +145,7 @@ export function useRouteStoreAdapter() {
   const setFullRouteCoords = useCallback((coords: [number, number][]) => {
     const latLngCoords: LatLng[] = coords.map(([lng, lat]) => ({ lat, lng }));
     const distance = store.route?.distance ?? 0;
+    const duration = store.route?.duration ?? 0;
 
     const prevCoords = store.route?.coordinates;
     const sameLength = Array.isArray(prevCoords) && prevCoords.length === latLngCoords.length;
@@ -144,7 +161,7 @@ export function useRouteStoreAdapter() {
     store.setRoute({
       coordinates: latLngCoords,
       distance,
-      duration: 0,
+      duration,
       isOptimal: true,
     });
   }, [store]);
@@ -221,6 +238,7 @@ export function useRouteStoreAdapter() {
     startAddress,
     endAddress,
     routeDistance,
+    routeDuration,
     fullRouteCoords,
     isBuilding: store.isBuilding,
     error: store.error,
@@ -234,6 +252,7 @@ export function useRouteStoreAdapter() {
     setTransportMode: store.setTransportMode,
     setRoutePoints,
     setRouteDistance,
+    setRouteDuration,
     setFullRouteCoords,
     handleRemoveRoutePoint,
     handleClearRoute,

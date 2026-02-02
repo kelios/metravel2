@@ -7,6 +7,7 @@ interface RoutingStatusProps {
   isLoading: boolean;
   error: string | boolean | null;
   distance: number | null;
+  duration?: number | null;
   transportMode: 'car' | 'bike' | 'foot';
 }
 
@@ -16,6 +17,16 @@ const getModeLabel = (mode: 'car' | 'bike' | 'foot') => {
     case 'foot': return 'Пешком';
     default: return 'Автомобиль';
   }
+};
+
+const formatDuration = (seconds: number) => {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '';
+  const totalMinutes = Math.round(seconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes} мин`;
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (m === 0) return `${h} ч`;
+  return `${h} ч ${m} мин`;
 };
 
 const getModeIcon = (mode: 'car' | 'bike' | 'foot') => {
@@ -47,6 +58,7 @@ export default function RoutingStatus({
   isLoading,
   error,
   distance,
+  duration,
   transportMode,
 }: RoutingStatusProps) {
   const colors = useThemedColors();
@@ -126,7 +138,7 @@ export default function RoutingStatus({
   }
 
   if (distance !== null && distance > 0) {
-    const time = estimateTime(distance, transportMode);
+    const time = duration != null && duration > 0 ? formatDuration(duration) : estimateTime(distance, transportMode);
     return (
       <View style={[styles.container, styles.successContainer]}>
         <View style={styles.successHeader}>

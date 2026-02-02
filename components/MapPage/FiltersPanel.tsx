@@ -52,6 +52,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     startAddress,
     endAddress,
     routeDistance,
+    routeDuration,
     routePoints,
     onRemoveRoutePoint,
     onClearRoute,
@@ -112,6 +113,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           routingLoading={routingLoading}
           routingError={routingError}
           routeDistance={routeDistance}
+          routeDuration={routeDuration}
           transportMode={transportMode}
         />
       )}

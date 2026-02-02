@@ -4,6 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
+import { Platform } from 'react-native';
 import type { LatLng } from '@/types/coordinates';
 import type { MapMode } from './types';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
@@ -100,13 +101,17 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
     return userLocation;
   }, [userLocation]);
 
+  const shouldRenderBaseTileLayer = Platform.OS !== 'web';
+
   return (
     <>
       {/* Base tile layer */}
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="&copy; OpenStreetMap contributors"
-      />
+      {shouldRenderBaseTileLayer ? (
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution="&copy; OpenStreetMap contributors"
+        />
+      ) : null}
 
       {/* Radius circle (radius mode only) */}
       {mapInstance &&

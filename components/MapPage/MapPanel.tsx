@@ -19,6 +19,7 @@ interface MapPanelProps {
     onMapClick?: (lng: number, lat: number) => void;
     transportMode?: 'car' | 'bike' | 'foot';
     setRouteDistance: (distance: number) => void;
+    setRouteDuration?: (durationSeconds: number) => void;
     setFullRouteCoords: (coords: [number, number][]) => void;
     radius?: string; // Радиус поиска в км
     onMapUiApiReady?: (api: MapUiApi | null) => void;
@@ -54,6 +55,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                onMapClick = () => {},
                                                transportMode = 'car',
                                                setRouteDistance,
+                                               setRouteDuration,
                                                setFullRouteCoords,
                                                radius,
                                                onMapUiApiReady,
@@ -157,6 +159,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     onMapClick={onMapClick}
                     transportMode={transportMode}
                     setRouteDistance={setRouteDistance}
+                    setRouteDuration={setRouteDuration}
                     setFullRouteCoords={setFullRouteCoords}
                     radius={radius}
                     onMapUiApiReady={onMapUiApiReady}

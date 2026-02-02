@@ -212,15 +212,25 @@ describe('RoutingMachine E2E Tests', () => {
     const startPoint: [number, number] = [27.5590, 53.9006];
     const endPoint: [number, number] = [27.5700, 53.9100];
 
+    // useRouting uses Valhalla for foot/bike when ORS key isn't provided.
+    // To keep this test focused and deterministic, we provide a dummy ORS key
+    // and mock the ORS geojson response format.
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        routes: [{
-          geometry: {
-            coordinates: [startPoint, endPoint],
+        features: [
+          {
+            geometry: {
+              coordinates: [startPoint, endPoint],
+            },
+            properties: {
+              summary: {
+                distance: 12345,
+                duration: 0,
+              },
+            },
           },
-          distance: 12345,
-        }],
+        ],
       }),
     });
 
@@ -233,7 +243,7 @@ describe('RoutingMachine E2E Tests', () => {
         setErrors={mockSetErrors}
         setRouteDistance={mockSetRouteDistance}
         setFullRouteCoords={mockSetFullRouteCoords}
-        ORS_API_KEY={undefined}
+        ORS_API_KEY={'test-test-test' as any}
       />
     );
 

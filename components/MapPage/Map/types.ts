@@ -29,6 +29,7 @@ export interface MapProps {
   mode: MapMode;
   transportMode: TransportMode;
   setRouteDistance: (distance: number) => void;
+  setRouteDuration?: (durationSeconds: number) => void;
   setFullRouteCoords: (coords: [number, number][]) => void;
   radius?: string;
   onMapUiApiReady?: (api: MapUiApi | null) => void;
