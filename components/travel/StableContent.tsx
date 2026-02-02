@@ -171,7 +171,10 @@ const truncateInstagramCaptions = (html: string) => {
 const prepareHtml = (html: string) => {
   const safe = sanitizeRichText(html);
   const normalized = replaceYouTubeIframes(normalizeImgTags(stripDangerousTags(safe)));
-  return truncateInstagramCaptions(normalized);
+  const demoted = normalized
+    .replace(/<\s*h1(\b[^>]*)>/gi, '<h2$1>')
+    .replace(/<\s*\/\s*h1\s*>/gi, '</h2>');
+  return truncateInstagramCaptions(demoted);
 };
 
 const WEB_RICH_TEXT_CLASS = "travel-rich-text";
