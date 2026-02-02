@@ -44,7 +44,9 @@ eslint-report.json
 .playwright-report-extracted/
 /e2e/.auth/
 .pwtrace_tmp*/
+
 .pwtrace_tmp/
+**/*-snapshots/
 
 # Android sensitive files
 google-services.json
