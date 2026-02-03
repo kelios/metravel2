@@ -372,7 +372,7 @@ html[data-theme="dark"] .modal-select option {
 
 /* Custom route pane with higher z-index */
 .leaflet-metravelRoutePane-pane {
-  z-index: 450 !important;
+  z-index: 560 !important;
   pointer-events: none !important;
 }
 
@@ -429,7 +429,7 @@ html[data-theme="dark"] .leaflet-tile {
 }
 
 .leaflet-popup.metravel-route-marker-popup {
-  max-width: min(240px, calc(100vw - 48px)) !important;
+  max-width: min(160px, calc(100vw - 48px)) !important;
 }
 
 .leaflet-popup.metravel-route-marker-popup .leaflet-popup-content-wrapper {
@@ -437,17 +437,19 @@ html[data-theme="dark"] .leaflet-tile {
 }
 
 .leaflet-popup.metravel-route-marker-popup .leaflet-popup-content {
-  max-width: min(200px, calc(100vw - 80px)) !important;
-  padding: 12px 44px 12px 14px !important;
+  max-width: min(120px, calc(100vw - 80px)) !important;
+  padding: 8px 36px 8px 12px !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 13px !important;
 }
 
 .leaflet-popup.metravel-route-marker-popup .leaflet-popup-close-button {
-  width: 28px !important;
-  height: 28px !important;
+  width: 24px !important;
+  height: 24px !important;
   margin: 4px !important;
+  font-size: 18px !important;
 }
 
 .leaflet-popup-tip {

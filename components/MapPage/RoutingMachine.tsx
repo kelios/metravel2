@@ -257,7 +257,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 const existingPane = typeof map.getPane === 'function' ? map.getPane(paneName) : null
                 const pane = existingPane || (typeof map.createPane === 'function' ? map.createPane(paneName) : null)
                 if (pane && pane.style) {
-                    pane.style.zIndex = '650'
+                    pane.style.zIndex = '560'
                     pane.style.pointerEvents = 'none'
                     hasRoutePane = true
                 }

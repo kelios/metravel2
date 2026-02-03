@@ -46,20 +46,32 @@ const parseCoords = (raw: string) => {
     .split(hasComma ? /\s+/ : /\s+/)
     .filter(Boolean);
 
+  const toLngLat = (a: number, b: number): [number, number] => {
+    const aLooksLat = a >= -90 && a <= 90;
+    const bLooksLat = b >= -90 && b <= 90;
+    const aLooksLng = a >= -180 && a <= 180;
+    const bLooksLng = b >= -180 && b <= 180;
+    if (aLooksLat && bLooksLng && !(aLooksLng && bLooksLat)) {
+      return [b, a];
+    }
+    return [a, b];
+  };
+
   if (hasComma) {
     const pairs = s
       .replace(/\s+/g, ' ')
       .trim()
       .split(' ')
       .map((p) => p.split(',').map((x) => Number(x)) as [number, number])
-      .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+      .filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]))
+      .map(([a, b]) => toLngLat(a, b));
     return pairs;
   }
 
   const nums = parts.map((x) => Number(x)).filter((x) => Number.isFinite(x));
   const out: Array<[number, number]> = [];
   for (let i = 0; i + 1 < nums.length; i += 2) {
-    out.push([nums[i + 1], nums[i]]);
+    out.push(toLngLat(nums[i], nums[i + 1]));
   }
   return out;
 };

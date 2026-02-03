@@ -911,7 +911,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           .leaflet-tile-pane { z-index: 200 !important; }
           .leaflet-overlay-pane { z-index: 400 !important; }
           .leaflet-metravelRoutePane-pane { 
-            z-index: 450 !important; 
+            z-index: 560 !important; 
             pointer-events: none !important;
           }
           .leaflet-shadow-pane { z-index: 500 !important; }

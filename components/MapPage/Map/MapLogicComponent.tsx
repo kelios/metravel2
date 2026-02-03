@@ -137,7 +137,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         const existing = typeof (map as any).getPane === 'function' ? (map as any).getPane(paneName) : null;
         const pane = existing || (typeof (map as any).createPane === 'function' ? (map as any).createPane(paneName) : null);
         if (pane && pane.style) {
-          pane.style.zIndex = '450';
+          pane.style.zIndex = '560';
           pane.style.pointerEvents = 'none';
         }
       } catch {
