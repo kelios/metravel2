@@ -63,7 +63,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // State
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [showInitialLoader, setShowInitialLoader] = useState(Platform.OS !== 'web');
-  const [hasWebTilesLoaded, setHasWebTilesLoaded] = useState(false);
+  const [_hasWebTilesLoaded, setHasWebTilesLoaded] = useState(false);
   const [_routingLoading, setRoutingLoading] = useState(false);
   const [errors, setErrors] = useState<any>({ routing: false });
   const [disableFitBounds, _setDisableFitBounds] = useState(false);
@@ -735,18 +735,33 @@ const MapPageComponent: React.FC<Props> = (props) => {
       const b = tuple?.[1];
       if (!Number.isFinite(a) || !Number.isFinite(b)) return tuple;
 
-      const aIsLatOnly = a >= -90 && a <= 90;
-      const bIsLatOnly = b >= -90 && b <= 90;
-      const aIsLngOnly = a >= -180 && a <= 180;
-      const bIsLngOnly = b >= -180 && b <= 180;
+      // Простая логика: если первое значение явно не может быть longitude (выходит за -90..90),
+      // а второе может быть longitude, то это формат [lat, lng] - меняем местами
+      const aOutOfLatRange = a < -90 || a > 90;
+      const bOutOfLatRange = b < -90 || b > 90;
 
-      const looksLikeLatLngNonAmbiguous = aIsLatOnly && bIsLngOnly && !(aIsLngOnly && bIsLatOnly);
-      if (looksLikeLatLngNonAmbiguous) return [b, a];
+      // Если первое значение выходит за диапазон lat, а второе нет - это [lng, lat]
+      if (aOutOfLatRange && !bOutOfLatRange) {
+        return tuple; // уже [lng, lat]
+      }
 
+      // Если второе значение выходит за диапазон lat, а первое нет - это [lat, lng]
+      if (!aOutOfLatRange && bOutOfLatRange) {
+        console.info('[Map.web.tsx] Swapping coordinates from [lat, lng] to [lng, lat]:', tuple, '->', [b, a]);
+        return [b, a]; // swap to [lng, lat]
+      }
+
+      // Оба значения в диапазоне -90..90 - неоднозначность
+      // Предполагаем, что координаты уже в формате [lng, lat] (как передает useRouteController)
       return tuple;
     };
 
-    return routePoints.map((p) => normalizeLngLat(p));
+    const normalized = routePoints.map((p) => normalizeLngLat(p));
+    console.info('[Map.web.tsx] Route points normalization:', {
+      original: routePoints,
+      normalized,
+    });
+    return normalized;
   }, [routePoints]);
 
   const hasWarnedInvalidCircleRef = useRef(false);

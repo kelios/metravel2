@@ -55,6 +55,16 @@ export const useRouting = (
         coords: [],
     })
 
+    // 🔍 ДИАГНОСТИКА: Логируем входные параметры
+    useEffect(() => {
+        console.info('[useRouting] Hook called with:', {
+            routePointsCount: routePoints?.length,
+            routePoints: routePoints?.slice(0, 2),
+            transportMode,
+            hasORS_API_KEY: !!ORS_API_KEY,
+        })
+    }, [routePoints, transportMode, ORS_API_KEY])
+
     const estimateDurationSeconds = useCallback((meters: number, mode: 'car' | 'bike' | 'foot') => {
         const speedsKmh = { car: 60, bike: 20, foot: 5 }
         const speed = speedsKmh[mode] ?? 60
@@ -466,6 +476,7 @@ export const useRouting = (
                 abortRef.current.abort()
                 abortRef.current = null
             }
+            console.info('[useRouting] Less than 2 points, resetting state')
             setState({
                 loading: false,
                 error: false,
@@ -574,6 +585,14 @@ export const useRouting = (
                 routeCache.set(currentPoints, transportMode, result.coords, result.distance, duration)
                 resolvedRouteKeys.add(routeKey)
 
+                console.info('[useRouting] ✅ Route built successfully:', {
+                    distance: result.distance,
+                    duration,
+                    coordsCount: result.coords?.length,
+                    firstCoords: result.coords?.slice(0, 2),
+                    isOptimal: result.isOptimal,
+                })
+
                 setState({
                     loading: false,
                     error: false,
@@ -588,6 +607,14 @@ export const useRouting = (
                 const directDistance = calculateDirectDistance(currentPoints)
                 const duration = estimateDurationSeconds(directDistance, transportMode)
                 const msg = primaryError?.message || 'Не удалось построить маршрут'
+
+                console.warn('[useRouting] ⚠️ Route building failed, using direct line:', {
+                    error: msg,
+                    distance: directDistance,
+                    duration,
+                    coordsCount: currentPoints?.length,
+                    firstCoords: currentPoints?.slice(0, 2),
+                })
 
                 setState({
                     loading: false,
@@ -631,6 +658,19 @@ export const useRouting = (
             }
         }
     }, [])
+
+    // 🔍 ДИАГНОСТИКА: Логируем текущее состояние при каждом изменении
+    useEffect(() => {
+        console.info('[useRouting] State updated:', {
+            loading: state.loading,
+            hasError: !!state.error,
+            error: state.error,
+            distance: state.distance,
+            duration: state.duration,
+            coordsCount: state.coords?.length,
+            firstCoords: state.coords?.slice(0, 2),
+        })
+    }, [state])
 
     return state
 }
