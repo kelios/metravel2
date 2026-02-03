@@ -314,6 +314,34 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     })
 
                     try {
+                        const pathEl = existingLine.getElement?.() as SVGPathElement | null | undefined
+                        if (pathEl) {
+                            try {
+                                pathEl.setAttribute('stroke', String(color))
+                                pathEl.setAttribute('stroke-width', String(weight))
+                                pathEl.setAttribute('stroke-opacity', '1')
+                                pathEl.setAttribute('opacity', '1')
+                                pathEl.setAttribute('fill', 'none')
+                            } catch {
+                                // noop
+                            }
+                            try {
+                                pathEl.style.stroke = String(color)
+                                pathEl.style.strokeWidth = `${weight}px`
+                                ;(pathEl.style as any).strokeOpacity = '1'
+                                pathEl.style.opacity = '1'
+                                pathEl.style.fill = 'none'
+                                pathEl.style.display = 'inline'
+                                pathEl.style.visibility = 'visible'
+                            } catch {
+                                // noop
+                            }
+                        }
+                    } catch {
+                        // noop
+                    }
+
+                    try {
                         existingLine.bringToFront?.()
                     } catch {
                         // noop
@@ -467,9 +495,24 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                             // Force visibility on path element
                             const pathEl = line.getElement?.()
                             if (pathEl) {
+                                try {
+                                    pathEl.setAttribute('stroke', String(color))
+                                    pathEl.setAttribute('stroke-width', String(weight))
+                                    pathEl.setAttribute('stroke-opacity', '1')
+                                    pathEl.setAttribute('opacity', '1')
+                                    pathEl.setAttribute('fill', 'none')
+                                } catch {
+                                    // noop
+                                }
+
                                 pathEl.style.display = 'inline'
                                 pathEl.style.visibility = 'visible'
                                 pathEl.style.pointerEvents = 'auto'
+                                pathEl.style.stroke = String(color)
+                                pathEl.style.strokeWidth = `${weight}px`
+                                ;(pathEl.style as any).strokeOpacity = '1'
+                                pathEl.style.opacity = '1'
+                                pathEl.style.fill = 'none'
                             }
                             
                             // Ensure parent containers don't hide the line

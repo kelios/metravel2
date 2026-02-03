@@ -513,6 +513,7 @@ export const attachLasyZanocujWfsOverlay = (
       const outputFormatCandidates = [
         outputFormat,
         outputFormat?.toLowerCase() === 'geojson' ? null : 'GEOJSON',
+        outputFormat?.toLowerCase() === 'application/json' ? null : 'application/json',
         'GML3',
       ].filter(Boolean) as string[];
 
@@ -539,6 +540,13 @@ export const attachLasyZanocujWfsOverlay = (
       addAttempt({
         version,
         typeParam: 'typeNames',
+        outputFormat: outputFormatCandidates[0] || 'GEOJSON',
+        srsName,
+        bboxOrder: 'lonlat',
+      });
+      addAttempt({
+        version,
+        typeParam: 'typeName',
         outputFormat: outputFormatCandidates[0] || 'GEOJSON',
         srsName,
         bboxOrder: 'lonlat',
