@@ -45,6 +45,7 @@ export const getStyles = (
             paddingRight: 0,
             paddingTop: 0,
             paddingBottom: 0,
+            height: '100%',
             minHeight: 0,
             minWidth: 0,
             alignItems: 'stretch',
@@ -76,6 +77,9 @@ export const getStyles = (
         ...(Platform.OS === 'web'
           ? ({
               isolation: 'isolate',
+              display: 'flex',
+              height: '100%',
+              minHeight: 0,
               minWidth: 0,
             } as any)
           : null),

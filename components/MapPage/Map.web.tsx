@@ -545,16 +545,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     };
   }, []);
 
-  // Canvas renderer for performance
-  const canvasRenderer = useMemo(() => {
-    if (!L || typeof (L as any).canvas !== 'function') return null;
-    try {
-      return (L as any).canvas({ tolerance: 5 });
-    } catch {
-      return null;
-    }
-  }, [L]);
-
   // Routing machine component
   const RoutingMachineWithMapInner = useMemo(() => {
     if (!rl) return null;
@@ -662,6 +652,28 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (mode === 'radius' && circleCenterLatLng) return circleCenterLatLng;
     return coordinatesLatLng;
   }, [mode, circleCenterLatLng, coordinatesLatLng]);
+
+  const routePointsForRouting = useMemo(() => {
+    if (!Array.isArray(routePoints) || routePoints.length === 0) return [] as [number, number][];
+
+    const normalizeLngLat = (tuple: [number, number]): [number, number] => {
+      const a = tuple?.[0];
+      const b = tuple?.[1];
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return tuple;
+
+      const aIsLatOnly = a >= -90 && a <= 90;
+      const bIsLatOnly = b >= -90 && b <= 90;
+      const aIsLngOnly = a >= -180 && a <= 180;
+      const bIsLngOnly = b >= -180 && b <= 180;
+
+      const looksLikeLatLngNonAmbiguous = aIsLatOnly && bIsLngOnly && !(aIsLngOnly && bIsLatOnly);
+      if (looksLikeLatLngNonAmbiguous) return [b, a];
+
+      return tuple;
+    };
+
+    return routePoints.map((p) => normalizeLngLat(p));
+  }, [routePoints]);
 
   const hasWarnedInvalidCircleRef = useRef(false);
   useEffect(() => {
@@ -1059,18 +1071,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
           {/* Routing */}
           {(() => {
             const shouldRenderRouting = mode === 'route' &&
-              routePoints.length >= 2 &&
+              routePointsForRouting.length >= 2 &&
               rl &&
               RoutingMachineWithMapInner &&
-              routePoints.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0]));
+              routePointsForRouting.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0]));
             
             console.info('[Map.web.tsx] Routing check:', {
               mode,
-              routePointsLength: routePoints.length,
-              routePoints,
+              routePointsLength: routePointsForRouting.length,
+              routePoints: routePointsForRouting,
               hasRL: !!rl,
               hasRoutingMachine: !!RoutingMachineWithMapInner,
-              allValid: routePoints.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0])),
+              allValid: routePointsForRouting.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0])),
               shouldRender: shouldRenderRouting
             });
             
@@ -1078,7 +1090,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
             
             return (
               <RoutingMachineWithMapInner
-                routePoints={routePoints}
+                routePoints={routePointsForRouting}
                 transportMode={transportMode}
                 setRoutingLoading={setRoutingLoading}
                 setErrors={setErrors}
@@ -1129,7 +1141,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
               expandedClusterKey={expandedCluster?.key}
               expandedClusterItems={expandedCluster?.items}
               hintCenter={hintCenterLatLng}
-              onClusterZoom={({ center, bounds, key, items }) => {
+              onClusterZoom={({ center: _center, bounds, key, items }) => {
                 setExpandedCluster({ key, items });
                 try {
                   mapRef.current?.fitBounds?.(bounds as any, { animate: true, padding: [30, 30] } as any);

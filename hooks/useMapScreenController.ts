@@ -149,12 +149,13 @@ export function useMapScreenController() {
 
   // Map panel coordinates (with safe defaults)
   const mapPanelCoordinates = useMemo(() => {
-    if (!coordinates || !Number.isFinite(coordinates.latitude) || !Number.isFinite(coordinates.longitude)) {
+    const source = queryCoordinates ?? coordinates;
+    if (!source || !Number.isFinite(source.latitude) || !Number.isFinite(source.longitude)) {
       // Default to Minsk coordinates
       return { latitude: 53.9006, longitude: 27.559 };
     }
-    return { latitude: coordinates.latitude, longitude: coordinates.longitude };
-  }, [coordinates]);
+    return { latitude: source.latitude, longitude: source.longitude };
+  }, [coordinates, queryCoordinates]);
 
   // Map panel props
   const mapPanelProps = useMemo(

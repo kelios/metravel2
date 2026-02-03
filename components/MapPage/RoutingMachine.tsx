@@ -283,12 +283,21 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     weight,
                     opacity,
                     dashArray,
+                    renderer: typeof leaflet.svg === 'function' ? leaflet.svg() : undefined,
+                    pane: 'overlayPane',
+                    interactive: false,
                     lineJoin: 'round',
                     lineCap: 'round',
+                    className: 'metravel-route-line',
                 })
 
                 try {
                     line.addTo(map)
+                    try {
+                        line.bringToFront?.()
+                    } catch {
+                        // noop
+                    }
                     polylineRef.current = line
                 } catch (error) {
                     // Если карта была уничтожена между whenReady и addTo
@@ -302,6 +311,21 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                         devWarn('Ошибка добавления полилинии на карту:', error)
                     }
                     return
+                }
+
+                if (__DEV__) {
+                    try {
+                        console.info('[RoutingMachine] Polyline added', {
+                            points: latlngs.length,
+                            hasLayer: typeof map.hasLayer === 'function' ? map.hasLayer(line) : undefined,
+                            color,
+                            weight,
+                            opacity,
+                            dashArray,
+                        })
+                    } catch {
+                        // noop
+                    }
                 }
 
                 // Центрируем карту на маршруте только при изменении старт/финиш.
@@ -339,7 +363,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         return () => {
             cancelled = true
         }
-    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routePoints, routingState.coords, info, warning])
+    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routeKey, info, warning])
 
     // Cleanup on unmount
     useEffect(() => {

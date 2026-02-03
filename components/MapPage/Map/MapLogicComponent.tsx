@@ -119,6 +119,17 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const markReady = () => {
       if (cancelled || hasCalledOnMapReadyRef.current) return;
       hasCalledOnMapReadyRef.current = true;
+
+      try {
+        const ac = (map as any).attributionControl;
+        if (ac && typeof ac.setPrefix === 'function') {
+          const prefix = '<a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>';
+          ac.setPrefix(prefix);
+        }
+      } catch {
+        // noop
+      }
+
       onMapReady(map);
     };
 

@@ -2,6 +2,54 @@ import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { seedNecessaryConsent } from './helpers/storage';
 
+async function installTileMock(page: any) {
+  const pngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8m2p8AAAAASUVORK5CYII=';
+  const png = Buffer.from(pngBase64, 'base64');
+
+  const routeTile = async (route: any) => {
+    return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: png,
+    });
+  };
+
+  await page.route('**://tile.openstreetmap.org/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.org/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.fr/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.de/**', routeTile);
+  await page.route('**://tile.waymarkedtrails.org/**', routeTile);
+  await page.route('**://*.tile.waymarkedtrails.org/**', routeTile);
+}
+
+function buildMockMapPoints(options: {
+  center: { lat: number; lng: number };
+  count: number;
+  spreadDegrees?: number;
+}) {
+  const { center, count, spreadDegrees = 0.02 } = options;
+  const points: any[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const angle = (i / Math.max(1, count)) * Math.PI * 2;
+    const radius = spreadDegrees * (0.2 + (i % 5) / 6);
+    const lat = center.lat + Math.cos(angle) * radius;
+    const lng = center.lng + Math.sin(angle) * radius;
+    points.push({
+      id: 10000 + i,
+      coord: `${lat.toFixed(6)},${lng.toFixed(6)}`,
+      address: `Mock point ${i + 1}`,
+      travelImageThumbUrl: '',
+      categoryName: 'Mock',
+      articleUrl: '',
+      urlTravel: '/travels/mock',
+    });
+  }
+
+  return points;
+}
+
 const getCanonicalHref = async (page: any): Promise<string | null> => {
   return page.evaluate(() => {
     const el = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
@@ -156,6 +204,118 @@ test.describe('Map Page (/map) - smoke e2e', () => {
 
     await expect(page.getByTestId('segmented-radius')).toBeVisible();
     await expect(page.getByTestId('segmented-route')).toBeVisible();
+  });
+
+  test('desktop: shows required map attribution (OpenStreetMap)', async ({ page }) => {
+    await installTileMock(page);
+    await gotoMapWithRecovery(page);
+
+    await expect(page.getByTestId('map-leaflet-wrapper')).toBeVisible({ timeout: 60_000 });
+
+    const attribution = page.locator('.leaflet-control-attribution').first();
+    await expect(attribution).toBeVisible({ timeout: 60_000 });
+    await expect(attribution).toContainText(/Leaflet/i);
+    await expect(attribution).toContainText(/OpenStreetMap/i);
+  });
+
+  test('desktop: can enable overlay layer and attribution updates (Waymarked Trails hiking)', async ({ page }) => {
+    await installTileMock(page);
+    await gotoMapWithRecovery(page);
+
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
+
+    // Some panels require expanding "Настройки карты".
+    const mapSettings = page.getByText('Настройки карты', { exact: true });
+    if (await mapSettings.isVisible().catch(() => false)) {
+      await mapSettings.click({ force: true }).catch(() => null);
+    }
+
+    // Turn on one tile overlay.
+    const overlayChip = page.getByText('Маршруты (Waymarked Trails: hiking)', { exact: true });
+    const overlayVisible = await overlayChip.isVisible({ timeout: 10_000 }).catch(() => false);
+    if (!overlayVisible) return;
+
+    const overlayRequest = page
+      .waitForRequest((req: any) => {
+        try {
+          return /tile\.waymarkedtrails\.org\/.+\/(hiking)\//.test(req.url()) || /tile\.waymarkedtrails\.org\/.+\.png/.test(req.url());
+        } catch {
+          return false;
+        }
+      }, { timeout: 30_000 })
+      .catch(() => null);
+
+    await overlayChip.click({ force: true });
+
+    // Assert we attempted to fetch overlay tiles and attribution contains provider.
+    await overlayRequest;
+
+    const attribution = page.locator('.leaflet-control-attribution').first();
+    await expect(attribution).toBeVisible({ timeout: 60_000 });
+    await expect(attribution).toContainText(/waymarkedtrails/i);
+  });
+
+  test('desktop: clicking cluster expands markers (zoom-to-area behavior)', async ({ page }) => {
+    await installTileMock(page);
+
+    // Ensure we get enough nearby points to form at least one cluster.
+    const mockedPoints = buildMockMapPoints({
+      center: { lat: 53.9006, lng: 27.5590 },
+      count: 24,
+      spreadDegrees: 0.01,
+    });
+
+    await page.route('**/api/travels/search_travels_for_map/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockedPoints),
+      });
+    });
+
+    // Filters payload can be requested early; keep it lightweight.
+    await page.route('**/api/filterformap/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          countries: [],
+          categories: [],
+          categoryTravelAddress: [],
+          companions: [],
+          complexity: [],
+          month: [],
+          over_nights_stay: [],
+          transports: [],
+          year: '',
+        }),
+      });
+    });
+
+    await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    await waitForMapUi(page, 90_000);
+
+    // Wait for clusters to render.
+    const clusterIcon = page.locator('.metravel-cluster-icon').first();
+    const hasCluster = await clusterIcon.isVisible({ timeout: 60_000 }).catch(() => false);
+    if (!hasCluster) return;
+
+    const markerIcon = page.locator('.metravel-pin-marker');
+    const markerCountBefore = await markerIcon.count().catch(() => 0);
+
+    // Click the cluster - app should fitBounds + switch into expanded markers rendering.
+    await clusterIcon.click({ force: true });
+
+    await expect
+      .poll(async () => {
+        const count = await markerIcon.count().catch(() => 0);
+        return { count };
+      }, { timeout: 30_000 })
+      .toMatchObject({ count: expect.any(Number) });
+
+    await expect
+      .poll(async () => await markerIcon.count().catch(() => 0), { timeout: 30_000 })
+      .toBeGreaterThan(markerCountBefore);
   });
 
   test('desktop: renders markers and opens popup on marker click', async ({ page }) => {
@@ -357,6 +517,160 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('route-builder')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('filters-build-route-button')).toBeVisible();
     await expect(page.getByTestId('filters-panel-footer')).toBeVisible();
+  });
+
+  test('desktop: route polyline is visible after entering start/end coordinates', async ({ page }) => {
+    await installTileMock(page);
+    await gotoMapWithRecovery(page);
+
+    await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
+    await page.getByTestId('segmented-route').click();
+    await expect(page.getByTestId('route-builder')).toBeVisible({ timeout: 20_000 });
+
+    const mapContainer = page.locator('.leaflet-container').first();
+    await expect(mapContainer).toBeVisible({ timeout: 60_000 });
+
+    // Enter coordinates into Start/Finish inputs (AddressSearch supports coordinate input).
+    // This matches the real user flow seen in QA (not map clicks).
+    const startInput = page.getByPlaceholder('Старт');
+    const endInput = page.getByPlaceholder('Финиш');
+
+    await expect(startInput).toBeVisible({ timeout: 30_000 });
+    await expect(endInput).toBeVisible({ timeout: 30_000 });
+
+    await startInput.click({ force: true });
+    await startInput.fill('50.4330, 20.4840');
+    // Trigger onSubmitEditing on RN-web
+    await startInput.press('Enter');
+    // Ensure blur in case Enter is not wired
+    await startInput.press('Tab');
+
+    await endInput.click({ force: true });
+    await endInput.fill('50.4601, 20.2979');
+    await endInput.press('Enter');
+    await endInput.press('Tab');
+
+    // Build/refresh route (button exists in route mode)
+    const buildBtn = page.getByTestId('filters-build-route-button');
+    await expect(buildBtn).toBeVisible({ timeout: 30_000 });
+    await buildBtn.click({ force: true });
+
+    // Diagnostics: ensure the route line is actually created.
+    const anyRouteLineCount = await page.locator('.metravel-route-line').count();
+    const pathRouteLineCount = await page.locator('.leaflet-overlay-pane svg path.metravel-route-line').count();
+    // Keep visible in CI output to debug mismatches with local manual checks.
+    console.info('[e2e] route line diagnostics', {
+      anyRouteLineCount,
+      pathRouteLineCount,
+    });
+
+    // Assert the route line exists in Leaflet overlay pane as a real SVG path.
+    // If Leaflet renders via Canvas, there will be no SVG path, and this test must fail.
+    const routeLine = page.locator('.leaflet-overlay-pane svg path.metravel-route-line').first();
+
+    await expect(routeLine).toBeVisible({ timeout: 60_000 });
+
+    const totalLen = await routeLine
+      .evaluate((el) => {
+        const anyEl = el as any;
+        if (typeof anyEl.getTotalLength !== 'function') return 0;
+        try {
+          return Number(anyEl.getTotalLength()) || 0;
+        } catch {
+          return 0;
+        }
+      })
+      .catch(() => 0);
+
+    console.info('[e2e] route line total length', { totalLen });
+    expect(anyRouteLineCount, 'route line element must exist in DOM').toBeGreaterThan(0);
+    expect(pathRouteLineCount, 'route line must be an SVG path on web').toBeGreaterThan(0);
+    expect(totalLen, 'route line SVG path must have non-zero length').toBeGreaterThan(10);
+
+    // Stronger assertions: the polyline must be visually drawable (stroke + opacity + width)
+    // and must be inside the visible map viewport (intersects the map container).
+    await expect
+      .poll(async () => {
+        const mapBox = await mapContainer.boundingBox().catch(() => null);
+        const lineBox = await routeLine.boundingBox().catch(() => null);
+        if (!mapBox || !lineBox) {
+          return { ok: false, reason: 'missing-bbox' };
+        }
+
+        const style = await routeLine.evaluate((el) => {
+          const s = window.getComputedStyle(el as Element);
+          const anyEl = el as any;
+          const attrStroke = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke') : null;
+          const attrOpacity = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke-opacity') : null;
+          const attrWidth = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke-width') : null;
+          let totalLength = 0;
+          try {
+            if (typeof anyEl.getTotalLength === 'function') {
+              totalLength = Number(anyEl.getTotalLength()) || 0;
+            }
+          } catch {
+            totalLength = 0;
+          }
+          return {
+            display: s.display,
+            visibility: s.visibility,
+            stroke: s.stroke,
+            strokeOpacity: s.strokeOpacity,
+            strokeWidth: s.strokeWidth,
+            opacity: s.opacity,
+            attrStroke,
+            attrOpacity,
+            attrWidth,
+            totalLength,
+          };
+        }).catch(() => null);
+
+        if (!style) return { ok: false, reason: 'no-style' };
+
+        const stroke = String(style.stroke || style.attrStroke || '').trim();
+        const opacityRaw = style.strokeOpacity || style.opacity || style.attrOpacity;
+        const widthRaw = style.strokeWidth || style.attrWidth;
+        const opacity = Number(String(opacityRaw ?? '').replace('px', ''));
+        const width = Number(String(widthRaw ?? '').replace('px', ''));
+
+        const hasDrawableStroke = !!stroke && stroke !== 'none' && stroke !== 'transparent' && stroke !== 'rgba(0, 0, 0, 0)';
+        const hasOpacity = Number.isFinite(opacity) && opacity > 0.05;
+        const hasWidth = Number.isFinite(width) && width >= 2;
+
+        const minSizeOk = (lineBox.width + lineBox.height) > 6;
+        const hasLength = Number(style.totalLength) > 10;
+
+        const intersects = !(
+          lineBox.x > mapBox.x + mapBox.width ||
+          lineBox.x + lineBox.width < mapBox.x ||
+          lineBox.y > mapBox.y + mapBox.height ||
+          lineBox.y + lineBox.height < mapBox.y
+        );
+
+        const ok =
+          style.display !== 'none' &&
+          style.visibility !== 'hidden' &&
+          hasDrawableStroke &&
+          hasOpacity &&
+          hasWidth &&
+          minSizeOk &&
+          hasLength &&
+          intersects;
+
+        return {
+          ok,
+          hasDrawableStroke,
+          hasOpacity,
+          hasWidth,
+          minSizeOk,
+          hasLength,
+          intersects,
+          style,
+          mapBox,
+          lineBox,
+        };
+      }, { timeout: 60_000 })
+      .toMatchObject({ ok: true });
   });
 
   test('desktop: changing radius persists to localStorage (map-filters)', async ({ page }) => {

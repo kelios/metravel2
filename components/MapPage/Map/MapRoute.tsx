@@ -62,6 +62,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
         dashArray,
         lineJoin: 'round',
         lineCap: 'round',
+        className: 'metravel-route-line',
       });
 
       line.addTo(map);
