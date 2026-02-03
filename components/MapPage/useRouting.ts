@@ -121,6 +121,8 @@ export const useRouting = (
                     error.message?.includes('401') ||
                     error.message?.includes('403') ||
                     error.message?.includes('404') ||
+                    error.message?.includes('429') ||
+                    error.message?.includes('лимит') ||
                     error.message?.includes('Некорректные координаты') ||
                     error.message?.includes('Неверный API ключ');
 

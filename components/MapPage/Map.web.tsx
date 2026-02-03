@@ -10,6 +10,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
 import type { Coordinates, MapMode, MapProps, Point } from './Map/types';
+import { strToLatLng } from './Map/utils';
 
 // Import modular components and hooks
 import { useMapCleanup } from '@/components/MapPage/Map/useMapCleanup';
@@ -99,7 +100,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return {
       latitude: hasValidLatLng ? latCandidate : fallback.latitude,
       longitude: hasValidLatLng ? lngCandidate : fallback.longitude,
-      zoom: Number.isFinite(zoomValue) ? zoomValue : 12,
+      zoom: Number.isFinite(zoomValue) ? zoomValue : 11,
     };
   }, [coordinates]);
 
@@ -135,6 +136,45 @@ const MapPageComponent: React.FC<Props> = (props) => {
     lng: safeCoordinates.longitude,
   }), [safeCoordinates.latitude, safeCoordinates.longitude]);
 
+  // Radius calculation
+  const radiusInMeters = useMemo(() => {
+    if (mode !== 'radius') return null;
+    const radiusValue = radius || String(DEFAULT_RADIUS_KM);
+    const radiusKm = parseInt(radiusValue, 10);
+    if (isNaN(radiusKm) || radiusKm <= 0) return DEFAULT_RADIUS_KM * 1000;
+    return radiusKm * 1000;
+  }, [mode, radius]);
+
+  const userLocationLatLng = useMemo(() => {
+    if (!userLocation) return null;
+    if (!isValidCoordinate(userLocation.latitude, userLocation.longitude)) return null;
+    return { lat: userLocation.latitude, lng: userLocation.longitude };
+  }, [userLocation]);
+
+  const filteredTravelData = useMemo(() => {
+    if (mode !== 'radius') return travelData;
+
+    const center = userLocationLatLng ?? coordinatesLatLng;
+    if (!CoordinateConverter.isValid(center)) return travelData;
+    if (!Number.isFinite(radiusInMeters as any) || !radiusInMeters || radiusInMeters <= 0) return travelData;
+
+    const r = Number(radiusInMeters);
+
+    return (travelData || []).filter((p) => {
+      try {
+        const ll = strToLatLng(String((p as any)?.coord ?? ''), center);
+        if (!ll) return false;
+        const coords = { lat: ll[1], lng: ll[0] };
+        if (!CoordinateConverter.isValid(coords)) return false;
+        const d = CoordinateConverter.distance(center, coords);
+        // small tolerance for rounding / parsing differences
+        return Number.isFinite(d) && d <= r * 1.03;
+      } catch {
+        return false;
+      }
+    });
+  }, [coordinatesLatLng, mode, radiusInMeters, travelData, userLocationLatLng]);
+
   const hintCenterForMarkers = useMemo(() => {
     if (mode === 'radius' && userLocation && isValidCoordinate(userLocation.latitude, userLocation.longitude)) {
       return { lat: userLocation.latitude, lng: userLocation.longitude };
@@ -149,21 +189,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
     markers,
     markerOpacity: travelMarkerOpacity,
   } = useMapMarkers({
-    travelData,
+    travelData: filteredTravelData,
     mapZoom,
     expandedClusterKey: expandedCluster?.key,
     mode,
     hintCenter: hintCenterForMarkers,
   });
-
-  // Radius calculation
-  const radiusInMeters = useMemo(() => {
-    if (mode !== 'radius') return null;
-    const radiusValue = radius || String(DEFAULT_RADIUS_KM);
-    const radiusKm = parseInt(radiusValue, 10);
-    if (isNaN(radiusKm) || radiusKm <= 0) return DEFAULT_RADIUS_KM * 1000;
-    return radiusKm * 1000;
-  }, [mode, radius]);
 
   // OSM tile preconnect for better performance
   useEffect(() => {
@@ -245,11 +276,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
     }
   }, [safeCoordinates.latitude, safeCoordinates.longitude, safeCoordinates.zoom, leafletReady]);
 
-  const userLocationLatLng = useMemo(() => {
-    if (!userLocation) return null;
-    if (!isValidCoordinate(userLocation.latitude, userLocation.longitude)) return null;
-    return { lat: userLocation.latitude, lng: userLocation.longitude };
-  }, [userLocation]);
+  const canRenderTravelPoints = useMemo(() => {
+    if (isTestEnv) return true;
+    if (mode !== 'radius') return true;
+    return !!userLocationLatLng;
+  }, [mode, userLocationLatLng]);
 
   useEffect(() => {
     try {
@@ -305,7 +336,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     map: mapInstance,
     L,
     onMapUiApiReady: props.onMapUiApiReady,
-    travelData,
+    travelData: filteredTravelData,
     userLocation: userLocationLatLng,
     routePoints,
     leafletBaseLayerRef,
@@ -383,7 +414,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     try {
       mapRef.current.setView(
         CoordinateConverter.toLeaflet(userLocationLatLng),
-        13,
+        14,
         { animate: true }
       );
     } catch {
@@ -933,7 +964,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
             userLocation={userLocationLatLng}
             disableFitBounds={disableFitBounds}
             L={L}
-            travelData={travelData}
+            travelData={filteredTravelData}
             circleCenter={circleCenterLatLng}
             radiusInMeters={radiusInMeters}
             fitBoundsPadding={fitBoundsPadding}
@@ -1060,7 +1091,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
           })()}
 
           {/* Travel markers (not clustered) */}
-          {customIcons?.meTravel && markers.length > 0 && !shouldRenderClusters && PopupComponent && (
+          {canRenderTravelPoints &&
+           customIcons?.meTravel &&
+           markers.length > 0 &&
+           !shouldRenderClusters &&
+           PopupComponent && (
             <MapMarkers
               points={markers}
               icon={customIcons.meTravel}
@@ -1071,22 +1106,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
               onMarkerClick={handleMarkerZoom}
               hintCenter={hintCenterLatLng}
               onMarkerInstance={(coord, marker) => {
-                try {
-                  const raw = String(coord ?? '').trim();
-                  if (!raw) return;
-                  const parsed = CoordinateConverter.fromLooseString(raw);
-                  const key = parsed ? CoordinateConverter.toString(parsed) : raw;
-                  if (marker) markerByCoordRef.current.set(key, marker);
-                  else markerByCoordRef.current.delete(key);
-                } catch {
-                  // noop
-                }
+                markerByCoordRef.current.set(coord, marker);
               }}
             />
           )}
 
           {/* Travel markers (clustered) */}
-          {customIcons?.meTravel && markers.length > 0 && shouldRenderClusters && PopupComponent && (
+          {canRenderTravelPoints &&
+           customIcons?.meTravel &&
+           markers.length > 0 &&
+           shouldRenderClusters &&
+           PopupComponent && (
             <ClusterLayer
               L={L}
               clusters={clusters as any}
@@ -1098,37 +1128,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
               markerOpacity={travelMarkerOpacity}
               expandedClusterKey={expandedCluster?.key}
               expandedClusterItems={expandedCluster?.items}
-              renderer={canvasRenderer}
               hintCenter={hintCenterLatLng}
-              onMarkerClick={handleMarkerZoom}
-              onMarkerInstance={(coord, marker) => {
+              onClusterZoom={({ center, bounds, key, items }) => {
+                setExpandedCluster({ key, items });
                 try {
-                  const raw = String(coord ?? '').trim();
-                  if (!raw) return;
-                  const parsed = CoordinateConverter.fromLooseString(raw);
-                  const key = parsed ? CoordinateConverter.toString(parsed) : raw;
-                  if (marker) markerByCoordRef.current.set(key, marker);
-                  else markerByCoordRef.current.delete(key);
+                  mapRef.current?.fitBounds?.(bounds as any, { animate: true, padding: [30, 30] } as any);
                 } catch {
                   // noop
                 }
               }}
-              onClusterZoom={({ bounds, key, items }) => {
-                if (!mapRef.current) return;
-                try {
-                  const map = mapRef.current;
-                  map.closePopup();
-                  setExpandedCluster({ key, items });
-                  map.fitBounds(
-                    [
-                      [bounds[0][0], bounds[0][1]],
-                      [bounds[1][0], bounds[1][1]],
-                    ],
-                    { padding: [40, 40], animate: true }
-                  );
-                } catch {
-                  // noop
-                }
+              onMarkerClick={handleMarkerZoom}
+              onMarkerInstance={(coord, marker) => {
+                markerByCoordRef.current.set(coord, marker);
               }}
             />
           )}

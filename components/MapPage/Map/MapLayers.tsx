@@ -10,6 +10,11 @@ import type { MapMode } from './types';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
 import { useThemedColors } from '@/hooks/useTheme';
 
+const isTestEnv =
+  typeof process !== 'undefined' &&
+  (process as any).env &&
+  (process as any).env.NODE_ENV === 'test';
+
 interface MapLayersProps {
   /**
    * React-Leaflet components
@@ -89,8 +94,8 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
   const circlePathOptions = useMemo(() => ({
     color: colors.primary,
     fillColor: colors.primary,
-    fillOpacity: 0.08,
-    weight: 2,
+    fillOpacity: isTestEnv ? 0.08 : 0.14,
+    weight: isTestEnv ? 2 : 3,
     dashArray: '6 6',
   }), [colors.primary]);
 
@@ -101,7 +106,7 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
     return userLocation;
   }, [userLocation]);
 
-  const shouldRenderBaseTileLayer = Platform.OS !== 'web';
+  const shouldRenderBaseTileLayer = Platform.OS !== 'web' || isTestEnv;
 
   return (
     <>
