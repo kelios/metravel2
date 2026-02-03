@@ -299,7 +299,7 @@ test.describe('Map Page Route Line Visibility - Visual Test', () => {
           timeout: 5000 
         });
         console.log('   📸 Скриншот path элемента: test-results/route-line-element.png');
-      } catch (e) {
+      } catch (_e) {
         console.log('   ⚠️  Не удалось создать скриншот path элемента');
       }
 

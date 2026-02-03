@@ -428,28 +428,50 @@ html[data-theme="dark"] .leaflet-tile {
   max-width: calc(100vw - 24px) !important;
 }
 
+/* Tooltip для маркеров старта/финиша маршрута */
+.leaflet-tooltip.metravel-route-marker-tooltip {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 6px !important;
+  box-shadow: var(--shadow-medium) !important;
+  padding: 4px 8px !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+  font-weight: 500 !important;
+  color: var(--color-text) !important;
+  white-space: nowrap !important;
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+.leaflet-tooltip.metravel-route-marker-tooltip::before {
+  border-top-color: var(--color-border) !important;
+}
+
+/* Старые стили попапа - оставляем для обратной совместимости */
 .leaflet-popup.metravel-route-marker-popup {
-  max-width: min(160px, calc(100vw - 48px)) !important;
+  max-width: min(100px, calc(100vw - 48px)) !important;
 }
 
 .leaflet-popup.metravel-route-marker-popup .leaflet-popup-content-wrapper {
   border-radius: 999px !important;
+  padding: 0 !important;
 }
 
 .leaflet-popup.metravel-route-marker-popup .leaflet-popup-content {
-  max-width: min(120px, calc(100vw - 80px)) !important;
-  padding: 8px 36px 8px 12px !important;
+  max-width: min(80px, calc(100vw - 80px)) !important;
+  padding: 4px 8px !important;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 13px !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+  font-weight: 500 !important;
+  text-align: center !important;
+  margin: 0 !important;
 }
 
 .leaflet-popup.metravel-route-marker-popup .leaflet-popup-close-button {
-  width: 24px !important;
-  height: 24px !important;
-  margin: 4px !important;
-  font-size: 18px !important;
+  display: none !important;
 }
 
 .leaflet-popup-tip {

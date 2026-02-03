@@ -252,21 +252,19 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             const latlngs = validCoords.map(([lng, lat]) => leaflet.latLng(lat, lng))
 
             const paneName = 'metravelRoutePane'
-            let hasRoutePane = false
             try {
                 const existingPane = typeof map.getPane === 'function' ? map.getPane(paneName) : null
                 const pane = existingPane || (typeof map.createPane === 'function' ? map.createPane(paneName) : null)
                 if (pane && pane.style) {
                     pane.style.zIndex = '560'
                     pane.style.pointerEvents = 'none'
-                    hasRoutePane = true
                 }
             } catch {
-                hasRoutePane = false
+                // noop
             }
 
             const renderer = typeof leaflet.svg === 'function'
-                ? leaflet.svg(hasRoutePane ? { pane: paneName } : undefined)
+                ? leaflet.svg()
                 : undefined
 
             const firstLatLng = latlngs[0] ? { lat: latlngs[0].lat, lng: latlngs[0].lng } : null
@@ -301,12 +299,31 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             const existingLine = polylineRef.current
             if (existingLine && typeof existingLine.setStyle === 'function' && coordsToDraw === latestCoords) {
                 try {
+                    try {
+                        if (typeof existingLine.setLatLngs === 'function') {
+                            existingLine.setLatLngs(latlngs)
+                        }
+                    } catch {
+                        // noop
+                    }
                     existingLine.setStyle({
                         color,
                         weight,
                         opacity,
                         dashArray: dashArray || undefined,
                     })
+
+                    try {
+                        existingLine.bringToFront?.()
+                    } catch {
+                        // noop
+                    }
+
+                    try {
+                        existingLine.redraw?.()
+                    } catch {
+                        // noop
+                    }
                     console.info('[RoutingMachine] ✅ Updated existing line styles (no recreate)')
                     return // Не пересоздаем линию!
                 } catch (error) {
@@ -367,7 +384,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     lineJoin: 'round',
                     lineCap: 'round',
                     className: 'metravel-route-line',
-                    pane: hasRoutePane ? paneName : 'overlayPane',
+                    pane: 'overlayPane',
                     renderer,
                 })
 
@@ -644,7 +661,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         return () => {
             cancelled = true
         }
-    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, hasTwoPoints, routeKey])
+    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, hasTwoPoints, routeKey, primary, danger, fitKey])
 
     // Cleanup on unmount
     useEffect(() => {

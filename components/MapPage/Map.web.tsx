@@ -823,7 +823,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     : 'Загрузка карты...';
 
   const rlSafe = (rl ?? {}) as ReactLeafletNS;
-  const { MapContainer, Marker, Popup, Circle, TileLayer, useMap, useMapEvents } = rlSafe;
+  const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rlSafe;
 
   const hasValidReactLeafletHooks = !!(
     useMap && 
@@ -1147,6 +1147,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           <RouteMarkersLayer
             Marker={Marker}
             Popup={Popup}
+            Tooltip={Tooltip}
             routePoints={routePoints}
             icons={{
               start: customIcons?.start,
@@ -1154,67 +1155,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
             }}
           />
 
-          {/* Route markers */}
-          {routePoints.length >= 1 &&
-           customIcons?.start &&
-           Number.isFinite(routePoints[0][0]) &&
-           Number.isFinite(routePoints[0][1]) &&
-           isValidCoordinate(routePoints[0][1], routePoints[0][0]) && (
-            <Marker
-              position={[routePoints[0][1], routePoints[0][0]]}
-              icon={customIcons.start}
-              eventHandlers={{
-                click: (e: any) => {
-                  e?.originalEvent?.stopPropagation?.();
-                },
-              }}
-            >
-              <Popup className="metravel-route-marker-popup">Старт</Popup>
-            </Marker>
-          )}
-
-          {/* Waypoint markers (intermediate points) */}
-          {routePoints.length > 2 &&
-           routePoints.slice(1, -1).map((point, index) => {
-             if (!Number.isFinite(point[0]) || !Number.isFinite(point[1]) || !isValidCoordinate(point[1], point[0])) {
-               return null;
-             }
-             return (
-               <Marker
-                 key={`waypoint-${index}`}
-                 position={[point[1], point[0]]}
-                 eventHandlers={{
-                   click: (e: any) => {
-                     e?.originalEvent?.stopPropagation?.();
-                   },
-                 }}
-               >
-                 <Popup className="metravel-route-marker-popup">Точка {index + 2}</Popup>
-               </Marker>
-             );
-           })}
-
-          {/* End marker - show for any route with 2+ points */}
-          {routePoints.length >= 2 &&
-           customIcons?.end &&
-           (() => {
-             const lastPoint = routePoints[routePoints.length - 1];
-             return Number.isFinite(lastPoint[0]) &&
-                    Number.isFinite(lastPoint[1]) &&
-                    isValidCoordinate(lastPoint[1], lastPoint[0]);
-           })() && (
-            <Marker
-              position={[routePoints[routePoints.length - 1][1], routePoints[routePoints.length - 1][0]]}
-              icon={customIcons.end}
-              eventHandlers={{
-                click: (e: any) => {
-                  e?.originalEvent?.stopPropagation?.();
-                },
-              }}
-            >
-              <Popup className="metravel-route-marker-popup">Финиш</Popup>
-            </Marker>
-          )}
 
           {/* Routing */}
           {(() => {

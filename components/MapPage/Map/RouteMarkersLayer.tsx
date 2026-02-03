@@ -12,6 +12,7 @@ interface RouteMarkersLayerProps {
    */
   Marker: any;
   Popup: any;
+  Tooltip: any;
 
   /**
    * Route points [lng, lat][]
@@ -36,10 +37,11 @@ interface RouteMarkersLayerProps {
  * - End marker (red)
  * - Coordinate validation
  * - Click event handling
+ * - Tooltip on hover
  */
 export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
   Marker,
-  Popup,
+  Tooltip,
   routePoints,
   icons,
 }) => {
@@ -64,7 +66,14 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
             },
           }}
         >
-          <Popup className="metravel-route-marker-popup">Старт</Popup>
+          <Tooltip
+            className="metravel-route-marker-tooltip"
+            direction="top"
+            offset={[0, -10]}
+            permanent={false}
+          >
+            Старт
+          </Tooltip>
         </Marker>
       )}
 
@@ -84,7 +93,14 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
                },
              }}
            >
-             <Popup className="metravel-route-marker-popup">Точка {index + 2}</Popup>
+             <Tooltip
+               className="metravel-route-marker-tooltip"
+               direction="top"
+               offset={[0, -10]}
+               permanent={false}
+             >
+               Точка {index + 2}
+             </Tooltip>
            </Marker>
          );
        })}
@@ -107,7 +123,14 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
             },
           }}
         >
-          <Popup className="metravel-route-marker-popup">Финиш</Popup>
+          <Tooltip
+            className="metravel-route-marker-tooltip"
+            direction="top"
+            offset={[0, -10]}
+            permanent={false}
+          >
+            Финиш
+          </Tooltip>
         </Marker>
       )}
     </>

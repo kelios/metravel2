@@ -10,58 +10,70 @@ export const useLeafletIcons = (L: any) => {
       const safe = (v: string) => String(v).replace(/[^\w\s#(),.%-]/g, '').slice(0, 64);
       const bgSafe = safe(bg);
 
-      // Уникальный дизайн маркера metravel в форме капли/пина
-      // Используем CSS для надежной отрисовки
+      // Уникальный дизайн маркера metravel в форме капли/пина.
+      // Важно: внутреннюю «каплю» центрируем через translateX(-50%),
+      // иначе на разных браузерах появлялись смещения (особенно заметно на start/end).
       const html = `
         <div style="
           position: relative;
           width: 34px;
           height: 46px;
+          box-sizing: border-box;
+          pointer-events: none;
+          user-select: none;
         ">
           <div style="
             position: absolute;
             top: 0;
-            left: 4px;
+            left: 50%;
             width: 26px;
             height: 26px;
+            transform: translateX(-50%) rotate(-45deg);
+            transform-origin: 50% 50%;
             background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 55%), ${bgSafe};
             border: none;
             outline: none;
             border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
             box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+            box-sizing: border-box;
           "></div>
           <div style="
             position: absolute;
             top: 9px;
-            left: 12px;
+            left: 50%;
             width: 10px;
             height: 10px;
+            margin-left: -5px;
             background: rgba(255,255,255,0.96);
             border-radius: 50%;
             z-index: 1;
+            box-sizing: border-box;
           "></div>
           <div style="
             position: absolute;
             top: 11px;
-            left: 14px;
+            left: 50%;
             width: 6px;
             height: 6px;
+            margin-left: -3px;
             background: ${bgSafe};
             border-radius: 50%;
             z-index: 2;
+            box-sizing: border-box;
           "></div>
           <div style="
             position: absolute;
             top: 4px;
-            left: 10px;
+            left: 50%;
             width: 10px;
             height: 6px;
+            margin-left: -5px;
             background: rgba(255,255,255,0.35);
             border-radius: 999px;
             transform: rotate(-20deg);
             z-index: 3;
             filter: blur(0.2px);
+            box-sizing: border-box;
           "></div>
         </div>
       `;
@@ -70,6 +82,7 @@ export const useLeafletIcons = (L: any) => {
         className: 'metravel-pin-marker',
         html,
         iconSize: [34, 46],
+        // Anchor внизу по центру ("носик" пина)
         iconAnchor: [17, 42],
         popupAnchor: [0, -44],
       });

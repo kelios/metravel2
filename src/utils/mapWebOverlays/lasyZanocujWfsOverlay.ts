@@ -280,6 +280,73 @@ const sanitizeGeoJson = (geojson: any) => {
   return { ...geojson, features };
 };
 
+const computeGeoJsonBounds = (geojson: any, swapAxes: boolean): BBox | null => {
+  if (!geojson || geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) return null;
+
+  let south = Infinity;
+  let west = Infinity;
+  let north = -Infinity;
+  let east = -Infinity;
+
+  const pushPair = (pair: any) => {
+    if (!Array.isArray(pair) || pair.length < 2) return;
+    const a = Number(pair[0]);
+    const b = Number(pair[1]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) return;
+    const lng = swapAxes ? b : a;
+    const lat = swapAxes ? a : b;
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+    west = Math.min(west, lng);
+    east = Math.max(east, lng);
+  };
+
+  const walk = (coords: any) => {
+    if (!Array.isArray(coords)) return;
+    if (coords.length >= 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+      pushPair(coords);
+      return;
+    }
+    for (const c of coords) walk(c);
+  };
+
+  for (const f of geojson.features) {
+    const g = f?.geometry;
+    if (!g || g.coordinates == null) continue;
+    walk(g.coordinates);
+  }
+
+  if (!Number.isFinite(south) || !Number.isFinite(west) || !Number.isFinite(north) || !Number.isFinite(east)) return null;
+  return normalizeBBox({ south, west, north, east });
+};
+
+const bboxesOverlap = (a: BBox, b: BBox) => {
+  if (!a || !b) return false;
+  return !(a.east < b.west || a.west > b.east || a.north < b.south || a.south > b.north);
+};
+
+const swapGeoJsonAxes = (geojson: any) => {
+  if (!geojson || geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) return geojson;
+
+  const swapCoords = (coords: any): any => {
+    if (!Array.isArray(coords)) return coords;
+    if (coords.length >= 2 && typeof coords[0] === 'number' && typeof coords[1] === 'number') {
+      return [coords[1], coords[0]];
+    }
+    return coords.map((c) => swapCoords(c));
+  };
+
+  return {
+    ...geojson,
+    features: geojson.features.map((f: any) => {
+      const g = f?.geometry;
+      if (!g || g.coordinates == null) return f;
+      return { ...f, geometry: { ...g, coordinates: swapCoords(g.coordinates) } };
+    }),
+  };
+};
+
 export const attachLasyZanocujWfsOverlay = (
   L: any,
   map: LeafletMap,
@@ -501,7 +568,22 @@ export const attachLasyZanocujWfsOverlay = (
           continue;
         }
 
-        renderGeoJson(parsed.data);
+        let dataToRender = parsed.data;
+        try {
+          const boundsNormal = computeGeoJsonBounds(dataToRender, false);
+          const boundsSwapped = computeGeoJsonBounds(dataToRender, true);
+          if (boundsNormal && boundsSwapped) {
+            const okNormal = bboxesOverlap(boundsNormal, bbox);
+            const okSwapped = bboxesOverlap(boundsSwapped, bbox);
+            if (!okNormal && okSwapped) {
+              dataToRender = swapGeoJsonAxes(dataToRender);
+            }
+          }
+        } catch {
+          // noop
+        }
+
+        renderGeoJson(dataToRender);
         preferredAttempt = attempt;
         backoffMs = 0;
         nextAllowedAt = Date.now() + 1200;

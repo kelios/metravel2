@@ -18,7 +18,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
   const leafletOverlayLayersRef = useRef<Map<string, any>>(new Map());
   const leafletControlRef = useRef<any>(null);
   const hasInitializedLayersRef = useRef(false);
-  const overlayControllersRef = useRef<{ overlayControllers?: Map<string, any> }>({});
   const isMountedRef = useRef(false);
 
   useEffect(() => {
@@ -27,10 +26,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
     if (typeof map.addLayer !== 'function') return;
     
     isMountedRef.current = true;
-
-    const overlayLayersSnapshot = leafletOverlayLayersRef.current;
-    const overpassControllerRef: any = leafletControlRef;
-    const overlayControllersRef: any = leafletControlRef;
 
     const cleanup = () => {
       // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Не удаляем слои если это StrictMode remount
@@ -43,7 +38,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       console.info('[useMapInstance] Running cleanup - component unmounting');
       
       try {
-        const controllers: Map<string, any> | undefined = (overlayControllersRef as any).overlayControllers;
+        const controllers: Map<string, any> | undefined = (leafletControlRef as any).overlayControllers;
         const overlayLayersSnapshot = new Map(leafletOverlayLayersRef.current);
 
         const overpassControllerToStop = (leafletControlRef as any).overpassController;
@@ -120,9 +115,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
         const x = size?.x;
         const y = size?.y;
         if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
-        if (x <= 0 || y <= 0) return false;
-
-        return true;
+        return !(x <= 0 || y <= 0);
       } catch {
         return false;
       }
@@ -135,7 +128,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       console.info('[useMapInstance] Setting up layers...');
 
       // Stop/cleanup any previous controllers/layers (defensive)
-      const prevControllers: Map<string, any> | undefined = (overlayControllersRef as any).overlayControllers;
+      const prevControllers: Map<string, any> | undefined = (leafletControlRef as any).overlayControllers;
       if (prevControllers && typeof prevControllers.forEach === 'function') {
         try {
           prevControllers.forEach((c) => {
@@ -151,7 +144,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       }
 
       const controllers: Map<string, any> = new Map<string, any>();
-      (overlayControllersRef as any).overlayControllers = controllers;
+      (leafletControlRef as any).overlayControllers = controllers;
 
       // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: НЕ удаляем существующие overlay слои!
       // Линия маршрута уже может быть нарисована в overlay pane
@@ -191,7 +184,7 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           });
           leafletOverlayLayersRef.current.set(overpassDef.id, overpassController.layer);
           overlays[overpassDef.title] = overpassController.layer;
-          (overpassControllerRef as any).overpassController = overpassController;
+          (leafletControlRef as any).overpassController = overpassController;
 
           controllers.set(overpassDef.id, overpassController);
           console.info('[useMapInstance] Created camping overlay controller:', overpassDef.id);
@@ -242,8 +235,8 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       if (wfsDef) {
         try {
           wfsController = attachLasyZanocujWfsOverlay(L, map, wfsDef, {
-            maxAreaKm2: 5000,
-            debounceMs: 700,
+            maxAreaKm2: 1200,
+            debounceMs: 800,
           });
           leafletOverlayLayersRef.current.set(wfsDef.id, wfsController.layer);
           overlays[wfsDef.title] = wfsController.layer;
@@ -303,11 +296,11 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
         if (layer) {
           try {
             layer.addTo(map);
-            if ((overpassControllerRef as any).overpassController?.layer === layer) {
-              (overpassControllerRef as any).overpassController?.start?.();
+            if ((leafletControlRef as any).overpassController?.layer === layer) {
+              (leafletControlRef as any).overpassController?.start?.();
             }
 
-            const controllers: Map<string, any> = (overlayControllersRef as any).overlayControllers;
+            const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
             const controller = controllers?.get?.(def.id);
             if (controller?.layer === layer) {
               controller.start?.();
@@ -370,4 +363,3 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
     leafletControlRef,
   };
 }
-
