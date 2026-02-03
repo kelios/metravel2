@@ -32,7 +32,7 @@ const MapRouteMarkers: React.FC<MapRouteMarkersProps> = ({
             },
           }}
         >
-          <Popup>Старт</Popup>
+          <Popup className="metravel-route-marker-popup">Старт</Popup>
         </Marker>
       )}
 
@@ -47,7 +47,7 @@ const MapRouteMarkers: React.FC<MapRouteMarkersProps> = ({
             },
           }}
         >
-          <Popup>Финиш</Popup>
+          <Popup className="metravel-route-marker-popup">Финиш</Popup>
         </Marker>
       )}
 
@@ -63,7 +63,7 @@ const MapRouteMarkers: React.FC<MapRouteMarkersProps> = ({
               },
             }}
           >
-            <Popup>Точка {index + 2}</Popup>
+            <Popup className="metravel-route-marker-popup">Точка {index + 2}</Popup>
           </Marker>
         ))}
     </>

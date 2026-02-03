@@ -210,18 +210,6 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         if (!leaflet) return
 
         let cancelled = false
-        // Remove old polyline
-        if (polylineRef.current) {
-            try {
-                map.removeLayer(polylineRef.current)
-            } catch (error) {
-                if (__DEV__) {
-                    const { devWarn } = require('@/src/utils/logger')
-                    devWarn('Ошибка удаления полилинии:', error)
-                }
-            }
-            polylineRef.current = null
-        }
 
         // Draw new polyline if we have coordinates
         const latestCoords = routingCoordsRef.current
@@ -240,57 +228,102 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             coordsToDraw: coordsToDraw.slice(0, 2),
         })
 
-        const normalizeLngLat = (tuple: [number, number]): [number, number] => {
-            const a = tuple?.[0]
-            const b = tuple?.[1]
-            if (!Number.isFinite(a) || !Number.isFinite(b)) return tuple
-
-            // Простая логика: если первое значение явно не может быть longitude (выходит за -90..90),
-            // а второе может быть longitude, то это формат [lat, lng] - меняем местами
-            const aOutOfLatRange = a < -90 || a > 90;
-            const bOutOfLatRange = b < -90 || b > 90;
-
-            // Если первое значение выходит за диапазон lat, а второе нет - это [lng, lat]
-            if (aOutOfLatRange && !bOutOfLatRange) {
-                return tuple; // уже [lng, lat]
-            }
-
-            // Если второе значение выходит за диапазон lat, а первое нет - это [lat, lng]
-            if (!aOutOfLatRange && bOutOfLatRange) {
-                return [b, a]; // swap to [lng, lat]
-            }
-
-            // Оба значения в диапазоне -90..90 - неоднозначность
-            // Предполагаем, что координаты уже в формате [lng, lat] (как ожидается)
-            return tuple;
-        }
-
-        const normalizedCoords = coordsToDraw.map((p) => normalizeLngLat(p))
-        const validCoords = normalizedCoords.filter(([lng, lat]) =>
-            Number.isFinite(lat) &&
+        // ORS/OSRM возвращают координаты в формате GeoJSON: [lng, lat]
+        // routePoints тоже приходят как [lng, lat]
+        // Leaflet.latLng() ожидает (lat, lng) - поэтому меняем порядок
+        
+        // Валидация координат
+        const validCoords = coordsToDraw.filter(([lng, lat]) =>
             Number.isFinite(lng) &&
-            lat >= -90 && lat <= 90 &&
-            lng >= -180 && lng <= 180
+            Number.isFinite(lat) &&
+            lng >= -180 && lng <= 180 &&
+            lat >= -90 && lat <= 90
         )
 
         console.info('[RoutingMachine] Coordinates processing:', {
             coordsToDrawCount: coordsToDraw.length,
-            normalizedCount: normalizedCoords.length,
             validCoordsCount: validCoords.length,
-            first2Normalized: normalizedCoords.slice(0, 2),
-            first2Valid: validCoords.slice(0, 2),
+            coordsToDraw: coordsToDraw.slice(0, 2),
+            validCoords: validCoords.slice(0, 2),
         })
 
         if (validCoords.length >= 2) {
+            // ВАЖНО: координаты в формате [lng, lat], Leaflet ожидает latLng(lat, lng)
             const latlngs = validCoords.map(([lng, lat]) => leaflet.latLng(lat, lng))
 
+            const paneName = 'metravelRoutePane'
+            let hasRoutePane = false
+            try {
+                const existingPane = typeof map.getPane === 'function' ? map.getPane(paneName) : null
+                const pane = existingPane || (typeof map.createPane === 'function' ? map.createPane(paneName) : null)
+                if (pane && pane.style) {
+                    pane.style.zIndex = '650'
+                    pane.style.pointerEvents = 'none'
+                    hasRoutePane = true
+                }
+            } catch {
+                hasRoutePane = false
+            }
+
+            const renderer = typeof leaflet.svg === 'function'
+                ? leaflet.svg(hasRoutePane ? { pane: paneName } : undefined)
+                : undefined
+
+            const firstLatLng = latlngs[0] ? { lat: latlngs[0].lat, lng: latlngs[0].lng } : null
+            const lastLatLng = latlngs[latlngs.length - 1] ? { 
+                lat: latlngs[latlngs.length - 1].lat, 
+                lng: latlngs[latlngs.length - 1].lng 
+            } : null
+            
+            console.info('[RoutingMachine] ✅ LatLng objects:', 
+                `count=${latlngs.length}`,
+                `first=${JSON.stringify(firstLatLng)}`,
+                `last=${JSON.stringify(lastLatLng)}`
+            )
+
+            // Проверяем текущую позицию карты
+            const mapCenter = map.getCenter?.()
+            const mapZoom = map.getZoom?.()
+            console.info('[RoutingMachine] Map state:', 
+                `center=${JSON.stringify(mapCenter ? { lat: mapCenter.lat, lng: mapCenter.lng } : null)}`,
+                `zoom=${mapZoom}`
+            )
+
             // Определяем цвет линии в зависимости от статуса
-            // Используем primary для оптимального маршрута, danger для fallback
             const isOptimal = routingState.error === false || routingState.error === ''
             const color = isOptimal ? primary : danger
-            const weight = isOptimal ? 5 : 4
-            const opacity = isOptimal ? 0.85 : 0.65
-            const dashArray = isOptimal ? null : '10, 10' // Пунктирная линия для неоптимального маршрута
+            const weight = isOptimal ? 6 : 5
+            const opacity = isOptimal ? 0.9 : 0.7
+            const dashArray = isOptimal ? null : '10, 10'
+
+            // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Если линия уже существует с теми же координатами,
+            // просто обновляем стили вместо пересоздания
+            const existingLine = polylineRef.current
+            if (existingLine && typeof existingLine.setStyle === 'function' && coordsToDraw === latestCoords) {
+                try {
+                    existingLine.setStyle({
+                        color,
+                        weight,
+                        opacity,
+                        dashArray: dashArray || undefined,
+                    })
+                    console.info('[RoutingMachine] ✅ Updated existing line styles (no recreate)')
+                    return // Не пересоздаем линию!
+                } catch (error) {
+                    console.warn('[RoutingMachine] Failed to update line styles, will recreate:', error)
+                }
+            }
+
+            // Удаляем старую линию перед созданием новой
+            if (polylineRef.current) {
+                try {
+                    map.removeLayer(polylineRef.current)
+                    console.info('[RoutingMachine] Removed old polyline')
+                } catch (error) {
+                    console.warn('[RoutingMachine] Failed to remove old polyline:', error)
+                }
+                polylineRef.current = null
+            }
 
             const schedule = (fn: () => void) => {
                 if (typeof requestAnimationFrame === 'function') {
@@ -315,47 +348,14 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     }
                 }
 
-                const routePaneName = 'metravelRoutePane'
-
-                // Ensure custom pane exists - create if not present
-                let routePane: HTMLElement | null = null
-                try {
-                    routePane = typeof map.getPane === 'function' ? map.getPane(routePaneName) : null
-                    if (!routePane && typeof map.createPane === 'function') {
-                        routePane = map.createPane(routePaneName)
-                        console.info('[RoutingMachine] Created custom pane:', routePaneName)
-                    }
-                    if (routePane && routePane.style) {
-                        routePane.style.zIndex = '450'
-                        routePane.style.pointerEvents = 'none'
-                    }
-                } catch (e) {
-                    console.warn('[RoutingMachine] Failed to create/configure pane:', e)
-                }
-
-                const hasRoutePane = !!routePane
-
-                // Force SVG renderer for proper CSS styling of route line
-                // Canvas renderer doesn't support CSS class styling
-                let renderer: any = undefined
-                try {
-                    if (typeof leaflet.svg === 'function') {
-                        // Create SVG renderer in the overlay pane (not custom pane)
-                        // This ensures proper stacking with other map elements
-                        renderer = leaflet.svg({ pane: 'overlayPane' })
-                    }
-                } catch (e) {
-                    console.warn('[RoutingMachine] Failed to create SVG renderer:', e)
-                }
-
-                console.info('[RoutingMachine] Creating polyline with pane:', {
-                    hasRoutePane,
-                    paneName: 'overlayPane', // Always use overlayPane for compatibility
-                    hasRenderer: !!renderer,
-                    rendererType: renderer ? 'svg' : 'default',
+                console.info('[RoutingMachine] Creating polyline:', {
+                    pointsCount: latlngs.length,
+                    firstPoint: latlngs[0],
+                    lastPoint: latlngs[latlngs.length - 1],
                     color,
                     weight,
                     opacity,
+                    isOptimal,
                 })
 
                 const line = leaflet.polyline(latlngs, {
@@ -363,35 +363,122 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     weight,
                     opacity,
                     dashArray,
-                    renderer, // Use SVG renderer for CSS styling
-                    pane: 'overlayPane', // Use standard overlay pane
                     interactive: false,
                     lineJoin: 'round',
                     lineCap: 'round',
                     className: 'metravel-route-line',
+                    pane: hasRoutePane ? paneName : 'overlayPane',
+                    renderer,
                 })
 
                 try {
                     line.addTo(map)
-                    line.bringToFront?.()
                     polylineRef.current = line
 
-                    // Ensure renderer flushes DOM updates (some browsers/fast-refresh sequences can delay SVG path paint).
                     try {
-                        if (typeof map.invalidateSize === 'function') {
-                            map.invalidateSize({ animate: false, pan: false } as any)
-                        }
+                        line.bringToFront?.()
                     } catch {
                         // noop
                     }
-                    try {
-                        const maybeRedraw = (line as any)?.redraw
-                        if (typeof maybeRedraw === 'function') {
-                            maybeRedraw.call(line)
+                    
+                    // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Сразу центрируем карту на маршруте
+                    const bounds = line.getBounds?.()
+                    if (bounds && typeof bounds.isValid === 'function' && bounds.isValid()) {
+                        try {
+                            map.fitBounds(bounds.pad(0.1), {
+                                animate: false,
+                                duration: 0,
+                                maxZoom: 14,
+                            })
+                            console.info('[RoutingMachine] 🎯 Map centered on route bounds')
+                        } catch (e) {
+                            console.warn('[RoutingMachine] Failed to fitBounds:', e)
                         }
-                    } catch {
-                        // noop
                     }
+                    
+                    // Принудительно перерисовываем карту
+                    setTimeout(() => {
+                        if (cancelled) return
+                        try {
+                            if (typeof map.invalidateSize === 'function') {
+                                map.invalidateSize({ animate: false, pan: false } as any)
+                                console.info('[RoutingMachine] Map invalidated')
+                            }
+                        } catch (e) {
+                            console.warn('[RoutingMachine] Failed to invalidate:', e)
+                        }
+                    }, 100)
+                    
+                    const boundsInfo = bounds ? {
+                        north: bounds.getNorth?.(),
+                        south: bounds.getSouth?.(),
+                        east: bounds.getEast?.(),
+                        west: bounds.getWest?.(),
+                    } : null
+                    
+                    console.info('[RoutingMachine] ✅ Polyline added to map', 
+                        `bounds=${JSON.stringify(boundsInfo)}`
+                    )
+                    
+                    // Проверяем элемент path в DOM
+                    setTimeout(() => {
+                        if (cancelled) return
+                        const pathEl = line.getElement?.()
+                        if (pathEl) {
+                            const d = pathEl.getAttribute('d')
+                            const rect = pathEl.getBoundingClientRect()
+                            console.info('[RoutingMachine] 🔍 Path element in DOM:',
+                                `d.length=${d?.length || 0}`,
+                                `rect=${JSON.stringify({ 
+                                    top: rect.top, 
+                                    left: rect.left, 
+                                    width: rect.width, 
+                                    height: rect.height 
+                                })}`
+                            )
+                        }
+                    }, 200)
+
+                    // Force bring to front AND set z-index on path element
+                    setTimeout(() => {
+                        if (cancelled) return
+                        try {
+                            if (typeof line.bringToFront === 'function') {
+                                line.bringToFront()
+                            }
+                            
+                            // Force visibility on path element
+                            const pathEl = line.getElement?.()
+                            if (pathEl) {
+                                pathEl.style.display = 'inline'
+                                pathEl.style.visibility = 'visible'
+                                pathEl.style.pointerEvents = 'auto'
+                            }
+                            
+                            // Ensure parent containers don't hide the line
+                            const parent = pathEl?.parentElement
+                            if (parent) {
+                                parent.style.overflow = 'visible'
+                            }
+                        } catch (e) {
+                            console.warn('[RoutingMachine] Failed to bring line to front:', e)
+                        }
+                    }, 10)
+
+                    // Force map redraw to ensure polyline renders
+                    setTimeout(() => {
+                        if (cancelled) return
+                        try {
+                            if (typeof map.invalidateSize === 'function') {
+                                map.invalidateSize({ animate: false, pan: false } as any)
+                            }
+                            if (typeof line.redraw === 'function') {
+                                line.redraw()
+                            }
+                        } catch (e) {
+                            console.warn('[RoutingMachine] Failed to redraw:', e)
+                        }
+                    }, 50)
 
                     // DOM diagnostics - check if SVG path exists
                     try {
@@ -400,6 +487,48 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                             const overlayPane = document.querySelector('.leaflet-overlay-pane')
                             const overlayPaneSvg = overlayPane?.querySelector('svg')
                             const overlayPanePaths = overlayPane?.querySelectorAll('path')
+
+                            // Get SVG dimensions and path details
+                            let svgInfo: any = null
+                            let pathInfo: any = null
+
+                            if (overlayPaneSvg) {
+                                const svgRect = overlayPaneSvg.getBoundingClientRect()
+                                const svgStyle = window.getComputedStyle(overlayPaneSvg)
+                                svgInfo = {
+                                    width: svgRect.width,
+                                    height: svgRect.height,
+                                    top: svgRect.top,
+                                    left: svgRect.left,
+                                    display: svgStyle.display,
+                                    visibility: svgStyle.visibility,
+                                    overflow: svgStyle.overflow,
+                                }
+                            }
+
+                            if (overlayPanePaths && overlayPanePaths.length > 0) {
+                                const firstPath = overlayPanePaths[0]
+                                const pathStyle = window.getComputedStyle(firstPath)
+                                const pathRect = firstPath.getBoundingClientRect()
+                                let pathLength = 0
+                                try {
+                                    pathLength = (firstPath as SVGPathElement).getTotalLength?.() || 0
+                                } catch { /* noop */ }
+
+                                pathInfo = {
+                                    d: firstPath.getAttribute('d')?.slice(0, 100) + '...',
+                                    stroke: pathStyle.stroke,
+                                    strokeWidth: pathStyle.strokeWidth,
+                                    strokeOpacity: (pathStyle as any).strokeOpacity,
+                                    fill: pathStyle.fill,
+                                    display: pathStyle.display,
+                                    visibility: pathStyle.visibility,
+                                    width: pathRect.width,
+                                    height: pathRect.height,
+                                    pathLength,
+                                    className: firstPath.getAttribute('class'),
+                                }
+                            }
 
                             console.info('[RoutingMachine] DOM diagnostics:', {
                                 routeLineCount: svgPaths.length,
@@ -410,10 +539,12 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                                     zIndex: (overlayPane as HTMLElement).style.zIndex,
                                     position: (overlayPane as HTMLElement).style.position,
                                 } : null,
+                                svgInfo,
+                                pathInfo,
                             })
                         }
-                    } catch {
-                        // noop
+                    } catch (e) {
+                        console.warn('[RoutingMachine] DOM diagnostics error:', e)
                     }
                 } catch (error) {
                     // Если карта была уничтожена между whenReady и addTo
@@ -484,7 +615,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                             weight,
                             opacity,
                             dashArray,
-                            pane: hasRoutePane ? routePaneName : 'overlayPane',
+                            pane: 'overlayPane',
                             hasElement: !!el,
                             bbox,
                             totalLength,
@@ -496,27 +627,9 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     }
                 }
 
-                // Центрируем карту на маршруте только при изменении старт/финиш.
-                // Иначе при каждом обновлении coords (или store sync) карта будет "дергаться",
-                // создавая ощущение бесконечной перестройки.
-                if (lastFitKeyRef.current !== fitKey) {
-                    lastFitKeyRef.current = fitKey
-                    try {
-                        const bounds = line.getBounds()
-                        if (bounds.isValid()) {
-                            map.fitBounds(bounds.pad(0.1), {
-                                animate: true,
-                                duration: 0.5,
-                                maxZoom: 14,
-                            })
-                        }
-                    } catch (error) {
-                        if (__DEV__) {
-                            const { devWarn } = require('@/src/utils/logger')
-                            devWarn('Ошибка центрирования на маршруте:', error)
-                        }
-                    }
-                }
+                // fitBounds теперь выполняется сразу после addTo (см. выше)
+                // Сохраняем ключ чтобы не центрировать повторно
+                lastFitKeyRef.current = fitKey
             }
 
             // Leaflet гарантирует, что whenReady вызовется когда готовы panes/renderer.
@@ -531,7 +644,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         return () => {
             cancelled = true
         }
-    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routeKey, primary, danger])
+    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, hasTwoPoints, routeKey])
 
     // Cleanup on unmount
     useEffect(() => {

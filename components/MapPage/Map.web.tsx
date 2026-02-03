@@ -919,6 +919,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
           .leaflet-tooltip-pane { z-index: 650 !important; }
           .leaflet-popup-pane { z-index: 700 !important; }
 
+          /* SVG renderer container - ensure proper sizing and visibility */
+          .leaflet-overlay-pane svg {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            overflow: visible !important;
+          }
+
+          .leaflet-overlay-pane svg path {
+            pointer-events: none !important;
+          }
+
           /* Route line styling */
           .metravel-route-line {
             stroke: ${(colors as any).primary || '#7a9d8f'} !important;
@@ -926,6 +938,16 @@ const MapPageComponent: React.FC<Props> = (props) => {
             stroke-width: 6px !important;
             stroke-linecap: round !important;
             stroke-linejoin: round !important;
+            fill: none !important;
+          }
+
+          /* Fallback for paths without class */
+          .leaflet-overlay-pane svg path[stroke] {
+            stroke-opacity: 0.9 !important;
+            stroke-width: 5px !important;
+            stroke-linecap: round !important;
+            stroke-linejoin: round !important;
+            fill: none !important;
           }
 
           .leaflet-marker-icon,
@@ -1147,7 +1169,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
                 },
               }}
             >
-              <Popup>Старт</Popup>
+              <Popup className="metravel-route-marker-popup">Старт</Popup>
             </Marker>
           )}
 
@@ -1167,7 +1189,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
                    },
                  }}
                >
-                 <Popup>Точка {index + 2}</Popup>
+                 <Popup className="metravel-route-marker-popup">Точка {index + 2}</Popup>
                </Marker>
              );
            })}
@@ -1190,7 +1212,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
                 },
               }}
             >
-              <Popup>Финиш</Popup>
+              <Popup className="metravel-route-marker-popup">Финиш</Popup>
             </Marker>
           )}
 

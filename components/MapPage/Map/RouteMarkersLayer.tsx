@@ -64,7 +64,7 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
             },
           }}
         >
-          <Popup>Старт</Popup>
+          <Popup className="metravel-route-marker-popup">Старт</Popup>
         </Marker>
       )}
 
@@ -84,7 +84,7 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
                },
              }}
            >
-             <Popup>Точка {index + 2}</Popup>
+             <Popup className="metravel-route-marker-popup">Точка {index + 2}</Popup>
            </Marker>
          );
        })}
@@ -107,7 +107,7 @@ export const RouteMarkersLayer: React.FC<RouteMarkersLayerProps> = React.memo(({
             },
           }}
         >
-          <Popup>Финиш</Popup>
+          <Popup className="metravel-route-marker-popup">Финиш</Popup>
         </Marker>
       )}
     </>

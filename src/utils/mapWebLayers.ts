@@ -19,11 +19,18 @@ export const createLeafletLayer = (L: any, def: WebMapLayerDefinition) => {
   }
 
   if (def.kind === 'tile') {
+    const isWaymarked = typeof def.id === 'string' && def.id.startsWith('waymarked-');
     const layer = L.tileLayer(def.url, {
       attribution: def.attribution,
       minZoom: def.minZoom,
       maxZoom: def.maxZoom,
       opacity: clampOpacity(def.opacity),
+      ...(isWaymarked
+        ? {
+            updateWhenZooming: false,
+            keepBuffer: 2,
+          }
+        : null),
     });
     if (def.zIndex != null && typeof layer.setZIndex === 'function') layer.setZIndex(def.zIndex);
     return layer;

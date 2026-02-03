@@ -18,33 +18,41 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
   const leafletOverlayLayersRef = useRef<Map<string, any>>(new Map());
   const leafletControlRef = useRef<any>(null);
   const hasInitializedLayersRef = useRef(false);
+  const overlayControllersRef = useRef<{ overlayControllers?: Map<string, any> }>({});
+  const isMountedRef = useRef(false);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!map || !L) return;
     if (typeof map.addLayer !== 'function') return;
+    
+    isMountedRef.current = true;
 
     const overlayLayersSnapshot = leafletOverlayLayersRef.current;
     const overpassControllerRef: any = leafletControlRef;
     const overlayControllersRef: any = leafletControlRef;
 
-    const cleanup = (
-      controllersToStop?: Map<string, any>,
-      overpassControllerToStop?: any,
-      poiControllerToStop?: any,
-      routesControllerToStop?: any,
-      wfsControllerToStop?: any
-    ) => {
+    const cleanup = () => {
+      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Не удаляем слои если это StrictMode remount
+      // Слои должны удаляться только при РЕАЛЬНОМ unmount компонента
+      if (!isMountedRef.current) {
+        console.info('[useMapInstance] Skipping cleanup - component remounting (StrictMode)');
+        return;
+      }
+      
+      console.info('[useMapInstance] Running cleanup - component unmounting');
+      
       try {
-        overpassControllerToStop?.stop?.();
-        poiControllerToStop?.stop?.();
-        routesControllerToStop?.stop?.();
-        wfsControllerToStop?.stop?.();
+        const controllers: Map<string, any> | undefined = (overlayControllersRef as any).overlayControllers;
+        const overlayLayersSnapshot = new Map(leafletOverlayLayersRef.current);
+
+        const overpassControllerToStop = (leafletControlRef as any).overpassController;
+        const poiControllerToStop = (leafletControlRef as any).poiController;
+        const routesControllerToStop = (leafletControlRef as any).routesController;
+        const wfsControllerToStop = (leafletControlRef as any).wfsController;
 
         try {
-          const controllers: Map<string, any> | undefined =
-            controllersToStop || (overlayControllersRef as any).overlayControllers;
-          controllers?.forEach?.((c: any) => {
+          controllers?.forEach?.((c) => {
             try {
               c?.stop?.();
             } catch {
@@ -124,6 +132,8 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       if (hasInitializedLayersRef.current) return;
       if (!canInitializeNow()) return;
 
+      console.info('[useMapInstance] Setting up layers...');
+
       // Stop/cleanup any previous controllers/layers (defensive)
       const prevControllers: Map<string, any> | undefined = (overlayControllersRef as any).overlayControllers;
       if (prevControllers && typeof prevControllers.forEach === 'function') {
@@ -143,21 +153,12 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
       const controllers: Map<string, any> = new Map<string, any>();
       (overlayControllersRef as any).overlayControllers = controllers;
 
-      // Clean existing overlay layers
-      try {
-        overlayLayersSnapshot.forEach((layer) => {
-          try {
-            if (map.hasLayer?.(layer)) map.removeLayer(layer);
-          } catch {
-            // noop
-          }
-        });
-        overlayLayersSnapshot.clear();
-      } catch {
-        // noop
-      }
+      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: НЕ удаляем существующие overlay слои!
+      // Линия маршрута уже может быть нарисована в overlay pane
+      // Мы только добавляем новые слои, не удаляем старые
+      console.info('[useMapInstance] Skipping overlay cleanup to preserve existing layers (e.g., route line)');
 
-      // Clean existing base layer
+      // Clean existing base layer only
       try {
         const baseLayer = leafletBaseLayerRef.current;
         if (baseLayer && map.hasLayer?.(baseLayer)) {
@@ -319,7 +320,8 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
 
       hasInitializedLayersRef.current = true;
 
-      return () => cleanup(controllers, overpassController, poiController, routesController, wfsController);
+      // Cleanup будет вызван через return основного useEffect
+      return undefined;
     };
 
     let lastCleanup: (() => void) | undefined;
@@ -344,6 +346,8 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
     }
 
     return () => {
+      isMountedRef.current = false;
+      
       try {
         map.off?.('load', onLoad);
         map.off?.('resize', onResize);

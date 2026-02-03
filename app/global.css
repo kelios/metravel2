@@ -343,14 +343,31 @@ html[data-theme="dark"] .modal-select option {
   z-index: 400 !important;
 }
 
+/* SVG container in overlay pane - ensure proper sizing */
+.leaflet-overlay-pane svg {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+}
+
 /* Route line styles - ensure visibility above tiles */
 .leaflet-overlay-pane .metravel-route-line,
-.leaflet-metravelRoutePane-pane .metravel-route-line {
+.leaflet-metravelRoutePane-pane .metravel-route-line,
+.leaflet-overlay-pane svg path.metravel-route-line {
   stroke: var(--color-primary, #7a9d8f) !important;
   stroke-opacity: 0.9 !important;
   stroke-width: 6px !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
+  fill: none !important;
+}
+
+/* Fallback for any path in overlay pane */
+.leaflet-overlay-pane svg path[stroke] {
+  stroke-opacity: 0.85 !important;
+  fill: none !important;
 }
 
 /* Custom route pane with higher z-index */
@@ -409,6 +426,28 @@ html[data-theme="dark"] .leaflet-tile {
 
 .leaflet-popup {
   max-width: calc(100vw - 24px) !important;
+}
+
+.leaflet-popup.metravel-route-marker-popup {
+  max-width: min(240px, calc(100vw - 48px)) !important;
+}
+
+.leaflet-popup.metravel-route-marker-popup .leaflet-popup-content-wrapper {
+  border-radius: 999px !important;
+}
+
+.leaflet-popup.metravel-route-marker-popup .leaflet-popup-content {
+  max-width: min(200px, calc(100vw - 80px)) !important;
+  padding: 12px 44px 12px 14px !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaflet-popup.metravel-route-marker-popup .leaflet-popup-close-button {
+  width: 28px !important;
+  height: 28px !important;
+  margin: 4px !important;
 }
 
 .leaflet-popup-tip {

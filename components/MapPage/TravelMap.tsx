@@ -9,6 +9,8 @@ import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
+import { attachOsmPoiOverlay } from '@/src/utils/mapWebOverlays/osmPoiOverlay';
+import { attachOsmCampingOverlay } from '@/src/utils/mapWebOverlays/osmCampingOverlay';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapMarkers from './Map/MapMarkers';
 import ClusterLayer from './Map/ClusterLayer';
@@ -48,6 +50,12 @@ interface TravelMapProps {
   enableClustering?: boolean;
 
   resizeTrigger?: number;
+
+  /**
+   * Enable overlay layers (POI, camping sites)
+   * Note: Only works on full-size maps, not compact mode
+   */
+  enableOverlays?: boolean;
 }
 
 /**
@@ -133,13 +141,14 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
       pane = typeof map.getPane === 'function' ? map.getPane(paneName) : null;
       if (!pane && typeof map.createPane === 'function') {
         pane = map.createPane(paneName);
+        console.info('[TravelMap] RouteLineLayer: created custom pane', paneName);
       }
       if (pane && pane.style) {
         pane.style.zIndex = '450';
         pane.style.pointerEvents = 'none';
       }
-    } catch {
-      // noop
+    } catch (e) {
+      console.warn('[TravelMap] RouteLineLayer: failed to create pane', e);
     }
 
     // Convert coords to Leaflet LatLng
@@ -151,55 +160,86 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
       )
       .map(([lat, lng]) => L.latLng(lat, lng));
 
-    if (latlngs.length < 2) return;
-
-    // Create SVG renderer for custom pane
-    const hasRoutePane = !!pane;
-    const renderer = typeof L.svg === 'function'
-      ? L.svg(hasRoutePane ? { pane: paneName } : undefined)
-      : undefined;
-
-    // Create polyline with proper styling
-    const line = L.polyline(latlngs, {
-      color: colors.primary || DESIGN_TOKENS.colors.primary,
-      weight: 5,
-      opacity: 0.85,
-      lineJoin: 'round',
-      lineCap: 'round',
-      interactive: false,
-      renderer,
-      pane: hasRoutePane ? paneName : 'overlayPane',
-      className: 'metravel-route-line',
-    });
-
-    try {
-      line.addTo(map);
-      line.bringToFront?.();
-      polylineRef.current = line;
-
-      // Ensure renderer flushes DOM updates
-      try {
-        if (typeof map.invalidateSize === 'function') {
-          map.invalidateSize({ animate: false, pan: false });
-        }
-      } catch {
-        // noop
-      }
-
-      console.info('[TravelMap] RouteLineLayer: polyline added', {
-        coordsCount: latlngs.length,
-        hasRoutePane,
+    if (latlngs.length < 2) {
+      console.warn('[TravelMap] RouteLineLayer: not enough valid coordinates', {
+        total: routeLineCoords.length,
+        valid: latlngs.length,
       });
-    } catch (error) {
-      console.warn('[TravelMap] RouteLineLayer: failed to add polyline', error);
-      try {
-        line.remove?.();
-      } catch {
-        // noop
-      }
+      return;
     }
 
+    console.info('[TravelMap] RouteLineLayer: drawing route', {
+      points: latlngs.length,
+      firstPoint: latlngs[0],
+      lastPoint: latlngs[latlngs.length - 1],
+    });
+
+    // Add polyline with slight delay to ensure pane is ready
+    const addPolyline = () => {
+      if (!mountedRef.current) return;
+
+      // Create SVG renderer for custom pane
+      const hasRoutePane = !!pane;
+      const renderer = typeof L.svg === 'function'
+        ? L.svg(hasRoutePane ? { pane: paneName } : undefined)
+        : undefined;
+
+      // Create polyline with proper styling
+      const line = L.polyline(latlngs, {
+        color: colors.primary || DESIGN_TOKENS.colors.primary,
+        weight: 6,
+        opacity: 0.9,
+        lineJoin: 'round',
+        lineCap: 'round',
+        interactive: false,
+        renderer,
+        pane: hasRoutePane ? paneName : 'overlayPane',
+        className: 'metravel-route-line',
+      });
+
+      try {
+        line.addTo(map);
+        
+        // Force polyline to front
+        if (typeof line.bringToFront === 'function') {
+          line.bringToFront();
+        }
+        
+        polylineRef.current = line;
+
+        // Force map to redraw
+        setTimeout(() => {
+          if (!mountedRef.current) return;
+          try {
+            if (typeof map.invalidateSize === 'function') {
+              map.invalidateSize({ animate: false, pan: false });
+            }
+          } catch {
+            // noop
+          }
+        }, 50);
+
+        console.info('[TravelMap] RouteLineLayer: ✅ polyline added successfully', {
+          coordsCount: latlngs.length,
+          hasRoutePane,
+          pane: hasRoutePane ? paneName : 'overlayPane',
+          color: colors.primary || DESIGN_TOKENS.colors.primary,
+        });
+      } catch (error) {
+        console.error('[TravelMap] RouteLineLayer: ❌ failed to add polyline', error);
+        try {
+          line.remove?.();
+        } catch {
+          // noop
+        }
+      }
+    };
+
+    // Small delay to ensure pane is in DOM
+    const timer = setTimeout(addPolyline, 10);
+
     return () => {
+      clearTimeout(timer);
       if (polylineRef.current && map) {
         try {
           map.removeLayer(polylineRef.current);
@@ -221,6 +261,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   height,
   enableClustering = false,
   resizeTrigger,
+  enableOverlays = false,
 }) => {
   const colors = useThemedColors();
   const mapRef = useRef<any>(null);
@@ -228,6 +269,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
   const mountedRef = useRef(true);
   const [mapReady, setMapReady] = useState(false);
+  const overlayControllersRef = useRef<Map<string, any>>(new Map());
 
   useEffect(() => {
     mountedRef.current = true;
@@ -434,6 +476,80 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       timeouts.forEach(t => clearTimeout(t));
     };
   }, [mapReady]);
+
+  // Initialize overlay layers when map is ready and overlays are enabled
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!mapReady || !mapRef.current || !L) return;
+    if (!enableOverlays || compact) return; // Don't add overlays in compact mode
+
+    const map = mapRef.current;
+    console.info('[TravelMap] Initializing overlay layers');
+
+    // Cleanup existing overlays
+    overlayControllersRef.current.forEach((controller, id) => {
+      try {
+        if (controller.stop) controller.stop();
+        if (controller.layer && map) {
+          map.removeLayer(controller.layer);
+        }
+      } catch (e) {
+        console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
+      }
+    });
+    overlayControllersRef.current.clear();
+
+    try {
+      // Initialize POI overlay (достопримечательности)
+      const poiController = attachOsmPoiOverlay(L, map, {
+        maxAreaKm2: 2500,
+        debounceMs: 700,
+        categories: ['Достопримечательности', 'Видовые места', 'Культура'],
+      });
+
+      if (poiController && poiController.layer) {
+        poiController.layer.addTo(map);
+        overlayControllersRef.current.set('osm-poi', poiController);
+        poiController.start();
+        console.info('[TravelMap] ✅ POI overlay initialized');
+      }
+    } catch (e) {
+      console.warn('[TravelMap] Failed to initialize POI overlay:', e);
+    }
+
+    try {
+      // Initialize camping overlay (кемпинги/заночуй в лесе)
+      const campingController = attachOsmCampingOverlay(L, map, {
+        maxAreaKm2: 2500,
+        debounceMs: 700,
+      });
+
+      if (campingController && campingController.layer) {
+        campingController.layer.addTo(map);
+        overlayControllersRef.current.set('osm-camping', campingController);
+        campingController.start();
+        console.info('[TravelMap] ✅ Camping overlay initialized');
+      }
+    } catch (e) {
+      console.warn('[TravelMap] Failed to initialize camping overlay:', e);
+    }
+
+    return () => {
+      // Cleanup overlays when unmounting or dependencies change
+      overlayControllersRef.current.forEach((controller, id) => {
+        try {
+          if (controller.stop) controller.stop();
+          if (controller.layer && map) {
+            map.removeLayer(controller.layer);
+          }
+          console.info('[TravelMap] Cleaned up overlay:', id);
+        } catch (e) {
+          console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
+        }
+      });
+      overlayControllersRef.current.clear();
+    };
+  }, [mapReady, L, enableOverlays, compact]);
 
   // Map styles
   const mapHeight = height || (compact ? 400 : 600);

@@ -71,6 +71,18 @@ exports[`MapPageComponent (Map.web.tsx) Radius mode and markers rendering matche
           .leaflet-tooltip-pane { z-index: 650 !important; }
           .leaflet-popup-pane { z-index: 700 !important; }
 
+          /* SVG renderer container - ensure proper sizing and visibility */
+          .leaflet-overlay-pane svg {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            overflow: visible !important;
+          }
+
+          .leaflet-overlay-pane svg path {
+            pointer-events: none !important;
+          }
+
           /* Route line styling */
           .metravel-route-line {
             stroke: #7a9d8f !important;
@@ -78,6 +90,16 @@ exports[`MapPageComponent (Map.web.tsx) Radius mode and markers rendering matche
             stroke-width: 6px !important;
             stroke-linecap: round !important;
             stroke-linejoin: round !important;
+            fill: none !important;
+          }
+
+          /* Fallback for paths without class */
+          .leaflet-overlay-pane svg path[stroke] {
+            stroke-opacity: 0.9 !important;
+            stroke-width: 5px !important;
+            stroke-linecap: round !important;
+            stroke-linejoin: round !important;
+            fill: none !important;
           }
 
           .leaflet-marker-icon,

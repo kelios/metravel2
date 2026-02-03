@@ -103,13 +103,21 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
     if (!mapUiApi) return;
     try {
       mapUiApi.setBaseLayer(selectedBaseLayerId);
+    } catch {
+      // noop
+    }
+  }, [mapUiApi, selectedBaseLayerId]);
+
+  useEffect(() => {
+    if (!mapUiApi) return;
+    try {
       for (const o of WEB_MAP_OVERLAY_LAYERS) {
         mapUiApi.setOverlayEnabled(o.id, Boolean(enabledOverlays[o.id]));
       }
     } catch {
       // noop
     }
-  }, [mapUiApi, selectedBaseLayerId, enabledOverlays]);
+  }, [mapUiApi, enabledOverlays]);
 
   useEffect(() => {
     if (!mapUiApi?.setOsmPoiCategories) return;
