@@ -249,15 +249,15 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng);
 
       if (hasValidCircleCenter) {
-        map.setView([circleCenter!.lat, circleCenter!.lng], 11, { animate: false });
+        map.setView([circleCenter!.lat, circleCenter!.lng], 12, { animate: false });
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       } else if (hasValidUserLocation) {
-        map.setView([userLocation.lat, userLocation.lng], 11, { animate: false });
+        map.setView([userLocation.lat, userLocation.lng], 12, { animate: false });
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       } else if (hasValidCoords) {
-        map.setView([coordinates.lat, coordinates.lng], 11, { animate: false });
+        map.setView([coordinates.lat, coordinates.lng], 12, { animate: false });
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       }
@@ -409,8 +409,8 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           // noop
         }
 
-        const maxZoom = mode === 'radius' ? 13 : undefined;
-        map.fitBounds(bounds.pad(0.2), { animate: false, maxZoom, ...padding } as any);
+        const maxZoom = mode === 'radius' ? 14 : undefined;
+        map.fitBounds(bounds.pad(0.12), { animate: false, maxZoom, ...padding } as any);
 
         // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
         requestAnimationFrame(() => syncZoomFromMap());

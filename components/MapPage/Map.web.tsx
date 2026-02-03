@@ -99,7 +99,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return {
       latitude: hasValidLatLng ? latCandidate : fallback.latitude,
       longitude: hasValidLatLng ? lngCandidate : fallback.longitude,
-      zoom: Number.isFinite(zoomValue) ? zoomValue : 11,
+      zoom: Number.isFinite(zoomValue) ? zoomValue : 12,
     };
   }, [coordinates]);
 
