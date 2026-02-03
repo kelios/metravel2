@@ -6,7 +6,7 @@
  */
 
 import React, { useMemo, useEffect, useRef, useState } from 'react';
-import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
+import { Platform, View, ActivityIndicator } from 'react-native';
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
 import { attachOsmPoiOverlay } from '@/src/utils/mapWebOverlays/osmPoiOverlay';
@@ -486,8 +486,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     const map = mapRef.current;
     console.info('[TravelMap] Initializing overlay layers');
 
+    const controllersSnapshot = overlayControllersRef.current;
+
     // Cleanup existing overlays
-    overlayControllersRef.current.forEach((controller, id) => {
+    controllersSnapshot.forEach((controller, id) => {
       try {
         if (controller.stop) controller.stop();
         if (controller.layer && map) {
@@ -497,7 +499,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
       }
     });
-    overlayControllersRef.current.clear();
+    controllersSnapshot.clear();
 
     try {
       // Initialize POI overlay (достопримечательности)
@@ -509,7 +511,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
       if (poiController && poiController.layer) {
         poiController.layer.addTo(map);
-        overlayControllersRef.current.set('osm-poi', poiController);
+        controllersSnapshot.set('osm-poi', poiController);
         poiController.start();
         console.info('[TravelMap] ✅ POI overlay initialized');
       }
@@ -526,7 +528,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
       if (campingController && campingController.layer) {
         campingController.layer.addTo(map);
-        overlayControllersRef.current.set('osm-camping', campingController);
+        controllersSnapshot.set('osm-camping', campingController);
         campingController.start();
         console.info('[TravelMap] ✅ Camping overlay initialized');
       }
@@ -536,7 +538,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
     return () => {
       // Cleanup overlays when unmounting or dependencies change
-      overlayControllersRef.current.forEach((controller, id) => {
+      controllersSnapshot.forEach((controller, id) => {
         try {
           if (controller.stop) controller.stop();
           if (controller.layer && map) {
@@ -547,7 +549,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
         }
       });
-      overlayControllersRef.current.clear();
+      controllersSnapshot.clear();
     };
   }, [mapReady, L, enableOverlays, compact]);
 
@@ -658,8 +660,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
               try {
                 const key = String(coord ?? '').trim();
                 if (!key) return;
-                if (marker) markerByCoordRef.current.set(key, marker);
-                else markerByCoordRef.current.delete(key);
+                markerByCoordRef.current.set(key, marker);
               } catch {
                 // noop
               }
@@ -670,16 +671,28 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         {/* Travel markers (clustered) */}
         {customIcons?.meTravel && markers.length > 0 && shouldCluster && PopupComponent && (
           <ClusterLayer
-            clusters={clusters}
+            L={L}
+            clusters={clusters as any}
             Marker={rl.Marker}
             Popup={rl.Popup}
             PopupContent={PopupComponent}
             popupProps={popupProps}
+            markerIcon={customIcons.meTravel}
             markerOpacity={markerOpacity}
-            onClusterZoom={() => {
-              // In travel details compact map we don't support expanding clusters yet
-            }}
+            expandedClusterKey={null}
+            expandedClusterItems={null as any}
             hintCenter={{ lat: center[0], lng: center[1] }}
+            onClusterZoom={() => {}}
+            onMarkerClick={() => {}}
+            onMarkerInstance={(coord, marker) => {
+              try {
+                const key = String(coord ?? '').trim();
+                if (!key) return;
+                markerByCoordRef.current.set(key, marker);
+              } catch {
+                // noop
+              }
+            }}
           />
         )}
       </MapContainer>
@@ -687,7 +700,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+// Заметка: в текущей TS-конфигурации проекта тип StyleSheet может не экспонировать create,
+// поэтому используем plain object для стилей (RNW это поддерживает).
+const styles: any = {
   mapContainer: {
     width: '100%',
     overflow: 'hidden',
@@ -702,5 +717,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-});
-
+};
