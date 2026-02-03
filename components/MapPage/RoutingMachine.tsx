@@ -78,7 +78,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         [routePoints, transportMode]
     )
     const lastRouteKeyLoadingRef = useRef<string | null>(null)
-    const { info, warning } = useThemedColors()
+    const { primary, danger } = useThemedColors()
 
     // Sync routing state to parent callbacks (only when changed)
     // Use coordsKey to prevent infinite loops from array reference changes
@@ -285,8 +285,9 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             const latlngs = validCoords.map(([lng, lat]) => leaflet.latLng(lat, lng))
 
             // Определяем цвет линии в зависимости от статуса
+            // Используем primary для оптимального маршрута, danger для fallback
             const isOptimal = routingState.error === false || routingState.error === ''
-            const color = isOptimal ? info : warning
+            const color = isOptimal ? primary : danger
             const weight = isOptimal ? 5 : 4
             const opacity = isOptimal ? 0.85 : 0.65
             const dashArray = isOptimal ? null : '10, 10' // Пунктирная линия для неоптимального маршрута
@@ -315,19 +316,55 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 }
 
                 const routePaneName = 'metravelRoutePane'
-                const hasRoutePane = !!(map && typeof map.getPane === 'function' && map.getPane(routePaneName))
 
-                const renderer = typeof leaflet.svg === 'function'
-                    ? leaflet.svg(hasRoutePane ? ({ pane: routePaneName } as any) : undefined)
-                    : undefined
+                // Ensure custom pane exists - create if not present
+                let routePane: HTMLElement | null = null
+                try {
+                    routePane = typeof map.getPane === 'function' ? map.getPane(routePaneName) : null
+                    if (!routePane && typeof map.createPane === 'function') {
+                        routePane = map.createPane(routePaneName)
+                        console.info('[RoutingMachine] Created custom pane:', routePaneName)
+                    }
+                    if (routePane && routePane.style) {
+                        routePane.style.zIndex = '450'
+                        routePane.style.pointerEvents = 'none'
+                    }
+                } catch (e) {
+                    console.warn('[RoutingMachine] Failed to create/configure pane:', e)
+                }
+
+                const hasRoutePane = !!routePane
+
+                // Force SVG renderer for proper CSS styling of route line
+                // Canvas renderer doesn't support CSS class styling
+                let renderer: any = undefined
+                try {
+                    if (typeof leaflet.svg === 'function') {
+                        // Create SVG renderer in the overlay pane (not custom pane)
+                        // This ensures proper stacking with other map elements
+                        renderer = leaflet.svg({ pane: 'overlayPane' })
+                    }
+                } catch (e) {
+                    console.warn('[RoutingMachine] Failed to create SVG renderer:', e)
+                }
+
+                console.info('[RoutingMachine] Creating polyline with pane:', {
+                    hasRoutePane,
+                    paneName: 'overlayPane', // Always use overlayPane for compatibility
+                    hasRenderer: !!renderer,
+                    rendererType: renderer ? 'svg' : 'default',
+                    color,
+                    weight,
+                    opacity,
+                })
 
                 const line = leaflet.polyline(latlngs, {
                     color,
                     weight,
                     opacity,
                     dashArray,
-                    renderer,
-                    pane: hasRoutePane ? routePaneName : 'overlayPane',
+                    renderer, // Use SVG renderer for CSS styling
+                    pane: 'overlayPane', // Use standard overlay pane
                     interactive: false,
                     lineJoin: 'round',
                     lineCap: 'round',
@@ -355,6 +392,29 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     } catch {
                         // noop
                     }
+
+                    // DOM diagnostics - check if SVG path exists
+                    try {
+                        if (typeof document !== 'undefined') {
+                            const svgPaths = document.querySelectorAll('.metravel-route-line')
+                            const overlayPane = document.querySelector('.leaflet-overlay-pane')
+                            const overlayPaneSvg = overlayPane?.querySelector('svg')
+                            const overlayPanePaths = overlayPane?.querySelectorAll('path')
+
+                            console.info('[RoutingMachine] DOM diagnostics:', {
+                                routeLineCount: svgPaths.length,
+                                overlayPaneExists: !!overlayPane,
+                                overlayPaneSvgExists: !!overlayPaneSvg,
+                                overlayPanePathCount: overlayPanePaths?.length || 0,
+                                overlayPaneStyle: overlayPane ? {
+                                    zIndex: (overlayPane as HTMLElement).style.zIndex,
+                                    position: (overlayPane as HTMLElement).style.position,
+                                } : null,
+                            })
+                        }
+                    } catch {
+                        // noop
+                    }
                 } catch (error) {
                     // Если карта была уничтожена между whenReady и addTo
                     try {
@@ -375,6 +435,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                         let bbox: any = null
                         let computed: any = null
                         let totalLength: number | null = null
+                        let parentInfo: any = null
                         try {
                             if (el && typeof el.getBBox === 'function') bbox = el.getBBox()
                         } catch {
@@ -400,6 +461,21 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                         } catch {
                             computed = null
                         }
+                        try {
+                            if (el) {
+                                const parent = el.parentElement
+                                const grandparent = parent?.parentElement
+                                parentInfo = {
+                                    parentTagName: parent?.tagName,
+                                    parentClassName: parent?.className,
+                                    grandparentTagName: grandparent?.tagName,
+                                    grandparentClassName: grandparent?.className,
+                                    elClassName: el.getAttribute?.('class'),
+                                }
+                            }
+                        } catch {
+                            parentInfo = null
+                        }
 
                         console.info('[RoutingMachine] Polyline added', {
                             points: latlngs.length,
@@ -413,6 +489,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                             bbox,
                             totalLength,
                             computed,
+                            parentInfo,
                         })
                     } catch {
                         // noop
@@ -454,7 +531,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         return () => {
             cancelled = true
         }
-    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routeKey, info, warning])
+    }, [map, leafletFromProps, coordsKeyForDraw, routingState.error, fitKey, hasTwoPoints, routeKey, primary, danger])
 
     // Cleanup on unmount
     useEffect(() => {

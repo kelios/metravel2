@@ -193,8 +193,9 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           (overpassControllerRef as any).overpassController = overpassController;
 
           controllers.set(overpassDef.id, overpassController);
-        } catch {
-          // noop
+          console.info('[useMapInstance] Created camping overlay controller:', overpassDef.id);
+        } catch (e) {
+          console.warn('[useMapInstance] Failed to create camping overlay:', e);
         }
       }
 
@@ -210,8 +211,9 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           leafletOverlayLayersRef.current.set(poiDef.id, poiController.layer);
           overlays[poiDef.title] = poiController.layer;
           controllers.set(poiDef.id, poiController);
-        } catch {
-          // noop
+          console.info('[useMapInstance] Created POI overlay controller:', poiDef.id);
+        } catch (e) {
+          console.warn('[useMapInstance] Failed to create POI overlay:', e);
         }
       }
 
@@ -227,8 +229,9 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           leafletOverlayLayersRef.current.set(routesDef.id, routesController.layer);
           overlays[routesDef.title] = routesController.layer;
           controllers.set(routesDef.id, routesController);
-        } catch {
-          // noop
+          console.info('[useMapInstance] Created routes overlay controller:', routesDef.id);
+        } catch (e) {
+          console.warn('[useMapInstance] Failed to create routes overlay:', e);
         }
       }
 
@@ -245,14 +248,26 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
           overlays[wfsDef.title] = wfsController.layer;
 
           controllers.set(wfsDef.id, wfsController);
-        } catch {
-          // noop
+          console.info('[useMapInstance] Created WFS overlay controller:', wfsDef.id);
+        } catch (e) {
+          console.warn('[useMapInstance] Failed to create WFS overlay:', e);
         }
       }
 
-      // Setup other overlay layers
+      // Log summary of created controllers
+      console.info('[useMapInstance] Overlay setup complete:', {
+        layerIds: Array.from(leafletOverlayLayersRef.current.keys()),
+        controllerIds: Array.from(controllers.keys()),
+      });
+
+      // Setup other overlay layers (exclude kinds that have dedicated controllers)
       WEB_MAP_OVERLAY_LAYERS
-        .filter((d) => d.kind !== 'osm-overpass-camping' && d.kind !== 'wfs-geojson')
+        .filter((d) =>
+          d.kind !== 'osm-overpass-camping' &&
+          d.kind !== 'osm-overpass-poi' &&
+          d.kind !== 'osm-overpass-routes' &&
+          d.kind !== 'wfs-geojson'
+        )
         .forEach((def) => {
           const layer = createLeafletLayer(L, def);
           if (!layer) return;

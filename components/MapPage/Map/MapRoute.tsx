@@ -14,7 +14,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
   isOptimal,
 }) => {
   const polylineRef = useRef<any>(null);
-  const { info, warning } = useThemedColors();
+  const { primary, danger } = useThemedColors();
 
   useEffect(() => {
     if (!map || typeof window === 'undefined') return;
@@ -50,7 +50,8 @@ const MapRoute: React.FC<MapRouteProps> = ({
       const latlngs = validCoords.map((coord) => L.latLng(coord.lat, coord.lng));
 
       // Determine line style based on route status
-      const color = isOptimal ? info : warning;
+      // Using primary for optimal routes, danger for fallback
+      const color = isOptimal ? primary : danger;
       const weight = isOptimal ? 5 : 4;
       const opacity = isOptimal ? 0.85 : 0.65;
       const dashArray = isOptimal ? null : '10, 10';
@@ -94,7 +95,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
         polylineRef.current = null;
       }
     };
-  }, [map, routeCoordinates, isOptimal, info, warning]);
+  }, [map, routeCoordinates, isOptimal, primary, danger]);
 
   return null;
 };

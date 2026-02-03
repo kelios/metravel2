@@ -9,11 +9,12 @@ import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 import { useMapMarkers } from '@/hooks/useMapMarkers';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapMarkers from './Map/MapMarkers';
 import ClusterLayer from './Map/ClusterLayer';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
 import { useLeafletIcons } from './Map/useLeafletIcons';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface TravelMapProps {
   /**
@@ -77,6 +78,141 @@ interface TravelMapProps {
  * />
  * ```
  */
+
+/**
+ * Internal component to render route line with proper Leaflet API
+ * Uses custom pane and SVG renderer for correct z-index stacking
+ */
+interface RouteLineLayerProps {
+  routeLineCoords: [number, number][];
+  colors: ThemedColors;
+  useMap: () => any;
+  L: any;
+}
+
+const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors, useMap, L }) => {
+  const map = useMap();
+  const polylineRef = useRef<any>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!map || !L || routeLineCoords.length < 2) {
+      // Remove old polyline if exists
+      if (polylineRef.current && map) {
+        try {
+          map.removeLayer(polylineRef.current);
+        } catch {
+          // noop
+        }
+        polylineRef.current = null;
+      }
+      return;
+    }
+
+    // Remove old polyline
+    if (polylineRef.current) {
+      try {
+        map.removeLayer(polylineRef.current);
+      } catch {
+        // noop
+      }
+      polylineRef.current = null;
+    }
+
+    // Ensure custom pane exists with proper z-index
+    const paneName = 'metravelRoutePane';
+    let pane: HTMLElement | null = null;
+    try {
+      pane = typeof map.getPane === 'function' ? map.getPane(paneName) : null;
+      if (!pane && typeof map.createPane === 'function') {
+        pane = map.createPane(paneName);
+      }
+      if (pane && pane.style) {
+        pane.style.zIndex = '450';
+        pane.style.pointerEvents = 'none';
+      }
+    } catch {
+      // noop
+    }
+
+    // Convert coords to Leaflet LatLng
+    const latlngs = routeLineCoords
+      .filter(([lat, lng]) =>
+        Number.isFinite(lat) && Number.isFinite(lng) &&
+        lat >= -90 && lat <= 90 &&
+        lng >= -180 && lng <= 180
+      )
+      .map(([lat, lng]) => L.latLng(lat, lng));
+
+    if (latlngs.length < 2) return;
+
+    // Create SVG renderer for custom pane
+    const hasRoutePane = !!pane;
+    const renderer = typeof L.svg === 'function'
+      ? L.svg(hasRoutePane ? { pane: paneName } : undefined)
+      : undefined;
+
+    // Create polyline with proper styling
+    const line = L.polyline(latlngs, {
+      color: colors.primary || DESIGN_TOKENS.colors.primary,
+      weight: 5,
+      opacity: 0.85,
+      lineJoin: 'round',
+      lineCap: 'round',
+      interactive: false,
+      renderer,
+      pane: hasRoutePane ? paneName : 'overlayPane',
+      className: 'metravel-route-line',
+    });
+
+    try {
+      line.addTo(map);
+      line.bringToFront?.();
+      polylineRef.current = line;
+
+      // Ensure renderer flushes DOM updates
+      try {
+        if (typeof map.invalidateSize === 'function') {
+          map.invalidateSize({ animate: false, pan: false });
+        }
+      } catch {
+        // noop
+      }
+
+      console.info('[TravelMap] RouteLineLayer: polyline added', {
+        coordsCount: latlngs.length,
+        hasRoutePane,
+      });
+    } catch (error) {
+      console.warn('[TravelMap] RouteLineLayer: failed to add polyline', error);
+      try {
+        line.remove?.();
+      } catch {
+        // noop
+      }
+    }
+
+    return () => {
+      if (polylineRef.current && map) {
+        try {
+          map.removeLayer(polylineRef.current);
+        } catch {
+          // noop
+        }
+        polylineRef.current = null;
+      }
+    };
+  }, [map, L, routeLineCoords, colors.primary]);
+
+  return null;
+};
 export const TravelMap: React.FC<TravelMapProps> = ({
   travelData = [],
   highlightedPoint,
@@ -328,7 +464,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // Render map
   if (!L || !rl) return null;
 
-  const { MapContainer, TileLayer, Polyline } = rl;
+  const { MapContainer, TileLayer } = rl;
 
   if (!MapContainer || !TileLayer) return null;
 
@@ -381,15 +517,13 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           attribution="&copy; OpenStreetMap contributors"
         />
 
-        {/* Route line connecting travel points */}
-        {Polyline && routeLineCoords.length >= 2 && (
-          <Polyline
-            positions={routeLineCoords}
-            color={colors.primary}
-            weight={4}
-            opacity={0.7}
-            lineJoin="round"
-            lineCap="round"
+        {/* Route line connecting travel points - using custom layer for proper z-index */}
+        {rl.useMap && routeLineCoords.length >= 2 && (
+          <RouteLineLayer
+            routeLineCoords={routeLineCoords}
+            colors={colors}
+            useMap={rl.useMap}
+            L={L}
           />
         )}
 

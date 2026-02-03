@@ -343,17 +343,21 @@ html[data-theme="dark"] .modal-select option {
   z-index: 400 !important;
 }
 
- .leaflet-overlay-pane .metravel-route-line {
-  stroke: var(--color-info) !important;
+/* Route line styles - ensure visibility above tiles */
+.leaflet-overlay-pane .metravel-route-line,
+.leaflet-metravelRoutePane-pane .metravel-route-line {
+  stroke: var(--color-primary, #7a9d8f) !important;
   stroke-opacity: 0.9 !important;
-  stroke-width: 5px !important;
- }
+  stroke-width: 6px !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
 
- .leaflet-metravelRoutePane-pane .metravel-route-line {
-  stroke: var(--color-info) !important;
-  stroke-opacity: 0.9 !important;
-  stroke-width: 5px !important;
- }
+/* Custom route pane with higher z-index */
+.leaflet-metravelRoutePane-pane {
+  z-index: 450 !important;
+  pointer-events: none !important;
+}
 
 .leaflet-shadow-pane {
   z-index: 500 !important;

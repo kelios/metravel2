@@ -910,10 +910,23 @@ const MapPageComponent: React.FC<Props> = (props) => {
           /* Enforce correct stacking order: route overlay must be above tiles */
           .leaflet-tile-pane { z-index: 200 !important; }
           .leaflet-overlay-pane { z-index: 400 !important; }
+          .leaflet-metravelRoutePane-pane { 
+            z-index: 450 !important; 
+            pointer-events: none !important;
+          }
           .leaflet-shadow-pane { z-index: 500 !important; }
           .leaflet-marker-pane { z-index: 600 !important; }
           .leaflet-tooltip-pane { z-index: 650 !important; }
           .leaflet-popup-pane { z-index: 700 !important; }
+
+          /* Route line styling */
+          .metravel-route-line {
+            stroke: ${(colors as any).primary || '#7a9d8f'} !important;
+            stroke-opacity: 0.9 !important;
+            stroke-width: 6px !important;
+            stroke-linecap: round !important;
+            stroke-linejoin: round !important;
+          }
 
           .leaflet-marker-icon,
           .leaflet-marker-shadow {
@@ -1066,6 +1079,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           zoom={initialZoomRef.current}
           key={mapInstanceKeyRef.current}
           zoomControl={false}
+          preferCanvas={false}
         >
           {/* Map layers (tiles, circle, user location) */}
           <MapLayers

@@ -310,21 +310,22 @@ export function useMapApi({
             map.removeLayer(layer);
           }
 
-          const overpassController = (leafletControlRef as any).overpassController;
-          if (overpassController?.layer === layer) {
-            if (enabled) overpassController.start?.();
-            else overpassController.stop?.();
-          }
-
+          // Get controller from the unified overlayControllers map
           const controllers: Map<string, any> = (leafletControlRef as any).overlayControllers;
           const controller = controllers?.get?.(id);
-          if (controller?.layer === layer) {
-            console.info('[useMapApi] Controller found for layer:', id);
-            if (enabled) controller.start?.();
-            else controller.stop?.();
+
+          if (controller) {
+            console.info('[useMapApi] Controller found for layer:', id, 'starting:', enabled);
+            if (enabled) {
+              controller.start?.();
+            } else {
+              controller.stop?.();
+            }
+          } else {
+            console.info('[useMapApi] No controller for layer:', id, 'available controllers:', controllers ? Array.from(controllers.keys()) : 'none');
           }
-        } catch {
-          // noop
+        } catch (e) {
+          console.warn('[useMapApi] setOverlayEnabled error:', e);
         }
       },
       setOsmPoiCategories: (categories: string[]) => {
