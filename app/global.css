@@ -349,6 +349,12 @@ html[data-theme="dark"] .modal-select option {
   stroke-width: 5px !important;
  }
 
+ .leaflet-metravelRoutePane-pane .metravel-route-line {
+  stroke: var(--color-info) !important;
+  stroke-opacity: 0.9 !important;
+  stroke-width: 5px !important;
+ }
+
 .leaflet-shadow-pane {
   z-index: 500 !important;
 }

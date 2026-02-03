@@ -62,7 +62,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   // State
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
-  const [showInitialLoader, setShowInitialLoader] = useState(true);
+  const [showInitialLoader, setShowInitialLoader] = useState(Platform.OS !== 'web');
+  const [hasWebTilesLoaded, setHasWebTilesLoaded] = useState(false);
   const [_routingLoading, setRoutingLoading] = useState(false);
   const [errors, setErrors] = useState<any>({ routing: false });
   const [disableFitBounds, _setDisableFitBounds] = useState(false);
@@ -76,6 +77,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const styles = useMemo(() => getStyles(colors), [colors]);
 
   useEffect(() => {
+    if (Platform.OS === 'web') return;
     const timeout = setTimeout(() => {
       setShowInitialLoader(false);
     }, 0);
@@ -123,6 +125,78 @@ const MapPageComponent: React.FC<Props> = (props) => {
     if (mapInstance && mapInstance === mapRef.current) return;
     setMapInstance(mapRef.current);
   }, [mapInstance]);
+
+  // Track first rendered tiles on web: loader overlay must disappear once tiles are visible.
+  // Use DOM polling with a safety timeout (tile load events are not consistently emitted on the map instance).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof document === 'undefined') return;
+    if (!leafletReady) return;
+
+    // Reset on module (re)load
+    setHasWebTilesLoaded(false);
+
+    let cancelled = false;
+    let intervalId: any = null;
+    let timeoutId: any = null;
+
+    const checkLoaded = () => {
+      if (cancelled) return;
+      try {
+        const hasTile = !!document.querySelector?.('.leaflet-tile-loaded');
+        if (hasTile) {
+          setHasWebTilesLoaded(true);
+          cancelled = true;
+        }
+      } catch {
+        // noop
+      }
+
+      if (cancelled) {
+        try {
+          if (intervalId) clearInterval(intervalId);
+        } catch {
+          // noop
+        }
+        try {
+          if (timeoutId) clearTimeout(timeoutId);
+        } catch {
+          // noop
+        }
+      }
+    };
+
+    // Poll until first tile is loaded
+    intervalId = setInterval(checkLoaded, 250);
+    // Run immediately
+    checkLoaded();
+
+    // Safety: never block map interactions indefinitely
+    timeoutId = setTimeout(() => {
+      if (cancelled) return;
+      cancelled = true;
+      setHasWebTilesLoaded(true);
+      try {
+        if (intervalId) clearInterval(intervalId);
+      } catch {
+        // noop
+      }
+    }, 15_000);
+
+    return () => {
+      cancelled = true;
+      try {
+        if (intervalId) clearInterval(intervalId);
+      } catch {
+        // noop
+      }
+      try {
+        if (timeoutId) clearTimeout(timeoutId);
+      } catch {
+        // noop
+      }
+    };
+  }, [leafletReady]);
 
   // Travel data
   const travelData = useMemo(
@@ -717,9 +791,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [mode, routePoints, travelData.length]);
 
   const canRenderMap = leafletReady && !!(L && rl);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!canRenderMap) return;
+    // Once Leaflet modules are ready and MapContainer can render, never keep a blocking loader overlay.
+    setShowInitialLoader(false);
+  }, [canRenderMap]);
+
   const shouldShowLoadingOverlay = Platform.OS === 'web'
-    ? showInitialLoader || leafletLoading || !canRenderMap
-    : showInitialLoader || leafletLoading || !canRenderMap;
+    ? !!leafletError || !canRenderMap
+    : showInitialLoader || leafletLoading || !!leafletError || !canRenderMap;
 
   const loaderMessage = leafletError
     ? 'Не удалось загрузить модули карты'
@@ -771,7 +853,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
       )}
 
       {shouldShowLoadingOverlay && (
-        <View style={{ position: 'absolute', inset: 0, zIndex: 10 } as any}>
+        <View
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 10,
+            ...(Platform.OS === 'web' ? ({ pointerEvents: 'none' } as any) : null),
+          } as any}
+        >
           {renderLoader(loaderMessage)}
         </View>
       )}
@@ -802,6 +891,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
             top: 0;
             left: 0;
           }
+
+          /* Enforce correct stacking order: route overlay must be above tiles */
+          .leaflet-tile-pane { z-index: 200 !important; }
+          .leaflet-overlay-pane { z-index: 400 !important; }
+          .leaflet-shadow-pane { z-index: 500 !important; }
+          .leaflet-marker-pane { z-index: 600 !important; }
+          .leaflet-tooltip-pane { z-index: 650 !important; }
+          .leaflet-popup-pane { z-index: 700 !important; }
 
           .leaflet-marker-icon,
           .leaflet-marker-shadow {

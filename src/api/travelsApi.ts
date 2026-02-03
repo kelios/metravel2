@@ -22,11 +22,9 @@ const rawApiUrl: string =
         ? 'http://example.test/api'
         : (envApiUrl
             ? envApiUrl
-            : (Platform.OS === 'web' && isE2E && webOriginApi
+            : (Platform.OS === 'web' && (isE2E || isLocalApi) && webOriginApi
                 ? webOriginApi
-                : (Platform.OS === 'web' && !isLocalApi && webOriginApi
-                    ? webOriginApi
-                    : '')));
+                : ''));
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');
 }

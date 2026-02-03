@@ -130,6 +130,20 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // noop
       }
 
+      // Ensure route polyline pane is always above tiles.
+      // In some web exports/e2e builds pane stacking can be broken, causing the route line to render under tiles.
+      try {
+        const paneName = 'metravelRoutePane';
+        const existing = typeof (map as any).getPane === 'function' ? (map as any).getPane(paneName) : null;
+        const pane = existing || (typeof (map as any).createPane === 'function' ? (map as any).createPane(paneName) : null);
+        if (pane && pane.style) {
+          pane.style.zIndex = '450';
+          pane.style.pointerEvents = 'none';
+        }
+      } catch {
+        // noop
+      }
+
       onMapReady(map);
     };
 

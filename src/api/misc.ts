@@ -17,7 +17,7 @@ const rawApiUrl: string =
     ? 'https://example.test/api'
     : (envApiUrl
         ? envApiUrl
-        : (Platform.OS === 'web' && !isLocalApi && typeof window !== 'undefined' && window.location?.origin
+        : (Platform.OS === 'web' && isLocalApi && typeof window !== 'undefined' && window.location?.origin
             ? `${window.location.origin}/api`
             : '')));
 if (!rawApiUrl) {

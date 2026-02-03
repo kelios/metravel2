@@ -62,6 +62,16 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     // Use custom hook for routing logic
     const routingState = useRouting(routePoints, transportMode, ORS_API_KEY)
     const hasTwoPoints = routePoints.length >= 2
+
+    const routePointsRef = useRef(routePoints)
+    const routingCoordsRef = useRef(routingState.coords)
+    useEffect(() => {
+        routePointsRef.current = routePoints
+    }, [routePoints])
+    useEffect(() => {
+        routingCoordsRef.current = routingState.coords
+    }, [routingState.coords])
+
     const clearedNoPointsRef = useRef(false)
     const routeKey = useMemo(
         () => routePoints.length >= 2 ? `${transportMode}-${routePoints.map(p => p.join(',')).join('|')}` : '',
@@ -214,9 +224,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         }
 
         // Draw new polyline if we have coordinates
-        const coordsToDraw = routingState.coords.length >= 2
-            ? routingState.coords
-            : (hasTwoPoints ? routePoints : [])
+        const latestCoords = routingCoordsRef.current
+        const latestRoutePoints = routePointsRef.current
+        const coordsToDraw = latestCoords.length >= 2
+            ? latestCoords
+            : (hasTwoPoints ? latestRoutePoints : [])
 
         const normalizeLngLat = (tuple: [number, number]): [number, number] => {
             const a = tuple?.[0]
@@ -268,7 +280,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                 // Во время fast-refresh/unmount карта может быть в промежуточном состоянии.
                 // Ранее мы просто возвращались, если overlayPane ещё не готов, и линия могла
                 // вообще никогда не появиться. Теперь делаем несколько ретраев.
-                if (typeof map.getPane === 'function') {
+                if (typeof map?.getPane === 'function') {
                     const overlayPane = map.getPane('overlayPane')
                     if (!overlayPane) {
                         if (attemptsLeft > 0) {
@@ -278,13 +290,20 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     }
                 }
 
+                const routePaneName = 'metravelRoutePane'
+                const hasRoutePane = !!(map && typeof map.getPane === 'function' && map.getPane(routePaneName))
+
+                const renderer = typeof leaflet.svg === 'function'
+                    ? leaflet.svg(hasRoutePane ? ({ pane: routePaneName } as any) : undefined)
+                    : undefined
+
                 const line = leaflet.polyline(latlngs, {
                     color,
                     weight,
                     opacity,
                     dashArray,
-                    renderer: typeof leaflet.svg === 'function' ? leaflet.svg() : undefined,
-                    pane: 'overlayPane',
+                    renderer,
+                    pane: hasRoutePane ? routePaneName : 'overlayPane',
                     interactive: false,
                     lineJoin: 'round',
                     lineCap: 'round',
@@ -293,12 +312,25 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
 
                 try {
                     line.addTo(map)
+                    line.bringToFront?.()
+                    polylineRef.current = line
+
+                    // Ensure renderer flushes DOM updates (some browsers/fast-refresh sequences can delay SVG path paint).
                     try {
-                        line.bringToFront?.()
+                        if (typeof map.invalidateSize === 'function') {
+                            map.invalidateSize({ animate: false, pan: false } as any)
+                        }
                     } catch {
                         // noop
                     }
-                    polylineRef.current = line
+                    try {
+                        const maybeRedraw = (line as any)?.redraw
+                        if (typeof maybeRedraw === 'function') {
+                            maybeRedraw.call(line)
+                        }
+                    } catch {
+                        // noop
+                    }
                 } catch (error) {
                     // Если карта была уничтожена между whenReady и addTo
                     try {
@@ -315,6 +347,36 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
 
                 if (__DEV__) {
                     try {
+                        const el = (line as any)?.getElement?.() as SVGPathElement | null | undefined
+                        let bbox: any = null
+                        let computed: any = null
+                        let totalLength: number | null = null
+                        try {
+                            if (el && typeof el.getBBox === 'function') bbox = el.getBBox()
+                        } catch {
+                            bbox = null
+                        }
+                        try {
+                            if (el && typeof el.getTotalLength === 'function') totalLength = Number(el.getTotalLength())
+                        } catch {
+                            totalLength = null
+                        }
+                        try {
+                            if (el && typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+                                const s = window.getComputedStyle(el)
+                                computed = {
+                                    stroke: s.stroke,
+                                    strokeOpacity: (s as any).strokeOpacity,
+                                    strokeWidth: s.strokeWidth,
+                                    opacity: s.opacity,
+                                    display: s.display,
+                                    visibility: s.visibility,
+                                }
+                            }
+                        } catch {
+                            computed = null
+                        }
+
                         console.info('[RoutingMachine] Polyline added', {
                             points: latlngs.length,
                             hasLayer: typeof map.hasLayer === 'function' ? map.hasLayer(line) : undefined,
@@ -322,6 +384,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                             weight,
                             opacity,
                             dashArray,
+                            pane: hasRoutePane ? routePaneName : 'overlayPane',
+                            hasElement: !!el,
+                            bbox,
+                            totalLength,
+                            computed,
                         })
                     } catch {
                         // noop

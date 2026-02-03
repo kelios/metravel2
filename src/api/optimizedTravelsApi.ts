@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 
 const rawApiUrl: string =
-  (Platform.OS === 'web' && !isLocalApi && typeof window !== 'undefined' && window.location?.origin
+  (Platform.OS === 'web' && isLocalApi && typeof window !== 'undefined' && window.location?.origin
     ? `${window.location.origin}/api`
     : process.env.EXPO_PUBLIC_API_URL) ||
   (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');

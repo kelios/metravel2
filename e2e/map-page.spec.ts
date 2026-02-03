@@ -519,7 +519,7 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await expect(page.getByTestId('filters-panel-footer')).toBeVisible();
   });
 
-  test('desktop: route polyline is visible after entering start/end coordinates', async ({ page }) => {
+  test('desktop: route polyline is visible after entering start/end coordinates', async ({ page }, testInfo) => {
     await installTileMock(page);
     await gotoMapWithRecovery(page);
 
@@ -555,9 +555,29 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await expect(buildBtn).toBeVisible({ timeout: 30_000 });
     await buildBtn.click({ force: true });
 
+    // Wait until Leaflet tiles actually render; otherwise the map can be covered by a loader overlay,
+    // and the route line may exist in DOM but not be visually visible to the user.
+    await expect
+      .poll(async () => {
+        try {
+          return await page.locator('.leaflet-tile-loaded').count();
+        } catch {
+          return 0;
+        }
+      }, { timeout: 60_000 })
+      .toBeGreaterThan(0);
+
+    try {
+      const shotPath = testInfo.outputPath('route-after-build.png');
+      await mapContainer.screenshot({ path: shotPath });
+      await testInfo.attach('route-after-build', { path: shotPath, contentType: 'image/png' });
+    } catch {
+      // ignore screenshot errors
+    }
+
     // Diagnostics: ensure the route line is actually created.
     const anyRouteLineCount = await page.locator('.metravel-route-line').count();
-    const pathRouteLineCount = await page.locator('.leaflet-overlay-pane svg path.metravel-route-line').count();
+    const pathRouteLineCount = await page.locator('svg path.metravel-route-line').count();
     // Keep visible in CI output to debug mismatches with local manual checks.
     console.info('[e2e] route line diagnostics', {
       anyRouteLineCount,
@@ -566,7 +586,7 @@ test.describe('Map Page (/map) - smoke e2e', () => {
 
     // Assert the route line exists in Leaflet overlay pane as a real SVG path.
     // If Leaflet renders via Canvas, there will be no SVG path, and this test must fail.
-    const routeLine = page.locator('.leaflet-overlay-pane svg path.metravel-route-line').first();
+    const routeLine = page.locator('svg path.metravel-route-line').first();
 
     await expect(routeLine).toBeVisible({ timeout: 60_000 });
 
@@ -589,88 +609,106 @@ test.describe('Map Page (/map) - smoke e2e', () => {
 
     // Stronger assertions: the polyline must be visually drawable (stroke + opacity + width)
     // and must be inside the visible map viewport (intersects the map container).
-    await expect
-      .poll(async () => {
-        const mapBox = await mapContainer.boundingBox().catch(() => null);
-        const lineBox = await routeLine.boundingBox().catch(() => null);
-        if (!mapBox || !lineBox) {
-          return { ok: false, reason: 'missing-bbox' };
-        }
+    const computeVisibility = async () => {
+      const mapBox = await mapContainer.boundingBox().catch(() => null);
+      const lineBox = await routeLine.boundingBox().catch(() => null);
+      if (!mapBox || !lineBox) {
+        return { ok: false, reason: 'missing-bbox' } as any;
+      }
 
-        const style = await routeLine.evaluate((el) => {
-          const s = window.getComputedStyle(el as Element);
-          const anyEl = el as any;
-          const attrStroke = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke') : null;
-          const attrOpacity = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke-opacity') : null;
-          const attrWidth = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke-width') : null;
-          let totalLength = 0;
-          try {
-            if (typeof anyEl.getTotalLength === 'function') {
-              totalLength = Number(anyEl.getTotalLength()) || 0;
-            }
-          } catch {
-            totalLength = 0;
+      const style = await routeLine.evaluate((el) => {
+        const s = window.getComputedStyle(el as Element);
+        const anyEl = el as any;
+        const attrStroke = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke') : null;
+        const attrOpacity = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke-opacity') : null;
+        const attrWidth = typeof anyEl.getAttribute === 'function' ? anyEl.getAttribute('stroke-width') : null;
+        let totalLength = 0;
+        try {
+          if (typeof anyEl.getTotalLength === 'function') {
+            totalLength = Number(anyEl.getTotalLength()) || 0;
           }
-          return {
-            display: s.display,
-            visibility: s.visibility,
-            stroke: s.stroke,
-            strokeOpacity: s.strokeOpacity,
-            strokeWidth: s.strokeWidth,
-            opacity: s.opacity,
-            attrStroke,
-            attrOpacity,
-            attrWidth,
-            totalLength,
-          };
-        }).catch(() => null);
-
-        if (!style) return { ok: false, reason: 'no-style' };
-
-        const stroke = String(style.stroke || style.attrStroke || '').trim();
-        const opacityRaw = style.strokeOpacity || style.opacity || style.attrOpacity;
-        const widthRaw = style.strokeWidth || style.attrWidth;
-        const opacity = Number(String(opacityRaw ?? '').replace('px', ''));
-        const width = Number(String(widthRaw ?? '').replace('px', ''));
-
-        const hasDrawableStroke = !!stroke && stroke !== 'none' && stroke !== 'transparent' && stroke !== 'rgba(0, 0, 0, 0)';
-        const hasOpacity = Number.isFinite(opacity) && opacity > 0.05;
-        const hasWidth = Number.isFinite(width) && width >= 2;
-
-        const minSizeOk = (lineBox.width + lineBox.height) > 6;
-        const hasLength = Number(style.totalLength) > 10;
-
-        const intersects = !(
-          lineBox.x > mapBox.x + mapBox.width ||
-          lineBox.x + lineBox.width < mapBox.x ||
-          lineBox.y > mapBox.y + mapBox.height ||
-          lineBox.y + lineBox.height < mapBox.y
-        );
-
-        const ok =
-          style.display !== 'none' &&
-          style.visibility !== 'hidden' &&
-          hasDrawableStroke &&
-          hasOpacity &&
-          hasWidth &&
-          minSizeOk &&
-          hasLength &&
-          intersects;
-
+        } catch {
+          totalLength = 0;
+        }
         return {
-          ok,
-          hasDrawableStroke,
-          hasOpacity,
-          hasWidth,
-          minSizeOk,
-          hasLength,
-          intersects,
-          style,
-          mapBox,
-          lineBox,
+          display: s.display,
+          visibility: s.visibility,
+          stroke: s.stroke,
+          strokeOpacity: (s as any).strokeOpacity,
+          strokeWidth: s.strokeWidth,
+          opacity: s.opacity,
+          attrStroke,
+          attrOpacity,
+          attrWidth,
+          totalLength,
         };
-      }, { timeout: 60_000 })
-      .toMatchObject({ ok: true });
+      }).catch(() => null);
+
+      if (!style) return { ok: false, reason: 'no-style' } as any;
+
+      const stroke = String(style.stroke || style.attrStroke || '').trim();
+      const opacityRaw = style.strokeOpacity || style.opacity || style.attrOpacity;
+      const widthRaw = style.strokeWidth || style.attrWidth;
+      const opacity = Number(String(opacityRaw ?? '').replace('px', ''));
+      const width = Number(String(widthRaw ?? '').replace('px', ''));
+
+      const hasDrawableStroke = !!stroke && stroke !== 'none' && stroke !== 'transparent' && stroke !== 'rgba(0, 0, 0, 0)';
+      const hasOpacity = Number.isFinite(opacity) && opacity > 0.05;
+      const hasWidth = Number.isFinite(width) && width >= 2;
+
+      const minSizeOk = (lineBox.width + lineBox.height) > 6;
+      const hasLength = Number(style.totalLength) > 10;
+
+      const intersects = !(
+        lineBox.x > mapBox.x + mapBox.width ||
+        lineBox.x + lineBox.width < mapBox.x ||
+        lineBox.y > mapBox.y + mapBox.height ||
+        lineBox.y + lineBox.height < mapBox.y
+      );
+
+      const basicOk =
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        hasDrawableStroke &&
+        hasOpacity &&
+        hasWidth &&
+        minSizeOk &&
+        hasLength &&
+        intersects;
+
+      const loadingTextVisible = await page
+        .getByText('Загрузка карты...', { exact: true })
+        .isVisible()
+        .catch(() => false);
+
+      return {
+        ok: basicOk && !loadingTextVisible,
+        basicOk,
+        hasDrawableStroke,
+        hasOpacity,
+        hasWidth,
+        minSizeOk,
+        hasLength,
+        intersects,
+        loadingTextVisible,
+        style,
+        mapBox,
+        lineBox,
+      };
+    };
+
+    let last: any = null;
+    const started = Date.now();
+    while (Date.now() - started < 60_000) {
+      last = await computeVisibility();
+      if (last?.ok) break;
+      await page.waitForTimeout(250);
+    }
+
+    if (!last?.ok) {
+      console.info('[e2e] route line visibility failure', last);
+    }
+    expect(last?.ok, `route line must be visible on top (diagnostics: ${JSON.stringify(last)})`).toBe(true);
   });
 
   test('desktop: changing radius persists to localStorage (map-filters)', async ({ page }) => {

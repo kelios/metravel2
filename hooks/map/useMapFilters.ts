@@ -70,13 +70,14 @@ export function useMapFilters() {
   // Загрузка фильтров с сервера
   useEffect(() => {
     let isMounted = true;
+    const controller = new AbortController();
 
     const loadFilters = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        const data = await fetchFiltersMap();
+        const data = await fetchFiltersMap({ signal: controller.signal });
 
         if (!isMounted) return;
 
@@ -105,6 +106,7 @@ export function useMapFilters() {
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
   }, []);
 
