@@ -40,6 +40,24 @@ const ORS_API_KEY = process.env.EXPO_PUBLIC_ORS_API_KEY || undefined;
 
 type Props = MapProps;
 
+const MapRouteViaUseMap: React.FC<{
+  useMapHook: () => any;
+  leaflet: any;
+  routeCoordinates: Array<{ lat: number; lng: number }>;
+}> = ({ useMapHook, leaflet, routeCoordinates }) => {
+  const map = useMapHook?.();
+  if (!map || !leaflet) return null;
+  return (
+    <MapRoute
+      map={map}
+      leaflet={leaflet}
+      routeCoordinates={routeCoordinates as any}
+      isOptimal={true}
+      disableFitBounds
+    />
+  );
+};
+
 const MapPageComponent: React.FC<Props> = (props) => {
   const {
     travel = { data: [] },
@@ -907,221 +925,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
           {renderLoader(loaderMessage)}
         </View>
       )}
-      {Platform.OS === 'web' && (
-        <style>
-          {`
-          /* Leaflet core layout: ensure panes/tiles are positioned correctly.
-             Without these rules, tiles can render as "islands" even if they load successfully. */
-          .leaflet-container {
-            position: relative;
-            overflow: hidden !important;
-            outline: 0;
-          }
-
-          .leaflet-container img.leaflet-tile {
-            max-width: none !important;
-          }
-
-          .leaflet-pane,
-          .leaflet-map-pane,
-          .leaflet-tile-pane,
-          .leaflet-overlay-pane,
-          .leaflet-shadow-pane,
-          .leaflet-marker-pane,
-          .leaflet-tooltip-pane,
-          .leaflet-popup-pane {
-            position: absolute !important;
-            top: 0;
-            left: 0;
-          }
-
-          /* Enforce correct stacking order: route overlay must be above tiles */
-          .leaflet-tile-pane { z-index: 200 !important; }
-          .leaflet-overlay-pane { z-index: 400 !important; }
-          .leaflet-metravelRoutePane-pane { 
-            /* keep above other overlay panes (often 560) but below markers (600) */
-            z-index: 590 !important; 
-            pointer-events: none !important;
-          }
-          .leaflet-shadow-pane { z-index: 500 !important; }
-          .leaflet-marker-pane { z-index: 600 !important; }
-          .leaflet-tooltip-pane { z-index: 650 !important; }
-          .leaflet-popup-pane { z-index: 700 !important; }
-
-          /* SVG renderer container - ensure proper sizing and visibility */
-          .leaflet-overlay-pane svg {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            overflow: visible !important;
-          }
-
-          .leaflet-metravelRoutePane-pane svg {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            overflow: visible !important;
-          }
-
-          .leaflet-overlay-pane svg path {
-            pointer-events: none !important;
-          }
-
-          .leaflet-metravelRoutePane-pane svg path {
-            pointer-events: none !important;
-          }
-
-          /* Route line styling */
-          .metravel-route-line {
-            stroke: ${(colors as any).primary || '#7a9d8f'} !important;
-            stroke-opacity: 0.9 !important;
-            stroke-width: 6px !important;
-            stroke-linecap: round !important;
-            stroke-linejoin: round !important;
-            fill: none !important;
-          }
-
-          /* Fallback for paths without class */
-          .leaflet-overlay-pane svg path[stroke],
-          .leaflet-metravelRoutePane-pane svg path[stroke] {
-            stroke-opacity: 0.9 !important;
-            stroke-width: 5px !important;
-            stroke-linecap: round !important;
-            stroke-linejoin: round !important;
-            fill: none !important;
-          }
-
-          .leaflet-marker-icon,
-          .leaflet-marker-shadow {
-            position: absolute !important;
-            left: 0;
-            top: 0;
-            display: block !important;
-          }
-
-          .leaflet-div-icon {
-            background: transparent;
-            border: none;
-          }
-
-          .leaflet-tile {
-            position: absolute !important;
-            width: 256px;
-            height: 256px;
-            opacity: 0;
-          }
-
-          .leaflet-tile.leaflet-tile-loaded {
-            opacity: 1;
-          }
-
-          /* Mobile: ensure Leaflet receives touch drag gestures instead of page scroll */
-          .leaflet-container {
-            touch-action: none;
-            -ms-touch-action: none;
-            overscroll-behavior: none;
-          }
-
-          .leaflet-popup-content-wrapper {
-            background: ${(colors as any).surface} !important;
-            border: 1px solid ${(colors as any).border} !important;
-            border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.08) !important;
-            padding: 0 !important;
-            max-height: calc(100vh - 200px);
-            overflow: hidden;
-            -webkit-overflow-scrolling: touch;
-          }
-
-          .leaflet-popup-tip {
-            background: ${(colors as any).surface} !important;
-            border: 1px solid ${(colors as any).border} !important;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
-          }
-
-          .leaflet-popup-content {
-            box-sizing: border-box;
-            margin: 0 !important;
-            padding: ${DESIGN_TOKENS.spacing.md}px !important;
-            width: min(380px, calc(100vw - 48px)) !important;
-            max-height: calc(100vh - 220px);
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-          }
-
-          .leaflet-popup-close-button {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 28px !important;
-            height: 28px !important;
-            line-height: 26px !important;
-            position: absolute !important;
-            top: 8px !important;
-            right: 8px !important;
-            margin: 0 !important;
-            border-radius: 999px !important;
-            border: 1px solid ${(colors as any).border} !important;
-            background: ${(colors as any).surface} !important;
-            color: ${(colors as any).textMuted} !important;
-            font-size: 18px !important;
-            z-index: 2 !important;
-          }
-
-          .leaflet-popup-close-button:hover {
-            color: ${(colors as any).text} !important;
-            background: ${(colors as any).backgroundSecondary} !important;
-          }
-
-          @media (max-width: 640px) {
-            .leaflet-popup-content-wrapper {
-              max-height: calc(100vh - 150px);
-            }
-            .leaflet-popup-content {
-              max-height: calc(100vh - 170px);
-            }
-          }
-
-          html[data-theme='dark'] .leaflet-popup-content-wrapper,
-          html[data-theme='dark'] .leaflet-popup-tip {
-            background: ${(colors as any).surface} !important;
-            opacity: 1 !important;
-          }
-
-          html[data-theme='dark'] .leaflet-popup-content-wrapper {
-            color: ${(colors as any).text} !important;
-            border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15) !important;
-            border: 1px solid ${(colors as any).border} !important;
-          }
-
-          html[data-theme='dark'] .leaflet-popup-content {
-            margin: ${DESIGN_TOKENS.spacing.md}px !important;
-            color: ${(colors as any).text} !important;
-          }
-
-          html[data-theme='dark'] .leaflet-popup-close-button {
-            display: block !important;
-            width: 28px !important;
-            height: 28px !important;
-            line-height: 26px !important;
-            text-align: center !important;
-            border-radius: 999px !important;
-            border: 1px solid ${(colors as any).border} !important;
-            background: ${(colors as any).surface} !important;
-            color: ${(colors as any).textMuted} !important;
-            font-size: 18px !important;
-            transition: all 0.2s !important;
-          }
-
-          html[data-theme='dark'] .leaflet-popup-close-button:hover {
-            color: ${(colors as any).text} !important;
-            background: ${(colors as any).backgroundSecondary} !important;
-            transform: scale(1.05) !important;
-          }
-          `}
-        </style>
-      )}
       {noPointsAlongRoute && (
         <View
           testID="no-points-message"
@@ -1193,14 +996,12 @@ const MapPageComponent: React.FC<Props> = (props) => {
 	          {mode === 'route' &&
 	            Array.isArray(routeLineLatLngObjects) &&
 	            routeLineLatLngObjects.length >= 2 && (
-	              // Prefer imperative Leaflet polyline: guarantees pane/renderer setup + bringToFront.
-	              mapInstance && L ? (
-	                <MapRoute
-	                  map={mapInstance}
+	              // Use Leaflet map instance directly via useMap hook to avoid relying on external state.
+	              typeof useMap === 'function' && L ? (
+	                <MapRouteViaUseMap
+	                  useMapHook={useMap as any}
 	                  leaflet={L}
 	                  routeCoordinates={routeLineLatLngObjects}
-	                  isOptimal={true}
-	                  disableFitBounds
 	                />
 	              ) : typeof Polyline === 'function' ? (
 	                <Polyline

@@ -45,6 +45,9 @@ export function useTravelDetails(): UseTravelDetailsReturn {
       isId
         ? fetchTravel(idNum, { signal })
         : fetchTravelBySlug(normalizedSlug, { signal }),
+    // Travel page is a core landing route; retries can keep the UI in "loading"
+    // for a long time when API is misconfigured/unreachable (hurts LCP).
+    retry: Platform.OS === 'web' ? false : undefined,
     staleTime: 600_000, // 10 минут — пока данные "свежие", повторный заход не покажет сплэш-лоадер
     gcTime: 10 * 60 * 1000,
     // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала

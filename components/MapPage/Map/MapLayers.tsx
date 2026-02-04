@@ -138,8 +138,13 @@ export const MapLayers: React.FC<MapLayersProps> = React.memo(({
         <Marker
           position={[validUserLocation.lat, validUserLocation.lng]}
           icon={userLocationIcon}
+          eventHandlers={{
+            click: (e: any) => {
+              e.originalEvent?.stopPropagation();
+            },
+          }}
         >
-          <Popup>Ваше местоположение</Popup>
+          <Popup className="metravel-route-marker-popup">Вы здесь</Popup>
         </Marker>
       )}
     </>

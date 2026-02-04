@@ -17,12 +17,18 @@ const webOriginApi =
         ? `${window.location.origin}/api`
         : '';
 
+const isWebLocalHost =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    typeof window.location?.hostname === 'string' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 const rawApiUrl: string =
     process.env.NODE_ENV === 'test'
         ? 'http://example.test/api'
         : (envApiUrl
             ? envApiUrl
-            : (Platform.OS === 'web' && (isE2E || isLocalApi) && webOriginApi
+            : (Platform.OS === 'web' && (isE2E || isLocalApi) && isWebLocalHost && webOriginApi
                 ? webOriginApi
                 : ''));
 if (!rawApiUrl) {

@@ -17,6 +17,19 @@ export const defaultQueryOptions: DefaultOptions = {
     
     // Количество повторных попыток при ошибке
     retry: (failureCount, error: any) => {
+      const message = String(error?.message || '').toLowerCase()
+
+      // Не повторяем запросы при таймаутах/сетевых сбоях:
+      // иначе мы искусственно растягиваем "loading" и можем сильно ухудшить LCP.
+      if (
+        message.includes('превышено время ожидания') ||
+        message.includes('timeout') ||
+        message.includes('failed to fetch') ||
+        message.includes('network request failed')
+      ) {
+        return false
+      }
+
       // Не повторяем для ошибок 4xx (клиентские ошибки)
       if (error?.status >= 400 && error?.status < 500) {
         return false;

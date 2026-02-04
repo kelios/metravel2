@@ -139,19 +139,37 @@ const MapRoute: React.FC<MapRouteProps> = ({
         return;
       }
 
-      if (!disableFitBounds) {
-        try {
-          const bounds = (group?.getBounds?.() ?? line.getBounds?.()) as any;
-          if (bounds.isValid()) {
+      try {
+        const bounds = (group?.getBounds?.() ?? line.getBounds?.()) as any;
+        const boundsValid = Boolean(bounds && typeof bounds.isValid === 'function' && bounds.isValid());
+
+        if (boundsValid) {
+          let shouldFit = !disableFitBounds;
+
+          // If "disableFitBounds" is set, still fit when the route is completely outside current viewport.
+          if (disableFitBounds) {
+            try {
+              const viewportBounds = typeof map.getBounds === 'function' ? map.getBounds() : null;
+              if (viewportBounds && typeof viewportBounds.intersects === 'function') {
+                // Pad slightly to avoid edge cases where bounds barely touch.
+                const padded = typeof bounds.pad === 'function' ? bounds.pad(0.02) : bounds;
+                shouldFit = !viewportBounds.intersects(padded);
+              }
+            } catch {
+              // noop
+            }
+          }
+
+          if (shouldFit) {
             map.fitBounds(bounds.pad(0.1), {
               animate: true,
               duration: 0.5,
               maxZoom: 14,
             });
           }
-        } catch (error) {
-          console.warn('Error centering on route:', error);
         }
+      } catch (error) {
+        console.warn('Error centering on route:', error);
       }
 
       setTimeout(() => {
