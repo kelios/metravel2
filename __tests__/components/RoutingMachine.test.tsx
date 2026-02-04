@@ -3,36 +3,16 @@ import { render, waitFor } from '@testing-library/react-native';
 import RoutingMachine from '@/components/MapPage/RoutingMachine';
 import { clearResolvedRouteKeys } from '@/components/MapPage/useRouting';
 
-// Mock Leaflet
-const mockLeaflet = {
-  latLng: jest.fn((lat, lng) => ({ lat, lng, distanceTo: jest.fn(() => 1000) })),
-  polyline: jest.fn(() => ({
-    addTo: jest.fn(),
-    getBounds: jest.fn(() => ({ pad: jest.fn(() => ({})) })),
-  })),
-};
-
-// Mock window.L
-Object.defineProperty(window, 'L', {
-  value: mockLeaflet,
-  writable: true,
-});
-
 // Mock fetch
 global.fetch = jest.fn();
 
 describe('RoutingMachine', () => {
-  const mockMap = {
-    removeLayer: jest.fn(),
-  };
-
   const mockSetRoutingLoading = jest.fn();
   const mockSetErrors = jest.fn();
   const mockSetRouteDistance = jest.fn();
   const mockSetFullRouteCoords = jest.fn();
 
   const defaultProps: any = {
-    map: mockMap,
     routePoints: [[27.5590, 53.9006], [27.5700, 53.9100]] as [number, number][],
     transportMode: 'car' as const,
     setRoutingLoading: mockSetRoutingLoading,
@@ -55,30 +35,6 @@ describe('RoutingMachine', () => {
     render(<RoutingMachine {...defaultProps} />);
     // Component renders successfully with 2 route points
     expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
-  });
-
-  it('draws polyline using L prop when window.L is not available', async () => {
-    const prevWindowL = (window as any).L;
-    try {
-      ;(window as any).L = undefined;
-
-      render(<RoutingMachine {...defaultProps} L={mockLeaflet} />);
-
-      await waitFor(() => {
-        expect(mockLeaflet.polyline).toHaveBeenCalled();
-      });
-    } finally {
-      ;(window as any).L = prevWindowL;
-    }
-  });
-
-  it('converts routePoints [lng,lat] to Leaflet latLng(lat,lng) (prevents Africa jump)', async () => {
-    render(<RoutingMachine {...defaultProps} />);
-
-    await waitFor(() => {
-      // First point in defaultProps is [27.5590, 53.9006] => lat=53.9006, lng=27.5590
-      expect(mockLeaflet.latLng).toHaveBeenCalledWith(53.9006, 27.559);
-    });
   });
 
   it('should not call setRoutingLoading when less than 2 points', async () => {

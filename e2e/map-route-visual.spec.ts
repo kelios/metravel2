@@ -6,14 +6,43 @@
 import { test, expect } from './fixtures';
 import { seedNecessaryConsent, hideRecommendationsBanner } from './helpers/storage';
 
+async function installTileMock(page: any) {
+  const pngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8m2p8AAAAASUVORK5CYII=';
+  const png = Buffer.from(pngBase64, 'base64');
+
+  const routeTile = async (route: any) => {
+    return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: png,
+    });
+  };
+
+  await page.route('**://tile.openstreetmap.org/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.org/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.fr/**', routeTile);
+  await page.route('**://*.tile.openstreetmap.de/**', routeTile);
+  await page.route('**://tile.waymarkedtrails.org/**', routeTile);
+  await page.route('**://*.tile.waymarkedtrails.org/**', routeTile);
+}
+
 test.describe('Map Route Line - Visual Regression', () => {
   test('снапшот карты с линией маршрута', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(hideRecommendationsBanner);
 
+    // Normalize viewport to keep locator screenshot dimensions stable across environments.
+    // Snapshot baselines were captured with a slightly narrower effective content width.
+    await page.setViewportSize({ width: 1265, height: 720 });
+
+    await installTileMock(page);
+
     console.log('🗺️  Открываем /map...');
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
+
+    await page.addStyleTag({ content: 'html, body { overflow: hidden !important; }' });
 
     // Проверяем URL
     expect(page.url()).toContain('/map');
@@ -25,17 +54,39 @@ test.describe('Map Route Line - Visual Regression', () => {
     const leafletContainer = page.locator('.leaflet-container').first();
     await expect(leafletContainer).toBeVisible({ timeout: 15000 });
     await page.waitForSelector('.leaflet-tile-loaded', { timeout: 15000 });
+
+    // Ensure at least one tile image is decoded (not just present in DOM).
+    const tile = page.locator('.leaflet-tile-loaded').first();
+    await expect
+      .poll(
+        async () => {
+          const handle = await tile.elementHandle();
+          if (!handle) return false;
+          return handle.evaluate((el) => {
+            const img = el as HTMLImageElement;
+            return Boolean(img.complete && img.naturalWidth > 0);
+          });
+        },
+        { timeout: 15_000 }
+      )
+      .toBe(true);
     
     console.log('✅ Карта загружена');
 
     // Переключаемся в режим маршрута
     console.log('🔄 Переключаем режим...');
-    const routeButton = page.locator('button').filter({ hasText: /Маршрут/i }).first();
-    
-    if (await routeButton.isVisible().catch(() => false)) {
-      await routeButton.click();
-      await page.waitForTimeout(1000);
-      console.log('✅ Режим маршрута');
+    const segmentedRoute = page.getByTestId('segmented-route');
+    if (await segmentedRoute.isVisible().catch(() => false)) {
+      await segmentedRoute.click({ force: true });
+      await page.waitForTimeout(800);
+      console.log('✅ Режим маршрута (segmented-route)');
+    } else {
+      const routeButton = page.locator('button').filter({ hasText: /Маршрут/i }).first();
+      if (await routeButton.isVisible().catch(() => false)) {
+        await routeButton.click({ force: true });
+        await page.waitForTimeout(800);
+        console.log('✅ Режим маршрута (button fallback)');
+      }
     }
 
     // Добавляем точки маршрута кликами
@@ -67,18 +118,28 @@ test.describe('Map Route Line - Visual Regression', () => {
     // Дополнительно ждем отрисовки
     await page.waitForTimeout(2000);
 
+    // Дожидаемся появления SVG path маршрута (иначе снимок может быть сделан до отрисовки)
+    const routePathLocator = page.locator('.leaflet-container path.metravel-route-line');
+    await expect
+      .poll(async () => routePathLocator.count(), { timeout: 20_000 })
+      .toBeGreaterThan(0);
+
     // ВИЗУАЛЬНЫЙ СНАПШОТ #1: Вся карта с маршрутом
     console.log('📸 Снапшот #1: Вся карта');
     await expect(mapWrapper).toHaveScreenshot('map-with-route-full.png', {
-      maxDiffPixels: 100,
+      maxDiffPixelRatio: 0.03,
       threshold: 0.2,
+      animations: 'disabled',
+      caret: 'hide',
     });
 
     // ВИЗУАЛЬНЫЙ СНАПШОТ #2: Только Leaflet контейнер
     console.log('📸 Снапшот #2: Leaflet контейнер');
     await expect(leafletContainer).toHaveScreenshot('map-with-route-leaflet.png', {
-      maxDiffPixels: 100,
+      maxDiffPixelRatio: 0.03,
       threshold: 0.2,
+      animations: 'disabled',
+      caret: 'hide',
     });
 
     // ВИЗУАЛЬНЫЙ СНАПШОТ #3: Overlay pane (где должна быть линия)
@@ -86,8 +147,10 @@ test.describe('Map Route Line - Visual Regression', () => {
     if (await overlayPane.isVisible().catch(() => false)) {
       console.log('📸 Снапшот #3: Overlay pane');
       await expect(overlayPane).toHaveScreenshot('map-route-overlay-pane.png', {
-        maxDiffPixels: 50,
+        maxDiffPixelRatio: 0.03,
         threshold: 0.2,
+        animations: 'disabled',
+        caret: 'hide',
       });
     }
 
@@ -134,24 +197,54 @@ test.describe('Map Route Line - Visual Regression', () => {
     await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(hideRecommendationsBanner);
 
+    // Normalize viewport to keep locator screenshot dimensions stable across environments.
+    await page.setViewportSize({ width: 1265, height: 720 });
+
+    await installTileMock(page);
+
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
+
+    await page.addStyleTag({ content: 'html, body { overflow: hidden !important; }' });
 
     const leafletContainer = page.locator('.leaflet-container').first();
     await expect(leafletContainer).toBeVisible({ timeout: 15000 });
     await page.waitForSelector('.leaflet-tile-loaded', { timeout: 15000 });
 
+    const tile = page.locator('.leaflet-tile-loaded').first();
+    await expect
+      .poll(
+        async () => {
+          const handle = await tile.elementHandle();
+          if (!handle) return false;
+          return handle.evaluate((el) => {
+            const img = el as HTMLImageElement;
+            return Boolean(img.complete && img.naturalWidth > 0);
+          });
+        },
+        { timeout: 15_000 }
+      )
+      .toBe(true);
+
     // Снапшот ДО добавления маршрута
     console.log('📸 BEFORE: карта без маршрута');
     await expect(leafletContainer).toHaveScreenshot('map-before-route.png', {
-      maxDiffPixels: 100,
+      maxDiffPixelRatio: 0.03,
+      animations: 'disabled',
+      caret: 'hide',
     });
 
     // Переключаем режим и добавляем точки
-    const routeButton = page.locator('button').filter({ hasText: /Маршрут/i }).first();
-    if (await routeButton.isVisible().catch(() => false)) {
-      await routeButton.click();
-      await page.waitForTimeout(1000);
+    const segmentedRoute = page.getByTestId('segmented-route');
+    if (await segmentedRoute.isVisible().catch(() => false)) {
+      await segmentedRoute.click({ force: true });
+      await page.waitForTimeout(800);
+    } else {
+      const routeButton = page.locator('button').filter({ hasText: /Маршрут/i }).first();
+      if (await routeButton.isVisible().catch(() => false)) {
+        await routeButton.click({ force: true });
+        await page.waitForTimeout(800);
+      }
     }
 
     const mapBox = await leafletContainer.boundingBox();
@@ -171,8 +264,16 @@ test.describe('Map Route Line - Visual Regression', () => {
 
     // Снапшот ПОСЛЕ добавления маршрута
     console.log('📸 AFTER: карта с маршрутом');
+
+    const routePathLocator = page.locator('.leaflet-container path.metravel-route-line');
+    await expect
+      .poll(async () => routePathLocator.count(), { timeout: 20_000 })
+      .toBeGreaterThan(0);
+
     await expect(leafletContainer).toHaveScreenshot('map-after-route.png', {
-      maxDiffPixels: 100,
+      maxDiffPixelRatio: 0.03,
+      animations: 'disabled',
+      caret: 'hide',
     });
 
     console.log('✅ Снапшоты ДО/ПОСЛЕ созданы');

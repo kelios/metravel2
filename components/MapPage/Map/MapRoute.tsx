@@ -4,12 +4,14 @@ import { useThemedColors } from '@/hooks/useTheme';
 
 interface MapRouteProps {
   map: any;
+  leaflet?: any;
   routeCoordinates: LatLng[];
   isOptimal: boolean;
 }
 
 const MapRoute: React.FC<MapRouteProps> = ({
   map,
+  leaflet: leafletFromProps,
   routeCoordinates,
   isOptimal,
 }) => {
@@ -19,8 +21,8 @@ const MapRoute: React.FC<MapRouteProps> = ({
   useEffect(() => {
     if (!map || typeof window === 'undefined') return;
 
-    const L = (window as any).L;
-    if (!L) return;
+    const leaflet = leafletFromProps ?? (window as any).L;
+    if (!leaflet) return;
 
     // Remove old polyline
     if (polylineRef.current) {
@@ -47,7 +49,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
 
     // Draw new polyline if we have coordinates
     if (validCoords.length >= 2) {
-      const latlngs = validCoords.map((coord) => L.latLng(coord.lat, coord.lng));
+      const latlngs = validCoords.map((coord) => leaflet.latLng(coord.lat, coord.lng));
 
       // Determine line style based on route status
       // Using primary for optimal routes, danger for fallback
@@ -56,7 +58,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
       const opacity = isOptimal ? 0.85 : 0.65;
       const dashArray = isOptimal ? null : '10, 10';
 
-      const line = L.polyline(latlngs, {
+      const line = leaflet.polyline(latlngs, {
         color,
         weight,
         opacity,
@@ -95,7 +97,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
         polylineRef.current = null;
       }
     };
-  }, [map, routeCoordinates, isOptimal, primary, danger]);
+  }, [map, leafletFromProps, routeCoordinates, isOptimal, primary, danger]);
 
   return null;
 };

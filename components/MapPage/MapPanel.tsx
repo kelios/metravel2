@@ -13,6 +13,7 @@ interface MapPanelProps {
     travelsData: any[];
     coordinates: LatLng | null;
     routePoints?: [number, number][];
+    fullRouteCoords?: [number, number][];
     placesAlongRoute?: any[];
     mode?: 'radius' | 'route';
     setRoutePoints?: (points: [number, number][]) => void;
@@ -49,6 +50,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                travelsData,
                                                coordinates,
                                                routePoints = [],
+                                               fullRouteCoords = [],
                                                placesAlongRoute = [],
                                                mode = 'radius',
                                                setRoutePoints = () => {},
@@ -153,6 +155,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                     travel={travelProp}
                     coordinates={safeCoordinates}
                     routePoints={routePoints}
+                    fullRouteCoords={fullRouteCoords}
                     placesAlongRoute={placesAlongRoute}
                     mode={mode}
                     setRoutePoints={setRoutePoints}

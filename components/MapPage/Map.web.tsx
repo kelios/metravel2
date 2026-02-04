@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-nativ
 import * as Location from 'expo-location';
 
 import RoutingMachine from './RoutingMachine';
+import MapRoute from './Map/MapRoute';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { isValidCoordinate } from '@/utils/coordinateValidator';
@@ -44,6 +45,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     travel = { data: [] },
     coordinates,
     routePoints,
+    fullRouteCoords,
     onMapClick,
     mode,
     transportMode,
@@ -627,7 +629,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
       const map = useMap();
       // Don't render RoutingMachine until map is available
       if (!map) return null;
-      return <RoutingMachine {...routeProps} map={map} L={L} />;
+      return <RoutingMachine {...routeProps} />;
     };
   }, [rl, L]);
 
@@ -832,6 +834,36 @@ const MapPageComponent: React.FC<Props> = (props) => {
     typeof useMapEvents === 'function'
   );
 
+  const routeLineLatLngObjects = useMemo(() => {
+    if (mode !== 'route') return [] as Array<{ lat: number; lng: number }>;
+
+    const candidate =
+      Array.isArray(fullRouteCoords) && fullRouteCoords.length >= 2
+        ? fullRouteCoords
+        : routePointsForRouting;
+
+    const valid = (candidate || [])
+      .filter(([lng, lat]) =>
+        Number.isFinite(lng) &&
+        Number.isFinite(lat) &&
+        lng >= -180 && lng <= 180 &&
+        lat >= -90 && lat <= 90
+      )
+      .map(([lng, lat]) => ({ lat, lng }));
+
+    return valid.length >= 2 ? valid : ([] as Array<{ lat: number; lng: number }>);
+  }, [fullRouteCoords, mode, routePointsForRouting]);
+
+  const MapRouteWithMapInner = useMemo(() => {
+    if (!rl) return null;
+    const { useMap } = rl;
+    return function MapRouteInner(routeProps: any) {
+      const map = useMap();
+      if (!map) return null;
+      return <MapRoute {...routeProps} map={map} leaflet={L} />;
+    };
+  }, [rl, L]);
+
   return (
     <View style={styles.wrapper} testID="map-leaflet-wrapper">
       {Platform.OS === 'web' && (
@@ -911,7 +943,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           .leaflet-tile-pane { z-index: 200 !important; }
           .leaflet-overlay-pane { z-index: 400 !important; }
           .leaflet-metravelRoutePane-pane { 
-            z-index: 560 !important; 
+            z-index: 450 !important; 
             pointer-events: none !important;
           }
           .leaflet-shadow-pane { z-index: 500 !important; }
@@ -1142,6 +1174,17 @@ const MapPageComponent: React.FC<Props> = (props) => {
             useMapEvents={useMapEvents}
             hintCenter={hintCenterLatLng}
           />
+
+          {/* Alternative imperative route line renderer */}
+          {mode === 'route' &&
+            Array.isArray(routeLineLatLngObjects) &&
+            routeLineLatLngObjects.length >= 2 &&
+            MapRouteWithMapInner && (
+              <MapRouteWithMapInner
+                routeCoordinates={routeLineLatLngObjects}
+                isOptimal={true}
+              />
+            )}
 
           {/* Route markers */}
           <RouteMarkersLayer

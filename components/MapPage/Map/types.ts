@@ -24,6 +24,7 @@ export interface MapProps {
   travel?: { data?: Point[] };
   coordinates: Coordinates;
   routePoints: [number, number][];
+  fullRouteCoords?: [number, number][];
   setRoutePoints?: (points: [number, number][]) => void;
   onMapClick: (lng: number, lat: number) => void;
   mode: MapMode;

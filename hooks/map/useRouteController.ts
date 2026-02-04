@@ -3,7 +3,7 @@
  * @module hooks/map/useRouteController
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
@@ -307,26 +307,6 @@ export function useRouteController(
     },
     [mapUiApi]
   );
-
-  // Automatically build route when points are added
-  const lastPointsCountRef = useRef(0);
-  useEffect(() => {
-    if (mode === 'route' && routeStorePoints.length >= 2) {
-      // Only trigger if the number of points actually changed
-      if (lastPointsCountRef.current !== routeStorePoints.length) {
-        lastPointsCountRef.current = routeStorePoints.length;
-
-        const points: [number, number][] = routeStorePoints.map((p) => [
-          p.coordinates.lng,
-          p.coordinates.lat,
-        ]);
-        console.info('[useRouteController] Auto-building route with points:', points);
-        setRoutePoints(points);
-      }
-    } else {
-      lastPointsCountRef.current = 0;
-    }
-  }, [mode, routeStorePoints.length, routeStorePoints, setRoutePoints]);
 
   return {
     mode,

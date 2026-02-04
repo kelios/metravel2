@@ -1,5 +1,5 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LatLng } from '@/types/coordinates';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
@@ -73,6 +73,91 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const lastUserLocationKeyRef = useRef<string | null>(null);
   const lastRadiusKeyRef = useRef<string | null>(null);
 
+  const debugEnabled = useMemo(() => {
+    try {
+      if (typeof __DEV__ === 'undefined' || !__DEV__) return false;
+      if (typeof window === 'undefined') return false;
+      const sp = new URLSearchParams(window.location.search);
+      const fromQuery = sp.has('mapDebug') && String(sp.get('mapDebug') ?? '1') !== '0';
+      let fromStorage = false;
+      try {
+        fromStorage = window.localStorage?.getItem('metravel.mapDebug') === '1';
+      } catch {
+        fromStorage = false;
+      }
+      if (fromQuery) {
+        try {
+          window.localStorage?.setItem('metravel.mapDebug', '1');
+        } catch {
+          // noop
+        }
+      }
+      return fromQuery || fromStorage;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const [debugOpen, setDebugOpen] = useState(true);
+  const [debugSnapshot, setDebugSnapshot] = useState<any>(null);
+  const lastDebugSnapshotTsRef = useRef(0);
+
+  const refreshDebugSnapshot = useCallback(
+    (reason?: string) => {
+      try {
+        if (!debugEnabled) return;
+        if (typeof window === 'undefined') return;
+        const now = Date.now();
+        if (now - lastDebugSnapshotTsRef.current < 250) return;
+        lastDebugSnapshotTsRef.current = now;
+
+        const dbg = (window as any).__metravelMapDebug;
+        const payload = typeof dbg?.dump === 'function' ? dbg.dump() : null;
+        setDebugSnapshot({
+          ts: now,
+          reason: reason || null,
+          payload,
+        });
+      } catch {
+        // noop
+      }
+    },
+    [debugEnabled]
+  );
+
+  const copyDebugJson = useCallback(async () => {
+    try {
+      if (typeof window === 'undefined') return;
+      const dbg = (window as any).__metravelMapDebug;
+      const text =
+        typeof dbg?.dumpJson === 'function'
+          ? String(dbg.dumpJson())
+          : JSON.stringify(debugSnapshot ?? null, null, 2);
+
+      if (typeof navigator !== 'undefined' && (navigator as any).clipboard?.writeText) {
+        await (navigator as any).clipboard.writeText(text);
+        return;
+      }
+
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      } catch {
+        // noop
+      }
+    } catch {
+      // noop
+    }
+  }, [debugSnapshot]);
+
   const hasRadiusResults = (travelData ?? []).length > 0;
   const canAutoFitRadiusView =
     hasRadiusResults ||
@@ -94,10 +179,12 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     click: mapClickHandler,
     zoomend: () => {
       syncZoomFromMap();
+      refreshDebugSnapshot('zoomend');
     },
     moveend: () => {
       // fitBounds can sometimes update zoom while zoomend isn't our first reliable signal
       syncZoomFromMap();
+      refreshDebugSnapshot('moveend');
     },
     zoomstart: () => {
       try {
@@ -144,6 +231,247 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         // noop
       }
 
+      try {
+        if (typeof __DEV__ !== 'undefined' && __DEV__ && typeof window !== 'undefined') {
+          const dumpRoute = () => {
+            try {
+              if (typeof document === 'undefined') return { ok: false, reason: 'no-document' };
+              const el = document.querySelector('path.metravel-route-line') as SVGPathElement | null;
+              const overlayPane = document.querySelector('.leaflet-overlay-pane') as HTMLElement | null;
+              const overlaySvg = overlayPane?.querySelector('svg') as SVGSVGElement | null;
+
+              if (!el) {
+                return {
+                  ok: false,
+                  reason: 'no-path',
+                  overlayPaneExists: !!overlayPane,
+                  overlaySvgExists: !!overlaySvg,
+                  overlayPathCount: overlayPane?.querySelectorAll('path')?.length ?? null,
+                };
+              }
+
+              const rect = el.getBoundingClientRect();
+              let bbox: any = null;
+              let totalLength: number | null = null;
+
+              try {
+                bbox = typeof el.getBBox === 'function' ? el.getBBox() : null;
+              } catch {
+                bbox = null;
+              }
+
+              try {
+                totalLength = typeof el.getTotalLength === 'function' ? Number(el.getTotalLength()) : null;
+              } catch {
+                totalLength = null;
+              }
+
+              let computed: any = null;
+              try {
+                const s = window.getComputedStyle(el);
+                computed = {
+                  stroke: s.stroke,
+                  strokeWidth: s.strokeWidth,
+                  strokeOpacity: (s as any).strokeOpacity,
+                  opacity: s.opacity,
+                  display: s.display,
+                  visibility: s.visibility,
+                  pointerEvents: (s as any).pointerEvents,
+                };
+              } catch {
+                computed = null;
+              }
+
+              return {
+                ok: true,
+                attrs: {
+                  class: el.getAttribute('class'),
+                  dLength: el.getAttribute('d')?.length ?? null,
+                  stroke: el.getAttribute('stroke'),
+                  strokeWidth: el.getAttribute('stroke-width'),
+                  strokeOpacity: el.getAttribute('stroke-opacity'),
+                  opacity: el.getAttribute('opacity'),
+                },
+                rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+                bbox,
+                totalLength,
+                computed,
+                overlay: {
+                  overlayPaneExists: !!overlayPane,
+                  overlaySvgExists: !!overlaySvg,
+                  overlayPathCount: overlayPane?.querySelectorAll('path')?.length ?? null,
+                },
+              };
+            } catch (e: any) {
+              return { ok: false, reason: 'exception', message: String(e?.message ?? e) };
+            }
+          };
+
+          const dumpOverlays = () => {
+            try {
+              const out: any[] = [];
+              const overlaysRef = _leafletOverlayLayersRef?.current;
+              const entries = overlaysRef && typeof overlaysRef.entries === 'function' ? Array.from(overlaysRef.entries()) : [];
+
+              for (const [id, layer] of entries) {
+                let hasLayer: boolean | null = null;
+                try {
+                  hasLayer = typeof map.hasLayer === 'function' ? Boolean(map.hasLayer(layer)) : null;
+                } catch {
+                  hasLayer = null;
+                }
+
+                let tileStats: any = null;
+                try {
+                  const container = layer?.getContainer?.() as HTMLElement | undefined;
+                  if (container && typeof container.querySelectorAll === 'function') {
+                    const imgs = container.querySelectorAll('img.leaflet-tile');
+                    const loaded = container.querySelectorAll('img.leaflet-tile-loaded');
+                    tileStats = {
+                      imgCount: imgs.length,
+                      loadedCount: loaded.length,
+                      containerZIndex: typeof window.getComputedStyle === 'function' ? window.getComputedStyle(container).zIndex : null,
+                      containerOpacity: typeof window.getComputedStyle === 'function'
+                        ? window.getComputedStyle(container).opacity
+                        : null,
+                    };
+                  }
+                } catch {
+                  tileStats = null;
+                }
+
+                out.push({
+                  id,
+                  hasLayer,
+                  kindHints: {
+                    isTileLayer: Boolean(layer?.getTileUrl || layer?._url || layer?.getContainer),
+                    url: layer?._url ?? null,
+                    zIndexOption: layer?.options?.zIndex ?? null,
+                    opacityOption: layer?.options?.opacity ?? null,
+                  },
+                  tileStats,
+                });
+              }
+
+              return { ok: true, count: out.length, overlays: out };
+            } catch (e: any) {
+              return { ok: false, reason: 'exception', message: String(e?.message ?? e) };
+            }
+          };
+
+          const dumpMap = () => {
+            try {
+              const center = map.getCenter?.();
+              const zoom = map.getZoom?.();
+              const size = map.getSize?.();
+
+              const paneNames = [
+                'mapPane',
+                'tilePane',
+                'overlayPane',
+                'shadowPane',
+                'markerPane',
+                'tooltipPane',
+                'popupPane',
+                'metravelRoutePane',
+              ];
+              const panes: Record<string, any> = {};
+
+              for (const name of paneNames) {
+                try {
+                  const p = map.getPane?.(name) as HTMLElement | null | undefined;
+                  if (!p) {
+                    panes[name] = null;
+                    continue;
+                  }
+                  const cs = typeof window.getComputedStyle === 'function' ? window.getComputedStyle(p) : null;
+                  panes[name] = {
+                    exists: true,
+                    styleZIndex: (p as any).style?.zIndex ?? null,
+                    computedZIndex: cs ? cs.zIndex : null,
+                    pointerEvents: cs ? (cs as any).pointerEvents : null,
+                    display: cs ? cs.display : null,
+                    visibility: cs ? cs.visibility : null,
+                  };
+                } catch {
+                  panes[name] = { exists: false, error: true };
+                }
+              }
+
+              return {
+                ok: true,
+                center: center ? { lat: center.lat, lng: center.lng } : null,
+                zoom: Number.isFinite(zoom) ? zoom : null,
+                size: size ? { x: size.x, y: size.y } : null,
+                panes,
+              };
+            } catch (e: any) {
+              return { ok: false, reason: 'exception', message: String(e?.message ?? e) };
+            }
+          };
+
+          (window as any).__metravelMapDebug = {
+            dumpRoute,
+            dumpOverlays,
+            dumpMap,
+            dump: () => ({ map: dumpMap(), route: dumpRoute(), overlays: dumpOverlays() }),
+            dumpJson: () => {
+              try {
+                const payload = { map: dumpMap(), route: dumpRoute(), overlays: dumpOverlays() };
+                const seen = new WeakSet<object>();
+                return JSON.stringify(
+                  payload,
+                  (_k, v) => {
+                    try {
+                      if (v && typeof v === 'object') {
+                        if (seen.has(v as object)) return '[Circular]';
+                        seen.add(v as object);
+                      }
+                      if (typeof HTMLElement !== 'undefined' && v instanceof HTMLElement) {
+                        const el = v as HTMLElement;
+                        return `[HTMLElement ${el.tagName}${el.id ? `#${el.id}` : ''}${el.className ? `.${String(el.className).toString().split(' ').join('.')}` : ''}]`;
+                      }
+                      if (typeof SVGElement !== 'undefined' && v instanceof SVGElement) {
+                        const el = v as SVGElement;
+                        return `[SVGElement ${el.tagName}${(el as any).id ? `#${String((el as any).id)}` : ''}]`;
+                      }
+                      if (typeof v === 'function') return '[Function]';
+                      return v;
+                    } catch {
+                      return '[Unserializable]';
+                    }
+                  },
+                  2
+                );
+              } catch (e: any) {
+                return JSON.stringify({ ok: false, reason: 'stringify-failed', message: String(e?.message ?? e) });
+              }
+            },
+            copyDump: async () => {
+              try {
+                const text = (window as any).__metravelMapDebug?.dumpJson?.();
+                if (!text) return { ok: false, reason: 'no-text' };
+                if (typeof navigator !== 'undefined' && (navigator as any).clipboard?.writeText) {
+                  await (navigator as any).clipboard.writeText(text);
+                  return { ok: true, copied: true, length: String(text).length };
+                }
+                return { ok: true, copied: false, length: String(text).length, text };
+              } catch (e: any) {
+                return { ok: false, reason: 'copy-failed', message: String(e?.message ?? e) };
+              }
+            },
+          };
+        }
+      } catch {
+        // noop
+      }
+
+      try {
+        refreshDebugSnapshot('map-ready');
+      } catch {
+        // noop
+      }
+
       onMapReady(map);
     };
 
@@ -174,7 +502,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       cancelled = true;
       hasCalledOnMapReadyRef.current = false;
     };
-  }, [map, mapRef, onMapReady, setMapZoom, syncZoomFromMap]);
+  }, [map, mapRef, onMapReady, refreshDebugSnapshot, setMapZoom, syncZoomFromMap, _leafletOverlayLayersRef]);
 
   // Close popup on map click or zoom
   useEffect(() => {
@@ -479,5 +807,186 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     canAutoFitRadiusView,
   ]);
 
-  return null;
+  if (!debugEnabled) return null;
+
+  const payload = debugSnapshot?.payload;
+  const mapDump = payload?.map;
+  const routeDump = payload?.route;
+  const overlaysDump = payload?.overlays;
+
+  const overlayItems: any[] = Array.isArray(overlaysDump?.overlays) ? overlaysDump.overlays : [];
+  const overlayItemsShort = overlayItems.slice(0, 12);
+
+  if (!debugOpen) {
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 10,
+          right: 10,
+          zIndex: 10000,
+          pointerEvents: 'auto',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            try {
+              setDebugOpen(true);
+              refreshDebugSnapshot('open');
+            } catch {
+              // noop
+            }
+          }}
+          style={{
+            fontSize: 12,
+            padding: '6px 8px',
+            borderRadius: 8,
+            border: '1px solid rgba(0,0,0,0.15)',
+            background: 'rgba(255,255,255,0.92)',
+            color: '#111',
+          }}
+        >
+          Map debug
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        zIndex: 10000,
+        width: 360,
+        maxWidth: 'calc(100vw - 20px)',
+        maxHeight: '60vh',
+        overflow: 'auto',
+        padding: 10,
+        borderRadius: 12,
+        border: '1px solid rgba(0,0,0,0.15)',
+        background: 'rgba(255,255,255,0.92)',
+        color: '#111',
+        fontSize: 12,
+        lineHeight: 1.3,
+        pointerEvents: 'auto',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ fontWeight: 700 }}>Map debug</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            type="button"
+            onClick={() => refreshDebugSnapshot('manual')}
+            style={{
+              fontSize: 12,
+              padding: '4px 8px',
+              borderRadius: 8,
+              border: '1px solid rgba(0,0,0,0.15)',
+              background: 'rgba(255,255,255,0.95)',
+            }}
+          >
+            Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void copyDebugJson();
+            }}
+            style={{
+              fontSize: 12,
+              padding: '4px 8px',
+              borderRadius: 8,
+              border: '1px solid rgba(0,0,0,0.15)',
+              background: 'rgba(255,255,255,0.95)',
+            }}
+          >
+            Copy JSON
+          </button>
+          <button
+            type="button"
+            onClick={() => setDebugOpen(false)}
+            style={{
+              fontSize: 12,
+              padding: '4px 8px',
+              borderRadius: 8,
+              border: '1px solid rgba(0,0,0,0.15)',
+              background: 'rgba(255,255,255,0.95)',
+            }}
+          >
+            Hide
+          </button>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 8 }}>
+        <div>
+          <b>Mode:</b> {String(mode)}
+        </div>
+        <div>
+          <b>Center/zoom:</b>{' '}
+          {mapDump?.center ? `${mapDump.center.lat.toFixed?.(5)}, ${mapDump.center.lng.toFixed?.(5)}` : 'n/a'} @{' '}
+          {mapDump?.zoom ?? 'n/a'}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Route</div>
+        <div>
+          <b>ok:</b> {String(Boolean(routeDump?.ok))}
+        </div>
+        <div>
+          <b>dLength:</b> {routeDump?.attrs?.dLength ?? 'n/a'}
+        </div>
+        <div>
+          <b>rect:</b>{' '}
+          {routeDump?.rect ? `${Math.round(routeDump.rect.width)}x${Math.round(routeDump.rect.height)}` : 'n/a'}
+        </div>
+        <div>
+          <b>computed:</b>{' '}
+          {routeDump?.computed
+            ? `display=${routeDump.computed.display} visibility=${routeDump.computed.visibility} opacity=${routeDump.computed.opacity} strokeWidth=${routeDump.computed.strokeWidth}`
+            : 'n/a'}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Panes</div>
+        <div>
+          <b>tilePane z:</b> {mapDump?.panes?.tilePane?.computedZIndex ?? 'n/a'}
+        </div>
+        <div>
+          <b>overlayPane z:</b> {mapDump?.panes?.overlayPane?.computedZIndex ?? 'n/a'}
+        </div>
+        <div>
+          <b>markerPane z:</b> {mapDump?.panes?.markerPane?.computedZIndex ?? 'n/a'}
+        </div>
+        <div>
+          <b>metravelRoutePane z:</b> {mapDump?.panes?.metravelRoutePane?.computedZIndex ?? 'n/a'}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Overlays</div>
+        <div>
+          <b>count:</b> {overlaysDump?.count ?? overlayItems.length}
+        </div>
+        <div style={{ marginTop: 6 }}>
+          {overlayItemsShort.map((o) => (
+            <div key={String(o?.id)} style={{ marginBottom: 4 }}>
+              <b>{String(o?.id)}:</b> hasLayer={String(o?.hasLayer)}{' '}
+              {o?.tileStats
+                ? `tiles=${o.tileStats.loadedCount ?? 'n/a'}/${o.tileStats.imgCount ?? 'n/a'} z=${o.tileStats.containerZIndex ?? 'n/a'} op=${o.tileStats.containerOpacity ?? 'n/a'}`
+                : ''}
+            </div>
+          ))}
+          {overlayItems.length > overlayItemsShort.length && (
+            <div style={{ opacity: 0.7 }}>… +{overlayItems.length - overlayItemsShort.length} more</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 };

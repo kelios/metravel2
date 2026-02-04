@@ -93,12 +93,14 @@ export function useMapApi({
 
             const toApply = Array.from(pendingOverlayTogglesRef.current.entries());
             pendingOverlayTogglesRef.current.clear();
-            pendingOverlayAttemptsRef.current = 0;
 
             for (const [id, enabled] of toApply) {
               try {
                 const layer = available.get(id);
-                if (!layer) continue;
+                if (!layer) {
+                  pendingOverlayTogglesRef.current.set(id, enabled);
+                  continue;
+                }
                 if (enabled) {
                   layer.addTo(map);
                 } else if (map.hasLayer?.(layer)) {
@@ -120,6 +122,18 @@ export function useMapApi({
               } catch {
                 // noop
               }
+            }
+
+            if (pendingOverlayTogglesRef.current.size > 0) {
+              pendingOverlayAttemptsRef.current += 1;
+              if (pendingOverlayAttemptsRef.current < 10) {
+                schedulePendingOverlayFlush();
+              } else {
+                pendingOverlayTogglesRef.current.clear();
+                pendingOverlayAttemptsRef.current = 0;
+              }
+            } else {
+              pendingOverlayAttemptsRef.current = 0;
             }
           } catch {
             // noop
@@ -293,13 +307,14 @@ export function useMapApi({
           console.info('[useMapApi] setOverlayEnabled called:', id, enabled);
           const layer = leafletOverlayLayersRef.current.get(id);
           if (!layer) {
-            if (leafletOverlayLayersRef.current.size === 0) {
-              pendingOverlayTogglesRef.current.set(id, enabled);
-              schedulePendingOverlayFlush();
-              return;
-            }
-
-            console.warn('[useMapApi] Layer not found:', id, 'Available layers:', Array.from(leafletOverlayLayersRef.current.keys()));
+            pendingOverlayTogglesRef.current.set(id, enabled);
+            schedulePendingOverlayFlush();
+            console.warn(
+              '[useMapApi] Layer not found (queued):',
+              id,
+              'Available layers:',
+              Array.from(leafletOverlayLayersRef.current.keys())
+            );
             return;
           }
 
@@ -322,7 +337,21 @@ export function useMapApi({
               controller.stop?.();
             }
           } else {
-            console.info('[useMapApi] No controller for layer:', id, 'available controllers:', controllers ? Array.from(controllers.keys()) : 'none');
+            const looksLikeTileLayer = Boolean(
+              (layer as any)?.getTileUrl ||
+                (layer as any)?._url ||
+                (typeof (layer as any)?.getContainer === 'function' && (layer as any)?.getContainer())
+            );
+            if (looksLikeTileLayer) {
+              console.info('[useMapApi] No controller for tile layer (expected):', id);
+            } else {
+              console.warn(
+                '[useMapApi] No controller for non-tile overlay layer:',
+                id,
+                'available controllers:',
+                controllers ? Array.from(controllers.keys()) : 'none'
+              );
+            }
           }
         } catch (e) {
           console.warn('[useMapApi] setOverlayEnabled error:', e);

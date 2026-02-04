@@ -56,6 +56,11 @@ const mockReactLeaflet = (() => {
       const iconClass = props.icon?.options?.className
       return <View testID="marker" data-icon-class={iconClass} {...props} />
     },
+    Tooltip: ({ children, ...props }: any) => (
+      <View testID="tooltip" {...props}>
+        {children}
+      </View>
+    ),
     Popup: ({ children }: any) => <View testID="popup">{children}</View>,
     useMap: jest.fn(() => ({
       fitBounds: jest.fn(),

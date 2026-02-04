@@ -19,10 +19,7 @@ test.describe('Map Page Route Line Visibility - Visual Test', () => {
     });
 
     console.log('🗺️  Открываем страницу карты /map...');
-    
-    // Блокируем навигацию на /roulette
-    await page.route('**/roulette*', route => route.abort());
-    
+
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
 
@@ -48,32 +45,27 @@ test.describe('Map Page Route Line Visibility - Visual Test', () => {
 
     // Переключаемся в режим маршрута
     console.log('🔄 Переключаемся в режим маршрута...');
-    const routeModeButton = page.locator('button').filter({ hasText: /Маршрут|маршрут/i }).first();
-    const routeButtonExists = await routeModeButton.isVisible().catch(() => false);
-    
-    if (routeButtonExists) {
-      await routeModeButton.click();
-      await page.waitForTimeout(1000);
-      
-      // Проверяем что не произошел редирект
-      const urlAfterClick = page.url();
-      console.log(`📍 URL после клика: ${urlAfterClick}`);
-      expect(urlAfterClick).toContain('/map');
-      
-      console.log('✅ Режим маршрута активирован');
+    const segmentedRoute = page.getByTestId('segmented-route');
+    const hasSegmentedRoute = await segmentedRoute.isVisible().catch(() => false);
+
+    if (hasSegmentedRoute) {
+      await segmentedRoute.click({ force: true });
+      await page.waitForTimeout(800);
     } else {
-      console.log('⚠️  Кнопка режима маршрута не найдена, ищем другие способы...');
-      
-      // Пробуем найти через data-testid или aria-label
-      const modeSelector = page.locator('[aria-label*="Маршрут"], [data-mode="route"]').first();
-      const modeSelectorExists = await modeSelector.isVisible().catch(() => false);
-      
-      if (modeSelectorExists) {
-        await modeSelector.click();
-        await page.waitForTimeout(1000);
-        console.log('✅ Режим маршрута активирован через селектор');
+      const routeModeButton = page.locator('button').filter({ hasText: /Маршрут|маршрут/i }).first();
+      const routeButtonExists = await routeModeButton.isVisible().catch(() => false);
+      if (routeButtonExists) {
+        await routeModeButton.click({ force: true });
+        await page.waitForTimeout(800);
       }
     }
+
+    // Проверяем что не произошел редирект
+    const urlAfterClick = page.url();
+    console.log(`📍 URL после клика: ${urlAfterClick}`);
+    expect(urlAfterClick).toContain('/map');
+
+    console.log('✅ Режим маршрута активирован');
     
     // Финальная проверка URL перед добавлением точек
     const finalUrl = page.url();
