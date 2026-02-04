@@ -152,7 +152,7 @@ export default function RootLayout() {
       let rafId: number | null = null;
       const update = () => setClientWidth(window.innerWidth);
 
-      // Avoid updating state during React hydration (can trigger React error #421 with Suspense).
+      // Avoid updating state during React hydration (can trigger React error 421 with Suspense).
       // Defer the initial read to the next frame.
       rafId = window.requestAnimationFrame(() => update());
 
@@ -234,7 +234,7 @@ export default function RootLayout() {
         let mountedTimer: ReturnType<typeof setTimeout> | null = null;
         let consentTimer: ReturnType<typeof setTimeout> | null = null;
 
-        // Defer mount-only UI to avoid hydration-time updates (React error #421 with Suspense).
+        // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
         // Відкладаємо ConsentBanner на 2 секунди для покращення FCP/LCP
@@ -419,19 +419,12 @@ function ThemedContent({
                                   resizeMode="cover"
                                 />
                               )}
-                              <Head>
-                                  <link rel="icon" href="/favicon.ico" />
-                                  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-                                  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-                                  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-                                  {Platform.OS === 'web' && (
-                                    <link
-                                      rel="stylesheet"
-                                      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                                      data-metravel-leaflet-css="cdn"
-                                    />
-                                  )}
-                              </Head>
+	                              <Head>
+	                                  <link rel="icon" href="/favicon.ico" />
+	                                  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+	                                  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+	                                  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+	                              </Head>
 
                               {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
                               {Platform.OS === 'web' && <SkipLinks />}

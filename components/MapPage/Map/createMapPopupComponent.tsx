@@ -7,6 +7,7 @@ import { showToast } from '@/src/utils/toast';
 import { userPointsApi } from '@/src/api/userPoints';
 import { useQueryClient } from '@tanstack/react-query';
 import { PointStatus } from '@/types/userPoints';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 
 type UseMap = () => any;
 
@@ -209,7 +210,7 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
         address: point.address,
         latitude: normalizedCoord.lat,
         longitude: normalizedCoord.lng,
-        color: '#ff922b',
+        color: DESIGN_COLORS.travelPoint,
         status: PointStatus.PLANNING,
         category: categoryNameString,
         categoryName: categoryNameString,

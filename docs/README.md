@@ -12,7 +12,11 @@
 - `DEVELOPMENT.md` — local setup and day-to-day dev workflow.
 - `TESTING.md` — Jest + Playwright.
 - `RELEASE.md` — release/deploy checklist.
-- `SEO_MIGRATION.md` — SEO/meta architecture guide (NEW: 25.01.2026).
+- `PRODUCTION_CHECKLIST.md` — production release checklist.
+- `INDEX.md` — docs entrypoint.
+- `SEO_MIGRATION.md` — SEO/meta architecture guide.
+- `MAPS_CONFIGURATION.md` — maps stack and routing key.
+- `DESIGN_SYSTEM_CONSOLIDATION.md` — migration to `DESIGN_TOKENS`.
 
 ## Quick start
 

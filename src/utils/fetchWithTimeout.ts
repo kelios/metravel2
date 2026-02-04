@@ -39,6 +39,17 @@ export async function fetchWithTimeout(
         });
         return response;
     } catch (error: any) {
+        // Browsers often throw `TypeError: Failed to fetch` for DNS/connection/CORS issues.
+        // Provide a more actionable message while preserving the original error as a cause.
+        const message = String(error?.message ?? '');
+        if (error instanceof TypeError && /failed to fetch/i.test(message)) {
+            const err = new Error(
+                `Network error while fetching ${url}. ` +
+                  `Is the API server running and reachable from this device/browser?`
+            );
+            (err as any).cause = error;
+            throw err;
+        }
         if ((error?.code === 'ERR_STREAM_PREMATURE_CLOSE' || error?.message === 'Premature close') && didTimeout) {
             throw new Error(`Превышено время ожидания (${timeout}ms). Попробуйте позже.`);
         }
@@ -55,4 +66,3 @@ export async function fetchWithTimeout(
         cleanupExternalAbort?.();
     }
 }
-

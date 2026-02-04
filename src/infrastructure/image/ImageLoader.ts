@@ -9,10 +9,10 @@ import { devWarn } from '@/src/utils/logger';
  * Сервис для загрузки изображений с retry механизмом
  */
 const PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
-  <rect width="400" height="300" rx="12" ry="12" fill="#f3f4f6"/>
-  <path d="M60 210 L140 130 L190 180 L260 110 L340 210" stroke="#d1d5db" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="140" cy="120" r="24" fill="#d1d5db"/>
-  <circle cx="285" cy="150" r="16" fill="#e5e7eb"/>
+  <rect width="400" height="300" rx="12" ry="12" fill="rgb(243, 244, 246)"/>
+  <path d="M60 210 L140 130 L190 180 L260 110 L340 210" stroke="rgb(209, 213, 219)" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="140" cy="120" r="24" fill="rgb(209, 213, 219)"/>
+  <circle cx="285" cy="150" r="16" fill="rgb(229, 231, 235)"/>
 </svg>`;
 const PLACEHOLDER_DATA_URL = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(PLACEHOLDER_SVG)}`;
 
@@ -295,9 +295,9 @@ export class ImageLoader {
         img.setAttribute('data-original-src', url);
         img.setAttribute('data-image-loader-fallback', 'true');
         img.src = PLACEHOLDER_DATA_URL;
-        img.style.backgroundColor = '#f3f4f6';
+        img.style.backgroundColor = 'rgb(243, 244, 246)';
         img.style.objectFit = 'cover';
-        img.style.color = '#d1d5db';
+        img.style.color = 'rgb(209, 213, 219)';
       }
     });
   }

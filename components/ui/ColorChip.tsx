@@ -3,14 +3,14 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'rea
 import { useThemedColors } from '@/hooks/useTheme';
 
 const NAMED_COLORS: Record<string, string> = {
-  gray: '#9e9e9e',
-  grey: '#9e9e9e',
-  lightgray: '#d3d3d3',
-  lightgrey: '#d3d3d3',
-  pink: '#ffc0cb',
-  lightpink: '#ffb6c1',
-  white: '#ffffff',
-  silver: '#c0c0c0',
+  gray: 'rgb(158, 158, 158)',
+  grey: 'rgb(158, 158, 158)',
+  lightgray: 'rgb(211, 211, 211)',
+  lightgrey: 'rgb(211, 211, 211)',
+  pink: 'rgb(255, 192, 203)',
+  lightpink: 'rgb(255, 182, 193)',
+  white: 'rgb(255, 255, 255)',
+  silver: 'rgb(192, 192, 192)',
 };
 
 const parseHex = (hex: string) => {

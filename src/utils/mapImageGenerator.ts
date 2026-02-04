@@ -132,7 +132,7 @@ export async function generateMapImageFromDOM(
       height,
       useCORS: true,
       allowTaint: false,
-      backgroundColor: '#ffffff',
+      backgroundColor: 'rgb(255, 255, 255)',
       scale: 2,
     });
 
@@ -151,9 +151,9 @@ export async function generateMapImageFromDOM(
     const ctx = fallbackCanvas.getContext('2d');
 
     if (ctx) {
-      ctx.fillStyle = '#f0f0f0';
+      ctx.fillStyle = 'rgb(240, 240, 240)';
       ctx.fillRect(0, 0, width, height);
-      ctx.fillStyle = '#666666';
+      ctx.fillStyle = 'rgb(102, 102, 102)';
       ctx.font = '20px Arial, sans-serif';
       const message = 'Карта не доступна для экспорта';
       const textWidth = ctx.measureText(message).width;

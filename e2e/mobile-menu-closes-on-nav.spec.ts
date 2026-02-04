@@ -48,7 +48,7 @@ async function waitForMainToRender(page: any) {
 }
 
 test.describe('Mobile menu navigation', () => {
-  test('closes menu overlay after selecting create travel (mobile)', async ({ page }) => {
+  test('closes menu overlay after selecting a nav item (mobile)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await preacceptCookiesAndStabilize(page);
 
@@ -65,27 +65,13 @@ test.describe('Mobile menu navigation', () => {
     const panel = page.getByTestId('mobile-menu-panel');
     await expect(panel).toBeVisible({ timeout: 10_000 });
 
-    // This item triggers handleCreate in CustomHeader.
-    // Note: In guest state this item is not rendered.
-    const create = panel.getByText(/Поделиться путешествием/i).first();
-    const createCount = await create.count();
-
-    if (createCount > 0) {
-      await Promise.all([
-        page.waitForURL((url) => url.pathname.includes('/travel/new') || url.pathname.includes('/login'), {
-          timeout: 30_000,
-        }),
-        create.click(),
-      ]);
-    } else {
-      // Fallback: pick any stable nav item and ensure menu closes after navigation.
-      const mapNav = panel.getByRole('button', { name: /Карта/i });
-      await expect(mapNav).toBeVisible({ timeout: 10_000 });
-      await Promise.all([
-        page.waitForURL((url) => url.pathname.includes('/map'), { timeout: 30_000 }),
-        mapNav.click(),
-      ]);
-    }
+    // Pick any stable nav item and ensure menu closes after navigation.
+    const mapNav = panel.getByRole('button', { name: /Карта/i });
+    await expect(mapNav).toBeVisible({ timeout: 10_000 });
+    await Promise.all([
+      page.waitForURL((url) => url.pathname.includes('/map'), { timeout: 30_000 }),
+      mapNav.click(),
+    ]);
 
     // After navigation, the menu overlay must be dismissed.
     await expect(page.getByTestId('mobile-menu-overlay')).toHaveCount(0, { timeout: 10_000 });

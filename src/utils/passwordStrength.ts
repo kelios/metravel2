@@ -1,6 +1,8 @@
 // src/utils/passwordStrength.ts
 // ✅ Утилита для проверки силы пароля
 
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+
 export interface PasswordStrength {
   score: number; // 0-4 (0 = очень слабый, 4 = очень сильный)
   feedback: string[];
@@ -100,15 +102,15 @@ export function getPasswordStrengthColor(score: number): string {
   switch (score) {
     case 0:
     case 1:
-      return '#f44336'; // Красный
+      return DESIGN_TOKENS.colors.danger;
     case 2:
-      return '#ff9800'; // Оранжевый
+      return DESIGN_TOKENS.colors.warning;
     case 3:
-      return '#ffc107'; // Желтый
+      return DESIGN_TOKENS.colors.accent;
     case 4:
-      return '#4caf50'; // Зеленый
+      return DESIGN_TOKENS.colors.success;
     default:
-      return '#9e9e9e'; // Серый
+      return DESIGN_TOKENS.colors.textMuted;
   }
 }
 

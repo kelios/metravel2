@@ -141,7 +141,16 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
 
         try {
             // Сохраняем черновик
-            await onManualSave();
+            const saved = await onManualSave();
+            const resolvedId = (saved as any)?.id ?? formData.id ?? null;
+            if (!resolvedId) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось сохранить',
+                    text2: 'Проверьте интернет-соединение и попробуйте ещё раз',
+                });
+                return;
+            }
 
             void showToastMessage({
                 type: 'success',

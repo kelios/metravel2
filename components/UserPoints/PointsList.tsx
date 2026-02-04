@@ -28,7 +28,7 @@ import ColorChip from '@/components/ui/ColorChip';
 import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { PointStatus, STATUS_LABELS } from '@/types/userPoints';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 import { PointsListHeader } from './PointsListHeader'
@@ -44,14 +44,8 @@ const DEFAULT_POINT_COLORS: string[] = [
   'yellow',
   'pink',
   'gray',
-  '#ff6b6b',
-  '#f06595',
-  '#845ef7',
-  '#339af0',
-  '#22b8cf',
-  '#51cf66',
-  '#fcc419',
-  '#ff922b',
+  ...DESIGN_COLORS.userPointPalette,
+  DESIGN_COLORS.travelPoint,
 ];
 
 
@@ -254,7 +248,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const [manualCoords, setManualCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
-  const [manualColor, setManualColor] = useState<string>('#2196F3');
+  const [manualColor, setManualColor] = useState<string>(DESIGN_COLORS.userPointDefault);
   const [manualStatus, setManualStatus] = useState<PointStatus>(PointStatus.PLANNING);
   const [manualCategoryIds, setManualCategoryIds] = useState<string[]>([]);
   const [isSavingManual, setIsSavingManual] = useState(false);
@@ -830,7 +824,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setManualCoords(null);
     setManualLat('');
     setManualLng('');
-    setManualColor('#2196F3');
+    setManualColor(DESIGN_COLORS.userPointDefault);
     setManualStatus(PointStatus.PLANNING);
     setManualCategoryIds([]);
     setManualError(null);
@@ -976,7 +970,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         setManualLat('');
         setManualLng('');
       }
-      setManualColor(String(point?.color ?? '#2196F3'));
+      setManualColor(String(point?.color ?? DESIGN_COLORS.userPointDefault));
       const nextStatus = ((point?.status as any) ?? PointStatus.PLANNING) as PointStatus;
       setManualStatus(nextStatus);
       setManualCategoryIds(resolveCategoryIdsForEdit(point));

@@ -606,7 +606,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: DESIGN_TOKENS.radii.pill,
         backgroundColor: colors.primarySoft,
         borderWidth: 1,
-        borderColor: colors.primary + '40',
+        borderColor: colors.primaryAlpha40,
         minHeight: 32,
     },
     previewButtonText: {

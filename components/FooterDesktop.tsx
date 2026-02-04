@@ -326,13 +326,6 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
     icon: InstagramBelarusIcon,
   };
 
-  const shareAction: LinkItem = {
-    key: "share",
-    label: "Поделиться путешествием",
-    route: "/travel/new" as any,
-    icon: <Feather name="share-2" size={16} color={iconColor} />,
-  };
-
   const dedupeByRoute = (items: LinkItem[]) =>
     items.filter((item, index, arr) => {
       if (!item.route) return true;
@@ -345,7 +338,6 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
 
   const secondaryIconActions: LinkItem[] = dedupeByRoute([
     ...extraActions,
-    shareAction,
     featureLink,
   ]).filter((i) => {
     if (!i.route) return true;

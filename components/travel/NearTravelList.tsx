@@ -199,7 +199,7 @@ const MapContainer = memo(({
       </View>
 
       <View style={mapStyles.mapWrapper}>
-        <React.Suspense fallback={<ActivityIndicator size="small" color="#5D8C7C" />}>
+        <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} />}>
           <MapClientSideComponent
             showRoute={showRoute}
             travel={{ data: points }}

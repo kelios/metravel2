@@ -65,6 +65,9 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     const muted = sanitizeCssValue(
       root?.getPropertyValue('--color-textMuted')?.trim() || colors.textMuted
     );
+    const surface = sanitizeCssValue(
+      root?.getPropertyValue('--color-surface')?.trim() || colors.surface
+    );
     const textOnDark = sanitizeCssValue(
       root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark
     );
@@ -76,8 +79,9 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
     );
     const boxShadow = shadow || '0 4px 16px rgba(0,0,0,0.35)';
     const borderColor = border || 'rgba(0,0,0,0.1)';
-    const badgeColor = muted || '#6B7280';
-    const badgeTextColor = textOnDark || '#FFFFFF';
+    const badgeColor = muted || colors.textMuted;
+    const badgeTextColor = textOnDark || colors.textOnDark;
+    const surfaceColor = surface || colors.surface;
 
     [2, 5, 10, 20, 50, 100, 200].forEach(count => {
       const icon = leaflet.divIcon({
@@ -87,7 +91,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             position: relative;
             width: 56px;
             height: 56px;
-            background: #FFFFFF;
+            background: ${surfaceColor};
             border-radius: 50%;
             border: 1px solid ${borderColor};
             box-shadow: ${boxShadow};
@@ -148,7 +152,10 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
       const root = typeof window !== 'undefined' ? getComputedStyle(document.documentElement) : null;
 
       const muted = sanitizeCssValue(
-        root?.getPropertyValue('--color-textMuted')?.trim() || colors.textMuted
+      root?.getPropertyValue('--color-textMuted')?.trim() || colors.textMuted
+    );
+      const surface = sanitizeCssValue(
+        root?.getPropertyValue('--color-surface')?.trim() || colors.surface
       );
       const textOnDark = sanitizeCssValue(
         root?.getPropertyValue('--color-textOnDark')?.trim() || colors.textOnDark
@@ -161,8 +168,9 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
       );
       const boxShadow = shadow || '0 4px 16px rgba(0,0,0,0.35)';
       const borderColor = border || 'rgba(0,0,0,0.1)';
-      const badgeColor = muted || '#6B7280';
-      const badgeTextColor = textOnDark || '#FFFFFF';
+      const badgeColor = muted || colors.textMuted;
+      const badgeTextColor = textOnDark || colors.textOnDark;
+      const surfaceColor = surface || colors.surface;
 
       const safeCount = Math.floor(count);
 
@@ -173,7 +181,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             position: relative;
             width: 56px;
             height: 56px;
-            background: #FFFFFF;
+            background: ${surfaceColor};
             border-radius: 50%;
             border: 1px solid ${borderColor};
             box-shadow: ${boxShadow};

@@ -8,8 +8,7 @@ import {
   View as DefaultView,
   ViewProps as RNViewProps,
 } from 'react-native';
-import Colors from '@/constants/Colors';
-import { ThemeContext } from '@/hooks/useTheme';
+import { ThemeContext, useThemedColors } from '@/hooks/useTheme';
 
 type ThemeProps = {
   lightColor?: string;
@@ -25,13 +24,18 @@ export type ButtonProps = ThemeProps & RNButtonProps;
  */
 export function useThemeColor(
     props: { light?: string; dark?: string },
-    colorName: keyof typeof Colors.light & keyof typeof Colors.dark
+    colorName: 'text' | 'background' | 'tint'
 ) {
   const themeContext = useContext(ThemeContext);
   const systemTheme = useColorScheme() ?? 'light';
   const theme = themeContext ? (themeContext.isDark ? 'dark' : 'light') : systemTheme;
   const colorFromProps = props[theme];
-  return colorFromProps ?? Colors[theme][colorName];
+  const colors = useThemedColors();
+
+  if (colorFromProps) return colorFromProps;
+  if (colorName === 'tint') return colors.primary;
+  if (colorName === 'background') return colors.background;
+  return colors.text;
 }
 
 /**

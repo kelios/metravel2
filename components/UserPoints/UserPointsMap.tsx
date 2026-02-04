@@ -26,6 +26,7 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
 import { createLeafletLayer } from '@/src/utils/mapWebLayers';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 
 interface UserPointsMapProps {
   /**
@@ -182,7 +183,7 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
   );
 };
 
-const DEFAULT_SITE_POINT_COLOR = '#ff922b';
+const DEFAULT_SITE_POINT_COLOR = DESIGN_COLORS.travelPoint;
 
 const WebMapInstanceBinder = ({ useMap, onMapReady }: { useMap: any; onMapReady: (map: any) => void }) => {
   const map = useMap?.();

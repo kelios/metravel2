@@ -100,7 +100,18 @@ describe('ArticleEditor.web autosave', () => {
     Object.defineProperty(Platform, 'OS', { value: os, configurable: true })
   }
 
-  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+  const flushMicrotasks = async () => {
+    await act(async () => {
+      await Promise.resolve()
+    })
+  }
+
+  const advanceTime = async (ms: number) => {
+    await act(async () => {
+      jest.advanceTimersByTime(ms)
+      await Promise.resolve()
+    })
+  }
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -110,127 +121,126 @@ describe('ArticleEditor.web autosave', () => {
     ;(globalThis as any).__quillRefAssigned__ = false
   })
 
-  it('does not autosave on mount and autosaves only after user changes', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
-
-    const onAutosave = jest.fn(async () => {})
-
-    const autosaveDelay = 30
-
-    const { getByTestId } = render(
-      <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
-    )
-
-    await waitFor(() => {
-      expect(getByTestId('quill-mock')).toBeTruthy()
+  describe('Autosave scheduling (fake timers)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers()
+      jest.clearAllTimers()
     })
-    await waitFor(() => {
+
+    afterEach(() => {
+      jest.useRealTimers()
+    })
+
+    it('does not autosave on mount and autosaves only after user changes', async () => {
+      const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+
+      const onAutosave = jest.fn(async () => {})
+      const autosaveDelay = 30
+
+      const { getByTestId } = render(
+        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
+      )
+
+      for (let i = 0; i < 20; i++) {
+        try {
+          expect(getByTestId('quill-mock')).toBeTruthy()
+          break
+        } catch {
+          await flushMicrotasks()
+        }
+      }
+      for (let i = 0; i < 20; i++) {
+        if ((globalThis as any).__quillRefAssigned__ === true) break
+        await flushMicrotasks()
+      }
       expect((globalThis as any).__quillRefAssigned__).toBe(true)
-    })
 
-    await act(async () => {
-      await sleep(autosaveDelay + 15)
-    })
+      await advanceTime(autosaveDelay + 15)
+      expect(onAutosave).not.toHaveBeenCalled()
 
-    expect(onAutosave).not.toHaveBeenCalled()
+      const quillProps = (globalThis as any).__quillProps__
+      expect(quillProps).toBeTruthy()
 
-    const quillProps = (globalThis as any).__quillProps__
-    expect(quillProps).toBeTruthy()
+      act(() => {
+        quillProps.onChange('<p>updated</p>', null, 'user')
+      })
 
-    act(() => {
-      quillProps.onChange('<p>updated</p>', null, 'user')
-    })
+      await advanceTime(autosaveDelay - 5)
+      expect(onAutosave).not.toHaveBeenCalled()
 
-    await act(async () => {
-      await sleep(autosaveDelay - 5)
-    })
-
-    expect(onAutosave).not.toHaveBeenCalled()
-
-    await act(async () => {
-      await sleep(10)
-    })
-
-    await waitFor(() => {
+      await advanceTime(10)
       expect(onAutosave).toHaveBeenCalledTimes(1)
       expect(onAutosave).toHaveBeenCalledWith('<p>updated</p>')
-    })
 
-    await act(async () => {
-      await sleep(autosaveDelay + 20)
-    })
-
-    expect(onAutosave).toHaveBeenCalledTimes(1)
-  })
-
-  it('does not autosave for non-user changes', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
-
-    const onAutosave = jest.fn(async () => {})
-
-    const autosaveDelay = 20
-
-    const { getByTestId } = render(
-      <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
-    )
-
-    await waitFor(() => {
-      expect(getByTestId('quill-mock')).toBeTruthy()
-    })
-    await waitFor(() => {
-      expect((globalThis as any).__quillRefAssigned__).toBe(true)
-    })
-
-    const quillProps = (globalThis as any).__quillProps__
-
-    act(() => {
-      quillProps.onChange('<p>api</p>', null, 'api')
-    })
-
-    await act(async () => {
-      await sleep(autosaveDelay + 20)
-    })
-
-    expect(onAutosave).not.toHaveBeenCalled()
-  })
-
-  it('retries autosave if the previous attempt fails (without requiring a new edit)', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
-
-    const autosaveDelay = 20
-    const onAutosave = jest
-      .fn()
-      .mockRejectedValueOnce(new Error('network'))
-      .mockResolvedValueOnce(undefined)
-
-    const { getByTestId } = render(
-      <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
-    )
-
-    await waitFor(() => {
-      expect(getByTestId('quill-mock')).toBeTruthy()
-    })
-
-    const quillProps = (globalThis as any).__quillProps__
-    expect(quillProps).toBeTruthy()
-
-    act(() => {
-      quillProps.onChange('<p>updated</p>', null, 'user')
-    })
-
-    await act(async () => {
-      await sleep(autosaveDelay + 10)
-    })
-
-    await waitFor(() => {
+      await advanceTime(autosaveDelay + 20)
       expect(onAutosave).toHaveBeenCalledTimes(1)
     })
 
-    await act(async () => {
-      await sleep(autosaveDelay * 2 + 20)
+    it('does not autosave for non-user changes', async () => {
+      const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+
+      const onAutosave = jest.fn(async () => {})
+      const autosaveDelay = 20
+
+      const { getByTestId } = render(
+        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
+      )
+
+      for (let i = 0; i < 20; i++) {
+        try {
+          expect(getByTestId('quill-mock')).toBeTruthy()
+          break
+        } catch {
+          await flushMicrotasks()
+        }
+      }
+      for (let i = 0; i < 20; i++) {
+        if ((globalThis as any).__quillRefAssigned__ === true) break
+        await flushMicrotasks()
+      }
+
+      const quillProps = (globalThis as any).__quillProps__
+      act(() => {
+        quillProps.onChange('<p>api</p>', null, 'api')
+      })
+
+      await advanceTime(autosaveDelay + 20)
+      expect(onAutosave).not.toHaveBeenCalled()
     })
 
-    await waitFor(() => {
+    it('retries autosave if the previous attempt fails (without requiring a new edit)', async () => {
+      const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+
+      const autosaveDelay = 20
+      const onAutosave = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('network'))
+        .mockResolvedValueOnce(undefined)
+
+      const { getByTestId } = render(
+        <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
+      )
+
+      for (let i = 0; i < 20; i++) {
+        try {
+          expect(getByTestId('quill-mock')).toBeTruthy()
+          break
+        } catch {
+          await flushMicrotasks()
+        }
+      }
+
+      const quillProps = (globalThis as any).__quillProps__
+      expect(quillProps).toBeTruthy()
+
+      act(() => {
+        quillProps.onChange('<p>updated</p>', null, 'user')
+      })
+
+      await advanceTime(autosaveDelay + 10)
+      expect(onAutosave).toHaveBeenCalledTimes(1)
+
+      await advanceTime(autosaveDelay * 2 + 20)
       expect(onAutosave).toHaveBeenCalledTimes(2)
       expect(onAutosave).toHaveBeenLastCalledWith('<p>updated</p>')
     })

@@ -36,6 +36,7 @@
     "lighthouse:produrl:summary": "node scripts/lighthouse-produrl-summary.js",
     "lighthouse:produrl:lcp": "node scripts/lighthouse-produrl-lcp.js",
     "test:travel:performance": "node scripts/test-travel-page-performance.js",
+    "test:pages:performance": "node scripts/test-pages-performance.js",
     "clean": "npx expo start --clear",
     "reset": "EXPO_RESET_CACHE=true npx expo start --clear",
     "prod:web": "NODE_ENV=production node ./node_modules/expo/bin/cli export -p web",

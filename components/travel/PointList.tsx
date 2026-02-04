@@ -14,7 +14,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { FlashList } from '@shopify/flash-list';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import PlaceListCard from '@/components/places/PlaceListCard';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -126,7 +126,7 @@ const buildOsmUrl = (coordStr: string) => {
   return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lon))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lon))}`;
 };
 
-const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
+const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_COLORS.travelPoint;
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 const normalizeCategoryNameToString = (

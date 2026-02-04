@@ -85,7 +85,7 @@ export function CommentForm({
           value={text}
           onChangeText={setText}
           placeholder={placeholder}
-          placeholderTextColor="#999"
+          placeholderTextColor={DESIGN_TOKENS.colors.textSubtle}
           multiline
           maxLength={2000}
           autoFocus={autoFocus}

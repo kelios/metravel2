@@ -157,7 +157,12 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      setIsOffline(!state.isConnected);
+      // `isConnected` / `isInternetReachable` can be null on first emission.
+      // Treat "unknown" as online to avoid a flashing offline banner on mount.
+      const connected = state.isConnected;
+      const reachable = state.isInternetReachable;
+      const offline = connected === false || reachable === false;
+      setIsOffline(offline);
     });
     return () => unsubscribe();
   }, []);
@@ -239,7 +244,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   }
 
   return (
-    <SafeAreaView
+    <View
       style={styles.container}
       testID="travel-upsert.root"
       accessibilityLabel="Форма создания путешествия"
@@ -427,7 +432,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
           />
         </TravelFormErrorBoundary>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

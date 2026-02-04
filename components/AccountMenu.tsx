@@ -465,13 +465,6 @@ function AccountMenu() {
                 style={styles.menuItem}
                 titleStyle={styles.menuItemTitle}
               />
-              <Menu.Item
-                onPress={() => handleNavigate('/travel/new')}
-                title="Поделиться путешествием"
-                leadingIcon={({ size }) => <Feather name="share-2" size={size} color={styles.iconPrimary.color} />}
-                style={styles.menuItemPrimary}
-                titleStyle={styles.menuItemTitlePrimary}
-              />
             </>
           )}
 

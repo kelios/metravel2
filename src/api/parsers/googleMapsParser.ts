@@ -2,6 +2,7 @@ import type { ParsedPoint, PointColor } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import JSZip from 'jszip';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 
 type FileInput = File | DocumentPickerAsset;
 
@@ -198,7 +199,7 @@ export class GoogleMapsParser {
     const description = (input.description ?? undefined) ? String(input.description).trim() : undefined;
 
     const status = this.normalizeStatus(input.status) ?? PointStatus.WANT_TO_VISIT;
-    const color = this.normalizeColor(input.color) ?? '#2196F3';
+    const color = this.normalizeColor(input.color) ?? DESIGN_COLORS.userPointDefault;
 
     return {
       id: this.generateId(),
@@ -292,21 +293,21 @@ export class GoogleMapsParser {
   }
   
   private static mapGoogleCategoryToColor(category?: string): PointColor {
-    if (!category) return '#2196F3';
+    if (!category) return DESIGN_COLORS.userPointDefault as unknown as PointColor;
     
     const lowerCategory = category.toLowerCase();
     
     if (lowerCategory.includes('starred') || lowerCategory.includes('favorite')) {
-      return '#F44336';
+      return 'rgb(244, 67, 54)' as unknown as PointColor;
     }
     if (lowerCategory.includes('want to go')) {
-      return '#9C27B0';
+      return 'rgb(156, 39, 176)' as unknown as PointColor;
     }
     if (lowerCategory.includes('visited')) {
-      return '#4CAF50';
+      return 'rgb(76, 175, 80)' as unknown as PointColor;
     }
     
-    return '#2196F3';
+    return DESIGN_COLORS.userPointDefault as unknown as PointColor;
   }
   
   private static mapGoogleStatusToStatus(category?: string): PointStatus {

@@ -10,6 +10,7 @@ import {
   type ViewStyle,
   type TextStyle,
 } from 'react-native'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 type ChildrenProps = { children?: React.ReactNode }
 
@@ -314,10 +315,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#7a9d8f',
+    backgroundColor: DESIGN_TOKENS.colors.primary,
   },
   buttonText: {
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontWeight: '700',
   },
   iconButton: {
@@ -354,9 +355,9 @@ const styles = StyleSheet.create({
     minWidth: 260,
     borderRadius: 12,
     paddingVertical: 8,
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surfaceElevated,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
+    borderColor: DESIGN_TOKENS.colors.borderLight,
   },
   menuItem: {
     flexDirection: 'row',
@@ -373,12 +374,12 @@ const styles = StyleSheet.create({
   },
   menuItemText: {
     fontSize: 15,
-    color: '#111827',
+    color: DESIGN_TOKENS.colors.text,
     textAlign: 'left',
     flex: 1,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: DESIGN_TOKENS.colors.surface,
     borderRadius: 12,
   },
   cardContent: {
@@ -391,6 +392,6 @@ const styles = StyleSheet.create({
     right: 12,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(17,24,39,0.92)',
+    backgroundColor: DESIGN_TOKENS.colors.overlay,
   },
 })

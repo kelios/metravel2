@@ -202,5 +202,5 @@ export function getOptimalOverlayColor(brightness: number): string {
  * Определяет цвет текста на основе яркости фона
  */
 export function getOptimalTextColor(brightness: number): string {
-  return brightness > 128 ? '#ffffff' : '#000000';
+  return brightness > 128 ? 'rgb(255, 255, 255)' : 'rgb(0, 0, 0)';
 }

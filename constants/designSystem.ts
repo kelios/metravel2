@@ -10,8 +10,70 @@ import {
   MODERN_MATTE_SHADOWS_DARK,
 } from './modernMattePalette';
 
+export const DESIGN_COLORS = {
+  // Used for persistence / payloads where CSS vars must not leak.
+  travelPoint: '#ff922b',
+  mapPin: '#ff8a00',
+
+  // Web shell / critical CSS fallbacks (must be plain values).
+  themeColorLight: '#ffffff',
+  themeColorDark: MODERN_MATTE_PALETTE_DARK.background,
+  criticalTextLight: MODERN_MATTE_PALETTE.text,
+  criticalTextDark: MODERN_MATTE_PALETTE_DARK.text,
+  criticalBgLight: MODERN_MATTE_PALETTE.background,
+  criticalBgDark: MODERN_MATTE_PALETTE_DARK.background,
+  criticalBgSecondaryLight: MODERN_MATTE_PALETTE.backgroundSecondary,
+  criticalBgSecondaryDark: MODERN_MATTE_PALETTE_DARK.backgroundSecondary,
+  criticalBgTertiaryLight: MODERN_MATTE_PALETTE.backgroundTertiary,
+  criticalBgTertiaryDark: MODERN_MATTE_PALETTE_DARK.backgroundTertiary,
+  criticalSurfaceLight: MODERN_MATTE_PALETTE.surface,
+  criticalSurfaceDark: MODERN_MATTE_PALETTE_DARK.surface,
+  criticalFocusLight: MODERN_MATTE_PALETTE.focusStrong,
+  criticalFocusDark: MODERN_MATTE_PALETTE_DARK.focusStrong,
+
+  // User-defined palette values (stored as strings).
+  userPointDefault: 'rgb(33, 150, 243)',
+  userPointPalette: [
+    'rgb(255, 107, 107)',
+    'rgb(240, 101, 149)',
+    'rgb(132, 94, 247)',
+    'rgb(51, 154, 240)',
+    'rgb(34, 184, 207)',
+    'rgb(81, 207, 102)',
+    'rgb(252, 196, 25)',
+  ],
+} as const;
+
 const colorVar = (name: string, fallback: string) =>
   Platform.OS === 'web' ? `var(--color-${name}, ${fallback})` : fallback;
+
+const extractHexColorFallback = (value: string): string | null => {
+  // Extract `#RRGGBB` / `#RRGGBBAA` from a plain hex or a `var(--..., <fallback>)`.
+  const trimmed = String(value ?? '').trim();
+
+  const direct = trimmed.match(/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/);
+  if (direct) return direct[0];
+
+  const fromVar = trimmed.match(/var\(\s*--[^,]+,\s*(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8})\s*\)/);
+  if (fromVar) return fromVar[1];
+
+  return null;
+};
+
+const applyHexAlpha = (hex: string, alphaHex: string): string => {
+  const normalized = hex.trim();
+  const alpha = alphaHex.replace(/^#/, '').slice(0, 2);
+  if (/^#[0-9a-fA-F]{6}$/.test(normalized)) return `${normalized}${alpha}`;
+  if (/^#[0-9a-fA-F]{8}$/.test(normalized)) return `${normalized.slice(0, 7)}${alpha}`;
+  return normalized;
+};
+
+const colorVarAlphaHex = (name: string, fallbackHex: string, alphaHex: string) =>
+  Platform.OS === 'web'
+    ? `var(--color-${name}-${alphaHex}, ${
+        applyHexAlpha(extractHexColorFallback(fallbackHex) ?? fallbackHex, alphaHex)
+      })`
+    : applyHexAlpha(extractHexColorFallback(fallbackHex) ?? fallbackHex, alphaHex);
 
 const shadowVar = (name: string, fallback: string) =>
   Platform.OS === 'web' ? `var(--shadow-${name}, ${fallback})` : fallback;
@@ -19,17 +81,27 @@ const shadowVar = (name: string, fallback: string) =>
 const themedColor = (name: string, light: string, dark: string, isDark: boolean) =>
   Platform.OS === 'web' ? `var(--color-${name}, ${light})` : isDark ? dark : light;
 
+const themedColorAlphaHex = (name: string, lightHex: string, darkHex: string, alphaHex: string, isDark: boolean) =>
+  Platform.OS === 'web'
+    ? `var(--color-${name}-${alphaHex}, ${
+        applyHexAlpha(extractHexColorFallback(isDark ? darkHex : lightHex) ?? (isDark ? darkHex : lightHex), alphaHex)
+      })`
+    : applyHexAlpha(extractHexColorFallback(isDark ? darkHex : lightHex) ?? (isDark ? darkHex : lightHex), alphaHex);
+
 const themedShadow = (name: string, light: string, dark: string, isDark: boolean) =>
   Platform.OS === 'web' ? `var(--shadow-${name}, ${light})` : isDark ? dark : light;
 
 export const DESIGN_TOKENS = {
   colors: {
     transparent: colorVar('transparent', MODERN_MATTE_PALETTE.transparent),
+    travelPoint: colorVar('travelPoint', DESIGN_COLORS.travelPoint),
+    mapPin: colorVar('mapPin', DESIGN_COLORS.mapPin),
     // Фоны (матовые, теплые)
     background: colorVar('background', MODERN_MATTE_PALETTE.background),
     backgroundSecondary: colorVar('backgroundSecondary', MODERN_MATTE_PALETTE.backgroundSecondary),
     backgroundTertiary: colorVar('backgroundTertiary', MODERN_MATTE_PALETTE.backgroundTertiary),
     surface: colorVar('surface', MODERN_MATTE_PALETTE.surface),
+    surfaceAlpha40: colorVarAlphaHex('surface', MODERN_MATTE_PALETTE.surface, '40'),
     surfaceMuted: colorVar('surfaceMuted', MODERN_MATTE_PALETTE.surfaceMuted),
     surfaceElevated: colorVar('surfaceElevated', MODERN_MATTE_PALETTE.surfaceElevated),
     card: colorVar('card', MODERN_MATTE_PALETTE.surface),
@@ -50,6 +122,9 @@ export const DESIGN_TOKENS = {
     primaryDark: colorVar('primaryDark', MODERN_MATTE_PALETTE.primaryDark),
     primaryLight: colorVar('primaryLight', MODERN_MATTE_PALETTE.primaryLight),
     primarySoft: colorVar('primarySoft', MODERN_MATTE_PALETTE.primarySoft),
+    primaryAlpha30: colorVarAlphaHex('primary', MODERN_MATTE_PALETTE.primary, '30'),
+    primaryAlpha40: colorVarAlphaHex('primary', MODERN_MATTE_PALETTE.primary, '40'),
+    primaryAlpha50: colorVarAlphaHex('primary', MODERN_MATTE_PALETTE.primary, '50'),
     
     accent: colorVar('accent', MODERN_MATTE_PALETTE.accent),
     accentDark: colorVar('accentDark', MODERN_MATTE_PALETTE.accentDark),
@@ -66,6 +141,7 @@ export const DESIGN_TOKENS = {
     warningDark: colorVar('warningDark', MODERN_MATTE_PALETTE.warningDark),
     warningLight: colorVar('warningLight', MODERN_MATTE_PALETTE.warningLight),
     warningSoft: colorVar('warningSoft', MODERN_MATTE_PALETTE.warningSoft),
+    warningAlpha40: colorVarAlphaHex('warning', MODERN_MATTE_PALETTE.warning, '40'),
     
     danger: colorVar('danger', MODERN_MATTE_PALETTE.danger),
     dangerDark: colorVar('dangerDark', MODERN_MATTE_PALETTE.dangerDark),
@@ -186,14 +262,15 @@ export const DESIGN_TOKENS = {
  * Rule: modernMattePalette should only be imported by this file.
  */
 export function getThemedColors(isDark: boolean) {
-  const palette = isDark ? MODERN_MATTE_PALETTE_DARK : MODERN_MATTE_PALETTE;
   const shadowsNative = isDark ? MODERN_MATTE_SHADOWS_DARK : MODERN_MATTE_SHADOWS;
-  const boxShadows = isDark ? MODERN_MATTE_BOX_SHADOWS_DARK : MODERN_MATTE_BOX_SHADOWS;
   const gradients = isDark ? MODERN_MATTE_GRADIENTS_DARK : MODERN_MATTE_GRADIENTS;
 
   return {
     // Primary
     primary: themedColor('primary', MODERN_MATTE_PALETTE.primary, MODERN_MATTE_PALETTE_DARK.primary, isDark),
+    primaryAlpha30: themedColorAlphaHex('primary', MODERN_MATTE_PALETTE.primary, MODERN_MATTE_PALETTE_DARK.primary, '30', isDark),
+    primaryAlpha40: themedColorAlphaHex('primary', MODERN_MATTE_PALETTE.primary, MODERN_MATTE_PALETTE_DARK.primary, '40', isDark),
+    primaryAlpha50: themedColorAlphaHex('primary', MODERN_MATTE_PALETTE.primary, MODERN_MATTE_PALETTE_DARK.primary, '50', isDark),
     primaryDark: themedColor('primaryDark', MODERN_MATTE_PALETTE.primaryDark, MODERN_MATTE_PALETTE_DARK.primaryDark, isDark),
     primaryLight: themedColor('primaryLight', MODERN_MATTE_PALETTE.primaryLight, MODERN_MATTE_PALETTE_DARK.primaryLight, isDark),
     primarySoft: themedColor('primarySoft', MODERN_MATTE_PALETTE.primarySoft, MODERN_MATTE_PALETTE_DARK.primarySoft, isDark),
@@ -217,6 +294,7 @@ export function getThemedColors(isDark: boolean) {
     backgroundSecondary: themedColor('backgroundSecondary', MODERN_MATTE_PALETTE.backgroundSecondary, MODERN_MATTE_PALETTE_DARK.backgroundSecondary, isDark),
     backgroundTertiary: themedColor('backgroundTertiary', MODERN_MATTE_PALETTE.backgroundTertiary, MODERN_MATTE_PALETTE_DARK.backgroundTertiary, isDark),
     surface: themedColor('surface', MODERN_MATTE_PALETTE.surface, MODERN_MATTE_PALETTE_DARK.surface, isDark),
+    surfaceAlpha40: themedColorAlphaHex('surface', MODERN_MATTE_PALETTE.surface, MODERN_MATTE_PALETTE_DARK.surface, '40', isDark),
     surfaceElevated: themedColor('surfaceElevated', MODERN_MATTE_PALETTE.surfaceElevated, MODERN_MATTE_PALETTE_DARK.surfaceElevated, isDark),
     surfaceMuted: themedColor('surfaceMuted', MODERN_MATTE_PALETTE.surfaceMuted, MODERN_MATTE_PALETTE_DARK.surfaceMuted, isDark),
     surfaceLight: themedColor('backgroundTertiary', MODERN_MATTE_PALETTE.backgroundTertiary, MODERN_MATTE_PALETTE_DARK.backgroundTertiary, isDark),
@@ -235,6 +313,7 @@ export function getThemedColors(isDark: boolean) {
     successSoft: themedColor('successSoft', MODERN_MATTE_PALETTE.successSoft, MODERN_MATTE_PALETTE_DARK.successSoft, isDark),
 
     warning: themedColor('warning', MODERN_MATTE_PALETTE.warning, MODERN_MATTE_PALETTE_DARK.warning, isDark),
+    warningAlpha40: themedColorAlphaHex('warning', MODERN_MATTE_PALETTE.warning, MODERN_MATTE_PALETTE_DARK.warning, '40', isDark),
     warningDark: themedColor('warningDark', MODERN_MATTE_PALETTE.warningDark, MODERN_MATTE_PALETTE_DARK.warningDark, isDark),
     warningLight: themedColor('warningLight', MODERN_MATTE_PALETTE.warningLight, MODERN_MATTE_PALETTE_DARK.warningLight, isDark),
     warningSoft: themedColor('warningSoft', MODERN_MATTE_PALETTE.warningSoft, MODERN_MATTE_PALETTE_DARK.warningSoft, isDark),

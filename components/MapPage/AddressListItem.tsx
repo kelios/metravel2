@@ -14,7 +14,7 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import * as Clipboard from 'expo-clipboard';
 import { TravelCoords } from '@/src/types/types';
 import { METRICS } from '@/constants/layout';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import PlaceListCard from '@/components/places/PlaceListCard';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -88,7 +88,7 @@ const openExternal = async (url?: string) => {
   }
 };
 
-const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
+const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_COLORS.travelPoint;
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 const stripCountryFromCategoryString = (raw: string | null | undefined, address?: string | null) => {

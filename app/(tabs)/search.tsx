@@ -37,6 +37,15 @@ function SearchScreen() {
         },
     }), [colors]);
 
+    if (isWeb && !isClient) {
+        const { SearchPageSkeleton } = require('@/components/listTravel/SearchPageSkeleton');
+        return (
+            <View style={styles.container}>
+                <SearchPageSkeleton />
+            </View>
+        );
+    }
+
     return (
         <>
             {isFocused && Platform.OS === 'web' && (

@@ -12,9 +12,9 @@ const DROP_PATH = 'M12 22s7-4.5 7-12a7 7 0 0 0-14 0c0 7.5 7 12 7 12Z';
 export const buildDropMarkerHtml = ({
   size,
   fill,
-  stroke = '#af7d4b',
+  stroke = 'rgb(175, 125, 75)',
   strokeWidth = 1,
-  innerColor = '#ffffff',
+  innerColor = 'rgb(255, 255, 255)',
   innerRadius = 3,
 }: DropMarkerOptions) => {
   return `

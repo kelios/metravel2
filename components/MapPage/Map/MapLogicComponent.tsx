@@ -1,5 +1,6 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 import type { LatLng } from '@/types/coordinates';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
@@ -878,7 +879,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
             borderRadius: 8,
             border: '1px solid rgba(0,0,0,0.15)',
             background: 'rgba(255,255,255,0.92)',
-            color: '#111',
+            color: `var(--color-text, ${DESIGN_COLORS.criticalTextLight})`,
           }}
         >
           Map debug
@@ -902,7 +903,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
         borderRadius: 12,
         border: '1px solid rgba(0,0,0,0.15)',
         background: 'rgba(255,255,255,0.92)',
-        color: '#111',
+        color: `var(--color-text, ${DESIGN_COLORS.criticalTextLight})`,
         fontSize: 12,
         lineHeight: 1.3,
         pointerEvents: 'auto',

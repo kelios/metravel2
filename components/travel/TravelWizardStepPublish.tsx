@@ -196,18 +196,27 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
             };
             setFormData(nextForm);
             setMissingForModeration([]);
-            await onManualSave(nextForm);
+            const saved = await onManualSave(nextForm);
+            const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
+            if (!resolvedId) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось сохранить',
+                    text2: 'Проверьте интернет-соединение и попробуйте ещё раз',
+                });
+                return;
+            }
 
-            const hasName = !!formData.name && formData.name.trim().length > 0;
-            const hasDescription = !!formData.description && formData.description.trim().length > 0;
-            const hasCountries = Array.isArray(formData.countries) && formData.countries.length > 0;
+            const hasName = !!nextForm.name && nextForm.name.trim().length > 0;
+            const hasDescription = !!nextForm.description && nextForm.description.trim().length > 0;
+            const hasCountries = Array.isArray(nextForm.countries) && nextForm.countries.length > 0;
             const hasRoute = routePoints.length > 0;
             const galleryArr = galleryItems;
-            const hasCover = !!formData.travel_image_thumb_small_url;
+            const hasCover = !!nextForm.travel_image_thumb_small_url;
             const hasPhotos = hasCover || galleryArr.length > 0;
 
             await trackWizardEvent('wizard_draft_saved', {
-                travel_id: formData.id ?? null,
+                travel_id: resolvedId,
                 step: currentStep,
                 fields_filled: {
                     name: hasName,
@@ -220,7 +229,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
             // После сохранения на последнем шаге логично вывести пользователя из мастера
             // в раздел "Мои путешествия", где он увидит черновик.
-            router.replace('/(tabs)/metravel');
+            router.replace('/metravel');
         } catch (error) {
             // ✅ FIX: Обработка ошибок сохранения
             void showToastMessage({
@@ -271,10 +280,19 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
         // Сохраняем статус на бэкенд (отсюда триггерятся уведомления)
         try {
-            await onManualSave(nextForm);
+            const saved = await onManualSave(nextForm);
+            const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
+            if (!resolvedId) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось отправить',
+                    text2: 'Сохранение не удалось. Проверьте интернет и попробуйте ещё раз.',
+                });
+                return;
+            }
 
             await trackWizardEvent('wizard_moderation_success', {
-                travel_id: formData.id ?? null,
+                travel_id: resolvedId,
                 filled_checklist_count: checklist.filter(item => item.ok).length,
                 total_checklist_count: checklist.length,
             });
@@ -287,7 +305,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
 
             // Навигация без повторного сохранения (чтобы не перезаписать publish=false старым стейтом)
             // Используем replace, чтобы мастер точно размонтировался и не продолжал автосохранение.
-            router.replace('/(tabs)/metravel');
+            router.replace('/metravel');
         } finally {
             finishAction();
         }
@@ -303,10 +321,19 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         setFormData(nextForm);
 
         try {
-            await onManualSave(nextForm);
+            const saved = await onManualSave(nextForm);
+            const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
+            if (!resolvedId) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось сохранить',
+                    text2: 'Проверьте интернет-соединение и попробуйте ещё раз',
+                });
+                return;
+            }
 
             await trackWizardEvent('admin_moderation_approved', {
-                travel_id: formData.id ?? null,
+                travel_id: resolvedId,
             });
 
             void showToastMessage({
@@ -315,7 +342,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 text2: 'Маршрут опубликован и доступен всем пользователям.',
             });
 
-            router.replace('/(tabs)/metravel');
+            router.replace('/metravel');
         } finally {
             finishAction();
         }
@@ -331,10 +358,19 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         setFormData(nextForm);
 
         try {
-            await onManualSave(nextForm);
+            const saved = await onManualSave(nextForm);
+            const resolvedId = (saved as any)?.id ?? (nextForm as any)?.id ?? null;
+            if (!resolvedId) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось сохранить',
+                    text2: 'Проверьте интернет-соединение и попробуйте ещё раз',
+                });
+                return;
+            }
 
             await trackWizardEvent('admin_moderation_rejected', {
-                travel_id: formData.id ?? null,
+                travel_id: resolvedId,
             });
 
             void showToastMessage({
@@ -343,7 +379,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 text2: 'Маршрут возвращен в черновики.',
             });
 
-            router.replace('/(tabs)/metravel');
+            router.replace('/metravel');
         } finally {
             finishAction();
         }
@@ -777,7 +813,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     checkBadgeRecommended: {
         backgroundColor: colors.primarySoft,
-        borderColor: colors.primary + '40',
+        borderColor: colors.primaryAlpha40,
     },
     checklistLabel: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,

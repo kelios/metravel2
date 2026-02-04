@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { WEB_TOAST_EVENT_NAME } from '@/src/utils/toast.web';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type ToastPayload = {
   text1?: string;
@@ -54,7 +55,7 @@ export default function ToastHost() {
       padding: '12px 14px',
       borderRadius: 12,
       background: 'rgba(17, 17, 17, 0.92)',
-      color: '#fff',
+      color: DESIGN_TOKENS.colors.textOnDark,
       boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
       fontSize: 14,
       lineHeight: 1.25,

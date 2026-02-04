@@ -388,9 +388,9 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     borderColor: colors.primary,
     backgroundColor: colors.primarySoft,
     ...(Platform.OS === 'web' 
-      ? { boxShadow: '0 2px 10px rgba(0, 0, 0, 0.10)' } as any
+      ? { boxShadow: colors.boxShadows.hover } as any
       : {
-          shadowColor: '#000',
+          shadowColor: colors.text,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.10,
           shadowRadius: 10,

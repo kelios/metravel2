@@ -36,7 +36,10 @@ const isTestEnv =
   (process as any).env &&
   (process as any).env.NODE_ENV === 'test';
 
-const ORS_API_KEY = process.env.EXPO_PUBLIC_ORS_API_KEY || undefined;
+const ORS_API_KEY = String(
+  process.env.EXPO_PUBLIC_ORS_API_KEY ?? (process.env as any).ORS_API_KEY ?? ''
+)
+  .trim() || undefined;
 
 type Props = MapProps;
 

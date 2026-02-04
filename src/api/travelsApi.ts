@@ -250,6 +250,18 @@ const unwrapTravelsList = (
     }
 
     if (payload && typeof payload === 'object') {
+        if (Array.isArray((payload as any).items)) {
+            return {
+                items: (payload as any).items,
+                total:
+                    typeof (payload as any).total === 'number'
+                        ? (payload as any).total
+                        : (typeof (payload as any).count === 'number'
+                            ? (payload as any).count
+                            : (payload as any).items.length),
+            };
+        }
+
         if (Array.isArray((payload as any).results)) {
             return {
                 items: (payload as any).results,
@@ -433,7 +445,7 @@ export const fetchTravels = async (
 
 export const fetchRandomTravels = async (
     page: number,
-    _itemsPerPage: number,
+    itemsPerPage: number,
     search: string,
     urlParams: Record<string, any>,
     options?: { signal?: AbortSignal }
@@ -464,6 +476,8 @@ export const fetchRandomTravels = async (
         whereObject.publish = 1;
 
         const params = buildWhereQueryParams({
+            page,
+            perPage: itemsPerPage,
             where: whereObject,
             query: search,
         });

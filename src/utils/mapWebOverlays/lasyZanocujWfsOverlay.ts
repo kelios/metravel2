@@ -457,9 +457,9 @@ export const attachLasyZanocujWfsOverlay = (
     if (!sanitized) return;
 
     const style = {
-      color: '#1f7a1f',
+      color: 'rgb(31, 122, 31)',
       weight: 2,
-      fillColor: '#34c759',
+      fillColor: 'rgb(52, 199, 89)',
       fillOpacity: 0.25,
       opacity: 0.9,
     };

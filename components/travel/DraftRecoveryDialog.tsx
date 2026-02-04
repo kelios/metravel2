@@ -121,7 +121,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       maxWidth: 400,
       width: '100%',
       alignItems: 'center',
-      shadowColor: '#000',
+      shadowColor: colors.text,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.15,
       shadowRadius: 12,
@@ -193,4 +193,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   });
 
 export default DraftRecoveryDialog;
-

@@ -42,10 +42,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Минимал',
     description: 'Чистый и простой дизайн',
     colors: {
-      primary: '#1a1a1a',
-      secondary: '#666666',
-      accent: '#2563eb',
-      background: '#ffffff',
+      primary: 'rgb(26, 26, 26)',
+      secondary: 'rgb(102, 102, 102)',
+      accent: 'rgb(37, 99, 235)',
+      background: 'rgb(255, 255, 255)',
     },
     preview: {
       headerFont: 'Inter',
@@ -58,10 +58,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Светлая',
     description: 'Мягкие цвета и много воздуха',
     colors: {
-      primary: '#1e293b',
-      secondary: '#64748b',
-      accent: '#3b82f6',
-      background: '#f8fafc',
+      primary: 'rgb(30, 41, 59)',
+      secondary: 'rgb(100, 116, 139)',
+      accent: 'rgb(59, 130, 246)',
+      background: 'rgb(248, 250, 252)',
     },
     preview: {
       headerFont: 'Inter',
@@ -74,10 +74,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Темная',
     description: 'Элегантное темное оформление',
     colors: {
-      primary: '#f1f5f9',
-      secondary: '#cbd5e1',
-      accent: '#f59e0b',
-      background: '#0f172a',
+      primary: 'rgb(241, 245, 249)',
+      secondary: 'rgb(203, 213, 225)',
+      accent: 'rgb(245, 158, 11)',
+      background: 'rgb(15, 23, 42)',
     },
     preview: {
       headerFont: 'Montserrat',
@@ -90,10 +90,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Журнал',
     description: 'Яркий журнальный стиль',
     colors: {
-      primary: '#1a1a1a',
-      secondary: '#4a4a4a',
-      accent: '#ea580c',
-      background: '#ffffff',
+      primary: 'rgb(26, 26, 26)',
+      secondary: 'rgb(74, 74, 74)',
+      accent: 'rgb(234, 88, 12)',
+      background: 'rgb(255, 255, 255)',
     },
     preview: {
       headerFont: 'Playfair Display',
@@ -106,10 +106,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Классика',
     description: 'Традиционная типографика',
     colors: {
-      primary: '#2c1810',
-      secondary: '#5a4a42',
-      accent: '#8b4513',
-      background: '#faf8f5',
+      primary: 'rgb(44, 24, 16)',
+      secondary: 'rgb(90, 74, 66)',
+      accent: 'rgb(139, 69, 19)',
+      background: 'rgb(250, 248, 245)',
     },
     preview: {
       headerFont: 'Crimson Text',
@@ -122,10 +122,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Модерн',
     description: 'Современный геометрический стиль',
     colors: {
-      primary: '#18181b',
-      secondary: '#52525b',
-      accent: '#8b5cf6',
-      background: '#ffffff',
+      primary: 'rgb(24, 24, 27)',
+      secondary: 'rgb(82, 82, 91)',
+      accent: 'rgb(139, 92, 246)',
+      background: 'rgb(255, 255, 255)',
     },
     preview: {
       headerFont: 'Poppins',
@@ -138,10 +138,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Романтика',
     description: 'Элегантный и нежный',
     colors: {
-      primary: '#4a1942',
-      secondary: '#8b5a83',
-      accent: '#e91e63',
-      background: '#fdf2f8',
+      primary: 'rgb(74, 25, 66)',
+      secondary: 'rgb(139, 90, 131)',
+      accent: 'rgb(233, 30, 99)',
+      background: 'rgb(253, 242, 248)',
     },
     preview: {
       headerFont: 'Cormorant Garamond',
@@ -154,10 +154,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Приключение',
     description: 'Динамичный и смелый',
     colors: {
-      primary: '#1a1a1a',
-      secondary: '#4a4a4a',
-      accent: '#ff6b35',
-      background: '#ffffff',
+      primary: 'rgb(26, 26, 26)',
+      secondary: 'rgb(74, 74, 74)',
+      accent: 'rgb(255, 107, 53)',
+      background: 'rgb(255, 255, 255)',
     },
     preview: {
       headerFont: 'Oswald',
@@ -170,10 +170,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Ч/Б Газета',
     description: 'Классическая монохромная печать',
     colors: {
-      primary: '#000000',
-      secondary: '#4a4a4a',
-      accent: '#000000',
-      background: '#ffffff',
+      primary: 'rgb(0, 0, 0)',
+      secondary: 'rgb(74, 74, 74)',
+      accent: 'rgb(0, 0, 0)',
+      background: 'rgb(255, 255, 255)',
     },
     preview: {
       headerFont: 'Libre Franklin',
@@ -186,10 +186,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Сепия',
     description: 'Винтажная газета 1920-х',
     colors: {
-      primary: '#3e2723',
-      secondary: '#6d4c41',
-      accent: '#8d6e63',
-      background: '#f5f1e8',
+      primary: 'rgb(62, 39, 35)',
+      secondary: 'rgb(109, 76, 65)',
+      accent: 'rgb(141, 110, 99)',
+      background: 'rgb(245, 241, 232)',
     },
     preview: {
       headerFont: 'Libre Franklin',
@@ -202,10 +202,10 @@ const THEME_CATALOG: Record<PdfThemeName, ThemeInfo> = {
     name: 'Газета',
     description: 'Яркая современная газетная верстка',
     colors: {
-      primary: '#1a1a1a',
-      secondary: '#4a4a4a',
-      accent: '#d32f2f',
-      background: '#fafaf7',
+      primary: 'rgb(26, 26, 26)',
+      secondary: 'rgb(74, 74, 74)',
+      accent: 'rgb(211, 47, 47)',
+      background: 'rgb(250, 250, 247)',
     },
     preview: {
       headerFont: 'Libre Franklin',

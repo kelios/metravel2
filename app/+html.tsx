@@ -1,6 +1,7 @@
 // app/_document.tsx
 import { ScrollViewStyleReset } from 'expo-router/html';
 import React from 'react';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 
 const METRIKA_ID = process.env.EXPO_PUBLIC_METRIKA_ID ? parseInt(process.env.EXPO_PUBLIC_METRIKA_ID, 10) : 0;
 const GA_ID = process.env.EXPO_PUBLIC_GOOGLE_GA4 || '';
@@ -425,9 +426,24 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <meta charSet="utf-8" />
       <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
       <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
-      <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
-      <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-      <meta name="color-scheme" content="light dark" />
+	      <meta name="theme-color" content={DESIGN_COLORS.themeColorDark} media="(prefers-color-scheme: dark)" />
+	      <meta name="theme-color" content={DESIGN_COLORS.themeColorLight} media="(prefers-color-scheme: light)" />
+	      <meta name="color-scheme" content="light dark" />
+
+	      <script
+	        dangerouslySetInnerHTML={{
+	          __html: String.raw`
+(function(){
+  try {
+    var fallback = 'MeTravel';
+    var rhTitle = document.querySelector('head title[data-rh=\"true\"]');
+    if (rhTitle && !rhTitle.textContent) rhTitle.textContent = fallback;
+    if (!document.title) document.title = fallback;
+  } catch (_e) {}
+})();
+`,
+        }}
+      />
       
       {!isProduction && <meta name="robots" content="noindex,nofollow" />}
 
@@ -605,8 +621,8 @@ body{
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
   text-rendering:optimizeSpeed;
-  color:var(--color-text,#1a1a1a);
-  background:linear-gradient(180deg,var(--color-background,#fff) 0%,var(--color-backgroundSecondary,#f5f5f5) 40%,var(--color-surface,#fafafa) 100%);
+  color:var(--color-text,${DESIGN_COLORS.criticalTextLight});
+  background:linear-gradient(180deg,var(--color-background,${DESIGN_COLORS.criticalBgLight}) 0%,var(--color-backgroundSecondary,${DESIGN_COLORS.criticalBgSecondaryLight}) 40%,var(--color-surface,${DESIGN_COLORS.criticalSurfaceLight}) 100%);
   padding-bottom:env(safe-area-inset-bottom);
   overflow-y:scroll;
   overflow-x:hidden;
@@ -616,14 +632,14 @@ svg[viewBox="0 0 32 32"][width="100%"][height="100%"]{width:32px;height:32px;max
 img{width:100%;object-fit:cover;font-style:italic;vertical-align:middle}
 input,button,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;background:transparent;border:0}
-button:focus-visible,a:focus-visible{outline:2px solid var(--color-focus,#0066cc);outline-offset:2px}
+button:focus-visible,a:focus-visible{outline:2px solid var(--color-focus,${DESIGN_COLORS.criticalFocusLight});outline-offset:2px}
 a{color:inherit;text-decoration:none}
 [hidden]{display:none !important}
-img[data-lcp]{content-visibility:auto;contain:layout style paint;min-height:300px;background:var(--color-backgroundSecondary,#f5f5f5);aspect-ratio:16/9}
+img[data-lcp]{content-visibility:auto;contain:layout style paint;min-height:300px;background:var(--color-backgroundSecondary,${DESIGN_COLORS.criticalBgSecondaryLight});aspect-ratio:16/9}
 img[width][height]{aspect-ratio:attr(width)/attr(height)}
 img[fetchpriority="high"]{content-visibility:auto;will-change:transform}
 img[loading="lazy"]{content-visibility:auto}
-[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,#f5f5f5)}
+[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,${DESIGN_COLORS.criticalBgSecondaryLight})}
 [data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:cover}
 [data-testid="home-hero-stack"]{min-height:400px;contain:layout style paint;display:flex;flex-direction:column !important;width:100%}
 @media (min-width:768px){[data-testid="home-hero-stack"]{flex-direction:row !important;align-items:center}}
@@ -638,14 +654,14 @@ img[loading="lazy"]{content-visibility:auto}
   html{scroll-behavior:auto}
   *,*::before,*::after{animation-duration:0.01ms !important;animation-iteration-count:1 !important;transition-duration:0.01ms !important;scroll-behavior:auto !important}
 }
-html[data-theme="dark"]{color-scheme:dark;--color-text:#fff;--color-background:#1a1a1a;--color-backgroundSecondary:#2a2a2a;--color-surface:#333;--color-focus:#66b3ff}
-html[data-theme="light"]{color-scheme:light;--color-text:#1a1a1a;--color-background:#fff;--color-backgroundSecondary:#f5f5f5;--color-surface:#fafafa;--color-focus:#0066cc}
-:focus-visible{outline:2px solid var(--color-focus,#0066cc);outline-offset:2px}
+html[data-theme="dark"]{color-scheme:dark;--color-text:${DESIGN_COLORS.criticalTextDark};--color-background:${DESIGN_COLORS.criticalBgDark};--color-backgroundSecondary:${DESIGN_COLORS.criticalBgSecondaryDark};--color-surface:${DESIGN_COLORS.criticalSurfaceDark};--color-focus:${DESIGN_COLORS.criticalFocusDark}}
+html[data-theme="light"]{color-scheme:light;--color-text:${DESIGN_COLORS.criticalTextLight};--color-background:${DESIGN_COLORS.criticalBgLight};--color-backgroundSecondary:${DESIGN_COLORS.criticalBgSecondaryLight};--color-surface:${DESIGN_COLORS.criticalSurfaceLight};--color-focus:${DESIGN_COLORS.criticalFocusLight}}
+:focus-visible{outline:2px solid var(--color-focus,${DESIGN_COLORS.criticalFocusLight});outline-offset:2px}
 ::selection{background-color:rgba(0,102,204,0.3);color:inherit}
 @media (max-width:768px){
   html{height:100%;height:-webkit-fill-available;font-size:100%}
   body{min-height:100vh;min-height:-webkit-fill-available;padding-bottom:calc(env(safe-area-inset-bottom) + 80px)}
-  img[data-lcp]{min-height:240px;aspect-ratio:16/9;background:var(--color-backgroundTertiary,#f0f0f0)}
+  img[data-lcp]{min-height:240px;aspect-ratio:16/9;background:var(--color-backgroundTertiary,${DESIGN_COLORS.criticalBgTertiaryLight})}
   [data-testid="travel-details-hero"]{min-height:240px}
   [data-card]{margin-bottom:16px;width:100%;max-width:100%;contain:layout style paint}
   [data-card] img{height:200px;object-fit:cover;width:100%;aspect-ratio:16/9}
@@ -661,7 +677,7 @@ html[data-theme="light"]{color-scheme:light;--color-text:#1a1a1a;--color-backgro
 [data-testid="footer-desktop-bar"]{justify-content:space-between !important}
 [data-testid^="footer-item-"]{display:inline-flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;flex:0 0 auto !important}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-[data-testid="map-container"]{min-height:400px;contain:layout style;background:var(--color-backgroundSecondary,#f5f5f5)}
+[data-testid="map-container"]{min-height:400px;contain:layout style;background:var(--color-backgroundSecondary,${DESIGN_COLORS.criticalBgSecondaryLight})}
 [data-testid="map-container"],[data-testid="map-leaflet-wrapper"],.leaflet-container,.leaflet-control-container{contain:none !important}
 [data-testid="search-container"]{min-height:600px;contain:layout style paint}
 [data-testid="travel-card"]{contain:layout style paint;will-change:auto}

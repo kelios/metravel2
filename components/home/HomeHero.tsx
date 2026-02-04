@@ -93,8 +93,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
-  const showImage = hydrated; // Show image on all devices when hydrated
-  const shouldRenderImageSlot = isWeb;
+  const showImage = hydrated && !isMobile;
+  const shouldRenderImageSlot = isWeb && !isMobile;
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;

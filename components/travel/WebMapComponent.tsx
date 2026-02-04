@@ -972,9 +972,9 @@ const WebMapComponent = ({
                                                                 transition: 'all 0.2s',
                                                             }}
                                                             onMouseEnter={(e) => {
-                                                                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                                                                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-                                                                e.currentTarget.style.color = '#ef4444';
+                                                                e.currentTarget.style.backgroundColor = colors.dangerSoft;
+                                                                e.currentTarget.style.borderColor = colors.danger;
+                                                                e.currentTarget.style.color = colors.danger;
                                                             }}
                                                             onMouseLeave={(e) => {
                                                                 e.currentTarget.style.backgroundColor = colors.surface;

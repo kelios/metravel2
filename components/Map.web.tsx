@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 
 // Leaflet/react-leaflet через Metro (без CDN)
 import Leaflet from 'leaflet';
@@ -125,7 +125,7 @@ const parseCoordKey = (coordKey: string): [number, number] | null => {
   return [lat, lng];
 };
 
-const DEFAULT_TRAVEL_POINT_COLOR = '#ff922b';
+const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_COLORS.travelPoint;
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
 const getCountryFromAddress = (address?: string | null) => {

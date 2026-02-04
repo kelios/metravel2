@@ -1,4 +1,5 @@
 import React, { createContext, useContext } from 'react';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ThemeContextType {
   // Add theme properties as needed
@@ -64,46 +65,46 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // Default theme values matching DESIGN_TOKENS
   const theme: ThemeContextType = {
     colors: {
-      primary: '#007bff',
-      secondary: '#6c757d',
-      background: '#ffffff',
-      surface: '#f8f9fa',
-      text: '#212529',
-      textMuted: '#6c757d',
-      border: '#dee2e6',
+      primary: DESIGN_TOKENS.colors.primary,
+      secondary: DESIGN_TOKENS.colors.accent,
+      background: DESIGN_TOKENS.colors.background,
+      surface: DESIGN_TOKENS.colors.surface,
+      text: DESIGN_TOKENS.colors.text,
+      textMuted: DESIGN_TOKENS.colors.textMuted,
+      border: DESIGN_TOKENS.colors.border,
     },
     spacing: {
-      xs: 4,
-      sm: 8,
-      md: 16,
-      lg: 24,
-      xl: 32,
+      xs: DESIGN_TOKENS.spacing.xxs,
+      sm: DESIGN_TOKENS.spacing.xs,
+      md: DESIGN_TOKENS.spacing.md,
+      lg: DESIGN_TOKENS.spacing.lg,
+      xl: DESIGN_TOKENS.spacing.xl,
     },
     typography: {
       sizes: {
-        xs: 12,
-        sm: 14,
-        md: 16,
-        lg: 18,
-        xl: 20,
+        xs: DESIGN_TOKENS.typography.sizes.xs,
+        sm: DESIGN_TOKENS.typography.sizes.sm,
+        md: DESIGN_TOKENS.typography.sizes.md,
+        lg: DESIGN_TOKENS.typography.sizes.lg,
+        xl: DESIGN_TOKENS.typography.sizes.xl,
       },
       weights: {
-        normal: '400',
-        medium: '500',
-        semibold: '600',
-        bold: '700',
+        normal: DESIGN_TOKENS.typography.weights.regular,
+        medium: DESIGN_TOKENS.typography.weights.medium,
+        semibold: DESIGN_TOKENS.typography.weights.semibold,
+        bold: DESIGN_TOKENS.typography.weights.bold,
       },
     },
     radii: {
-      sm: 4,
-      md: 8,
-      lg: 12,
-      xl: 16,
+      sm: DESIGN_TOKENS.radii.sm,
+      md: DESIGN_TOKENS.radii.md,
+      lg: DESIGN_TOKENS.radii.lg,
+      xl: DESIGN_TOKENS.radii.xl,
     },
     shadows: {
-      light: '0 1px 3px rgba(0,0,0,0.1)',
-      medium: '0 4px 6px rgba(0,0,0,0.1)',
-      heavy: '0 10px 15px rgba(0,0,0,0.1)',
+      light: DESIGN_TOKENS.shadows.light,
+      medium: DESIGN_TOKENS.shadows.medium,
+      heavy: DESIGN_TOKENS.shadows.heavy,
     },
   };
 

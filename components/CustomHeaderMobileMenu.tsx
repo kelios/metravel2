@@ -11,7 +11,6 @@ type Props = {
   onNavPress: (path: string) => void
   onUserAction: (path: string, extraAction?: () => void) => void
   onMyTravels?: () => void
-  onCreate: () => void
   onLogout: () => void
   colors: ThemedColors
   styles: any
@@ -29,7 +28,6 @@ export default function CustomHeaderMobileMenu({
   onNavPress,
   onUserAction,
   onMyTravels,
-  onCreate,
   onLogout,
   colors,
   styles,
@@ -172,18 +170,6 @@ export default function CustomHeaderMobileMenu({
                     <Feather name="map-pin" size={20} color={colors.textMuted} />
                   </View>
                   <Text style={styles.modalNavLabel}>Мои точки</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={onCreate}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel="Поделиться маршрутом и историей"
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="share-2" size={20} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.modalNavLabel}>Поделиться путешествием</Text>
                 </Pressable>
 
                 <Pressable

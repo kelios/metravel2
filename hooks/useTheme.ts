@@ -3,9 +3,12 @@
  * Handles light/dark mode switching with persistence
  */
 
-import { useEffect, useState, useCallback, createContext, useContext, createElement } from 'react';
+import { useEffect, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 import { getThemedColors } from '@/constants/designSystem';
+
+// Re-export helper for callers that historically imported it from this module.
+export { getThemedColors };
 
 export type Theme = 'light' | 'dark' | 'auto';
 
@@ -16,7 +19,21 @@ export interface ThemeContextType {
   toggleTheme: () => void;
 }
 
-export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+const THEME_CONTEXT_GLOBAL_KEY = '__metravelThemeContext_v1';
+const THEME_PROVIDER_WARNED_GLOBAL_KEY = '__metravelThemeProviderWarned_v1';
+
+function getSingletonThemeContext(): Context<ThemeContextType | undefined> {
+  const g: any = typeof globalThis !== 'undefined' ? globalThis : undefined;
+  if (g && g[THEME_CONTEXT_GLOBAL_KEY]) {
+    return g[THEME_CONTEXT_GLOBAL_KEY] as Context<ThemeContextType | undefined>;
+  }
+
+  const ctx = createContext<ThemeContextType | undefined>(undefined);
+  if (g) g[THEME_CONTEXT_GLOBAL_KEY] = ctx;
+  return ctx;
+}
+
+export const ThemeContext = getSingletonThemeContext();
 
 /**
  * Hook для управления темой (light/dark mode)
@@ -26,7 +43,15 @@ export function useTheme(): ThemeContextType {
 
   if (!context) {
     if (__DEV__) {
-      console.error('useTheme must be used within ThemeProvider');
+      const g: any = typeof globalThis !== 'undefined' ? globalThis : undefined;
+      const alreadyWarned = Boolean(g && g[THEME_PROVIDER_WARNED_GLOBAL_KEY]);
+      if (!alreadyWarned) {
+        if (g) g[THEME_PROVIDER_WARNED_GLOBAL_KEY] = true;
+        console.error(
+          'useTheme must be used within ThemeProvider. ' +
+            "If you're seeing this during Fast Refresh on web, a full reload usually fixes it."
+        );
+      }
     }
     return {
       theme: 'auto',

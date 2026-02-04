@@ -103,7 +103,7 @@ export const useRouting = (
     }, [hasTwoPoints])
 
     const forceOsrm = useMemo(() => {
-        // В dev можно включить форс-OSRM чтобы не ловить CORS от ORS
+        // В dev можно включить форс-OSRM (в основном для driving), чтобы не зависеть от ORS.
         if (typeof process !== 'undefined') {
             const envFlag = (process.env as any)?.EXPO_PUBLIC_FORCE_OSRM;
             if (envFlag === '1' || envFlag === 'true') return true;
@@ -175,8 +175,10 @@ export const useRouting = (
             }
         }
 
+        const apiKey = String(ORS_API_KEY ?? '').trim()
+
         // ✅ БЕЗОПАСНОСТЬ: Валидация API ключа
-        if (!ORS_API_KEY || ORS_API_KEY.length < 10) {
+        if (!apiKey || apiKey.length < 10) {
             throw new Error('Неверный API ключ или доступ запрещен.');
         }
 
@@ -190,7 +192,7 @@ export const useRouting = (
                 {
                     method: 'POST',
                     headers: {
-                        Authorization: String(ORS_API_KEY),
+                        Authorization: apiKey,
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ coordinates }),
@@ -570,15 +572,55 @@ export const useRouting = (
                 setState((prev) => ({ ...prev, loading: true, error: false }))
                 routeCache.recordRequest()
 
-                let result: RouteResult
-                const shouldUseORS = !!ORS_API_KEY && !forceOsrm
+                // `EXPO_PUBLIC_FORCE_OSRM` historically existed to force OSRM for driving in dev.
+                // For bike/foot the public OSRM profile isn't reliable; if we have an ORS key,
+                // prefer ORS regardless of this flag.
+                const normalizedApiKey = String(ORS_API_KEY ?? '').trim()
+                const shouldUseORS =
+                    !!normalizedApiKey && (transportMode !== 'car' || !forceOsrm)
 
+                const isWeb =
+                    typeof window !== 'undefined' && typeof document !== 'undefined'
+
+                let lastError: any = null
+
+                const attempt = async (label: string, fn: () => Promise<RouteResult>) => {
+                    try {
+                        return await fn()
+                    } catch (e: any) {
+                        lastError = e
+                        const msg = e?.message || String(e)
+                        console.warn(`[useRouting] ${label} failed, trying fallback...`, msg)
+                        return null
+                    }
+                }
+
+                let result: RouteResult | null = null
+
+                // 1) Primary: ORS if we have a key (best for all transport modes).
                 if (shouldUseORS) {
-                    result = await fetchORS(currentPoints, transportMode, abortController.signal)
-                } else if (transportMode === 'car') {
-                    result = await fetchOSRM(currentPoints, transportMode, abortController.signal)
-                } else {
-                    result = await fetchValhalla(currentPoints, transportMode, abortController.signal)
+                    result = await attempt('ORS', () =>
+                        fetchORS(currentPoints, transportMode, abortController.signal)
+                    )
+                }
+
+                // 2) Fallback: OSRM driving (CORS-friendly). For bike/foot on web, this avoids Valhalla CORS issues
+                // and is still "by roads" even if the mode isn't exact.
+                if (!result && (transportMode === 'car' || isWeb)) {
+                    result = await attempt('OSRM', () =>
+                        fetchOSRM(currentPoints, 'car', abortController.signal)
+                    )
+                }
+
+                // 3) Fallback: Valhalla for bike/foot (non-web / when OSRM isn't used).
+                if (!result && transportMode !== 'car') {
+                    result = await attempt('Valhalla', () =>
+                        fetchValhalla(currentPoints, transportMode, abortController.signal)
+                    )
+                }
+
+                if (!result) {
+                    throw lastError || new Error('Не удалось построить маршрут')
                 }
 
                 const duration = result.duration || estimateDurationSeconds(result.distance, transportMode)

@@ -1021,9 +1021,17 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     );
 
     useEffect(() => {
-        if (!fullscreen && !showHtml && tmpStoredRange.current && quillRef.current) {
-            quillRef.current.getEditor().setSelection(tmpStoredRange.current, 'silent');
+        if (fullscreen || showHtml) return;
+        if (!tmpStoredRange.current) return;
+
+        const editor = quillRef.current?.getEditor?.();
+        if (!editor || typeof editor.setSelection !== 'function') return;
+
+        try {
+            editor.setSelection(tmpStoredRange.current as any, 'silent');
             tmpStoredRange.current = null;
+        } catch {
+            // noop
         }
     }, [fullscreen, showHtml]);
 
@@ -1316,8 +1324,15 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                             <Button
                                 onPress={() => {
                                     setAnchorModalVisible(false);
-                                    if (tmpStoredRange.current && quillRef.current) {
-                                        quillRef.current.getEditor().setSelection(tmpStoredRange.current, 'silent');
+                                    if (tmpStoredRange.current) {
+                                        const editor = quillRef.current?.getEditor?.();
+                                        if (editor && typeof editor.setSelection === 'function') {
+                                            try {
+                                                editor.setSelection(tmpStoredRange.current as any, 'silent');
+                                            } catch {
+                                                // noop
+                                            }
+                                        }
                                     }
                                     if (showHtml) {
                                         const id = normalizeAnchorId(anchorValue);

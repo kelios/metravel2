@@ -159,17 +159,6 @@ describe('CustomHeader', () => {
             expect(mockPush).toHaveBeenCalledWith('/map');
         });
 
-        it('redirects guest to login when create is pressed', () => {
-            (usePathname as jest.Mock).mockReturnValue('/');
-            mockAuthContext.isAuthenticated = false;
-            const utils = renderHeader();
-
-            const createButton = utils.getByTestId('header-create');
-            fireEvent.press(createButton);
-
-            expect(mockPush).toHaveBeenCalledWith('/login');
-        });
-
         it('correctly identifies active path for nested routes', () => {
             (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
             const utils = renderHeader();

@@ -115,4 +115,4 @@ npm run build:all:prod
 
 **Последнее обновление:** 3 января 2026  
 **Статус:** ✅ Google Maps проблемы исправлены, зависимости оптимизированы  
-**См. полный отчет:** `PRODUCTION_READINESS_REPORT.md`
+**См. полный отчет:** `docs/PRODUCTION_READINESS_REPORT.md`

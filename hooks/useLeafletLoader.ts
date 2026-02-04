@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 
 interface UseLeafletLoaderOptions {
   /**
@@ -104,12 +105,15 @@ const ensureLeafletCss = async (): Promise<void> => {
       '.leaflet-marker-pane{z-index:600}' +
       '.leaflet-tooltip-pane{z-index:650}' +
       '.leaflet-popup-pane{z-index:700}' +
+      // Prevent global SVG/img resets from scaling Leaflet overlays/tiles.
+      '.leaflet-container svg{max-width:none !important;max-height:none !important}' +
+      '.leaflet-container img{max-width:none !important}' +
       '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
       '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
       '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
       '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
       '.leaflet-right .leaflet-control{float:right}' +
-      '.leaflet-control-attribution{margin:0;padding:0 5px;color:#333;font-size:11px;background:rgba(255,255,255,0.7)}';
+      `.leaflet-control-attribution{margin:0;padding:0 5px;color:var(--color-text,${DESIGN_COLORS.criticalTextLight});font-size:11px;background:rgba(255,255,255,0.7)}`;
     document.head.appendChild(style);
     return;
   }
@@ -142,12 +146,15 @@ const ensureLeafletCss = async (): Promise<void> => {
       '.leaflet-popup-pane{z-index:700}' +
       '.leaflet-tile{position:absolute;left:0;top:0;filter:inherit;visibility:inherit}' +
       '.leaflet-zoom-animated{transform-origin:0 0}' +
+      // Prevent global SVG/img resets from scaling Leaflet overlays/tiles.
+      '.leaflet-container svg{max-width:none !important;max-height:none !important}' +
+      '.leaflet-container img{max-width:none !important}' +
       '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
       '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
       '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
       '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
       '.leaflet-right .leaflet-control{float:right}' +
-      '.leaflet-control-attribution{margin:0;padding:0 5px;color:#333;font-size:11px;background:rgba(255,255,255,0.7)}';
+      `.leaflet-control-attribution{margin:0;padding:0 5px;color:var(--color-text,${DESIGN_COLORS.criticalTextLight});font-size:11px;background:rgba(255,255,255,0.7)}`;
     document.head.appendChild(style);
     return;
   }
@@ -174,13 +181,16 @@ const ensureLeafletCss = async (): Promise<void> => {
         '.leaflet-popup-pane{z-index:700}' +
         '.leaflet-tile{position:absolute;left:0;top:0;filter:inherit;visibility:inherit}' +
         '.leaflet-zoom-animated{transform-origin:0 0}' +
+        // Prevent global SVG/img resets from scaling Leaflet overlays/tiles.
+        '.leaflet-container svg{max-width:none !important;max-height:none !important}' +
+        '.leaflet-container img{max-width:none !important}' +
         // Controls positioning
         '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
         '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
         '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
         '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
         '.leaflet-right .leaflet-control{float:right}' +
-        '.leaflet-control-attribution{margin:0;padding:0 5px;color:#333;font-size:11px;background:rgba(255,255,255,0.7)}';
+        `.leaflet-control-attribution{margin:0;padding:0 5px;color:var(--color-text,${DESIGN_COLORS.criticalTextLight});font-size:11px;background:rgba(255,255,255,0.7)}`;
       document.head.appendChild(style);
       resolve();
     };

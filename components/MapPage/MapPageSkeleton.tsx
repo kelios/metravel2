@@ -17,6 +17,16 @@ export const MapPageSkeleton: React.FC = () => {
       backgroundColor: colors.surfaceLight,
       position: 'relative',
     },
+    headlineText: {
+      position: 'absolute',
+      left: DESIGN_TOKENS.spacing.lg,
+      right: DESIGN_TOKENS.spacing.lg,
+      top: DESIGN_TOKENS.spacing.lg,
+      color: colors.text,
+      fontSize: 24,
+      fontWeight: '700',
+      lineHeight: 30,
+    },
     mapControls: {
       position: 'absolute',
       top: DESIGN_TOKENS.spacing.md,
@@ -46,6 +56,7 @@ export const MapPageSkeleton: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.mapArea}>
         <SkeletonLoader width="100%" height={1} borderRadius={0} style={StyleSheet.absoluteFillObject} />
+        <Text style={styles.headlineText}>{'Карта путешествий\nЗагружаем…'}</Text>
         <Text style={styles.placeholderText}>Загружаем карту…</Text>
         
         <View style={styles.mapControls}>

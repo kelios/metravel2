@@ -3,6 +3,7 @@ import { View, StyleSheet, ActivityIndicator, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 
 type Point = {
   id: number;
@@ -75,16 +76,17 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
     () => withAlpha(themeColors.surface, 0.8),
     [themeColors.surface]
   );
-  const markerColor = '#FF8A00';
+  const markerColor = DESIGN_COLORS.mapPin;
+  const markerShadowColor = themeColors.shadows.medium.shadowColor || themeColors.text;
   const markerSvg = `
     <svg width="32" height="48" viewBox="0 0 32 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id="pinGlow" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22" />
-          <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0" />
+          <stop offset="0" stop-color="${themeColors.textOnDark}" stop-opacity="0.22" />
+          <stop offset="0.55" stop-color="${themeColors.textOnDark}" stop-opacity="0" />
         </linearGradient>
         <filter id="pinShadow" x="-30%" y="-10%" width="160%" height="160%" color-interpolation-filters="sRGB">
-          <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.20" />
+          <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="${markerShadowColor}" flood-opacity="0.20" />
         </filter>
       </defs>
 
@@ -94,9 +96,9 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
 
         <path d="M22 28.5C19.2 34.8 16 41.8 16 41.8C16 41.8 12.8 34.8 10 28.5H22Z" fill="${markerColor}"/>
 
-        <circle cx="16" cy="15.5" r="5.2" fill="#FFFFFF" fill-opacity="0.96" />
+        <circle cx="16" cy="15.5" r="5.2" fill="${themeColors.textOnDark}" fill-opacity="0.96" />
         <circle cx="16" cy="15.5" r="3.2" fill="${markerColor}" />
-        <rect x="12.5" y="7.2" width="7.8" height="3.8" rx="1.9" fill="#FFFFFF" fill-opacity="0.35" transform="rotate(-18 12.5 7.2)" />
+        <rect x="12.5" y="7.2" width="7.8" height="3.8" rx="1.9" fill="${themeColors.textOnDark}" fill-opacity="0.35" transform="rotate(-18 12.5 7.2)" />
       </g>
     </svg>
   `;

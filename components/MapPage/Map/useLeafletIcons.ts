@@ -1,5 +1,6 @@
 // components/MapPage/map/useLeafletIcons.ts
 import { useMemo } from 'react';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export const useLeafletIcons = (L: any) => {
   return useMemo(() => {
@@ -89,10 +90,10 @@ export const useLeafletIcons = (L: any) => {
     };
 
     return {
-      meTravel: makeDivPin('#FF8A00'),
-      start: makeDivPin('#7a9d8a'),
-      end: makeDivPin('#a88a8a'),
-      userLocation: makeDivPin('#8a9aa8'),
+      meTravel: makeDivPin(DESIGN_TOKENS.colors.mapPin),
+      start: makeDivPin(DESIGN_TOKENS.colors.success),
+      end: makeDivPin(DESIGN_TOKENS.colors.dangerDark),
+      userLocation: makeDivPin(DESIGN_TOKENS.colors.accent),
     };
   }, [L]);
 };

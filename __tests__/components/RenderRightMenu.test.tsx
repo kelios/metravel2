@@ -187,7 +187,7 @@ describe('AccountMenu', () => {
     } as any);
 
     const { getByText } = renderWithClient(<RenderRightMenu />);
-    expect(getByText('Поделиться путешествием')).toBeTruthy();
+    expect(getByText('Мои путешествия')).toBeTruthy();
   });
 
   it('displays username when authenticated', () => {

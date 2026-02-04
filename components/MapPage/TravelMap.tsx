@@ -707,7 +707,7 @@ const styles: any = {
     width: '100%',
     overflow: 'hidden',
     position: 'relative',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
   },
   loadingContainer: {
     alignItems: 'center',

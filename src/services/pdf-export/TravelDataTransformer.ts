@@ -8,14 +8,14 @@ import { sanitizeRichTextForPdf } from '@/src/utils/sanitizeRichText';
 
 const IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url=';
 const DEFAULT_IMAGE_PARAMS = 'w=1600&fit=inside';
-const SAFE_COLOR_FALLBACK = '#1f2937';
+const SAFE_COLOR_FALLBACK = 'rgb(31, 41, 55)';
 const PLACEHOLDER_IMAGE = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
-    <rect width="800" height="600" rx="18" ry="18" fill="#f3f4f6"/>
-    <path d="M110 450 L220 310 L310 380 L430 270 L690 450" stroke="#d1d5db" stroke-width="20" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="220" cy="300" r="70" fill="#d1d5db"/>
-    <circle cx="520" cy="360" r="45" fill="#e5e7eb"/>
-    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#cbd5f5" font-family="sans-serif" font-size="36">
+    <rect width="800" height="600" rx="18" ry="18" fill="rgb(243, 244, 246)"/>
+    <path d="M110 450 L220 310 L310 380 L430 270 L690 450" stroke="rgb(209, 213, 219)" stroke-width="20" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="220" cy="300" r="70" fill="rgb(209, 213, 219)"/>
+    <circle cx="520" cy="360" r="45" fill="rgb(229, 231, 235)"/>
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="rgb(203, 213, 245)" font-family="sans-serif" font-size="36">
       Фото недоступно
     </text>
   </svg>`

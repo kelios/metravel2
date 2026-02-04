@@ -127,16 +127,6 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         router.push('/');
     }, [logout, router]);
 
-    const handleCreate = useCallback(() => {
-        if (!isAuthenticated) {
-            setMobileMenuVisible(false);
-            router.push('/login' as any);
-            return;
-        }
-        setMobileMenuVisible(false);
-        router.push('/travel/new' as any);
-    }, [isAuthenticated, router]);
-
     const openMobileMenu = useCallback(() => {
         mobileMenuOpenedAtRef.current = Date.now();
         setMobileMenuVisible(true);
@@ -528,25 +518,6 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                   
                   {/* Элементы пользователя - справа */}
                   <View style={styles.rightSection}>
-                      {!isMobile && (
-                          <Pressable
-                              onPress={handleCreate}
-                              style={({ hovered, pressed }) => [
-                                  styles.createButton,
-                                  (hovered || pressed) && styles.createButtonHover,
-                                  globalFocusStyles.focusable,
-                              ]}
-                              accessibilityRole="button"
-                              accessibilityLabel="Поделиться маршрутом и историей"
-                              testID="header-create"
-                          >
-                              <View style={styles.iconSlot18}>
-                                  <Feather name="share-2" size={18} color={colors.surface} />
-                              </View>
-                              <Text style={styles.createLabel}>Поделиться путешествием</Text>
-                          </Pressable>
-                      )}
-
                       {/* Мобильное меню - кнопка (только на мобильных) */}
                       {isMobile ? (
                           <>
@@ -645,7 +616,6 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                   onNavPress={handleNavPress}
                   onUserAction={handleUserAction}
                   onMyTravels={handleMyTravels}
-                  onCreate={handleCreate}
                   onLogout={handleLogout}
                   colors={colors as any}
                   styles={styles}
@@ -673,7 +643,6 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                   onNavPress={handleNavPress}
                   onUserAction={handleUserAction}
                   onMyTravels={handleMyTravels}
-                  onCreate={handleCreate}
                   onLogout={handleLogout}
                   colors={colors as any}
                   styles={styles}

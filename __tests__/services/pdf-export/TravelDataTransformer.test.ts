@@ -396,10 +396,10 @@ describe('TravelDataTransformer', () => {
 
       const result = transformer.transform(travels);
 
-      // var(--bg/--fg) заменяются на SAFE_COLOR_FALLBACK (#1f2937),
+      // var(--bg/--fg) заменяются на SAFE_COLOR_FALLBACK (rgb(31, 41, 55)),
       // inline-стили санитизируются до явных color/background значений
-      expect(result[0].description).toContain('color:#1f2937');
-      expect(result[0].description).toMatch(/background(-color)?:#1f2937/);
+      expect(result[0].description).toMatch(/color\s*:\s*rgb\(31,\s*41,\s*55\)/);
+      expect(result[0].description).toMatch(/background(-color)?\s*:\s*rgb\(31,\s*41,\s*55\)/);
       expect(result[0].description).not.toContain('--bg');
       expect(result[0].description).not.toContain(':root');
     });

@@ -80,6 +80,12 @@ describe('listTravelHelpers', () => {
       expect(response).toEqual({ items: data, total: 10 })
     })
 
+    it('normalizes object responses with items array and explicit total', () => {
+      const items = [createTravel({ id: 22 })]
+      const response = normalizeApiResponse({ items, total: 12 })
+      expect(response).toEqual({ items, total: 12 })
+    })
+
     it('wraps single data object and falls back to total of 1', () => {
       const single = createTravel({ id: 31 })
       const response = normalizeApiResponse({ data: single })

@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react'
 import { View } from 'react-native'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 type QuillInstance = any
 
@@ -249,7 +250,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
     <View style={style}>
       <div ref={containerRef} style={{ height: '100%', width: '100%' }} />
       {loadError ? (
-        <div style={{ padding: 8, color: '#b00020', fontSize: 12 }}>
+        <div style={{ padding: 8, color: DESIGN_TOKENS.colors.error, fontSize: 12 }}>
           Не удалось загрузить редактор. Попробуйте обновить страницу.
         </div>
       ) : null}

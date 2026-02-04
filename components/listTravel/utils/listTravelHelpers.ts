@@ -24,8 +24,16 @@ export function normalizeApiResponse(data: any): { items: Travel[]; total: numbe
     let items: Travel[] = [];
     let total = 0;
 
+    // Если data.items - массив (некоторые эндпоинты/обертки)
+    if (Array.isArray((data as any).items)) {
+      items = (data as any).items;
+      total =
+        typeof (data as any).total === 'number'
+          ? (data as any).total
+          : (typeof (data as any).count === 'number' ? (data as any).count : items.length);
+    }
     // ✅ ИСПРАВЛЕНИЕ: Если data.data - массив (основной случай)
-    if (Array.isArray(data.data)) {
+    else if (Array.isArray(data.data)) {
       items = data.data;
       // ✅ ИСПРАВЛЕНИЕ: Используем total из ответа, если он есть, иначе длину массива
       total = typeof data.total === 'number' ? data.total : items.length;

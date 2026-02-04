@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { SkeletonLoader, TravelCardSkeleton, FiltersSkeleton } from '@/components/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -66,6 +66,9 @@ export const SearchPageSkeleton: React.FC = () => {
     <View style={styles.container}>
       {/* Sidebar with Filters */}
       <View style={[styles.sidebar, isMobile && styles.sidebarMobile]}>
+        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: DESIGN_TOKENS.spacing.sm }}>
+          Поиск путешествий
+        </Text>
         <SkeletonLoader 
           width="60%" 
           height={24} 

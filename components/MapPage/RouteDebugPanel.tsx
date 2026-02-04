@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouteStore } from '@/stores/routeStore';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 export const RouteDebugPanel: React.FC = () => {
   const routeStore = useRouteStore();
@@ -105,10 +106,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
+    backgroundColor: DESIGN_TOKENS.colors.surfaceElevated,
+    padding: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    shadowColor: DESIGN_TOKENS.colors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   },
   stat: {
     fontSize: 12,
-    color: '#666',
+    color: DESIGN_TOKENS.colors.textMuted,
     marginBottom: 4,
   },
   buttons: {
@@ -136,23 +137,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   button: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
+    backgroundColor: DESIGN_TOKENS.colors.info,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    borderRadius: DESIGN_TOKENS.radii.sm,
   },
   clearButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: DESIGN_TOKENS.colors.danger,
   },
   buttonText: {
-    color: 'white',
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: 12,
     fontWeight: '600',
   },
   logs: {
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-    paddingTop: 12,
+    borderTopColor: DESIGN_TOKENS.colors.border,
+    paddingTop: DESIGN_TOKENS.spacing.sm,
   },
   logsTitle: {
     fontSize: 12,
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   },
   log: {
     fontSize: 10,
-    color: '#666',
+    color: DESIGN_TOKENS.colors.textMuted,
     marginBottom: 2,
     fontFamily: 'monospace',
   },

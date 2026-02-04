@@ -1,5 +1,6 @@
 import type { ParsedPoint } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
+import { DESIGN_COLORS } from '@/constants/designSystem';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 
 type FileInput = File | DocumentPickerAsset;
@@ -83,7 +84,7 @@ export class OSMParser {
         this.normalizeColor(props.color) ??
         this.normalizeColor(props['marker-color']) ??
         this.normalizeColor(props.markerColor) ??
-        '#2196F3';
+        DESIGN_COLORS.userPointDefault;
 
       const status = this.normalizeStatus(props.status) ?? PointStatus.PLANNING;
       
@@ -130,7 +131,7 @@ export class OSMParser {
           if (isNaN(lat) || isNaN(lon)) continue;
 
           const status = this.normalizeStatus(statusRaw) ?? PointStatus.PLANNING;
-          const color = this.normalizeColor(colorRaw) ?? '#2196F3';
+          const color = this.normalizeColor(colorRaw) ?? DESIGN_COLORS.userPointDefault;
 
           const point: ParsedPoint = {
             id: this.generateId(),
@@ -174,7 +175,7 @@ export class OSMParser {
       const colorRaw = this.extractTagText(wptXml, 'color');
 
       const status = this.normalizeStatus(statusRaw) ?? PointStatus.PLANNING;
-      const color = this.normalizeColor(colorRaw) ?? '#2196F3';
+      const color = this.normalizeColor(colorRaw) ?? DESIGN_COLORS.userPointDefault;
 
       points.push({
         id: this.generateId(),

@@ -5,6 +5,7 @@ import {
   getPasswordStrengthColor,
   meetsMinimumRequirements 
 } from '@/src/utils/passwordStrength';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 describe('passwordStrength', () => {
   describe('checkPasswordStrength', () => {
@@ -66,12 +67,12 @@ describe('passwordStrength', () => {
 
   describe('getPasswordStrengthColor', () => {
     it('should return red for weak passwords', () => {
-      expect(getPasswordStrengthColor(0)).toBe('#f44336');
-      expect(getPasswordStrengthColor(1)).toBe('#f44336');
+      expect(getPasswordStrengthColor(0)).toBe(DESIGN_TOKENS.colors.danger);
+      expect(getPasswordStrengthColor(1)).toBe(DESIGN_TOKENS.colors.danger);
     });
 
     it('should return green for strong passwords', () => {
-      expect(getPasswordStrengthColor(4)).toBe('#4caf50');
+      expect(getPasswordStrengthColor(4)).toBe(DESIGN_TOKENS.colors.success);
     });
   });
 

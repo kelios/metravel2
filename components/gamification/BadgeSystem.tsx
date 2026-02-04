@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemedColors } from '@/hooks/useTheme';
 import BadgeCard, { Badge } from './BadgeCard';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 const STORAGE_KEY_BADGES = 'user_badges';
 const STORAGE_KEY_STATS = 'user_stats';
@@ -22,7 +23,7 @@ const AVAILABLE_BADGES: Badge[] = [
     name: 'Первопроходец',
     description: 'Опубликовал первую статью',
     icon: 'star',
-    color: '#FFD700',
+    color: DESIGN_TOKENS.colors.warning,
     maxProgress: 1,
     earned: false,
   },
@@ -31,7 +32,7 @@ const AVAILABLE_BADGES: Badge[] = [
     name: 'Путешественник',
     description: 'Опубликовал 5 статей',
     icon: 'navigation',
-    color: '#5D8AA8',
+    color: DESIGN_TOKENS.colors.info,
     maxProgress: 5,
     earned: false,
   },
@@ -40,7 +41,7 @@ const AVAILABLE_BADGES: Badge[] = [
     name: 'Исследователь',
     description: 'Опубликовал 10 статей',
     icon: 'globe',
-    color: '#4CAF50',
+    color: DESIGN_TOKENS.colors.success,
     maxProgress: 10,
     earned: false,
   },

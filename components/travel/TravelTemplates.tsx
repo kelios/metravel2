@@ -25,7 +25,7 @@ const TEMPLATES: TravelTemplate[] = [
     name: 'Выходные в городе',
     description: 'Короткая поездка в город на 2-3 дня',
     icon: 'map-pin',
-    color: '#5D8AA8',
+    color: DESIGN_TOKENS.colors.info,
     category: 'city',
     fields: {
       name: 'Выходные в [Название города]',
@@ -49,7 +49,7 @@ const TEMPLATES: TravelTemplate[] = [
     name: 'Поход в горы',
     description: 'Треккинг и горные приключения',
     icon: 'activity',
-    color: '#4CAF50',
+    color: DESIGN_TOKENS.colors.success,
     category: 'nature',
     fields: {
       name: 'Поход в горы [Название]',
@@ -73,7 +73,7 @@ const TEMPLATES: TravelTemplate[] = [
     name: 'Пляжный отдых',
     description: 'Отдых на море или океане',
     icon: 'sun',
-    color: '#00BCD4',
+    color: DESIGN_TOKENS.colors.accent,
     category: 'beach',
     fields: {
       name: 'Пляжный отдых в [Место]',
@@ -97,7 +97,7 @@ const TEMPLATES: TravelTemplate[] = [
     name: 'Культурный тур',
     description: 'Знакомство с историей и культурой',
     icon: 'book-open',
-    color: '#9C27B0',
+    color: DESIGN_TOKENS.colors.primary,
     category: 'culture',
     fields: {
       name: 'Культурный тур по [Регион]',
@@ -121,7 +121,7 @@ const TEMPLATES: TravelTemplate[] = [
     name: 'Автопутешествие',
     description: 'Поездка на автомобиле по маршруту',
     icon: 'truck',
-    color: '#FF9800',
+    color: DESIGN_TOKENS.colors.warning,
     category: 'adventure',
     fields: {
       name: 'Автопутешествие по [Маршрут]',

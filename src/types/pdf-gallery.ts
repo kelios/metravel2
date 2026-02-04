@@ -175,7 +175,7 @@ export const DEFAULT_GALLERY_SETTINGS: Record<GalleryLayout, FullGallerySettings
     spacing: 'spacious',
     borderStyle: 'polaroid',
     polaroid: {
-      frameColor: '#ffffff',
+      frameColor: 'rgb(255, 255, 255)',
       frameWidth: 20,
       rotation: 3,
       shadow: true,
@@ -193,8 +193,8 @@ export const DEFAULT_GALLERY_SETTINGS: Record<GalleryLayout, FullGallerySettings
       photoSize: 'large',
       showCaption: true,
       showMetadata: true,
-      backgroundColor: '#ffffff',
-      textColor: '#1a1a1a',
+      backgroundColor: 'rgb(255, 255, 255)',
+      textColor: 'rgb(26, 26, 26)',
     },
   },
 };

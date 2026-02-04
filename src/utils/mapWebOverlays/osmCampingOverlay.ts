@@ -85,9 +85,9 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
       try {
         marker = L.circleMarker([p.lat, p.lng], {
           radius: 6,
-          color: '#1f7a1f',
+          color: 'rgb(31, 122, 31)',
           weight: 2,
-          fillColor: '#34c759',
+          fillColor: 'rgb(52, 199, 89)',
           fillOpacity: 0.7,
         });
       } catch (e: any) {

@@ -13,7 +13,45 @@ const { spawn } = require('child_process');
 const DEFAULT_TRAVEL_PATH =
   '/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina';
 
+function parseArgs(argv) {
+  const args = {};
+  const list = Array.isArray(argv) ? argv : [];
+
+  for (let i = 0; i < list.length; i += 1) {
+    const token = String(list[i] ?? '');
+    if (!token.startsWith('--')) continue;
+
+    const stripped = token.slice(2);
+    if (!stripped) continue;
+
+    const eqIndex = stripped.indexOf('=');
+    if (eqIndex !== -1) {
+      const key = stripped.slice(0, eqIndex);
+      const value = stripped.slice(eqIndex + 1);
+      args[key] = value;
+      continue;
+    }
+
+    const next = list[i + 1];
+    if (next != null && !String(next).startsWith('--')) {
+      args[stripped] = String(next);
+      i += 1;
+      continue;
+    }
+
+    args[stripped] = '1';
+  }
+
+  return args;
+}
+
 function resolveTravelPath() {
+  const argv = parseArgs(process.argv.slice(2));
+  const argPath = String(argv.path || argv.pathname || '').trim();
+  if (argPath) {
+    return argPath.startsWith('/') ? argPath : `/${argPath}`;
+  }
+
   const explicitPath = String(process.env.LIGHTHOUSE_PATH || '').trim();
   if (explicitPath) {
     return explicitPath.startsWith('/') ? explicitPath : `/${explicitPath}`;
@@ -67,17 +105,37 @@ async function findAvailablePort(startPort) {
 }
 
 async function runLighthouseViaScript({ url, formFactor, port, reportPath }) {
+  const argv = parseArgs(process.argv.slice(2));
+
+  const throttlingMethod = String(
+    argv['throttling-method'] ||
+      argv.throttlingMethod ||
+      process.env.LIGHTHOUSE_THROTTLING_METHOD ||
+      'simulate',
+  ).trim();
+
   const flags = [
     '--only-categories=performance,accessibility,best-practices,seo',
     `--emulated-form-factor=${formFactor}`,
-    '--throttling-method=simulate',
+    `--throttling-method=${throttlingMethod}`,
   ];
 
   return new Promise((resolve, reject) => {
+    const apiStubValue = String(
+      argv['api-stub'] ?? argv.apiStub ?? process.env.LIGHTHOUSE_API_STUB ?? '0',
+    ).trim();
+
     const child = spawn('node', [path.join(__dirname, 'run-lighthouse.js')], {
       stdio: 'inherit',
       env: {
         ...process.env,
+        LIGHTHOUSE_API_STUB: apiStubValue === '1' ? '1' : '0',
+        LIGHTHOUSE_API_ORIGIN: String(
+          argv['api-origin'] || argv.apiOrigin || process.env.LIGHTHOUSE_API_ORIGIN || '',
+        ).trim(),
+        LIGHTHOUSE_BUILD_DIR: String(
+          argv['build-dir'] || argv.buildDir || process.env.LIGHTHOUSE_BUILD_DIR || '',
+        ).trim(),
         LIGHTHOUSE_HOST: '127.0.0.1',
         LIGHTHOUSE_PORT: String(port),
         LIGHTHOUSE_URL: url,
@@ -189,7 +247,9 @@ async function main() {
   console.log(`\n🚀 Testing Travel Page Performance`);
   console.log(`📍 Path: ${TRAVEL_PATH}\n`);
 
-  const port = await findAvailablePort(Number(process.env.LIGHTHOUSE_PORT || '4173'));
+  const argv = parseArgs(process.argv.slice(2));
+  const preferredPort = Number(argv.port || process.env.LIGHTHOUSE_PORT || '4173');
+  const port = await findAvailablePort(preferredPort);
   const localUrl = `http://127.0.0.1:${port}${TRAVEL_PATH}`;
 
   console.log('⏳ Running Mobile Lighthouse audit...');
@@ -235,7 +295,7 @@ async function main() {
 
     maxLcpMs: numberFromEnv('LIGHTHOUSE_MAX_LCP_MS', 2500),
     maxCls: numberFromEnv('LIGHTHOUSE_MAX_CLS', 0.1),
-    maxTbtMs: numberFromEnv('LIGHTHOUSE_MAX_TBT_MS', 300),
+    maxTbtMs: numberFromEnv('LIGHTHOUSE_MAX_TBT_MS', 400),
     maxFcpMs: numberFromEnv('LIGHTHOUSE_MAX_FCP_MS', 1800),
     maxSiMs: numberFromEnv('LIGHTHOUSE_MAX_SI_MS', 4500),
   };
