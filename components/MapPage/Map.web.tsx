@@ -621,18 +621,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
     };
   }, []);
 
-  // Routing machine component
-  const RoutingMachineWithMapInner = useMemo(() => {
-    if (!rl) return null;
-    const { useMap } = rl;
-    return function RouteInner(routeProps: any) {
-      const map = useMap();
-      // Don't render RoutingMachine until map is available
-      if (!map) return null;
-      return <RoutingMachine {...routeProps} />;
-    };
-  }, [rl, L]);
-
   const renderLoader = useCallback(
     (message: string) => (
       <View style={[styles.loader, { position: 'relative', overflow: 'hidden' }] as any}>
@@ -853,16 +841,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
     return valid.length >= 2 ? valid : ([] as Array<{ lat: number; lng: number }>);
   }, [fullRouteCoords, mode, routePointsForRouting]);
-
-  const MapRouteWithMapInner = useMemo(() => {
-    if (!rl) return null;
-    const { useMap } = rl;
-    return function MapRouteInner(routeProps: any) {
-      const map = useMap();
-      if (!map) return null;
-      return <MapRoute {...routeProps} map={map} leaflet={L} />;
-    };
-  }, [rl, L]);
 
   return (
     <View style={styles.wrapper} testID="map-leaflet-wrapper">
@@ -1179,8 +1157,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
           {mode === 'route' &&
             Array.isArray(routeLineLatLngObjects) &&
             routeLineLatLngObjects.length >= 2 &&
-            MapRouteWithMapInner && (
-              <MapRouteWithMapInner
+            mapInstance &&
+            L && (
+              <MapRoute
+                map={mapInstance}
+                leaflet={L}
                 routeCoordinates={routeLineLatLngObjects}
                 isOptimal={true}
               />
@@ -1203,8 +1184,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
           {(() => {
             const shouldRenderRouting = mode === 'route' &&
               routePointsForRouting.length >= 2 &&
-              rl &&
-              RoutingMachineWithMapInner &&
               routePointsForRouting.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0]));
             
             console.info('[Map.web.tsx] Routing check:', {
@@ -1212,7 +1191,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
               routePointsLength: routePointsForRouting.length,
               routePoints: routePointsForRouting,
               hasRL: !!rl,
-              hasRoutingMachine: !!RoutingMachineWithMapInner,
               allValid: routePointsForRouting.every((p) => Number.isFinite(p[0]) && Number.isFinite(p[1]) && isValidCoordinate(p[1], p[0])),
               shouldRender: shouldRenderRouting
             });
@@ -1220,7 +1198,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
             if (!shouldRenderRouting) return null;
             
             return (
-              <RoutingMachineWithMapInner
+              <RoutingMachine
                 routePoints={routePointsForRouting}
                 transportMode={transportMode}
                 setRoutingLoading={setRoutingLoading}

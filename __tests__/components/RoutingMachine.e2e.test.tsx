@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
-import RoutingMachine from '@/components/MapPage/RoutingMachine';
-import { clearResolvedRouteKeys } from '@/components/MapPage/useRouting';
+import RoutingMachine from '../../components/MapPage/RoutingMachine';
+import { clearResolvedRouteKeys } from '../../components/MapPage/useRouting';
 
 global.fetch = jest.fn();
 
@@ -209,7 +209,6 @@ describe('RoutingMachine E2E Tests', () => {
 
     render(
       <RoutingMachine
-        map={mockMap}
         routePoints={[startPoint, endPoint]}
         transportMode="car"
         setRoutingLoading={mockSetRoutingLoading}
