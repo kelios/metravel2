@@ -97,6 +97,13 @@ const ensureLeafletCss = async (): Promise<void> => {
     const style = document.createElement('style');
     style.setAttribute('data-leaflet-fallback', 'true');
     style.textContent =
+      '.leaflet-pane,.leaflet-map-pane{z-index:400}' +
+      '.leaflet-tile-pane{z-index:200}' +
+      '.leaflet-overlay-pane{z-index:400}' +
+      '.leaflet-shadow-pane{z-index:500}' +
+      '.leaflet-marker-pane{z-index:600}' +
+      '.leaflet-tooltip-pane{z-index:650}' +
+      '.leaflet-popup-pane{z-index:700}' +
       '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
       '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
       '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
@@ -126,6 +133,13 @@ const ensureLeafletCss = async (): Promise<void> => {
     style.textContent =
       '.leaflet-container{position:relative;overflow:hidden;outline:0}' +
       '.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;top:0;left:0}' +
+      '.leaflet-pane,.leaflet-map-pane{z-index:400}' +
+      '.leaflet-tile-pane{z-index:200}' +
+      '.leaflet-overlay-pane{z-index:400}' +
+      '.leaflet-shadow-pane{z-index:500}' +
+      '.leaflet-marker-pane{z-index:600}' +
+      '.leaflet-tooltip-pane{z-index:650}' +
+      '.leaflet-popup-pane{z-index:700}' +
       '.leaflet-tile{position:absolute;left:0;top:0;filter:inherit;visibility:inherit}' +
       '.leaflet-zoom-animated{transform-origin:0 0}' +
       '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
@@ -151,6 +165,13 @@ const ensureLeafletCss = async (): Promise<void> => {
         // Core pane layout (critical for tiles + SVG overlays)
         '.leaflet-container{position:relative;overflow:hidden;outline:0}' +
         '.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;top:0;left:0}' +
+        '.leaflet-pane,.leaflet-map-pane{z-index:400}' +
+        '.leaflet-tile-pane{z-index:200}' +
+        '.leaflet-overlay-pane{z-index:400}' +
+        '.leaflet-shadow-pane{z-index:500}' +
+        '.leaflet-marker-pane{z-index:600}' +
+        '.leaflet-tooltip-pane{z-index:650}' +
+        '.leaflet-popup-pane{z-index:700}' +
         '.leaflet-tile{position:absolute;left:0;top:0;filter:inherit;visibility:inherit}' +
         '.leaflet-zoom-animated{transform-origin:0 0}' +
         // Controls positioning

@@ -322,8 +322,14 @@ class ApiClient {
                 timeout
             );
 
-            // Если получили 401, пробуем обновить токен
+            // Если получили 401, пробуем обновить токен.
+            // В E2E окружении токен может быть "фейковым" (см. e2e/global-setup.ts) и
+            // попытка refresh без refreshToken приводит к очистке токенов и каскадным
+            // падениям e2e после первого 401. Поэтому в E2E не делаем refresh.
             if (response.status === 401 && token) {
+                if (isE2E) {
+                    throw new ApiError(401, 'Требуется авторизация');
+                }
                 try {
                     const newToken = await this.refreshAccessToken();
                     // Повторяем запрос с новым токеном
@@ -483,6 +489,9 @@ class ApiClient {
             );
 
             if (resp.status === 401 && token) {
+                if (isE2E) {
+                    throw new ApiError(401, 'Требуется авторизация');
+                }
                 try {
                     const newToken = await this.refreshAccessToken();
                     const retryHeaders: HeadersInit = {
@@ -608,6 +617,9 @@ class ApiClient {
             );
 
             if (response.status === 401 && token) {
+                if (isE2E) {
+                    throw new ApiError(401, 'Требуется авторизация');
+                }
                 const newToken = await this.refreshAccessToken();
                 const retryHeaders: HeadersInit = {
                     Authorization: `Token ${newToken}`,
@@ -673,6 +685,9 @@ class ApiClient {
             );
 
             if (response.status === 401 && token) {
+                if (isE2E) {
+                    throw new ApiError(401, 'Требуется авторизация');
+                }
                 const newToken = await this.refreshAccessToken();
                 const retryHeaders: HeadersInit = {
                     Authorization: `Token ${newToken}`,

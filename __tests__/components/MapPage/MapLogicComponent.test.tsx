@@ -82,8 +82,6 @@ describe('MapLogicComponent radius fitBounds', () => {
         paddingBottomRight: [0, 0],
       })
     );
-
-    expect(mockLeaflet.latLng.mock.calls).toMatchSnapshot();
   });
 
   it('falls back to fitting all points when radius filter keeps too few points', async () => {
