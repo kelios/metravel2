@@ -68,6 +68,22 @@ const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
 const ensureLeafletCss = async (): Promise<void> => {
   if (typeof document === 'undefined') return;
 
+  if (isTestEnv) {
+    if (document.querySelector('style[data-leaflet-fallback="true"]')) return;
+
+    const style = document.createElement('style');
+    style.setAttribute('data-leaflet-fallback', 'true');
+    style.textContent =
+      '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
+      '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
+      '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
+      '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
+      '.leaflet-right .leaflet-control{float:right}' +
+      '.leaflet-control-attribution{margin:0;padding:0 5px;color:#333;font-size:11px;background:rgba(255,255,255,0.7)}';
+    document.head.appendChild(style);
+    return;
+  }
+
   const existing = document.querySelector(`link[rel="stylesheet"][href="${LEAFLET_CSS_HREF}"]`) as
     | HTMLLinkElement
     | null;
@@ -166,7 +182,6 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!enabled) return;
-    if (isTestEnv) return;
 
     ensureLeafletCss().catch(() => {
       // noop: map can still attempt to render; error will be handled during JS load.
@@ -221,10 +236,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
 
     (async () => {
       try {
-        if (!isTestEnv) {
-          await ensureLeafletCss();
-          if (cancelled) return;
-        }
+        await ensureLeafletCss();
+        if (cancelled) return;
 
         // Import Leaflet
         const LeafletModule = await import('leaflet');

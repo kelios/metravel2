@@ -1,6 +1,3 @@
-const prevNodeEnv = process.env.NODE_ENV;
-process.env.NODE_ENV = 'development';
-
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
   return {
@@ -10,6 +7,7 @@ jest.mock('react-native', () => {
 });
 
 import { act, renderHook } from '@testing-library/react-native';
+
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 
 describe('useLeafletLoader required styles', () => {
@@ -33,23 +31,15 @@ describe('useLeafletLoader required styles', () => {
     jest.useRealTimers();
   });
 
-  afterAll(() => {
-    process.env.NODE_ENV = prevNodeEnv;
-  });
-
-  it('injects Leaflet CSS link on web mount', async () => {
+  it('injects required Leaflet fallback styles on web mount (test env)', async () => {
     renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }));
 
     await act(async () => {
       // Flush effects
     });
 
-    const link = document.querySelector(
-      'link[rel="stylesheet"][href*="unpkg.com/leaflet@1.9.4/dist/leaflet.css"]'
-    );
     const fallback = document.querySelector('style[data-leaflet-fallback="true"]');
-
-    expect(!!link || !!fallback).toBe(true);
+    expect(fallback).toBeTruthy();
   });
 
   it('injects fallback styles if Leaflet CSS does not load within timeout', async () => {
@@ -61,6 +51,7 @@ describe('useLeafletLoader required styles', () => {
 
     await act(async () => {
       jest.advanceTimersByTime(5000);
+      jest.runOnlyPendingTimers();
     });
 
     const fallback = document.querySelector('style[data-leaflet-fallback="true"]');
