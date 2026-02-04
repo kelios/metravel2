@@ -8,10 +8,10 @@ import {
   Platform,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
-const { spacing, radii, typography } = MODERN_DESIGN_TOKENS;
+const { spacing, radii, typography, zIndex } = DESIGN_TOKENS;
 
 interface DesignToggleProps {
   useModernDesign: boolean;
@@ -109,7 +109,7 @@ const createStyles = (themeColors: ReturnType<typeof useThemedColors>) => StyleS
     position: 'absolute',
     top: Platform.select({ web: 20, default: 60 }),
     right: 20,
-    zIndex: 1000,
+    zIndex: zIndex.popover,
     backgroundColor: themeColors.surfaceElevated,
     borderRadius: radii.xl,
     padding: spacing.md,
@@ -147,8 +147,8 @@ const createStyles = (themeColors: ReturnType<typeof useThemedColors>) => StyleS
     gap: spacing.xs,
   },
   toggleText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
     color: themeColors.text,
   },
   toggleTextActive: {
@@ -191,8 +191,8 @@ const createStyles = (themeColors: ReturnType<typeof useThemedColors>) => StyleS
     borderTopColor: themeColors.border,
   },
   variantLabel: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.semibold,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold as any,
     color: themeColors.textMuted,
     marginBottom: spacing.xs,
     textTransform: 'uppercase',
@@ -225,8 +225,8 @@ const createStyles = (themeColors: ReturnType<typeof useThemedColors>) => StyleS
     borderColor: themeColors.primaryDark,
   },
   variantButtonText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.medium,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.medium as any,
     color: themeColors.text,
   },
   variantButtonTextActive: {

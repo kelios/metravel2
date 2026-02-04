@@ -11,7 +11,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
-import { AIRY_GRADIENTS, AIRY_COLORS } from '@/constants/airyColors';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
@@ -43,8 +42,8 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     overflow: 'hidden',
     ...Platform.select({
       web: {
-        backgroundColor: AIRY_GRADIENTS.primary.split(' ')[0] || colors.primary,
-        backgroundImage: AIRY_GRADIENTS.primary,
+        backgroundColor: colors.primary,
+        backgroundImage: colors.gradients.primary,
       } as any,
     }),
   },
@@ -268,7 +267,7 @@ function HeroSection({
         <View
           style={[
             styles.gradientContainer,
-            Platform.OS === 'web' ? { backgroundImage: AIRY_GRADIENTS.primary } as any : undefined,
+            Platform.OS === 'web' ? { backgroundImage: colors.gradients.primary } as any : undefined,
           ]}
         >
           <View style={styles.content}>
@@ -329,7 +328,7 @@ function HeroSection({
         </View>
       ) : (
         <LinearGradient
-          colors={[AIRY_COLORS.primaryLight, AIRY_COLORS.background]}
+          colors={[colors.primaryLight, colors.background]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradientContainer}

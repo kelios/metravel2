@@ -5,16 +5,7 @@
 
 import { useEffect, useState, useCallback, createContext, useContext, createElement } from 'react';
 import { Platform, useColorScheme } from 'react-native';
-import {
-  MODERN_MATTE_PALETTE,
-  MODERN_MATTE_PALETTE_DARK,
-  MODERN_MATTE_SHADOWS,
-  MODERN_MATTE_SHADOWS_DARK,
-  MODERN_MATTE_BOX_SHADOWS,
-  MODERN_MATTE_BOX_SHADOWS_DARK,
-  MODERN_MATTE_GRADIENTS,
-  MODERN_MATTE_GRADIENTS_DARK,
-} from '@/constants/modernMattePalette';
+import { getThemedColors } from '@/constants/designSystem';
 
 export type Theme = 'light' | 'dark' | 'auto';
 
@@ -162,92 +153,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  * Хук для получения цветов в зависимости от темы
  * Использует современную матовую палитру (светлая/тёмная).
  */
-type MattePalette = Record<keyof typeof MODERN_MATTE_PALETTE, string>;
-
-export function getThemedColors(isDark: boolean) {
-  const raw = isDark ? MODERN_MATTE_PALETTE_DARK : MODERN_MATTE_PALETTE;
-  // Normalize to a simple string map to avoid literal-type conflicts.
-  const basePalette: Record<string, string> = { ...MODERN_MATTE_PALETTE };
-  const themePalette: Record<string, string> = { ...raw };
-  const palette: MattePalette = { ...basePalette, ...themePalette } as MattePalette;
-  const shadows = isDark ? MODERN_MATTE_SHADOWS_DARK : MODERN_MATTE_SHADOWS;
-  const boxShadows = isDark ? MODERN_MATTE_BOX_SHADOWS_DARK : MODERN_MATTE_BOX_SHADOWS;
-  const gradients = isDark ? MODERN_MATTE_GRADIENTS_DARK : MODERN_MATTE_GRADIENTS;
-
-  return {
-    // Primary
-    primary: palette.primary,
-    primaryDark: palette.primaryDark,
-    primaryLight: palette.primaryLight,
-    primarySoft: palette.primarySoft,
-    accent: palette.accent,
-    accentDark: palette.accentDark,
-    accentLight: palette.accentLight,
-    accentSoft: palette.accentSoft,
-
-    // Text
-    text: palette.text,
-    textSecondary: palette.textSecondary,
-    textTertiary: palette.textTertiary,
-    textMuted: palette.textMuted,
-    textInverse: palette.textInverse,
-    textOnPrimary: palette.textOnPrimary,
-    textOnDark: palette.textOnDark,
-
-    // Background
-    background: palette.background,
-    backgroundSecondary: palette.backgroundSecondary,
-    backgroundTertiary: palette.backgroundTertiary,
-    surface: palette.surface,
-    surfaceElevated: palette.surfaceElevated,
-    surfaceMuted: palette.surfaceMuted,
-    surfaceLight: palette.backgroundTertiary,
-    border: palette.border,
-    borderLight: palette.borderLight,
-    borderStrong: palette.borderStrong,
-    borderAccent: palette.borderAccent,
-    mutedBackground: palette.mutedBackground ?? palette.backgroundSecondary,
-
-    // Status
-    success: palette.success,
-    successDark: palette.successDark,
-    successLight: palette.successLight,
-    successSoft: palette.successSoft,
-
-    warning: palette.warning,
-    warningDark: palette.warningDark,
-    warningLight: palette.warningLight,
-    warningSoft: palette.warningSoft,
-
-    danger: palette.danger,
-    dangerDark: palette.dangerDark,
-    dangerLight: palette.dangerLight,
-    dangerSoft: palette.dangerSoft,
-
-    info: palette.info,
-    infoDark: palette.infoDark,
-    infoLight: palette.infoLight,
-    infoSoft: palette.infoSoft,
-
-    // Focus и состояния
-    focus: palette.focus,
-    focusStrong: palette.focusStrong,
-    disabled: palette.disabled,
-    disabledText: palette.disabledText,
-
-    // Overlay
-    overlay: palette.overlay,
-    overlayLight: palette.overlayLight,
-
-    // Тени
-    shadows,
-    boxShadows,
-
-    // Градиенты
-    gradients,
-  };
-}
-
 export function useThemedColors() {
   const { isDark } = useTheme();
   return getThemedColors(isDark);

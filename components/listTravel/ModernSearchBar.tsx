@@ -1,5 +1,5 @@
 // ModernSearchBar.tsx - Современная панель поиска
-import React, { memo, useState, useRef, useCallback, useEffect } from 'react';
+import React, { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -10,10 +10,11 @@ import {
   Animated,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { MODERN_DESIGN_TOKENS } from '@/styles/modernRedesign';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { BlurView } from 'expo-blur';
+import { useThemedColors } from '@/hooks/useTheme';
 
-const { colors, spacing, radii, typography, shadows, animations, boxShadows } = MODERN_DESIGN_TOKENS;
+const { spacing, radii, typography, animations, colors: tokenColors } = DESIGN_TOKENS;
 
 interface ModernSearchBarProps {
   value: string;
@@ -42,6 +43,8 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
   resultsCount,
   isLoading = false,
 }) => {
+  const themedColors = useThemedColors();
+  const styles = useMemo(() => createStyles(themedColors), [themedColors]);
   const [isFocused, setIsFocused] = useState(false);
   const [localValue, setLocalValue] = useState(value);
   const animatedScale = useRef(new Animated.Value(1)).current;
@@ -104,14 +107,14 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
 
   const SearchIcon = () => (
     <View style={styles.searchIcon}>
-      <Feather name="search" size={20} color={colors.neutral[400]} />
+      <Feather name="search" size={20} color={themedColors.textMuted} />
     </View>
   );
 
   const ClearButton = () => (
     localValue.length > 0 ? (
       <Pressable onPress={handleClear} style={styles.clearButton}>
-        <Feather name="x-circle" size={18} color={colors.neutral[400]} />
+        <Feather name="x-circle" size={18} color={themedColors.textMuted} />
       </Pressable>
     ) : null
   );
@@ -146,7 +149,7 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
               onPress={onToggleFilters}
               style={styles.filterButton}
             >
-              <Feather name="sliders" size={18} color={colors.neutral[600]} />
+              <Feather name="sliders" size={18} color={themedColors.text} />
             </Pressable>
           )}
 
@@ -159,7 +162,7 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
             onFocus={handleFocus}
             onBlur={handleBlur}
             placeholder={placeholder}
-            placeholderTextColor={colors.neutral[400]}
+            placeholderTextColor={themedColors.textMuted}
             style={styles.input}
             returnKeyType="search"
             autoCapitalize="none"
@@ -188,7 +191,7 @@ const ModernSearchBar: React.FC<ModernSearchBarProps> = memo(({
               <Feather
                 name="zap"
                 size={18}
-                color={showRecommendations ? colors.accent.amber : colors.neutral[400]}
+                color={showRecommendations ? themedColors.accent : themedColors.textMuted}
               />
             </Pressable>
           )}
@@ -234,7 +237,7 @@ const getResultsWord = (count: number): string => {
   return 'результатов';
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
     marginBottom: spacing.md,
   },
@@ -244,28 +247,28 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface.muted,
+    backgroundColor: colors.surfaceMuted,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.md,
     height: 56,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: tokenColors.transparent,
     ...Platform.select({
       ios: {
-        backgroundColor: 'rgba(248, 250, 252, 0.8)',
+        backgroundColor: colors.surfaceMuted,
       },
       web: {
-        transition: `all ${animations.duration.base}ms ${animations.easing.ease}`,
+        transition: `all ${animations.duration.normal}ms ${animations.easing.default}`,
       },
     }),
   },
   searchBarFocused: {
-    backgroundColor: colors.surface.default,
-    borderColor: colors.primary[500],
-    ...shadows.md,
+    backgroundColor: colors.surface,
+    borderColor: colors.focusStrong,
+    ...colors.shadows.medium,
     ...Platform.select({
       web: {
-        boxShadow: `0 0 0 4px ${colors.primary[100]}, ${boxShadows.md}`,
+        boxShadow: `0 0 0 4px ${colors.primarySoft}, ${colors.boxShadows.medium}`,
       },
     }),
   },
@@ -273,53 +276,58 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surface.default,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.xs,
-    ...shadows.sm,
+    ...colors.shadows.light,
   },
   searchIcon: {
     marginRight: spacing.sm,
   },
   input: {
     flex: 1,
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.neutral[800],
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium as any,
+    color: colors.text,
     paddingVertical: 0,
     ...Platform.select({
       web: {
-        outlineWidth: 0,
-        backgroundColor: 'transparent',
+        outlineWidth: 0 as any,
+        backgroundColor: tokenColors.transparent,
       },
     }),
   },
   clearButton: {
     padding: spacing.xs,
     marginLeft: spacing.xs,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
   },
   recommendButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surface.default,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.xs,
-    ...shadows.sm,
+    ...colors.shadows.light,
     ...Platform.select({
       web: {
-        transition: `all ${animations.duration.fast}ms ${animations.easing.ease}`,
+        transition: `all ${animations.duration.fast}ms ${animations.easing.default}`,
         cursor: 'pointer',
       },
     }),
   },
   recommendButtonActive: {
-    backgroundColor: colors.accent.amber + '20',
+    backgroundColor: colors.accentSoft,
     ...Platform.select({
       web: {
-        boxShadow: `0 0 0 2px ${colors.accent.amber}40`,
+        boxShadow: `0 0 0 2px ${colors.accent}`,
       },
     }),
   },
@@ -331,7 +339,7 @@ const styles = StyleSheet.create({
     bottom: -4,
     borderRadius: radii.pill + 4,
     borderWidth: 2,
-    borderColor: colors.primary[200],
+    borderColor: colors.focus,
     pointerEvents: 'none',
   },
   resultsContainer: {
@@ -343,20 +351,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loadingText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.neutral[500],
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   resultsBadge: {
-    backgroundColor: colors.primary[50],
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
   },
   resultsText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.primary[700],
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium as any,
+    color: colors.primaryDark,
   },
 });
 

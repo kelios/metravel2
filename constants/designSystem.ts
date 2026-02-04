@@ -1,11 +1,26 @@
 import { Platform } from 'react-native';
-import { MODERN_MATTE_PALETTE, MODERN_MATTE_SHADOWS, MODERN_MATTE_BOX_SHADOWS } from './modernMattePalette';
+import {
+  MODERN_MATTE_BOX_SHADOWS,
+  MODERN_MATTE_BOX_SHADOWS_DARK,
+  MODERN_MATTE_GRADIENTS,
+  MODERN_MATTE_GRADIENTS_DARK,
+  MODERN_MATTE_PALETTE,
+  MODERN_MATTE_PALETTE_DARK,
+  MODERN_MATTE_SHADOWS,
+  MODERN_MATTE_SHADOWS_DARK,
+} from './modernMattePalette';
 
 const colorVar = (name: string, fallback: string) =>
   Platform.OS === 'web' ? `var(--color-${name}, ${fallback})` : fallback;
 
 const shadowVar = (name: string, fallback: string) =>
   Platform.OS === 'web' ? `var(--shadow-${name}, ${fallback})` : fallback;
+
+const themedColor = (name: string, light: string, dark: string, isDark: boolean) =>
+  Platform.OS === 'web' ? `var(--color-${name}, ${light})` : isDark ? dark : light;
+
+const themedShadow = (name: string, light: string, dark: string, isDark: boolean) =>
+  Platform.OS === 'web' ? `var(--shadow-${name}, ${light})` : isDark ? dark : light;
 
 export const DESIGN_TOKENS = {
   colors: {
@@ -163,3 +178,97 @@ export const DESIGN_TOKENS = {
     minWidth: 44,
   },
 };
+
+/**
+ * Theme-aware color/shadow/gradient helper for components that still rely on
+ * `useThemedColors()` shape (colors + shadows + boxShadows + gradients).
+ *
+ * Rule: modernMattePalette should only be imported by this file.
+ */
+export function getThemedColors(isDark: boolean) {
+  const palette = isDark ? MODERN_MATTE_PALETTE_DARK : MODERN_MATTE_PALETTE;
+  const shadowsNative = isDark ? MODERN_MATTE_SHADOWS_DARK : MODERN_MATTE_SHADOWS;
+  const boxShadows = isDark ? MODERN_MATTE_BOX_SHADOWS_DARK : MODERN_MATTE_BOX_SHADOWS;
+  const gradients = isDark ? MODERN_MATTE_GRADIENTS_DARK : MODERN_MATTE_GRADIENTS;
+
+  return {
+    // Primary
+    primary: themedColor('primary', MODERN_MATTE_PALETTE.primary, MODERN_MATTE_PALETTE_DARK.primary, isDark),
+    primaryDark: themedColor('primaryDark', MODERN_MATTE_PALETTE.primaryDark, MODERN_MATTE_PALETTE_DARK.primaryDark, isDark),
+    primaryLight: themedColor('primaryLight', MODERN_MATTE_PALETTE.primaryLight, MODERN_MATTE_PALETTE_DARK.primaryLight, isDark),
+    primarySoft: themedColor('primarySoft', MODERN_MATTE_PALETTE.primarySoft, MODERN_MATTE_PALETTE_DARK.primarySoft, isDark),
+
+    accent: themedColor('accent', MODERN_MATTE_PALETTE.accent, MODERN_MATTE_PALETTE_DARK.accent, isDark),
+    accentDark: themedColor('accentDark', MODERN_MATTE_PALETTE.accentDark, MODERN_MATTE_PALETTE_DARK.accentDark, isDark),
+    accentLight: themedColor('accentLight', MODERN_MATTE_PALETTE.accentLight, MODERN_MATTE_PALETTE_DARK.accentLight, isDark),
+    accentSoft: themedColor('accentSoft', MODERN_MATTE_PALETTE.accentSoft, MODERN_MATTE_PALETTE_DARK.accentSoft, isDark),
+
+    // Text
+    text: themedColor('text', MODERN_MATTE_PALETTE.text, MODERN_MATTE_PALETTE_DARK.text, isDark),
+    textSecondary: themedColor('textMuted', MODERN_MATTE_PALETTE.textSecondary, MODERN_MATTE_PALETTE_DARK.textSecondary, isDark),
+    textTertiary: themedColor('textSubtle', MODERN_MATTE_PALETTE.textTertiary, MODERN_MATTE_PALETTE_DARK.textTertiary, isDark),
+    textMuted: themedColor('textMuted', MODERN_MATTE_PALETTE.textMuted, MODERN_MATTE_PALETTE_DARK.textMuted, isDark),
+    textInverse: themedColor('textInverse', MODERN_MATTE_PALETTE.textInverse, MODERN_MATTE_PALETTE_DARK.textInverse, isDark),
+    textOnPrimary: themedColor('textOnPrimary', MODERN_MATTE_PALETTE.textOnPrimary, MODERN_MATTE_PALETTE_DARK.textOnPrimary, isDark),
+    textOnDark: themedColor('textOnDark', MODERN_MATTE_PALETTE.textOnDark, MODERN_MATTE_PALETTE_DARK.textOnDark, isDark),
+
+    // Background
+    background: themedColor('background', MODERN_MATTE_PALETTE.background, MODERN_MATTE_PALETTE_DARK.background, isDark),
+    backgroundSecondary: themedColor('backgroundSecondary', MODERN_MATTE_PALETTE.backgroundSecondary, MODERN_MATTE_PALETTE_DARK.backgroundSecondary, isDark),
+    backgroundTertiary: themedColor('backgroundTertiary', MODERN_MATTE_PALETTE.backgroundTertiary, MODERN_MATTE_PALETTE_DARK.backgroundTertiary, isDark),
+    surface: themedColor('surface', MODERN_MATTE_PALETTE.surface, MODERN_MATTE_PALETTE_DARK.surface, isDark),
+    surfaceElevated: themedColor('surfaceElevated', MODERN_MATTE_PALETTE.surfaceElevated, MODERN_MATTE_PALETTE_DARK.surfaceElevated, isDark),
+    surfaceMuted: themedColor('surfaceMuted', MODERN_MATTE_PALETTE.surfaceMuted, MODERN_MATTE_PALETTE_DARK.surfaceMuted, isDark),
+    surfaceLight: themedColor('backgroundTertiary', MODERN_MATTE_PALETTE.backgroundTertiary, MODERN_MATTE_PALETTE_DARK.backgroundTertiary, isDark),
+
+    // Borders
+    border: themedColor('border', MODERN_MATTE_PALETTE.border, MODERN_MATTE_PALETTE_DARK.border, isDark),
+    borderLight: themedColor('borderLight', MODERN_MATTE_PALETTE.borderLight, MODERN_MATTE_PALETTE_DARK.borderLight, isDark),
+    borderStrong: themedColor('borderStrong', MODERN_MATTE_PALETTE.borderStrong, MODERN_MATTE_PALETTE_DARK.borderStrong, isDark),
+    borderAccent: themedColor('borderAccent', MODERN_MATTE_PALETTE.borderAccent, MODERN_MATTE_PALETTE_DARK.borderAccent, isDark),
+    mutedBackground: themedColor('mutedBackground', MODERN_MATTE_PALETTE.mutedBackground ?? MODERN_MATTE_PALETTE.backgroundSecondary, MODERN_MATTE_PALETTE_DARK.mutedBackground ?? MODERN_MATTE_PALETTE_DARK.backgroundSecondary, isDark),
+
+    // Status
+    success: themedColor('success', MODERN_MATTE_PALETTE.success, MODERN_MATTE_PALETTE_DARK.success, isDark),
+    successDark: themedColor('successDark', MODERN_MATTE_PALETTE.successDark, MODERN_MATTE_PALETTE_DARK.successDark, isDark),
+    successLight: themedColor('successLight', MODERN_MATTE_PALETTE.successLight, MODERN_MATTE_PALETTE_DARK.successLight, isDark),
+    successSoft: themedColor('successSoft', MODERN_MATTE_PALETTE.successSoft, MODERN_MATTE_PALETTE_DARK.successSoft, isDark),
+
+    warning: themedColor('warning', MODERN_MATTE_PALETTE.warning, MODERN_MATTE_PALETTE_DARK.warning, isDark),
+    warningDark: themedColor('warningDark', MODERN_MATTE_PALETTE.warningDark, MODERN_MATTE_PALETTE_DARK.warningDark, isDark),
+    warningLight: themedColor('warningLight', MODERN_MATTE_PALETTE.warningLight, MODERN_MATTE_PALETTE_DARK.warningLight, isDark),
+    warningSoft: themedColor('warningSoft', MODERN_MATTE_PALETTE.warningSoft, MODERN_MATTE_PALETTE_DARK.warningSoft, isDark),
+
+    danger: themedColor('danger', MODERN_MATTE_PALETTE.danger, MODERN_MATTE_PALETTE_DARK.danger, isDark),
+    dangerDark: themedColor('dangerDark', MODERN_MATTE_PALETTE.dangerDark, MODERN_MATTE_PALETTE_DARK.dangerDark, isDark),
+    dangerLight: themedColor('dangerLight', MODERN_MATTE_PALETTE.dangerLight, MODERN_MATTE_PALETTE_DARK.dangerLight, isDark),
+    dangerSoft: themedColor('dangerSoft', MODERN_MATTE_PALETTE.dangerSoft, MODERN_MATTE_PALETTE_DARK.dangerSoft, isDark),
+
+    info: themedColor('info', MODERN_MATTE_PALETTE.info, MODERN_MATTE_PALETTE_DARK.info, isDark),
+    infoDark: themedColor('infoDark', MODERN_MATTE_PALETTE.infoDark, MODERN_MATTE_PALETTE_DARK.infoDark, isDark),
+    infoLight: themedColor('infoLight', MODERN_MATTE_PALETTE.infoLight, MODERN_MATTE_PALETTE_DARK.infoLight, isDark),
+    infoSoft: themedColor('infoSoft', MODERN_MATTE_PALETTE.infoSoft, MODERN_MATTE_PALETTE_DARK.infoSoft, isDark),
+
+    // Focus/state
+    focus: themedColor('focus', MODERN_MATTE_PALETTE.focus, MODERN_MATTE_PALETTE_DARK.focus, isDark),
+    focusStrong: themedColor('focusStrong', MODERN_MATTE_PALETTE.focusStrong, MODERN_MATTE_PALETTE_DARK.focusStrong, isDark),
+    disabled: themedColor('disabled', MODERN_MATTE_PALETTE.disabled, MODERN_MATTE_PALETTE_DARK.disabled, isDark),
+    disabledText: themedColor('disabledText', MODERN_MATTE_PALETTE.disabledText, MODERN_MATTE_PALETTE_DARK.disabledText, isDark),
+
+    overlay: themedColor('overlay', MODERN_MATTE_PALETTE.overlay, MODERN_MATTE_PALETTE_DARK.overlay, isDark),
+    overlayLight: themedColor('overlayLight', MODERN_MATTE_PALETTE.overlayLight, MODERN_MATTE_PALETTE_DARK.overlayLight, isDark),
+
+    // Shadows
+    shadows: shadowsNative,
+    boxShadows: {
+      light: themedShadow('light', MODERN_MATTE_BOX_SHADOWS.light, MODERN_MATTE_BOX_SHADOWS_DARK.light, isDark),
+      medium: themedShadow('medium', MODERN_MATTE_BOX_SHADOWS.medium, MODERN_MATTE_BOX_SHADOWS_DARK.medium, isDark),
+      heavy: themedShadow('heavy', MODERN_MATTE_BOX_SHADOWS.heavy, MODERN_MATTE_BOX_SHADOWS_DARK.heavy, isDark),
+      hover: themedShadow('hover', MODERN_MATTE_BOX_SHADOWS.hover, MODERN_MATTE_BOX_SHADOWS_DARK.hover, isDark),
+      card: themedShadow('card', MODERN_MATTE_BOX_SHADOWS.card, MODERN_MATTE_BOX_SHADOWS_DARK.card, isDark),
+      modal: themedShadow('modal', MODERN_MATTE_BOX_SHADOWS.modal, MODERN_MATTE_BOX_SHADOWS_DARK.modal, isDark),
+    },
+
+    gradients,
+  };
+}
