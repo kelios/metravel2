@@ -14,6 +14,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { queryKeys } from '@/src/queryKeys';
 import type { LatLng } from '@/types/coordinates';
+import { CoordinateConverter } from '@/utils/coordinateConverter';
 import MapIcon from './MapIcon';
 import IconButton from '@/components/ui/IconButton';
 
@@ -109,17 +110,45 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
 
   const trySubmitCoords = useCallback(() => {
     if (!enableCoordinateInput) return false;
-    const parts = query.split(',').map(p => p.trim());
+    const parts = query.replace(/;/g, ',').split(',').map(p => p.trim());
     if (parts.length !== 2) return false;
     const [a, b] = parts.map(Number);
     if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
-    // допускаем ввод как "lat, lng" или "lng, lat" — считаем второй координатой широту
-    // выберем формат lat,lng (a — широта, b — долгота) по интуитивности пользователя
-    const lat = a;
-    const lng = b;
-    const coords: LatLng = { lat, lng };
+
+    const candidateLatLng: LatLng = { lat: a, lng: b };
+    const candidateLngLat: LatLng = { lat: b, lng: a };
+    const validLatLng = CoordinateConverter.isValid(candidateLatLng);
+    const validLngLat = CoordinateConverter.isValid(candidateLngLat);
+
+    if (!validLatLng && !validLngLat) return false;
+
+    // If only one candidate is valid, it's unambiguous.
+    let coords: LatLng;
+    if (validLatLng && !validLngLat) {
+      coords = candidateLatLng;
+    } else if (!validLatLng && validLngLat) {
+      coords = candidateLngLat;
+    } else {
+      // Ambiguous case: both within -90..90. App search is constrained to Belarus (countrycodes=by),
+      // so prefer the interpretation that falls into a Belarus-like bounding box.
+      const inBelarusBox = (c: LatLng) =>
+        c.lat >= 50 && c.lat <= 57.5 && c.lng >= 22 && c.lng <= 33.5;
+
+      const aInBox = inBelarusBox(candidateLatLng);
+      const bInBox = inBelarusBox(candidateLngLat);
+
+      if (aInBox && !bInBox) coords = candidateLatLng;
+      else if (!aInBox && bInBox) coords = candidateLngLat;
+      else {
+        // Fallback heuristic: for Belarus lat is typically larger than lng in magnitude.
+        coords = Math.abs(candidateLatLng.lat) >= Math.abs(candidateLatLng.lng)
+          ? candidateLatLng
+          : candidateLngLat;
+      }
+    }
+
     setShowResults(false);
-    onAddressSelect(`${lat.toFixed(5)}, ${lng.toFixed(5)}`, coords);
+    onAddressSelect(`${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`, coords);
     return true;
   }, [enableCoordinateInput, onAddressSelect, query]);
 

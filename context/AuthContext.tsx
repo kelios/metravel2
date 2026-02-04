@@ -1,4 +1,4 @@
-import { createContext, FC, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, FC, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi,} from '@/src/api/auth';
 import { setAuthInvalidationHandler } from '@/src/api/client';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
@@ -44,7 +44,12 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     const [authReady, setAuthReady] = useState(false);
     const [profileRefreshToken, setProfileRefreshToken] = useState(0);
 
+    // Guards against races where an in-flight auth check finishes after logout
+    // and re-applies stale authenticated state.
+    const authEpochRef = useRef(0);
+
     const invalidateAuthState = useCallback(() => {
+        authEpochRef.current += 1;
         setIsAuthenticated(false);
         setUserId(null);
         setUsername('');
@@ -64,6 +69,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     };
 
     const checkAuthentication = useCallback(async () => {
+        const epochAtStart = authEpochRef.current;
         try {
             // ✅ FIX-001: Используем безопасное хранилище для токена
             // ✅ FIX-004: Используем батчинг для остальных данных
@@ -71,6 +77,11 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 getSecureItem('userToken'),
                 getStorageBatch(['userId', 'userName', 'isSuperuser', 'userAvatar']),
             ]);
+
+            // If logout (or invalidation) happened while we were awaiting, ignore stale results.
+            if (epochAtStart !== authEpochRef.current) {
+                return;
+            }
 
             // Если токена нет, считаем пользователя полностью разлогиненным,
             // даже если в AsyncStorage остались имя / userId.
@@ -100,7 +111,9 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             setIsSuperuser(false);
             setUserAvatar(null);
         } finally {
-            setAuthReady(true);
+            if (epochAtStart === authEpochRef.current) {
+                setAuthReady(true);
+            }
         }
     }, []);
 
@@ -117,9 +130,14 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     }, [invalidateAuthState]);
 
     const login = async (email: string, password: string): Promise<boolean> => {
+        const epochAtStart = authEpochRef.current;
         try {
             const userData = await loginApi(email, password);
             if (userData) {
+                if (epochAtStart !== authEpochRef.current) {
+                    return false;
+                }
+
                 // Save token first so apiClient will include Authorization header for profile fetch.
                 await setSecureItem('userToken', userData.token);
 
@@ -130,6 +148,10 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                     if (__DEV__) {
                         console.warn('Не удалось загрузить профиль пользователя:', e);
                     }
+                }
+
+                if (epochAtStart !== authEpochRef.current) {
+                    return false;
                 }
 
                 const normalizedFirstName = String(profile?.first_name ?? '').trim();
@@ -149,6 +171,10 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
                 await setStorageBatch(items);
                 if (!avatar) {
                     await removeStorageBatch(['userAvatar']);
+                }
+
+                if (epochAtStart !== authEpochRef.current) {
+                    return false;
                 }
 
                 setIsAuthenticated(true);

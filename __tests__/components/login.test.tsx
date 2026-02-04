@@ -102,6 +102,9 @@ const renderLogin = (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) => {
 
 describe('Login Component', () => {
   beforeEach(() => {
+    // Some test suites use fake timers and don't always restore them.
+    // Ensure this suite runs with real timers so @testing-library's async utils work.
+    jest.useRealTimers();
     jest.clearAllMocks();
   });
 

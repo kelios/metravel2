@@ -73,6 +73,17 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
   const lastUserLocationKeyRef = useRef<string | null>(null);
   const lastRadiusKeyRef = useRef<string | null>(null);
 
+  const getInitialRadiusZoom = useCallback((radiusMeters?: number | null) => {
+    const r = Number(radiusMeters);
+    if (!Number.isFinite(r) || r <= 0) return 13;
+    const km = r / 1000;
+    if (km <= 10) return 15;
+    if (km <= 25) return 14;
+    if (km <= 60) return 13;
+    if (km <= 120) return 12;
+    return 11;
+  }, []);
+
   const debugEnabled = useMemo(() => {
     try {
       if (typeof __DEV__ === 'undefined' || !__DEV__) return false;
@@ -572,7 +583,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     // Keep tests unchanged (tests expect setView only after radius results).
     if (!isTestEnv && mode === 'radius' && !hasInitializedRef.current && hasValidUserLocation) {
       try {
-        map.setView([userLocation!.lat, userLocation!.lng], 14, { animate: false });
+        map.setView([userLocation!.lat, userLocation!.lng], 15, { animate: false });
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       } catch {
@@ -613,17 +624,18 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       // Prefer explicit circleCenter (radius mode), then user location, then provided coordinates.
       const hasValidCircleCenter =
         circleCenter && Number.isFinite(circleCenter.lat) && Number.isFinite(circleCenter.lng);
+      const radiusZoom = getInitialRadiusZoom(radiusInMeters);
 
       if (hasValidCircleCenter) {
-        map.setView([circleCenter!.lat, circleCenter!.lng], 11, { animate: false });
+        map.setView([circleCenter!.lat, circleCenter!.lng], radiusZoom, { animate: false });
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       } else if (hasValidUserLocation) {
-        map.setView([userLocation.lat, userLocation.lng], 11, { animate: false });
+        map.setView([userLocation.lat, userLocation.lng], radiusZoom, { animate: false });
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       } else if (hasValidCoords) {
-        map.setView([coordinates.lat, coordinates.lng], 11, { animate: false });
+        map.setView([coordinates.lat, coordinates.lng], radiusZoom, { animate: false });
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       }
@@ -642,6 +654,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     hasRadiusResults,
     circleCenter,
     radiusInMeters,
+    getInitialRadiusZoom,
   ]);
 
   // Fit bounds to all travel points (radius mode only)
@@ -756,7 +769,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     }
 
     try {
-      const bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
+      let bounds = (L as any).latLngBounds(coords.map(([lng, lat]) => (L as any).latLng(lat, lng)));
       const padding = fitBoundsPadding ?? {};
 
       // On web, layout (side panels, ResizeObserver, fonts) can change without a window resize.
@@ -774,8 +787,28 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           // noop
         }
 
-        const maxZoom = mode === 'radius' ? 14 : undefined;
-        map.fitBounds(bounds.pad(0.12), { animate: false, maxZoom, ...padding } as any);
+        if (
+          mode === 'radius' &&
+          circleCenter &&
+          Number.isFinite(circleCenter.lat) &&
+          Number.isFinite(circleCenter.lng) &&
+          Number.isFinite(radiusInMeters) &&
+          Number(radiusInMeters) > 0
+        ) {
+          try {
+            const circle = (L as any).circle([circleCenter.lat, circleCenter.lng], {
+              radius: Number(radiusInMeters),
+            });
+            const circleBounds = circle?.getBounds?.();
+            if (circleBounds) bounds = circleBounds;
+          } catch {
+            // noop
+          }
+        }
+
+        const maxZoom = mode === 'radius' ? 16 : undefined;
+        const padFactor = mode === 'radius' ? 0.0 : 0.12;
+        map.fitBounds(bounds.pad(padFactor), { animate: false, maxZoom, ...padding } as any);
 
         // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
         requestAnimationFrame(() => syncZoomFromMap());

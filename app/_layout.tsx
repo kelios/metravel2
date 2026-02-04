@@ -28,6 +28,12 @@ if (__DEV__) {
 
 // ✅ ИСПРАВЛЕНИЕ: Глобальный CSS для web (box-sizing fix)
 if (Platform.OS === 'web') {
+  // Load Leaflet CSS early (web-only) so pane/layout is correct before the map mounts.
+  try {
+    require('./leafletStyles.web');
+  } catch {
+    // If CSS bundling is unavailable, useLeafletLoader will fallback to CDN / minimal CSS.
+  }
   require('./global.css');
 }
 

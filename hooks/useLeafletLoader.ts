@@ -65,9 +65,32 @@ const isTestEnv = typeof process !== 'undefined' &&
 
 const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
 
+const leafletCssSeemsApplied = () => {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return false;
+  try {
+    const probe = document.createElement('div');
+    probe.className = 'leaflet-map-pane';
+    probe.style.position = 'absolute';
+    probe.style.top = '-9999px';
+    probe.style.left = '-9999px';
+    document.body.appendChild(probe);
+    const z = window.getComputedStyle(probe).zIndex;
+    probe.remove();
+    // Leaflet core CSS sets .leaflet-map-pane { z-index: 400; }
+    return z === '400';
+  } catch {
+    return false;
+  }
+};
+
 const ensureLeafletCss = async (): Promise<void> => {
   if (typeof document === 'undefined') return;
 
+  // If Leaflet core CSS is already applied, do nothing.
+  if (leafletCssSeemsApplied()) return;
+
+  // In Jest/JSDOM we don't load real external stylesheets reliably.
+  // Keep tests deterministic by injecting a small known-good fallback and exiting early.
   if (isTestEnv) {
     if (document.querySelector('style[data-leaflet-fallback="true"]')) return;
 
@@ -84,6 +107,19 @@ const ensureLeafletCss = async (): Promise<void> => {
     return;
   }
 
+  // Prefer bundled Leaflet CSS (no extra network request). Some bundlers can resolve the module
+  // but ignore CSS side-effects; verify via leafletCssSeemsApplied().
+  try {
+    require('leaflet/dist/leaflet.css');
+    // Some bundlers may allow the require but not actually apply CSS; verify before returning.
+    if (leafletCssSeemsApplied()) return;
+  } catch {
+    // Continue to CDN fallback below.
+  }
+
+  // If bundling failed, try CDN CSS. If that fails (CSP/offline), inject a minimal layout fallback.
+  if (document.querySelector('style[data-leaflet-fallback="true"]')) return;
+
   const existing = document.querySelector(`link[rel="stylesheet"][href="${LEAFLET_CSS_HREF}"]`) as
     | HTMLLinkElement
     | null;
@@ -99,6 +135,12 @@ const ensureLeafletCss = async (): Promise<void> => {
       const style = document.createElement('style');
       style.setAttribute('data-leaflet-fallback', 'true');
       style.textContent =
+        // Core pane layout (critical for tiles + SVG overlays)
+        '.leaflet-container{position:relative;overflow:hidden;outline:0}' +
+        '.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;top:0;left:0}' +
+        '.leaflet-tile{position:absolute;left:0;top:0;filter:inherit;visibility:inherit}' +
+        '.leaflet-zoom-animated{transform-origin:0 0}' +
+        // Controls positioning
         '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
         '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
         '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
@@ -112,6 +154,7 @@ const ensureLeafletCss = async (): Promise<void> => {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = LEAFLET_CSS_HREF;
+    link.setAttribute('data-metravel-leaflet-css', 'cdn');
 
     let settled = false;
     const settleResolve = () => {

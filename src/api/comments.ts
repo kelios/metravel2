@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, ApiError } from './client';
 import type {
   TravelComment,
   TravelCommentThread,
@@ -6,11 +6,31 @@ import type {
   TravelCommentUpdate,
 } from '../../types/comments';
 
+const getErrorStatus = (error: unknown): number | undefined => {
+  if (error instanceof ApiError) return error.status;
+  if (!error || typeof error !== 'object') return undefined;
+  const anyErr = error as any;
+  const status =
+    typeof anyErr.status === 'number'
+      ? anyErr.status
+      : (typeof anyErr?.response?.status === 'number' ? anyErr.response.status : undefined);
+  return status;
+};
+
 export const commentsApi = {
-  getMainThread: async (travelId: number): Promise<TravelCommentThread> => {
-    return await apiClient.get<TravelCommentThread>(
-      `/travel-comment-threads/main/?travel_id=${travelId}`
-    );
+  getMainThread: async (travelId: number): Promise<TravelCommentThread | null> => {
+    try {
+      return await apiClient.get<TravelCommentThread>(
+        `/travel-comment-threads/main/?travel_id=${travelId}`
+      );
+    } catch (error) {
+      // Backend can return 404 when a main thread doesn't exist yet (no comments).
+      // Treat this as an empty state rather than a hard error.
+      if (getErrorStatus(error) === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 
   getThread: async (threadId: number): Promise<TravelCommentThread> => {
@@ -20,9 +40,17 @@ export const commentsApi = {
   },
 
   getComments: async (threadId: number): Promise<TravelComment[]> => {
-    return await apiClient.get<TravelComment[]>(
-      `/travel-comments/?thread_id=${threadId}`
-    );
+    try {
+      return await apiClient.get<TravelComment[]>(
+        `/travel-comments/?thread_id=${threadId}`
+      );
+    } catch (error) {
+      // Some backends return 404 for an empty thread instead of [].
+      if (getErrorStatus(error) === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   getComment: async (commentId: number): Promise<TravelComment> => {

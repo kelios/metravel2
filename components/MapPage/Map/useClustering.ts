@@ -39,6 +39,13 @@ const getClusterRadiusMetersForZoom = (zoom: number) => {
 const buildClusterKey = (center: [number, number], count: number) =>
   `${center[0].toFixed(5)}|${center[1].toFixed(5)}|${count}`;
 
+const metersToLatDegrees = (meters: number) => meters / 111_320;
+const metersToLngDegrees = (meters: number, atLat: number) => {
+  const latRad = (atLat * Math.PI) / 180;
+  const cos = Math.max(0.2, Math.cos(latRad));
+  return meters / (111_320 * cos);
+};
+
 export function useClustering(
   points: Point[],
   mapZoom: number,
@@ -52,16 +59,12 @@ export function useClustering(
   const clusters = useMemo<ClusterItem[]>(() => {
     if (!shouldRenderClusters) return [];
 
-    const parsedPoints: Array<{ point: Point; lat: number; lng: number }> = [];
-    for (const point of points) {
-      const ll = strToLatLng(point.coord, hintCenter);
-      if (!ll) continue;
-      const lng = ll[0];
-      const lat = ll[1];
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      if (!CoordinateConverter.isValid({ lat, lng })) continue;
-      parsedPoints.push({ point, lat, lng });
-    }
+    const hintLat =
+      hintCenter && CoordinateConverter.isValid(hintCenter) ? Number(hintCenter.lat) : 53.9;
+    // Use a slightly larger cell size than the target radius so clustering is stable and fast.
+    const cellMeters = Math.max(250, clusterRadiusMeters * 1.25);
+    const latStep = metersToLatDegrees(cellMeters);
+    const lngStep = metersToLngDegrees(cellMeters, hintLat);
 
     type InternalCluster = {
       items: Point[];
@@ -73,56 +76,50 @@ export function useClustering(
       maxLng: number;
     };
 
-    const out: InternalCluster[] = [];
+    const buckets = new Map<string, InternalCluster>();
 
-    for (const p of parsedPoints) {
-      let bestIdx = -1;
-      let bestDist = Infinity;
+    for (const point of points) {
+      const ll = strToLatLng(point.coord, hintCenter);
+      if (!ll) continue;
+      const lng = ll[0];
+      const lat = ll[1];
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      if (!CoordinateConverter.isValid({ lat, lng })) continue;
 
-      for (let i = 0; i < out.length; i++) {
-        const c = out[i];
-        const centerLat = c.sumLat / c.items.length;
-        const centerLng = c.sumLng / c.items.length;
-        const dist = CoordinateConverter.distance(
-          { lat: p.lat, lng: p.lng },
-          { lat: centerLat, lng: centerLng }
-        );
-        if (dist <= clusterRadiusMeters && dist < bestDist) {
-          bestDist = dist;
-          bestIdx = i;
-        }
-      }
+      const x = Math.floor(lng / lngStep);
+      const y = Math.floor(lat / latStep);
+      const bucketKey = `${x}:${y}`;
 
-      if (bestIdx === -1) {
-        out.push({
-          items: [p.point],
-          sumLat: p.lat,
-          sumLng: p.lng,
-          minLat: p.lat,
-          maxLat: p.lat,
-          minLng: p.lng,
-          maxLng: p.lng,
+      const existing = buckets.get(bucketKey);
+      if (!existing) {
+        buckets.set(bucketKey, {
+          items: [point],
+          sumLat: lat,
+          sumLng: lng,
+          minLat: lat,
+          maxLat: lat,
+          minLng: lng,
+          maxLng: lng,
         });
         continue;
       }
 
-      const target = out[bestIdx];
-      target.items.push(p.point);
-      target.sumLat += p.lat;
-      target.sumLng += p.lng;
-      target.minLat = Math.min(target.minLat, p.lat);
-      target.maxLat = Math.max(target.maxLat, p.lat);
-      target.minLng = Math.min(target.minLng, p.lng);
-      target.maxLng = Math.max(target.maxLng, p.lng);
+      existing.items.push(point);
+      existing.sumLat += lat;
+      existing.sumLng += lng;
+      existing.minLat = Math.min(existing.minLat, lat);
+      existing.maxLat = Math.max(existing.maxLat, lat);
+      existing.minLng = Math.min(existing.minLng, lng);
+      existing.maxLng = Math.max(existing.maxLng, lng);
     }
 
-    return out.map((c) => {
+    const out: ClusterItem[] = [];
+    for (const c of buckets.values()) {
       const count = c.items.length;
       const centerLat = c.sumLat / count;
       const centerLng = c.sumLng / count;
-      const key = buildClusterKey([centerLat, centerLng], count);
-      return {
-        key,
+      out.push({
+        key: buildClusterKey([centerLat, centerLng], count),
         center: [centerLat, centerLng],
         count,
         items: c.items,
@@ -130,8 +127,10 @@ export function useClustering(
           [c.minLat, c.minLng],
           [c.maxLat, c.maxLng],
         ],
-      };
-    });
+      });
+    }
+
+    return out;
   }, [points, shouldRenderClusters, clusterRadiusMeters, hintCenter]);
 
   return {
@@ -143,4 +142,3 @@ export function useClustering(
     CLUSTER_THRESHOLD,
   };
 }
-

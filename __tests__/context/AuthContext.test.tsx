@@ -45,6 +45,16 @@ describe('AuthContext', () => {
     (AsyncStorage as any).__reset?.();
   });
 
+  const createDeferred = <T,>() => {
+    let resolve!: (value: T) => void;
+    let reject!: (reason?: any) => void;
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res;
+      reject = rej;
+    });
+    return { promise, resolve, reject };
+  };
+
   it('throws error when useAuth is used outside provider', () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     expect(() => render(<TestComponent />)).toThrow('useAuth must be used within an AuthProvider');
@@ -267,6 +277,49 @@ describe('AuthContext', () => {
     expect(contextValue.userId).toBeNull();
     expect(contextValue.username).toBe('');
     expect(contextValue.isSuperuser).toBe(false);
+  });
+
+  it('does not restore stale authenticated state if logout happens during initial auth check', async () => {
+    const tokenDeferred = createDeferred<string | null>();
+    const storageDeferred = createDeferred<any>();
+
+    (getSecureItem as jest.Mock).mockReturnValueOnce(tokenDeferred.promise);
+    (getStorageBatch as jest.Mock).mockReturnValueOnce(storageDeferred.promise);
+    (logoutApi as jest.Mock).mockResolvedValueOnce(undefined);
+
+    let contextValue: any;
+
+    render(
+      <AuthProvider>
+        <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(contextValue).toBeDefined();
+    });
+
+    await act(async () => {
+      await contextValue.logout();
+    });
+
+    await act(async () => {
+      tokenDeferred.resolve('token-123');
+      storageDeferred.resolve({
+        userId: '7',
+        userName: 'User Name',
+        isSuperuser: 'true',
+        userAvatar: null,
+      });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(contextValue.isAuthenticated).toBe(false);
+      expect(contextValue.userId).toBeNull();
+      expect(contextValue.username).toBe('');
+      expect(contextValue.isSuperuser).toBe(false);
+    });
   });
 
   it('sendPassword returns success message from api', async () => {

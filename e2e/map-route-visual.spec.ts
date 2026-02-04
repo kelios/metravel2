@@ -6,6 +6,8 @@
 import { test, expect } from './fixtures';
 import { seedNecessaryConsent, hideRecommendationsBanner } from './helpers/storage';
 
+const MAP_SHOT_SIZE = { width: 826, height: 554 };
+
 async function installTileMock(page: any) {
   const pngBase64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO8m2p8AAAAASUVORK5CYII=';
@@ -27,6 +29,18 @@ async function installTileMock(page: any) {
   await page.route('**://*.tile.waymarkedtrails.org/**', routeTile);
 }
 
+async function normalizeMapScreenshotBox(page: any) {
+  await page.addStyleTag({
+    content: `
+      [data-testid="map-leaflet-wrapper"] { width: ${MAP_SHOT_SIZE.width}px !important; height: ${MAP_SHOT_SIZE.height}px !important; }
+      .leaflet-container { width: ${MAP_SHOT_SIZE.width}px !important; height: ${MAP_SHOT_SIZE.height}px !important; }
+      html, body { overflow: hidden !important; }
+    `,
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+  await page.waitForTimeout(250);
+}
+
 test.describe('Map Route Line - Visual Regression', () => {
   test('снапшот карты с линией маршрута', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
@@ -42,7 +56,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
 
-    await page.addStyleTag({ content: 'html, body { overflow: hidden !important; }' });
+    await normalizeMapScreenshotBox(page);
 
     // Проверяем URL
     expect(page.url()).toContain('/map');
@@ -205,7 +219,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
 
-    await page.addStyleTag({ content: 'html, body { overflow: hidden !important; }' });
+    await normalizeMapScreenshotBox(page);
 
     const leafletContainer = page.locator('.leaflet-container').first();
     await expect(leafletContainer).toBeVisible({ timeout: 15000 });

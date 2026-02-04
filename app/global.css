@@ -331,6 +331,24 @@ html[data-theme="dark"] .modal-select option {
   contain: none !important;
 }
 
+/* ✅ FIX: Global img reset in app/+html.tsx breaks Leaflet tiles (tiles become scaled “cubes”). */
+.leaflet-container .leaflet-tile-pane img,
+.leaflet-container img.leaflet-tile,
+.leaflet-container .leaflet-tile {
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: none !important;
+}
+
+.leaflet-container img.leaflet-marker-icon,
+.leaflet-container img.leaflet-marker-shadow {
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: none !important;
+}
+
 .leaflet-control-container {
   contain: none !important;
 }
@@ -362,6 +380,15 @@ html[data-theme="dark"] .modal-select option {
   pointer-events: none !important;
 }
 
+/* SVG container in custom route pane - ensure proper sizing */
+.leaflet-metravelRoutePane-pane svg {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
+}
+
 /* Route line styles - ensure visibility above tiles */
 .leaflet-overlay-pane .metravel-route-line,
 .leaflet-metravelRoutePane-pane .metravel-route-line,
@@ -374,6 +401,20 @@ html[data-theme="dark"] .modal-select option {
   fill: none !important;
 }
 
+/* Outline style (used by the map for extra contrast) */
+.leaflet-metravelRoutePane-pane .metravel-route-line-outline,
+.leaflet-metravelRoutePane-pane svg path.metravel-route-line-outline {
+  stroke: var(--color-text, rgba(0, 0, 0, 0.9)) !important;
+  stroke-opacity: 0.95 !important;
+  stroke-width: 10px !important;
+  fill: none !important;
+}
+
+html[data-theme="dark"] .leaflet-metravelRoutePane-pane .metravel-route-line-outline,
+html[data-theme="dark"] .leaflet-metravelRoutePane-pane svg path.metravel-route-line-outline {
+  stroke: rgba(255, 255, 255, 0.9) !important;
+}
+
 /* Fallback for any path in overlay pane */
 .leaflet-overlay-pane svg path[stroke] {
   stroke-opacity: 0.85 !important;
@@ -382,7 +423,8 @@ html[data-theme="dark"] .modal-select option {
 
 /* Custom route pane with higher z-index */
 .leaflet-metravelRoutePane-pane {
-  z-index: 450 !important;
+  /* keep above other overlays but below markers */
+  z-index: 590 !important;
   pointer-events: none !important;
 }
 
@@ -540,4 +582,3 @@ html[data-theme="dark"] .leaflet-control-attribution {
 .leaflet-tooltip {
   z-index: 650 !important;
 }
-

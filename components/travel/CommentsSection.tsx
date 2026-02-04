@@ -41,13 +41,14 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     data: mainThread,
     isLoading: isLoadingThread,
     error: threadError,
+    refetch: refetchThread,
   } = useMainThread(travelId);
 
   const {
     data: comments = [],
     isLoading: isLoadingComments,
     error: commentsError,
-    refetch,
+    refetch: refetchComments,
   } = useComments(mainThread?.id || 0);
 
 
@@ -59,9 +60,16 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await refetch();
-    setIsRefreshing(false);
-  }, [refetch]);
+    try {
+      const tasks: Promise<unknown>[] = [refetchThread()];
+      if (mainThread?.id) {
+        tasks.push(refetchComments());
+      }
+      await Promise.allSettled(tasks);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [mainThread?.id, refetchComments, refetchThread]);
 
   const handleSubmitComment = useCallback(
     (text: string) => {
@@ -295,6 +303,23 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
         </Text>
       </View>
 
+      {hasError && (
+        <View style={styles.errorBanner} accessibilityRole="alert">
+          <Feather name="alert-triangle" size={16} color={DESIGN_TOKENS.colors.warning} />
+          <Text style={styles.errorBannerText}>
+            Не удалось загрузить комментарии. Проверьте соединение и попробуйте ещё раз.
+          </Text>
+          <Pressable
+            onPress={handleRefresh}
+            style={styles.errorBannerButton}
+            accessibilityRole="button"
+            accessibilityLabel="Повторить загрузку комментариев"
+          >
+            <Text style={styles.errorBannerButtonText}>Повторить</Text>
+          </Pressable>
+        </View>
+      )}
+
       {/* Управление тредами - если есть вложенные комментарии */}
       {Object.keys(replies).length > 0 && (
         <View style={styles.threadControls}>
@@ -337,7 +362,10 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
           accessibilityRole="button"
           accessibilityLabel="Войти, чтобы оставить комментарий"
         >
-          <Text style={styles.loginText}>Войдите, чтобы оставить комментарий</Text>
+          <View style={styles.loginPromptRow}>
+            <Feather name="log-in" size={18} color={DESIGN_TOKENS.colors.primary} />
+            <Text style={styles.loginText}>Войдите, чтобы оставить комментарий</Text>
+          </View>
         </Pressable>
       )}
 
@@ -351,7 +379,15 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
           <View style={styles.emptyState}>
             <Feather name="message-circle" size={48} color={DESIGN_TOKENS.colors.disabled} />
             <Text style={styles.emptyText}>Комментарии недоступны</Text>
-            <Text style={styles.emptySubtext}>Попробуйте обновить страницу</Text>
+            <Text style={styles.emptySubtext}>Попробуйте обновить страницу или повторить позже</Text>
+            <Pressable
+              onPress={handleRefresh}
+              style={styles.retryButton}
+              accessibilityRole="button"
+              accessibilityLabel="Повторить загрузку комментариев"
+            >
+              <Text style={styles.retryButtonText}>Повторить</Text>
+            </Pressable>
           </View>
         ) : topLevel.length === 0 ? (
           <View style={styles.emptyState}>
@@ -472,9 +508,45 @@ const styles = StyleSheet.create<Record<string, any>>({
     marginBottom: DESIGN_TOKENS.spacing.md,
     alignItems: 'center',
   },
+  loginPromptRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
   loginText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
     color: DESIGN_TOKENS.colors.textMuted,
+  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: DESIGN_TOKENS.colors.warningSoft,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.warning + '40',
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.warning,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
+  },
+  errorBannerButton: {
+    paddingVertical: DESIGN_TOKENS.spacing.xxs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.warning + '40',
+  },
+  errorBannerButtonText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm - 1,
+    color: DESIGN_TOKENS.colors.warning,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
   commentsList: {
     flex: 1,
@@ -493,6 +565,20 @@ const styles = StyleSheet.create<Record<string, any>>({
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: DESIGN_TOKENS.colors.textSubtle,
     marginTop: DESIGN_TOKENS.spacing.xs,
+  },
+  retryButton: {
+    marginTop: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: DESIGN_TOKENS.colors.surface,
+    borderWidth: 1,
+    borderColor: DESIGN_TOKENS.colors.border,
+  },
+  retryButtonText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    color: DESIGN_TOKENS.colors.primary,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
   errorText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,

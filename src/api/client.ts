@@ -13,6 +13,7 @@ import {
 } from '@/src/utils/secureStorage';
 
 const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
 const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
 const webOriginApi =
     Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
@@ -20,9 +21,7 @@ const webOriginApi =
         : '';
 const rawApiUrl: string =
     Platform.OS === 'web'
-        ? (isE2E
-            ? (webOriginApi || envApiUrl || '')
-            : (envApiUrl || ''))
+        ? ((isE2E || isLocalApi) && webOriginApi ? webOriginApi : (envApiUrl || ''))
         : (envApiUrl || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : ''));
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');

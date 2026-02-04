@@ -1,17 +1,14 @@
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Platform: { OS: 'web', select: (obj: any) => obj.web ?? obj.default },
-  };
-});
-
 import { act, renderHook } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import { useLeafletLoader } from '@/hooks/useLeafletLoader';
 
+const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+const ORIGINAL_PLATFORM_OS = Platform.OS;
+
 describe('useLeafletLoader required styles', () => {
   beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
     document.head.innerHTML = '';
     document.body.innerHTML = '';
     jest.useFakeTimers();
@@ -29,17 +26,19 @@ describe('useLeafletLoader required styles', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    Object.defineProperty(Platform, 'OS', { value: ORIGINAL_PLATFORM_OS, configurable: true });
   });
 
-  it('injects required Leaflet fallback styles on web mount (test env)', async () => {
+  it('injects Leaflet CSS link or fallback styles on web mount', async () => {
     renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }));
 
     await act(async () => {
       // Flush effects
     });
 
+    const link = document.querySelector(`link[rel="stylesheet"][href="${LEAFLET_CSS_HREF}"]`);
     const fallback = document.querySelector('style[data-leaflet-fallback="true"]');
-    expect(fallback).toBeTruthy();
+    expect(!!link || !!fallback).toBe(true);
   });
 
   it('injects fallback styles if Leaflet CSS does not load within timeout', async () => {

@@ -6,6 +6,23 @@ import type {
   TravelCommentUpdate,
 } from '../types/comments';
 
+const mergeIsLikedFromCache = (
+  next: TravelComment,
+  prevById: Map<number, TravelComment>
+): TravelComment => {
+  if (typeof next.is_liked !== 'undefined') return next;
+  const prev = prevById.get(next.id);
+  if (!prev || typeof prev.is_liked === 'undefined') return next;
+  return { ...next, is_liked: prev.is_liked };
+};
+
+const buildPrevById = (prev?: unknown): Map<number, TravelComment> => {
+  const map = new Map<number, TravelComment>();
+  if (!Array.isArray(prev)) return map;
+  (prev as TravelComment[]).forEach((c) => map.set(c.id, c));
+  return map;
+};
+
 export const commentKeys = {
   all: ['comments'] as const,
   threads: () => [...commentKeys.all, 'threads'] as const,
@@ -36,10 +53,17 @@ export function useThread(threadId: number) {
 }
 
 export function useComments(threadId: number) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: commentKeys.comments(threadId),
     queryFn: () => commentsApi.getComments(threadId),
     enabled: !!threadId && threadId > 0,
+    select: (data) => {
+      const prevById = buildPrevById(
+        queryClient.getQueryData<TravelComment[]>(commentKeys.comments(threadId))
+      );
+      return data.map((c) => mergeIsLikedFromCache(c, prevById));
+    },
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 1,
@@ -48,10 +72,17 @@ export function useComments(threadId: number) {
 }
 
 export function useComment(commentId: number) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: commentKeys.comment(commentId),
     queryFn: () => commentsApi.getComment(commentId),
     enabled: !!commentId && commentId > 0,
+    select: (data) => {
+      const prev = queryClient.getQueryData<TravelComment>(commentKeys.comment(commentId));
+      if (typeof data.is_liked !== 'undefined') return data;
+      if (!prev || typeof prev.is_liked === 'undefined') return data;
+      return { ...data, is_liked: prev.is_liked };
+    },
   });
 }
 
@@ -196,7 +227,7 @@ export function useLikeComment() {
       return { previousData };
     },
     onSuccess: (updatedComment, commentId) => {
-      // Update cache with server response to ensure is_liked is correct
+      // Update cache with server response; preserve is_liked when backend omits it.
       queryClient.getQueryCache().findAll({ queryKey: commentKeys.all }).forEach((query) => {
         const data = query.state.data;
         if (!data) return;
@@ -206,11 +237,20 @@ export function useLikeComment() {
           const index = comments.findIndex((c) => c.id === commentId);
           if (index !== -1) {
             const newComments = [...comments];
-            newComments[index] = updatedComment;
+            newComments[index] = {
+              ...newComments[index],
+              ...(updatedComment as TravelComment),
+              is_liked: true,
+            };
             queryClient.setQueryData(query.queryKey, newComments);
           }
         } else if ((data as TravelComment).id === commentId) {
-          queryClient.setQueryData(query.queryKey, updatedComment);
+          const current = data as TravelComment;
+          queryClient.setQueryData(query.queryKey, {
+            ...current,
+            ...(updatedComment as TravelComment),
+            is_liked: true,
+          });
         }
       });
     },

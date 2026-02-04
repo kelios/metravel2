@@ -130,6 +130,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const scrollRef = useRef<any>(null)
   const indexRef = useRef(0)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [renderIndex, setRenderIndex] = useState(0)
+  const renderIndexRef = useRef(0)
+  const rafRef = useRef<number | null>(null)
   const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web')
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -190,6 +193,13 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return effective
   }, [prefetchEnabled, preloadCount])
 
+  const renderWindow = useMemo(() => {
+    // Keep a small window of mounted slides to avoid triggering requests for the entire gallery.
+    // Wider on desktop to reduce "blank" risk while scrolling.
+    const base = isMobile ? 1 : 2
+    return Math.max(base, effectivePreload)
+  }, [effectivePreload, isMobile])
+
   const warmNeighbors = useCallback(
     (idx: number) => {
       if (!canPrefetchOnWeb) return
@@ -204,6 +214,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     },
     [canPrefetchOnWeb, effectivePreload, images.length, uriMap]
   )
+
+  useEffect(() => {
+    if (!prefetchEnabled) return
+    warmNeighbors(indexRef.current)
+  }, [prefetchEnabled, warmNeighbors])
 
   const enablePrefetch = useCallback(() => {
     if (Platform.OS !== 'web') return
@@ -227,6 +242,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (i: number, animated = true) => {
       const wrapped = clamp(i, 0, images.length - 1)
       scrollRef.current?.scrollTo?.({ x: wrapped * containerW, y: 0, animated })
+      renderIndexRef.current = wrapped
+      setRenderIndex(wrapped)
       setActiveIndex(wrapped)
     },
     [containerW, images.length, setActiveIndex]
@@ -271,6 +288,10 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         clearTimeout(scrollIdleTimerRef.current)
         scrollIdleTimerRef.current = null
       }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current)
+        rafRef.current = null
+      }
     }
   }, [])
 
@@ -284,9 +305,22 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
+      const distance = Math.abs(index - renderIndex)
+      const shouldRender = distance <= renderWindow
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
       const mainPriority = isFirstSlide ? 'high' : 'low'
+      const shouldBlur = blurBackground && distance <= 1
+
+      if (!shouldRender) {
+        return (
+          <View style={[styles.slide, { width: containerW, height: containerH }]}>
+            <View style={styles.imageCardWrapper}>
+              <View style={styles.imageCardSurface} />
+            </View>
+          </View>
+        )
+      }
 
       return (
         <View style={[styles.slide, { width: containerW, height: containerH }]}>
@@ -295,9 +329,10 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               <ImageCardMedia
                 src={uri}
                 fit={fit}
-                blurBackground={blurBackground}
+                blurBackground={shouldBlur}
                 priority={mainPriority as any}
                 loading={isFirstSlide ? 'eager' : 'lazy'}
+                prefetch={isFirstSlide}
                 transition={0}
                 style={styles.img}
                 alt={`Фотография путешествия ${index + 1} из ${images.length}`}
@@ -309,7 +344,10 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   accessibilityLabel: `Фотография путешествия ${index + 1} из ${images.length}`,
                 }}
                 onLoad={() => {
-                  if (index === 0) onFirstImageLoad?.()
+                  if (index === 0) {
+                    onFirstImageLoad?.()
+                    enablePrefetch()
+                  }
                 }}
               />
             </View>
@@ -317,13 +355,30 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         </View>
       )
     },
-    [blurBackground, containerH, containerW, fit, imageProps, images.length, onFirstImageLoad, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
+    [blurBackground, containerH, containerW, enablePrefetch, fit, imageProps, images.length, onFirstImageLoad, renderIndex, renderWindow, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
   )
 
   const handleScroll = useCallback(
     (e: any) => {
       enablePrefetch()
       const x = e?.nativeEvent?.contentOffset?.x ?? 0
+
+      // Keep a fast-updating render index so we can mount upcoming slides while the user scrolls.
+      // This prevents loading="lazy" from triggering requests for the entire gallery upfront.
+      const nextRenderIndex = Math.round((x || 0) / (containerW || 1))
+      if (nextRenderIndex !== renderIndexRef.current) {
+        renderIndexRef.current = nextRenderIndex
+        if (typeof requestAnimationFrame === 'function') {
+          if (rafRef.current) cancelAnimationFrame(rafRef.current)
+          rafRef.current = requestAnimationFrame(() => {
+            rafRef.current = null
+            setRenderIndex(renderIndexRef.current)
+          })
+        } else {
+          setRenderIndex(renderIndexRef.current)
+        }
+      }
+
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = setTimeout(() => {
         const idx = Math.round((x || 0) / (containerW || 1))

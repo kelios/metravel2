@@ -36,12 +36,13 @@ export const PointsListGrid: React.FC<{
 
   renderFooter?: () => React.ReactElement | null
 
-  onRefresh: () => void
+	  onRefresh: () => void
 
-  currentLocation: { lat: number; lng: number } | null
-  onMapPress: (coords: { lat: number; lng: number }) => void
-  onPointEdit?: (point: any) => void
-  onPointDelete?: (point: any) => void
+	  currentLocation: { lat: number; lng: number } | null
+	  onMapPress: (coords: { lat: number; lng: number }) => void
+	  onMapPointPress?: (point: any) => void
+	  onPointEdit?: (point: any) => void
+	  onPointDelete?: (point: any) => void
 
   showManualAdd: boolean
   manualCoords: { lat: number; lng: number } | null
@@ -77,13 +78,14 @@ export const PointsListGrid: React.FC<{
   renderHeader,
   renderItem,
   renderEmpty,
-  renderFooter,
-  onRefresh,
-  currentLocation,
-  onMapPress,
-  onPointEdit,
-  onPointDelete,
-  showManualAdd,
+	  renderFooter,
+	  onRefresh,
+	  currentLocation,
+	  onMapPress,
+	  onMapPointPress,
+	  onPointEdit,
+	  onPointDelete,
+	  showManualAdd,
   manualCoords,
   manualColor,
   isLocating,
@@ -108,19 +110,14 @@ export const PointsListGrid: React.FC<{
     () => getFiltersPanelStyles(themedColors as any, !isWideScreen, windowWidth),
     [themedColors, isWideScreen, windowWidth]
   )
-  const recommendedRouteLines = useMemo(() => {
-    if (!showingRecommendations) return [] as Array<{ id: number; line: Array<[number, number]> }>;
-    const entries = Object.entries(recommendedRoutes ?? {});
-    return entries
-      .map(([id, r]) => ({ id: Number(id), line: r?.line ?? [] }))
-      .filter((r) => Number.isFinite(r.id) && Array.isArray(r.line) && r.line.length > 1);
-  }, [recommendedRoutes, showingRecommendations]);
-  const handleMapPointPress = React.useCallback((p: any) => {
-    // allow marker click to focus the same way as list click
-    // (parent controls activePointId via list, this is a safe noop)
-    void p
-  }, [])
-  const [internalPanelTab, setInternalPanelTab] = React.useState<'filters' | 'list'>('list')
+	  const recommendedRouteLines = useMemo(() => {
+	    if (!showingRecommendations) return [] as Array<{ id: number; line: Array<[number, number]> }>;
+	    const entries = Object.entries(recommendedRoutes ?? {});
+	    return entries
+	      .map(([id, r]) => ({ id: Number(id), line: r?.line ?? [] }))
+	      .filter((r) => Number.isFinite(r.id) && Array.isArray(r.line) && r.line.length > 1);
+	  }, [recommendedRoutes, showingRecommendations]);
+	  const [internalPanelTab, setInternalPanelTab] = React.useState<'filters' | 'list'>('list')
   const panelTab = controlledPanelTab ?? internalPanelTab
   const setPanelTab = onPanelTabChange ?? setInternalPanelTab
   const [showMobilePanel, setShowMobilePanel] = React.useState(() => !isWideScreen)
@@ -142,20 +139,20 @@ export const PointsListGrid: React.FC<{
   const renderMapCanvas = React.useCallback(
     () => (
       <View style={styles.mapInner}>
-        <UserPointsMap
-          points={filteredPoints}
-          center={currentLocation ?? undefined}
-          searchMarker={searchMarker}
-          routeLines={recommendedRouteLines}
-          onMapPress={onMapPress}
-          onEditPoint={onPointEdit}
-          onDeletePoint={onPointDelete}
-          pendingMarker={showManualAdd ? manualCoords : null}
-          pendingMarkerColor={manualColor}
-          activePointId={activePointId ?? undefined}
-          onPointPress={handleMapPointPress}
-          onMapUiApiReady={setMapUiApi}
-        />
+	        <UserPointsMap
+	          points={filteredPoints}
+	          center={currentLocation ?? undefined}
+	          searchMarker={searchMarker}
+	          routeLines={recommendedRouteLines}
+	          onMapPress={onMapPress}
+	          onEditPoint={onPointEdit}
+	          onDeletePoint={onPointDelete}
+	          pendingMarker={showManualAdd ? manualCoords : null}
+	          pendingMarkerColor={manualColor}
+	          activePointId={activePointId ?? undefined}
+	          onPointPress={onMapPointPress}
+	          onMapUiApiReady={setMapUiApi}
+	        />
 
         <IconButton
           icon={<Feather name="crosshair" size={20} color={colors.text} />}
@@ -166,15 +163,15 @@ export const PointsListGrid: React.FC<{
         />
       </View>
     ),
-    [
-      activePointId,
-      colors.text,
-      currentLocation,
-      filteredPoints,
-      handleMapPointPress,
-      isLocating,
-      manualColor,
-      manualCoords,
+	    [
+	      activePointId,
+	      colors.text,
+	      currentLocation,
+	      filteredPoints,
+	      onMapPointPress,
+	      isLocating,
+	      manualColor,
+	      manualCoords,
       onLocateMe,
       onMapPress,
       onPointDelete,
@@ -306,17 +303,18 @@ export const PointsListGrid: React.FC<{
 
   const renderListPanel = React.useCallback(
     () => (
-      <FlashList
-        key={listKey ?? 'userpoints-list'}
-        style={localStyles.rightPanelScroll}
-        contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
-        data={filteredPoints}
-        extraData={listExtraData}
-        keyExtractor={(item) => String((item as any)?.id)}
-        testID="userpoints-panel-content-list"
-        renderItem={({ item }) => {
-          const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
-          return (
+	      <FlashList
+	        key={listKey ?? 'userpoints-list'}
+	        style={localStyles.rightPanelScroll}
+	        contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
+	        data={filteredPoints}
+	        extraData={listExtraData}
+	        keyExtractor={(item) => String((item as any)?.id)}
+	        testID="userpoints-panel-content-list"
+	        estimatedItemSize={160}
+	        renderItem={({ item }) => {
+	          const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
+	          return (
             <View style={localStyles.pointsListItem}>
               {renderItem({ item })}
               {showingRecommendations && routeInfo ? (
@@ -475,13 +473,14 @@ export const PointsListGrid: React.FC<{
 
   if (viewMode === 'list') {
     const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
-    return (
-      <FlashList
-        data={filteredPoints}
-        renderItem={({ item, index }: { item: any; index: number }) => {
-          if (columns <= 1) {
-            return renderItem({ item })
-          }
+	    return (
+	      <FlashList
+	        data={filteredPoints}
+	        estimatedItemSize={160}
+	        renderItem={({ item, index }: { item: any; index: number }) => {
+	          if (columns <= 1) {
+	            return renderItem({ item })
+	          }
           const gap = 12
           const col = columns > 0 ? index % columns : 0
           const isFirst = col === 0
@@ -570,6 +569,12 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     borderLeftWidth: 1,
     borderLeftColor: colors.border,
     backgroundColor: colors.background,
+    ...(Platform.OS === 'web'
+      ? ({
+          boxShadow: '-10px 0 30px rgba(0,0,0,0.06)',
+          zIndex: 2,
+        } as any)
+      : null),
   },
   mobilePanelContainer: {
     flex: 1,

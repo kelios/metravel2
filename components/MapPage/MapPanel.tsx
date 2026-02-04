@@ -1,13 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
-import { useLazyMap } from '@/hooks/useLazyMap';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
 import { MapSkeleton } from '@/components/SkeletonLoader';
-import { useDeferredMapLoad } from './MapOptimizations';
 import type { MapUiApi } from '@/src/types/mapUi';
 
 type LatLng = { latitude: number; longitude: number };
+
+const LazyWebMap = React.lazy(() =>
+  import('@/components/MapPage/OptimizedMap.web').then((m) => ({ default: (m as any).default ?? (m as any) }))
+);
 
 interface MapPanelProps {
     travelsData: any[];
@@ -24,6 +26,7 @@ interface MapPanelProps {
     setFullRouteCoords: (coords: [number, number][]) => void;
     radius?: string; // Радиус поиска в км
     onMapUiApiReady?: (api: MapUiApi | null) => void;
+    onUserLocationChange?: ((loc: LatLng | null) => void) | undefined;
 }
 
 /** Плейсхолдер для нативных платформ или во время загрузки карты */
@@ -61,10 +64,10 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                setFullRouteCoords,
                                                radius,
                                                onMapUiApiReady,
+                                               onUserLocationChange,
 	                                           }) => {
 	    const [hydrated, setHydrated] = useState(false);
     const isWeb = Platform.OS === 'web' && hydrated;
-    const isE2E = String(process.env.EXPO_PUBLIC_E2E || '').toLowerCase() === 'true';
     const themeColors = useThemedColors();
 
     useEffect(() => {
@@ -72,43 +75,8 @@ const MapPanel: React.FC<MapPanelProps> = ({
         setHydrated(true);
     }, []);
 
-	    // ✅ ОПТИМИЗАЦИЯ: Отложенная загрузка карты для улучшения Lighthouse score
-	    const shouldDeferLoad = useDeferredMapLoad(isWeb && !isE2E);
-
 	    // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты без недетерминированного SSR
     const [mapKeyVersion, setMapKeyVersion] = useState(0);
-
-	    // ✅ УЛУЧШЕНИЕ: Ленивая загрузка карты с Intersection Observer
-	    const { shouldLoad, setElementRef } = useLazyMap({
-	        rootMargin: '200px',
-	        threshold: 0.1,
-	        // In e2e we always load immediately to avoid flaky IntersectionObserver behavior.
-	        enabled: isWeb && shouldDeferLoad && !isE2E,
-	    });
-
-    // Динамически импортируем веб-карту, только в браузере и когда нужно
-    const [WebMap, setWebMap] = useState<React.ComponentType<any> | null>(null);
-    const [loading, setLoading] = useState(isWeb && shouldLoad && shouldDeferLoad);
-
-    useEffect(() => {
-        let mounted = true;
-        if (!isWeb || !shouldLoad) return;
-
-        (async () => {
-            try {
-                const mod = await import('@/components/MapPage/Map');
-                if (mounted) setWebMap(() => (mod.default ?? mod as any));
-            } catch (e) {
-                console.error('[MapPanel] Failed to load web map:', e);
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        })();
-
-        return () => {
-            mounted = false;
-        };
-    }, [isWeb, shouldLoad]);
 
     const travelProp = useMemo(() => ({ data: travelsData }), [travelsData]);
 
@@ -129,44 +97,29 @@ const MapPanel: React.FC<MapPanelProps> = ({
     // Early returns - AFTER all hooks
     if (!isWeb) return <Placeholder />;
 
-    if (!shouldLoad) {
-        return (
-            <View 
-                style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}
-                ref={setElementRef as any}
-            >
-                <Placeholder text="Карта загрузится при прокрутке…" showSkeleton={true} />
-            </View>
-        );
-    }
-
-    if (loading || !WebMap) {
-        return <Placeholder text="Инициализация карты…" showSkeleton={true} />;
-    }
-
     return (
-        <View 
-            style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}
-            ref={setElementRef as any}
-        >
+        <View style={[styles.mapContainer, { backgroundColor: themeColors.surface }]}>
             <MapErrorBoundary onError={handleMapError}>
-                <WebMap
-                    key={`map-${mapKeyVersion}`}
-                    travel={travelProp}
-                    coordinates={safeCoordinates}
-                    routePoints={routePoints}
-                    fullRouteCoords={fullRouteCoords}
-                    placesAlongRoute={placesAlongRoute}
-                    mode={mode}
-                    setRoutePoints={setRoutePoints}
-                    onMapClick={onMapClick}
-                    transportMode={transportMode}
-                    setRouteDistance={setRouteDistance}
-                    setRouteDuration={setRouteDuration}
-                    setFullRouteCoords={setFullRouteCoords}
-                    radius={radius}
-                    onMapUiApiReady={onMapUiApiReady}
-                />
+                <Suspense fallback={<Placeholder text="Инициализация карты…" showSkeleton={true} />}>
+                  <LazyWebMap
+                      key={`map-${mapKeyVersion}`}
+                      travel={travelProp}
+                      coordinates={safeCoordinates}
+                      routePoints={routePoints}
+                      fullRouteCoords={fullRouteCoords}
+                      placesAlongRoute={placesAlongRoute}
+                      mode={mode}
+                      setRoutePoints={setRoutePoints}
+                      onMapClick={onMapClick}
+                      transportMode={transportMode}
+                      setRouteDistance={setRouteDistance}
+                      setRouteDuration={setRouteDuration}
+                      setFullRouteCoords={setFullRouteCoords}
+                      radius={radius}
+                      onMapUiApiReady={onMapUiApiReady}
+                      onUserLocationChange={onUserLocationChange}
+                  />
+                </Suspense>
             </MapErrorBoundary>
         </View>
     );

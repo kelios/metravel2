@@ -30,6 +30,17 @@ describe('Comments API', () => {
       );
       expect(result).toEqual(mockThread);
     });
+
+    it('should treat 404 as empty (no main thread yet)', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 404 } });
+
+      const result = await commentsApi.getMainThread(123);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comment-threads/main/?travel_id=123'
+      );
+      expect(result).toBeNull();
+    });
   });
 
   describe('getComments', () => {
@@ -55,6 +66,17 @@ describe('Comments API', () => {
         '/travel-comments/?thread_id=1'
       );
       expect(result).toEqual(mockComments);
+    });
+
+    it('should treat 404 as empty list', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 404 } });
+
+      const result = await commentsApi.getComments(1);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comments/?thread_id=1'
+      );
+      expect(result).toEqual([]);
     });
   });
 

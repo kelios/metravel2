@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CommentItem } from '@/components/travel/CommentItem';
-import { useLikeComment, useUnlikeComment, useDeleteComment, useThread, useComments } from '@/hooks/useComments';
+import { useLikeComment, useUnlikeComment, useDeleteComment } from '@/hooks/useComments';
 import { useAuth } from '@/context/AuthContext';
 import type { TravelComment } from '@/types/comments';
 
@@ -12,8 +12,6 @@ jest.mock('@/context/AuthContext');
 const mockUseLikeComment = useLikeComment as jest.MockedFunction<typeof useLikeComment>;
 const mockUseUnlikeComment = useUnlikeComment as jest.MockedFunction<typeof useUnlikeComment>;
 const mockUseDeleteComment = useDeleteComment as jest.MockedFunction<typeof useDeleteComment>;
-const mockUseThread = useThread as jest.MockedFunction<typeof useThread>;
-const mockUseComments = useComments as jest.MockedFunction<typeof useComments>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 
 const createTestQueryClient = () =>
@@ -60,16 +58,6 @@ describe('CommentItem', () => {
     mockUseDeleteComment.mockReturnValue({
       mutate: jest.fn(),
       isPending: false,
-    } as any);
-
-    mockUseThread.mockReturnValue({
-      data: null,
-      isLoading: false,
-    } as any);
-
-    mockUseComments.mockReturnValue({
-      data: [],
-      isLoading: false,
     } as any);
   });
 

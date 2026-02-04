@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, Text, View, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
 import type { MapUiApi } from '@/src/types/mapUi';
@@ -142,7 +142,7 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
   pendingMarkerColor,
   onMapUiApiReady,
   routeLines,
-  height = 600,
+  height,
   enableClustering: _enableClustering,
 }) => {
   void _enableClustering;
@@ -193,18 +193,88 @@ const WebMapInstanceBinder = ({ useMap, onMapReady }: { useMap: any; onMapReady:
   return null;
 };
 
-const WebMapFixSize = ({ useMap }: { useMap: any }) => {
+const WebMapAutoResize = ({ useMap }: { useMap: any }) => {
   const map = useMap?.();
+
   React.useEffect(() => {
     if (!map) return;
-    requestAnimationFrame(() => {
+
+    let raf: number | null = null;
+    const invalidate = () => {
       try {
-        map.invalidateSize();
+        if (raf != null && typeof cancelAnimationFrame === 'function') {
+          cancelAnimationFrame(raf);
+        }
       } catch {
         // noop
       }
-    });
+
+      try {
+        if (typeof requestAnimationFrame === 'function') {
+          raf = requestAnimationFrame(() => {
+            try {
+              map.invalidateSize?.();
+            } catch {
+              // noop
+            }
+          }) as any;
+        } else {
+          map.invalidateSize?.();
+        }
+      } catch {
+        // noop
+      }
+    };
+
+    // Initial + post-layout invalidations (fonts/header can shift layout on web).
+    invalidate();
+    const t1 = setTimeout(invalidate, 50);
+    const t2 = setTimeout(invalidate, 250);
+
+    const canUseWindow = typeof window !== 'undefined' && typeof window.addEventListener === 'function';
+    const onWindowResize = () => invalidate();
+    if (canUseWindow) {
+      try {
+        window.addEventListener('resize', onWindowResize);
+      } catch {
+        // noop
+      }
+    }
+
+    let ro: any = null;
+    try {
+      const container = map.getContainer?.();
+      if (container && typeof ResizeObserver !== 'undefined') {
+        ro = new ResizeObserver(() => invalidate());
+        ro.observe(container);
+      }
+    } catch {
+      // noop
+    }
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      if (canUseWindow) {
+        try {
+          window.removeEventListener('resize', onWindowResize);
+        } catch {
+          // noop
+        }
+      }
+      try {
+        ro?.disconnect();
+      } catch {
+        // noop
+      }
+      try {
+        if (raf != null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(raf);
+      } catch {
+        // noop
+      }
+    };
   }, [map]);
+
   return null;
 };
 
@@ -823,6 +893,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
 }) => {
   const colors = useThemedColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const loadingStyles = React.useMemo(() => createLoadingStyles(colors), [colors]);
 
   const isWebAutomation =
     Platform.OS === 'web' &&
@@ -1360,11 +1431,47 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   );
 
   if (!mods?.MapContainer) {
-    return <View style={[styles.container, height ? { height } : null]} />;
+    return (
+      <View style={[styles.container, height ? { height } : null, loadingStyles.loadingWrap]}>
+        <ActivityIndicator color={colors.primary} />
+        <Text style={loadingStyles.loadingText}>Загрузка карты…</Text>
+      </View>
+    );
   }
 
   return (
     <View style={[styles.container, height ? { height } : null]}>
+      {Platform.OS === 'web' ? (
+        <style>
+          {`
+            /* Leaflet core layout: ensure panes/tiles are positioned correctly.
+               /map injects these styles; /userpoints needs the same baseline to avoid "tile islands". */
+            .leaflet-container {
+              position: relative;
+              overflow: hidden !important;
+              outline: 0;
+            }
+
+            .leaflet-container img.leaflet-tile {
+              max-width: none !important;
+              max-height: none !important;
+            }
+
+            .leaflet-pane,
+            .leaflet-map-pane,
+            .leaflet-tile-pane,
+            .leaflet-overlay-pane,
+            .leaflet-shadow-pane,
+            .leaflet-marker-pane,
+            .leaflet-tooltip-pane,
+            .leaflet-popup-pane {
+              position: absolute !important;
+              top: 0;
+              left: 0;
+            }
+          `}
+        </style>
+      ) : null}
       <mods.MapContainer
         center={[center.lat, center.lng]}
         zoom={safePoints.length > 0 ? 10 : 5}
@@ -1382,10 +1489,10 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
           );
         })()}
 
-        <WebMapInstanceBinder useMap={mods.useMap} onMapReady={handleMapReady} />
-        <WebMapFixSize useMap={mods.useMap} />
-        <WebMapClickHandler useMapEvents={mods.useMapEvents} onMapPress={onMapPress} />
-        <WebMapCenterReporter useMap={mods.useMap} useMapEvents={mods.useMapEvents} onCenterChange={onCenterChange} />
+	        <WebMapInstanceBinder useMap={mods.useMap} onMapReady={handleMapReady} />
+	        <WebMapAutoResize useMap={mods.useMap} />
+	        <WebMapClickHandler useMapEvents={mods.useMapEvents} onMapPress={onMapPress} />
+	        <WebMapCenterReporter useMap={mods.useMap} useMapEvents={mods.useMapEvents} onCenterChange={onCenterChange} />
 
         {centerOverride && Number.isFinite(centerOverride.lat) && Number.isFinite(centerOverride.lng) ? (
           <mods.Marker
@@ -1633,6 +1740,20 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderRadius: 12,
       overflow: 'hidden',
       backgroundColor: colors.backgroundTertiary,
+    },
+  });
+
+const createLoadingStyles = (colors: ReturnType<typeof useThemedColors>) =>
+  StyleSheet.create({
+    loadingWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 16,
+    },
+    loadingText: {
+      marginTop: 10,
+      fontSize: 12,
+      color: colors.textMuted,
     },
   });
 

@@ -59,7 +59,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // Leaflet loader (replaces manual loading logic)
   const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } = useLeafletLoader({
     enabled: Platform.OS === 'web',
-    useIdleCallback: true,
+    // Map page is a primary surface: load Leaflet immediately for snappier UX.
+    useIdleCallback: false,
+    fallbackDelay: 0,
   });
 
   // State
@@ -717,42 +719,53 @@ const MapPageComponent: React.FC<Props> = (props) => {
     return coordinatesLatLng;
   }, [mode, circleCenterLatLng, coordinatesLatLng]);
 
-  const routePointsForRouting = useMemo(() => {
-    if (!Array.isArray(routePoints) || routePoints.length === 0) return [] as [number, number][];
-
-    const normalizeLngLat = (tuple: [number, number]): [number, number] => {
+  const normalizeLngLatWithHint = useCallback(
+    (tuple: [number, number]): [number, number] => {
       const a = tuple?.[0];
       const b = tuple?.[1];
       if (!Number.isFinite(a) || !Number.isFinite(b)) return tuple;
 
-      // Простая логика: если первое значение явно не может быть longitude (выходит за -90..90),
-      // а второе может быть longitude, то это формат [lat, lng] - меняем местами
-      const aOutOfLatRange = a < -90 || a > 90;
-      const bOutOfLatRange = b < -90 || b > 90;
+      const option1 = { lng: a, lat: b };
+      const option2 = { lng: b, lat: a };
+      const option1Valid = isValidCoordinate(option1.lat, option1.lng);
+      const option2Valid = isValidCoordinate(option2.lat, option2.lng);
 
-      // Если первое значение выходит за диапазон lat, а второе нет - это [lng, lat]
-      if (aOutOfLatRange && !bOutOfLatRange) {
-        return tuple; // уже [lng, lat]
+      if (option1Valid && !option2Valid) return [option1.lng, option1.lat];
+      if (!option1Valid && option2Valid) return [option2.lng, option2.lat];
+
+      // Ambiguous: both values fall within latitude range (-90..90) so both orders look "valid".
+      // Choose the interpretation closer to current hint center (user location / current map center).
+      if (
+        option1Valid &&
+        option2Valid &&
+        hintCenterLatLng &&
+        isValidCoordinate(hintCenterLatLng.lat, hintCenterLatLng.lng)
+      ) {
+        try {
+          const d1 = CoordinateConverter.distance(hintCenterLatLng, option1 as any);
+          const d2 = CoordinateConverter.distance(hintCenterLatLng, option2 as any);
+          return d2 < d1 ? [option2.lng, option2.lat] : [option1.lng, option1.lat];
+        } catch {
+          // noop
+        }
       }
 
-      // Если второе значение выходит за диапазон lat, а первое нет - это [lat, lng]
-      if (!aOutOfLatRange && bOutOfLatRange) {
-        console.info('[Map.web.tsx] Swapping coordinates from [lat, lng] to [lng, lat]:', tuple, '->', [b, a]);
-        return [b, a]; // swap to [lng, lat]
-      }
-
-      // Оба значения в диапазоне -90..90 - неоднозначность
-      // Предполагаем, что координаты уже в формате [lng, lat] (как передает useRouteController)
+      // Default: assume incoming tuple is already [lng, lat] (legacy Metravel format).
       return tuple;
-    };
+    },
+    [hintCenterLatLng]
+  );
 
-    const normalized = routePoints.map((p) => normalizeLngLat(p));
+  const routePointsForRouting = useMemo(() => {
+    if (!Array.isArray(routePoints) || routePoints.length === 0) return [] as [number, number][];
+
+    const normalized = routePoints.map((p) => normalizeLngLatWithHint(p));
     console.info('[Map.web.tsx] Route points normalization:', {
       original: routePoints,
       normalized,
     });
     return normalized;
-  }, [routePoints]);
+  }, [normalizeLngLatWithHint, routePoints]);
 
   const hasWarnedInvalidCircleRef = useRef(false);
   useEffect(() => {
@@ -781,13 +794,20 @@ const MapPageComponent: React.FC<Props> = (props) => {
     autoPanPaddingBottomRight: [360, 220],
   }), []);
 
-  const fitBoundsPadding = useMemo(
-    () => ({
+  const fitBoundsPadding = useMemo(() => {
+    // Route mode: keep room for the right-side panel so fitBounds doesn't place markers behind it.
+    // Radius mode: the panel is outside the map container, so large right padding over-zooms out.
+    if (mode === 'radius') {
+      return {
+        paddingTopLeft: [16, 80] as [number, number],
+        paddingBottomRight: [16, 80] as [number, number],
+      };
+    }
+    return {
       paddingTopLeft: [24, 140] as [number, number],
       paddingBottomRight: [360, 220] as [number, number],
-    }),
-    []
-  );
+    };
+  }, [mode]);
 
   const noPointsAlongRoute = useMemo(() => {
     if (mode !== 'route') return false;
@@ -814,6 +834,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const rlSafe = (rl ?? {}) as ReactLeafletNS;
   const { MapContainer, Marker, Popup, Tooltip, Circle, TileLayer, useMap, useMapEvents } = rlSafe;
+  const Polyline = (rlSafe as any)?.Polyline as any;
+  const Pane = (rlSafe as any)?.Pane as any;
 
   const hasValidReactLeafletHooks = !!(
     useMap && 
@@ -830,17 +852,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ? fullRouteCoords
         : routePointsForRouting;
 
-    const valid = (candidate || [])
-      .filter(([lng, lat]) =>
-        Number.isFinite(lng) &&
-        Number.isFinite(lat) &&
-        lng >= -180 && lng <= 180 &&
-        lat >= -90 && lat <= 90
-      )
+    const normalized = (candidate || []).map((p) => normalizeLngLatWithHint(p));
+    const valid = normalized
+      .filter(([lng, lat]) => isValidCoordinate(lat, lng))
       .map(([lng, lat]) => ({ lat, lng }));
 
     return valid.length >= 2 ? valid : ([] as Array<{ lat: number; lng: number }>);
-  }, [fullRouteCoords, mode, routePointsForRouting]);
+  }, [fullRouteCoords, mode, normalizeLngLatWithHint, routePointsForRouting]);
 
   return (
     <View style={styles.wrapper} testID="map-leaflet-wrapper">
@@ -1113,6 +1131,11 @@ const MapPageComponent: React.FC<Props> = (props) => {
           zoomControl={false}
           preferCanvas={false}
         >
+          {/* Ensure custom pane exists before any route Polyline tries to target it */}
+          {typeof Pane === 'function' ? (
+            <Pane name="metravelRoutePane" style={{ zIndex: 590, pointerEvents: 'none' } as any} />
+          ) : null}
+
           {/* Map layers (tiles, circle, user location) */}
           <MapLayers
             TileLayer={TileLayer}
@@ -1153,19 +1176,54 @@ const MapPageComponent: React.FC<Props> = (props) => {
             hintCenter={hintCenterLatLng}
           />
 
-          {/* Alternative imperative route line renderer */}
+          {/* Route line renderer */}
           {mode === 'route' &&
             Array.isArray(routeLineLatLngObjects) &&
-            routeLineLatLngObjects.length >= 2 &&
-            mapInstance &&
-            L && (
-              <MapRoute
-                map={mapInstance}
-                leaflet={L}
-                routeCoordinates={routeLineLatLngObjects}
-                isOptimal={true}
-                disableFitBounds
-              />
+            routeLineLatLngObjects.length >= 2 && (
+              // Prefer declarative react-leaflet Polyline when available (more reliable than imperative add/remove)
+              typeof Polyline === 'function' ? (
+                <>
+                  {/* Outline for contrast on any basemap */}
+                  <Polyline
+                    positions={routeLineLatLngObjects as any}
+                    pane="metravelRoutePane"
+                    pathOptions={{
+                      color: (colors as any).text || '#000',
+                      weight: 10,
+                      opacity: 0.95,
+                      lineJoin: 'round',
+                      lineCap: 'round',
+                      interactive: false,
+                      className: 'metravel-route-line metravel-route-line-outline',
+                    }}
+                  />
+                  <Polyline
+                    positions={routeLineLatLngObjects as any}
+                    pane="metravelRoutePane"
+                    pathOptions={{
+                      color: (colors as any).primary || DESIGN_TOKENS.colors.primary,
+                      weight: 6,
+                      opacity: 1,
+                      lineJoin: 'round',
+                      lineCap: 'round',
+                      interactive: false,
+                      className: 'metravel-route-line',
+                    }}
+                  />
+                </>
+              ) : (
+                // Fallback: imperative Leaflet polyline (legacy)
+                mapInstance &&
+                L && (
+                  <MapRoute
+                    map={mapInstance}
+                    leaflet={L}
+                    routeCoordinates={routeLineLatLngObjects}
+                    isOptimal={true}
+                    disableFitBounds
+                  />
+                )
+              )
             )}
 
           {/* Route markers */}

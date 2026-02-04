@@ -78,6 +78,7 @@ describe('CommentsSection', () => {
         data: { id: 1, travel: 123, is_main: true, created_at: null, updated_at: null },
         isLoading: false,
         error: null,
+        refetch: jest.fn(),
       } as any);
 
       mockUseComments.mockReturnValue({
@@ -146,6 +147,7 @@ describe('CommentsSection', () => {
         data: { id: 1, travel: 123, is_main: true, created_at: null, updated_at: null },
         isLoading: false,
         error: null,
+        refetch: jest.fn(),
       } as any);
 
       mockUseComments.mockReturnValue({
@@ -225,6 +227,7 @@ describe('CommentsSection', () => {
         data: undefined,
         isLoading: true,
         error: null,
+        refetch: jest.fn(),
       } as any);
 
       mockUseComments.mockReturnValue({
@@ -244,6 +247,7 @@ describe('CommentsSection', () => {
         data: undefined,
         isLoading: false,
         error: new Error('Network error'),
+        refetch: jest.fn(),
       } as any);
 
       mockUseComments.mockReturnValue({
@@ -285,6 +289,7 @@ describe('CommentsSection', () => {
         data: { id: 1, travel: 123, is_main: true, created_at: null, updated_at: null },
         isLoading: false,
         error: null,
+        refetch: jest.fn(),
       } as any);
 
       mockUseComments.mockReturnValue({
@@ -329,6 +334,7 @@ describe('CommentsSection', () => {
         data: { id: 1, travel: 123, is_main: true, created_at: null, updated_at: null },
         isLoading: false,
         error: null,
+        refetch: jest.fn(),
       } as any);
     });
 

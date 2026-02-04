@@ -521,6 +521,13 @@ test.describe('Map Page (/map) - smoke e2e', () => {
 
   test('desktop: route polyline is visible after entering start/end coordinates', async ({ page }, testInfo) => {
     await installTileMock(page);
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.removeItem('route-storage');
+      } catch {
+        // ignore
+      }
+    });
     await gotoMapWithRecovery(page);
 
     await expect(page.getByTestId('filters-panel')).toBeVisible({ timeout: 60_000 });
@@ -539,14 +546,14 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     await expect(endInput).toBeVisible({ timeout: 30_000 });
 
     await startInput.click({ force: true });
-    await startInput.fill('50.4330, 20.4840');
+    await startInput.fill('53.9006, 27.5590');
     // Trigger onSubmitEditing on RN-web
     await startInput.press('Enter');
     // Ensure blur in case Enter is not wired
     await startInput.press('Tab');
 
     await endInput.click({ force: true });
-    await endInput.fill('50.4601, 20.2979');
+    await endInput.fill('53.4539, 26.4729');
     await endInput.press('Enter');
     await endInput.press('Tab');
 
@@ -554,6 +561,31 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     const buildBtn = page.getByTestId('filters-build-route-button');
     await expect(buildBtn).toBeVisible({ timeout: 30_000 });
     await buildBtn.click({ force: true });
+
+    // Wait for the route line to appear. Route building can be async and may lag behind
+    // the "Маршрут построен" toast/state update.
+    const routeLine = page.locator('svg path.metravel-route-line').first();
+    await expect
+      .poll(async () => routeLine.count(), { timeout: 90_000 })
+      .toBeGreaterThan(0);
+
+    await expect
+      .poll(
+        async () =>
+          routeLine
+            .evaluate((el) => {
+              const anyEl = el as any;
+              if (typeof anyEl.getTotalLength !== 'function') return 0;
+              try {
+                return Number(anyEl.getTotalLength()) || 0;
+              } catch {
+                return 0;
+              }
+            })
+            .catch(() => 0),
+        { timeout: 90_000 }
+      )
+      .toBeGreaterThan(10);
 
     // Wait until Leaflet tiles actually render; otherwise the map can be covered by a loader overlay,
     // and the route line may exist in DOM but not be visually visible to the user.
@@ -583,10 +615,6 @@ test.describe('Map Page (/map) - smoke e2e', () => {
       anyRouteLineCount,
       pathRouteLineCount,
     });
-
-    // Assert the route line exists in Leaflet overlay pane as a real SVG path.
-    // If Leaflet renders via Canvas, there will be no SVG path, and this test must fail.
-    const routeLine = page.locator('svg path.metravel-route-line').first();
 
     await expect(routeLine).toBeVisible({ timeout: 60_000 });
 
