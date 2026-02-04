@@ -323,7 +323,10 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
         });
 
         it('должен сохранить черновик с валидным названием', async () => {
-            const mockSave = jest.fn().mockResolvedValue(undefined);
+            const mockSave = jest.fn().mockResolvedValue({
+                ...defaultProps.formData,
+                id: '123',
+            });
 
             const { getByText } = render(
                 <TravelWizardStepBasic
@@ -351,7 +354,10 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
         });
 
         it('должен перенаправить в /metravel после сохранения', async () => {
-            const mockSave = jest.fn().mockResolvedValue(undefined);
+            const mockSave = jest.fn().mockResolvedValue({
+                ...defaultProps.formData,
+                id: '123',
+            });
 
             const { getByText } = render(
                 <TravelWizardStepBasic
