@@ -14,6 +14,13 @@ test.describe('Leaflet CSS', () => {
     const leafletContainer = page.locator('.leaflet-container').first();
     await expect(leafletContainer).toBeVisible({ timeout: 15_000 });
 
+    // Ensure Leaflet CSS is actually loaded (CDN link injected in app layout).
+    const cssHref = await page.evaluate(() => {
+      const link = document.querySelector('link[data-metravel-leaflet-css="cdn"]') as HTMLLinkElement | null;
+      return link?.href ?? null;
+    });
+    expect(cssHref).toContain('leaflet');
+
     // Leaflet core CSS sets .leaflet-map-pane z-index to 400.
     const zIndex = await page.evaluate(() => {
       const probe = document.createElement('div');

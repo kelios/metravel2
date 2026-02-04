@@ -939,7 +939,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
           .leaflet-tile-pane { z-index: 200 !important; }
           .leaflet-overlay-pane { z-index: 400 !important; }
           .leaflet-metravelRoutePane-pane { 
-            z-index: 450 !important; 
+            /* keep above other overlay panes (often 560) but below markers (600) */
+            z-index: 590 !important; 
             pointer-events: none !important;
           }
           .leaflet-shadow-pane { z-index: 500 !important; }
@@ -955,7 +956,18 @@ const MapPageComponent: React.FC<Props> = (props) => {
             overflow: visible !important;
           }
 
+          .leaflet-metravelRoutePane-pane svg {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            overflow: visible !important;
+          }
+
           .leaflet-overlay-pane svg path {
+            pointer-events: none !important;
+          }
+
+          .leaflet-metravelRoutePane-pane svg path {
             pointer-events: none !important;
           }
 
@@ -970,7 +982,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
           }
 
           /* Fallback for paths without class */
-          .leaflet-overlay-pane svg path[stroke] {
+          .leaflet-overlay-pane svg path[stroke],
+          .leaflet-metravelRoutePane-pane svg path[stroke] {
             stroke-opacity: 0.9 !important;
             stroke-width: 5px !important;
             stroke-linecap: round !important;

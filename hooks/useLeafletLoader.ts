@@ -107,23 +107,36 @@ const ensureLeafletCss = async (): Promise<void> => {
     return;
   }
 
-  // Prefer bundled Leaflet CSS (no extra network request). Some bundlers can resolve the module
-  // but ignore CSS side-effects; verify via leafletCssSeemsApplied().
-  try {
-    require('leaflet/dist/leaflet.css');
-    // Some bundlers may allow the require but not actually apply CSS; verify before returning.
-    if (leafletCssSeemsApplied()) return;
-  } catch {
-    // Continue to CDN fallback below.
-  }
-
   // If bundling failed, try CDN CSS. If that fails (CSP/offline), inject a minimal layout fallback.
   if (document.querySelector('style[data-leaflet-fallback="true"]')) return;
 
   const existing = document.querySelector(`link[rel="stylesheet"][href="${LEAFLET_CSS_HREF}"]`) as
     | HTMLLinkElement
     | null;
-  if (existing) return;
+  if (existing) {
+    // A link tag was injected elsewhere (e.g. app layout). Give it a moment to apply.
+    const started = Date.now();
+    while (Date.now() - started < 3000) {
+      if (leafletCssSeemsApplied()) return;
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    // Still not applied → fall back to minimal CSS.
+    const style = document.createElement('style');
+    style.setAttribute('data-leaflet-fallback', 'true');
+    style.textContent =
+      '.leaflet-container{position:relative;overflow:hidden;outline:0}' +
+      '.leaflet-pane,.leaflet-map-pane,.leaflet-tile-pane,.leaflet-overlay-pane,.leaflet-shadow-pane,.leaflet-marker-pane,.leaflet-tooltip-pane,.leaflet-popup-pane{position:absolute;top:0;left:0}' +
+      '.leaflet-tile{position:absolute;left:0;top:0;filter:inherit;visibility:inherit}' +
+      '.leaflet-zoom-animated{transform-origin:0 0}' +
+      '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
+      '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
+      '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
+      '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
+      '.leaflet-right .leaflet-control{float:right}' +
+      '.leaflet-control-attribution{margin:0;padding:0 5px;color:#333;font-size:11px;background:rgba(255,255,255,0.7)}';
+    document.head.appendChild(style);
+    return;
+  }
 
   await new Promise<void>((resolve) => {
     const fallback = () => {
