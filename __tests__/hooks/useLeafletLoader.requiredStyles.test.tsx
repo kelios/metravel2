@@ -40,10 +40,12 @@ describe('useLeafletLoader required styles', () => {
   it('injects Leaflet CSS link on web mount', async () => {
     renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }));
 
-    await act(async () => {});
+    await act(async () => {
+      // Flush effects
+    });
 
     const link = document.querySelector(
-      'link[rel="stylesheet"][href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"]'
+      'link[rel="stylesheet"][href*="unpkg.com/leaflet@1.9.4/dist/leaflet.css"]'
     );
     const fallback = document.querySelector('style[data-leaflet-fallback="true"]');
 
@@ -52,6 +54,10 @@ describe('useLeafletLoader required styles', () => {
 
   it('injects fallback styles if Leaflet CSS does not load within timeout', async () => {
     renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }));
+
+    await act(async () => {
+      // Ensure initial effect ran and scheduled the timeout
+    });
 
     await act(async () => {
       jest.advanceTimersByTime(5000);
