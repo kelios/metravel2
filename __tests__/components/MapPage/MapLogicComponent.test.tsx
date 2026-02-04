@@ -4,6 +4,16 @@ const { render, act } = require('@testing-library/react-native');
 const { MapLogicComponent } = require('@/components/MapPage/Map/MapLogicComponent');
 
 describe('MapLogicComponent radius fitBounds', () => {
+  const originalRaf = global.requestAnimationFrame;
+
+  beforeAll(() => {
+    global.requestAnimationFrame = (cb: any) => cb(0);
+  });
+
+  afterAll(() => {
+    global.requestAnimationFrame = originalRaf;
+  });
+
   it('prefers circle center when auto-fitting without travel points', async () => {
     const fitBounds = jest.fn();
     const map = {
@@ -26,6 +36,7 @@ describe('MapLogicComponent radius fitBounds', () => {
       })),
       circle: jest.fn(() => ({
         getBounds: () => ({
+          pad: jest.fn(() => 'padded-bounds'),
           getSouthWest: () => ({ lat: 53, lng: 27 }),
           getNorthEast: () => ({ lat: 54, lng: 28 }),
         }),
@@ -98,6 +109,7 @@ describe('MapLogicComponent radius fitBounds', () => {
       })),
       circle: jest.fn(() => ({
         getBounds: () => ({
+          pad: jest.fn(() => 'padded-bounds'),
           getSouthWest: () => ({ lat: 49, lng: 9 }),
           getNorthEast: () => ({ lat: 51, lng: 11 }),
         }),

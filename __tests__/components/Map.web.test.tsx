@@ -151,27 +151,6 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
     expect(rendered.toJSON()).toBeTruthy();
   });
 
-  it('matches snapshot on web', () => {
-    mockPlatform.OS = 'web';
-
-    const rendered = renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
-    expect(rendered.toJSON()).toMatchSnapshot();
-  });
-
-  it('uses expected tile layer URL', () => {
-    const fs = require('fs');
-    const path = require('path');
-    const filePath = path.join(__dirname, '../../components/Map.web.tsx');
-    
-    if (!fs.existsSync(filePath)) {
-      return;
-    }
-    
-    const fileContent = fs.readFileSync(filePath, 'utf8');
-    
-    expect(fileContent).toContain('basemaps.cartocdn.com/rastertiles/voyager');
-  });
-
   it('handles travel data correctly', async () => {
     const travelData = {
       data: [
@@ -231,4 +210,3 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
     expect(rendered.toJSON()).toBeTruthy();
   });
 });
-

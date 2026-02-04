@@ -1189,55 +1189,35 @@ const MapPageComponent: React.FC<Props> = (props) => {
             hintCenter={hintCenterLatLng}
           />
 
-          {/* Route line renderer */}
-          {mode === 'route' &&
-            Array.isArray(routeLineLatLngObjects) &&
-            routeLineLatLngObjects.length >= 2 && (
-              // Prefer declarative react-leaflet Polyline when available (more reliable than imperative add/remove)
-              typeof Polyline === 'function' ? (
-                <>
-                  {/* Outline for contrast on any basemap */}
-                  <Polyline
-                    positions={routeLineLatLngObjects as any}
-                    pane="metravelRoutePane"
-                    pathOptions={{
-                      color: (colors as any).text || '#000',
-                      weight: 10,
-                      opacity: 0.95,
-                      lineJoin: 'round',
-                      lineCap: 'round',
-                      interactive: false,
-                      className: 'metravel-route-line metravel-route-line-outline',
-                    }}
-                  />
-                  <Polyline
-                    positions={routeLineLatLngObjects as any}
-                    pane="metravelRoutePane"
-                    pathOptions={{
-                      color: (colors as any).primary || DESIGN_TOKENS.colors.primary,
-                      weight: 6,
-                      opacity: 1,
-                      lineJoin: 'round',
-                      lineCap: 'round',
-                      interactive: false,
-                      className: 'metravel-route-line',
-                    }}
-                  />
-                </>
-              ) : (
-                // Fallback: imperative Leaflet polyline (legacy)
-                mapInstance &&
-                L && (
-                  <MapRoute
-                    map={mapInstance}
-                    leaflet={L}
-                    routeCoordinates={routeLineLatLngObjects}
-                    isOptimal={true}
-                    disableFitBounds
-                  />
-                )
-              )
-            )}
+	          {/* Route line renderer */}
+	          {mode === 'route' &&
+	            Array.isArray(routeLineLatLngObjects) &&
+	            routeLineLatLngObjects.length >= 2 && (
+	              // Prefer imperative Leaflet polyline: guarantees pane/renderer setup + bringToFront.
+	              mapInstance && L ? (
+	                <MapRoute
+	                  map={mapInstance}
+	                  leaflet={L}
+	                  routeCoordinates={routeLineLatLngObjects}
+	                  isOptimal={true}
+	                  disableFitBounds
+	                />
+	              ) : typeof Polyline === 'function' ? (
+	                <Polyline
+	                  positions={routeLineLatLngObjects as any}
+	                  pane="metravelRoutePane"
+	                  pathOptions={{
+	                    color: (colors as any).primary || DESIGN_TOKENS.colors.primary,
+	                    weight: 6,
+	                    opacity: 1,
+	                    lineJoin: 'round',
+	                    lineCap: 'round',
+	                    interactive: false,
+	                    className: 'metravel-route-line',
+	                  }}
+	                />
+	              ) : null
+	            )}
 
           {/* Route markers */}
           <RouteMarkersLayer

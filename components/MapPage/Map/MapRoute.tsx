@@ -17,7 +17,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
   isOptimal,
   disableFitBounds,
 }) => {
-  const polylineRef = useRef<any>(null);
+  const layerRef = useRef<any>(null);
   const { primary, danger } = useThemedColors();
 
   useEffect(() => {
@@ -29,13 +29,13 @@ const MapRoute: React.FC<MapRouteProps> = ({
     let cancelled = false;
 
     // Remove old polyline
-    if (polylineRef.current) {
+    if (layerRef.current) {
       try {
-        map.removeLayer(polylineRef.current);
+        map.removeLayer(layerRef.current);
       } catch (_error) {
         console.warn('Error removing polyline:', _error);
       }
-      polylineRef.current = null;
+      layerRef.current = null;
     }
 
     const validCoords = (routeCoordinates || []).filter((c) => {
@@ -54,13 +54,13 @@ const MapRoute: React.FC<MapRouteProps> = ({
     if (validCoords.length < 2) {
       return () => {
         cancelled = true;
-        if (polylineRef.current && map) {
+        if (layerRef.current && map) {
           try {
-            map.removeLayer(polylineRef.current);
+            map.removeLayer(layerRef.current);
           } catch {
             // Ignore cleanup errors
           }
-          polylineRef.current = null;
+          layerRef.current = null;
         }
       };
     }
@@ -76,7 +76,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
         const existing = typeof map.getPane === 'function' ? map.getPane(paneName) : null;
         const pane = existing || (typeof map.createPane === 'function' ? map.createPane(paneName) : null);
         if (pane && pane.style) {
-          pane.style.zIndex = '560';
+          pane.style.zIndex = '590';
           pane.style.pointerEvents = 'none';
           hasRoutePane = true;
         }
@@ -86,15 +86,32 @@ const MapRoute: React.FC<MapRouteProps> = ({
 
       const renderer = typeof leaflet.svg === 'function' && hasRoutePane ? leaflet.svg({ pane: paneName }) : undefined;
 
-      const color = isOptimal ? primary : danger;
-      const weight = isOptimal ? 5 : 4;
-      const opacity = isOptimal ? 0.85 : 0.65;
+      const mainColor = isOptimal ? primary : danger;
       const dashArray = isOptimal ? null : '10, 10';
 
+      const outlineColor =
+        typeof document !== 'undefined' &&
+        document.documentElement?.getAttribute?.('data-theme') === 'dark'
+          ? 'rgba(255,255,255,0.9)'
+          : 'rgba(0,0,0,0.9)';
+
+      const outline = leaflet.polyline(latlngs, {
+        color: outlineColor,
+        weight: isOptimal ? 10 : 9,
+        opacity: 0.9,
+        dashArray,
+        lineJoin: 'round',
+        lineCap: 'round',
+        className: 'metravel-route-line metravel-route-line-outline',
+        interactive: false,
+        pane: hasRoutePane ? paneName : undefined,
+        renderer,
+      });
+
       const line = leaflet.polyline(latlngs, {
-        color,
-        weight,
-        opacity,
+        color: mainColor,
+        weight: isOptimal ? 6 : 5,
+        opacity: 1,
         dashArray,
         lineJoin: 'round',
         lineCap: 'round',
@@ -104,19 +121,27 @@ const MapRoute: React.FC<MapRouteProps> = ({
         renderer,
       });
 
+      const group =
+        typeof leaflet.featureGroup === 'function'
+          ? leaflet.featureGroup([outline, line])
+          : line;
+
       try {
-        line.addTo(map);
-        if (typeof line.bringToFront === 'function') {
-          line.bringToFront();
+        if (group !== line) {
+          group.addTo(map);
+        } else {
+          line.addTo(map);
         }
-        polylineRef.current = line;
+        if (typeof outline.bringToFront === 'function') outline.bringToFront();
+        if (typeof line.bringToFront === 'function') line.bringToFront();
+        layerRef.current = group;
       } catch {
         return;
       }
 
       if (!disableFitBounds) {
         try {
-          const bounds = line.getBounds();
+          const bounds = (group?.getBounds?.() ?? line.getBounds?.()) as any;
           if (bounds.isValid()) {
             map.fitBounds(bounds.pad(0.1), {
               animate: true,
@@ -137,6 +162,7 @@ const MapRoute: React.FC<MapRouteProps> = ({
           // noop
         }
         try {
+          outline.redraw?.();
           line.redraw?.();
         } catch {
           // noop
@@ -155,13 +181,13 @@ const MapRoute: React.FC<MapRouteProps> = ({
     // Cleanup on unmount
     return () => {
       cancelled = true;
-      if (polylineRef.current && map) {
+      if (layerRef.current && map) {
         try {
-          map.removeLayer(polylineRef.current);
+          map.removeLayer(layerRef.current);
         } catch {
           // Ignore cleanup errors
         }
-        polylineRef.current = null;
+        layerRef.current = null;
       }
     };
   }, [map, leafletFromProps, routeCoordinates, isOptimal, primary, danger, disableFitBounds]);

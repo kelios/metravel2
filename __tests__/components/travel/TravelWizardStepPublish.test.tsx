@@ -51,6 +51,23 @@ const baseFormData: TravelFormData = {
 };
 
 describe('TravelWizardStepPublish - moderation submit', () => {
+  it('renders publish step basics (smoke)', () => {
+    const { getByText } = render(
+      <TravelWizardStepPublish
+        currentStep={6}
+        totalSteps={6}
+        formData={baseFormData}
+        setFormData={jest.fn()}
+        isSuperAdmin={false}
+        onManualSave={jest.fn()}
+        onGoBack={jest.fn()}
+        onFinish={jest.fn()}
+      />
+    );
+
+    expect(getByText('Готовность к публикации')).toBeTruthy();
+  });
+
   it('sets publish=true and moderation=false when sending to moderation (user flow)', async () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);
     const onFinish = jest.fn();

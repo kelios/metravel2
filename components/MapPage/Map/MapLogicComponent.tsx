@@ -6,8 +6,9 @@ import { strToLatLng } from './utils';
 
 const isTestEnv =
   typeof process !== 'undefined' &&
-  (process as any).env &&
-  (process as any).env.NODE_ENV === 'test';
+  ((process as any).env?.NODE_ENV === 'test' ||
+    (process as any).env?.JEST_WORKER_ID != null ||
+    (globalThis as any)?.jest != null);
 
 interface Point {
   id?: number;

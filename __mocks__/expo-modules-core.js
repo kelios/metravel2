@@ -40,6 +40,16 @@ module.exports = {
   requireNativeViewManager: jest.fn(() => () => null),
   requireNativeModule,
   requireOptionalNativeModule,
+  // Used by expo-location and other permissioned Expo modules.
+  // Must be defined at module-eval time (hooks are created during import).
+  createPermissionHook: jest.fn(() => {
+    return function usePermissionHookMock() {
+      return [
+        { status: 'granted', granted: true, canAskAgain: true, expires: 'never' },
+        jest.fn(async () => ({ status: 'granted', granted: true, canAskAgain: true, expires: 'never' })),
+      ];
+    };
+  }),
   registerWebModule: jest.fn(),
   SharedRef: class {},
   initialize: jest.fn(),

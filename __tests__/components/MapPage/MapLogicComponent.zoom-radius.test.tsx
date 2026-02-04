@@ -4,6 +4,16 @@ const { render, act } = require('@testing-library/react-native');
 const { MapLogicComponent } = require('@/components/MapPage/Map/MapLogicComponent');
 
 describe('MapLogicComponent radius zoom initialization', () => {
+  const originalRaf = global.requestAnimationFrame;
+
+  beforeAll(() => {
+    global.requestAnimationFrame = (cb: any) => cb(0);
+  });
+
+  afterAll(() => {
+    global.requestAnimationFrame = originalRaf;
+  });
+
   it('does not setView until radius results are ready', async () => {
     const map = {
       fitBounds: jest.fn(),
@@ -25,6 +35,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       })),
       circle: jest.fn(() => ({
         getBounds: () => ({
+          pad: jest.fn(() => 'padded-bounds'),
           getSouthWest: () => ({ lat: 53, lng: 27 }),
           getNorthEast: () => ({ lat: 54, lng: 28 }),
         }),
@@ -72,7 +83,8 @@ describe('MapLogicComponent radius zoom initialization', () => {
     await act(async () => {});
 
     // Results exist: initialization should happen; prefer circleCenter.
-    expect(map.setView).toHaveBeenCalledWith([53.9, 27.5667], 11, { animate: false });
+    // Initial zoom is derived from radius (60km -> 13).
+    expect(map.setView).toHaveBeenCalledWith([53.9, 27.5667], 13, { animate: false });
   });
 
   it('recomputes fitBounds when radius changes', async () => {
@@ -96,6 +108,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       })),
       circle: jest.fn(() => ({
         getBounds: () => ({
+          pad: jest.fn(() => 'padded-bounds'),
           getSouthWest: () => ({ lat: 53, lng: 27 }),
           getNorthEast: () => ({ lat: 54, lng: 28 }),
         }),

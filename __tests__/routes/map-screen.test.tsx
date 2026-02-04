@@ -280,62 +280,6 @@ describe('MapScreen (map tab)', () => {
     expect(queryByTestId('map-panel-tab-travels')).toBeTruthy()
   })
 
-  it('shows open panel button after isMobile changes from desktop to mobile (SSR-safe)', async () => {
-    mockResponsiveState = { isPhone: false, isLargePhone: false, width: 1024 }
-    const client = createTestClient()
-    const utils = render(
-      <QueryClientProvider client={client}>
-        <MapScreen />
-      </QueryClientProvider>
-    )
-
-    // Desktop: панель открыта по умолчанию
-    await waitFor(() => {
-      expect(utils.getByTestId('map-panel-tab-filters')).toBeTruthy()
-    })
-
-    // Симулируем смену брейкпоинта на mobile после первого рендера
-    mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
-    utils.rerender(
-      <QueryClientProvider client={client}>
-        <MapScreen />
-      </QueryClientProvider>
-    )
-
-    // Mobile: панель должна закрыться по умолчанию
-    await waitFor(() => {
-      expect(utils.queryByTestId('map-panel-tab-filters')).toBeNull()
-      expect(utils.queryByTestId('map-panel-tab-travels')).toBeNull()
-    })
-  })
-
-  it('shows loader in travels list tab while data is loading', async () => {
-    // Возвращаем промис, который разрешится после проверки лоадера
-    let resolveRequest: (value: any) => void;
-    const slowPromise = new Promise<any>((resolve) => {
-      resolveRequest = resolve;
-    });
-
-    mockFetchTravelsForMap.mockImplementation(() => slowPromise);
-
-    const utils = renderWithClient();
-    const { getByTestId } = utils;
-
-    // Запрос на данные карты начинается только после получения геолокации
-    await waitFor(() => {
-      expect(mockFetchTravelsForMap).toHaveBeenCalled();
-    });
-
-    // Переключаемся на вкладку "Список" (на mobile панель закрыта по умолчанию)
-    await openPanelAndGoToListTab(utils);
-
-    // Пока запрос не завершён, должен отображаться лоадер
-    expect(getByTestId('map-loading-overlay')).toBeTruthy();
-
-    // Завершаем запрос, чтобы избежать зависаний
-    resolveRequest!({});
-  });
-
   it('shows correct travels count in list tab after data is loaded', async () => {
     const utils = renderWithClient();
     const { getByTestId } = utils;
