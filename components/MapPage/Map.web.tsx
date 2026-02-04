@@ -1164,6 +1164,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
                 leaflet={L}
                 routeCoordinates={routeLineLatLngObjects}
                 isOptimal={true}
+                disableFitBounds
               />
             )}
 

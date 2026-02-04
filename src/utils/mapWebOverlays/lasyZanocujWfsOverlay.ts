@@ -182,31 +182,38 @@ export const __wfsXmlToGeoJson = (xmlText: string) => {
   const allEls = Array.from(doc.getElementsByTagName('*')) as Element[];
   const members = allEls.filter((el) => {
     const ln = localName(el.tagName);
-    return ln === 'featureMember' || ln === 'member';
+    return ln === 'featureMember' || ln === 'member' || ln === 'featureMembers';
   });
   const features: any[] = [];
 
   for (const m of members) {
-    const featureEl = Array.from(m.children || [])[0] as Element | undefined;
-    if (!featureEl) continue;
+    const ln = localName(m.tagName);
+    const candidateFeatures: Element[] =
+      ln === 'featureMembers'
+        ? (Array.from(m.children || []) as Element[])
+        : ([Array.from(m.children || [])[0]] as Array<Element | undefined>).filter(Boolean) as Element[];
 
-    const geometry = extractGeometryFromGml(featureEl);
-    if (!geometry) continue;
+    for (const featureEl of candidateFeatures) {
+      if (!featureEl) continue;
 
-    const props: Record<string, any> = {};
-    for (const child of Array.from(featureEl.children)) {
-      const tag = localName(child.tagName);
-      if (tag === localName((geometry as any)?.type || '')) continue;
+      const geometry = extractGeometryFromGml(featureEl);
+      if (!geometry) continue;
 
-      const isGeomChild = !!child.querySelector(
-        'Point,LineString,Polygon,MultiPoint,MultiLineString,MultiPolygon,Surface,MultiSurface,gml\\:Point,gml\\:LineString,gml\\:Polygon,gml\\:MultiPoint,gml\\:MultiLineString,gml\\:MultiPolygon,gml\\:Surface,gml\\:MultiSurface'
-      );
-      if (isGeomChild) continue;
-      const val = gmlText(child);
-      if (val) props[tag] = val;
+      const props: Record<string, any> = {};
+      for (const child of Array.from(featureEl.children)) {
+        const tag = localName(child.tagName);
+        if (tag === localName((geometry as any)?.type || '')) continue;
+
+        const isGeomChild = !!child.querySelector(
+          'Point,LineString,Polygon,MultiPoint,MultiLineString,MultiPolygon,Surface,MultiSurface,gml\\:Point,gml\\:LineString,gml\\:Polygon,gml\\:MultiPoint,gml\\:MultiLineString,gml\\:MultiPolygon,gml\\:Surface,gml\\:MultiSurface'
+        );
+        if (isGeomChild) continue;
+        const val = gmlText(child);
+        if (val) props[tag] = val;
+      }
+
+      features.push({ type: 'Feature', geometry, properties: props });
     }
-
-    features.push({ type: 'Feature', geometry, properties: props });
   }
 
   if (!features.length) return null;
@@ -507,15 +514,33 @@ export const attachLasyZanocujWfsOverlay = (
     try {
       const version = def.wfsParams?.version || '2.0.0';
       const outputFormat = def.wfsParams?.outputFormat || 'GEOJSON';
-      const srsName = def.wfsParams?.srsName || 'urn:ogc:def:crs:OGC:1.3:CRS84';
+      const srsName = def.wfsParams?.srsName || 'EPSG:4326';
 
-      // Keep attempts tight to avoid spamming WFS servers with many format probes.
+      const srsCandidates = (() => {
+        const out = [srsName];
+        const lower = (srsName || '').toLowerCase();
+        if (lower.includes('crs84') || lower.includes('ogc:1.3:crs84')) {
+          out.push('EPSG:4326');
+        }
+        if (lower === 'epsg:4326') {
+          out.push('urn:ogc:def:crs:EPSG::4326');
+        }
+        return Array.from(new Set(out)).slice(0, 2);
+      })();
+
       const outputFormatCandidates = [
         outputFormat,
         outputFormat?.toLowerCase() === 'geojson' ? null : 'GEOJSON',
-        outputFormat?.toLowerCase() === 'application/json' ? null : 'application/json',
+        outputFormat?.toLowerCase() === 'esrigeojson' ? null : 'ESRIGEOJSON',
         'GML3',
       ].filter(Boolean) as string[];
+
+      const uniqueFormats = Array.from(new Set(outputFormatCandidates));
+      const formatsToTry = ((): string[] => {
+        const first = uniqueFormats[0] || 'GEOJSON';
+        if (first.toLowerCase() === 'gml3') return ['GML3'];
+        return [first, 'GML3'];
+      })();
 
       // Attempt list: prefer cached successful params, then config + one fallback.
       const attempts: Array<{
@@ -537,29 +562,57 @@ export const attachLasyZanocujWfsOverlay = (
         addAttempt(preferredAttempt);
       }
 
-      addAttempt({
-        version,
-        typeParam: 'typeNames',
-        outputFormat: outputFormatCandidates[0] || 'GEOJSON',
-        srsName,
-        bboxOrder: 'lonlat',
-      });
+      for (const srs of srsCandidates) {
+        for (const fmt of formatsToTry) {
+          addAttempt({
+            version,
+            typeParam: 'typeNames',
+            outputFormat: fmt,
+            srsName: srs,
+            bboxOrder: 'lonlat',
+          });
+        }
+      }
+
       addAttempt({
         version,
         typeParam: 'typeName',
-        outputFormat: outputFormatCandidates[0] || 'GEOJSON',
-        srsName,
+        outputFormat: formatsToTry[0] || outputFormatCandidates[0] || 'GEOJSON',
+        srsName: srsCandidates[0] || srsName,
         bboxOrder: 'lonlat',
-      });
-      addAttempt({
-        version: '1.1.0',
-        typeParam: 'typeName',
-        outputFormat: outputFormatCandidates.includes('GML3') ? 'GML3' : (outputFormatCandidates[0] || 'GEOJSON'),
-        srsName: 'EPSG:4326',
-        bboxOrder: 'latlon',
       });
 
+      const fmt0 = formatsToTry[0] || outputFormatCandidates[0] || 'GEOJSON';
+      if (srsCandidates.includes('EPSG:4326')) {
+        addAttempt({
+          version,
+          typeParam: 'typeNames',
+          outputFormat: fmt0,
+          srsName: 'EPSG:4326',
+          bboxOrder: 'latlon',
+        });
+        addAttempt({
+          version,
+          typeParam: 'typeName',
+          outputFormat: fmt0,
+          srsName: 'EPSG:4326',
+          bboxOrder: 'latlon',
+        });
+      }
+
+      if (version !== '1.1.0') {
+        addAttempt({
+          version: '1.1.0',
+          typeParam: 'typeName',
+          outputFormat: 'GML3',
+          srsName: 'EPSG:4326',
+          bboxOrder: 'latlon',
+        });
+      }
+
       let lastErrorText = '';
+      let lastErrorStatus: number | null = null;
+      let lastAttempt: (typeof attempts)[number] | null = null;
       for (const attempt of attempts) {
         const url = buildUrl(bbox, attempt);
         const res = await fetch(url, { method: 'GET', signal: abort.signal });
@@ -567,16 +620,28 @@ export const attachLasyZanocujWfsOverlay = (
         if (!res.ok) {
           const text = await res.text().catch(() => '');
           lastErrorText = text;
+          lastErrorStatus = res.status;
+          lastAttempt = attempt;
           continue;
         }
 
         const parsed = await tryParseGeoJsonFromResponse(res);
         if (!parsed.ok) {
           lastErrorText = parsed.errorText;
+          lastErrorStatus = res.status;
+          lastAttempt = attempt;
           continue;
         }
 
-        let dataToRender = parsed.data;
+        const initialSanitized = sanitizeGeoJson(parsed.data);
+        if (!initialSanitized) {
+          lastErrorText = 'Empty or invalid FeatureCollection';
+          lastErrorStatus = res.status;
+          lastAttempt = attempt;
+          continue;
+        }
+
+        let dataToRender = initialSanitized;
         try {
           const boundsNormal = computeGeoJsonBounds(dataToRender, false);
           const boundsSwapped = computeGeoJsonBounds(dataToRender, true);
@@ -598,7 +663,12 @@ export const attachLasyZanocujWfsOverlay = (
         return;
       }
 
-      throw new Error(`WFS: no supported GeoJSON outputFormat. Last response: ${String(lastErrorText).slice(0, 200)}`);
+      throw new Error(
+        `WFS: failed to load features (unsupported params or response).` +
+          ` Last status: ${lastErrorStatus ?? 'n/a'}.` +
+          ` Last attempt: ${lastAttempt ? `${lastAttempt.version} ${lastAttempt.typeParam} ${lastAttempt.srsName} ${lastAttempt.bboxOrder} ${lastAttempt.outputFormat}` : 'n/a'}.` +
+          ` Last response: ${String(lastErrorText).slice(0, 200)}`
+      );
     } catch (e: any) {
       if (e?.name === 'AbortError') return;
       const msg = String(e?.message || '').toLowerCase();

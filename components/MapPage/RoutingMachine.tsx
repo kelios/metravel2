@@ -82,11 +82,6 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         } catch {
             // noop
         }
-        try {
-            setRoutingLoading(false)
-        } catch {
-            // noop
-        }
         setRouteDistance(0)
         setFullRouteCoords([])
     }, [hasTwoPoints, setErrors, setFullRouteCoords, setRouteDistance, setRoutingLoading])

@@ -3,7 +3,7 @@ import { Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput,
 import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'
 
-import { PointsMap } from '@/components/UserPoints/PointsMap'
+import { UserPointsMap } from '@/components/UserPoints/UserPointsMap'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
@@ -142,7 +142,7 @@ export const PointsListGrid: React.FC<{
   const renderMapCanvas = React.useCallback(
     () => (
       <View style={styles.mapInner}>
-        <PointsMap
+        <UserPointsMap
           points={filteredPoints}
           center={currentLocation ?? undefined}
           searchMarker={searchMarker}

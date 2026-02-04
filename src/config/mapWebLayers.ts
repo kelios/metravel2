@@ -107,7 +107,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
         'WFS_BDL_mapa_turystyczna:Program_Zanocuj_w_lesie',
       version: process.env.EXPO_PUBLIC_LASY_WFS_VERSION || '2.0.0',
       outputFormat: process.env.EXPO_PUBLIC_LASY_WFS_OUTPUT || 'GEOJSON',
-      srsName: process.env.EXPO_PUBLIC_LASY_WFS_SRS || 'urn:ogc:def:crs:OGC:1.3:CRS84',
+      srsName: process.env.EXPO_PUBLIC_LASY_WFS_SRS || 'EPSG:4326',
     },
     opacity: 0.8,
     zIndex: 450,

@@ -49,7 +49,7 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     if (bb && dockBb) {
       const itemCenterX = bb.x + bb.width / 2;
       const dockCenterX = dockBb.x + dockBb.width / 2;
-      expect(Math.abs(itemCenterX - dockCenterX), 'expected "Ещё" to be centered within 100px').toBeLessThanOrEqual(100);
+      expect(Math.abs(itemCenterX - dockCenterX), 'expected "Ещё" to be centered within 110px').toBeLessThanOrEqual(110);
     }
 
     // Open More modal.

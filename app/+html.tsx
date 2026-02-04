@@ -661,7 +661,8 @@ html[data-theme="light"]{color-scheme:light;--color-text:#1a1a1a;--color-backgro
 [data-testid="footer-desktop-bar"]{justify-content:space-between !important}
 [data-testid^="footer-item-"]{display:inline-flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;flex:0 0 auto !important}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-[data-testid="map-container"]{min-height:400px;contain:layout style paint;background:var(--color-backgroundSecondary,#f5f5f5)}
+[data-testid="map-container"]{min-height:400px;contain:layout style;background:var(--color-backgroundSecondary,#f5f5f5)}
+[data-testid="map-container"],[data-testid="map-leaflet-wrapper"],.leaflet-container,.leaflet-control-container{contain:none !important}
 [data-testid="search-container"]{min-height:600px;contain:layout style paint}
 [data-testid="travel-card"]{contain:layout style paint;will-change:auto}
 [data-testid="map-skeleton"],[data-testid="search-skeleton"]{animation:pulse 1.5s ease-in-out infinite}

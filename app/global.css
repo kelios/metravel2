@@ -328,6 +328,16 @@ html[data-theme="dark"] .modal-select option {
   background-image: none !important;
   width: 100% !important;
   height: 100% !important;
+  contain: none !important;
+}
+
+.leaflet-control-container {
+  contain: none !important;
+}
+
+[data-testid="map-container"],
+[data-testid="map-leaflet-wrapper"] {
+  contain: none !important;
 }
 
 /* Panes должны иметь правильную иерархию z-index */

@@ -17,6 +17,16 @@ const mockLeaflet = {
   divIcon: jest.fn().mockImplementation((options: any) => ({
     options,
   })),
+  polyline: jest.fn().mockImplementation((_latlngs: any, _options: any): any => {
+    const bounds: any = {}
+    bounds.isValid = jest.fn(() => true)
+    bounds.pad = jest.fn(() => bounds)
+
+    return {
+      addTo: jest.fn(),
+      getBounds: jest.fn(() => bounds),
+    }
+  }),
   latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
   latLngBounds: jest.fn((_points: any[]) => ({
     pad: jest.fn((padding: number) => ({ pad: padding })),

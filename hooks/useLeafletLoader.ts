@@ -63,6 +63,69 @@ interface UseLeafletLoaderResult {
 const isTestEnv = typeof process !== 'undefined' &&
   (process as any).env?.NODE_ENV === 'test';
 
+const LEAFLET_CSS_HREF = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+
+const ensureLeafletCss = async (): Promise<void> => {
+  if (typeof document === 'undefined') return;
+
+  const existing = document.querySelector(`link[rel="stylesheet"][href="${LEAFLET_CSS_HREF}"]`) as
+    | HTMLLinkElement
+    | null;
+  if (existing) return;
+
+  await new Promise<void>((resolve) => {
+    const fallback = () => {
+      if (document.querySelector('style[data-leaflet-fallback="true"]')) {
+        resolve();
+        return;
+      }
+
+      const style = document.createElement('style');
+      style.setAttribute('data-leaflet-fallback', 'true');
+      style.textContent =
+        '.leaflet-control-container{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none}' +
+        '.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}' +
+        '.leaflet-top{top:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-right{right:0}' +
+        '.leaflet-control{position:relative;z-index:1000;pointer-events:auto;float:left;clear:both}' +
+        '.leaflet-right .leaflet-control{float:right}' +
+        '.leaflet-control-attribution{margin:0;padding:0 5px;color:#333;font-size:11px;background:rgba(255,255,255,0.7)}';
+      document.head.appendChild(style);
+      resolve();
+    };
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = LEAFLET_CSS_HREF;
+
+    let settled = false;
+    const settleResolve = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    const settleFallback = () => {
+      if (settled) return;
+      settled = true;
+      fallback();
+    };
+
+    const timeout = window.setTimeout(() => {
+      settleFallback();
+    }, 5000);
+
+    link.onload = () => {
+      window.clearTimeout(timeout);
+      settleResolve();
+    };
+    link.onerror = () => {
+      window.clearTimeout(timeout);
+      settleFallback();
+    };
+
+    document.head.appendChild(link);
+  });
+};
+
 /**
  * Lazy load Leaflet and React-Leaflet for web platform
  *
@@ -98,6 +161,17 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [shouldLoad, setShouldLoad] = useState(isTestEnv);
+
+  // Ensure Leaflet CSS is present ASAP (before JS is loaded) to avoid controls/attribution layout glitches.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!enabled) return;
+    if (isTestEnv) return;
+
+    ensureLeafletCss().catch(() => {
+      // noop: map can still attempt to render; error will be handled during JS load.
+    });
+  }, [enabled]);
 
   // Schedule loading with idle callback or timeout
   useEffect(() => {
@@ -147,6 +221,11 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
 
     (async () => {
       try {
+        if (!isTestEnv) {
+          await ensureLeafletCss();
+          if (cancelled) return;
+        }
+
         // Import Leaflet
         const LeafletModule = await import('leaflet');
         if (cancelled) return;
