@@ -122,6 +122,7 @@ function ImageCardMedia({
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
+    if (/^(data:|blob:)/i.test(uri)) return uri;
     const blurSize = 64;
     const optimized = optimizeImageUrl(uri, {
       width: blurSize,
@@ -132,7 +133,7 @@ function ImageCardMedia({
       format: 'auto',
     }) ?? uri;
     
-    // Add cache-busting parameter to force reload with new fit parameter
+    // Add cache-busting parameter to force reload with new fit parameter (remote URLs only).
     const separator = optimized.includes('?') ? '&' : '?';
     return `${optimized}${separator}cb=contain`;
   }, [resolvedSource]);

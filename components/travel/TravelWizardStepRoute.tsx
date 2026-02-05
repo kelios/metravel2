@@ -16,6 +16,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelFilters } from '@/hooks/useTravelFilters';
 import { showToast } from '@/src/utils/toast';
+import { extractGpsFromImageFile } from '@/src/utils/exifGps';
+import { registerPendingImageFile, removePendingImageFile } from '@/src/utils/pendingImageFiles';
 
 async function showToastMessage(payload: any) {
     await showToast(payload);
@@ -119,6 +121,8 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
     const [manualCoords, setManualCoords] = useState('');
     const [manualLat, setManualLat] = useState('');
     const [manualLng, setManualLng] = useState('');
+    const [manualPhotoPreviewUrl, setManualPhotoPreviewUrl] = useState<string | null>(null);
+    const manualPhotoInputRef = useRef<any>(null);
 
     const handleQuickDraft = useCallback(async () => {
         if (!onManualSave) return;
@@ -390,7 +394,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
             lng,
             address,
             categories: [],
-            image: '',
+            image: manualPhotoPreviewUrl,
             country: derivedCountryId ? Number(derivedCountryId) : null,
         };
 
@@ -402,8 +406,80 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
         setManualCoords('');
         setManualLat('');
         setManualLng('');
+        setManualPhotoPreviewUrl(null);
         setIsManualPointVisible(false);
-    }, [countries, handleMarkersChange, manualCoords, manualLat, manualLng, parseCoordsPair, reverseGeocode, selectedCountryIds, onCountrySelect, markers]);
+        if (manualPhotoPreviewUrl && onManualSave) {
+            setTimeout(() => {
+                try {
+                    const res = onManualSave();
+                    if (res && typeof (res as any).catch === 'function') {
+                        (res as any).catch(() => null);
+                    }
+                } catch {
+                    // ignore
+                }
+            }, 0);
+        }
+    }, [countries, handleMarkersChange, manualCoords, manualLat, manualLng, manualPhotoPreviewUrl, onManualSave, parseCoordsPair, reverseGeocode, selectedCountryIds, onCountrySelect, markers]);
+
+    const cleanupManualPhotoPreview = useCallback(() => {
+        if (!manualPhotoPreviewUrl) return;
+        removePendingImageFile(manualPhotoPreviewUrl);
+        try {
+            if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+                URL.revokeObjectURL(manualPhotoPreviewUrl);
+            }
+        } catch {
+            // noop
+        }
+        setManualPhotoPreviewUrl(null);
+    }, [manualPhotoPreviewUrl]);
+
+    const handleManualPhotoPick = useCallback(() => {
+        if (Platform.OS !== 'web') return;
+        manualPhotoInputRef.current?.click?.();
+    }, []);
+
+    const handleManualPhotoSelected = useCallback(async (e: any) => {
+        if (Platform.OS !== 'web') return;
+        const file: File | null = e?.target?.files?.[0] ?? null;
+        try {
+            if (e?.target) e.target.value = '';
+        } catch {
+            // noop
+        }
+        if (!file) return;
+
+        const coords = await extractGpsFromImageFile(file);
+        if (!coords) {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Нет геолокации в фото',
+                text2: 'В этом файле не найден GPS в EXIF. Попробуйте другое фото или введите координаты вручную.',
+            });
+            return;
+        }
+
+        cleanupManualPhotoPreview();
+
+        setManualLat(String(coords.lat));
+        setManualLng(String(coords.lng));
+        setManualCoords(`${coords.lat}, ${coords.lng}`);
+
+        try {
+            const previewUrl = URL.createObjectURL(file);
+            registerPendingImageFile(previewUrl, file);
+            setManualPhotoPreviewUrl(previewUrl);
+        } catch {
+            // ignore preview
+        }
+
+        void showToastMessage({
+            type: 'success',
+            text1: 'Координаты заполнены',
+            text2: 'Взяли GPS из EXIF фотографии.',
+        });
+    }, [cleanupManualPhotoPreview]);
 
     const handleCountriesFilterChange = useCallback((value: string | number | Array<string | number>) => {
         const prev = selectedCountryIds || [];
@@ -521,7 +597,13 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                             <View style={[styles.manualPointRow, isMobile && styles.manualPointRowMobile]}>
                                 <Button
                                     mode={isManualPointVisible ? 'contained' : 'outlined'}
-                                    onPress={() => setIsManualPointVisible(v => !v)}
+                                    onPress={() => {
+                                        setIsManualPointVisible((v) => {
+                                            const next = !v;
+                                            if (!next) cleanupManualPhotoPreview();
+                                            return next;
+                                        });
+                                    }}
                                     compact
                                     testID="travel-wizard.step-route.manual.toggle"
                                     accessibilityLabel="travel-wizard.step-route.manual.toggle"
@@ -536,6 +618,40 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                     testID="travel-wizard.step-route.manual.panel"
                                     accessibilityLabel="travel-wizard.step-route.manual.panel"
                                 >
+                                    {Platform.OS === 'web' && (
+                                        <View style={styles.manualPhotoRow}>
+                                            <Button
+                                                mode="outlined"
+                                                onPress={handleManualPhotoPick}
+                                                compact
+                                                testID="travel-wizard.step-route.manual.photo.pick"
+                                                accessibilityLabel="travel-wizard.step-route.manual.photo.pick"
+                                            >
+                                                Координаты из фото
+                                            </Button>
+                                            {manualPhotoPreviewUrl ? (
+                                                <Button
+                                                    mode="text"
+                                                    onPress={cleanupManualPhotoPreview}
+                                                    compact
+                                                    testID="travel-wizard.step-route.manual.photo.clear"
+                                                    accessibilityLabel="travel-wizard.step-route.manual.photo.clear"
+                                                >
+                                                    Убрать фото
+                                                </Button>
+                                            ) : null}
+                                            <input
+                                                ref={manualPhotoInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleManualPhotoSelected}
+                                                style={styles.manualHiddenInput as any}
+                                            />
+                                            <Text style={styles.manualPhotoHint}>
+                                                Фото прикрепится к точке и загрузится после автосохранения.
+                                            </Text>
+                                        </View>
+                                    )}
                                     <View style={styles.manualCoordsWrapper}>
                                         <Text style={styles.manualPointLabel}>Координаты (lat, lng)</Text>
                                         <TextInput
@@ -594,7 +710,10 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                         </Button>
                                         <Button
                                             mode="text"
-                                            onPress={() => setIsManualPointVisible(false)}
+                                            onPress={() => {
+                                                cleanupManualPhotoPreview();
+                                                setIsManualPointVisible(false);
+                                            }}
                                             compact
                                             testID="travel-wizard.step-route.manual.cancel"
                                             accessibilityLabel="travel-wizard.step-route.manual.cancel"
@@ -649,6 +768,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
                                             countrylist={countries}
                                             onCountrySelect={onCountrySelect}
                                             onCountryDeselect={onCountryDeselect}
+                                            onRequestSaveDraft={onManualSave}
                                         />
                                     </Suspense>
                                 ) : (
@@ -776,6 +896,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.surfaceElevated,
         borderWidth: 1,
         borderColor: colors.border,
+    },
+    manualPhotoRow: {
+        marginBottom: DESIGN_TOKENS.spacing.sm,
+        gap: DESIGN_TOKENS.spacing.xs,
+        ...(Platform.OS === 'web'
+            ? ({ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' } as any)
+            : null),
+    },
+    manualHiddenInput: {
+        display: 'none',
+    },
+    manualPhotoHint: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+        ...(Platform.OS === 'web' ? ({ width: '100%' } as any) : null),
     },
     manualCoordsWrapper: {
         marginBottom: DESIGN_TOKENS.spacing.sm,

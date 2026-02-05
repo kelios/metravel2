@@ -118,6 +118,42 @@ describe('WebMapComponent marker sync', () => {
     expect(updatedImg.src).toContain('/img2.jpg');
   });
 
+  it('preserves local blob preview when backend assigns id (merge fallback by lat/lng)', async () => {
+    const blob = 'blob:https://example.com/preview';
+
+    const initialMarkers = [
+      { id: null, lat: 10, lng: 20, address: 'A', categories: [], image: blob, country: null },
+    ];
+    const serverMarkers = [
+      // Backend assigns id; image may be null on first response.
+      { id: 55, lat: '10', lng: '20', address: 'A', categories: [], image: null, country: null },
+    ];
+
+    const utils = render(
+      <WebMapComponent
+        {...baseProps}
+        markers={initialMarkers as any}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText('Загрузка карты…')).toBeNull();
+    });
+
+    const initialImg = screen.getAllByRole('img', { name: /Фото/i })[0] as HTMLImageElement;
+    expect(initialImg.src).toContain(blob);
+
+    utils.rerender(
+      <WebMapComponent
+        {...baseProps}
+        markers={serverMarkers as any}
+      />,
+    );
+
+    const updatedImg = screen.getAllByRole('img', { name: /Фото/i })[0] as HTMLImageElement;
+    expect(updatedImg.src).toContain(blob);
+  });
+
   it('adds marker on map click and propagates it via onMarkersChange (regression: point must be saved)', async () => {
     const onMarkersChange = jest.fn();
 

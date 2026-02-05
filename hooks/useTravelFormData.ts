@@ -63,20 +63,39 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       if (!Array.isArray(serverMarkers) || serverMarkers.length === 0) return currentMarkers;
       if (!Array.isArray(currentMarkers) || currentMarkers.length === 0) return serverMarkers;
 
-      const makeKey = (m: any) => {
-        const idRaw = m?.id != null ? String(m.id) : '';
-        const id = idRaw && idRaw !== 'null' && idRaw !== 'undefined' ? idRaw : '';
-        const lat = typeof m?.lat === 'number' ? m.lat.toFixed(6) : String(m?.lat ?? '');
-        const lng = typeof m?.lng === 'number' ? m.lng.toFixed(6) : String(m?.lng ?? '');
-        // Prefer stable id if present, fallback to coordinates.
-        return id ? `id:${id}` : `ll:${lat},${lng}`;
+      const normalizeCoord = (value: any): string => {
+        const num = typeof value === 'number' ? value : Number(value);
+        if (Number.isFinite(num)) return num.toFixed(6);
+        return String(value ?? '');
       };
 
-      const currentByKey = new Map<string, any>();
-      currentMarkers.forEach(m => currentByKey.set(makeKey(m), m));
+      const makeIdKey = (m: any) => {
+        const idRaw = m?.id != null ? String(m.id) : '';
+        const id = idRaw && idRaw !== 'null' && idRaw !== 'undefined' ? idRaw : '';
+        return id ? `id:${id}` : '';
+      };
+
+      const makeLlKey = (m: any) => {
+        const lat = normalizeCoord(m?.lat);
+        const lng = normalizeCoord(m?.lng);
+        return `ll:${lat},${lng}`;
+      };
+
+      // Keep both indices:
+      // - by id for stable updates
+      // - by lat/lng for the first save when server assigns ids (client still had id:null)
+      const currentById = new Map<string, any>();
+      const currentByLl = new Map<string, any>();
+      currentMarkers.forEach(m => {
+        const idKey = makeIdKey(m);
+        if (idKey) currentById.set(idKey, m);
+        currentByLl.set(makeLlKey(m), m);
+      });
 
       return serverMarkers.map(m => {
-        const current = currentByKey.get(makeKey(m));
+        const idKey = makeIdKey(m);
+        const llKey = makeLlKey(m);
+        const current = (idKey ? currentById.get(idKey) : null) ?? currentByLl.get(llKey);
         if (!current) return m;
 
         // If server did not return image (or returned empty), keep current image.

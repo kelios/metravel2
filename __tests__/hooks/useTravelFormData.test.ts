@@ -427,6 +427,60 @@ describe('useTravelFormData', () => {
     expect(byId.get('2')?.image).toBe(localImgB);
   });
 
+  it('preserves marker local preview when server assigns id on first save (fallback merge by lat/lng)', async () => {
+    const localPointImage = 'blob:https://example.com/new-point-preview';
+
+    (saveFormData as jest.Mock).mockImplementation(async (payload: any) => {
+      // Backend assigns id and returns empty image.
+      const coords = Array.isArray(payload?.coordsMeTravel) ? payload.coordsMeTravel : [];
+      return {
+        ...payload,
+        coordsMeTravel: coords.map((m: any, idx: number) => ({
+          ...m,
+          id: 1000 + idx,
+          // Some backends return coordinates as strings.
+          lat: String(m.lat),
+          lng: String(m.lng),
+          image: null,
+        })),
+      };
+    });
+
+    const { result } = renderHook(
+      () =>
+        useTravelFormData({
+          travelId: null,
+          isNew: true,
+          userId: '42',
+          isSuperAdmin: false,
+          isAuthenticated: true,
+          authReady: true,
+        }),
+      { concurrentRoot: false }
+    );
+
+    await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
+
+    act(() => {
+      result.current.setFormData({
+        ...(result.current.formData as any),
+        coordsMeTravel: [
+          { id: null, lat: 55.751244, lng: 37.618423, address: 'Moscow', categories: [], image: localPointImage },
+        ],
+      } as any);
+    });
+
+    await act(async () => {
+      await result.current.handleManualSave(result.current.formData as any);
+    });
+
+    const savedMarkers = (result.current.formData as any).coordsMeTravel as any[];
+    expect(savedMarkers.length).toBe(1);
+    expect(savedMarkers[0]?.id).toBe(1000);
+    // Server returned null, so we must keep local preview even though id changed.
+    expect(savedMarkers[0]?.image).toBe(localPointImage);
+  });
+
   describe('Edit flow - access control', () => {
 	    it('sets hasAccess to false when user does not own the travel', async () => {
       const otherUserTravel = {

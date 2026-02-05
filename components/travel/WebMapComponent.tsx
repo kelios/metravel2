@@ -11,11 +11,19 @@ import '@/src/utils/leafletFix';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { ensureLeafletCss } from '@/src/utils/ensureLeafletCss';
+import { extractGpsFromImageFile } from '@/src/utils/exifGps';
+import { showToast } from '@/src/utils/toast';
+import { uploadImage } from '@/src/api/misc';
+import { getPendingImageFile, registerPendingImageFile, removePendingImageFile } from '@/src/utils/pendingImageFiles';
 
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
 type LeafletNS = any;
 type ReactLeafletNS = typeof import('react-leaflet');
+
+async function showToastMessage(payload: any) {
+    await showToast(payload);
+}
 
 const reverseGeocode = async (latlng: any) => {
     // Пробуем несколько сервисов для получения наиболее точного адреса
@@ -197,6 +205,7 @@ type WebMapComponentProps = {
     countrylist: any[];
     onCountrySelect: (countryId: any) => void;
     onCountryDeselect: (countryId: any) => void;
+    onRequestSaveDraft?: () => Promise<any> | void;
 };
 
 const WebMapComponent = ({
@@ -206,6 +215,7 @@ const WebMapComponent = ({
     countrylist,
     onCountrySelect,
     onCountryDeselect,
+    onRequestSaveDraft,
 }: WebMapComponentProps) => {
     // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
     const colors = useThemedColors();
@@ -319,11 +329,21 @@ const WebMapComponent = ({
             return;
         }
 
-        const makeMarkerKey = (m: any) => {
+        const normalizeCoordKey = (value: any) => {
+            const num = typeof value === 'number' ? value : Number(value);
+            if (Number.isFinite(num)) return num.toFixed(6);
+            return String(value ?? '');
+        };
+
+        const makeIdKey = (m: any) => {
             const id = m?.id != null ? String(m.id) : '';
             if (id && id !== 'null' && id !== 'undefined') return `id:${id}`;
-            const lat = typeof m?.lat === 'number' ? m.lat.toFixed(6) : String(m?.lat ?? '');
-            const lng = typeof m?.lng === 'number' ? m.lng.toFixed(6) : String(m?.lng ?? '');
+            return '';
+        };
+
+        const makeLlKey = (m: any) => {
+            const lat = normalizeCoordKey(m?.lat);
+            const lng = normalizeCoordKey(m?.lng);
             return `ll:${lat},${lng}`;
         };
 
@@ -349,11 +369,18 @@ const WebMapComponent = ({
             // ✅ FIX: Используем функциональное обновление чтобы получить актуальное локальное состояние
             // без добавления localMarkers в зависимость (избегаем бесконечного цикла)
             setLocalMarkers(currentLocalMarkers => {
-                const localByKey = new Map<string, any>();
-                (currentLocalMarkers || []).forEach((m: any) => localByKey.set(makeMarkerKey(m), m));
+                const localById = new Map<string, any>();
+                const localByLl = new Map<string, any>();
+                (currentLocalMarkers || []).forEach((m: any) => {
+                    const idKey = makeIdKey(m);
+                    if (idKey) localById.set(idKey, m);
+                    localByLl.set(makeLlKey(m), m);
+                });
 
                 const mergedMarkers = markers.map((m) => {
-                    const localMarker = localByKey.get(makeMarkerKey(m));
+                    const idKey = makeIdKey(m);
+                    const llKey = makeLlKey(m);
+                    const localMarker = (idKey ? localById.get(idKey) : null) ?? localByLl.get(llKey);
                     // Сохраняем локальное blob/data превью только если внешний маркер не имеет изображения.
                     if (localMarker?.image && /^(blob:|data:)/i.test(String(localMarker.image))) {
                         const serverImage = m?.image;
@@ -441,7 +468,7 @@ const WebMapComponent = ({
         });
     }, [L]);
 
-    const addMarker = async (latlng: any) => {
+    const addMarker = async (latlng: any, options?: { image?: string | null }) => {
         if (!isValidCoordinates(latlng)) return;
 
         const geocodeData = await reverseGeocode(latlng);
@@ -471,7 +498,7 @@ const WebMapComponent = ({
             lng: latlng.lng,
             address,
             categories: [],
-            image: null,
+            image: options?.image ?? null,
             country: null as number | null,
         };
 
@@ -491,6 +518,126 @@ const WebMapComponent = ({
         const nextMarkers = [...baseMarkers, newMarker];
         debouncedMarkersChange(nextMarkers);
         setActiveIndex(Math.max(0, nextMarkers.length - 1));
+    };
+
+    const lastSaveKickAtRef = useRef(0);
+    const kickDraftSave = useCallback(() => {
+        if (!onRequestSaveDraft) return;
+        const now = Date.now();
+        if (now - lastSaveKickAtRef.current < 1500) return;
+        lastSaveKickAtRef.current = now;
+        setTimeout(() => {
+            try {
+                const res = onRequestSaveDraft();
+                if (res && typeof (res as any).catch === 'function') {
+                    (res as any).catch(() => null);
+                }
+            } catch {
+                // ignore
+            }
+        }, 0);
+    }, [onRequestSaveDraft]);
+
+    const uploadStateByBlobRef = useRef(new Map<string, { inFlight: boolean; attempts: number; lastToastAt?: number }>());
+
+    const tryUploadMarkerImage = useCallback(async (marker: any) => {
+        const imageUrl = typeof marker?.image === 'string' ? marker.image.trim() : '';
+        if (!imageUrl || !/^(blob:)/i.test(imageUrl)) return;
+        if (marker?.id == null) return;
+
+        const state = uploadStateByBlobRef.current.get(imageUrl) ?? { inFlight: false, attempts: 0 };
+        if (state.inFlight || state.attempts >= 3) return;
+
+        const file = getPendingImageFile(imageUrl);
+        if (!file) return;
+
+        uploadStateByBlobRef.current.set(imageUrl, { ...state, inFlight: true, attempts: state.attempts + 1 });
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('collection', 'travelImageAddress');
+            formData.append('id', String(marker.id));
+
+            const response = await uploadImage(formData);
+            const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
+            const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : '';
+            if (!uploadedUrl) {
+                throw new Error('Upload did not return URL');
+            }
+
+            const base = Array.isArray(lastMarkersRef.current) ? lastMarkersRef.current : localMarkers;
+            const updated = (base || []).map((m: any) => {
+                if (String(m?.id ?? '') === String(marker.id) && String(m?.image || '').trim() === imageUrl) {
+                    return { ...m, image: uploadedUrl };
+                }
+                return m;
+            });
+            debouncedMarkersChange(updated);
+
+            removePendingImageFile(imageUrl);
+            try {
+                URL.revokeObjectURL(imageUrl);
+            } catch {
+                // noop
+            }
+        } catch {
+            const now = Date.now();
+            const current = uploadStateByBlobRef.current.get(imageUrl) ?? { inFlight: false, attempts: state.attempts + 1 };
+            const lastToastAt = current.lastToastAt ?? 0;
+            const shouldToast = now - lastToastAt > 8000;
+            uploadStateByBlobRef.current.set(imageUrl, { ...current, inFlight: false, lastToastAt: shouldToast ? now : lastToastAt });
+            if (shouldToast) {
+                void showToastMessage({
+                    type: 'error',
+                    text1: 'Не удалось загрузить фото точки',
+                    text2: 'Фото останется локальным до следующей попытки. Проверьте интернет и попробуйте позже.',
+                });
+            }
+        } finally {
+            const cur = uploadStateByBlobRef.current.get(imageUrl);
+            if (cur) {
+                uploadStateByBlobRef.current.set(imageUrl, { ...cur, inFlight: false });
+            }
+        }
+    }, [debouncedMarkersChange, localMarkers]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        (localMarkers || []).forEach((m: any) => {
+            void tryUploadMarkerImage(m);
+        });
+    }, [localMarkers, tryUploadMarkerImage]);
+
+    const handleAddMarkerFromPhoto = async (file: File) => {
+        if (typeof window === 'undefined') return;
+        if (typeof File === 'undefined' || !(file instanceof File)) return;
+
+        const coords = await extractGpsFromImageFile(file);
+        if (!coords) {
+            void showToastMessage({
+                type: 'error',
+                text1: 'Нет геолокации в фото',
+                text2: 'В этом файле не найден GPS в EXIF. Попробуйте другое фото или добавьте точку вручную.',
+            });
+            return;
+        }
+
+        let previewUrl: string | null = null;
+        try {
+            previewUrl = URL.createObjectURL(file);
+            registerPendingImageFile(previewUrl, file);
+        } catch {
+            previewUrl = null;
+        }
+
+        await addMarker({ lat: coords.lat, lng: coords.lng }, { image: previewUrl });
+        kickDraftSave();
+        void showToastMessage({
+            type: 'success',
+            text1: 'Точка добавлена',
+            text2: 'Координаты взяты из геолокации фото (EXIF).',
+        });
     };
 
     const handleEditMarker = (index: number) => {
@@ -518,6 +665,15 @@ const WebMapComponent = ({
 
     const handleMarkerRemove = (index: number) => {
         const removed = localMarkers[index];
+        const removedImage = typeof removed?.image === 'string' ? removed.image.trim() : '';
+        if (removedImage && /^(blob:)/i.test(removedImage)) {
+            removePendingImageFile(removedImage);
+            try {
+                URL.revokeObjectURL(removedImage);
+            } catch {
+                // noop
+            }
+        }
         const updated = localMarkers.filter((_: any, i: any) => i !== index);
         debouncedMarkersChange(updated);
 
@@ -912,7 +1068,7 @@ const WebMapComponent = ({
                                                         <ImageCardMedia
                                                             src={normalizeImageUrl(marker.image)}
                                                             alt="Фото"
-                                                            fit="cover"
+                                                            fit="contain"
                                                             blurBackground
                                                             loading="lazy"
                                                             priority="low"
@@ -1079,6 +1235,7 @@ const WebMapComponent = ({
                                             setEditingIndex={setEditingIndex}
                                             activeIndex={activeIndex}
                                             setActiveIndex={setActiveIndex}
+                                            onAddMarkerFromPhoto={handleAddMarkerFromPhoto}
                                         />
                                     </div>
                                 </div>
@@ -1103,6 +1260,7 @@ const WebMapComponent = ({
                                 setEditingIndex={setEditingIndex}
                                 activeIndex={activeIndex}
                                 setActiveIndex={setActiveIndex}
+                                onAddMarkerFromPhoto={handleAddMarkerFromPhoto}
                             />
                         </div>
                     ) : null}

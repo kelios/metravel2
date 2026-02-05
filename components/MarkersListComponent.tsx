@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Feather from '@expo/vector-icons/Feather';
 import { MarkerData } from "@/src/types/types";
@@ -20,6 +20,7 @@ interface MarkersListComponentProps {
     setEditingIndex: (index: number | null) => void;
     activeIndex?: number | null;
     setActiveIndex?: (index: number | null) => void;
+    onAddMarkerFromPhoto?: (file: File) => void | Promise<void>;
 }
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
@@ -34,6 +35,11 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
         justifyContent: 'space-between',
         marginBottom: '10px',
     },
+    headerRight: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+    },
     headerTitle: {
         fontSize: '14px',
         fontWeight: 700,
@@ -47,6 +53,24 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
         borderRadius: '999px',
         backgroundColor: colors.primarySoft,
         color: colors.primaryDark,
+    },
+    addFromPhotoButton: {
+        border: `1px solid ${colors.border}`,
+        backgroundColor: colors.surface,
+        color: colors.text,
+        padding: '6px 10px',
+        borderRadius: '10px',
+        cursor: 'pointer',
+        fontSize: '11px',
+        whiteSpace: 'nowrap' as const,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontWeight: 600,
+        transition: 'all 0.15s ease',
+    },
+    fileInputHidden: {
+        display: 'none',
     },
     searchRow: {
         display: 'flex',
@@ -395,10 +419,12 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
                                                                setEditingIndex,
                                                                activeIndex,
                                                                setActiveIndex,
+                                                               onAddMarkerFromPhoto,
                                                            }) => {
     const colors = useThemedColors();
     const styles = useStyles(colors);
     const [search, setSearch] = useState('');
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
     const onRemove = useCallback((index: number) => handleMarkerRemove(index), [handleMarkerRemove]);
     const onEdit = useCallback((index: number) => {
         setEditingIndex(index);
@@ -437,11 +463,50 @@ const MarkersListComponent: React.FC<MarkersListComponentProps> = ({
         container.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
     }, [activeIndex]);
 
+    const handleAddFromPhotoClick = useCallback(() => {
+        if (!onAddMarkerFromPhoto) return;
+        fileInputRef.current?.click();
+    }, [onAddMarkerFromPhoto]);
+
+    const handlePhotoSelected = useCallback(
+        async (e: React.ChangeEvent<HTMLInputElement>) => {
+            if (!onAddMarkerFromPhoto) return;
+            const file = e.target.files?.[0] ?? null;
+            // allow selecting the same file again
+            e.target.value = '';
+            if (!file) return;
+            await onAddMarkerFromPhoto(file);
+        },
+        [onAddMarkerFromPhoto]
+    );
+
     return (
         <div style={styles.container}>
             <div style={styles.headerRow}>
                 <div style={styles.headerTitle}>Точки</div>
-                <div style={styles.headerBadge}>{markers.length}</div>
+                <div style={styles.headerRight}>
+                    {onAddMarkerFromPhoto ? (
+                        <>
+                            <button
+                                type="button"
+                                onClick={handleAddFromPhotoClick}
+                                style={styles.addFromPhotoButton as React.CSSProperties}
+                                title="Добавить точку из геолокации фото (EXIF)"
+                            >
+                                <Feather name="camera" size={14} color={colors.textMuted} />
+                                <span>Из фото</span>
+                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                onChange={handlePhotoSelected}
+                                style={styles.fileInputHidden as React.CSSProperties}
+                            />
+                        </>
+                    ) : null}
+                    <div style={styles.headerBadge}>{markers.length}</div>
+                </div>
             </div>
             {markers.length > 0 && (
                 <div style={styles.searchRow}>
