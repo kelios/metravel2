@@ -165,13 +165,6 @@ export function useTravelDetailsPerformance({
   }, [isLoading, lcpLoaded, travel])
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || lcpLoaded) return
-    // Keep the lightweight hero until the real LCP image finishes loading.
-    // Enabling the slider early can change the LCP candidate and confuse PSI/Lighthouse.
-    return
-  }, [lcpLoaded])
-
-  useEffect(() => {
     if (Platform.OS === 'web') {
       rIC(() => {
         injectCriticalStyles()

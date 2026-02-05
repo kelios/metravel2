@@ -1,5 +1,5 @@
 // app/quests/[city]/[questId].tsx
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, Link } from 'expo-router';
 // ⚡️ иконки лениво, чтобы не тянуть весь @expo/vector-icons в entry
@@ -12,16 +12,8 @@ const QuestWizardLazy = React.lazy<React.ComponentType<any>>(() =>
 );
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-// ⚡️ реестр квестов подгружаем по месту (иначе все квесты уедут в entry)
-type QuestBundle = {
-    title: string;
-    steps: any[];
-    finale?: any;
-    intro?: any;
-    storageKey?: string;
-    city?: string;
-    coverUrl?: string;
-};
+import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
+import { useAuth } from '@/context/AuthContext';
 
 import { useIsFocused } from '@react-navigation/native';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -32,30 +24,22 @@ export default function QuestByIdScreen() {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const [bundle, setBundle] = useState<QuestBundle | null>(null);
-    const [loaded, setLoaded] = useState(false);
+    // Загружаем бандл квеста из бэкенда по quest_id
+    const { bundle, loading: loaded_loading, error } = useQuestBundle(questId ? String(questId) : undefined);
+    const loaded = !loaded_loading;
 
-    // Лениво грузим реестр и достаём бандл нужного квеста
-    useEffect(() => {
-        let cancelled = false;
-        setLoaded(false);
-        setBundle(null);
-        (async () => {
-            try {
-                const mod = await import('@/components/quests/registry');
-                const getQuestById: (id: string) => QuestBundle | null = (mod as any).getQuestById;
-                const b = questId ? getQuestById(String(questId)) : null;
-                if (!cancelled) setBundle(b);
-            } catch {
-                if (!cancelled) setBundle(null);
-            } finally {
-                if (!cancelled) setLoaded(true);
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-    }, [questId]);
+    // Синхронизация прогресса с бэкендом для авторизованных пользователей
+    const { isAuthenticated } = useAuth();
+    const { saveProgress, resetProgress } = useQuestProgressSync(
+        questId ? String(questId) : undefined,
+        isAuthenticated,
+    );
+    const handleProgressChange = useCallback((data: any) => {
+        saveProgress(data);
+    }, [saveProgress]);
+    const handleProgressReset = useCallback(() => {
+        resetProgress();
+    }, [resetProgress]);
 
     // SEO тексты
     const { title, description, headKey, ogType } = useMemo(() => {
@@ -138,6 +122,8 @@ export default function QuestByIdScreen() {
                     intro={bundle.intro}
                     storageKey={bundle.storageKey}
                     city={bundle.city}
+                    onProgressChange={isAuthenticated ? handleProgressChange : undefined}
+                    onProgressReset={isAuthenticated ? handleProgressReset : undefined}
                     // Чтобы не жечь main thread: открываем превью карты не сразу
                     mapPreviewOpenByDefault={false}
                 />

@@ -8,7 +8,7 @@ import type { Travel } from '@/src/types/types'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 
-export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: boolean }> = ({
+export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: boolean }> = React.memo(({
   travel,
   isMobile,
 }) => {
@@ -43,4 +43,6 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
       </View>
     </>
   )
-}
+})
+
+TravelDetailsFooterSection.displayName = 'TravelDetailsFooterSection'

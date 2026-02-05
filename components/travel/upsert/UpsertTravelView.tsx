@@ -362,6 +362,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
             stepErrors={controller.wizard.step1SubmitErrors.map(e => e.message)}
+            focusAnchorId={controller.wizard.focusAnchorId}
+            onAnchorHandled={controller.wizard.handleAnchorHandled}
             onStepSelect={controller.wizard.handleStepSelect}
           />
         </TravelFormErrorBoundary>
@@ -446,6 +448,8 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
             stepMeta={controller.currentStepMeta}
             progress={controller.progress}
             autosaveBadge={controller.autosaveBadge}
+            focusAnchorId={controller.wizard.focusAnchorId}
+            onAnchorHandled={controller.wizard.handleAnchorHandled}
             onStepSelect={controller.wizard.handleStepSelect}
           />
         </TravelFormErrorBoundary>

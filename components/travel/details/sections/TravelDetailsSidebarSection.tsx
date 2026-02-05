@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect, useState } from 'react'
-import { Animated, Platform, Text, View } from 'react-native'
+import React, { Suspense, useCallback, useEffect, useState } from 'react'
+import { Platform, Text, View } from 'react-native'
 
 import NavigationArrows from '@/components/travel/NavigationArrows'
 import { TravelListSkeleton } from '@/components/travel/TravelDetailSkeletons'
@@ -25,7 +25,7 @@ const TravelListFallback = () => {
 export const TravelDetailsSidebarSection: React.FC<{
   travel: Travel
   anchors: AnchorsMap
-  scrollY: Animated.Value
+  scrollY: any
   viewportHeight: number
   canRenderHeavy: boolean
 }> = ({
@@ -39,6 +39,7 @@ export const TravelDetailsSidebarSection: React.FC<{
   const isWeb = Platform.OS === 'web'
   const progressiveEnabled = !isWeb || canRenderHeavy
   const [relatedTravels, setRelatedTravels] = useState<Travel[]>([])
+  const handleTravelsLoaded = useCallback((travels: Travel[]) => setRelatedTravels(travels), [])
 
   // Unified progressive loading for both platforms
   const { shouldLoad: shouldLoadNear, setElementRef: setNearRef } = useProgressiveLoad({
@@ -96,7 +97,7 @@ export const TravelDetailsSidebarSection: React.FC<{
                 <Suspense fallback={<TravelListFallback />}>
                   <NearTravelList
                     travel={travel}
-                    onTravelsLoaded={(travels) => setRelatedTravels(travels)}
+                    onTravelsLoaded={handleTravelsLoaded}
                     showHeader={false}
                     embedded
                   />

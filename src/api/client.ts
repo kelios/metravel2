@@ -83,7 +83,9 @@ class ApiClient {
     private refreshTokenLock: boolean = false; // ✅ FIX-003: Lock для предотвращения race condition
 
     // ✅ FIX: Rate limiting для предотвращения спама запросов
+    // Optimized: per-endpoint counters + global counter avoid O(n) scans.
     private requestTimestamps: Map<string, number[]> = new Map();
+    private globalTimestamps: number[] = [];
     private readonly rateLimitWindow = 60000; // 1 минута
     private readonly maxRequestsPerWindow = 100; // Максимум 100 запросов в минуту
     private readonly maxRequestsPerEndpoint = 20; // Максимум 20 запросов к одному эндпоинту в минуту
@@ -100,50 +102,47 @@ class ApiClient {
      */
     private checkRateLimit(endpoint: string): boolean {
         const now = Date.now();
+        const cutoff = now - this.rateLimitWindow;
         const key = endpoint.split('?')[0]; // Игнорируем query параметры
 
-        // Получаем временные метки для этого эндпоинта
-        const timestamps = this.requestTimestamps.get(key) || [];
-
-        // Удаляем старые метки (вне окна)
-        const recentTimestamps = timestamps.filter(ts => now - ts < this.rateLimitWindow);
-
-        // Проверяем лимит для конкретного эндпоинта
-        if (recentTimestamps.length >= this.maxRequestsPerEndpoint) {
-            console.warn(`Rate limit exceeded for endpoint: ${key}`);
-            return false;
+        // Trim global timestamps (oldest first, so trim from head)
+        while (this.globalTimestamps.length > 0 && this.globalTimestamps[0] < cutoff) {
+            this.globalTimestamps.shift();
         }
 
-        // Проверяем общий лимит по всем эндпоинтам
-        const allTimestamps = Array.from(this.requestTimestamps.values())
-            .flat()
-            .filter(ts => now - ts < this.rateLimitWindow);
-
-        if (allTimestamps.length >= this.maxRequestsPerWindow) {
+        // Проверяем общий лимит
+        if (this.globalTimestamps.length >= this.maxRequestsPerWindow) {
             console.warn('Global rate limit exceeded');
             return false;
         }
 
-        // Добавляем текущую метку
-        recentTimestamps.push(now);
-        this.requestTimestamps.set(key, recentTimestamps);
-
-        return true;
-    }
-
-    /**
-     * Очистка старых меток времени (для оптимизации памяти)
-     */
-    private cleanupRateLimitData(): void {
-        const now = Date.now();
-        for (const [key, timestamps] of this.requestTimestamps.entries()) {
-            const recentTimestamps = timestamps.filter(ts => now - ts < this.rateLimitWindow);
-            if (recentTimestamps.length === 0) {
+        // Trim per-endpoint timestamps
+        const timestamps = this.requestTimestamps.get(key);
+        if (timestamps) {
+            while (timestamps.length > 0 && timestamps[0] < cutoff) {
+                timestamps.shift();
+            }
+            if (timestamps.length === 0) {
                 this.requestTimestamps.delete(key);
-            } else {
-                this.requestTimestamps.set(key, recentTimestamps);
             }
         }
+
+        // Проверяем лимит для конкретного эндпоинта
+        const current = this.requestTimestamps.get(key);
+        if (current && current.length >= this.maxRequestsPerEndpoint) {
+            console.warn(`Rate limit exceeded for endpoint: ${key}`);
+            return false;
+        }
+
+        // Добавляем текущую метку
+        this.globalTimestamps.push(now);
+        if (current) {
+            current.push(now);
+        } else {
+            this.requestTimestamps.set(key, [now]);
+        }
+
+        return true;
     }
 
     /**
@@ -298,11 +297,6 @@ class ApiClient {
                 'Слишком много запросов. Пожалуйста, подождите немного.',
                 { rateLimited: true }
             );
-        }
-
-        // Периодически очищаем старые метки (каждые 100 запросов примерно)
-        if (Math.random() < 0.01) {
-            this.cleanupRateLimitData();
         }
 
         // ✅ FIX-005: Проверяем доступность сети перед запросом

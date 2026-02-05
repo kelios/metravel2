@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Dimensions, Animated } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Snackbar } from '@/src/ui/paper';
 import { useRouter } from 'expo-router';
@@ -13,24 +13,19 @@ import { validateStep } from '@/utils/travelWizardValidation';
 import { getContextualTips } from '@/utils/contextualTips';
 import { useStepTransition } from '@/hooks/useStepTransition';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { showToast } from '@/src/utils/toast';
 
 async function showToastMessage(payload: any) {
     await showToast(payload);
 }
 
-const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
-const isMobileDefault = windowWidth <= METRICS.breakpoints.tablet;
-const FILTERS_SCROLL_MAX_HEIGHT = windowHeight * 0.8;
-
 interface TravelWizardStepBasicProps {
     currentStep: number;
     totalSteps: number;
     formData: TravelFormData;
     setFormData: React.Dispatch<React.SetStateAction<TravelFormData>>;
-    isMobile?: boolean;
     onManualSave: () => Promise<TravelFormData | void>;
     snackbarVisible: boolean;
     snackbarMessage: string;
@@ -61,7 +56,6 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
     totalSteps,
     formData,
     setFormData,
-    isMobile = isMobileDefault,
     onManualSave,
     snackbarVisible,
     snackbarMessage,
@@ -82,6 +76,8 @@ const TravelWizardStepBasic: React.FC<TravelWizardStepBasicProps> = ({
 }) => {
     const colors = useThemedColors();
     const router = useRouter();
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
 
@@ -266,7 +262,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1
     },
     filtersScroll: {
-        maxHeight: FILTERS_SCROLL_MAX_HEIGHT
+        maxHeight: '80vh' as any,
     },
     mobileFiltersWrapper: {
         padding: DESIGN_TOKENS.spacing.md

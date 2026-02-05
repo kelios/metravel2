@@ -236,30 +236,30 @@ export const TravelDetailsMapSection: React.FC<{
         </View>
       </View>
 
-      <View
-        ref={anchors.points}
-        testID="travel-details-points"
-        style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
-        collapsable={false}
-        accessibilityLabel="Координаты мест"
-        {...(Platform.OS === 'web'
-          ? { 'data-testid': 'travel-details-points', 'data-section-key': 'points' }
-          : {})}
-      >
-        <Text style={styles.sectionHeaderText}>Координаты мест</Text>
-        <View style={{ marginTop: 12 }}>
-          {travel.travelAddress && (
+      {travel.travelAddress && (travel.travelAddress as any[]).length > 0 && (
+        <View
+          ref={anchors.points}
+          testID="travel-details-points"
+          style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
+          collapsable={false}
+          accessibilityLabel="Координаты мест"
+          {...(Platform.OS === 'web'
+            ? { 'data-testid': 'travel-details-points', 'data-section-key': 'points' }
+            : {})}
+        >
+          <Text style={styles.sectionHeaderText}>Координаты мест</Text>
+          <View style={{ marginTop: 12 }}>
             <Suspense fallback={<PointListFallback />}>
-                  <PointList
-                    points={travel.travelAddress as any}
-                    baseUrl={travel.url}
-                    travelName={travel.name}
-                    onPointCardPress={handlePointCardPress}
-                  />
-                </Suspense>
-              )}
-            </View>
+              <PointList
+                points={travel.travelAddress as any}
+                baseUrl={travel.url}
+                travelName={travel.name}
+                onPointCardPress={handlePointCardPress}
+              />
+            </Suspense>
           </View>
+        </View>
+      )}
     </>
   )
 }

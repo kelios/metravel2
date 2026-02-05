@@ -7,12 +7,12 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import Home from '@/components/home/Home';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
 
 function HomeScreen() {
     const pathname = usePathname();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
-    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
 
     const effectivePathname = useMemo(() => {
         if (Platform.OS !== 'web') return pathname;

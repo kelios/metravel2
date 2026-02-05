@@ -221,8 +221,6 @@ export default function RootLayout() {
       [pathname]
     );
 
-    useIdleFlag(1200);
-
     /** === динамическая высота ДОКА футера (только иконки) === */
     const [dockHeight, setDockHeight] = useState(0);
     
@@ -392,18 +390,17 @@ function ThemedContent({
   const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
   const WEB_FOOTER_RESERVE_HEIGHT = 56;
 
-  const BottomGutter = () => {
+  const bottomGutter = useMemo(() => {
     if (!showFooter || !isMobile) return null;
 
     if (Platform.OS === 'web') {
       return <View testID="bottom-gutter" style={{ height: WEB_FOOTER_RESERVE_HEIGHT }} />;
     }
 
-    const h = dockHeight;
-    if (h <= 0) return null;
+    if (dockHeight <= 0) return null;
 
-    return <View testID="bottom-gutter" style={{ height: h }} />;
-  };
+    return <View testID="bottom-gutter" style={{ height: dockHeight }} />;
+  }, [showFooter, isMobile, dockHeight]);
 
   return (
     <ThemedPaperProvider>
@@ -442,7 +439,7 @@ function ThemedContent({
                                   </Stack>
 
                                   {/* Прокладка: только высота док-строки футера */}
-                                  <BottomGutter />
+                                  {bottomGutter}
                               </View>
 
                               {Platform.OS === 'web' && __DEV__ ? (

@@ -181,11 +181,15 @@ export const TravelDetailsContentSection: React.FC<{
                   <Text style={styles.descriptionIntroTitle}>Описание маршрута</Text>
                   <Text style={styles.descriptionIntroText}>
                     {`${travel.number_days || 0} ${
-                      travel.number_days === 1
-                        ? 'день'
-                        : travel.number_days < 5
-                        ? 'дня'
-                        : 'дней'
+                      (() => {
+                        const n = travel.number_days || 0
+                        const mod10 = n % 10
+                        const mod100 = n % 100
+                        if (mod100 >= 11 && mod100 <= 14) return 'дней'
+                        if (mod10 === 1) return 'день'
+                        if (mod10 >= 2 && mod10 <= 4) return 'дня'
+                        return 'дней'
+                      })()
                     }`}
                     {travel.countryName ? ` · ${travel.countryName}` : ''}
                     {travel.monthName ? ` · лучший сезон: ${travel.monthName.toLowerCase()}` : ''}

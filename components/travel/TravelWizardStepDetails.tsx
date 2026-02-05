@@ -1,6 +1,6 @@
-import React, { lazy, useMemo } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager } from 'react-native';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
@@ -29,6 +29,8 @@ interface TravelWizardStepDetailsProps {
     };
     progress?: number;
     autosaveBadge?: string;
+    focusAnchorId?: string | null;
+    onAnchorHandled?: () => void;
     onStepSelect?: (step: number) => void;
     onPreview?: () => void;
     onOpenPublic?: () => void;
@@ -45,12 +47,15 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     stepMeta,
     progress = currentStep / totalSteps,
     autosaveBadge,
+    focusAnchorId,
+    onAnchorHandled,
     onStepSelect,
     onPreview,
     onOpenPublic,
 }) => {
     const colors = useThemedColors();
-    const { isMobile } = useResponsive();
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
 
@@ -58,6 +63,44 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const contentPaddingBottom = useMemo(() => DESIGN_TOKENS.spacing.xl, []);
+
+    const scrollRef = useRef<ScrollView | null>(null);
+    const plusAnchorRef = useRef<View | null>(null);
+
+    useEffect(() => {
+        if (!focusAnchorId) return;
+
+        if (Platform.OS === 'web') {
+            onAnchorHandled?.();
+            return;
+        }
+
+        const scrollNode = scrollRef.current;
+        const anchorNode = plusAnchorRef.current;
+        if (!scrollNode || !anchorNode) {
+            onAnchorHandled?.();
+            return;
+        }
+
+        const scrollHandle = findNodeHandle(scrollNode);
+        const anchorHandle = findNodeHandle(anchorNode);
+        if (!scrollHandle || !anchorHandle) {
+            onAnchorHandled?.();
+            return;
+        }
+
+        setTimeout(() => {
+            UIManager.measureLayout(
+                anchorHandle,
+                scrollHandle,
+                () => onAnchorHandled?.(),
+                (_x, y) => {
+                    scrollRef.current?.scrollTo({ y: Math.max(y - 12, 0), animated: true });
+                    onAnchorHandled?.();
+                },
+            );
+        }, 50);
+    }, [focusAnchorId, onAnchorHandled]);
 
     const idTravelStr = useMemo(
         () => (formData?.id != null ? String(formData.id) : undefined),
@@ -123,6 +166,7 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                     </View>
                 )}
                 <ScrollView
+                    ref={scrollRef}
                     style={styles.content}
                     contentContainerStyle={[styles.contentContainer, { paddingBottom: contentPaddingBottom }]}
                     keyboardShouldPersistTaps="handled"
@@ -146,38 +190,44 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
 
                         <View style={styles.card}>
                             <Text style={styles.editorLabel}>Плюсы</Text>
-                            <ArticleEditor
-                                key={`plus-${idTravelStr ?? 'new'}`}
-                                label="Плюсы"
-                                content={formData.plus ?? ''}
-                                onChange={(val: string) => handleChange('plus', val as any)}
-                                idTravel={idTravelStr}
-                                variant="compact"
-                            />
+                            <Suspense fallback={<Text style={styles.sectionHint}>Загрузка редактора…</Text>}>
+                                <ArticleEditor
+                                    key={`plus-${idTravelStr ?? 'new'}`}
+                                    label="Плюсы"
+                                    content={formData.plus ?? ''}
+                                    onChange={(val: string) => handleChange('plus', val as any)}
+                                    idTravel={idTravelStr}
+                                    variant="compact"
+                                />
+                            </Suspense>
                         </View>
 
                         <View style={styles.card}>
                             <Text style={styles.editorLabel}>Минусы</Text>
-                            <ArticleEditor
-                                key={`minus-${idTravelStr ?? 'new'}`}
-                                label="Минусы"
-                                content={formData.minus ?? ''}
-                                onChange={(val: string) => handleChange('minus', val as any)}
-                                idTravel={idTravelStr}
-                                variant="compact"
-                            />
+                            <Suspense fallback={<Text style={styles.sectionHint}>Загрузка редактора…</Text>}>
+                                <ArticleEditor
+                                    key={`minus-${idTravelStr ?? 'new'}`}
+                                    label="Минусы"
+                                    content={formData.minus ?? ''}
+                                    onChange={(val: string) => handleChange('minus', val as any)}
+                                    idTravel={idTravelStr}
+                                    variant="compact"
+                                />
+                            </Suspense>
                         </View>
 
                         <View style={styles.card}>
                             <Text style={styles.editorLabel}>Рекомендации и лайфхаки</Text>
-                            <ArticleEditor
-                                key={`rec-${idTravelStr ?? 'new'}`}
-                                label="Рекомендации"
-                                content={formData.recommendation ?? ''}
-                                onChange={(val: string) => handleChange('recommendation', val as any)}
-                                idTravel={idTravelStr}
-                                variant="compact"
-                            />
+                            <Suspense fallback={<Text style={styles.sectionHint}>Загрузка редактора…</Text>}>
+                                <ArticleEditor
+                                    key={`rec-${idTravelStr ?? 'new'}`}
+                                    label="Рекомендации"
+                                    content={formData.recommendation ?? ''}
+                                    onChange={(val: string) => handleChange('recommendation', val as any)}
+                                    idTravel={idTravelStr}
+                                    variant="compact"
+                                />
+                            </Suspense>
                         </View>
 
                     </View>

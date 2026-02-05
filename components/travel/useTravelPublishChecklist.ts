@@ -60,8 +60,20 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
   ]);
 
   const recommendedChecklist = useMemo<ChecklistItem[]>(() => {
-    return [];
-  }, []);
+    const hasPlus = !!formData.plus && formData.plus.trim().length >= 10;
+    const hasMinus = !!formData.minus && formData.minus.trim().length >= 10;
+    const hasRecommendation = !!formData.recommendation && formData.recommendation.trim().length >= 10;
+    const hasVideo = !!formData.youtube_link && formData.youtube_link.trim().length > 0;
+    const hasGallery3 = galleryItems.length >= 3;
+
+    return [
+      { key: 'plus', label: 'Плюсы маршрута', detail: 'Опишите преимущества (шаг 4)', benefit: 'Повышает доверие читателей', ok: hasPlus },
+      { key: 'minus', label: 'Минусы маршрута', detail: 'Укажите недостатки (шаг 4)', benefit: 'Помогает принять решение', ok: hasMinus },
+      { key: 'recommendation', label: 'Рекомендации и лайфхаки', detail: 'Поделитесь советами (шаг 4)', benefit: 'Увеличивает ценность маршрута', ok: hasRecommendation },
+      { key: 'gallery3', label: 'Минимум 3 фото в галерее', detail: `Сейчас: ${galleryItems.length} фото (шаг 3)`, benefit: 'Маршруты с фото получают больше просмотров', ok: hasGallery3 },
+      { key: 'video', label: 'Видео о путешествии', detail: 'YouTube-ссылка (шаг 3)', benefit: 'Видео повышает вовлечённость', ok: hasVideo },
+    ];
+  }, [formData.plus, formData.minus, formData.recommendation, formData.youtube_link, galleryItems.length]);
 
   const checklist = useMemo<ChecklistItem[]>(() => {
     const hasName = !!formData.name && formData.name.trim().length > 0;

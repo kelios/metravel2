@@ -13,6 +13,7 @@ import { sendFeedback } from '@/src/api/misc';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAboutStyles } from '@/components/about/aboutStyles';
+import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
@@ -33,7 +34,6 @@ function AboutAndContactScreen() {
   const router = useRouter();
 
   const isFocused = useIsFocused();
-  const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
   // стабильный canonical и ключ для <head>
   const canonical = buildCanonicalUrl('/about');
 

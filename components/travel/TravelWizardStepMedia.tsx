@@ -13,6 +13,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { deleteTravelMainImage } from '@/src/api/misc';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const GallerySectionLazy = Platform.OS === 'web'
     ? React.lazy(() => import('@/components/travel/GallerySection'))
@@ -66,6 +67,8 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
     onOpenPublic,
 }) => {
     const colors = useThemedColors();
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const progressValue = Math.min(Math.max(progress, 0), 1);
     const progressPercent = Math.round(progressValue * 100);
     const [isDeleteCoverDialogVisible, setIsDeleteCoverDialogVisible] = useState(false);
@@ -226,7 +229,7 @@ const TravelWizardStepMedia: React.FC<TravelWizardStepMediaProps> = ({
                     onOpenPublic={onOpenPublic}
                 />
 
-                {validation.warnings.length > 0 && (
+                {!isMobile && validation.warnings.length > 0 && (
                     <View style={styles.validationSummaryWrapper}>
                         <ValidationSummary
                             errorCount={validation.errors.length}

@@ -18,8 +18,10 @@ import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
-// ---- типы данных для ленивой загрузки ----
-type City = { id: string; name: string; country: 'PL' | 'BY' };
+import { useQuestsList, useQuestCities } from '@/hooks/useQuestsApi';
+
+// ---- типы данных ----
+type City = { id: string; name: string; country?: string; lat?: number; lng?: number };
 type NearbyCity = City & { isNearby: true };
 type QuestMeta = {
     id: string;
@@ -30,16 +32,6 @@ type QuestMeta = {
     lat: number; lng: number;
     cityId?: string;
 };
-
-// ленивые данные (вместо статического импорта)
-async function loadQuestData() {
-    const m = await import('@/components/quests/cityQuests');
-    return {
-        CITIES: m.CITIES as City[],
-        CITY_QUESTS: m.CITY_QUESTS as Record<string, QuestMeta[]>,
-        ALL_QUESTS: m.ALL_QUESTS as QuestMeta[],
-    };
-}
 
 const STORAGE_SELECTED_CITY = 'quests_selected_city';
 const STORAGE_NEARBY_RADIUS = 'quests_nearby_radius_km';
@@ -158,10 +150,16 @@ export default function QuestsScreen() {
     const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
     const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
     const [nearbyRadiusKm, setNearbyRadiusKm] = useState<number>(DEFAULT_NEARBY_RADIUS_KM);
-    const [dataLoaded, setDataLoaded] = useState(false);
-    const [CITIES, setCITIES] = useState<City[]>([]);
-    const [CITY_QUESTS, setCITY_QUESTS] = useState<Record<string, QuestMeta[]>>({});
-    const [ALL_QUESTS, setALL_QUESTS] = useState<QuestMeta[]>([]);
+    // Данные из API
+    const { quests: ALL_QUESTS, cityQuestsIndex: CITY_QUESTS, loading: questsLoading } = useQuestsList();
+    const { cities: apiCities, loading: citiesLoading } = useQuestCities();
+    const dataLoaded = !questsLoading && !citiesLoading;
+    const CITIES = useMemo<City[]>(() => apiCities.map(c => ({
+        id: c.id,
+        name: c.name,
+        lat: c.lat,
+        lng: c.lng,
+    })), [apiCities]);
 
     const isFocused = useIsFocused();
     const colors = useThemedColors();
@@ -211,19 +209,6 @@ export default function QuestsScreen() {
                 console.warn('Error reading nearby radius storage', error);
             }
         })();
-    }, []);
-
-    // ⚡️ данные квестов грузим лениво (после маунта / при первом заходе на экран)
-    useEffect(() => {
-        let mounted = true;
-        loadQuestData().then(({ CITIES, CITY_QUESTS, ALL_QUESTS }) => {
-            if (!mounted) return;
-            setCITIES(CITIES);
-            setCITY_QUESTS(CITY_QUESTS);
-            setALL_QUESTS(ALL_QUESTS);
-            setDataLoaded(true);
-        });
-        return () => { mounted = false; };
     }, []);
 
     // ⚡️ геолокацию просим ТОЛЬКО если выбран «Рядом»
@@ -386,7 +371,7 @@ export default function QuestsScreen() {
                                                 <Text style={sx(s.cityCountry, isMobile && s.cityCountryMobile)}>
                                                     {item.id === NEARBY_ID
                                                         ? userLoc ? 'по геолокации' : 'гео отключена'
-                                                        : item.country === 'PL' ? 'Польша' : 'Беларусь'}
+                                                        : item.name}
                                                 </Text>
                                                 <Text style={sx(s.questsCount, isMobile && s.questsCountMobile)}>
                                                     {questsCount} кв.
@@ -482,7 +467,7 @@ function QuestCardLink({
             <Pressable style={sx(s.questCard, isMobile && s.questCardMobile)}>
                 {quest.cover && (
                     <View style={sx(s.coverWrap, isMobile && s.coverWrapMobile)}>
-                        <Image source={quest.cover} style={s.questCover} resizeMode="cover" />
+                        <Image source={typeof quest.cover === 'string' ? { uri: quest.cover } : quest.cover} style={s.questCover} resizeMode="cover" />
                         <View style={sx(s.coverOverlay, isMobile && s.coverOverlayMobile)}>
                             <Text style={sx(s.questTitle, isMobile && s.questTitleMobile)} numberOfLines={2}>
                                 {quest.title}

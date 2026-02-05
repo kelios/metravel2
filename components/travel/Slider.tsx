@@ -29,7 +29,6 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  runOnJS,
   interpolate,
   Extrapolate,
   type SharedValue,
@@ -224,14 +223,15 @@ const Dot = memo(function Dot({
                                 containerW,
                                 total,
                                 reduceMotion,
+                                dotStyle,
 }: {
   i: number;
   x: SharedValue<number>;
   containerW: number;
   total: number;
   reduceMotion: boolean;
+  dotStyle: any;
 }) {
-  const { styles } = useSliderTheme();
   const style = useAnimatedStyle(() => {
     const scrollPosition = x.value;
     const currentIndex = scrollPosition / (containerW || 1);
@@ -262,7 +262,7 @@ const Dot = memo(function Dot({
     };
   }, [containerW, total, reduceMotion, i]);
 
-  return <Animated.View style={[styles.dot, style]} />;
+  return <Animated.View style={[dotStyle, style]} />;
 });
 
 type SlideProps = {
@@ -431,16 +431,14 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // ✅ УЛУЧШЕНИЕ: Состояние для текущего индекса (для счетчика)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
-  const [prefetchEnabled, setPrefetchEnabled] = useState(
-    Platform.OS !== "web" ? true : false
-  );
+  const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web');
 
   useEffect(() => {
     setShowSwipeHint(images.length > 1);
     // On web we avoid auto-prefetch during initial load (hurts PSI/LCP by pulling extra gallery images).
     // Prefetch can still be enabled later on explicit user interaction.
-    setPrefetchEnabled(Platform.OS !== "web" ? true : false);
-  }, [images, canPrefetchOnWeb]);
+    setPrefetchEnabled(Platform.OS !== 'web');
+  }, [images]);
 
   const dismissSwipeHint = useCallback(() => setShowSwipeHint(false), []);
   useEffect(() => {
@@ -595,7 +593,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     clearAutoplay();
     if (!canAutoplay()) return;
     autoplayTimer.current = setInterval(() => {
-      runOnJS(next)();
+      next();
     }, Math.max(2500, autoPlayInterval)) as unknown as number;
   }, [autoPlayInterval, canAutoplay, clearAutoplay, next]);
 
@@ -705,12 +703,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   );
 
   // надёжный апдейт текущего индекса
+  const setActiveIndexRef = useRef(setActiveIndex);
+  setActiveIndexRef.current = setActiveIndex;
+
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
       const first = viewableItems.find((v) => v.index != null);
       if (first && typeof first.index === "number") {
         const idx = first.index;
-        if (indexRef.current !== idx) setActiveIndex(idx);
+        if (indexRef.current !== idx) setActiveIndexRef.current(idx);
       }
     }
   ).current;
@@ -856,7 +857,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             <View style={styles.dotsContainer}>
               {images.map((_, i) => (
                 <View key={i} style={styles.dotWrap}>
-                  <Dot i={i} x={x} containerW={containerW} total={images.length} reduceMotion={reduceMotion} />
+                  <Dot i={i} x={x} containerW={containerW} total={images.length} reduceMotion={reduceMotion} dotStyle={styles.dot} />
                 </View>
               ))}
             </View>
@@ -920,40 +921,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   flatBackground: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.surfaceMuted,
-  },
-  imageCardWrapper: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    // Без внутренних отступов: фото идёт от края до края внутри слайдера
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    alignSelf: "stretch",
-    maxWidth: 1280,
-    width: "100%",
-  },
-  imageCardWrapperElevated: {
-    ...Platform.select<any>({
-      web: {
-        boxShadow: colors.boxShadows.heavy,
-      },
-      android: {
-        elevation: 10,
-      },
-      ios: colors.shadows.medium,
-    }),
-  },
-  imageCardSurface: {
-    width: "100%",
-    height: "100%",
-    alignSelf: "center",
-    borderRadius: 0,
-    overflow: "hidden",
-    backgroundColor: "transparent",
-    borderWidth: 0,
-    borderColor: "transparent",
-    justifyContent: "center",
-    alignItems: "center",
   },
   img: {
     width: "100%",
@@ -1113,34 +1080,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     fontWeight: "600",
     fontFamily: Platform.OS === "web" ? "system-ui, -apple-system" : undefined,
     letterSpacing: 0.5,
-  },
-  metaRow: {
-    width: "100%",
-    marginTop: 12,
-    paddingHorizontal: 4,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  metaRowMobile: {
-    alignItems: "center",
-  },
-  swipeHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.overlayLight,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  swipeHintMobile: {
-    marginTop: 8,
-  },
-  swipeHintText: {
-    marginLeft: 8,
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: colors.text,
-    fontWeight: "500",
   },
 });

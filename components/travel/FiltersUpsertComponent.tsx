@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     View,
     Text,
     TextInput,
     ScrollView,
     StyleSheet,
-    Dimensions,
     ActivityIndicator,
     Platform,
     Linking,
@@ -18,11 +17,9 @@ import CheckboxComponent from '@/components/CheckboxComponent';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { TravelFormData, TravelFilters, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+import { useResponsive } from '@/hooks/useResponsive';
 
-const { width } = Dimensions.get('window');
-const isMobile = width <= METRICS.breakpoints.tablet;
 const MultiSelectFieldAny: any = MultiSelectField;
 
 
@@ -116,6 +113,8 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
                                                                      showAdditionalFields = true,
                                                                  }) => {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
     const isLoading = !formData || !filters;
 
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -165,14 +164,18 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         [rawData.countries]
     );
 
+    // Keep a ref to the latest formData so the callback stays stable.
+    const formDataRef = useRef(formData);
+    formDataRef.current = formData;
+
     // Local handler fallback if onFieldChange is not provided
     const handleFieldChange = useCallback((field: keyof TravelFormData, value: any) => {
         if (onFieldChange) {
             onFieldChange(field, value);
-        } else {
-            setFormData({ ...formData!, [field]: value });
+        } else if (formDataRef.current) {
+            setFormData({ ...formDataRef.current, [field]: value });
         }
-    }, [formData, onFieldChange, setFormData]);
+    }, [onFieldChange, setFormData]);
 
     useEffect(() => {
         // если новая запись — явно фиксируем publish=false,
@@ -236,7 +239,7 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         >
             {onClose && isMobile && (
                 <ButtonBase
-                    label="✖"
+                    label="X"
                     onPress={() => onClose()}
                     variant="ghost"
                     size="sm"
@@ -475,11 +478,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         top: -16,
         right: -14,
         backgroundColor: colors.danger, // ✅ ДИЗАЙН: Динамический цвет фона
-        borderRadius: 12,
-        width: 20,
-        height: 20,
-        minHeight: 20,
-        minWidth: 20,
+        borderRadius: 22,
+        width: 44,
+        height: 44,
+        minHeight: 44,
+        minWidth: 44,
         paddingHorizontal: 0,
         paddingVertical: 0,
         justifyContent: 'center',
@@ -508,4 +511,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
 });
 
-export default FiltersUpsertComponent;
+export default React.memo(FiltersUpsertComponent);

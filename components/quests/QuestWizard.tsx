@@ -15,10 +15,31 @@ import {
     Dimensions, Modal, Image, Keyboard
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Video, ResizeMode } from 'expo-av';
-import * as Clipboard from 'expo-clipboard';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
-import BelkrajWidget from "@/components/belkraj/BelkrajWidget";
+
+// ⚡️ Heavy deps lazy-loaded to keep chunk small
+const BelkrajWidgetLazy = lazy(() => import("@/components/belkraj/BelkrajWidget"));
+const getClipboard = () => import('expo-clipboard');
+
+// Lazy wrapper for expo-av Video (only used on native finale)
+const NativeVideoLazy = lazy(() =>
+    import('expo-av').then((m) => ({
+        default: memo(function NativeVideo(props: {
+            source: any; posterSource?: any; usePoster?: boolean;
+            style?: any; useNativeControls?: boolean; shouldPlay?: boolean;
+            isLooping?: boolean; onError?: () => void;
+        }) {
+            return (
+                <m.Video
+                    {...props}
+                    resizeMode={m.ResizeMode.CONTAIN}
+                    // @ts-ignore
+                    playsInline
+                />
+            );
+        }),
+    }))
+);
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -37,6 +58,14 @@ export type QuestFinale = { text: string; video?: any; poster?: any; };
 export type QuestWizardProps = {
     title: string; steps: QuestStep[]; finale: QuestFinale; intro?: QuestStep;
     storageKey?: string; city?: QuestCity;
+    /** Callback для синхронизации прогресса с бэкендом */
+    onProgressChange?: (data: {
+        currentIndex: number; unlockedIndex: number;
+        answers: Record<string, string>; attempts: Record<string, number>;
+        hints: Record<string, boolean>; showMap: boolean; completed?: boolean;
+    }) => void;
+    /** Callback при сбросе прогресса */
+    onProgressReset?: () => void;
 };
 
 // ===================== ТЕМА =====================
@@ -147,7 +176,7 @@ const StepCard = memo((props: StepCardProps) => {
         return openCandidates([urls[app]]);
     };
 
-    const copyCoords = async () => { await Clipboard.setStringAsync(`${step.lat.toFixed(6)}, ${step.lng.toFixed(6)}`); notify('Координаты скопированы'); };
+    const copyCoords = async () => { const Clipboard = await getClipboard(); await Clipboard.setStringAsync(`${step.lat.toFixed(6)}, ${step.lng.toFixed(6)}`); notify('Координаты скопированы'); };
 
     const shake = () => {
         shakeAnim.setValue(0);
@@ -292,13 +321,13 @@ const StepCard = memo((props: StepCardProps) => {
                         <>
                             <Text style={styles.photoHint}>Это статичное фото-подсказка, не интерактивная карта.</Text>
                             <Pressable style={styles.imagePreview} onPress={() => setImageModalVisible(true)}>
-                                <Image source={step.image} style={styles.previewImage} />
+                                <Image source={typeof step.image === 'string' ? { uri: step.image } : step.image} style={styles.previewImage} />
                                 <View style={styles.imageOverlay}><Text style={styles.overlayText}>Нажмите для увеличения</Text></View>
                             </Pressable>
                         </>
                     )}
 
-                    <ImageZoomModal image={step.image} visible={imageModalVisible} onClose={() => setImageModalVisible(false)} />
+                    <ImageZoomModal image={typeof step.image === 'string' ? { uri: step.image } : step.image} visible={imageModalVisible} onClose={() => setImageModalVisible(false)} />
                 </View>
             )}
 
@@ -323,7 +352,7 @@ const StepCard = memo((props: StepCardProps) => {
 });
 
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, onProgressChange, onProgressReset }: QuestWizardProps) {
     const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
@@ -371,12 +400,16 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         loadProgress();
     }, [storageKey]);
 
-    // Сохранение прогресса
+    // Сохранение прогресса (локально + бэкенд)
     useEffect(() => {
         if (suppressSave.current) return;
         AsyncStorage.setItem(storageKey, JSON.stringify({
             index: currentIndex, unlocked: unlockedIndex, answers, attempts, hints, showMap
         })).catch(e => console.error('Error saving progress:', e));
+        // Синхронизация с бэкендом
+        onProgressChange?.({
+            currentIndex, unlockedIndex: unlockedIndex, answers, attempts, hints, showMap,
+        });
     }, [currentIndex, unlockedIndex, answers, attempts, hints, showMap, storageKey]);
 
     const completedSteps = steps.filter(s => answers[s.id]);
@@ -425,6 +458,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             await AsyncStorage.removeItem(storageKey);
             setCurrentIndex(0); setUnlockedIndex(0); setAnswers({}); setAttempts({}); setHints({}); setShowMap(true); setShowFinaleOnly(false);
             await AsyncStorage.setItem(storageKey, JSON.stringify({ index: 0, unlocked: 0, answers: {}, attempts: {}, hints: {}, showMap: true }));
+            onProgressReset?.();
             notify('Прогресс очищен');
         } catch (e) {
             console.error('Error resetting progress:', e);
@@ -601,13 +635,15 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
 
                                 {city && <View style={{ height: SPACING.xl - 4 }} />}
                                 {city && (
-                                    <BelkrajWidget
-                                        points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                        countryCode={city.countryCode ?? 'BY'}
-                                        collapsedHeight={520}
-                                        expandedHeight={1200}
-                                        className="belkraj-slot"
-                                    />
+                                    <Suspense fallback={null}>
+                                        <BelkrajWidgetLazy
+                                            points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
+                                            countryCode={city.countryCode ?? 'BY'}
+                                            collapsedHeight={520}
+                                            expandedHeight={1200}
+                                            className="belkraj-slot"
+                                        />
+                                    </Suspense>
                                 )}
                             </>
                         )}
@@ -636,19 +672,18 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                         </>
                                                     )
                                                 ) : (
-                                                    <Video
-                                                        source={finale.video}
-                                                        posterSource={finale.poster}
-                                                        usePoster={!!finale.poster}
-                                                        style={StyleSheet.absoluteFill}
-                                                        resizeMode={ResizeMode.CONTAIN}
-                                                        useNativeControls
-                                                        shouldPlay={false}
-                                                        isLooping={false}
-                                                        // @ts-ignore
-                                                        playsInline
-                                                        onError={() => setVideoOk(false)}
-                                                    />
+                                                    <Suspense fallback={null}>
+                                                        <NativeVideoLazy
+                                                            source={typeof finale.video === 'string' ? { uri: finale.video } : finale.video}
+                                                            posterSource={typeof finale.poster === 'string' ? { uri: finale.poster } : finale.poster}
+                                                            usePoster={!!finale.poster}
+                                                            style={StyleSheet.absoluteFill}
+                                                            useNativeControls
+                                                            shouldPlay={false}
+                                                            isLooping={false}
+                                                            onError={() => setVideoOk(false)}
+                                                        />
+                                                    </Suspense>
                                                 )}
                                             </View>
                                         )}

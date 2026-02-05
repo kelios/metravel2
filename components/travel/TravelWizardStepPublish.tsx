@@ -388,9 +388,9 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     const handlePrimaryAction = () => {
         if (userPendingModeration) return;
         if (status === 'draft') {
-            handleSaveDraft();
+            void handleSaveDraft();
         } else {
-            handleSendToModeration();
+            void handleSendToModeration();
         }
     };
 

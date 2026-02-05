@@ -35,23 +35,25 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
 
   const loadData = useCallback(async () => {
     try {
-      // Загрузка реакций
-      const reactionsData = await AsyncStorage.getItem(STORAGE_KEY_REACTIONS);
+      // Batch all reads into a single multiGet call
+      const pairs = await AsyncStorage.multiGet([
+        STORAGE_KEY_REACTIONS,
+        STORAGE_KEY_USER_REACTIONS,
+        STORAGE_KEY_VIEWS,
+      ]);
+      const reactionsData = pairs[0]?.[1];
+      const userReactionsData = pairs[1]?.[1];
+      const viewsData = pairs[2]?.[1];
+
       if (reactionsData) {
         const allReactions = JSON.parse(reactionsData);
         setReactions(allReactions[travelId] || { like: 0, love: 0, fire: 0 });
       }
-
-      // Загрузка реакции пользователя
-      const userReactionsData = await AsyncStorage.getItem(STORAGE_KEY_USER_REACTIONS);
       if (userReactionsData) {
         const userReactions: UserReaction[] = JSON.parse(userReactionsData);
         const userReactionItem = userReactions.find(r => r.travelId === travelId);
         setUserReaction(userReactionItem?.type || null);
       }
-
-      // Загрузка просмотров
-      const viewsData = await AsyncStorage.getItem(STORAGE_KEY_VIEWS);
       if (viewsData) {
         const allViews = JSON.parse(viewsData);
         setViews(allViews[travelId] || 0);

@@ -387,7 +387,8 @@ export function getQualityScore(formData: TravelFormData): {
   else if (formData.coordsMeTravel && formData.coordsMeTravel.length >= 1) score += 10;
 
   // Медиа (30 баллов)
-  const hasCover = formData.travelImageThumbUrlArr && formData.travelImageThumbUrlArr.length > 0;
+  const hasCover = (formData.travel_image_thumb_small_url && String(formData.travel_image_thumb_small_url).trim().length > 0) ||
+    (formData.travelImageThumbUrlArr && formData.travelImageThumbUrlArr.length > 0);
   const hasGallery = formData.gallery && formData.gallery.length >= 3;
   const hasVideo = formData.youtube_link && formData.youtube_link.length > 0;
 

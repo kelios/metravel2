@@ -71,7 +71,7 @@ export function optimizeImageUrl(
   const clampedQuality = Math.max(1, Math.min(100, Number.isFinite(quality as any) ? (quality as number) : 85))
 
   try {
-    const cacheKey = `${originalUrl}:${JSON.stringify({ ...options, dpr })}`;
+    const cacheKey = `${originalUrl}:${width ?? ''}:${height ?? ''}:${clampedQuality}:${format}:${dpr}:${fit}:${blur ?? ''}`;
     if (optimizedUrlCache.has(cacheKey)) {
       return optimizedUrlCache.get(cacheKey);
     }

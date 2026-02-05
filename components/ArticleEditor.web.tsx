@@ -276,7 +276,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             width: '100%',
             ...(isWeb
                 ? ({
-                    minHeight: '100vh',
+                    minHeight: '100dvh',
                     minWidth: '100vw',
                 } as any)
                 : null),
@@ -759,7 +759,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, [fireChange, resolveEditorSelection, showHtml, shouldLoadQuill, uploadAndInsert, quillMountKey]);
 
-    const IconButton = React.memo(function IconButtonWrapper({
+    const IconButton = function IconButtonWrapper({
         name,
         onPress,
         label,
@@ -772,7 +772,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 style={dynamicStyles.btn}
             />
         );
-    });
+    };
 
     const insertAnchor = useCallback((idRaw: string) => {
         if (!quillRef.current) return;

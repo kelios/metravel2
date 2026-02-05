@@ -8,7 +8,7 @@ import React, {
   useState,
   forwardRef,
 } from 'react'
-import { Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native'
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -303,6 +303,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const keyExtractor = useCallback((it: SliderImage) => String(it.id), [])
 
+  const handleFirstImageLoad = useCallback(() => {
+    onFirstImageLoad?.()
+    enablePrefetch()
+  }, [onFirstImageLoad, enablePrefetch])
+
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
       const distance = Math.abs(index - renderIndex)
@@ -343,19 +348,14 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                   accessibilityRole: 'image',
                   accessibilityLabel: `Фотография путешествия ${index + 1} из ${images.length}`,
                 }}
-                onLoad={() => {
-                  if (index === 0) {
-                    onFirstImageLoad?.()
-                    enablePrefetch()
-                  }
-                }}
+                onLoad={isFirstSlide ? handleFirstImageLoad : undefined}
               />
             </View>
           </View>
         </View>
       )
     },
-    [blurBackground, containerH, containerW, enablePrefetch, fit, imageProps, images.length, onFirstImageLoad, renderIndex, renderWindow, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
+    [blurBackground, containerH, containerW, fit, handleFirstImageLoad, imageProps, images.length, renderIndex, renderWindow, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
   )
 
   const handleScroll = useCallback(
@@ -387,6 +387,29 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     },
     [containerW, enablePrefetch, setActiveIndex]
   )
+
+  // Keyboard navigation for accessibility
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        prev()
+      } else if (e.key === 'ArrowRight') {
+        next()
+      }
+    }
+    // Only attach when slider is focused or hovered
+    const wrapper = scrollRef.current as any
+    const node = wrapper?._nativeNode || wrapper?._domNode || wrapper
+    if (!node || typeof node.addEventListener !== 'function') return
+    const parent = node.closest?.('[data-testid="slider-wrapper"]') || node.parentElement?.parentElement
+    if (!parent) return
+    parent.setAttribute('tabindex', '0')
+    parent.addEventListener('keydown', handleKeyDown)
+    return () => {
+      parent.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [next, prev])
 
   if (!images.length) return null
 
@@ -476,6 +499,16 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               </View>
             </TouchableOpacity>
           </>
+        ) : null}
+
+        {images.length > 1 ? (
+          <View style={styles.counter} pointerEvents="none">
+            <View style={styles.counterContainer}>
+              <Text style={styles.counterText}>
+                {currentIndex + 1}/{images.length}
+              </Text>
+            </View>
+          </View>
         ) : null}
 
         {showDots && images.length > 1 ? (
@@ -667,5 +700,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       width: 18,
       opacity: 1,
       backgroundColor: colors.text,
+    },
+    counter: {
+      position: 'absolute',
+      top: 16,
+      right: 16,
+      zIndex: 50,
+    },
+    counterContainer: {
+      backgroundColor: colors.overlayLight,
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...(Platform.OS === 'web'
+        ? ({ backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any)
+        : null),
+    },
+    counterText: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '600' as any,
+      fontFamily: 'system-ui, -apple-system',
+      letterSpacing: 0.5,
     },
   })

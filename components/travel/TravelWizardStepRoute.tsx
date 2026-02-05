@@ -146,7 +146,7 @@ const TravelWizardStepRoute: React.FC<TravelWizardStepRouteProps> = ({
 
             setTimeout(() => {
                 router.push('/metravel');
-            }, 400);
+            }, 250);
         } catch {
             void showToastMessage({
                 type: 'error',
@@ -794,7 +794,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
         backgroundColor: colors.background,
         ...(Platform.OS === 'web'
-            ? ({ height: '100vh', overflow: 'hidden' } as any)
+            ? ({ height: '100dvh', overflow: 'hidden' } as any)
             : null),
     },
     keyboardAvoid: { flex: 1 },

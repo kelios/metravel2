@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
@@ -8,7 +8,7 @@ import { TravelFormData } from '@/src/types/types';
 import TextInputComponent from '@/components/TextInputComponent';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
+import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import Button from '@/components/ui/Button';
 import { appendPlainTextToHtml } from '@/utils/htmlUtils';
@@ -55,11 +55,8 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const isMobile = useMemo(() => {
-        if (Platform.OS === 'web') return false;
-        const { width } = Dimensions.get('window');
-        return width <= METRICS.breakpoints.tablet;
-    }, []);
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
 
     useEffect(() => {
         const result = validateTravelForm({

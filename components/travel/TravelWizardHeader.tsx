@@ -457,9 +457,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderWidth: 0,
     },
     iconButtonMobile: {
-        width: 36,
-        height: 36,
-        minHeight: 36,
+        width: 40,
+        height: 40,
+        minHeight: 44,
     },
     iconButtonActive: {
         backgroundColor: colors.primarySoft,
@@ -509,14 +509,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         gap: DESIGN_TOKENS.spacing.xs,
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-        height: 32,
-        minHeight: 44, // ✅ ДОСТУПНОСТЬ: Минимальная высота touch target
+        minHeight: 44,
         borderRadius: DESIGN_TOKENS.radii.pill,
         borderWidth: 1,
     },
     actionButtonMobile: {
-        minHeight: 36,
-        height: 36,
+        minHeight: 44,
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     },
     actionButtonSecondary: {
@@ -553,8 +551,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderColor: colors.border,
     },
     backButtonMobile: {
-        minHeight: 36,
-        height: 36,
+        minHeight: 44,
         paddingHorizontal: 10,
     },
     backButtonText: {
