@@ -55,6 +55,26 @@ async function assertNoHorizontalScroll(page: any) {
   ).toBeLessThanOrEqual(res.bodyClientWidth);
 }
 
+async function waitForNonNullBoundingBoxes(
+  page: any,
+  locators: any[],
+  opts?: { timeoutMs?: number; stepMs?: number; label?: string }
+): Promise<(any | null)[]> {
+  const timeoutMs = opts?.timeoutMs ?? 5_000;
+  const stepMs = opts?.stepMs ?? 100;
+  const startedAt = Date.now();
+  let last: (any | null)[] = [];
+
+  while (Date.now() - startedAt < timeoutMs) {
+    last = await Promise.all(locators.map((l) => l.boundingBox()));
+    if (last.every((b) => b != null)) return last;
+    await page.waitForTimeout(stepMs);
+  }
+
+  // Return the last sample so the caller can craft a helpful assertion message.
+  return last;
+}
+
 test.describe('Footer layout invariants (web)', () => {
   test('initial load: footer height does not jump during the first second', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -239,14 +259,14 @@ test.describe('Footer layout invariants (web)', () => {
         await expect(item).toBeVisible({ timeout: 10_000 });
       }
 
-      const [b0, b1, b2] = await Promise.all([
-        items.nth(0).boundingBox(),
-        items.nth(1).boundingBox(),
-        items.nth(2).boundingBox(),
-      ]);
-      expect(b0).not.toBeNull();
-      expect(b1).not.toBeNull();
-      expect(b2).not.toBeNull();
+      const [b0, b1, b2] = await waitForNonNullBoundingBoxes(
+        page,
+        [items.nth(0), items.nth(1), items.nth(2)],
+        { timeoutMs: 10_000, stepMs: 100, label: `footer items width=${w}` }
+      );
+      expect(b0, `expected footer item[0] to have a bounding box at width=${w}`).not.toBeNull();
+      expect(b1, `expected footer item[1] to have a bounding box at width=${w}`).not.toBeNull();
+      expect(b2, `expected footer item[2] to have a bounding box at width=${w}`).not.toBeNull();
       if (b0 && b1 && b2) {
         const yDiff01 = Math.abs(b0.y - b1.y);
         const yDiff02 = Math.abs(b0.y - b2.y);

@@ -43,7 +43,9 @@ async function gotoWithRetry(page: any, url: string) {
 }
 
 async function waitForMainToRender(page: any) {
-  await Promise.race([
+  // IMPORTANT: Promise.race is flaky here — if one selector never appears it can "win" the race
+  // by timing out slightly earlier than the others. We want "any of these signals".
+  await Promise.any([
     page.waitForSelector('#search-input', { timeout: 30_000 }),
     page.waitForSelector(
       '[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"], [data-testid="list-travel-skeleton"]',
