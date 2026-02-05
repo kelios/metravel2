@@ -1,8 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { Platform, Pressable, Text, View } from 'react-native'
 
-import { useThemedColors } from '@/hooks/useTheme'
-
 import {
   DescriptionSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
@@ -11,7 +9,6 @@ import type { Travel } from '@/src/types/types'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
-import { Icon } from '../TravelDetailsIcons'
 import { CollapsibleSection } from './CollapsibleSection'
 import { LazyYouTube } from './LazyYouTubeSection'
 
@@ -34,27 +31,7 @@ export const TravelDetailsContentSection: React.FC<{
   scrollRef: any
 }> = ({ travel, isMobile, anchors, forceOpenKey, scrollRef }) => {
   const styles = useTravelDetailsStyles()
-  const colors = useThemedColors()
   type InsightKey = 'recommendation' | 'plus' | 'minus'
-
-  const stripHtml = useCallback((value?: string | null) => {
-    if (!value) return ''
-    return value
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-  }, [])
-
-  const extractSnippets = useCallback(
-    (value?: string | null, maxSentences = 1) => {
-      const text = stripHtml(value)
-      if (!text) return ''
-      const matches = text.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || []
-      const parts = matches.map((p) => p.trim()).filter(Boolean)
-      return parts.slice(0, Math.max(1, maxSentences)).join(' ')
-    },
-    [stripHtml]
-  )
 
   const hasRecommendation = Boolean(travel.recommendation?.trim())
   const hasPlus = Boolean(travel.plus?.trim())
@@ -119,77 +96,6 @@ export const TravelDetailsContentSection: React.FC<{
         : {},
     [mobileInsightKey, shouldUseMobileInsights]
   )
-
-  const decisionSummary = useMemo(() => {
-    const items: Array<{ label: string; text: string; tone: 'info' | 'positive' | 'negative' }> = []
-    const rec = extractSnippets(travel.recommendation, 2)
-    const plus = extractSnippets(travel.plus, 1)
-    const minus = extractSnippets(travel.minus, 1)
-
-    if (rec) items.push({ label: 'Полезно', text: rec, tone: 'info' })
-    if (plus) items.push({ label: 'Плюс', text: plus, tone: 'positive' })
-    if (minus) items.push({ label: 'Минус', text: minus, tone: 'negative' })
-
-    return items.slice(0, 3)
-  }, [extractSnippets, travel.minus, travel.plus, travel.recommendation])
-
-  const decisionTips = useMemo(() => {
-    const cleanTip = (value: string) => {
-      return value
-        .replace(/^\s*[-–—•]+\s*/g, '')
-        .replace(/^\s*\d{1,2}\s*[).]\s*/g, '')
-        .replace(/\s*\b\d{1,2}\s*[).]\s*$/g, '')
-        .replace(/\s*\b\d{1,2}\.\s*$/g, '')
-        .replace(/\s*[:：]\s*$/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-    }
-
-    const splitToTips = (text: string): string[] => {
-      const normalized = text
-        .replace(/\r\n/g, '\n')
-        .replace(/(&nbsp;|&#160;)/gi, ' ')
-        .replace(/\u00a0/g, ' ')
-        .replace(/\u2022/g, '•')
-        .trim()
-
-      const lines = normalized
-        .split(/\n+/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-
-      const out: string[] = []
-
-      for (const line of lines) {
-        const expanded = line
-          .replace(/\s+(?=\d{1,2}\s*[).]\s+)/g, '\n')
-          .replace(/\s+(?=[-–—•]\s+)/g, '\n')
-          .split(/\n+/)
-          .map((s) => s.trim())
-          .filter(Boolean)
-
-        for (const chunk of expanded) {
-          const semis = chunk
-            .split(/\s*;\s+/g)
-            .map((s) => s.trim())
-            .filter(Boolean)
-
-          for (const maybe of semis.length > 0 ? semis : [chunk]) {
-            const tip = cleanTip(maybe)
-            if (tip) out.push(tip)
-          }
-        }
-      }
-
-      return out
-    }
-
-    const tips = decisionSummary
-      .flatMap((item) => splitToTips(item.text))
-      .filter((t) => Boolean(t))
-
-    return tips.slice(0, 8)
-  }, [decisionSummary])
 
   const scrollToTop = useCallback(() => {
     try {
@@ -285,24 +191,6 @@ export const TravelDetailsContentSection: React.FC<{
                     {travel.monthName ? ` · лучший сезон: ${travel.monthName.toLowerCase()}` : ''}
                   </Text>
                 </View>
-
-                {decisionTips.length > 0 && (
-                  <View style={styles.decisionSummaryBox}>
-                    <Text style={styles.decisionSummaryTitle}>Полезные советы перед поездкой</Text>
-                    <View style={styles.decisionSummaryList}>
-                      {decisionTips.map((tip, idx) => (
-                        <View key={`tip-${idx}`} style={styles.decisionSummaryBulletRow}>
-                          <Icon
-                            name="lightbulb-outline"
-                            size={14}
-                            color={colors.textMuted}
-                          />
-                          <Text style={styles.decisionSummaryBulletText}>{tip}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
 
                 <TravelDescription title={travel.name} htmlContent={travel.description} noBox />
 

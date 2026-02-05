@@ -113,43 +113,19 @@ describe('DescriptionSection.redesign', () => {
   });
 
   describe('Советы (Decision Tips)', () => {
-    it('должен отобразить советы первого уровня', () => {
+    it('не должен отображать блок советов даже если они переданы', () => {
       const tips = [
         { text: 'Совет 1', level: 0 },
         { text: 'Совет 2', level: 0 },
       ];
 
-      const { getByText } = render(
-        <DescriptionSection {...mockProps} decisionTips={tips} />
-      );
-
-      expect(getByText('Полезные советы перед поездкой')).toBeTruthy();
-      expect(getByText('Совет 1')).toBeTruthy();
-      expect(getByText('Совет 2')).toBeTruthy();
-    });
-
-    it('должен отобразить советы второго уровня', () => {
-      const tips = [
-        { text: 'Основной совет', level: 0 },
-        { text: 'Подсовет 1', level: 1 },
-        { text: 'Подсовет 2', level: 1 },
-      ];
-
-      const { getByText } = render(
-        <DescriptionSection {...mockProps} decisionTips={tips} />
-      );
-
-      expect(getByText('Основной совет')).toBeTruthy();
-      expect(getByText('Подсовет 1')).toBeTruthy();
-      expect(getByText('Подсовет 2')).toBeTruthy();
-    });
-
-    it('не должен отображать блок советов, если список пуст', () => {
       const { queryByText } = render(
-        <DescriptionSection {...mockProps} decisionTips={[]} />
+        <DescriptionSection {...mockProps} decisionTips={tips} />
       );
 
       expect(queryByText('Полезные советы перед поездкой')).toBeNull();
+      expect(queryByText('Совет 1')).toBeNull();
+      expect(queryByText('Совет 2')).toBeNull();
     });
 
     it('не должен отображать блок советов по умолчанию', () => {
@@ -268,9 +244,12 @@ describe('DescriptionSection.redesign', () => {
     });
 
     it('должен скрыть декоративные иконки от screen readers', () => {
-      const tips = [{ text: 'Совет', level: 0 }];
+      const Platform = require('react-native').Platform;
+      Platform.OS = 'web';
+
+      const onBackToTop = jest.fn();
       const { UNSAFE_getAllByType } = render(
-        <DescriptionSection {...mockProps} decisionTips={tips} />
+        <DescriptionSection {...mockProps} onBackToTop={onBackToTop} />
       );
 
       const icons = UNSAFE_getAllByType(Icon);

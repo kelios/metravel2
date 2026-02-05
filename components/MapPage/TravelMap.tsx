@@ -56,6 +56,12 @@ interface TravelMapProps {
    * Note: Only works on full-size maps, not compact mode
    */
   enableOverlays?: boolean;
+
+  /**
+   * Draw a line connecting points (NOT routing; just straight segments).
+   * Defaults to false on travel pages (points-only).
+   */
+  showRouteLine?: boolean;
 }
 
 /**
@@ -262,6 +268,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   enableClustering = false,
   resizeTrigger,
   enableOverlays = false,
+  showRouteLine = false,
 }) => {
   const colors = useThemedColors();
   const mapRef = useRef<any>(null);
@@ -356,6 +363,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   // Convert travel data to route line coordinates
   const routeLineCoords = useMemo(() => {
+    if (!showRouteLine) return [];
     if (!travelData || travelData.length < 2) return [];
 
     const coords: [number, number][] = [];
@@ -381,7 +389,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     }
 
     return coords;
-  }, [travelData]);
+  }, [showRouteLine, travelData]);
 
   // Highlight point when requested
   useEffect(() => {
@@ -636,7 +644,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         />
 
         {/* Route line connecting travel points - using custom layer for proper z-index */}
-        {rl.useMap && routeLineCoords.length >= 2 && (
+        {showRouteLine && rl.useMap && routeLineCoords.length >= 2 && (
           <RouteLineLayer
             routeLineCoords={routeLineCoords}
             colors={colors}

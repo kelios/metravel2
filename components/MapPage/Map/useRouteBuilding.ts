@@ -56,24 +56,57 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
       mode: TransportMode,
       signal: AbortSignal
     ): Promise<RouteResult> => {
+      const parseOrsError = (raw: string): { code?: number; message?: string } => {
+        if (!raw) return {};
+        try {
+          const parsed = JSON.parse(raw);
+          const code = Number(parsed?.error?.code);
+          const message =
+            typeof parsed?.error?.message === 'string' ? parsed.error.message : undefined;
+          return {
+            code: Number.isFinite(code) ? code : undefined,
+            message,
+          };
+        } catch {
+          return {};
+        }
+      };
+
       // ORS expects [lng, lat] format
       const coordinates = points.map(p => [p.lng, p.lat]);
+      const radiusesToTry: Array<number | undefined> = [undefined, 1000, 2000, 5000];
 
-      const res = await fetch(
-        `https://api.openrouteservice.org/v2/directions/${getORSProfile(mode)}/geojson`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: String(ORS_API_KEY),
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ coordinates }),
-          signal,
+      let res: Response | null = null;
+      let lastErrorText = '';
+      for (const radius of radiusesToTry) {
+        res = await fetch(
+          `https://api.openrouteservice.org/v2/directions/${getORSProfile(mode)}/geojson`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: String(ORS_API_KEY),
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              coordinates,
+              ...(typeof radius === 'number'
+                ? { radiuses: new Array(coordinates.length).fill(radius) }
+                : {}),
+            }),
+            signal,
+          }
+        );
+
+        if (res.ok) break;
+
+        lastErrorText = await res.text().catch(() => '');
+        const { code: orsCode } = parseOrsError(lastErrorText);
+
+        // ORS 404 + error.code=2010 => point is too far from routable graph; retry with larger radius.
+        if (orsCode === 2010 && radius !== radiusesToTry[radiusesToTry.length - 1]) {
+          continue;
         }
-      );
 
-      if (!res.ok) {
-        const errorText = await res.text().catch(() => '');
         if (res.status === 429)
           throw new Error('Превышен лимит запросов. Подождите немного.');
         if (res.status === 403)
@@ -81,8 +114,12 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
         if (res.status === 400)
           throw new Error('Некорректные координаты маршрута.');
         throw new Error(
-          `Ошибка ORS: ${res.status}${errorText ? ` - ${errorText}` : ''}`
+          `Ошибка ORS: ${res.status}${lastErrorText ? ` - ${lastErrorText}` : ''}`
         );
+      }
+
+      if (!res || !res.ok) {
+        throw new Error(`Ошибка ORS: ${res?.status ?? 'unknown'}${lastErrorText ? ` - ${lastErrorText}` : ''}`);
       }
 
       const data = await res.json();

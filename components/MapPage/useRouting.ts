@@ -47,6 +47,12 @@ export const useRouting = (
     ORS_API_KEY: string | undefined
 ) => {
     const isTestEnv = typeof process !== 'undefined' && (process.env as any)?.NODE_ENV === 'test'
+    const debugRouting = useMemo(() => {
+        if (isTestEnv) return false
+        if (typeof process === 'undefined') return false
+        const flag = (process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING
+        return flag === '1' || flag === 'true'
+    }, [isTestEnv])
     const [state, setState] = useState<RoutingState>({
         loading: false,
         error: false,
@@ -184,46 +190,175 @@ export const useRouting = (
         }
 
         // ✅ УЛУЧШЕНИЕ: Используем retry для устойчивости к временным ошибкам
-        return await fetchWithRetry(async () => {
-            // ORS API expects coordinates in [lng, lat] format
-            const coordinates = points.map(([lng, lat]) => [lng, lat])
-
-            const res = await fetch(
-                `https://api.openrouteservice.org/v2/directions/${getORSProfile(mode)}/geojson`,
-                {
-                    method: 'POST',
-                    headers: {
-                        Authorization: apiKey,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ coordinates }),
-                    signal,
+        const parseOrsError = (raw: string): { code?: number; message?: string } => {
+            if (!raw) return {}
+            try {
+                const parsed = JSON.parse(raw)
+                const code = Number(parsed?.error?.code)
+                const message = typeof parsed?.error?.message === 'string' ? parsed.error.message : undefined
+                return {
+                    code: Number.isFinite(code) ? code : undefined,
+                    message,
                 }
-            )
-
-            if (!res.ok) {
-                const errorText = await res.text().catch(() => '')
-                if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.')
-                if (res.status === 403) throw new Error('Неверный API ключ или доступ запрещен.')
-                if (res.status === 400) throw new Error('Некорректные координаты маршрута.')
-                throw new Error(`Ошибка ORS: ${res.status}${errorText ? ` - ${errorText}` : ''}`)
+            } catch {
+                return {}
             }
+        }
 
-            const data = await res.json()
-            const feature = data.features?.[0]
-            const geometry = feature?.geometry
-            const summary = feature?.properties?.summary
+        // ORS по умолчанию "снэпает" точки к графу в радиусе 350м; иногда точка может быть дальше (поле/лес/река).
+        // В этом случае ORS возвращает 404 с error.code=2010. Тогда пробуем увеличить radiuses.
+        const radiusesToTry: Array<number | undefined> = [undefined, 800, 1200, 2000]
+        let lastError: any = null
+        let failingIndex: number | null = null
 
-            if (!geometry?.coordinates?.length) throw new Error('Пустой маршрут от ORS')
+        const extractFailingIndex = (message?: string) => {
+            if (!message) return null
+            const m = message.match(/coordinate\s+(\d+)/i)
+            if (!m) return null
+            const idx = Number(m[1])
+            return Number.isFinite(idx) ? idx : null
+        }
 
-            return {
-                coords: geometry.coordinates as [number, number][],
-                distance: summary?.distance || 0,
-                duration: summary?.duration || 0,
-                isOptimal: true,
+        const buildRadiuses = (radius: number, len: number, idx: number | null) => {
+            const base = 350
+            const arr = new Array(len).fill(base)
+            if (typeof idx === 'number' && idx >= 0 && idx < len) {
+                arr[idx] = radius
+            } else {
+                // Fallback: bump endpoints (usually start/end are the only meaningful snap points).
+                arr[0] = radius
+                arr[len - 1] = radius
             }
-        }, 3, 1000); // 3 попытки с начальной задержкой 1с
-    }, [ORS_API_KEY, fetchWithRetry])
+            return arr
+        }
+
+        const haversineMeters = (a: [number, number], b: [number, number]) => {
+            const toRad = (deg: number) => (deg * Math.PI) / 180
+            const R = 6371000
+            const lng1 = a[0], lat1 = a[1]
+            const lng2 = b[0], lat2 = b[1]
+            const dLat = toRad(lat2 - lat1)
+            const dLng = toRad(lng2 - lng1)
+            const s1 = Math.sin(dLat / 2)
+            const s2 = Math.sin(dLng / 2)
+            const aa =
+                s1 * s1 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * s2 * s2
+            const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa))
+            return R * c
+        }
+        // Guardrail: don't accept routes whose snapped endpoints are слишком далеко от выбранных точек.
+        // (We don't hard-fail; we log and we'll visually anchor the polyline to the user points later.)
+        const WARN_ENDPOINT_SNAP_METERS = 2000
+
+        for (const radius of radiusesToTry) {
+            try {
+                // ✅ УЛУЧШЕНИЕ: Используем retry для устойчивости к временным ошибкам
+                return await fetchWithRetry(async () => {
+                    // ORS API expects coordinates in [lng, lat] format
+                    const coordinates = points.map(([lng, lat]) => [lng, lat])
+                    const body: any = { coordinates }
+                    if (typeof radius === 'number') {
+                        body.radiuses = buildRadiuses(radius, coordinates.length, failingIndex)
+                    }
+
+                    if (debugRouting) {
+                        console.info('[useRouting] ORS request payload (no key):', {
+                            profile: getORSProfile(mode),
+                            body,
+                        })
+                    }
+
+                    const res = await fetch(
+                        `https://api.openrouteservice.org/v2/directions/${getORSProfile(mode)}/geojson`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                Authorization: apiKey,
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(body),
+                            signal,
+                        }
+                    )
+
+                    if (!res.ok) {
+                        const errorText = await res.text().catch(() => '')
+                        const { code: orsCode, message: orsMessage } = parseOrsError(errorText)
+
+                        if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите немного.')
+                        if (res.status === 403) throw new Error('Неверный API ключ или доступ запрещен.')
+                        if (res.status === 400) throw new Error('Некорректные координаты маршрута.')
+
+                        const err: any = new Error(
+                            `Ошибка ORS: ${res.status}${errorText ? ` - ${errorText}` : ''}`
+                        )
+                        err.httpStatus = res.status
+                        err.responseText = errorText
+                        err.orsCode = orsCode
+                        err.orsMessage = orsMessage
+                        throw err
+                    }
+
+                    const data = await res.json()
+                    const feature = data.features?.[0]
+                    const geometry = feature?.geometry
+                    const summary = feature?.properties?.summary
+
+                    if (!geometry?.coordinates?.length) throw new Error('Пустой маршрут от ORS')
+
+                    try {
+                        const first = geometry.coordinates?.[0] as any
+                        const last = geometry.coordinates?.[geometry.coordinates.length - 1] as any
+                        const start = points[0]
+                        const end = points[points.length - 1]
+                        if (
+                            Array.isArray(first) &&
+                            Array.isArray(last) &&
+                            first.length === 2 &&
+                            last.length === 2 &&
+                            Array.isArray(start) &&
+                            Array.isArray(end)
+                        ) {
+                            const startSnap = haversineMeters(start, [Number(first[0]), Number(first[1])])
+                            const endSnap = haversineMeters(end, [Number(last[0]), Number(last[1])])
+                            if (startSnap > WARN_ENDPOINT_SNAP_METERS || endSnap > WARN_ENDPOINT_SNAP_METERS) {
+                                console.warn('[useRouting] ORS сильно сместил точки к дороге:', {
+                                    startSnapM: Math.round(startSnap),
+                                    endSnapM: Math.round(endSnap),
+                                })
+                            }
+                        }
+                    } catch (e) {
+                        // If this throws, treat as ORS failure so we can fallback to Valhalla/OSRM/direct line.
+                        throw e
+                    }
+
+                    return {
+                        coords: geometry.coordinates as [number, number][],
+                        distance: summary?.distance || 0,
+                        duration: summary?.duration || 0,
+                        isOptimal: true,
+                    }
+                }, 3, 1000) // 3 попытки с начальной задержкой 1с
+            } catch (e: any) {
+                lastError = e
+                const orsCode = e?.orsCode
+                const maybeIndex = extractFailingIndex(String(e?.orsMessage || e?.responseText || e?.message || ''))
+                if (typeof maybeIndex === 'number') failingIndex = maybeIndex
+                if (orsCode === 2010 && radius !== radiusesToTry[radiusesToTry.length - 1]) {
+                    const currentRadius = typeof radius === 'number' ? radius : 350
+                    console.info(
+                        `[useRouting] ORS: no routable point within ${currentRadius}m (coord idx ${failingIndex ?? 'unknown'}), retrying with larger radius...`
+                    )
+                    continue
+                }
+                throw e
+            }
+        }
+
+        throw lastError || new Error('Ошибка ORS')
+    }, [ORS_API_KEY, debugRouting, fetchWithRetry])
 
     const fetchOSRM = useCallback(async (
         points: [number, number][],
@@ -466,6 +601,51 @@ export const useRouting = (
         return totalDistance
     }, [])
 
+    const ensureAnchoredGeometry = useCallback(
+        (points: [number, number][], coords: [number, number][]) => {
+            if (!Array.isArray(points) || points.length < 2) return coords
+            if (!Array.isArray(coords) || coords.length < 2) return coords
+
+            const start = points[0]
+            const end = points[points.length - 1]
+            const first = coords[0]
+            const last = coords[coords.length - 1]
+
+            const haversineMeters = (a: [number, number], b: [number, number]) => {
+                const toRad = (deg: number) => (deg * Math.PI) / 180
+                const R = 6371000
+                const lng1 = a[0], lat1 = a[1]
+                const lng2 = b[0], lat2 = b[1]
+                const dLat = toRad(lat2 - lat1)
+                const dLng = toRad(lng2 - lng1)
+                const s1 = Math.sin(dLat / 2)
+                const s2 = Math.sin(dLng / 2)
+                const aa =
+                    s1 * s1 +
+                    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * s2 * s2
+                const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa))
+                return R * c
+            }
+
+            const out = coords.slice()
+            const thresholdM = 25
+            try {
+                const ds = haversineMeters(start, first)
+                if (ds > thresholdM) out.unshift(start)
+            } catch {
+                // noop
+            }
+            try {
+                const de = haversineMeters(end, last)
+                if (de > thresholdM) out.push(end)
+            } catch {
+                // noop
+            }
+            return out
+        },
+        []
+    )
+
     const supportsPublicOsrmProfile = useMemo(() => {
         // Теперь поддерживаем все режимы: OSRM для car, Valhalla для bike/foot
         return true
@@ -619,23 +799,30 @@ export const useRouting = (
                     )
                 }
 
-                // 2) Fallback: OSRM driving (CORS-friendly). For bike/foot on web, this avoids Valhalla CORS issues
-                // and is still "by roads" even if the mode isn't exact.
-                if (!result && (transportMode === 'car' || isWeb)) {
-                    result = await attempt('OSRM', () =>
-                        fetchOSRM(currentPoints, 'car', abortController.signal)
-                    )
-                }
-
-                // 3) Fallback: Valhalla for bike/foot (non-web / when OSRM isn't used).
+                // 2) Fallback: Valhalla for bike/foot (mode-aware).
+                // On web it might fail due to CORS; in that case we still fall back further.
                 if (!result && transportMode !== 'car') {
                     result = await attempt('Valhalla', () =>
                         fetchValhalla(currentPoints, transportMode, abortController.signal)
                     )
                 }
 
+                // 3) Fallback: OSRM driving (CORS-friendly). Last resort for bike/foot on web.
+                if (!result && (transportMode === 'car' || isWeb)) {
+                    result = await attempt('OSRM', () =>
+                        fetchOSRM(currentPoints, 'car', abortController.signal)
+                    )
+                }
+
                 if (!result) {
                     throw lastError || new Error('Не удалось построить маршрут')
+                }
+
+                // Ensure the polyline visually starts/ends at the selected markers
+                // even when the routing provider snaps endpoints to the road graph.
+                result = {
+                    ...result,
+                    coords: ensureAnchoredGeometry(currentPoints, result.coords),
                 }
 
                 const duration = result.duration || estimateDurationSeconds(result.distance, transportMode)

@@ -59,7 +59,7 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = memo(({
   numberDays,
   countryName,
   monthName,
-  decisionTips = [],
+  decisionTips: _decisionTips = [],
   onBackToTop,
   hideBackToTop = false,
 }) => {
@@ -105,49 +105,6 @@ export const DescriptionSection: React.FC<DescriptionSectionProps> = memo(({
           </Text>
         )}
       </View>
-
-      {/* Полезные советы */}
-      {decisionTips.length > 0 && (
-        <View
-          style={[
-            styles.tipsBox,
-            {
-              backgroundColor: colors.surfaceElevated,
-              borderColor: colors.borderLight,
-            }
-          ]}
-          accessible
-          accessibilityLabel="Полезные советы перед поездкой"
-          {...(Platform.OS === 'web' ? { role: 'complementary' } as any : {})}
-        >
-          <View style={styles.tipsHeader}>
-            <Icon name="lightbulb" size={20} color={colors.primary} accessibilityElementsHidden />
-            <Text style={[styles.tipsTitle, { color: colors.text }]}>
-              Полезные советы перед поездкой
-            </Text>
-          </View>
-
-          <View style={styles.tipsList}>
-            {decisionTips.map((tip, idx) =>
-              tip.level === 0 ? (
-                <View key={`tip-${idx}`} style={styles.tipRow}>
-                  <Icon name="check-circle" size={16} color={colors.primary} accessibilityElementsHidden />
-                  <Text style={[styles.tipText, { color: colors.text }]}>
-                    {tip.text}
-                  </Text>
-                </View>
-              ) : (
-                <View key={`tip-${idx}`} style={styles.tipSubRow}>
-                  <Icon name="circle" size={6} color={colors.textMuted} accessibilityElementsHidden />
-                  <Text style={[styles.tipSubText, { color: colors.text }]}>
-                    {tip.text}
-                  </Text>
-                </View>
-              )
-            )}
-          </View>
-        </View>
-      )}
 
       {/* Описание */}
       <View style={styles.descriptionWrapper}>

@@ -81,4 +81,39 @@ describe('TravelMap (web)', () => {
 
     expect(getByTestId('travel-map')).toBeTruthy();
   });
+
+  it('does not call rl.useMap by default (points-only, no route line)', () => {
+    render(
+      <TravelMap
+        travelData={[
+          { coord: '53.9, 27.56' },
+          { coord: '53.91, 27.57' },
+        ]}
+        compact
+        height={400}
+      />
+    );
+
+    const { useLeafletLoader } = require('@/hooks/useLeafletLoader');
+    const loaderValue = useLeafletLoader.mock.results[0]?.value;
+    expect(loaderValue?.RL?.useMap).toHaveBeenCalledTimes(0);
+  });
+
+  it('calls rl.useMap when showRouteLine=true and there are 2+ points', () => {
+    render(
+      <TravelMap
+        travelData={[
+          { coord: '53.9, 27.56' },
+          { coord: '53.91, 27.57' },
+        ]}
+        showRouteLine
+        compact
+        height={400}
+      />
+    );
+
+    const { useLeafletLoader } = require('@/hooks/useLeafletLoader');
+    const loaderValue = useLeafletLoader.mock.results[0]?.value;
+    expect(loaderValue?.RL?.useMap).toHaveBeenCalled();
+  });
 });

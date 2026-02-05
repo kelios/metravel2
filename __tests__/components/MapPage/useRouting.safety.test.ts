@@ -150,6 +150,66 @@ describe('useRouting - Safety Tests', () => {
   });
 
   describe('Network Error Handling', () => {
+    it('retries ORS with radiuses when error.code=2010 (no routable point)', async () => {
+      // First call: ORS 404 with code=2010 and coordinate index 0
+      ;(global.fetch as jest.Mock)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          text: jest.fn().mockResolvedValue(
+            JSON.stringify({
+              error: {
+                code: 2010,
+                message:
+                  'Could not find routable point within a radius of 350.0 meters of specified coordinate 0: 20.1805115 50.2621317.',
+              },
+            })
+          ),
+        })
+        // Second call: ORS ok
+        .mockResolvedValueOnce({
+          ok: true,
+          json: jest.fn().mockResolvedValue({
+            features: [
+              {
+                geometry: {
+                  coordinates: [
+                    [27.56, 53.9],
+                    [27.6, 53.95],
+                  ],
+                },
+                properties: {
+                  summary: { distance: 5000, duration: 0 },
+                },
+              },
+            ],
+          }),
+        });
+
+      renderHook(() =>
+        useRouting(
+          [
+            [20.1805115, 50.2621317],
+            [20.1502991, 50.3375723],
+          ],
+          'foot',
+          'test-api-key-long-enough'
+        )
+      );
+
+      await waitFor(() => {
+        expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(2);
+      });
+
+      const secondCall = (global.fetch as jest.Mock).mock.calls[1];
+      const options = secondCall?.[1] as any;
+      const body = JSON.parse(String(options?.body || '{}'));
+      expect(Array.isArray(body.radiuses)).toBe(true);
+      expect(body.radiuses.length).toBe(2);
+      // coordinate index 0 should be bumped above the default 350
+      expect(body.radiuses[0]).toBeGreaterThan(350);
+    });
+
     it('handles network timeout', async () => {
       (global.fetch as jest.Mock).mockImplementation(
         () =>
