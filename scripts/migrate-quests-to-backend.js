@@ -32,14 +32,20 @@ function serializeAnswer(answerFn) {
         return { type: 'any', value: '' };
     }
 
-    // normalize(s) === 'xxx' — точное совпадение после нормализации
-    const exactMatch = fnStr.match(/normalize\(s\)\s*===\s*'([^']+)'/);
+    // s === 'xxx' or normalize(s) === 'xxx' — точное совпадение
+    const exactMatch = fnStr.match(/(?:normalize\(s\)|s)\s*===\s*'([^']+)'/);
     if (exactMatch) {
         return { type: 'exact', value: exactMatch[1] };
     }
 
-    // ['a','b','c'].includes(normalize(s)) — один из вариантов
-    const includesMatch = fnStr.match(/\[([^\]]+)\]\.includes\(normalize\(s\)\)/);
+    // Inline normalize chain: s.toLowerCase()...trim() === 'xxx'
+    const inlineNormExact = fnStr.match(/\.trim\(\)\s*===\s*'([^']+)'/);
+    if (inlineNormExact) {
+        return { type: 'exact', value: inlineNormExact[1] };
+    }
+
+    // ['a','b','c'].includes(normalize(s)) or ['a','b'].includes(s) — один из вариантов
+    const includesMatch = fnStr.match(/\[([^\]]+)\]\.includes\((?:normalize\(s\)|s)\)/);
     if (includesMatch) {
         const values = includesMatch[1].replace(/'/g, '').split(',').map(v => v.trim());
         return { type: 'exact_any', value: JSON.stringify(values) };
@@ -57,8 +63,8 @@ function serializeAnswer(answerFn) {
         return { type: 'range', value: JSON.stringify({ min: parseInt(rangeMatch[1]), max: parseInt(rangeMatch[2]) }) };
     }
 
-    // normalize(s).length > N — любой текст длиннее N
-    const lenMatch = fnStr.match(/normalize\(s\)\.length\s*>\s*(\d+)/);
+    // normalize(s).length > N or s.length > N — любой текст длиннее N
+    const lenMatch = fnStr.match(/(?:normalize\(s\)|s)\.length\s*>\s*(\d+)/);
     if (lenMatch) {
         return { type: 'any_text', value: JSON.stringify({ min_length: parseInt(lenMatch[1]) + 1 }) };
     }

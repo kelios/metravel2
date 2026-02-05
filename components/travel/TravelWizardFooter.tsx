@@ -383,4 +383,4 @@ const TravelWizardFooter: React.FC<TravelWizardFooterProps> = ({
 };
 
 
-export default TravelWizardFooter;
+export default React.memo(TravelWizardFooter);

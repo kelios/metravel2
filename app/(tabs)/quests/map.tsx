@@ -7,11 +7,10 @@ import {
     Text,
     StyleSheet,
     Pressable,
-    Image as RNImage,
+    ActivityIndicator,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Asset } from 'expo-asset';
-import { ALL_QUESTS_META, getQuestById, QuestMeta } from '@/components/quests/registry';
+import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type Point = {
@@ -24,33 +23,12 @@ type Point = {
     urlTravel?: string;
 };
 
-// надёжно получаем web-URL для Asset
-function assetUri(mod: any): string {
-    try {
-        // expo-asset стабильно даёт корректный путь на web
-        const a = Asset.fromModule(mod);
-        const uri = a?.uri;
-        if (!uri) return '';
-        if (uri.startsWith('http') || uri.startsWith('data:') || uri.startsWith('/')) return uri;
-        return `/${uri}`; // делаем абсолютным, если вдруг относительный
-    } catch {
-        // fallback через RNImage (на случай dev-сборки)
-        try {
-            const res = RNImage.resolveAssetSource?.(mod);
-            const uri = res?.uri;
-            if (!uri) return '';
-            if (uri.startsWith('http') || uri.startsWith('data:') || uri.startsWith('/')) return uri;
-            return `/${uri}`;
-        } catch {
-            return '';
-        }
-    }
-}
-
 export default function QuestsMapScreen() {
     const router = useRouter();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+
+    const { quests, loading: questsLoading } = useQuestsList();
 
     const [MapPageComponent, setMapPageComponent] = useState<React.ComponentType<any> | null>(null);
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
@@ -75,23 +53,13 @@ export default function QuestsMapScreen() {
     }, [isWeb]);
 
     const travel = useMemo(() => {
-        const data: Point[] = ALL_QUESTS_META.map((m: QuestMeta) => {
-            const bundle = getQuestById(m.id);
-            const address = bundle?.city?.name || m.cityId;
-
-            // 1) пробуем обложку из meta
-            let coverUri = m.cover ? assetUri(m.cover) : '';
-
-            // 2) если нет — берём первую картинку из шагов квеста
-            if (!coverUri && bundle?.steps?.length) {
-                const firstWithImg = bundle.steps.find((s: any) => s?.image);
-                if (firstWithImg?.image) coverUri = assetUri(firstWithImg.image);
-            }
+        const data: Point[] = quests.map((m) => {
+            const coverUri = typeof m.cover === 'string' ? m.cover : '';
 
             return {
                 id: undefined,
                 coord: `${m.lat},${m.lng}`,
-                address,
+                address: m.title,
                 travelImageThumbUrl: coverUri,
                 categoryName: 'Квест',
                 urlTravel: `/quests/${m.cityId}/${m.id}`,
@@ -99,7 +67,7 @@ export default function QuestsMapScreen() {
             };
         });
         return { data };
-    }, []);
+    }, [quests]);
 
     const [routePoints, setRoutePoints] = useState<[number, number][]>([]);
 
@@ -115,6 +83,14 @@ export default function QuestsMapScreen() {
                     <Ionicons name="arrow-back" size={16} color={colors.textOnPrimary} />
                     <Text style={styles.backBtnTxt}>Назад</Text>
                 </Pressable>
+            </View>
+        );
+    }
+
+    if (questsLoading) {
+        return (
+            <View style={styles.fallback}>
+                <ActivityIndicator color={colors.primary} />
             </View>
         );
     }

@@ -147,14 +147,14 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
       pane = typeof map.getPane === 'function' ? map.getPane(paneName) : null;
       if (!pane && typeof map.createPane === 'function') {
         pane = map.createPane(paneName);
-        console.info('[TravelMap] RouteLineLayer: created custom pane', paneName);
+        if (__DEV__) console.info('[TravelMap] RouteLineLayer: created custom pane', paneName);
       }
       if (pane && pane.style) {
         pane.style.zIndex = '450';
         pane.style.pointerEvents = 'none';
       }
     } catch (e) {
-      console.warn('[TravelMap] RouteLineLayer: failed to create pane', e);
+      if (__DEV__) console.warn('[TravelMap] RouteLineLayer: failed to create pane', e);
     }
 
     // Convert coords to Leaflet LatLng
@@ -167,18 +167,11 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
       .map(([lat, lng]) => L.latLng(lat, lng));
 
     if (latlngs.length < 2) {
-      console.warn('[TravelMap] RouteLineLayer: not enough valid coordinates', {
-        total: routeLineCoords.length,
-        valid: latlngs.length,
-      });
+      if (__DEV__) console.warn('[TravelMap] RouteLineLayer: not enough valid coordinates', latlngs.length);
       return;
     }
 
-    console.info('[TravelMap] RouteLineLayer: drawing route', {
-      points: latlngs.length,
-      firstPoint: latlngs[0],
-      lastPoint: latlngs[latlngs.length - 1],
-    });
+    if (__DEV__) console.info('[TravelMap] RouteLineLayer: drawing route, points:', latlngs.length);
 
     // Add polyline with slight delay to ensure pane is ready
     const addPolyline = () => {
@@ -213,26 +206,9 @@ const RouteLineLayer: React.FC<RouteLineLayerProps> = ({ routeLineCoords, colors
         
         polylineRef.current = line;
 
-        // Force map to redraw
-        setTimeout(() => {
-          if (!mountedRef.current) return;
-          try {
-            if (typeof map.invalidateSize === 'function') {
-              map.invalidateSize({ animate: false, pan: false });
-            }
-          } catch {
-            // noop
-          }
-        }, 50);
-
-        console.info('[TravelMap] RouteLineLayer: ✅ polyline added successfully', {
-          coordsCount: latlngs.length,
-          hasRoutePane,
-          pane: hasRoutePane ? paneName : 'overlayPane',
-          color: colors.primary || DESIGN_TOKENS.colors.primary,
-        });
+        if (__DEV__) console.info('[TravelMap] RouteLineLayer: polyline added, coords:', latlngs.length);
       } catch (error) {
-        console.error('[TravelMap] RouteLineLayer: ❌ failed to add polyline', error);
+        console.error('[TravelMap] RouteLineLayer: failed to add polyline', error);
         try {
           line.remove?.();
         } catch {
@@ -287,7 +263,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         try {
           mapRef.current.remove();
         } catch (e) {
-          console.warn('[TravelMap] Error removing map:', e);
+          if (__DEV__) console.warn('[TravelMap] Error removing map:', e);
         }
       }
       mapRef.current = null;
@@ -428,31 +404,21 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       try {
         if (map && typeof map.invalidateSize === 'function') {
           map.invalidateSize({ animate: true, pan: false });
-          console.info('[TravelMap] invalidateSize called, trigger:', resizeTrigger);
         }
-      } catch (e) {
-        console.warn('[TravelMap] Error invalidating size:', e);
+      } catch {
+        // noop
       }
     };
 
-    // Multiple attempts to ensure map resizes properly
-    if (typeof requestAnimationFrame !== 'undefined') {
-      requestAnimationFrame(() => invalidate());
-      requestAnimationFrame(() => {
-        setTimeout(invalidate, 50);
-      });
-    } else {
-      invalidate();
-    }
-
-    const timeouts = [
-      setTimeout(invalidate, 100),
-      setTimeout(invalidate, 300),
-      setTimeout(invalidate, 500),
-    ];
+    // Two-pass invalidation: immediate (rAF) + delayed for CSS transitions
+    const rafId = typeof requestAnimationFrame !== 'undefined'
+      ? requestAnimationFrame(invalidate)
+      : undefined;
+    const timer = setTimeout(invalidate, 300);
 
     return () => {
-      timeouts.forEach(t => clearTimeout(t));
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
+      clearTimeout(timer);
     };
   }, [resizeTrigger]);
 
@@ -465,23 +431,18 @@ export const TravelMap: React.FC<TravelMapProps> = ({
       try {
         if (map && typeof map.invalidateSize === 'function') {
           map.invalidateSize({ animate: false, pan: false });
-          console.info('[TravelMap] invalidateSize on ready');
         }
-      } catch (e) {
-        console.warn('[TravelMap] Error invalidating size on ready:', e);
+      } catch {
+        // noop
       }
     };
 
-    // Aggressively call invalidateSize when map is ready
-    const timeouts = [
-      setTimeout(invalidate, 0),
-      setTimeout(invalidate, 100),
-      setTimeout(invalidate, 300),
-      setTimeout(invalidate, 600),
-    ];
+    // Two-pass: immediate + delayed for layout settle
+    invalidate();
+    const timer = setTimeout(invalidate, 200);
 
     return () => {
-      timeouts.forEach(t => clearTimeout(t));
+      clearTimeout(timer);
     };
   }, [mapReady]);
 
@@ -492,7 +453,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     if (!enableOverlays || compact) return; // Don't add overlays in compact mode
 
     const map = mapRef.current;
-    console.info('[TravelMap] Initializing overlay layers');
+    if (__DEV__) console.info('[TravelMap] Initializing overlay layers');
 
     const controllersSnapshot = overlayControllersRef.current;
 
@@ -504,7 +465,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           map.removeLayer(controller.layer);
         }
       } catch (e) {
-        console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
+        if (__DEV__) console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
       }
     });
     controllersSnapshot.clear();
@@ -521,10 +482,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         poiController.layer.addTo(map);
         controllersSnapshot.set('osm-poi', poiController);
         poiController.start();
-        console.info('[TravelMap] ✅ POI overlay initialized');
+        if (__DEV__) console.info('[TravelMap] POI overlay initialized');
       }
     } catch (e) {
-      console.warn('[TravelMap] Failed to initialize POI overlay:', e);
+      if (__DEV__) console.warn('[TravelMap] Failed to initialize POI overlay:', e);
     }
 
     try {
@@ -538,10 +499,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         campingController.layer.addTo(map);
         controllersSnapshot.set('osm-camping', campingController);
         campingController.start();
-        console.info('[TravelMap] ✅ Camping overlay initialized');
+        if (__DEV__) console.info('[TravelMap] Camping overlay initialized');
       }
     } catch (e) {
-      console.warn('[TravelMap] Failed to initialize camping overlay:', e);
+      if (__DEV__) console.warn('[TravelMap] Failed to initialize camping overlay:', e);
     }
 
     return () => {
@@ -552,9 +513,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           if (controller.layer && map) {
             map.removeLayer(controller.layer);
           }
-          console.info('[TravelMap] Cleaned up overlay:', id);
+          if (__DEV__) console.info('[TravelMap] Cleaned up overlay:', id);
         } catch (e) {
-          console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
+          if (__DEV__) console.warn('[TravelMap] Failed to cleanup overlay:', id, e);
         }
       });
       controllersSnapshot.clear();
@@ -614,27 +575,13 @@ export const TravelMap: React.FC<TravelMapProps> = ({
           if (!mountedRef.current) return;
           if (map && !mapRef.current) {
             mapRef.current = map;
-            console.info('[TravelMap] Map ref set');
-
-            // Invalidate size immediately after map is set
-            setTimeout(() => {
-              if (map && typeof map.invalidateSize === 'function') {
-                map.invalidateSize({ animate: false, pan: false });
-                console.info('[TravelMap] Initial invalidateSize after ref');
-              }
-            }, 100);
+            if (__DEV__) console.info('[TravelMap] Map ref set');
           }
         }}
         whenReady={() => {
           if (!mountedRef.current) return;
-          console.info('[TravelMap] Map ready event fired');
+          if (__DEV__) console.info('[TravelMap] Map ready event fired');
           setMapReady(true);
-
-          // Additional invalidateSize when ready event fires
-          if (mapRef.current && typeof mapRef.current.invalidateSize === 'function') {
-            mapRef.current.invalidateSize({ animate: false, pan: false });
-            console.info('[TravelMap] invalidateSize in whenReady');
-          }
         }}
       >
         {/* Base tile layer */}

@@ -351,6 +351,40 @@ export const getStyles = (
         padding: 16,
         justifyContent: 'center',
       },
+      fab: {
+        position: 'absolute',
+        right: 16,
+        bottom: 16,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: themedColors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1001,
+        ...(Platform.OS === 'web'
+          ? ({ boxShadow: themedColors.boxShadows.medium } as any)
+          : Platform.OS === 'ios'
+          ? shadowMedium
+          : { elevation: shadowMedium.elevation }),
+      },
+      loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: themedColors.overlay,
+        zIndex: 1002,
+      },
+      panelPlaceholder: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+      },
+      panelPlaceholderText: {
+        fontSize: 14,
+        color: themedColors.textMuted,
+      },
   });
 };
 

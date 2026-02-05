@@ -76,10 +76,7 @@ export default function MapScreen() {
 
 
     const mapPanelPlaceholder = useMemo(
-        () => {
-            const { MapPageSkeleton } = require('@/components/MapPage/MapPageSkeleton');
-            return <MapPageSkeleton />;
-        },
+        () => <MapPageSkeleton />,
         [],
     );
 

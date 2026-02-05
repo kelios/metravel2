@@ -82,6 +82,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     const ignoredOldImageRef = useRef<string | null>(null);
     const lastNotifiedPreviewRef = useRef<string | null>(null);
     const pendingUploadRef = useRef<File | { uri: string; name: string; type: string } | null>(null);
+    const blobUrlsRef = useRef<Set<string>>(new Set());
+    const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const hasValidImage = Boolean(previewUrl || imageUri);
     const currentDisplayUrl = previewUrl ?? imageUri ?? '';
 
@@ -186,6 +188,15 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 clearTimeout(remoteRetryTimerRef.current);
                 remoteRetryTimerRef.current = null;
             }
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+                progressIntervalRef.current = null;
+            }
+            // Revoke all blob URLs to prevent memory leaks
+            blobUrlsRef.current.forEach(url => {
+                try { URL.revokeObjectURL(url); } catch { /* noop */ }
+            });
+            blobUrlsRef.current.clear();
         };
     }, []);
 
@@ -231,7 +242,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         const prevOldImage = prevOldImageRef.current;
         prevOldImageRef.current = oldImage;
         
-        console.info('PhotoUploadWithPreview: oldImage changed', { oldImage, isManuallySelected, isFirstRender, prevOldImage });
+        if (__DEV__) console.info('PhotoUploadWithPreview: oldImage changed', { oldImage, isManuallySelected, isFirstRender, prevOldImage });
         
         if (isManuallySelected) {
             return;
@@ -253,15 +264,15 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         if (!oldImage || !oldImage.trim()) {
             // Только если это не первый рендер и раньше было значение - не сбрасываем
             if (!isFirstRender && prevOldImage && prevOldImage.trim()) {
-                console.info('PhotoUploadWithPreview: oldImage became empty, keeping current state');
+                if (__DEV__) console.info('PhotoUploadWithPreview: oldImage became empty, keeping current state');
                 return;
             }
             // Первый рендер с пустым oldImage - ничего не делаем
             if (isFirstRender) {
-                console.info('PhotoUploadWithPreview: first render with empty oldImage, skipping');
+                if (__DEV__) console.info('PhotoUploadWithPreview: first render with empty oldImage, skipping');
                 return;
             }
-            console.info('PhotoUploadWithPreview: oldImage is empty, clearing image');
+            if (__DEV__) console.info('PhotoUploadWithPreview: oldImage is empty, clearing image');
             setImageUri(null);
             setPreviewUrl(null);
             setFallbackImageUrl(null);
@@ -270,7 +281,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         }
         
         const normalized = normalizeImageUrl(oldImage);
-        console.info('PhotoUploadWithPreview: normalized URL', normalized);
+        if (__DEV__) console.info('PhotoUploadWithPreview: normalized URL', normalized);
         if (normalized && normalized.length > 0) {
             setImageUri(normalized);
             setFallbackImageUrl(oldImage);
@@ -331,10 +342,11 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             let previewCandidate: string;
             if (Platform.OS === 'web' && file instanceof File) {
                 previewCandidate = URL.createObjectURL(file);
-                console.info('Created blob URL:', previewCandidate);
+                blobUrlsRef.current.add(previewCandidate);
+                if (__DEV__) console.info('Created blob URL:', previewCandidate);
             } else {
                 previewCandidate = (file as { uri: string }).uri;
-                console.info('Using file URI:', previewCandidate);
+                if (__DEV__) console.info('Using file URI:', previewCandidate);
             }
             
             // Устанавливаем превью сразу
@@ -372,10 +384,14 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             formData.append('id', normalizedId);
 
             // Симуляция прогресса
-            const progressInterval = setInterval(() => {
+            if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+            progressIntervalRef.current = setInterval(() => {
                 setUploadProgress(prev => {
                     if (prev >= 90) {
-                        clearInterval(progressInterval);
+                        if (progressIntervalRef.current) {
+                            clearInterval(progressIntervalRef.current);
+                            progressIntervalRef.current = null;
+                        }
                         return 90;
                     }
                     return prev + 10;
@@ -384,13 +400,16 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
             const response = await uploadImage(formData);
 
-            clearInterval(progressInterval);
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+                progressIntervalRef.current = null;
+            }
             setUploadProgress(100);
 
             const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
             const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
             
-            console.info('Upload response:', { uploadedUrlRaw, uploadedUrl });
+            if (__DEV__) console.info('Upload response:', { uploadedUrlRaw, uploadedUrl });
 
             if (uploadedUrl) {
                 // Успешная загрузка - показываем URL с сервера
@@ -466,7 +485,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
             const file = acceptedFiles[0];
             if (file) {
-                console.info('File selected:', file.name, file.type, file.size);
+                if (__DEV__) console.info('File selected:', file.name, file.type, file.size);
                 const validationError = validateFile(file);
                 if (validationError) {
                     setError(validationError);
@@ -528,7 +547,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                 onLoad={(e) => {
                                     const imgEl = e.currentTarget as HTMLImageElement;
                                     const isDecoded = (imgEl?.naturalWidth ?? 0) > 0 && (imgEl?.naturalHeight ?? 0) > 0;
-                                    console.info('Image loaded successfully:', currentDisplayUrl, {
+                                    if (__DEV__) console.info('Image loaded successfully:', currentDisplayUrl, {
                                         naturalWidth: imgEl?.naturalWidth,
                                         naturalHeight: imgEl?.naturalHeight,
                                         isDecoded,
@@ -542,7 +561,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                         lastPreviewUrl,
                                         hasTriedFallback
                                     );
-                                    console.error('Image decode failed:', currentDisplayUrl, 'fallback:', candidateFallback);
+                                    if (__DEV__) console.error('Image decode failed:', currentDisplayUrl, 'fallback:', candidateFallback);
                                     if (candidateFallback) {
                                         applyFallback(candidateFallback);
                                         return;
@@ -578,7 +597,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                         lastPreviewUrl,
                                         hasTriedFallback
                                     );
-                                    console.error('Image load error:', currentDisplayUrl, 'fallback:', candidateFallback);
+                                    if (__DEV__) console.error('Image load error:', currentDisplayUrl, 'fallback:', candidateFallback);
                                     if (candidateFallback) {
                                         applyFallback(candidateFallback);
                                         return;
@@ -783,11 +802,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
     },
     removeButton: {
         position: 'absolute',
-        top: 8,
-        right: 8,
+        top: 4,
+        right: 4,
         backgroundColor: 'rgba(0, 0, 0, 0.6)',
         borderRadius: DESIGN_TOKENS.radii.pill,
-        padding: 6,
+        width: 44,
+        height: 44,
+        minWidth: 44,
+        minHeight: 44,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         cursor: 'pointer',
     },
     placeholderContainer: {
@@ -890,4 +915,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>): any => ({
     },
 });
 
-export default PhotoUploadWithPreview;
+export default React.memo(PhotoUploadWithPreview);

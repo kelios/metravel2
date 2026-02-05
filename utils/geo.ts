@@ -1,5 +1,4 @@
 // src/utils/geo.ts
-import { ALL_QUESTS, QuestMeta } from '@/components/quests/cityQuests';
 
 const R_EARTH_KM = 6371;
 
@@ -13,13 +12,26 @@ export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: numb
     return 2 * R_EARTH_KM * Math.asin(Math.sqrt(h));
 }
 
-export function getQuestsNearby(lat: number, lng: number, radiusKm: number, opts?: {
-    petFriendlyOnly?: boolean;
-    difficulty?: Array<QuestMeta['difficulty']>;
-    tagsAnyOf?: string[];
-}): QuestMeta[] {
+type QuestLike = {
+    lat: number; lng: number;
+    petFriendly?: boolean;
+    difficulty?: string;
+    tags?: string[];
+};
+
+export function getQuestsNearby<T extends QuestLike>(
+    quests: T[],
+    lat: number,
+    lng: number,
+    radiusKm: number,
+    opts?: {
+        petFriendlyOnly?: boolean;
+        difficulty?: string[];
+        tagsAnyOf?: string[];
+    },
+): T[] {
     const { petFriendlyOnly, difficulty, tagsAnyOf } = opts || {};
-    return ALL_QUESTS
+    return quests
         .filter(q => {
             if (petFriendlyOnly && !q.petFriendly) return false;
             if (difficulty && difficulty.length && !difficulty.includes(q.difficulty ?? 'easy')) return false;

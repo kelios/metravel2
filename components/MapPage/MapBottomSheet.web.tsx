@@ -169,6 +169,13 @@ const getStyles = (colors: ThemedColors) =>
     contentContainer: {
       flexGrow: 1,
       minHeight: 0,
+      ...(Platform.OS === 'web'
+        ? ({
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            touchAction: 'pan-y',
+          } as any)
+        : null),
     },
   });
 

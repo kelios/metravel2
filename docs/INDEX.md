@@ -26,6 +26,10 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/SEO_MIGRATION.md` — meta tags, canonical/robots, structured data
 - `docs/AUTH_REQUIRED.md` — auth-required routes/actions
 
+## Quests
+
+- `docs/QUESTS_BACKEND.md` — quest backend migration, API, architecture, data migration
+
 ## Design system
 
 - `docs/DESIGN_SYSTEM_CONSOLIDATION.md` — how to migrate to `DESIGN_TOKENS`

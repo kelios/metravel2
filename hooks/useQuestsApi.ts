@@ -2,7 +2,6 @@
 // Хуки и адаптеры для работы с квестами через бэкенд API
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { QuestStep, QuestFinale, QuestCity } from '@/components/quests/QuestWizard';
-import type { QuestMeta } from '@/components/quests/registry';
 import type {
     ApiQuestMeta,
     ApiQuestBundle,
@@ -19,6 +18,23 @@ import {
     updateProgress as apiUpdateProgress,
     deleteProgress as apiDeleteProgress,
 } from '@/src/api/quests';
+
+// ===================== ТИПЫ ФРОНТЕНДА =====================
+
+/** Метаданные квеста для каталогов/поиска (фронтенд формат) */
+export type QuestMeta = {
+    id: string;
+    title: string;
+    points: number;
+    cityId: string;
+    lat: number;
+    lng: number;
+    durationMin?: number;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    tags?: string[];
+    petFriendly?: boolean;
+    cover?: any;
+};
 
 // ===================== АДАПТЕРЫ: API → Frontend =====================
 
@@ -212,6 +228,40 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
 
 // ===================== ХУКИ =====================
 
+/** Ленивый fallback на локальный реестр при недоступности API */
+async function fallbackQuestsList(): Promise<QuestMeta[]> {
+    try {
+        const mod = await import('@/components/quests/registry');
+        const allMeta: any[] = (mod as any).ALL_QUESTS_META || [];
+        return allMeta.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            points: m.points ?? 0,
+            cityId: m.cityId ?? '',
+            lat: m.lat ?? 0,
+            lng: m.lng ?? 0,
+            durationMin: m.durationMin,
+            difficulty: m.difficulty,
+            tags: m.tags,
+            petFriendly: m.petFriendly,
+            cover: m.cover,
+        }));
+    } catch {
+        return [];
+    }
+}
+
+async function fallbackQuestBundle(questId: string): Promise<FrontendQuestBundle | null> {
+    try {
+        const mod = await import('@/components/quests/registry');
+        const getQuestById: (id: string) => any = (mod as any).getQuestById;
+        const b = getQuestById(questId);
+        return b || null;
+    } catch {
+        return null;
+    }
+}
+
 /** Хук для загрузки списка квестов */
 export function useQuestsList() {
     const [quests, setQuests] = useState<QuestMeta[]>([]);
@@ -230,10 +280,13 @@ export function useQuestsList() {
                     setLoading(false);
                 }
             })
-            .catch((err) => {
+            .catch(async (err) => {
+                if (cancelled) return;
+                console.warn('API unavailable, falling back to local registry:', err?.message);
+                const local = await fallbackQuestsList();
                 if (!cancelled) {
-                    console.error('Error fetching quests list:', err);
-                    setError(err?.message || 'Ошибка загрузки квестов');
+                    setQuests(local);
+                    setError(local.length ? null : (err?.message || 'Ошибка загрузки квестов'));
                     setLoading(false);
                 }
             });
@@ -272,7 +325,21 @@ export function useQuestCities() {
                     setLoading(false);
                 }
             })
-            .catch(() => {
+            .catch(async () => {
+                if (cancelled) return;
+                console.warn('API unavailable for quest cities, falling back to local data');
+                try {
+                    const mod = await import('@/components/quests/cityQuests');
+                    const localCities: any[] = (mod as any).CITIES || [];
+                    if (!cancelled) {
+                        setCities(localCities.map((c: any) => ({
+                            id: c.id,
+                            name: c.name || '',
+                            lat: c.lat ?? 0,
+                            lng: c.lng ?? 0,
+                        })));
+                    }
+                } catch { /* ignore */ }
                 if (!cancelled) setLoading(false);
             });
         return () => { cancelled = true; };
@@ -306,10 +373,13 @@ export function useQuestBundle(questId: string | undefined) {
                     setLoading(false);
                 }
             })
-            .catch((err) => {
+            .catch(async (err) => {
+                if (cancelled) return;
+                console.warn('API unavailable for quest bundle, falling back to local registry:', err?.message);
+                const local = await fallbackQuestBundle(questId);
                 if (!cancelled) {
-                    console.error('Error fetching quest bundle:', err);
-                    setError(err?.message || 'Квест не найден');
+                    setBundle(local);
+                    setError(local ? null : (err?.message || 'Квест не найден'));
                     setLoading(false);
                 }
             });
@@ -320,11 +390,15 @@ export function useQuestBundle(questId: string | undefined) {
     return { bundle, loading, error };
 }
 
+const PROGRESS_SYNC_DEBOUNCE_MS = 2000;
+
 /** Хук для синхронизации прогресса квеста с бэкендом (для авторизованных) */
 export function useQuestProgressSync(questId: string | undefined, isAuthenticated: boolean) {
     const [progress, setProgress] = useState<ApiQuestProgress | null>(null);
     const [syncing, setSyncing] = useState(false);
     const progressIdRef = useRef<number | null>(null);
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingDataRef = useRef<any>(null);
 
     // Загрузка прогресса при маунте
     useEffect(() => {
@@ -345,17 +419,15 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         return () => { cancelled = true; };
     }, [questId, isAuthenticated]);
 
-    // Сохранение прогресса на сервер
-    const saveProgress = useCallback(async (data: {
-        currentIndex: number;
-        unlockedIndex: number;
-        answers: Record<string, string>;
-        attempts: Record<string, number>;
-        hints: Record<string, boolean>;
-        showMap: boolean;
-        completed?: boolean;
-    }) => {
-        if (!isAuthenticated || !progressIdRef.current) return;
+    // Flush pending debounced save
+    const flushSync = useCallback(async () => {
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+        }
+        const data = pendingDataRef.current;
+        if (!data || !isAuthenticated || !progressIdRef.current) return;
+        pendingDataRef.current = null;
 
         setSyncing(true);
         try {
@@ -376,8 +448,41 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         }
     }, [isAuthenticated]);
 
+    // Flush on unmount
+    useEffect(() => {
+        return () => {
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        };
+    }, []);
+
+    // Сохранение прогресса на сервер (с дебаунсом 2 сек)
+    const saveProgress = useCallback((data: {
+        currentIndex: number;
+        unlockedIndex: number;
+        answers: Record<string, string>;
+        attempts: Record<string, number>;
+        hints: Record<string, boolean>;
+        showMap: boolean;
+        completed?: boolean;
+    }) => {
+        if (!isAuthenticated || !progressIdRef.current) return;
+
+        pendingDataRef.current = data;
+
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = setTimeout(() => {
+            flushSync();
+        }, PROGRESS_SYNC_DEBOUNCE_MS);
+    }, [isAuthenticated, flushSync]);
+
     // Сброс прогресса
     const resetProgress = useCallback(async () => {
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = null;
+        }
+        pendingDataRef.current = null;
+
         if (!isAuthenticated || !progressIdRef.current) return;
         try {
             await apiDeleteProgress(progressIdRef.current);

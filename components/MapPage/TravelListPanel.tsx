@@ -103,6 +103,15 @@ const TravelListPanel: React.FC<Props> = ({
     return null;
   }, [hasMore, isLoading, styles.endText, styles.loader, themeColors.primary]);
 
+  if (!travelsData || travelsData.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>Мест не найдено</Text>
+        <Text style={styles.emptyHint}>Попробуйте изменить фильтры или увеличить радиус поиска</Text>
+      </View>
+    );
+  }
+
   return (
     <FlashList
       data={travelsData}

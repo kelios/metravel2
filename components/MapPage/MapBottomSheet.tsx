@@ -255,7 +255,7 @@ const getStyles = (colors: ThemedColors) =>
       ...colors.shadows.heavy,
       ...Platform.select({
         web: {
-          zIndex: 20,
+          zIndex: 50,
         },
       }),
     },
@@ -264,7 +264,7 @@ const getStyles = (colors: ThemedColors) =>
       position: 'fixed',
       left: 0,
       right: 0,
-      zIndex: 20,
+      zIndex: 50,
       flexDirection: 'column',
       backgroundColor: colors.surface,
       borderTopLeftRadius: 24,
@@ -346,6 +346,8 @@ const getStyles = (colors: ThemedColors) =>
           overflowY: 'auto',
           // @ts-ignore: web-only style
           WebkitOverflowScrolling: 'touch',
+          // @ts-ignore: web-only style
+          touchAction: 'pan-y',
         },
         default: {
           flex: 1,

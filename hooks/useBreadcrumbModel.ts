@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { Platform } from 'react-native';
 import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { getQuestById } from '@/components/quests/registry';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
+import { fetchQuestByQuestId } from '@/src/api/quests';
 import { queryKeys } from '@/src/queryKeys';
 
 const useGlobalSearchParamsSafe: typeof useGlobalSearchParams =
@@ -155,6 +155,23 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     gcTime: 10 * 60 * 1000,
   });
 
+  // Quest title from API (for breadcrumbs on quest detail pages)
+  const questSlugForBreadcrumb = useMemo(() => {
+    const p = resolvedPathname;
+    if (!p || !p.startsWith('/quests/')) return null;
+    const parts = p.split('/').filter(Boolean);
+    return parts.length >= 3 ? parts[2] : null;
+  }, [resolvedPathname]);
+
+  const { data: questApiData } = useQuery({
+    queryKey: ['quest-bundle', questSlugForBreadcrumb],
+    queryFn: () => questSlugForBreadcrumb ? fetchQuestByQuestId(questSlugForBreadcrumb) : null,
+    enabled: !!questSlugForBreadcrumb,
+    staleTime: 600_000,
+    gcTime: 10 * 60 * 1000,
+  });
+  const questApiTitle = questApiData?.title || '';
+
   return useMemo(() => {
     const p = resolvedPathname;
     const isHome = p === '/';
@@ -224,8 +241,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
     const isQuestDetails = p.startsWith('/quests/') && parts.length >= 3;
     if (isQuestDetails) {
       const questSlug = parts[2];
-      const questBundle = getQuestById(questSlug);
-      let questTitle = questBundle?.title || toTitleFromSegment(questSlug);
+      let questTitle = questApiTitle || toTitleFromSegment(questSlug);
       if (questTitle.length > MAX_BREADCRUMB_LENGTH) {
         questTitle = questTitle.slice(0, MAX_BREADCRUMB_LENGTH).trim() + '...';
       }
@@ -289,5 +305,5 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData?.name, travelSlug]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData?.name, travelSlug, questApiTitle]);
 }

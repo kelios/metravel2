@@ -20,6 +20,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
+import { getSiteBaseUrl } from '@/utils/seo';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { showToast } from '@/src/utils/toast';
@@ -72,7 +73,6 @@ const buildOsmUrl = (coord?: string) => {
 };
 
 const openExternal = async (url?: string) => {
-    const { getSiteBaseUrl } = require('@/utils/seo');
     const safeUrl = getSafeExternalUrl(url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
     if (!safeUrl) return;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
