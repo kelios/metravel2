@@ -704,7 +704,8 @@ export const useRouting = (
                 duration: cached.duration || estimateDurationSeconds(cached.distance, transportMode),
                 coords: cached.coords,
             })
-            // Важное: НЕ делаем return, т.к. возможна смена transportMode.
+            // routeKey уже включает transportMode, поэтому безопасно не перестраивать маршрут повторно.
+            return
         }
 
         // Skip if already processing this exact route

@@ -303,10 +303,6 @@ export function useLikeComment() {
         });
       }
     },
-    onSettled: () => {
-      // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: commentKeys.all });
-    },
   });
 }
 
@@ -360,10 +356,6 @@ export function useUnlikeComment() {
           queryClient.setQueryData(JSON.parse(key), value);
         });
       }
-    },
-    onSettled: () => {
-      // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: commentKeys.all });
     },
   });
 }

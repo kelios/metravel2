@@ -901,6 +901,25 @@ const MapPageComponent: React.FC<Props> = (props) => {
       .filter(([lng, lat]) => isValidCoordinate(lat, lng))
       .map(([lng, lat]) => ({ lat, lng }));
 
+    try {
+      const debugRouting =
+        typeof process !== 'undefined' &&
+        (((process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING === '1') ||
+          ((process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING === 'true'));
+      if (debugRouting) {
+        console.info('[Map.web.tsx] Route line source:', {
+          fullRouteCoordsLen: Array.isArray(fullRouteCoords) ? fullRouteCoords.length : null,
+          routePointsLen: Array.isArray(routePointsForRouting) ? routePointsForRouting.length : null,
+          candidate: Array.isArray(fullRouteCoords) && fullRouteCoords.length >= 2 ? 'fullRouteCoords' : 'routePoints',
+          routeLineLen: valid.length,
+          first: valid[0] ?? null,
+          last: valid.length ? valid[valid.length - 1] : null,
+        });
+      }
+    } catch {
+      // noop
+    }
+
     return valid.length >= 2 ? valid : ([] as Array<{ lat: number; lng: number }>);
   }, [fullRouteCoords, mode, normalizeLngLatWithHint, routePointsForRouting]);
 

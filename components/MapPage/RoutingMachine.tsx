@@ -77,6 +77,11 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     setRouteElevationStats,
     ORS_API_KEY,
 }) => {
+    const debugRouting = useMemo(() => {
+        if (typeof process === 'undefined') return false
+        const flag = (process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING
+        return flag === '1' || flag === 'true'
+    }, [])
     const prevStateRef = useRef<{
         loading: boolean
         error: string | boolean
@@ -198,7 +203,27 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             } catch {
                 // noop
             }
-            setFullRouteCoords(routingState.coords)
+            if (debugRouting) {
+                try {
+                    console.info('[RoutingMachine] sync -> setFullRouteCoords', {
+                        len: Array.isArray(routingState.coords) ? routingState.coords.length : null,
+                        first: Array.isArray(routingState.coords) ? routingState.coords?.[0] : null,
+                        last: Array.isArray(routingState.coords)
+                            ? routingState.coords?.[routingState.coords.length - 1]
+                            : null,
+                        distance: routingState.distance,
+                        duration: routingState.duration,
+                    })
+                } catch {
+                    // noop
+                }
+            }
+            // Не сбрасываем fullRouteCoords в [] при старте загрузки: это создает "прямую линию" миганием
+            // и может триггерить лишние эффекты/перерендеры. Очищаем только когда точек < 2 (отдельный эффект),
+            // либо когда реально есть геометрия.
+            if (Array.isArray(routingState.coords) && routingState.coords.length >= 2) {
+                setFullRouteCoords(routingState.coords)
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [

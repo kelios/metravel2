@@ -53,6 +53,8 @@ export function useRouteStoreAdapter() {
     points: [number, number][],
     options?: { force?: boolean }
   ) => {
+    const state = useRouteStore.getState();
+
     // ✅ ИСПРАВЛЕНИЕ: Проверяем, что points - это массив
     if (!Array.isArray(points)) {
       console.warn('[setRoutePoints] Invalid points array:', points);
@@ -61,12 +63,12 @@ export function useRouteStoreAdapter() {
 
     // Explicitly clear when empty array is provided
     if (points.length === 0) {
-      store.clearRoute();
+      state.clearRoute();
       return;
     }
 
     // Check if points are already the same - avoid infinite loop
-    const currentPoints = store.points;
+    const currentPoints = state.points;
     if (!options?.force && currentPoints.length === points.length) {
       const allMatch = points.every((point, index) => {
         const [lng, lat] = point;
@@ -83,7 +85,7 @@ export function useRouteStoreAdapter() {
     }
 
     // Clear existing points
-    store.clearRoute();
+    state.clearRoute();
     
     // Add new points с проверкой валидности
     points.forEach((point, index) => {
@@ -103,29 +105,30 @@ export function useRouteStoreAdapter() {
       const coords: LatLng = { lat, lng };
       const address = CoordinateConverter.formatCoordinates(coords);
       console.info('[setRoutePoints] Adding point', index, coords, address);
-      store.addPoint(coords, address);
+      useRouteStore.getState().addPoint(coords, address);
     });
 
-    console.info('[setRoutePoints] Points added. Total:', store.points.length);
-  }, [store]);
+    console.info('[setRoutePoints] Points added. Total:', useRouteStore.getState().points.length);
+  }, []);
 
   const setRouteDistance = useCallback((distance: number) => {
+    const state = useRouteStore.getState();
     const existingCoords =
-      store.route?.coordinates ?? store.points.map((p) => p.coordinates);
+      state.route?.coordinates ?? state.points.map((p) => p.coordinates);
 
-    const existingDuration = store.route?.duration ?? 0;
-    const prevElevationGain = store.route?.elevationGain;
-    const prevElevationLoss = store.route?.elevationLoss;
+    const existingDuration = state.route?.duration ?? 0;
+    const prevElevationGain = state.route?.elevationGain;
+    const prevElevationLoss = state.route?.elevationLoss;
 
-    const prevDistance = store.route?.distance;
+    const prevDistance = state.route?.distance;
     const sameDistance = typeof prevDistance === 'number' && prevDistance === distance;
 
     // If we already have the same distance and coordinates, avoid a store update.
-    if (sameDistance && store.route?.coordinates === existingCoords) {
+    if (sameDistance && state.route?.coordinates === existingCoords) {
       return;
     }
 
-    store.setRoute({
+    state.setRoute({
       coordinates: existingCoords,
       distance,
       duration: existingDuration,
@@ -133,16 +136,17 @@ export function useRouteStoreAdapter() {
       elevationGain: prevElevationGain,
       elevationLoss: prevElevationLoss,
     });
-  }, [store]);
+  }, []);
 
   const setRouteDuration = useCallback((durationSeconds: number) => {
+    const state = useRouteStore.getState();
     const existingCoords =
-      store.route?.coordinates ?? store.points.map((p) => p.coordinates);
-    const existingDistance = store.route?.distance ?? 0;
-    const prevElevationGain = store.route?.elevationGain;
-    const prevElevationLoss = store.route?.elevationLoss;
+      state.route?.coordinates ?? state.points.map((p) => p.coordinates);
+    const existingDistance = state.route?.distance ?? 0;
+    const prevElevationGain = state.route?.elevationGain;
+    const prevElevationLoss = state.route?.elevationLoss;
 
-    store.setRoute({
+    state.setRoute({
       coordinates: existingCoords,
       distance: existingDistance,
       duration: Number(durationSeconds) || 0,
@@ -150,27 +154,49 @@ export function useRouteStoreAdapter() {
       elevationGain: prevElevationGain,
       elevationLoss: prevElevationLoss,
     });
-  }, [store]);
+  }, []);
 
   const setFullRouteCoords = useCallback((coords: [number, number][]) => {
-    const latLngCoords: LatLng[] = coords.map(([lng, lat]) => ({ lat, lng }));
-    const distance = store.route?.distance ?? 0;
-    const duration = store.route?.duration ?? 0;
-    const prevElevationGain = store.route?.elevationGain;
-    const prevElevationLoss = store.route?.elevationLoss;
+    const debugRouting =
+      typeof process !== 'undefined' &&
+      ((process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING === '1' ||
+        (process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING === 'true');
 
-    const prevCoords = store.route?.coordinates;
+    const state = useRouteStore.getState();
+
+    if (debugRouting) {
+      try {
+        const first = Array.isArray(coords) && coords.length > 0 ? coords[0] : null;
+        const last =
+          Array.isArray(coords) && coords.length > 0 ? coords[coords.length - 1] : null;
+        console.info('[useRouteStoreAdapter] setFullRouteCoords called:', {
+          len: Array.isArray(coords) ? coords.length : null,
+          first,
+          last,
+        });
+      } catch {
+        // noop
+      }
+    }
+
+    const latLngCoords: LatLng[] = coords.map(([lng, lat]) => ({ lat, lng }));
+    const distance = state.route?.distance ?? 0;
+    const duration = state.route?.duration ?? 0;
+    const prevElevationGain = state.route?.elevationGain;
+    const prevElevationLoss = state.route?.elevationLoss;
+
+    const prevCoords = state.route?.coordinates;
     const sameLength = Array.isArray(prevCoords) && prevCoords.length === latLngCoords.length;
     const sameCoords = !!prevCoords && sameLength && prevCoords.every((p, i) => {
       const next = latLngCoords[i];
       return !!next && p.lat === next.lat && p.lng === next.lng;
     });
 
-    if (sameCoords && store.route?.distance === distance) {
+    if (sameCoords && state.route?.distance === distance) {
       return;
     }
 
-    store.setRoute({
+    state.setRoute({
       coordinates: latLngCoords,
       distance,
       duration,
@@ -178,16 +204,29 @@ export function useRouteStoreAdapter() {
       elevationGain: prevElevationGain,
       elevationLoss: prevElevationLoss,
     });
-  }, [store]);
+
+    if (debugRouting) {
+      try {
+        console.info('[useRouteStoreAdapter] route updated:', {
+          coordsLen: latLngCoords.length,
+          distance,
+          duration,
+        });
+      } catch {
+        // noop
+      }
+    }
+  }, []);
 
   const setRouteElevationStats = useCallback((elevationGainMeters: number | null, elevationLossMeters: number | null) => {
+    const state = useRouteStore.getState();
     const existingCoords =
-      store.route?.coordinates ?? store.points.map((p) => p.coordinates);
-    const existingDistance = store.route?.distance ?? 0;
-    const existingDuration = store.route?.duration ?? 0;
-    const isOptimal = store.route?.isOptimal ?? true;
+      state.route?.coordinates ?? state.points.map((p) => p.coordinates);
+    const existingDistance = state.route?.distance ?? 0;
+    const existingDuration = state.route?.duration ?? 0;
+    const isOptimal = state.route?.isOptimal ?? true;
 
-    store.setRoute({
+    state.setRoute({
       coordinates: existingCoords,
       distance: existingDistance,
       duration: existingDuration,
@@ -205,61 +244,62 @@ export function useRouteStoreAdapter() {
             ? Math.max(0, Math.round(elevationLossMeters))
             : undefined,
     });
-  }, [store]);
+  }, []);
 
   const handleRemoveRoutePoint = useCallback((index: number) => {
-    const point = store.points[index];
+    const point = useRouteStore.getState().points[index];
     if (point) {
-      store.removePoint(point.id);
+      useRouteStore.getState().removePoint(point.id);
     }
-  }, [store]);
+  }, []);
 
   const handleClearRoute = useCallback(() => {
-    store.clearRoute();
-  }, [store]);
+    useRouteStore.getState().clearRoute();
+  }, []);
 
   const handleAddressSelect = useCallback((address: string, coords: LatLng, isStart: boolean) => {
-    const canUpdate = typeof (store as any).updatePoint === 'function';
+    const state = useRouteStore.getState();
+    const canUpdate = typeof (state as any).updatePoint === 'function';
     if (isStart) {
-      const existingStart = store.getStartPoint() ?? store.points[0];
+      const existingStart = state.getStartPoint() ?? state.points[0];
       if (existingStart) {
         if (canUpdate) {
-          (store as any).updatePoint(existingStart.id, { coordinates: coords, address });
+          (state as any).updatePoint(existingStart.id, { coordinates: coords, address });
         } else {
-          store.removePoint(existingStart.id);
-          store.addPoint(coords, address);
+          state.removePoint(existingStart.id);
+          state.addPoint(coords, address);
         }
 
         // If we only have a single point and it's currently treated as both start and end,
         // ensure the end stays empty until user selects it explicitly.
-        if (store.points.length === 1) {
-          const endCandidate = store.getEndPoint();
+        if (state.points.length === 1) {
+          const endCandidate = state.getEndPoint();
           if (endCandidate && endCandidate.id === existingStart.id) {
             // Remove and re-add start to clear any persisted end address mirroring.
             // We keep only the start point.
-            store.removePoint(existingStart.id);
-            store.addPoint(coords, address);
+            state.removePoint(existingStart.id);
+            state.addPoint(coords, address);
           }
         }
         return;
       }
-      store.addPoint(coords, address);
+      state.addPoint(coords, address);
       return;
     }
 
-    const existingEnd = store.getEndPoint();
-    if (existingEnd && store.points.length >= 2) {
+    const existingEnd = state.getEndPoint();
+    if (existingEnd && state.points.length >= 2) {
       if (canUpdate) {
-        (store as any).updatePoint(existingEnd.id, { coordinates: coords, address });
+        (state as any).updatePoint(existingEnd.id, { coordinates: coords, address });
       } else {
-        store.removePoint(existingEnd.id);
-        store.addPoint(coords, address);
+        state.removePoint(existingEnd.id);
+        state.addPoint(coords, address);
       }
       return;
     }
 
-    store.addPoint(coords, address);
-  }, [store]);
+    state.addPoint(coords, address);
+  }, []);
 
   const handleAddressClear = useCallback((isStart: boolean) => {
     const target = isStart

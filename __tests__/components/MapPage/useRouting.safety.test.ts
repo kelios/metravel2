@@ -459,6 +459,54 @@ describe('useRouting - Safety Tests', () => {
     });
   });
 
+  describe('Caching behavior', () => {
+    it('does not refetch when the same route is rendered again and cached', async () => {
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({
+          features: [
+            {
+              geometry: {
+                coordinates: [
+                  [27.56, 53.9],
+                  [27.6, 53.95],
+                ],
+              },
+              properties: {
+                summary: { distance: 5000, duration: 0 },
+              },
+            },
+          ],
+        }),
+      });
+
+      const points: [number, number][] = [
+        [27.56, 53.9],
+        [27.6, 53.95],
+      ];
+
+      const { rerender, result } = renderHook(
+        ({ pts }) => useRouting(pts, 'foot', 'test-api-key-long-enough'),
+        { initialProps: { pts: points } }
+      );
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+        expect(result.current.coords.length).toBeGreaterThanOrEqual(2);
+      });
+
+      const firstCalls = (global.fetch as jest.Mock).mock.calls.length;
+      expect(firstCalls).toBeGreaterThanOrEqual(1);
+
+      // Re-render with same points (should use cache and return without scheduling a new fetch)
+      rerender({ pts: points });
+      await new Promise((r) => setTimeout(r, 30));
+
+      const afterCalls = (global.fetch as jest.Mock).mock.calls.length;
+      expect(afterCalls).toBe(firstCalls);
+    });
+  });
+
   describe('Transport Mode Changes', () => {
     it('handles transport mode change with same points', async () => {
       (global.fetch as jest.Mock).mockResolvedValue({

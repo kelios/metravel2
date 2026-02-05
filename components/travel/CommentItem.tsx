@@ -29,6 +29,11 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
   const isLiked = !!comment.is_liked;
 
   const handleLikeToggle = () => {
+    // Предотвращаем клик во время выполнения мутации
+    if (likeComment.isPending || unlikeComment.isPending) {
+      return;
+    }
+
     if (isLiked) {
       unlikeComment.mutate(comment.id);
     } else {
