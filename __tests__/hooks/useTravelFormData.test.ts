@@ -3,6 +3,7 @@ import { renderHook, waitFor, act, cleanup } from '@testing-library/react-native
 import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { fetchTravel } from '@/src/api/travelsApi';
 import { saveFormData } from '@/src/api/misc';
+import { ApiError } from '@/src/api/client';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
 
@@ -36,13 +37,13 @@ describe('useTravelFormData', () => {
     cleanup();
   });
 
-  it('redirects with error when travel does not exist', async () => {
-    (fetchTravel as jest.Mock).mockResolvedValue(null);
+  it('sets loadError when travel does not exist', async () => {
+    (fetchTravel as jest.Mock).mockRejectedValue(new ApiError(404, 'Not found'));
 
     const { result } = renderHook(() => useTravelFormData(baseOptions), { concurrentRoot: false });
 
     await waitFor(() => {
-      expect(router.replace).toHaveBeenCalledWith('/');
+      expect(result.current.isInitialLoading).toBe(false);
     });
 
     expect(Toast.show).toHaveBeenCalledWith(
@@ -50,7 +51,9 @@ describe('useTravelFormData', () => {
         text1: 'Путешествие не найдено',
       })
     );
+    expect(router.replace).not.toHaveBeenCalled();
     expect(result.current.hasAccess).toBe(false);
+    expect(result.current.loadError?.status).toBe(404);
     expect(result.current.isInitialLoading).toBe(false);
   });
 
@@ -425,7 +428,7 @@ describe('useTravelFormData', () => {
   });
 
   describe('Edit flow - access control', () => {
-    it('sets hasAccess to false when user does not own the travel', async () => {
+	    it('sets hasAccess to false when user does not own the travel', async () => {
       const otherUserTravel = {
         id: 123,
         name: 'Other User Travel',
@@ -447,17 +450,17 @@ describe('useTravelFormData', () => {
         { concurrentRoot: false }
       );
 
-      await waitFor(() => {
-        expect(result.current.hasAccess).toBe(false);
-      });
+	      await waitFor(() => {
+	        expect(result.current.hasAccess).toBe(false);
+	      });
 
-      expect(router.replace).toHaveBeenCalledWith('/');
-      expect(Toast.show).toHaveBeenCalledWith(
-        expect.objectContaining({
-          text1: 'Нет доступа',
-        })
-      );
-    });
+	      expect(router.replace).not.toHaveBeenCalled();
+	      expect(Toast.show).toHaveBeenCalledWith(
+	        expect.objectContaining({
+	          text1: 'Нет доступа',
+	        })
+	      );
+	    });
 
     it('allows superadmin to edit any travel', async () => {
       const otherUserTravel = {
@@ -495,8 +498,8 @@ describe('useTravelFormData', () => {
       expect(router.replace).not.toHaveBeenCalled();
     });
 
-    it('sets hasAccess to false on fetch error', async () => {
-      (fetchTravel as jest.Mock).mockRejectedValue(new Error('Network error'));
+	    it('sets hasAccess to false on fetch error', async () => {
+	      (fetchTravel as jest.Mock).mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(
         () =>
@@ -511,18 +514,17 @@ describe('useTravelFormData', () => {
         { concurrentRoot: false }
       );
 
-      await waitFor(() => {
-        expect(result.current.hasAccess).toBe(false);
-      });
+	      await waitFor(() => expect(result.current.hasAccess).toBe(false));
+	      await waitFor(() => expect(result.current.loadError).toBeTruthy());
 
-      expect(router.replace).toHaveBeenCalledWith('/');
-      expect(Toast.show).toHaveBeenCalledWith(
-        expect.objectContaining({
-          text1: 'Ошибка загрузки',
-        })
-      );
-    });
-  });
+	      expect(router.replace).not.toHaveBeenCalled();
+	      expect(Toast.show).toHaveBeenCalledWith(
+	        expect.objectContaining({
+	          text1: 'Ошибка загрузки',
+	        })
+	      );
+	    });
+	  });
 
   describe('Edit flow - data initialization', () => {
     it('correctly initializes form data from existing travel', async () => {

@@ -90,7 +90,7 @@ describe('UpsertTravel authReady gating', () => {
       authReady: false,
     };
 
-    const { rerender } = render(<UpsertTravel />);
+    const { rerender, getByText, queryByTestId } = render(<UpsertTravel />);
 
     // Пока authReady=false — нет запросов и редиректов
     expect(mockFetchTravel).not.toHaveBeenCalled();
@@ -104,8 +104,11 @@ describe('UpsertTravel authReady gating', () => {
       expect(mockFetchTravel).toHaveBeenCalledTimes(1);
     });
 
+    // No automatic redirect: the view should show a "no access" screen.
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/');
+      expect(getByText('Нет доступа')).toBeTruthy();
     });
+    expect(queryByTestId('travel-upsert.root')).toBeNull();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });

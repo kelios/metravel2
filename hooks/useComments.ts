@@ -192,7 +192,7 @@ export function useUpdateComment() {
   return useMutation({
     mutationFn: ({ commentId, data }: { commentId: number; data: TravelCommentUpdate }) =>
       commentsApi.updateComment(commentId, data),
-    onSuccess: (updatedComment) => {
+    onSuccess: () => {
       // Keep all list variants (thread + travel) in sync.
       queryClient.invalidateQueries({ queryKey: commentKeys.all, refetchType: 'active' });
     },

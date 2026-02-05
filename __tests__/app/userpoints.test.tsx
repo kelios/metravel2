@@ -125,7 +125,8 @@ describe('UserPointsScreen', () => {
     const loginButton = await screen.findByText('Войти');
     fireEvent.press(loginButton);
 
-    expect(router.push).toHaveBeenCalledWith('/login');
+    expect(router.push).toHaveBeenCalledWith(expect.stringContaining('/login'));
+    expect(router.push).toHaveBeenCalledWith(expect.stringContaining('intent=userpoints'));
   });
 
   it('should render PointsList when user is authenticated', async () => {

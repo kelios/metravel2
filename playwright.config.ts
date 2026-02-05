@@ -55,7 +55,7 @@ export default defineConfig({
         url: baseURL,
         // Local runs can leave the dev server running if Playwright is interrupted.
         // Reuse it instead of failing with EADDRINUSE.
-        reuseExistingServer: !!process.env.CI ? false : true,
+        reuseExistingServer: process.env.CI ? false : true,
         timeout: 600_000,
         env: {
           ...process.env,

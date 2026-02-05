@@ -148,7 +148,8 @@ describe('ProfileScreen', () => {
     const { getByText } = render(<ProfileScreen />);
 
     fireEvent.press(getByText('Войти'));
-    expect(mockPush).toHaveBeenCalledWith('/login');
+    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/login'));
+    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('intent=profile'));
   });
 
   it('calls logout and navigates to login on logout button press', async () => {

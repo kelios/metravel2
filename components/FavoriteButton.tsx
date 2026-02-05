@@ -142,7 +142,7 @@ export default function FavoriteButton({
         } finally {
             inFlightRef.current = false;
         }
-    }, [isAuthenticated, router, isFav, id, type, title, imageUrl, url, country, city, addFavorite, removeFavorite]);
+    }, [isAuthenticated, requireAuth, isFav, id, type, title, imageUrl, url, country, city, addFavorite, removeFavorite]);
 
     // On web, avoid rendering a DOM <button> to prevent nested button warnings inside clickable cards.
     // (react-native-web renders Pressable as <button> by default)

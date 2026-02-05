@@ -102,7 +102,8 @@ describe('RecommendationsTabs', () => {
     ).toBeTruthy();
 
     fireEvent.press(screen.getByText('Войти'));
-    expect(mockPush).toHaveBeenCalledWith('/login');
+    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/login'));
+    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('intent=favorites'));
   });
 
   it('shows empty favorites state when authenticated but favorites are empty', async () => {

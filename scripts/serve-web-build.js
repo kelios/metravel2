@@ -46,8 +46,14 @@ const proxyPaths = ['/api/', '/api', '/travel-image/', '/address-image/', '/gall
 const proxyTimeoutMs = Number(process.env.E2E_API_PROXY_TIMEOUT_MS || '60000')
 const proxyDebug = String(process.env.E2E_API_PROXY_DEBUG || '').toLowerCase() === 'true'
 
-const httpAgent = new http.Agent({ keepAlive: true })
-const httpsAgent = new https.Agent({ keepAlive: true, rejectUnauthorized: !allowInsecureProxy })
+// Keep proxy agents bounded to avoid socket/file-descriptor exhaustion in long E2E runs.
+const httpAgent = new http.Agent({ keepAlive: true, maxSockets: 50, maxFreeSockets: 10 })
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 50,
+  maxFreeSockets: 10,
+  rejectUnauthorized: !allowInsecureProxy,
+})
 
 let isShuttingDown = false
 
