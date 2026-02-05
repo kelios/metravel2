@@ -61,7 +61,7 @@ const INP_MAX_MS = process.env.CI
   ? getNumberEnv('E2E_INP_MAX_MS', 200)
   : getNumberEnv('E2E_INP_MAX_MS', 500);
 
-test.describe('Web Vitals (CLS/LCP/INP)', () => {
+test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
   test('travels page stays stable and fast', async ({ page }: any) => {
     await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(hideRecommendationsBanner);

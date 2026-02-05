@@ -102,7 +102,7 @@ async function finalizeClsAfterRender(page: any): Promise<number> {
   });
 }
 
-test.describe('Render audit: main and travel details (responsive + perf)', () => {
+test.describe('@perf Render audit: main and travel details (responsive + perf)', () => {
   for (const vp of VIEWPORTS) {
     test(`main page renders key blocks (${vp.name})`, async ({ page }) => {
       await page.setViewportSize({ width: vp.width, height: vp.height });

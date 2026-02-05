@@ -13,7 +13,7 @@ import { seedNecessaryConsent } from './helpers/storage';
 /**
  * TC-TRAVEL-DETAIL-024: Производительность загрузки (P2)
  */
-test.describe('Travel Details - Performance Metrics', () => {
+test.describe('@perf Travel Details - Performance Metrics', () => {
   test('TC-024: метрики производительности в пределах нормы', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
 
@@ -214,7 +214,7 @@ test.describe('Travel Details - Performance Metrics', () => {
 /**
  * Проверки качества рендеринга
  */
-test.describe('Travel Details - Rendering Quality', () => {
+test.describe('@perf Travel Details - Rendering Quality', () => {
   test('отсутствие визуальных артефактов', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
@@ -357,7 +357,7 @@ test.describe('Travel Details - Rendering Quality', () => {
 /**
  * Проверки оптимизации изображений
  */
-test.describe('Travel Details - Image Optimization', () => {
+test.describe('@perf Travel Details - Image Optimization', () => {
   test('изображения имеют корректные размеры', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
@@ -469,7 +469,7 @@ test.describe('Travel Details - Image Optimization', () => {
 /**
  * Проверки памяти и утечек
  */
-test.describe('Travel Details - Memory Management', () => {
+test.describe('@perf Travel Details - Memory Management', () => {
   test('отсутствие значительных утечек памяти при навигации', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
 

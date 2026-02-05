@@ -61,7 +61,7 @@ const ROUTES_FULL: string[] = [
 
 const ROUTES_LOCAL_DEFAULT: string[] = ['/', '/travelsby', '/roulette'];
 
-test.describe('CLS audit', () => {
+test.describe('@perf CLS audit', () => {
   test('audit core routes (clsTotal / clsAfterRender)', async ({ page }, testInfo) => {
     // This audit can take a while on dev servers (cold start / heavy routes).
     test.setTimeout(5 * 60_000);

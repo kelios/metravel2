@@ -131,7 +131,7 @@ async function collectCls(page: any): Promise<ClsData> {
   });
 }
 
-test.describe('CLS guard', () => {
+test.describe('@perf CLS guard', () => {
   test(`route ${ROUTE} should not exceed CLS thresholds`, async ({ page }) => {
     test.setTimeout(2 * 60_000);
 

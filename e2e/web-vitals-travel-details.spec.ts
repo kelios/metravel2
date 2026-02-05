@@ -297,7 +297,7 @@ async function collectAndAssert(page: any) {
   }
 }
 
-test.describe('Web Vitals (CLS/LCP/INP) - travel details', () => {
+test.describe('@perf Web Vitals (CLS/LCP/INP) - travel details', () => {
   test('travel details stays stable and fast (desktop)', async ({ page }: any) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await setupVitalsCollection(page);
