@@ -126,6 +126,17 @@ describe('Comments API', () => {
       );
       expect(result).toEqual([]);
     });
+
+    it('should treat 400 as empty list (missing thread/backends that reject travel_id)', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 400 } });
+
+      const result = await commentsApi.getCommentsByTravel(123);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comments/?travel_id=123'
+      );
+      expect(result).toEqual([]);
+    });
   });
 
   describe('getTravelComments', () => {

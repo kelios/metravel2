@@ -108,8 +108,8 @@ export default function CustomHeaderMobileMenu({
 
             <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>Аккаунт</Text>
-            {!isAuthenticated ? (
-              <>
+	            {!isAuthenticated ? (
+	              <>
                 <Pressable
                   onPress={() => onUserAction(buildLoginHref({ intent: 'menu' }) as any)}
                   style={styles.modalNavItem}
@@ -133,28 +133,40 @@ export default function CustomHeaderMobileMenu({
                   <Text style={styles.modalNavLabel}>Зарегистрироваться</Text>
                 </Pressable>
               </>
-            ) : (
-              <>
-                <Pressable
-                  onPress={() => onUserAction('/profile')}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel={username ? `Личный кабинет ${username}` : 'Личный кабинет'}
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather name="user" size={20} color={colors.textMuted} />
-                  </View>
-                  <Text style={styles.modalNavLabel}>
-                    {`Личный кабинет${favoritesCount > 0 ? ` (${favoritesCount})` : ''}`}
-                  </Text>
-                </Pressable>
+	            ) : (
+	              <>
+	                <Pressable
+	                  onPress={() => onUserAction('/profile')}
+	                  style={styles.modalNavItem}
+	                  accessibilityRole="button"
+	                  accessibilityLabel={username ? `Личный кабинет ${username}` : 'Личный кабинет'}
+	                >
+	                  <View style={styles.iconSlot20}>
+	                    <Feather name="user" size={20} color={colors.textMuted} />
+	                  </View>
+	                  <Text style={styles.modalNavLabel}>
+	                    {`Личный кабинет${favoritesCount > 0 ? ` (${favoritesCount})` : ''}`}
+	                  </Text>
+	                </Pressable>
 
-                <Pressable
-                  onPress={onMyTravels ? onMyTravels : () => onUserAction('/metravel')}
-                  style={styles.modalNavItem}
-                  accessibilityRole="button"
-                  accessibilityLabel="Мои путешествия"
-                >
+	                <Pressable
+	                  onPress={() => onUserAction('/travel/new')}
+	                  style={styles.modalNavItem}
+	                  accessibilityRole="button"
+	                  accessibilityLabel="Добавить путешествие"
+	                >
+	                  <View style={styles.iconSlot20}>
+	                    <Feather name="plus-circle" size={20} color={colors.textMuted} />
+	                  </View>
+	                  <Text style={styles.modalNavLabel}>Добавить путешествие</Text>
+	                </Pressable>
+
+	                <Pressable
+	                  onPress={onMyTravels ? onMyTravels : () => onUserAction('/metravel')}
+	                  style={styles.modalNavItem}
+	                  accessibilityRole="button"
+	                  accessibilityLabel="Мои путешествия"
+	                >
                   <View style={styles.iconSlot20}>
                     <Feather name="map" size={20} color={colors.textMuted} />
                   </View>

@@ -80,6 +80,7 @@ export const useRouting = (
     const rateLimitKeyRef = useRef<string | null>(null)
     const rateLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const resetDoneRef = useRef(false)
+    const activeRequestIdRef = useRef(0)
     // ✅ ИСПРАВЛЕНИЕ: Храним routePoints в ref чтобы избежать бесконечных ререндеров
     const routePointsRef = useRef<[number, number][]>(routePoints)
     
@@ -565,11 +566,25 @@ export const useRouting = (
         }
 
         const fetchRoute = async () => {
+            const requestId = ++activeRequestIdRef.current
             isProcessingRef.current = true
             lastRouteKeyRef.current = routeKey
 
+            const isStale = () =>
+                activeRequestIdRef.current !== requestId ||
+                lastRouteKeyRef.current !== routeKey ||
+                abortController.signal.aborted
+
+            const commitIfCurrent = (fn: () => void) => {
+                if (isStale()) return
+                fn()
+            }
+
             try {
-                setState((prev) => ({ ...prev, loading: true, error: false }))
+                commitIfCurrent(() => {
+                    setState((prev) => ({ ...prev, loading: true, error: false }))
+                })
+                // Record request even if stale-check would skip UI updates; it still counts towards rate limiting.
                 routeCache.recordRequest()
 
                 // `EXPO_PUBLIC_FORCE_OSRM` historically existed to force OSRM for driving in dev.
@@ -624,6 +639,8 @@ export const useRouting = (
                 }
 
                 const duration = result.duration || estimateDurationSeconds(result.distance, transportMode)
+                if (isStale()) return
+
                 routeCache.set(currentPoints, transportMode, result.coords, result.distance, duration)
                 resolvedRouteKeys.add(routeKey)
 
@@ -635,12 +652,14 @@ export const useRouting = (
                     isOptimal: result.isOptimal,
                 })
 
-                setState({
-                    loading: false,
-                    error: false,
-                    distance: result.distance,
-                    duration,
-                    coords: result.coords,
+                commitIfCurrent(() => {
+                    setState({
+                        loading: false,
+                        error: false,
+                        distance: result.distance,
+                        duration,
+                        coords: result.coords,
+                    })
                 })
             } catch (primaryError: any) {
                 if (primaryError?.name === 'AbortError') return
@@ -658,17 +677,23 @@ export const useRouting = (
                     firstCoords: currentPoints?.slice(0, 2),
                 })
 
-                setState({
-                    loading: false,
-                    error: msg,
-                    distance: directDistance,
-                    duration,
-                    coords: currentPoints,
+                commitIfCurrent(() => {
+                    setState({
+                        loading: false,
+                        error: msg,
+                        distance: directDistance,
+                        duration,
+                        coords: currentPoints,
+                    })
                 })
+                if (isStale()) return
                 resolvedRouteKeys.add(routeKey)
                 routeCache.set(currentPoints, transportMode, currentPoints, directDistance, duration)
             } finally {
-                isProcessingRef.current = false
+                // Prevent older in-flight requests from clearing the "processing" flag for newer ones.
+                if (activeRequestIdRef.current === requestId) {
+                    isProcessingRef.current = false
+                }
             }
         }
 

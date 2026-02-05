@@ -66,8 +66,15 @@ export const commentsApi = {
         `/travel-comments/?travel_id=${travelId}`
       );
     } catch (error) {
+      const status = getErrorStatus(error);
       // Some backends return 404 for an empty travel thread instead of [].
-      if (getErrorStatus(error) === 404) {
+      if (status === 404) {
+        return [];
+      }
+      // After E2E runs / DB resets the "main thread" can be missing, and some backends
+      // respond with 400 for travel_id lookups instead of returning an empty list.
+      // Treat this as an empty state so comments remain publicly readable.
+      if (status === 400) {
         return [];
       }
       throw error;

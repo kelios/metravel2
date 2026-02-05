@@ -232,7 +232,18 @@ test.describe('Footer layout invariants (web)', () => {
       const count = await items.count();
       expect(count, `expected at least 3 footer items at width=${w}`).toBeGreaterThanOrEqual(3);
 
-      const [b0, b1, b2] = await Promise.all([items.nth(0).boundingBox(), items.nth(1).boundingBox(), items.nth(2).boundingBox()]);
+      // Bounding box is null when element is detached/hidden. Wait for stable rendering.
+      for (const idx of [0, 1, 2]) {
+        const item = items.nth(idx);
+        await item.scrollIntoViewIfNeeded().catch(() => null);
+        await expect(item).toBeVisible({ timeout: 10_000 });
+      }
+
+      const [b0, b1, b2] = await Promise.all([
+        items.nth(0).boundingBox(),
+        items.nth(1).boundingBox(),
+        items.nth(2).boundingBox(),
+      ]);
       expect(b0).not.toBeNull();
       expect(b1).not.toBeNull();
       expect(b2).not.toBeNull();

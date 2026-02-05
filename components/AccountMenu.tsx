@@ -448,6 +448,13 @@ function AccountMenu() {
           {expandedSections.travels && (
             <>
               <Menu.Item
+                onPress={() => handleNavigate('/travel/new')}
+                title="Добавить путешествие"
+                leadingIcon={({ size }) => <Feather name="plus-circle" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
                 onPress={() =>
                   handleNavigate('/metravel', () => {
                     const numericUserId = userId ? Number(userId) : undefined;

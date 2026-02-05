@@ -188,6 +188,7 @@ describe('AccountMenu', () => {
 
     const { getByText } = renderWithClient(<RenderRightMenu />);
     expect(getByText('Мои путешествия')).toBeTruthy();
+    expect(getByText('Добавить путешествие')).toBeTruthy();
   });
 
   it('displays username when authenticated', () => {
@@ -370,6 +371,30 @@ describe('AccountMenu', () => {
 
     await waitFor(() => {
       expect(mockUpdateFilters).toHaveBeenCalledWith({ user_id: 1 });
+    });
+  });
+
+  it('navigates to new travel screen when pressing "Добавить путешествие"', async () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      username: 'testuser',
+      logout: mockLogout,
+      userId: '1',
+      setIsAuthenticated: jest.fn(),
+      setUsername: jest.fn(),
+      setIsSuperuser: jest.fn(),
+      setUserId: jest.fn(),
+      isSuperuser: false,
+      login: jest.fn(),
+      sendPassword: jest.fn(),
+      setNewPassword: jest.fn(),
+    } as any);
+
+    const { getByText } = renderWithClient(<AccountMenu />);
+    fireEvent.press(getByText('Добавить путешествие'));
+
+    await waitFor(() => {
+      expect(router.push).toHaveBeenCalledWith('/travel/new');
     });
   });
 

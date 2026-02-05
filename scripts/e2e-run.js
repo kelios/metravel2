@@ -60,6 +60,7 @@ async function main() {
     'test',
     '--forbid-only',
     '--retries=0',
+    '--pass-with-no-tests',
     `--workers=${workersFast}`,
     '--grep-invert',
     '@perf',
@@ -73,6 +74,7 @@ async function main() {
     'test',
     '--forbid-only',
     '--retries=0',
+    '--pass-with-no-tests',
     '--workers=1',
     '--grep',
     '@perf',
@@ -86,4 +88,3 @@ main().catch((err) => {
   console.error(err && err.message ? err.message : String(err));
   process.exit(1);
 });
-

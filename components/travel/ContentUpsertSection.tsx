@@ -1,11 +1,19 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { View, SafeAreaView, StyleSheet, ScrollView, Text, NativeSyntheticEvent, LayoutChangeEvent, Modal, TouchableOpacity, Platform, Dimensions } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import * as Clipboard from 'expo-clipboard';
 import { TravelFormData } from '@/src/types/types';
 import TextInputComponent from '@/components/TextInputComponent';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
+import Button from '@/components/ui/Button';
+import { appendPlainTextToHtml } from '@/utils/htmlUtils';
+import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
+import { showToast } from '@/src/utils/toast';
 
 const ArticleEditor = lazy(() => import('@/components/ArticleEditor'));
 
@@ -38,6 +46,11 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
     const [fieldPositions, setFieldPositions] = useState<Record<string, number>>({});
     const scrollRef = useRef<ScrollView>(null);
     const [isDescriptionFullscreen, setIsDescriptionFullscreen] = useState(false);
+    const [isImportingDescriptionText, setIsImportingDescriptionText] = useState(false);
+    const [isPastingDescriptionText, setIsPastingDescriptionText] = useState(false);
+
+    const dictation = useWebSpeechDictation({ lang: 'ru-RU', continuous: true });
+    const descriptionHtmlRef = useRef<string>(String(formData.description ?? ''));
 
     // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -126,6 +139,116 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         [setFormData]
     );
 
+    useEffect(() => {
+        descriptionHtmlRef.current = String(formData.description ?? '');
+    }, [formData.description]);
+
+    useEffect(() => {
+        dictation.bindFinalTextHandler((text) => {
+            const next = appendPlainTextToHtml(descriptionHtmlRef.current, text);
+            descriptionHtmlRef.current = next;
+            handleChange('description', next as any);
+        });
+    }, [dictation, handleChange]);
+
+    const appendToDescription = useCallback(
+        (plainText: string) => {
+            const next = appendPlainTextToHtml(String(formData.description ?? ''), plainText);
+            handleChange('description', next as any);
+        },
+        [formData.description, handleChange]
+    );
+
+    const readUriAsText = useCallback(async (uri: string): Promise<string> => {
+        const safeUri = String(uri ?? '');
+        if (!safeUri) return '';
+
+        // Web: blob/data/http urls can be read via fetch()
+        if (Platform.OS === 'web' && /^(blob:|data:|https?:)/i.test(safeUri)) {
+            const res = await fetch(safeUri);
+            return await res.text();
+        }
+
+        // Native: file:// (and in some cases content://) via expo-file-system
+        return await FileSystem.readAsStringAsync(safeUri, { encoding: 'utf8' as any });
+    }, []);
+
+    const importDescriptionText = useCallback(async () => {
+        setIsImportingDescriptionText(true);
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: '*/*',
+                copyToCacheDirectory: true,
+                multiple: false,
+            });
+
+            if (result.canceled || !result.assets?.[0]) return;
+            const asset = result.assets[0];
+
+            const size = typeof asset.size === 'number' ? asset.size : null;
+            if (size != null && size > 1024 * 1024) {
+                await showToast({
+                    type: 'error',
+                    text1: 'Слишком большой файл',
+                    text2: 'Пожалуйста, выберите текст до 1 МБ (например .txt/.md).',
+                });
+                return;
+            }
+
+            const text = await readUriAsText(String(asset.uri ?? ''));
+            const cleaned = String(text ?? '').trim();
+            if (!cleaned) {
+                await showToast({
+                    type: 'error',
+                    text1: 'Пустой текст',
+                    text2: 'Файл не содержит текста или не удалось прочитать содержимое.',
+                });
+                return;
+            }
+
+            appendToDescription(cleaned);
+            await showToast({
+                type: 'success',
+                text1: 'Текст добавлен',
+                text2: asset.name ? `Файл: ${asset.name}` : undefined,
+            });
+        } catch (err: any) {
+            await showToast({
+                type: 'error',
+                text1: 'Не удалось импортировать',
+                text2: err?.message ? String(err.message) : 'Попробуйте другой файл (например .txt).',
+            });
+        } finally {
+            setIsImportingDescriptionText(false);
+        }
+    }, [appendToDescription, readUriAsText]);
+
+    const pasteDescriptionText = useCallback(async () => {
+        setIsPastingDescriptionText(true);
+        try {
+            const text = await Clipboard.getStringAsync();
+            const cleaned = String(text ?? '').trim();
+            if (!cleaned) {
+                await showToast({
+                    type: 'error',
+                    text1: 'Буфер пуст',
+                    text2: 'Скопируйте текст и попробуйте снова.',
+                });
+                return;
+            }
+            appendToDescription(cleaned);
+            await showToast({ type: 'success', text1: 'Текст добавлен', text2: 'Из буфера обмена' });
+        } catch (err: any) {
+            await showToast({
+                type: 'error',
+                text1: 'Не удалось вставить',
+                text2: err?.message ? String(err.message) : 'Попробуйте снова.',
+            });
+        } finally {
+            setIsPastingDescriptionText(false);
+        }
+    }, [appendToDescription]);
+
     // Получить ошибку для поля (показываем только если поле было "тронуто")
     const getError = useCallback((field: string) => {
         if (!touchedFields.has(field)) return null;
@@ -203,6 +326,63 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                                     </Text>
                                     <Text style={styles.descriptionCounterText}>{descriptionPlainLength} символов</Text>
                                 </View>
+
+                                <View style={styles.descriptionActionsRow}>
+                                    {Platform.OS === 'web' && dictation.isSupported ? (
+                                        <Button
+                                            size="sm"
+                                            variant={dictation.isListening ? 'danger' : 'outline'}
+                                            label={dictation.isListening ? 'Стоп' : 'Надиктовать'}
+                                            icon={<Feather name={dictation.isListening ? 'square' : 'mic'} size={16} color={dictation.isListening ? colors.textOnPrimary : colors.text} />}
+                                            onPress={() => (dictation.isListening ? dictation.stop() : dictation.start())}
+                                            style={styles.descriptionActionButton}
+                                        />
+                                    ) : (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            label="Диктовка"
+                                            icon={<Feather name="mic" size={16} color={colors.text} />}
+                                            disabled
+                                            style={styles.descriptionActionButton}
+                                        />
+                                    )}
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        label={isImportingDescriptionText ? 'Импорт…' : 'Импорт текста'}
+                                        icon={<Feather name="upload" size={16} color={colors.text} />}
+                                        loading={isImportingDescriptionText}
+                                        disabled={isImportingDescriptionText}
+                                        onPress={importDescriptionText}
+                                        style={styles.descriptionActionButton}
+                                    />
+
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        label={isPastingDescriptionText ? 'Вставка…' : 'Вставить'}
+                                        icon={<Feather name="clipboard" size={16} color={colors.text} />}
+                                        loading={isPastingDescriptionText}
+                                        disabled={isPastingDescriptionText}
+                                        onPress={pasteDescriptionText}
+                                        style={styles.descriptionActionButton}
+                                    />
+                                </View>
+
+                                {Platform.OS === 'web' && dictation.isSupported && dictation.isListening && dictation.interimText ? (
+                                    <Text style={styles.dictationInterimText}>
+                                        {dictation.interimText}
+                                    </Text>
+                                ) : null}
+
+                                {Platform.OS !== 'web' ? (
+                                    <Text style={styles.dictationHint}>
+                                        Подсказка: на телефоне можно использовать микрофон на клавиатуре (системная диктовка) и потом нажать «Вставить».
+                                    </Text>
+                                ) : null}
+
                                 <Text style={styles.descriptionAnchorHint}>{descriptionAnchorHint}</Text>
                                 {!!error && (
                                     <View style={styles.errorContainer}>
@@ -476,6 +656,27 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
+    },
+    descriptionActionsRow: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: DESIGN_TOKENS.spacing.xs,
+        marginTop: DESIGN_TOKENS.spacing.sm,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    descriptionActionButton: {
+        minHeight: 36,
+    },
+    dictationInterimText: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: colors.textMuted,
+    },
+    dictationHint: {
+        marginTop: DESIGN_TOKENS.spacing.xs,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+        lineHeight: 16,
     },
     descriptionEditChip: {
         paddingHorizontal: DESIGN_TOKENS.spacing.sm,

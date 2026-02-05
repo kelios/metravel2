@@ -27,6 +27,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
 import { createLeafletLayer } from '@/src/utils/mapWebLayers';
 import { DESIGN_COLORS } from '@/constants/designSystem';
+import { ensureLeafletCss } from '@/src/utils/ensureLeafletCss';
 
 interface UserPointsMapProps {
   /**
@@ -902,6 +903,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     Boolean((navigator as any).webdriver);
 
   const [mapInstance, setMapInstance] = React.useState<any>(null);
+  const mapRef = React.useRef<any>(null);
   const baseLayerFallbackIndexRef = React.useRef(0);
   const baseLayerFallbackSwitchingRef = React.useRef(false);
 
@@ -941,6 +943,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     if (Platform.OS !== 'web') return;
     let cancelled = false;
     try {
+      ensureLeafletCss();
       if (cancelled) return;
       setMods({
         L: Leaflet,
@@ -1368,6 +1371,16 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     [isWebAutomation]
   );
 
+  const handleWhenReady = React.useCallback(() => {
+    try {
+      const map = mapRef.current;
+      if (!map) return;
+      handleMapReady(map);
+    } catch {
+      // noop
+    }
+  }, [handleMapReady]);
+
   const polylinePathOptions = React.useMemo(() => {
     return { color: colors.primary, weight: 4, opacity: 0.85 } as any;
   }, [colors.primary]);
@@ -1474,22 +1487,12 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
         </style>
       ) : null}
       <mods.MapContainer
+        ref={mapRef}
         center={[center.lat, center.lng]}
         zoom={safePoints.length > 0 ? 10 : 5}
-        whenCreated={handleMapReady as any}
+        whenReady={handleWhenReady}
         style={{ height: '100%', width: '100%' }}
       >
-        {(() => {
-          const TileLayer = (ReactLeaflet as any)?.TileLayer;
-          if (!TileLayer) return null;
-          return (
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution="&copy; OpenStreetMap contributors"
-            />
-          );
-        })()}
-
 	        <WebMapInstanceBinder useMap={mods.useMap} onMapReady={handleMapReady} />
 	        <WebMapAutoResize useMap={mods.useMap} />
 	        <WebMapClickHandler useMapEvents={mods.useMapEvents} onMapPress={onMapPress} />

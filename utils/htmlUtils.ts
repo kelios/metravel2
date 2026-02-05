@@ -58,6 +58,32 @@ export function escapeHtml(value: string): string {
 }
 
 /**
+ * Converts plain text into a minimal HTML representation suitable for rich-text editors.
+ * - Blank lines become paragraph breaks.
+ * - Single newlines become <br/>.
+ */
+export function plainTextToHtml(text: string): string {
+    const raw = String(text ?? '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+    if (!raw) return '';
+
+    const paragraphs = raw.split(/\n{2,}/g);
+    return paragraphs
+        .map((p) => `<p>${escapeHtml(p).replace(/\n/g, '<br/>')}</p>`)
+        .join('');
+}
+
+/**
+ * Appends plain text to an existing HTML string (adds a blank paragraph separator when needed).
+ */
+export function appendPlainTextToHtml(existingHtml: string, text: string): string {
+    const base = String(existingHtml ?? '');
+    const addition = plainTextToHtml(text);
+    if (!addition) return base;
+    if (!base.trim()) return addition;
+    return `${base}<p><br/></p>${addition}`;
+}
+
+/**
  * Safe JSON stringify that avoids breaking HTML script tags
  */
 export function safeJsonString(value: string): string {
