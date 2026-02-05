@@ -9,6 +9,9 @@ interface RoutingStatusProps {
   distance: number | null;
   duration?: number | null;
   transportMode: 'car' | 'bike' | 'foot';
+  isEstimated?: boolean;
+  elevationGain?: number | null;
+  elevationLoss?: number | null;
 }
 
 const getModeLabel = (mode: 'car' | 'bike' | 'foot') => {
@@ -60,6 +63,9 @@ export default function RoutingStatus({
   distance,
   duration,
   transportMode,
+  isEstimated = false,
+  elevationGain,
+  elevationLoss,
 }: RoutingStatusProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -139,11 +145,15 @@ export default function RoutingStatus({
 
   if (distance !== null && distance > 0) {
     const time = duration != null && duration > 0 ? formatDuration(duration) : estimateTime(distance, transportMode);
+    const showElevation =
+      (transportMode === 'bike' || transportMode === 'foot') &&
+      Number.isFinite(elevationGain as any) &&
+      Number.isFinite(elevationLoss as any);
     return (
       <View style={[styles.container, styles.successContainer]}>
         <View style={styles.successHeader}>
           <Feather name={getModeIcon(transportMode)} size={16} color={colors.success} />
-          <Text style={styles.successTitle}>Маршрут построен</Text>
+          <Text style={styles.successTitle}>{isEstimated ? 'Оценка маршрута' : 'Маршрут построен'}</Text>
         </View>
         <View style={styles.successStats}>
           <View style={styles.statRow}>
@@ -158,6 +168,18 @@ export default function RoutingStatus({
             <Text style={styles.statLabel}>Способ:</Text>
             <Text style={styles.statValue}>{getModeLabel(transportMode)}</Text>
           </View>
+          {showElevation && (
+            <>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Набор:</Text>
+                <Text style={styles.statValue}>{Math.round(Number(elevationGain))} м</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={styles.statLabel}>Спуск:</Text>
+                <Text style={styles.statValue}>{Math.round(Number(elevationLoss))} м</Text>
+              </View>
+            </>
+          )}
         </View>
       </View>
     );

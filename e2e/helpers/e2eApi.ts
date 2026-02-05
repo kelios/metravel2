@@ -33,8 +33,12 @@ function tokenFromStorageState(): string {
       const tokenEntry = ls.find((x: any) => x?.name === 'secure_userToken');
       const encrypted = String(tokenEntry?.value ?? '').trim();
       if (!encrypted) continue;
-      const token = simpleDecrypt(encrypted, 'metravel_encryption_key_v1').trim();
-      if (token) return normalizeToken(token);
+      const looksBase64 = /^[A-Za-z0-9+/]+=*$/.test(encrypted) && encrypted.length % 4 === 0;
+      if (looksBase64) {
+        const token = simpleDecrypt(encrypted, 'metravel_encryption_key_v1').trim();
+        if (token) return normalizeToken(token);
+      }
+      return normalizeToken(encrypted);
     }
   } catch {
     // ignore
@@ -74,7 +78,9 @@ export async function apiLogin(email: string, password: string): Promise<E2EApiC
 }
 
 export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
-  const apiBaseRaw = (process.env.E2E_API_URL || process.env.EXPO_PUBLIC_API_URL || '').trim();
+  const apiBaseRaw =
+    (process.env.E2E_API_URL || process.env.EXPO_PUBLIC_API_URL || process.env.BASE_URL || '').trim() ||
+    `http://127.0.0.1:${Number(process.env.E2E_WEB_PORT || '8085')}`;
   if (!apiBaseRaw) return null;
 
   const tokenFromEnv = normalizeToken(process.env.E2E_API_TOKEN || '');
@@ -86,6 +92,12 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
   const password = String(process.env.E2E_PASSWORD || '').trim();
   if (email && password) {
     return apiLogin(email, password);
+  }
+
+  // Fallback: use token from the Playwright storageState (global-setup writes it).
+  const tokenFromState = tokenFromStorageState();
+  if (tokenFromState) {
+    return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromState };
   }
 
   return null;
@@ -276,26 +288,70 @@ async function getUserIdFromPage(page: any): Promise<string> {
 export async function loginAsUser(page: any): Promise<{ userId?: string }> {
   const email = process.env.E2E_EMAIL || '';
   const password = process.env.E2E_PASSWORD || '';
-  
-  await page.goto('/login');
+
+  if (!email.trim() || !password.trim()) {
+    // Store plaintext token for maximum compatibility with the app's secureStorage
+    // (it falls back to raw value when decryption fails).
+    await page.addInitScript((value: string) => {
+      try {
+        window.localStorage.setItem('secure_userToken', value);
+      } catch {
+        // ignore
+      }
+    }, 'e2e-fake-token');
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem('userId', '1');
+        window.localStorage.setItem('userName', 'E2E User');
+        window.localStorage.setItem('isSuperuser', 'false');
+      } catch {
+        // ignore
+      }
+    });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    return { userId: '1' };
+  }
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.getByRole('button', { name: /^войти$/i }).click();
-  await page.waitForURL('**/*');
+  await page.waitForTimeout(500);
 
   const userId = await getUserIdFromPage(page);
   return userId ? { userId } : {};
 }
 
 export async function loginAsAdmin(page: any): Promise<{ userId?: string }> {
-  const email = process.env.E2E_ADMIN_EMAIL || process.env.E2E_EMAIL || '';
-  const password = process.env.E2E_ADMIN_PASSWORD || process.env.E2E_PASSWORD || '';
-  
-  await page.goto('/login');
+  const email = process.env.E2E_ADMIN_EMAIL || '';
+  const password = process.env.E2E_ADMIN_PASSWORD || '';
+
+  if (!email.trim() || !password.trim()) {
+    await page.addInitScript((value: string) => {
+      try {
+        window.localStorage.setItem('secure_userToken', value);
+      } catch {
+        // ignore
+      }
+    }, 'e2e-fake-admin-token');
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem('userId', '2');
+        window.localStorage.setItem('userName', 'E2E Admin');
+        window.localStorage.setItem('isSuperuser', 'true');
+      } catch {
+        // ignore
+      }
+    });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    return { userId: '2' };
+  }
+
+  await page.goto('/login', { waitUntil: 'domcontentloaded' });
   await page.fill('input[type="email"]', email);
   await page.fill('input[type="password"]', password);
   await page.getByRole('button', { name: /^войти$/i }).click();
-  await page.waitForURL('**/*');
+  await page.waitForTimeout(500);
 
   const userId = await getUserIdFromPage(page);
   return userId ? { userId } : {};

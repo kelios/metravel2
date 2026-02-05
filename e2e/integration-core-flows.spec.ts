@@ -4,17 +4,12 @@ import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/stora
 
 type ApiMatch = string | RegExp;
 
-const REQUIRE_API_PROXY = process.env.E2E_REQUIRE_API_PROXY === '1';
-const ensureApiProxyOrSkip = async (page: any, label: string) => {
-  if (REQUIRE_API_PROXY) return;
-
-  const resp = await page.request
-    .get('/api/travels/', { timeout: 7_000 })
-    .catch(() => null);
-
-  if (!resp || resp.status() < 200 || resp.status() >= 400) {
-    test.skip(true, `API proxy unavailable for ${label} (set E2E_REQUIRE_API_PROXY=1 to enforce)`);
-  }
+const ensureApiProxy = async (page: any, label: string) => {
+  const resp = await page.request.get('/api/travels/', { timeout: 7_000 }).catch(() => null);
+  expect(resp, `${label}: expected API proxy to respond to /api/travels/`).toBeTruthy();
+  if (!resp) return;
+  expect(resp.status(), `${label}: unexpected API proxy status for /api/travels/`).toBeGreaterThanOrEqual(200);
+  expect(resp.status(), `${label}: unexpected API proxy status for /api/travels/`).toBeLessThan(400);
 };
 
 const waitForApiResponse = async (page: any, patterns: ApiMatch[], label: string) => {
@@ -78,11 +73,6 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
 };
 
 test.describe('Integration: core data flows (web)', () => {
-  test.skip(
-    process.env.E2E_VERIFY_API_PROXY !== '1',
-    'Set E2E_VERIFY_API_PROXY=1 to enforce API proxy response assertions.'
-  );
-
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(hideRecommendationsBanner);
@@ -101,7 +91,7 @@ test.describe('Integration: core data flows (web)', () => {
   });
 
   test('travels list renders cards after API load', async ({ page }) => {
-    await ensureApiProxyOrSkip(page, 'travelsby');
+    await ensureApiProxy(page, 'travelsby');
     const responsePromise = waitForApiResponse(
       page,
       [/\/api\/travels\//, /\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//],
@@ -118,7 +108,7 @@ test.describe('Integration: core data flows (web)', () => {
   });
 
   test('map list shows travel cards after API load', async ({ page }) => {
-    await ensureApiProxyOrSkip(page, 'map');
+    await ensureApiProxy(page, 'map');
     const responsePromise = waitForApiResponse(
       page,
       [/\/api\/filterformap\//, /\/api\/travels\/search_travels_for_map\//, /\/api\/travels\//],
@@ -142,7 +132,7 @@ test.describe('Integration: core data flows (web)', () => {
   });
 
   test('roulette returns cards after spin', async ({ page }) => {
-    await ensureApiProxyOrSkip(page, 'roulette');
+    await ensureApiProxy(page, 'roulette');
     const filtersPromise = waitForApiResponse(
       page,
       [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//],

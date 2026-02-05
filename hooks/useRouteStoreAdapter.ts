@@ -40,6 +40,8 @@ export function useRouteStoreAdapter() {
   // Get route data
   const routeDistance = store.route?.distance ?? null;
   const routeDuration = store.route?.duration ?? null;
+  const routeElevationGain = store.route?.elevationGain ?? null;
+  const routeElevationLoss = store.route?.elevationLoss ?? null;
   
   const fullRouteCoords = useMemo(() => {
     if (!store.route?.coordinates) return [];
@@ -112,6 +114,8 @@ export function useRouteStoreAdapter() {
       store.route?.coordinates ?? store.points.map((p) => p.coordinates);
 
     const existingDuration = store.route?.duration ?? 0;
+    const prevElevationGain = store.route?.elevationGain;
+    const prevElevationLoss = store.route?.elevationLoss;
 
     const prevDistance = store.route?.distance;
     const sameDistance = typeof prevDistance === 'number' && prevDistance === distance;
@@ -126,6 +130,8 @@ export function useRouteStoreAdapter() {
       distance,
       duration: existingDuration,
       isOptimal: true,
+      elevationGain: prevElevationGain,
+      elevationLoss: prevElevationLoss,
     });
   }, [store]);
 
@@ -133,12 +139,16 @@ export function useRouteStoreAdapter() {
     const existingCoords =
       store.route?.coordinates ?? store.points.map((p) => p.coordinates);
     const existingDistance = store.route?.distance ?? 0;
+    const prevElevationGain = store.route?.elevationGain;
+    const prevElevationLoss = store.route?.elevationLoss;
 
     store.setRoute({
       coordinates: existingCoords,
       distance: existingDistance,
       duration: Number(durationSeconds) || 0,
       isOptimal: true,
+      elevationGain: prevElevationGain,
+      elevationLoss: prevElevationLoss,
     });
   }, [store]);
 
@@ -146,6 +156,8 @@ export function useRouteStoreAdapter() {
     const latLngCoords: LatLng[] = coords.map(([lng, lat]) => ({ lat, lng }));
     const distance = store.route?.distance ?? 0;
     const duration = store.route?.duration ?? 0;
+    const prevElevationGain = store.route?.elevationGain;
+    const prevElevationLoss = store.route?.elevationLoss;
 
     const prevCoords = store.route?.coordinates;
     const sameLength = Array.isArray(prevCoords) && prevCoords.length === latLngCoords.length;
@@ -163,6 +175,35 @@ export function useRouteStoreAdapter() {
       distance,
       duration,
       isOptimal: true,
+      elevationGain: prevElevationGain,
+      elevationLoss: prevElevationLoss,
+    });
+  }, [store]);
+
+  const setRouteElevationStats = useCallback((elevationGainMeters: number | null, elevationLossMeters: number | null) => {
+    const existingCoords =
+      store.route?.coordinates ?? store.points.map((p) => p.coordinates);
+    const existingDistance = store.route?.distance ?? 0;
+    const existingDuration = store.route?.duration ?? 0;
+    const isOptimal = store.route?.isOptimal ?? true;
+
+    store.setRoute({
+      coordinates: existingCoords,
+      distance: existingDistance,
+      duration: existingDuration,
+      isOptimal,
+      elevationGain:
+        elevationGainMeters == null
+          ? undefined
+          : Number.isFinite(elevationGainMeters)
+            ? Math.max(0, Math.round(elevationGainMeters))
+            : undefined,
+      elevationLoss:
+        elevationLossMeters == null
+          ? undefined
+          : Number.isFinite(elevationLossMeters)
+            ? Math.max(0, Math.round(elevationLossMeters))
+            : undefined,
     });
   }, [store]);
 
@@ -239,9 +280,15 @@ export function useRouteStoreAdapter() {
     endAddress,
     routeDistance,
     routeDuration,
+    routeElevationGain,
+    routeElevationLoss,
     fullRouteCoords,
     isBuilding: store.isBuilding,
     error: store.error,
+
+    // Routing status setters (for map/routing components)
+    setBuilding: store.setBuilding,
+    setError: store.setError,
     
     // Direct store access for new code
     points: store.points,
@@ -254,6 +301,7 @@ export function useRouteStoreAdapter() {
     setRouteDistance,
     setRouteDuration,
     setFullRouteCoords,
+    setRouteElevationStats,
     handleRemoveRoutePoint,
     handleClearRoute,
     handleAddressSelect,

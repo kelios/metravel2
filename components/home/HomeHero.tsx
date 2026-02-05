@@ -10,6 +10,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 interface HomeHeroProps {
   travelsCount?: number;
@@ -68,7 +69,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const handleCreateBook = () => {
     queueAnalyticsEvent('HomeClick_CreateBook');
     if (!isAuthenticated) {
-      router.push('/login?redirect=%2F&intent=create-book' as any);
+      router.push(buildLoginHref({ redirect: '/', intent: 'create-book' }) as any);
     } else if (travelsCount === 0) {
       router.push('/travel/new' as any);
     } else {

@@ -211,6 +211,79 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     );
   }
 
+  if (controller.loadError && !controller.isNew) {
+    const status = controller.loadError.status;
+    const message = controller.loadError.message;
+
+    return (
+      <SafeAreaView
+        style={styles.container}
+        testID="travel-upsert.load-error"
+        accessibilityLabel="Ошибка загрузки путешествия"
+      >
+        <View style={styles.errorContainer}>
+          <Feather
+            name={status === 0 ? 'wifi-off' : status === 404 ? 'search' : 'alert-triangle'}
+            size={48}
+            color={status === 0 ? colors.warning : colors.danger}
+            style={{ marginBottom: DESIGN_TOKENS.spacing.md }}
+          />
+          <Text style={styles.errorTitle}>
+            {status === 401
+              ? 'Требуется вход'
+              : status === 403
+                ? 'Нет доступа'
+                : status === 404
+                  ? 'Путешествие не найдено'
+                  : status === 0
+                    ? 'Нет соединения'
+                    : 'Ошибка загрузки'}
+          </Text>
+          <Text style={styles.errorText}>
+            {status === 0 ? message : 'Не удалось загрузить путешествие. Попробуйте ещё раз.'}
+          </Text>
+
+          <View style={{ flexDirection: 'row', gap: DESIGN_TOKENS.spacing.sm, marginTop: DESIGN_TOKENS.spacing.lg }}>
+            {status !== 401 && (
+              <Pressable
+                onPress={() => controller.retryLoad()}
+                style={{
+                  backgroundColor: colors.primary,
+                  paddingVertical: DESIGN_TOKENS.spacing.sm,
+                  paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+                  borderRadius: DESIGN_TOKENS.radii.md,
+                  minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+                  justifyContent: 'center',
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Повторить загрузку"
+              >
+                <Text style={{ color: colors.textOnPrimary, fontWeight: '600' }}>Повторить</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => router.replace('/')}
+              style={{
+                backgroundColor: colors.surface,
+                paddingVertical: DESIGN_TOKENS.spacing.sm,
+                paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+                borderRadius: DESIGN_TOKENS.radii.md,
+                borderWidth: 1,
+                borderColor: colors.border,
+                minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+                justifyContent: 'center',
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="На главную"
+            >
+              <Text style={{ color: colors.text, fontWeight: '600' }}>На главную</Text>
+            </Pressable>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (!controller.hasAccess && !controller.isNew) {
     return (
       <SafeAreaView

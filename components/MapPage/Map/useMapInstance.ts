@@ -18,23 +18,13 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
   const leafletOverlayLayersRef = useRef<Map<string, any>>(new Map());
   const leafletControlRef = useRef<any>(null);
   const hasInitializedLayersRef = useRef(false);
-  const isMountedRef = useRef(false);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!map || !L) return;
     if (typeof map.addLayer !== 'function') return;
-    
-    isMountedRef.current = true;
 
     const cleanup = () => {
-      // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Не удаляем слои если это StrictMode remount
-      // Слои должны удаляться только при РЕАЛЬНОМ unmount компонента
-      if (!isMountedRef.current) {
-        console.info('[useMapInstance] Skipping cleanup - component remounting (StrictMode)');
-        return;
-      }
-      
       console.info('[useMapInstance] Running cleanup - component unmounting');
       
       try {
@@ -339,8 +329,6 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
     }
 
     return () => {
-      isMountedRef.current = false;
-      
       try {
         map.off?.('load', onLoad);
         map.off?.('resize', onResize);

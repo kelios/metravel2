@@ -12,6 +12,8 @@ export interface UpsertTravelController {
   isNew: boolean;
   isInitialLoading: boolean;
   hasAccess: boolean;
+  loadError: { status: number; message: string } | null;
+  retryLoad: () => Promise<void>;
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
 
@@ -49,7 +51,7 @@ export interface UpsertTravelController {
 
 export function useUpsertTravelController(): UpsertTravelController {
   const { id } = useLocalSearchParams();
-  const { userId, isAuthenticated, isSuperuser, authReady } = useAuth();
+  const { userId, isAuthenticated, isSuperuser, authReady, logout } = useAuth();
   const colors = useThemedColors();
 
   const isNew = !id;
@@ -65,6 +67,10 @@ export function useUpsertTravelController(): UpsertTravelController {
     isSuperAdmin: isSuperuser,
     isAuthenticated,
     authReady,
+    onAuthRequired: async () => {
+      // Clear app auth state so header/menu doesn't keep showing a stale user.
+      await logout();
+    },
   });
 
   // Draft recovery for unsaved changes
@@ -161,6 +167,8 @@ export function useUpsertTravelController(): UpsertTravelController {
     isNew,
     isInitialLoading: form.isInitialLoading,
     hasAccess: form.hasAccess,
+    loadError: form.loadError,
+    retryLoad: form.retryLoad,
     isAuthenticated,
     isSuperAdmin: isSuperuser,
 

@@ -10,6 +10,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
 
@@ -89,7 +90,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
     }, [router]);
 
     const handleLoginPress = useCallback(() => {
-        router.push('/login' as any);
+        router.push(buildLoginHref({ intent: 'recommendations' }) as any);
     }, [router]);
 
     const handleHorizontalWheel = useCallback((e: any) => {

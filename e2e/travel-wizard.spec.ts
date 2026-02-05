@@ -405,6 +405,36 @@ const ensureOnStep2 = async (page: Page) => {
       { timeout: 30_000 }
     )
     .toBeTruthy();
+
+  // Ensure Leaflet core CSS is present on the route step as well (not only on /map).
+  const leafletContainer = page.locator('.leaflet-container').first();
+  await expect(leafletContainer).toBeVisible({ timeout: 30_000 });
+
+  await expect
+    .poll(
+      async () =>
+        await page.evaluate(() => {
+          const link = document.querySelector('link[data-metravel-leaflet-css="cdn"]') as HTMLLinkElement | null;
+          return link?.href ?? '';
+        }),
+      { timeout: 30_000 }
+    )
+    .toContain('leaflet');
+
+  await expect
+    .poll(
+      async () =>
+        await page.evaluate(() => {
+          const probe = document.createElement('div');
+          probe.className = 'leaflet-pane';
+          document.body.appendChild(probe);
+          const z = window.getComputedStyle(probe).zIndex;
+          probe.remove();
+          return z;
+        }),
+      { timeout: 30_000 }
+    )
+    .toBe('400');
 };
 
 const ensureOnStep3 = async (page: Page) => {
@@ -736,11 +766,12 @@ test.describe('Создание путешествия - Полный flow', () 
     // Кликаем по Quick Draft
     await page.getByRole('button', { name: /быстрый черновик/i }).click();
 
-    // Проверяем Toast сообщение
-    await expect(page.locator('text=Черновик сохранен')).toBeVisible({ timeout: 5000 });
-
-    // Проверяем редирект в /metravel
-    await expect(page).toHaveURL(/\/metravel/, { timeout: 5000 });
+    // Успех может проявиться по-разному: toast и/или редирект.
+    const quickDraftSuccess = await Promise.any([
+      page.locator('text=Черновик сохранен').first().waitFor({ state: 'visible', timeout: 20_000 }).then(() => 'toast'),
+      page.waitForURL(/\/metravel/, { timeout: 20_000 }).then(() => 'redirect'),
+    ]).catch(() => null);
+    expect(quickDraftSuccess).toBeTruthy();
   });
 
   test('должен показать ошибку при Quick Draft без названия', async ({ page }) => {

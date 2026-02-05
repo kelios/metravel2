@@ -24,6 +24,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/MAPS_CONFIGURATION.md` — maps setup (web + native) and routing key
 - `docs/GOOGLE_MAPS_REMOVAL_SUMMARY.md` — why we don’t need Google Maps keys
 - `docs/SEO_MIGRATION.md` — meta tags, canonical/robots, structured data
+- `docs/AUTH_REQUIRED.md` — auth-required routes/actions
 
 ## Design system
 

@@ -8,6 +8,7 @@ import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { ResponsiveContainer } from '@/components/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 interface HomeFinalCTAProps {
   travelsCount?: number;
@@ -23,7 +24,7 @@ export default function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const handleAction = () => {
     sendAnalyticsEvent('HomeClick_FinalCTA');
     if (!isAuthenticated) {
-      router.push('/login?redirect=%2F&intent=create-book' as any);
+      router.push(buildLoginHref({ redirect: '/', intent: 'create-book' }) as any);
     } else if (travelsCount === 0) {
       router.push('/travel/new' as any);
     } else {

@@ -111,6 +111,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
      footerLoaderStyle,
      renderItem,
      cardSpacing = 16,
+     testID,
      listRef: externalListRef,
    }) => {
     const localListRef = useRef<any>(null)
@@ -366,7 +367,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     // Always render the search bar, even on mobile
 
     return (
-      <View style={containerStyle}>
+      <View testID={testID} style={containerStyle}>
         {/* Search Header - Sticky */}
         <View
           style={[

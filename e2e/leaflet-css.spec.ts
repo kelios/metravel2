@@ -21,10 +21,10 @@ test.describe('Leaflet CSS', () => {
     });
     expect(cssHref).toContain('leaflet');
 
-    // Leaflet core CSS sets .leaflet-map-pane z-index to 400.
+    // Leaflet core CSS sets base pane z-index to 400.
     const zIndex = await page.evaluate(() => {
       const probe = document.createElement('div');
-      probe.className = 'leaflet-map-pane';
+      probe.className = 'leaflet-pane';
       document.body.appendChild(probe);
       const z = window.getComputedStyle(probe).zIndex;
       probe.remove();

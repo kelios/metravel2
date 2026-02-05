@@ -2,10 +2,10 @@
 import React, { memo, useMemo } from 'react';
 import { StyleSheet, Platform, Pressable, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 type OptimizedFavoriteButtonProps = {
     id: string | number;
@@ -30,8 +30,8 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
     size = 18,
     style,
 }: OptimizedFavoriteButtonProps) {
-    const router = useRouter();
     const { isAuthenticated } = useAuth();
+    const { requireAuth } = useRequireAuth({ intent: 'favorite' });
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
     const serverIsFav = isFavorite(id, type);
     const colors = useThemedColors();
@@ -49,7 +49,7 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
         }
         
         if (!isAuthenticated) {
-            router.push('/login' as any);
+            requireAuth();
             return;
         }
 

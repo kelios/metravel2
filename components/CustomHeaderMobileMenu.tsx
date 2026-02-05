@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { DOCUMENT_NAV_ITEMS, PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation'
+import { buildLoginHref } from '@/src/utils/authNavigation'
 
 type Props = {
   visible: boolean
@@ -110,7 +111,7 @@ export default function CustomHeaderMobileMenu({
             {!isAuthenticated ? (
               <>
                 <Pressable
-                  onPress={() => onUserAction('/login')}
+                  onPress={() => onUserAction(buildLoginHref({ intent: 'menu' }) as any)}
                   style={styles.modalNavItem}
                   accessibilityRole="button"
                   accessibilityLabel="Войти"

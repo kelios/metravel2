@@ -14,6 +14,7 @@ import {
   checkTravelEditAccess,
 } from '@/utils/travelFormUtils';
 import { showToast } from '@/src/utils/toast';
+import { ApiError } from '@/src/api/client';
 
 async function showToastMessage(payload: any) {
   await showToast(payload);
@@ -26,10 +27,11 @@ interface UseTravelFormDataOptions {
   isSuperAdmin: boolean;
   isAuthenticated: boolean;
   authReady: boolean;
+  onAuthRequired?: (context: { redirect: string }) => void | Promise<void>;
 }
 
 export function useTravelFormData(options: UseTravelFormDataOptions) {
-  const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady } = options;
+  const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady, onAuthRequired } = options;
   const router = useRouter();
   const stableTravelId = useMemo(() => {
     if (isNew) return null;
@@ -96,6 +98,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
+  const [loadError, setLoadError] = useState<{ status: number; message: string } | null>(null);
   const [_dataVersion, setDataVersion] = useState(0);
   const [isManualSaveInFlight, setIsManualSaveInFlight] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -647,18 +650,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const loadTravelData = useCallback(
     async (id: string) => {
       try {
+        setLoadError(null);
         const travelData = await fetchTravel(Number(id));
-
-        if (!travelData) {
-          void showToastMessage({
-            type: 'error',
-            text1: 'Путешествие не найдено',
-            text2: 'Возможно, оно было удалено или недоступно',
-          });
-          setHasAccess(false);
-          router.replace('/');
-          return;
-        }
 
         if (!isNew && travelData) {
           const canEdit = checkTravelEditAccess(travelData, userId, isSuperAdmin);
@@ -671,7 +664,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
             });
             // ✅ FIX: Явно устанавливаем hasAccess в false при отсутствии доступа
             setHasAccess(false);
-            router.replace('/');
             return;
           }
 
@@ -696,19 +688,74 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         // ✅ FIX: Используем ref для updateBaseline чтобы избежать stale closure и race condition
         updateBaselineRef.current?.(finalData);
       } catch (error) {
+        const apiError = error instanceof ApiError ? error : null;
+        const status = apiError?.status ?? -1;
+        const message =
+          apiError?.message ||
+          (error instanceof Error ? error.message : 'Не удалось загрузить путешествие');
+
         console.error('Ошибка загрузки путешествия:', error);
+
+        if (status === 401) {
+          try {
+            await onAuthRequired?.({ redirect: `/travel/${encodeURIComponent(String(id))}` });
+          } catch {
+            // ignore
+          }
+          void showToastMessage({
+            type: 'error',
+            text1: 'Требуется вход',
+            text2: 'Войдите в аккаунт, чтобы редактировать путешествие',
+          });
+          setHasAccess(false);
+          setLoadError({ status, message });
+          const redirect = `/travel/${encodeURIComponent(String(id))}`;
+          router.replace(`/login?redirect=${encodeURIComponent(redirect)}&intent=edit-travel` as any);
+          return;
+        }
+
+        if (status === 403) {
+          void showToastMessage({
+            type: 'error',
+            text1: 'Нет доступа',
+            text2: 'Вы можете редактировать только свои путешествия',
+          });
+          setHasAccess(false);
+          setLoadError({ status, message });
+          return;
+        }
+
+        if (status === 404) {
+          void showToastMessage({
+            type: 'error',
+            text1: 'Путешествие не найдено',
+            text2: 'Возможно, оно было удалено или недоступно',
+          });
+          setHasAccess(false);
+          setLoadError({ status, message });
+          return;
+        }
+
         void showToastMessage({
           type: 'error',
           text1: 'Ошибка загрузки',
-          text2: 'Не удалось загрузить путешествие',
+          text2: status === 0 ? message : 'Не удалось загрузить путешествие',
         });
-        // ✅ FIX: Устанавливаем hasAccess в false при ошибке загрузки
+
+        // Don't redirect away: keep the user on the edit screen and allow retry.
         setHasAccess(false);
-        router.replace('/');
+        setLoadError({ status, message });
       }
     },
     [formState, isNew, normalizeDraftPlaceholders, router, userId, isSuperAdmin]
   );
+
+  const retryLoad = useCallback(async () => {
+    if (isNew) return;
+    if (!travelId) return;
+    setIsInitialLoading(true);
+    await loadTravelData(travelId as string).finally(() => setIsInitialLoading(false));
+  }, [isNew, loadTravelData, travelId]);
 
 
   // ✅ FIX: Cleanup на размонтирование
@@ -799,11 +846,13 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     travelDataOld,
     isInitialLoading,
     hasAccess,
+    loadError,
     autosave,
     handleManualSave,
     handleCountrySelect,
     handleCountryDeselect,
     hasUserInteracted,
     formState,
+    retryLoad,
   };
 }

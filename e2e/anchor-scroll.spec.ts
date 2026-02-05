@@ -132,18 +132,14 @@ test.describe('Article anchors (TOC -> section)', () => {
     await tocLink.click();
     await page.waitForTimeout(500);
 
-    // In some builds the hash updates but the scroll doesn't reliably complete (layout shifts /
-    // custom scroll containers). Ensure the target is brought into view deterministically.
-    await page.evaluate((id) => {
-      const el = document.getElementById(String(id));
-      if (!el) return;
-      try {
-        el.scrollIntoView({ block: 'start' });
-      } catch {
-        el.scrollIntoView(true);
-      }
-    }, targetId);
-    await page.waitForTimeout(200);
+    const target = page.locator(`#${targetId}`).first();
+    await expect(target).toBeVisible({ timeout: 10_000 });
+
+    await expect(page).toHaveURL(new RegExp(`#${targetId}$`));
+
+    // Ensure the target is within viewport (allowing headers / layout differences)
+    await target.scrollIntoViewIfNeeded({ timeout: 20_000 });
+    await expect(target).toBeInViewport({ timeout: 20_000 });
 
     const scrollAfter = scrollRoot
       ? await scrollRoot.evaluate((node: Element) => Number((node as HTMLElement).scrollTop ?? 0))
@@ -151,14 +147,6 @@ test.describe('Article anchors (TOC -> section)', () => {
           const el = document.scrollingElement || document.documentElement;
           return Number(el?.scrollTop ?? 0);
         });
-
-    const target = page.locator(`#${targetId}`).first();
-    await expect(target).toBeVisible({ timeout: 10_000 });
-
-    await expect(page).toHaveURL(new RegExp(`#${targetId}$`));
-
-    // Ensure the target is within viewport (allowing headers / layout differences)
-    await expect(target).toBeInViewport({ timeout: 20_000 });
 
     // Optional sanity: in typical builds scroll position changes.
     expect(scrollAfter >= scrollBefore).toBeTruthy();

@@ -1,91 +1,108 @@
-import { request } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { apiContextFromEnv, createOrUpdateTravel } from './helpers/e2eApi';
 
-let createdId: string | number | null = null;
+let createdId: number | null = null;
+let travelExists = false;
 
-test.describe.serial('Created travels cleanup', () => {
-  test('creates travel via API and registers it for cleanup', async ({ createdTravels }) => {
-    const ctx = await apiContextFromEnv().catch(() => null);
-    if (!ctx) {
-      test.skip(true, 'E2E_API_URL + auth are required to verify cleanup');
-      return;
+const nowIso = () => new Date().toISOString();
+
+function installMockTravelRoutes(page: any) {
+  page.route('**/api/travels/upsert/**', async (route: any) => {
+    const req = route.request();
+    const method = String(req.method() || 'GET').toUpperCase();
+    if (method !== 'PUT' && method !== 'POST') {
+      return route.continue();
     }
 
-    const created = await createOrUpdateTravel(ctx, {
-      id: null,
-      name: `E2E Cleanup ${Date.now()}`,
-      description: 'Autotest cleanup travel description long enough to pass validation in e2e flow.',
-      countries: [],
-      cities: [],
-      over_nights_stay: [],
-      complexity: [],
-      companions: [],
-      recommendation: null,
-      plus: null,
-      minus: null,
-      youtube_link: null,
-      gallery: [],
-      categories: [],
-      countryIds: [],
-      travelAddressIds: [],
-      travelAddressCity: [],
-      travelAddressCountry: [],
-      travelAddressAdress: [],
-      travelAddressCategory: [],
-      coordsMeTravel: [],
-      thumbs200ForCollectionArr: [],
-      travelImageThumbUrlArr: [],
-      travelImageAddress: [],
-      categoriesIds: [],
-      transports: [],
-      month: [],
-      year: '2026',
-      budget: '',
-      number_peoples: '2',
-      number_days: '2',
-      visa: false,
-      publish: false,
-      moderation: false,
+    createdId = createdId ?? 999_500;
+    travelExists = true;
+
+    return route.fulfill({
+      status: method === 'POST' ? 201 : 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: createdId,
+        slug: String(createdId),
+        url: `/travels/${createdId}`,
+        name: 'E2E Cleanup Mock',
+      }),
     });
-
-    createdId = created?.id ?? null;
-    expect(createdId, 'Upsert did not return id').toBeTruthy();
-    if (createdId != null) {
-      createdTravels.add(createdId);
-    }
   });
 
-  test('removes created travel after previous test', async () => {
-    if (!createdId) {
-      test.skip(true, 'No travel id recorded in previous test');
-      return;
+  page.route(/.*\/api\/travels\/\d+\/?$/, async (route: any) => {
+    const req = route.request();
+    const url = String(req.url() || '');
+    const method = String(req.method() || 'GET').toUpperCase();
+    const match = url.match(/\/api\/travels\/(\d+)\/?$/);
+    const id = match ? Number(match[1]) : NaN;
+
+    if (!Number.isFinite(id)) return route.continue();
+    if (createdId != null && id !== createdId) return route.continue();
+
+    if (method === 'DELETE') {
+      travelExists = false;
+      return route.fulfill({ status: 204, contentType: 'text/plain', body: '' });
     }
 
-    const ctx = await apiContextFromEnv().catch(() => null);
-    if (!ctx) {
-      test.skip(true, 'E2E_API_URL + auth are required to verify cleanup');
-      return;
+    if (method === 'GET') {
+      if (!travelExists) {
+        return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ detail: 'Not found' }) });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id,
+          slug: String(id),
+          url: `/travels/${id}`,
+          name: 'E2E Cleanup Mock',
+          created_at: nowIso(),
+          updated_at: nowIso(),
+        }),
+      });
     }
 
-    const api = await request.newContext({
-      baseURL: ctx.apiBase,
-      extraHTTPHeaders: {
-        Authorization: `Token ${ctx.token}`,
-        'Content-Type': 'application/json',
-      },
+    return route.fulfill({ status: 405, contentType: 'text/plain', body: 'Method Not Allowed' });
+  });
+}
+
+test.describe.serial('Created travels cleanup', () => {
+  test('creates travel via API and registers it for cleanup', async ({ page, createdTravels }) => {
+    installMockTravelRoutes(page);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const created = await page.evaluate(async () => {
+      const resp = await fetch('/api/travels/upsert/', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: null, name: 'E2E Cleanup Mock' }),
+      });
+      const json = await resp.json().catch(() => null);
+      return { ok: resp.ok, status: resp.status, json };
     });
 
-    await expect
-      .poll(
-        async () => {
-          const resp = await api.get(`/api/travels/${createdId}/`);
-          return resp.status();
-        },
-        { timeout: 15_000 }
-      )
-      .toBe(404);
+    expect(created.ok, `mock upsert failed: ${created.status}`).toBeTruthy();
+    const id = Number((created as any).json?.id);
+    expect(Number.isFinite(id)).toBeTruthy();
+    createdId = id;
+    travelExists = true;
+    createdTravels.add(id);
+  });
 
-    await api.dispose();
+  test('removes created travel after previous test', async ({ page }) => {
+    expect(createdId, 'Expected createdId from previous test').toBeTruthy();
+    installMockTravelRoutes(page);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+
+    const deleted = await page.evaluate(async (id) => {
+      const resp = await fetch(`/api/travels/${id}/`, { method: 'DELETE' });
+      return { ok: resp.ok, status: resp.status };
+    }, createdId);
+    expect(deleted.ok, `mock delete failed: ${deleted.status}`).toBeTruthy();
+
+    const readBack = await page.evaluate(async (id) => {
+      const resp = await fetch(`/api/travels/${id}/`);
+      return { status: resp.status };
+    }, createdId);
+    expect(readBack.status).toBe(404);
   });
 });

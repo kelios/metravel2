@@ -14,6 +14,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 interface CTASectionProps {
   travel: Travel;
@@ -26,6 +27,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const { isAuthenticated } = useAuth();
+  const { loginHref, requireAuth } = useRequireAuth({ intent: 'create-book' });
   const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites();
 
   // Проверяем, в избранном ли путешествие
@@ -33,7 +35,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
 
   const handleFavorite = useCallback(async () => {
     if (!isAuthenticated) {
-      router.push('/login');
+      requireAuth();
       return;
     }
     
@@ -58,11 +60,11 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
 
   const handleCreateTravel = useCallback(() => {
     if (!isAuthenticated) {
-      router.push('/login');
+      requireAuth();
       return;
     }
     router.push('/travel/new');
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, requireAuth, router]);
 
   const handleViewAuthorTravels = useCallback(() => {
     const userId = (travel as any).userIds ?? (travel as any).userId;
@@ -212,7 +214,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
           </View>
           <Button
             label="Войти / Регистрация"
-            onPress={() => router.push('/login')}
+            onPress={() => router.push(loginHref as any)}
             variant="primary"
             size="md"
             style={[styles.primaryButton, isMobile && styles.primaryButtonMobile]}

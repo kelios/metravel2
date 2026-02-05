@@ -2,19 +2,6 @@ import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 import { seedNecessaryConsent } from './helpers/storage';
 
-const REQUIRE_API_PROXY = process.env.E2E_REQUIRE_API_PROXY === '1';
-const ensureApiProxyOrSkip = async (page: any, label: string) => {
-  if (REQUIRE_API_PROXY) return;
-
-  const resp = await page.request
-    .get('/api/travels/', { timeout: 7_000 })
-    .catch(() => null);
-
-  if (!resp || resp.status() < 200 || resp.status() >= 400) {
-    test.skip(true, `API proxy unavailable for ${label} (set E2E_REQUIRE_API_PROXY=1 to enforce)`);
-  }
-};
-
 function getNumberEnv(name: string, fallback: number): number {
   const raw = process.env[name];
   if (!raw) return fallback;
@@ -118,11 +105,6 @@ async function countCardsInFirstRow(page: any): Promise<number> {
 
 test.describe('Responsive layout invariants', () => {
   test('no horizontal scroll + grid breaks correctly (mobile/tablet/desktop)', async ({ page }) => {
-    test.skip(
-      process.env.E2E_VERIFY_API_PROXY !== '1',
-      'Set E2E_VERIFY_API_PROXY=1 to enforce data-backed layout assertions.'
-    );
-    await ensureApiProxyOrSkip(page, 'layout grid');
     // Thresholds derived from app constants:
     // - mobile layout breakpoint is effectively 768 (METRICS.breakpoints.tablet)
     // - grid expects 1/2/3 columns across mobile/tablet/desktop

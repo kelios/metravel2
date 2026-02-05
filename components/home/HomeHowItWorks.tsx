@@ -7,6 +7,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 const STEPS = [
   {
@@ -45,7 +46,7 @@ function HomeHowItWorks() {
       const target = path.startsWith('/') ? path : `/${path}`;
       if (!isAuthenticated) {
         const redirect = encodeURIComponent(target);
-        router.push(`/login?redirect=${redirect}` as any);
+        router.push(buildLoginHref({ redirect, intent: 'create-book' }) as any);
         return;
       }
       router.push(target as any);

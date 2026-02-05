@@ -49,6 +49,8 @@ export interface FiltersContextValue {
   endAddress: string;
   routeDistance: number | null;
   routeDuration: number | null;
+  routeElevationGain?: number | null;
+  routeElevationLoss?: number | null;
   routePoints: RoutePoint[];
   onRemoveRoutePoint?: (id: string) => void;
   onClearRoute?: () => void;

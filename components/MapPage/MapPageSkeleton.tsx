@@ -56,7 +56,7 @@ export const MapPageSkeleton: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.mapArea}>
         <SkeletonLoader width="100%" height={1} borderRadius={0} style={StyleSheet.absoluteFillObject} />
-        <Text style={styles.headlineText}>{'Карта путешествий\nЗагружаем…'}</Text>
+        <Text style={styles.headlineText}>Карта путешествий</Text>
         <Text style={styles.placeholderText}>Загружаем карту…</Text>
         
         <View style={styles.mapControls}>

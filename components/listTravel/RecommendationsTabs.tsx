@@ -27,6 +27,7 @@ import { useAuth } from '@/context/AuthContext';
 import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 /* ---------------- Lazy Components ---------------- */
 
@@ -309,7 +310,7 @@ const RecommendationsTabs = memo(
             return renderTabPane(
               <AuthGate
                 message="Избранное будет доступно после регистрации или авторизации"
-                onLogin={() => router.push('/login' as any)}
+                onLogin={() => router.push(buildLoginHref({ intent: 'favorites' }) as any)}
                 styles={styles}
                 colors={colors}
               />
@@ -405,7 +406,7 @@ const RecommendationsTabs = memo(
             return renderTabPane(
               <AuthGate
                 message="История просмотров будет доступна после регистрации или авторизации"
-                onLogin={() => router.push('/login' as any)}
+                onLogin={() => router.push(buildLoginHref({ intent: 'history' }) as any)}
                 styles={styles}
                 colors={colors}
               />

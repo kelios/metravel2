@@ -89,7 +89,14 @@ test.describe('Travel Details - Media Content', () => {
         type: 'note',
         description: 'Page is not scrollable in this run; skipping smooth scroll assertions.',
       });
-      test.skip(true, 'Page not scrollable');
+      const scrollInfo = await page
+        .evaluate(() => {
+          const el = document.scrollingElement || document.documentElement;
+          return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight };
+        })
+        .catch(() => ({ scrollHeight: 0, clientHeight: 0 }));
+      expect(scrollInfo.scrollHeight).toBeLessThanOrEqual(scrollInfo.clientHeight + 10);
+      return;
     }
 
     // Проверяем наличие счетчика просмотров
@@ -410,13 +417,36 @@ test.describe('Travel Details - Scroll Behavior', () => {
     if (!didScroll) {
       test.info().annotations.push({
         type: 'note',
-        description: 'ScrollY did not change after wheel scroll; skipping assertion for this environment.',
+        description: 'ScrollY did not change after wheel scroll; attempting programmatic scroll.',
       });
-      test.skip(true, 'Scrolling did not occur');
+      await page.evaluate(() => {
+        try {
+          window.scrollBy(0, 800);
+        } catch {
+          // ignore
+        }
+      });
+      await page.waitForTimeout(250);
     }
 
     // Проверяем, что прокрутка произошла
     const scrolledY = await page.evaluate(() => window.scrollY);
+    if (scrolledY <= 0) {
+      const scrollInfo = await page
+        .evaluate(() => {
+          const el = document.scrollingElement || document.documentElement;
+          return { scrollHeight: el.scrollHeight, clientHeight: el.clientHeight };
+        })
+        .catch(() => ({ scrollHeight: 0, clientHeight: 0 }));
+      // If the document truly isn't scrollable, the behavior is fine; otherwise it's a regression.
+      if (scrollInfo.scrollHeight <= scrollInfo.clientHeight + 10) {
+        test.info().annotations.push({
+          type: 'note',
+          description: 'Document is not scrollable after load; treating scroll-to-top check as not applicable.',
+        });
+        return;
+      }
+    }
     expect(scrolledY).toBeGreaterThan(0);
 
     // Прокручиваем обратно наверх

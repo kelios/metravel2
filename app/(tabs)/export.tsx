@@ -10,6 +10,7 @@ import EmptyState from '@/components/EmptyState';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMyTravels } from '@/src/api/travelsApi';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 const isWeb = Platform.OS === 'web';
 const isClient = typeof window !== 'undefined';
@@ -100,7 +101,7 @@ export default function ExportScreen() {
                     description="Экспорт в PDF доступен после авторизации."
                     action={{
                         label: 'Войти',
-                        onPress: () => router.push('/login?redirect=%2Fexport&intent=build-pdf' as any),
+                        onPress: () => router.push(buildLoginHref({ redirect: '/export', intent: 'build-pdf' }) as any),
                     }}
                     secondaryAction={{
                         label: 'Открыть Поиск',

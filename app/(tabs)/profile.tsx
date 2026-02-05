@@ -25,6 +25,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl } from '@/src/utils/externalLinks';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 interface UserStats {
   travelsCount: number;
@@ -536,7 +537,7 @@ export default function ProfileScreen() {
           description="Войдите, чтобы открыть профиль и управлять своими данными."
           action={{
             label: 'Войти',
-            onPress: () => router.push('/login'),
+            onPress: () => router.push(buildLoginHref({ redirect: '/profile', intent: 'profile' }) as any),
           }}
         />
       </SafeAreaView>

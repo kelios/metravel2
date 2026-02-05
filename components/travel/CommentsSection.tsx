@@ -16,7 +16,7 @@ import { CommentItem } from './CommentItem';
 import { CommentForm } from './CommentForm';
 import {
   useMainThread,
-  useComments,
+  useTravelComments,
   useCreateComment,
   useUpdateComment,
   useReplyToComment,
@@ -49,7 +49,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     isLoading: isLoadingComments,
     error: commentsError,
     refetch: refetchComments,
-  } = useComments(mainThread?.id || 0);
+  } = useTravelComments(travelId, mainThread?.id);
 
 
   const createComment = useCreateComment();
@@ -61,15 +61,12 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const tasks: Promise<unknown>[] = [refetchThread()];
-      if (mainThread?.id) {
-        tasks.push(refetchComments());
-      }
+      const tasks: Promise<unknown>[] = [refetchThread(), refetchComments()];
       await Promise.allSettled(tasks);
     } finally {
       setIsRefreshing(false);
     }
-  }, [mainThread?.id, refetchComments, refetchThread]);
+  }, [refetchComments, refetchThread]);
 
   const handleSubmitComment = useCallback(
     (text: string) => {
@@ -380,14 +377,6 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
             <Feather name="message-circle" size={48} color={DESIGN_TOKENS.colors.disabled} />
             <Text style={styles.emptyText}>Комментарии недоступны</Text>
             <Text style={styles.emptySubtext}>Попробуйте обновить страницу или повторить позже</Text>
-            <Pressable
-              onPress={handleRefresh}
-              style={styles.retryButton}
-              accessibilityRole="button"
-              accessibilityLabel="Повторить загрузку комментариев"
-            >
-              <Text style={styles.retryButtonText}>Повторить</Text>
-            </Pressable>
           </View>
         ) : topLevel.length === 0 ? (
           <View style={styles.emptyState}>

@@ -329,6 +329,13 @@ class ApiClient {
                 timeout
             );
 
+            // Если токена нет, но сервер вернул 401 — состояние аутентификации, вероятно, устарело
+            // (например, токен был удалён в другой вкладке). Сбрасываем состояние, чтобы UI обновился.
+            if (response.status === 401 && !token) {
+                await this.clearTokens();
+                throw new ApiError(401, 'Требуется авторизация');
+            }
+
             // Если получили 401, пробуем обновить токен.
             // В E2E окружении токен может быть "фейковым" (см. e2e/global-setup.ts) и
             // попытка refresh без refreshToken приводит к очистке токенов и каскадным
@@ -362,8 +369,40 @@ class ApiClient {
 
                     return await this.parseSuccessResponse<T>(retryResponse);
                 } catch {
-                    // Если refresh не удался, пробрасываем ошибку
-                    throw new ApiError(401, 'Требуется авторизация');
+                    // Если refresh не удался, очищаем токены и пробуем повторить запрос без авторизации.
+                    // Это важно для публичных эндпоинтов, которые могут работать без токена, но
+                    // падают из‑за устаревшего/некорректного токена в хранилище.
+                    await this.clearTokens();
+
+                    const fallbackHeaders: HeadersInit = {
+                        ...this.defaultHeaders,
+                        ...options.headers,
+                    };
+                    const fallbackResponse = await fetchWithTimeout(
+                        `${this.baseURL}${endpoint}`,
+                        { ...options, headers: fallbackHeaders },
+                        timeout
+                    );
+
+                    if (!fallbackResponse.ok) {
+                        const errorText = await fallbackResponse.text().catch(() => 'Unknown error');
+                        let errorData;
+                        try {
+                            errorData = JSON.parse(errorText);
+                        } catch {
+                            errorData = errorText;
+                        }
+
+                        throw new ApiError(
+                            fallbackResponse.status,
+                            errorData?.message ||
+                                errorData?.detail ||
+                                `Ошибка запроса: ${fallbackResponse.statusText}`,
+                            errorData
+                        );
+                    }
+
+                    return await this.parseSuccessResponse<T>(fallbackResponse);
                 }
             }
 
@@ -495,6 +534,11 @@ class ApiClient {
                 timeout
             );
 
+            if (resp.status === 401 && !token) {
+                await this.clearTokens();
+                throw new ApiError(401, 'Требуется авторизация');
+            }
+
             if (resp.status === 401 && token) {
                 if (isE2E) {
                     throw new ApiError(401, 'Требуется авторизация');
@@ -512,7 +556,16 @@ class ApiClient {
                     );
                     return await handle(retryResp);
                 } catch {
-                    throw new ApiError(401, 'Требуется авторизация');
+                    await this.clearTokens();
+                    const fallbackHeaders: HeadersInit = {
+                        ...options.headers,
+                    };
+                    const fallbackResp = await fetchWithTimeout(
+                        `${this.baseURL}${endpoint}`,
+                        { ...options, method: options.method || 'GET', headers: fallbackHeaders },
+                        timeout
+                    );
+                    return await handle(fallbackResp);
                 }
             }
 

@@ -10,6 +10,7 @@ import '@/src/utils/leafletFix';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
+import { ensureLeafletCss } from '@/src/utils/ensureLeafletCss';
 
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 
@@ -217,6 +218,7 @@ const WebMapComponent = ({
         let cancelled = false;
 
         try {
+            ensureLeafletCss();
             if (!cancelled) {
                 setL(Leaflet);
                 setRl(ReactLeaflet as any);
@@ -243,6 +245,61 @@ const WebMapComponent = ({
     const rootRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<any>(null);
     const mapInstanceKeyRef = useRef<string>(`leaflet-map-${Math.random().toString(36).slice(2)}`);
+    const [mapCreatedNonce, setMapCreatedNonce] = useState(0);
+
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+
+        let raf: number | null = null;
+        let timeoutId: any = null;
+        let cancelled = false;
+
+        const invalidate = () => {
+            if (cancelled) return;
+            try {
+                map.invalidateSize?.(true);
+            } catch {
+                // noop
+            }
+        };
+
+        try {
+            if (typeof requestAnimationFrame !== 'undefined') {
+                raf = requestAnimationFrame(invalidate);
+            } else {
+                timeoutId = setTimeout(invalidate, 0);
+            }
+        } catch {
+            // noop
+        }
+
+        try {
+            if (typeof window !== 'undefined') {
+                timeoutId = window.setTimeout(invalidate, 250);
+            }
+        } catch {
+            // noop
+        }
+
+        return () => {
+            cancelled = true;
+            if (raf != null) {
+                try {
+                    cancelAnimationFrame(raf);
+                } catch {
+                    // noop
+                }
+            }
+            if (timeoutId != null) {
+                try {
+                    clearTimeout(timeoutId);
+                } catch {
+                    // noop
+                }
+            }
+        };
+    }, [mapCreatedNonce, isWideLayout, isExpanded]);
     // Только для старта: если маркеры пришли извне (редактирование маршрута), разрешаем авто-fit.
     // При создании нового маршрута (маркер ставит пользователь) авто-fit отключён.
     const hasInitialMarkersRef = useRef(markers.length > 0);
@@ -809,6 +866,7 @@ const WebMapComponent = ({
                                 key={mapInstanceKeyRef.current}
                                 whenCreated={(map: any) => {
                                     mapRef.current = map;
+                                    setMapCreatedNonce((n) => n + 1);
                                 }}
                                 style={{ height: isWideLayout ? 600 : 460, width: '100%' }}
                             >

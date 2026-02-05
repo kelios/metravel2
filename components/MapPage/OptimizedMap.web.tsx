@@ -1,7 +1,7 @@
 // components/MapPage/OptimizedMap.web.tsx
 // Wrapper component for Map.web.tsx with optimized props handling
 import React from 'react';
-import MapPageComponent from './Map.web';
+import MapPageComponent from '@/components/MapPage/Map.web';
 
 type Point = {
   id?: number;
@@ -25,6 +25,7 @@ interface OptimizedMapProps {
   travel?: { data?: Point[] };
   coordinates: Coordinates;
   routePoints: [number, number][];
+  fullRouteCoords?: [number, number][];
   setRoutePoints: (points: [number, number][]) => void;
   onMapClick: (lng: number, lat: number) => void;
   mode: MapMode;
@@ -32,14 +33,19 @@ interface OptimizedMapProps {
   setRouteDistance: (distance: number) => void;
   setRouteDuration?: (durationSeconds: number) => void;
   setFullRouteCoords: (coords: [number, number][]) => void;
+  setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void;
+  setRoutingLoading?: (loading: boolean) => void;
+  setRoutingError?: (error: string | null) => void;
   placesAlongRoute?: any[]; // For compatibility, not used in Map.web
   onMapUiApiReady?: (api: any | null) => void;
+  onUserLocationChange?: (loc: Coordinates | null) => void;
 }
 
 const OptimizedMap: React.FC<OptimizedMapProps> = ({
   travel,
   coordinates,
   routePoints,
+  fullRouteCoords,
   setRoutePoints,
   onMapClick,
   mode,
@@ -47,14 +53,19 @@ const OptimizedMap: React.FC<OptimizedMapProps> = ({
   setRouteDistance,
   setRouteDuration,
   setFullRouteCoords,
+  setRouteElevationStats,
+  setRoutingLoading,
+  setRoutingError,
   placesAlongRoute: _placesAlongRoute, // Accepted but not passed to Map.web
   onMapUiApiReady,
+  onUserLocationChange,
 }) => {
   return (
     <MapPageComponent
       travel={travel}
       coordinates={coordinates}
       routePoints={routePoints}
+      fullRouteCoords={fullRouteCoords}
       setRoutePoints={setRoutePoints}
       onMapClick={onMapClick}
       mode={mode}
@@ -62,7 +73,11 @@ const OptimizedMap: React.FC<OptimizedMapProps> = ({
       setRouteDistance={setRouteDistance}
       setRouteDuration={setRouteDuration}
       setFullRouteCoords={setFullRouteCoords}
+      setRouteElevationStats={setRouteElevationStats}
+      setRoutingLoading={setRoutingLoading}
+      setRoutingError={setRoutingError}
       onMapUiApiReady={onMapUiApiReady}
+      onUserLocationChange={onUserLocationChange}
     />
   );
 };
@@ -102,6 +117,26 @@ const arePropsEqual = (
         );
       }
     )
+  ) {
+    return false;
+  }
+
+  // Сравниваем "полный" маршрут (геометрия от роутинга), иначе линия может остаться прямой
+  const prevFull = prevProps.fullRouteCoords || [];
+  const nextFull = nextProps.fullRouteCoords || [];
+  if (prevFull.length !== nextFull.length) {
+    return false;
+  }
+  if (
+    prevFull.length > 0 &&
+    !prevFull.every((point, i) => {
+      const nextPoint = nextFull[i];
+      if (!nextPoint) return false;
+      return (
+        Math.abs(point[0] - nextPoint[0]) < COORD_EPSILON &&
+        Math.abs(point[1] - nextPoint[1]) < COORD_EPSILON
+      );
+    })
   ) {
     return false;
   }

@@ -41,6 +41,17 @@ describe('Comments API', () => {
       );
       expect(result).toBeNull();
     });
+
+    it('should treat 401 as empty (thread metadata can be protected)', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 401 } });
+
+      const result = await commentsApi.getMainThread(123);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comment-threads/main/?travel_id=123'
+      );
+      expect(result).toBeNull();
+    });
   });
 
   describe('getComments', () => {
@@ -77,6 +88,61 @@ describe('Comments API', () => {
         '/travel-comments/?thread_id=1'
       );
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('getCommentsByTravel', () => {
+    it('should fetch comments for travel', async () => {
+      const mockComments: TravelComment[] = [
+        {
+          id: 1,
+          thread: 1,
+          sub_thread: null,
+          user: 1,
+          text: 'Test comment',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+          likes_count: 5,
+        },
+      ];
+
+      mockedApiClient.get.mockResolvedValueOnce(mockComments);
+
+      const result = await commentsApi.getCommentsByTravel(123);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comments/?travel_id=123'
+      );
+      expect(result).toEqual(mockComments);
+    });
+
+    it('should treat 404 as empty list', async () => {
+      mockedApiClient.get.mockRejectedValueOnce({ response: { status: 404 } });
+
+      const result = await commentsApi.getCommentsByTravel(123);
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        '/travel-comments/?travel_id=123'
+      );
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getTravelComments', () => {
+    it('should prefer thread_id when provided', async () => {
+      mockedApiClient.get.mockResolvedValueOnce([]);
+
+      await commentsApi.getTravelComments({ travelId: 123, threadId: 9 });
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9');
+    });
+
+    it('should fall back to travel_id when thread_id is missing', async () => {
+      mockedApiClient.get.mockResolvedValueOnce([]);
+
+      await commentsApi.getTravelComments({ travelId: 123, threadId: null });
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?travel_id=123');
     });
   });
 

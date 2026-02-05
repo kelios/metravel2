@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '@/context/AuthContext';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/EmptyState';
 import Button from '@/components/ui/Button';
@@ -305,7 +306,7 @@ export default function SettingsScreen() {
                     description="Войдите, чтобы управлять настройками и данными аккаунта."
                     action={{
                         label: 'Войти',
-                        onPress: () => router.push('/login'),
+                        onPress: () => router.push(buildLoginHref({ redirect: '/settings', intent: 'settings' }) as any),
                     }}
                 />
             </SafeAreaView>

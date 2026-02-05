@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CommentsSection } from '@/components/travel/CommentsSection';
 import {
   useMainThread,
-  useComments,
+  useTravelComments,
   useCreateComment,
   useUpdateComment,
   useReplyToComment,
@@ -13,12 +13,13 @@ import {
   useDeleteComment,
 } from '@/hooks/useComments';
 import { useAuth } from '@/context/AuthContext';
+import { ApiError } from '@/src/api/client';
 
 jest.mock('@/hooks/useComments');
 jest.mock('@/context/AuthContext');
 
 const mockUseMainThread = useMainThread as jest.MockedFunction<typeof useMainThread>;
-const mockUseComments = useComments as jest.MockedFunction<typeof useComments>;
+const mockUseTravelComments = useTravelComments as jest.MockedFunction<typeof useTravelComments>;
 const mockUseCreateComment = useCreateComment as jest.MockedFunction<typeof useCreateComment>;
 const mockUseUpdateComment = useUpdateComment as jest.MockedFunction<typeof useUpdateComment>;
 const mockUseReplyToComment = useReplyToComment as jest.MockedFunction<typeof useReplyToComment>;
@@ -81,7 +82,7 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      mockUseComments.mockReturnValue({
+      mockUseTravelComments.mockReturnValue({
         data: [
           {
             id: 1,
@@ -150,7 +151,7 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      mockUseComments.mockReturnValue({
+      mockUseTravelComments.mockReturnValue({
         data: [],
         isLoading: false,
         error: null,
@@ -230,7 +231,7 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      mockUseComments.mockReturnValue({
+      mockUseTravelComments.mockReturnValue({
         data: [],
         isLoading: false,
         error: null,
@@ -250,7 +251,7 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      mockUseComments.mockReturnValue({
+      mockUseTravelComments.mockReturnValue({
         data: [],
         isLoading: false,
         error: null,
@@ -259,6 +260,47 @@ describe('CommentsSection', () => {
 
       render(<CommentsSection travelId={123} />, { wrapper });
 
+      expect(screen.getByText('Комментарии недоступны')).toBeTruthy();
+    });
+
+    it('should show generic error on 401 error (view is public)', () => {
+      mockUseAuth.mockReturnValue({
+        isAuthenticated: false,
+        userId: null,
+        username: '',
+        isSuperuser: false,
+        userAvatar: null,
+        authReady: true,
+        profileRefreshToken: 0,
+        setIsAuthenticated: jest.fn(),
+        setUsername: jest.fn(),
+        setIsSuperuser: jest.fn(),
+        setUserId: jest.fn(),
+        setUserAvatar: jest.fn(),
+        triggerProfileRefresh: jest.fn(),
+        logout: jest.fn(),
+        login: jest.fn(),
+        sendPassword: jest.fn(),
+        setNewPassword: jest.fn(),
+      });
+
+      mockUseMainThread.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new ApiError(401, 'Требуется авторизация'),
+        refetch: jest.fn(),
+      } as any);
+
+      mockUseTravelComments.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        refetch: jest.fn(),
+      } as any);
+
+      render(<CommentsSection travelId={123} />, { wrapper });
+
+      expect(screen.getByText('Войдите, чтобы оставить комментарий')).toBeTruthy();
       expect(screen.getByText('Комментарии недоступны')).toBeTruthy();
     });
   });
@@ -292,7 +334,7 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      mockUseComments.mockReturnValue({
+      mockUseTravelComments.mockReturnValue({
         data: [],
         isLoading: false,
         error: null,
@@ -339,7 +381,7 @@ describe('CommentsSection', () => {
     });
 
     it('should organize comments into top-level and replies', () => {
-      mockUseComments.mockReturnValue({
+      mockUseTravelComments.mockReturnValue({
         data: [
           {
             id: 1,

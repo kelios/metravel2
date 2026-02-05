@@ -38,6 +38,12 @@ interface FiltersPanelBodyProps {
   setTransportMode: (mode: 'car' | 'bike' | 'foot') => void;
   startAddress: string;
   endAddress: string;
+  routingLoading?: boolean;
+  routingError?: string | boolean | null;
+  routeDistance?: number | null;
+  routeDuration?: number | null;
+  routeElevationGain?: number | null;
+  routeElevationLoss?: number | null;
   routePoints: RoutePoint[];
   onRemoveRoutePoint: (id: string) => void;
   onClearRoute?: () => void;
@@ -66,6 +72,12 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   setTransportMode,
   startAddress,
   endAddress,
+  routingLoading,
+  routingError,
+  routeDistance,
+  routeDuration,
+  routeElevationGain,
+  routeElevationLoss,
   routePoints,
   onRemoveRoutePoint,
   onClearRoute,
@@ -101,6 +113,12 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           setTransportMode={setTransportMode}
           startAddress={startAddress}
           endAddress={endAddress}
+          routingLoading={routingLoading}
+          routingError={routingError}
+          routeDistance={routeDistance}
+          routeDuration={routeDuration}
+          routeElevationGain={routeElevationGain}
+          routeElevationLoss={routeElevationLoss}
           routePoints={routePoints}
           onRemoveRoutePoint={onRemoveRoutePoint}
           onClearRoute={onClearRoute}

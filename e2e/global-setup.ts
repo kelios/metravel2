@@ -18,6 +18,31 @@ function ensureEnv(name: string): string | null {
   return v && v.trim().length > 0 ? v.trim() : null;
 }
 
+async function waitForBaseURL(baseURL: string, timeoutMs: number) {
+  const startedAt = Date.now();
+  let lastErr: any = null;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 4000).unref();
+      try {
+        const resp = await fetch(baseURL, { method: 'GET', signal: controller.signal } as any);
+        if (resp) return;
+      } finally {
+        clearTimeout(t);
+      }
+    } catch (e: any) {
+      lastErr = e;
+    }
+
+    await new Promise((r) => setTimeout(r, 750));
+  }
+
+  const msg = lastErr?.message ? String(lastErr.message) : String(lastErr || 'unknown error');
+  throw new Error(`[global-setup] Timed out waiting for baseURL to be reachable: ${baseURL}. Last error: ${msg}`);
+}
+
 async function maybeAcceptCookies(page: any) {
   const acceptAll = page.getByText('Принять всё', { exact: true });
   const necessaryOnly = page.getByText('Только необходимые', { exact: true });
@@ -130,6 +155,15 @@ export default async function globalSetup(config: FullConfig) {
   const page = await context.newPage();
 
   if (!baseURL) {
+    await context.storageState({ path: STORAGE_STATE_PATH });
+    await browser.close();
+    return;
+  }
+
+  // `webServer` can be started in parallel with `globalSetup`. Avoid flaky connection refused errors.
+  try {
+    await waitForBaseURL(baseURL, 600_000);
+  } catch {
     await context.storageState({ path: STORAGE_STATE_PATH });
     await browser.close();
     return;

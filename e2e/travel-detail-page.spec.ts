@@ -52,16 +52,16 @@ test.describe('Travel Details Page - Loading and Display', () => {
       .then((v) => v)
       .catch(() => false);
 
-    if (!loaded) {
-      const errorState = page.getByText('Не удалось загрузить путешествие').first();
-      if (await errorState.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Travel details page entered error state; skipping TC-001 in this environment.',
-        });
-        test.skip(true, 'Travel details not available');
-      }
-    }
+	    if (!loaded) {
+	      const errorState = page.getByText('Не удалось загрузить путешествие').first();
+	      if (await errorState.isVisible().catch(() => false)) {
+	        test.info().annotations.push({
+	          type: 'note',
+	          description: 'Travel details page entered error state; skipping TC-001 in this environment.',
+	        });
+	        throw new Error('Travel details not available (error state is visible).');
+	      }
+	    }
 
     await expect(mainContent.first()).toBeVisible({ timeout: 30_000 });
 

@@ -1,11 +1,40 @@
 import { test, expect } from './fixtures';
 
+const gotoWithRetry = async (
+  page: any,
+  url: string,
+  opts: { waitUntil?: 'domcontentloaded' | 'load' | 'networkidle'; timeout?: number; attempts?: number } = {}
+) => {
+  const attempts = Math.max(1, Number(opts.attempts ?? 3));
+  const waitUntil = opts.waitUntil ?? 'domcontentloaded';
+  const timeout = opts.timeout ?? 60_000;
+
+  let lastErr: any = null;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      await page.goto(url, { waitUntil, timeout });
+      return;
+    } catch (err: any) {
+      lastErr = err;
+      const msg = err?.message ? String(err.message) : String(err);
+      const isConnRefused =
+        msg.includes('ERR_CONNECTION_REFUSED') ||
+        msg.includes('ECONNREFUSED') ||
+        msg.includes('ERR_CONNECTION_RESET') ||
+        msg.includes('net::ERR_CONNECTION_REFUSED');
+      if (!isConnRefused) break;
+      await page.waitForTimeout(1000);
+    }
+  }
+  throw lastErr;
+};
+
 test.describe('Manual QA automation: auth entrypoints', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test('login -> registration link works with visible cookie banner', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await gotoWithRetry(page, '/login', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
     const banner = page.getByTestId('consent-banner');
     await expect(banner).toBeVisible({ timeout: 10_000 });
@@ -19,7 +48,7 @@ test.describe('Manual QA automation: auth entrypoints', () => {
 
   test('account menu navigation works for guest users', async ({ page, context }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
     // Открываем меню аккаунта
     const accountButton = page.getByTestId('account-menu-anchor');
@@ -47,7 +76,7 @@ test.describe('Manual QA automation: auth entrypoints', () => {
 
   test('account menu registration works for guest users', async ({ page, context }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 });
 
     // Открываем меню аккаунта
     const accountButton = page.getByTestId('account-menu-anchor');

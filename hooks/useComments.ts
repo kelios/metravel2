@@ -29,6 +29,8 @@ export const commentKeys = {
   thread: (threadId: number) => [...commentKeys.threads(), threadId] as const,
   mainThread: (travelId: number) => [...commentKeys.threads(), 'main', travelId] as const,
   comments: (threadId: number) => [...commentKeys.all, 'list', threadId] as const,
+  travelComments: (travelId: number, threadId?: number | null) =>
+    [...commentKeys.all, 'travel', travelId, threadId || 0] as const,
   comment: (commentId: number) => [...commentKeys.all, 'detail', commentId] as const,
 };
 
@@ -71,6 +73,27 @@ export function useComments(threadId: number) {
   });
 }
 
+export function useTravelComments(travelId: number, threadId?: number | null) {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: commentKeys.travelComments(travelId, threadId),
+    queryFn: () => commentsApi.getTravelComments({ travelId, threadId }),
+    enabled: !!travelId && travelId > 0,
+    select: (data) => {
+      const prevById = buildPrevById(
+        queryClient.getQueryData<TravelComment[]>(
+          commentKeys.travelComments(travelId, threadId)
+        )
+      );
+      return data.map((c) => mergeIsLikedFromCache(c, prevById));
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+}
+
 export function useComment(commentId: number) {
   const queryClient = useQueryClient();
   return useQuery({
@@ -92,60 +115,72 @@ export function useCreateComment() {
   return useMutation({
     mutationFn: (data: TravelCommentCreate) => commentsApi.createComment(data),
     onMutate: async (data) => {
-      // Cancel any outgoing refetches
-      if (data.thread_id) {
-        await queryClient.cancelQueries({ queryKey: commentKeys.comments(data.thread_id) });
-      }
+      // Cancel any outgoing refetches for comments-related queries
+      await queryClient.cancelQueries({ queryKey: commentKeys.all });
 
-      // Snapshot the previous value
-      const previousComments = data.thread_id
-        ? queryClient.getQueryData<TravelComment[]>(commentKeys.comments(data.thread_id))
-        : undefined;
+      // Snapshot all existing comments caches (thread + travel variants)
+      const previous = queryClient.getQueriesData({ queryKey: commentKeys.all });
 
-      // Optimistically update to the new value
-      if (data.thread_id && previousComments) {
-        const optimisticComment: TravelComment = {
-          id: Date.now(), // Temporary ID
-          text: data.text,
-          thread: data.thread_id,
-          sub_thread: null,
-          user: 0, // Current user ID (will be replaced on refetch)
-          user_name: 'Отправка...',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          likes_count: 0,
-          is_liked: false,
-        };
+      const optimisticComment: TravelComment = {
+        id: Date.now(), // Temporary ID
+        text: data.text,
+        thread: data.thread_id ?? 0,
+        sub_thread: null,
+        user: 0, // Current user ID (will be replaced on refetch)
+        user_name: 'Отправка...',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        likes_count: 0,
+        is_liked: false,
+      };
 
-        queryClient.setQueryData<TravelComment[]>(
-          commentKeys.comments(data.thread_id),
-          [...previousComments, optimisticComment]
-        );
-      }
+      // Optimistically update relevant cached lists
+      previous.forEach(([key, value]) => {
+        if (!Array.isArray(value)) return;
 
-      return { previousComments, threadId: data.thread_id };
+        const queryKey = key as unknown as any[];
+        const kind = queryKey?.[1];
+
+        // Thread-based cache: ['comments', 'list', threadId]
+        if (kind === 'list' && typeof data.thread_id === 'number' && queryKey?.[2] === data.thread_id) {
+          queryClient.setQueryData<TravelComment[]>(queryKey as any, [...(value as TravelComment[]), optimisticComment]);
+          return;
+        }
+
+        // Travel-based cache: ['comments', 'travel', travelId, threadId]
+        if (kind === 'travel') {
+          const travelIdInKey = queryKey?.[2];
+          const threadIdInKey = queryKey?.[3];
+
+          if (typeof data.travel_id === 'number' && travelIdInKey === data.travel_id) {
+            queryClient.setQueryData<TravelComment[]>(queryKey as any, [...(value as TravelComment[]), optimisticComment]);
+            return;
+          }
+
+          if (typeof data.thread_id === 'number' && threadIdInKey === data.thread_id) {
+            queryClient.setQueryData<TravelComment[]>(queryKey as any, [...(value as TravelComment[]), optimisticComment]);
+            return;
+          }
+        }
+      });
+
+      return { previous };
     },
     onError: (err, variables, context) => {
-      // If the mutation fails, rollback
-      if (context?.threadId && context?.previousComments) {
-        queryClient.setQueryData(
-          commentKeys.comments(context.threadId),
-          context.previousComments
-        );
+      // If the mutation fails, rollback all comments caches
+      if (context?.previous) {
+        (context.previous as Array<[unknown, unknown]>).forEach(([key, value]) => {
+          queryClient.setQueryData(key as any, value);
+        });
       }
     },
     onSuccess: (newComment, variables) => {
-      // Force refetch to get the real data
+      // Refetch all comments-related queries (thread + travel variants) to reconcile optimistic state.
+      queryClient.invalidateQueries({ queryKey: commentKeys.all, refetchType: 'active' });
+
+      // Main thread can appear after first comment is created.
       if (variables.travel_id) {
-        queryClient.invalidateQueries({
-          queryKey: commentKeys.mainThread(variables.travel_id),
-        });
-      }
-      
-      if (newComment.thread) {
-        queryClient.invalidateQueries({
-          queryKey: commentKeys.comments(newComment.thread),
-        });
+        queryClient.invalidateQueries({ queryKey: commentKeys.mainThread(variables.travel_id) });
       }
     },
   });
@@ -158,14 +193,8 @@ export function useUpdateComment() {
     mutationFn: ({ commentId, data }: { commentId: number; data: TravelCommentUpdate }) =>
       commentsApi.updateComment(commentId, data),
     onSuccess: (updatedComment) => {
-      queryClient.invalidateQueries({
-        queryKey: commentKeys.comment(updatedComment.id),
-      });
-      if (updatedComment.thread) {
-        queryClient.invalidateQueries({
-          queryKey: commentKeys.comments(updatedComment.thread),
-        });
-      }
+      // Keep all list variants (thread + travel) in sync.
+      queryClient.invalidateQueries({ queryKey: commentKeys.all, refetchType: 'active' });
     },
   });
 }
@@ -176,8 +205,20 @@ export function useDeleteComment() {
   return useMutation({
     mutationFn: (commentId: number) => commentsApi.deleteComment(commentId),
     onSuccess: (_, _commentId) => {
+      // Remove from any cached lists/details immediately so UI updates without waiting for refetch.
+      queryClient.setQueriesData({ queryKey: commentKeys.all }, (old: unknown) => {
+        if (!old) return old;
+        if (Array.isArray(old)) {
+          return (old as TravelComment[]).filter((c) => c?.id !== _commentId);
+        }
+        if (typeof old === 'object' && (old as any)?.id === _commentId) {
+          return undefined;
+        }
+        return old;
+      });
       queryClient.invalidateQueries({
         queryKey: commentKeys.all,
+        refetchType: 'active',
       });
     },
   });
@@ -334,60 +375,60 @@ export function useReplyToComment() {
     mutationFn: ({ commentId, data }: { commentId: number; data: TravelCommentCreate }) =>
       commentsApi.replyToComment(commentId, data),
     onMutate: async ({ commentId, data }) => {
-      // Cancel any outgoing refetches
-      if (data.thread_id) {
-        await queryClient.cancelQueries({ queryKey: commentKeys.comments(data.thread_id) });
-      }
+      await queryClient.cancelQueries({ queryKey: commentKeys.all });
+      const previous = queryClient.getQueriesData({ queryKey: commentKeys.all });
 
-      // Snapshot the previous value
-      const previousComments = data.thread_id
-        ? queryClient.getQueryData<TravelComment[]>(commentKeys.comments(data.thread_id))
-        : undefined;
+      const optimisticComment: TravelComment = {
+        id: Date.now(), // Temporary ID
+        text: data.text,
+        thread: data.thread_id ?? 0,
+        sub_thread: commentId,
+        user: 0,
+        user_name: 'Отправка...',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        likes_count: 0,
+        is_liked: false,
+      };
 
-      // Optimistically update to the new value
-      if (data.thread_id && previousComments) {
-        const optimisticComment: TravelComment = {
-          id: Date.now(), // Temporary ID
-          text: data.text,
-          thread: data.thread_id,
-          sub_thread: commentId, // ✅ ИСПРАВЛЕНО: sub_thread = ID родительского комментария
-          user: 0, // Current user ID (will be replaced on refetch)
-          user_name: 'Отправка...',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          likes_count: 0,
-          is_liked: false,
-        };
+      previous.forEach(([key, value]) => {
+        if (!Array.isArray(value)) return;
+        const queryKey = key as unknown as any[];
+        const kind = queryKey?.[1];
 
-        queryClient.setQueryData<TravelComment[]>(
-          commentKeys.comments(data.thread_id),
-          [...previousComments, optimisticComment]
-        );
-      }
+        if (kind === 'list' && typeof data.thread_id === 'number' && queryKey?.[2] === data.thread_id) {
+          queryClient.setQueryData<TravelComment[]>(queryKey as any, [...(value as TravelComment[]), optimisticComment]);
+          return;
+        }
 
-      return { previousComments, threadId: data.thread_id };
+        if (kind === 'travel') {
+          const travelIdInKey = queryKey?.[2];
+          const threadIdInKey = queryKey?.[3];
+
+          if (typeof data.travel_id === 'number' && travelIdInKey === data.travel_id) {
+            queryClient.setQueryData<TravelComment[]>(queryKey as any, [...(value as TravelComment[]), optimisticComment]);
+            return;
+          }
+          if (typeof data.thread_id === 'number' && threadIdInKey === data.thread_id) {
+            queryClient.setQueryData<TravelComment[]>(queryKey as any, [...(value as TravelComment[]), optimisticComment]);
+            return;
+          }
+        }
+      });
+
+      return { previous };
     },
     onError: (err, variables, context) => {
-      // If the mutation fails, rollback
-      if (context?.threadId && context?.previousComments) {
-        queryClient.setQueryData(
-          commentKeys.comments(context.threadId),
-          context.previousComments
-        );
+      if (context?.previous) {
+        (context.previous as Array<[unknown, unknown]>).forEach(([key, value]) => {
+          queryClient.setQueryData(key as any, value);
+        });
       }
     },
     onSuccess: (newComment, variables) => {
-      // Force refetch to get the real data
-      if (newComment.thread) {
-        queryClient.invalidateQueries({
-          queryKey: commentKeys.comments(newComment.thread),
-        });
-      }
-
+      queryClient.invalidateQueries({ queryKey: commentKeys.all, refetchType: 'active' });
       if (variables.data.travel_id) {
-        queryClient.invalidateQueries({
-          queryKey: commentKeys.mainThread(variables.data.travel_id),
-        });
+        queryClient.invalidateQueries({ queryKey: commentKeys.mainThread(variables.data.travel_id) });
       }
     },
   });

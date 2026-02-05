@@ -43,16 +43,16 @@ test.describe('Travel Details - Performance Metrics', () => {
       .isVisible()
       .then((v) => v)
       .catch(() => false);
-    if (!loaded) {
-      const errorState = page.getByText('Не удалось загрузить путешествие').first();
-      if (await errorState.isVisible().catch(() => false)) {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Travel details page entered error state; skipping performance metrics in this environment.',
-        });
-        test.skip(true, 'Travel details not available');
-      }
-    }
+	    if (!loaded) {
+	      const errorState = page.getByText('Не удалось загрузить путешествие').first();
+	      if (await errorState.isVisible().catch(() => false)) {
+	        test.info().annotations.push({
+	          type: 'note',
+	          description: 'Travel details page entered error state; skipping performance metrics in this environment.',
+	        });
+	        throw new Error('Travel details not available (error state is visible).');
+	      }
+	    }
     await mainContent.waitFor({ state: 'visible', timeout: 30_000 });
 
     const navigationEnd = Date.now();

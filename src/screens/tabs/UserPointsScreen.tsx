@@ -6,6 +6,7 @@ import { ImportWizard } from '@/components/UserPoints/ImportWizard';
 import { useAuth } from '@/context/AuthContext';
 import { router } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 export default function UserPointsScreen() {
   const [showImportWizard, setShowImportWizard] = useState(false);
@@ -31,7 +32,7 @@ export default function UserPointsScreen() {
         </Text>
         <TouchableOpacity
           style={styles.authButton}
-          onPress={() => router.push('/login')}
+          onPress={() => router.push(buildLoginHref({ redirect: '/userpoints', intent: 'userpoints' }) as any)}
         >
           <Text style={styles.authButtonText}>Войти</Text>
         </TouchableOpacity>

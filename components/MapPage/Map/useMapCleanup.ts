@@ -1,12 +1,25 @@
 // components/MapPage/map/useMapCleanup.ts
-import { useEffect, useId, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { LEAFLET_MAP_CONTAINER_ID_PREFIX } from './constants';
 
 export const useMapCleanup = () => {
-  const reactId = useId();
-  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${reactId}`);
-  const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${reactId}`);
+  // `useId()` гарантирует уникальность только внутри одного React root.
+  // На web у Expo/Router возможны несколько root-деревьев, поэтому используем
+  // собственный безопасный идентификатор для DOM id/ключей Leaflet контейнера.
+  const instanceIdRef = useRef<string>('');
+  if (!instanceIdRef.current) {
+    const raw =
+      typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function'
+        ? (crypto as any).randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    // Leaflet/DOM ids: держим только безопасные символы.
+    instanceIdRef.current = String(raw).replace(/[^a-zA-Z0-9_-]/g, '');
+  }
+
+  const mapInstanceKeyRef = useRef<string>(`leaflet-map-${instanceIdRef.current}`);
+  const mapContainerIdRef = useRef<string>(`${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${instanceIdRef.current}`);
+  const containerElRef = useRef<any>(null);
 
   // Глобальная очистка старых контейнеров при монтировании
   useEffect(() => {
@@ -43,6 +56,13 @@ export const useMapCleanup = () => {
     };
 
     try {
+      // Keep a stable reference to the current container element for unmount cleanup.
+      try {
+        containerElRef.current = document.getElementById(mapContainerIdRef.current) as any;
+      } catch {
+        // noop
+      }
+
       const allLeafletContainers = document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`);
       allLeafletContainers.forEach((el: any) => {
         if (el.id === mapContainerIdRef.current) return;
@@ -66,7 +86,8 @@ export const useMapCleanup = () => {
       if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
       try {
-        const container = document.getElementById(containerId) as any;
+        // Prefer a direct element reference (it may already be detached from DOM).
+        const container = (containerElRef.current as any) || (document.getElementById(containerId) as any);
         if (!container) return;
 
         if (container._leaflet_map) {

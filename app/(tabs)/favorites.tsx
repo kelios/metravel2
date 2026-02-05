@@ -14,6 +14,7 @@ import { confirmAction } from '@/src/utils/confirmAction';
 import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 export default function FavoritesScreen() {
     const router = useRouter();
@@ -195,7 +196,7 @@ export default function FavoritesScreen() {
                     description="Войдите, чтобы сохранять избранное и синхронизировать его между устройствами."
                     action={{
                         label: 'Войти',
-                        onPress: () => router.push('/login'),
+                        onPress: () => router.push(buildLoginHref({ redirect: '/favorites', intent: 'favorites' }) as any),
                     }}
                 />
             </SafeAreaView>

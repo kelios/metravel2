@@ -102,19 +102,70 @@ const proxyRequest = (req, res, target) => {
         ...(isHttps && allowInsecureProxy ? { rejectUnauthorized: false } : null),
       },
       (proxyRes) => {
-        if (clientClosed) {
+        try {
+          if (clientClosed) {
+            try {
+              proxyRes.destroy()
+            } catch {
+              // ignore
+            }
+            return
+          }
+          if (proxyDebug) {
+            console.log(`[Proxy] ${req.method || 'GET'} ${upstreamPath} -> ${proxyRes.statusCode || 0}`)
+          }
+
+          proxyRes.on('error', (error) => {
+            if (clientClosed) return
+            if (res.headersSent || res.writableEnded) return
+            const message = error && error.message ? error.message : String(error)
+            if (!isShuttingDown && proxyDebug) {
+              console.warn(`[Proxy] Upstream response error: ${message}`)
+            }
+            res.statusCode = 502
+            res.end('Proxy error')
+          })
+
+          res.on('error', () => {
+            try {
+              proxyRes.destroy()
+            } catch {
+              // ignore
+            }
+          })
+
+          // Forward status + headers, but guard against invalid header values that can crash Node.
+          res.statusCode = proxyRes.statusCode || 200
+          const headers = proxyRes.headers || {}
+          for (const [key, value] of Object.entries(headers)) {
+            if (!key) continue
+            if (value == null) continue
+            try {
+              res.setHeader(key, value)
+            } catch (e) {
+              if (proxyDebug) {
+                const msg = e && e.message ? e.message : String(e)
+                console.warn(`[Proxy] Skipping invalid header "${key}": ${msg}`)
+              }
+            }
+          }
+
+          proxyRes.pipe(res)
+        } catch (error) {
+          if (clientClosed) return
+          if (res.headersSent || res.writableEnded) return
+          const message = error && error.message ? error.message : String(error)
+          if (!isShuttingDown) {
+            console.error('❌ API proxy error:', message)
+          }
+          res.statusCode = 502
+          res.end('Proxy error')
           try {
             proxyRes.destroy()
           } catch {
             // ignore
           }
-          return
         }
-        if (proxyDebug) {
-          console.log(`[Proxy] ${req.method || 'GET'} ${upstreamPath} -> ${proxyRes.statusCode || 0}`)
-        }
-        res.writeHead(proxyRes.statusCode || 200, proxyRes.headers)
-        proxyRes.pipe(res)
       }
     )
 
@@ -273,3 +324,15 @@ const shutdown = () => {
 
 process.on('SIGINT', shutdown)
 process.on('SIGTERM', shutdown)
+
+// Keep the server alive during long e2e runs even if an unexpected async error slips through.
+// Prefer logging over crashing to avoid cascading `ERR_CONNECTION_REFUSED` test failures.
+process.on('uncaughtException', (err) => {
+  if (isShuttingDown) return
+  console.error('❌ Uncaught exception in web build server:', err)
+})
+
+process.on('unhandledRejection', (reason) => {
+  if (isShuttingDown) return
+  console.error('❌ Unhandled rejection in web build server:', reason)
+})

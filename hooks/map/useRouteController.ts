@@ -70,6 +70,16 @@ interface UseRouteControllerResult {
   routeDuration: number | null;
 
   /**
+   * Route elevation gain in meters (bike/foot)
+   */
+  routeElevationGain: number | null;
+
+  /**
+   * Route elevation loss in meters (bike/foot)
+   */
+  routeElevationLoss: number | null;
+
+  /**
    * Full route coordinates
    */
   fullRouteCoords: [number, number][];
@@ -93,6 +103,11 @@ interface UseRouteControllerResult {
    * Set full route coordinates
    */
   setFullRouteCoords: (coords: [number, number][]) => void;
+
+  /**
+   * Set elevation gain/loss (meters)
+   */
+  setRouteElevationStats: (gainMeters: number | null, lossMeters: number | null) => void;
 
   /**
    * Clear route
@@ -128,6 +143,16 @@ interface UseRouteControllerResult {
    * Routing error
    */
   routingError: string | boolean | null;
+
+  /**
+   * Set routing loading state
+   */
+  setRoutingLoading: (loading: boolean) => void;
+
+  /**
+   * Set routing error (null to clear)
+   */
+  setRoutingError: (error: string | null) => void;
 
   /**
    * Handle map click (for route building)
@@ -178,17 +203,22 @@ export function useRouteController(
     endAddress,
     routeDistance,
     routeDuration,
+    routeElevationGain,
+    routeElevationLoss,
     fullRouteCoords,
     setRoutePoints,
     setRouteDistance,
     setRouteDuration,
     setFullRouteCoords,
+    setRouteElevationStats,
     handleClearRoute,
     handleAddressSelect,
     handleAddressClear,
     points: routeStorePoints,
     isBuilding: routingLoading,
     error: routingError,
+    setBuilding,
+    setError,
     addPoint,
     updatePoint,
   } = routeStore;
@@ -319,11 +349,14 @@ export function useRouteController(
     endAddress,
     routeDistance,
     routeDuration,
+    routeElevationGain,
+    routeElevationLoss,
     fullRouteCoords,
     setRoutePoints,
     setRouteDistance,
     setRouteDuration,
     setFullRouteCoords,
+    setRouteElevationStats,
     handleClearRoute,
     handleAddressSelect,
     handleAddressClear,
@@ -331,6 +364,8 @@ export function useRouteController(
     swapStartEnd: routeStore.swapStartEnd,
     routingLoading,
     routingError,
+    setRoutingLoading: setBuilding,
+    setRoutingError: setError,
     handleMapClick,
     buildRouteTo,
   };

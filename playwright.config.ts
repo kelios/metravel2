@@ -53,7 +53,9 @@ export default defineConfig({
     : {
         command: 'node scripts/e2e-webserver.js',
         url: baseURL,
-        reuseExistingServer: false,
+        // Local runs can leave the dev server running if Playwright is interrupted.
+        // Reuse it instead of failing with EADDRINUSE.
+        reuseExistingServer: !!process.env.CI ? false : true,
         timeout: 600_000,
         env: {
           ...process.env,

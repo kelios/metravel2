@@ -32,6 +32,9 @@ export interface MapProps {
   setRouteDistance: (distance: number) => void;
   setRouteDuration?: (durationSeconds: number) => void;
   setFullRouteCoords: (coords: [number, number][]) => void;
+  setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void;
+  setRoutingLoading?: (loading: boolean) => void;
+  setRoutingError?: (error: string | null) => void;
   radius?: string;
   onMapUiApiReady?: (api: MapUiApi | null) => void;
   onUserLocationChange?: (loc: Coordinates | null) => void;

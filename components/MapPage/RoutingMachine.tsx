@@ -2,6 +2,44 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useRouting } from './useRouting'
 
+// Open-Meteo elevation endpoint supports batch arrays; keep this comfortably under the limit
+// to reduce URL size and rate-limit pressure.
+const MAX_ELEVATION_SAMPLES = 60
+const elevationCache = new Map<string, { gain: number; loss: number }>()
+let elevationNextAllowedAtMs = 0
+let elevationLastAttemptAtMs = 0
+const ELEVATION_MIN_INTERVAL_MS = 1500
+const ELEVATION_429_COOLDOWN_MS = 30_000
+
+const sampleIndices = (total: number, maxSamples: number) => {
+    if (!Number.isFinite(total) || total <= 0) return [] as number[]
+    if (total <= maxSamples) return Array.from({ length: total }, (_, i) => i)
+    if (maxSamples <= 1) return [0]
+    const out: number[] = []
+    for (let i = 0; i < maxSamples; i++) {
+        const idx = Math.round((i * (total - 1)) / (maxSamples - 1))
+        out.push(idx)
+    }
+    // Ensure unique / sorted indices
+    return Array.from(new Set(out)).sort((a, b) => a - b)
+}
+
+const computeElevationGainLoss = (elevations: number[]) => {
+    let gain = 0
+    let loss = 0
+    const noiseThresholdMeters = 3
+    for (let i = 1; i < elevations.length; i++) {
+        const prev = elevations[i - 1]
+        const next = elevations[i]
+        if (!Number.isFinite(prev) || !Number.isFinite(next)) continue
+        const delta = next - prev
+        if (Math.abs(delta) < noiseThresholdMeters) continue
+        if (delta > 0) gain += delta
+        else loss += Math.abs(delta)
+    }
+    return { gain: Math.round(gain), loss: Math.round(loss) }
+}
+
 interface RoutingMachineProps {
     routePoints: [number, number][]
     transportMode: 'car' | 'bike' | 'foot'
@@ -10,6 +48,7 @@ interface RoutingMachineProps {
     setRouteDistance: (distance: number) => void
     setRouteDuration?: (durationSeconds: number) => void
     setFullRouteCoords: (coords: [number, number][]) => void
+    setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void
     ORS_API_KEY: string | undefined
 }
 
@@ -35,6 +74,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
     setRouteDistance,
     setRouteDuration,
     setFullRouteCoords,
+    setRouteElevationStats,
     ORS_API_KEY,
 }) => {
     const prevStateRef = useRef<{
@@ -169,6 +209,103 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
         hasTwoPoints,
         // Не включаем setters в зависимости - они стабильны
     ])
+
+    // Elevation stats (bike/foot only): fetch elevations for sampled route geometry and compute gain/loss.
+    useEffect(() => {
+        if (!hasTwoPoints) return
+        if (transportMode === 'car') return
+        if (!setRouteElevationStats) return
+        if (routingState.loading) return
+        if (!Array.isArray(routingState.coords) || routingState.coords.length < 2) return
+
+        const indices = sampleIndices(routingState.coords.length, MAX_ELEVATION_SAMPLES)
+        if (indices.length < 2) return
+
+        const sampled = indices
+            .map((i) => routingState.coords[i])
+            .filter((p) => Array.isArray(p) && p.length >= 2 && Number.isFinite(p[0]) && Number.isFinite(p[1]))
+
+        if (sampled.length < 2) return
+
+        const latitudes = sampled.map((p) => Number(p[1]).toFixed(5)).join(',')
+        const longitudes = sampled.map((p) => Number(p[0]).toFixed(5)).join(',')
+
+        // Stable cache key (rounded samples) to avoid re-fetching on tiny floating diffs.
+        const cacheKey = `${transportMode}:${latitudes}:${longitudes}`
+        const cached = elevationCache.get(cacheKey)
+        if (cached) {
+            try {
+                setRouteElevationStats(cached.gain, cached.loss)
+            } catch {
+                // noop
+            }
+            return
+        }
+
+        // Clear stale values while we fetch new elevations
+        try {
+            setRouteElevationStats(null, null)
+        } catch {
+            // noop
+        }
+
+        const now = Date.now()
+        if (now < elevationNextAllowedAtMs) return
+        if (now - elevationLastAttemptAtMs < ELEVATION_MIN_INTERVAL_MS) return
+        elevationLastAttemptAtMs = now
+
+        const abortController = new AbortController()
+        let cancelled = false
+
+        const fetchElevations = async () => {
+            try {
+                // Open-Meteo elevation API (no key). Keep sample count <= 100.
+                const url = `https://api.open-meteo.com/v1/elevation?latitude=${latitudes}&longitude=${longitudes}`
+                const res = await fetch(url, { signal: abortController.signal })
+                if (res.status === 429) {
+                    elevationNextAllowedAtMs = Date.now() + ELEVATION_429_COOLDOWN_MS
+                    return
+                }
+                if (!res.ok) return
+                const data = await res.json().catch(() => null)
+                const elevations = (data as any)?.elevation
+                if (!Array.isArray(elevations) || elevations.length < 2) return
+                if (cancelled) return
+
+                const stats = computeElevationGainLoss(elevations.map((x: any) => Number(x)))
+                elevationCache.set(cacheKey, stats)
+                try {
+                    setRouteElevationStats(stats.gain, stats.loss)
+                } catch {
+                    // noop
+                }
+            } catch (e: any) {
+                if (e?.name === 'AbortError') return
+            }
+        }
+
+        fetchElevations()
+
+        return () => {
+            cancelled = true
+            try {
+                abortController.abort()
+            } catch {
+                // noop
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasTwoPoints, transportMode, coordsKeyForSync, routingState.loading, setRouteElevationStats])
+
+    useEffect(() => {
+        if (!setRouteElevationStats) return
+        if (transportMode !== 'car') return
+        try {
+            setRouteElevationStats(null, null)
+        } catch {
+            // noop
+        }
+    }, [setRouteElevationStats, transportMode])
 
     return null
 }

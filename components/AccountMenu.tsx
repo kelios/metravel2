@@ -14,6 +14,7 @@ import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
@@ -350,7 +351,7 @@ function AccountMenu() {
       {!isAuthenticated ? (
         <>
           <Menu.Item
-            onPress={() => handleNavigate('/login')}
+            onPress={() => handleNavigate(buildLoginHref({ intent: 'menu' }))}
             title="Войти"
             leadingIcon={({ size }) => <Feather name="log-in" size={size} color={styles.iconMuted.color} />}
             style={styles.menuItem}

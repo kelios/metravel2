@@ -14,6 +14,7 @@ import { SkeletonLoader } from '@/components/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildLoginHref } from '@/src/utils/authNavigation';
 
 export default function HistoryScreen() {
     const router = useRouter();
@@ -176,7 +177,7 @@ export default function HistoryScreen() {
                     description="Войдите, чтобы сохранять историю просмотров и синхронизировать её между устройствами."
                     action={{
                         label: 'Войти',
-                        onPress: () => router.push('/login'),
+                        onPress: () => router.push(buildLoginHref({ redirect: '/history', intent: 'history' }) as any),
                     }}
                 />
             </SafeAreaView>

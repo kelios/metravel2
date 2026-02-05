@@ -24,6 +24,9 @@ interface MapPanelProps {
     setRouteDistance: (distance: number) => void;
     setRouteDuration?: (durationSeconds: number) => void;
     setFullRouteCoords: (coords: [number, number][]) => void;
+    setRouteElevationStats?: (gainMeters: number | null, lossMeters: number | null) => void;
+    setRoutingLoading?: (loading: boolean) => void;
+    setRoutingError?: (error: string | null) => void;
     radius?: string; // Радиус поиска в км
     onMapUiApiReady?: (api: MapUiApi | null) => void;
     onUserLocationChange?: ((loc: LatLng | null) => void) | undefined;
@@ -62,6 +65,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                setRouteDistance,
                                                setRouteDuration,
                                                setFullRouteCoords,
+                                               setRouteElevationStats,
+                                               setRoutingLoading,
+                                               setRoutingError,
                                                radius,
                                                onMapUiApiReady,
                                                onUserLocationChange,
@@ -115,6 +121,9 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       setRouteDistance={setRouteDistance}
                       setRouteDuration={setRouteDuration}
                       setFullRouteCoords={setFullRouteCoords}
+                      setRouteElevationStats={setRouteElevationStats}
+                      setRoutingLoading={setRoutingLoading}
+                      setRoutingError={setRoutingError}
                       radius={radius}
                       onMapUiApiReady={onMapUiApiReady}
                       onUserLocationChange={onUserLocationChange}

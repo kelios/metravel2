@@ -1,7 +1,6 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { TouchableOpacity, StyleSheet, Platform, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { devLog } from '@/src/utils/logger';
@@ -9,6 +8,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { showToast } from '@/src/utils/toast';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 type FavoriteButtonProps = {
     id: string | number;
@@ -36,8 +36,8 @@ export default function FavoriteButton({
     style,
 }: FavoriteButtonProps) {
     const colors = useThemedColors();
-    const router = useRouter();
     const { isAuthenticated } = useAuth();
+    const { requireAuth } = useRequireAuth({ intent: 'favorite' });
     const { isFavorite, addFavorite, removeFavorite } = useFavorites();
     const serverIsFav = isFavorite(id, type);
     // Оптимистичное состояние для мгновенного отклика
@@ -76,7 +76,7 @@ export default function FavoriteButton({
         }
 
         if (!isAuthenticated) {
-            router.push('/login' as any);
+            requireAuth();
             return;
         }
 

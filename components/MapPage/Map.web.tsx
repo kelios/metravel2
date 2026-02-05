@@ -73,6 +73,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
     setRouteDistance,
     setRouteDuration,
     setFullRouteCoords,
+    setRouteElevationStats,
+    setRoutingLoading,
+    setRoutingError,
     radius,
     onUserLocationChange,
   } = props;
@@ -89,7 +92,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [showInitialLoader, setShowInitialLoader] = useState(Platform.OS !== 'web');
   const [_hasWebTilesLoaded, setHasWebTilesLoaded] = useState(false);
-  const [_routingLoading, setRoutingLoading] = useState(false);
   const [errors, setErrors] = useState<any>({ routing: false });
   const [disableFitBounds, _setDisableFitBounds] = useState(false);
   const [expandedCluster, setExpandedCluster] = useState<{ key: string; items: Point[] } | null>(null);
@@ -144,6 +146,19 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const lastAutoFitKeyRef = useRef<string | null>(null);
 
   const { mapInstanceKeyRef, mapContainerIdRef } = useMapCleanup();
+
+  // Defensive cleanup: if the component unmounts (route change / error boundary),
+  // make sure Leaflet map instance is removed so the container is not "stamped".
+  useEffect(() => {
+    return () => {
+      try {
+        mapRef.current?.remove?.();
+      } catch {
+        // noop
+      }
+      mapRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -410,8 +425,16 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   useEffect(() => {
     if (!errors?.routing) return;
+    // Avoid spamming the console for expected/temporary states (rate-limit, aborts).
+    const msg = typeof errors.routing === 'string' ? errors.routing : String(errors.routing);
+    const normalized = msg.trim();
+    if (!normalized) return;
+    if (normalized.toLowerCase().includes('signal is aborted')) return;
+
+    const shouldWarn = normalized.includes('Слишком много запросов');
     try {
-      console.error('[Map] Routing error:', errors.routing);
+      if (shouldWarn) console.warn('[Map] Routing:', normalized);
+      else console.error('[Map] Routing error:', normalized);
     } catch {
       // noop
     }
@@ -1057,11 +1080,38 @@ const MapPageComponent: React.FC<Props> = (props) => {
               <RoutingMachine
                 routePoints={routePointsForRouting}
                 transportMode={transportMode}
-                setRoutingLoading={setRoutingLoading}
-                setErrors={setErrors}
+                setRoutingLoading={(loading) => {
+                  try {
+                    setRoutingLoading?.(loading);
+                  } catch {
+                    // noop
+                  }
+                }}
+                setErrors={(next) => {
+                  try {
+                    setErrors(next);
+                  } catch {
+                    // noop
+                  }
+                  const routingMsg = (next as any)?.routing;
+                  if (typeof routingMsg === 'string' && routingMsg.trim()) {
+                    try {
+                      setRoutingError?.(routingMsg);
+                    } catch {
+                      // noop
+                    }
+                  } else {
+                    try {
+                      setRoutingError?.(null);
+                    } catch {
+                      // noop
+                    }
+                  }
+                }}
                 setRouteDistance={setRouteDistance}
                 setRouteDuration={setRouteDuration}
                 setFullRouteCoords={setFullRouteCoords}
+                setRouteElevationStats={setRouteElevationStats}
                 ORS_API_KEY={ORS_API_KEY}
               />
             );

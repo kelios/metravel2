@@ -26,7 +26,14 @@ export const commentsApi = {
     } catch (error) {
       // Backend can return 404 when a main thread doesn't exist yet (no comments).
       // Treat this as an empty state rather than a hard error.
-      if (getErrorStatus(error) === 404) {
+      const status = getErrorStatus(error);
+      if (status === 404) {
+        return null;
+      }
+      // Some deployments protect thread metadata behind auth while still allowing
+      // public comment reads. Treat "auth required" as "no thread info" so the UI
+      // can fall back to other read strategies (e.g. fetching by travel_id).
+      if (status === 401 || status === 403) {
         return null;
       }
       throw error;
@@ -51,6 +58,31 @@ export const commentsApi = {
       }
       throw error;
     }
+  },
+
+  getCommentsByTravel: async (travelId: number): Promise<TravelComment[]> => {
+    try {
+      return await apiClient.get<TravelComment[]>(
+        `/travel-comments/?travel_id=${travelId}`
+      );
+    } catch (error) {
+      // Some backends return 404 for an empty travel thread instead of [].
+      if (getErrorStatus(error) === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  getTravelComments: async (params: {
+    travelId: number;
+    threadId?: number | null;
+  }): Promise<TravelComment[]> => {
+    const { travelId, threadId } = params;
+    if (typeof threadId === 'number' && threadId > 0) {
+      return await commentsApi.getComments(threadId);
+    }
+    return await commentsApi.getCommentsByTravel(travelId);
   },
 
   getComment: async (commentId: number): Promise<TravelComment> => {

@@ -30,6 +30,8 @@ export interface RouteData {
   duration: number; // seconds
   isOptimal: boolean;
   error?: string;
+  elevationGain?: number; // meters
+  elevationLoss?: number; // meters
 }
 
 /**

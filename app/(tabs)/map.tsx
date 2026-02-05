@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
+import { ensureLeafletCss } from '@/src/utils/ensureLeafletCss'
 
 // Keep the tab route module tiny so it doesn't pull map dependencies into the entry bundle.
 const MapScreenImpl = React.lazy(() => import('@/src/screens/tabs/MapScreen'))
@@ -12,19 +13,7 @@ export default function MapScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') return
 
-    try {
-      const id = 'metravel-leaflet-css'
-      if (typeof document !== 'undefined' && !document.getElementById(id)) {
-        const link = document.createElement('link')
-        link.id = id
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        link.setAttribute('data-metravel-leaflet-css', 'cdn')
-        document.head.appendChild(link)
-      }
-    } catch {
-      // noop
-    }
+    ensureLeafletCss()
 
     setHydrated(true)
 
