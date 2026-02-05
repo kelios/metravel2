@@ -58,7 +58,7 @@
     "build:all:dev": "eas build --platform all --profile development",
     "build:all:preview": "eas build --platform all --profile preview",
     "build:all:prod": "eas build --platform all --profile production",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "audit:high": "node scripts/yarn-audit-high.js",
     "perf:check": "./scripts/check-performance.sh",
     "perf:lighthouse": "npm run lighthouse:travel:mobile && npm run lighthouse:travel:desktop",
