@@ -747,7 +747,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         setLoadError({ status, message });
       }
     },
-    [formState, isNew, normalizeDraftPlaceholders, router, userId, isSuperAdmin]
+    [formState, isNew, normalizeDraftPlaceholders, onAuthRequired, router, userId, isSuperAdmin]
   );
 
   const retryLoad = useCallback(async () => {

@@ -56,7 +56,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
     } catch (error) {
       console.error('Error toggling favorite:', error);
     }
-  }, [travel, isAuthenticated, isFavorite, addFavorite, removeFavorite, onFavoriteToggle, router]);
+  }, [travel, isAuthenticated, isFavorite, addFavorite, removeFavorite, onFavoriteToggle, requireAuth]);
 
   const handleCreateTravel = useCallback(() => {
     if (!isAuthenticated) {

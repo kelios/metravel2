@@ -21,6 +21,12 @@ console.warn = (message, ...args) => {
   if (text.includes('GA4: gtag is not available')) {
     return
   }
+  if (text.includes('[Map] Location permission not granted')) {
+    return
+  }
+  if (text.includes('[useRouting]')) {
+    return
+  }
   if (text.includes('[setRoutePoints]')) {
     return
   }
@@ -42,6 +48,10 @@ console.info = (message, ...args) => {
   if (joined.includes('Created blob URL:')) return
   if (joined.includes('Upload response:')) return
   if (joined.includes('[setRoutePoints]')) return
+  if (joined.includes('[Map.web.tsx] Routing check:')) return
+  if (joined.includes('[Map.web.tsx] Route points normalization:')) return
+  if (joined.includes('[useRouting]')) return
+  if (joined.includes('[FiltersPanel]')) return
   if (joined.includes('Nominatim geocode response')) return
   if (joined.includes('BigDataCloud geocode response')) return
   originalInfo(message, ...args)
@@ -237,6 +247,9 @@ console.error = (message, ...args) => {
     return
   }
   if (text.includes('Upload error:')) {
+    return
+  }
+  if (text.includes('Comments error:')) {
     return
   }
   if (text.includes('Failed to load Leaflet')) {

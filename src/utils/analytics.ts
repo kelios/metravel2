@@ -10,6 +10,12 @@ export const sendAnalyticsEvent = async (
     eventName: string,
     eventParams: Record<string, unknown> = {}
 ) => {
+    // Unit/integration tests should be silent and must never make network calls.
+    // Jest sets JEST_WORKER_ID; also keep the NODE_ENV guard for other runners.
+    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID != null) {
+        return;
+    }
+
     // Web: use gtag.js (already injected in app/+html.tsx) instead of Measurement Protocol.
     // Measurement Protocol from the browser triggers CORS and exposes api_secret.
     if (Platform.OS === 'web') {

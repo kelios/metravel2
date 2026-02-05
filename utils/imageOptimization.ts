@@ -100,20 +100,24 @@ export function optimizeImageUrl(
       }
     }
     
-    // Handle both absolute and relative URLs
+    // Handle absolute URLs, protocol-relative URLs, and relative paths.
+    // For non-HTTP schemes (data/blob/file/etc) we intentionally pass through without warnings.
+    if (/^(data:|blob:|file:|content:|asset:)/i.test(secureUrl)) {
+      return secureUrl;
+    }
+
     let url: URL;
     if (secureUrl.startsWith('https://') || secureUrl.startsWith('http://')) {
       url = new URL(secureUrl);
-    } else if (secureUrl.startsWith('/')) {
-      // Relative URL starting with /
-      const base = Platform.OS === 'web' && typeof window !== 'undefined' 
-        ? window.location.origin 
-        : 'https://metravel.by';
-      url = new URL(secureUrl, base);
+    } else if (secureUrl.startsWith('//')) {
+      url = new URL(`https:${secureUrl}`);
     } else {
-      // Invalid URL format
-      console.warn('Invalid image URL format:', originalUrl);
-      return secureUrl;
+      const origin =
+        Platform.OS === 'web' && typeof window !== 'undefined'
+          ? (window as any)?.location?.origin
+          : undefined;
+      const base = typeof origin === 'string' && origin.length > 0 ? origin : 'https://metravel.by';
+      url = new URL(secureUrl, base);
     }
 
     const isAllowedTransformHost = (() => {
@@ -216,7 +220,9 @@ export function optimizeImageUrl(
     return optimizedUrl;
   } catch (error) {
     // Если URL некорректен, возвращаем оригинал
-    console.warn('Error optimizing image URL:', error);
+    if (!isTestEnv()) {
+      console.warn('Error optimizing image URL:', error);
+    }
     return originalUrl;
   }
 }
