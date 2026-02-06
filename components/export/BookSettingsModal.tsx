@@ -45,6 +45,8 @@ export interface BookSettings {
   showCaptions?: boolean;
   captionPosition?: CaptionPosition;
   gallerySpacing?: 'compact' | 'normal' | 'spacious';
+  // Стиль фото-страницы путешествия
+  photoPageLayout?: 'full-bleed' | 'framed' | 'split';
 }
 
 const DEFAULT_CHECKLIST_SELECTION: ChecklistSection[] = ['clothing', 'food', 'electronics'];
