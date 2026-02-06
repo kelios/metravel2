@@ -145,8 +145,6 @@ export const VideoSkeleton: React.FC = () => {
  * Skeleton для комментариев (P2-8)
  */
 export const CommentsSkeleton: React.FC = () => {
-  const colors = useThemedColors();
-
   const styles = useMemo(() => StyleSheet.create({
     container: {
       padding: DESIGN_TOKENS.spacing.md,

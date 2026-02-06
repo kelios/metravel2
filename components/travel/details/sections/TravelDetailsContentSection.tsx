@@ -100,7 +100,7 @@ export const TravelDetailsContentSection: React.FC<{
     [mobileInsightKey, shouldUseMobileInsights]
   )
 
-  const scrollToTop = useCallback(() => {
+  const _scrollToTop = useCallback(() => {
     try {
       const scrollViewAny = scrollRef.current as any
       const node: any =

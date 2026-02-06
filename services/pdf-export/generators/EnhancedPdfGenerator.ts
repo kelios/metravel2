@@ -4,15 +4,17 @@
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { TravelForBook } from '@/types/pdf-export';
 import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
-import { calculateOptimalColumns } from '@/types/pdf-gallery';
 import { getThemeConfig, type PdfThemeName } from '../themes/PdfThemeConfig';
 import type { ContentParser, ParsedContentBlock } from '../parsers/ContentParser';
 import type { BlockRenderer } from '../renderers/BlockRenderer';
 import type { TravelQuote } from '../quotes/travelQuotes';
-import { pickRandomGalleryQuote, pickRandomQuote } from '../quotes/travelQuotes';
+import { pickRandomQuote } from '../quotes/travelQuotes';
 import { CoverPageGenerator } from './pages/CoverPageGenerator';
-import { escapeHtml as sharedEscapeHtml, buildSafeImageUrl as sharedBuildSafeImageUrl } from '../utils/htmlUtils';
+import { escapeHtml as sharedEscapeHtml } from '../utils/htmlUtils';
 import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../utils/pluralize';
+import { V1FinalRenderer } from './v1/V1FinalRenderer';
+import { V1GalleryRenderer } from './v1/V1GalleryRenderer';
+import { V1MapRenderer } from './v1/V1MapRenderer';
 
 const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
   clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
@@ -39,8 +41,10 @@ export class EnhancedPdfGenerator {
   private theme: ReturnType<typeof getThemeConfig>;
   private themeName: string;
   private selectedQuotes?: { cover?: TravelQuote; final?: TravelQuote };
-  private galleryQuotesByTravel = new Map<string | number, TravelQuote>();
   private currentSettings?: BookSettings;
+  private finalRenderer!: V1FinalRenderer;
+  private galleryRenderer!: V1GalleryRenderer;
+  private mapRenderer!: V1MapRenderer;
 
   private getGalleryOptions(): {
     layout: GalleryLayout;
@@ -140,21 +144,17 @@ export class EnhancedPdfGenerator {
     };
   }
 
-  private getGalleryQuote(travel: TravelForBook): TravelQuote {
-    const key = travel.id ?? travel.name ?? 'default';
-    if (!this.galleryQuotesByTravel.has(key)) {
-      const quote = pickRandomGalleryQuote();
-      this.galleryQuotesByTravel.set(key, {
-        text: quote.text,
-        author: quote.author || 'MeTravel.by',
-      });
-    }
-    return this.galleryQuotesByTravel.get(key)!;
-  }
-
   constructor(themeName: PdfThemeName | string) {
     this.theme = getThemeConfig(themeName);
     this.themeName = themeName;
+    this.initRenderers();
+  }
+
+  private initRenderers(): void {
+    const ctx = { theme: this.theme, settings: this.currentSettings };
+    this.finalRenderer = new V1FinalRenderer(ctx);
+    this.galleryRenderer = new V1GalleryRenderer(ctx);
+    this.mapRenderer = new V1MapRenderer(ctx);
   }
 
   /**
@@ -167,6 +167,7 @@ export class EnhancedPdfGenerator {
     await this.ensureParser();
     await this.ensureBlockRenderer();
     this.currentSettings = settings;
+    this.initRenderers(); // reinit with updated settings
 
     const sortedTravels = this.sortTravels(travels, settings.sortOrder);
     const coverImage = this.resolveCoverImage(sortedTravels, settings);
@@ -1027,157 +1028,7 @@ export class EnhancedPdfGenerator {
   }
 
   private renderGalleryPages(travel: TravelForBook, startPageNumber: number): string[] {
-    const { colors, typography, spacing } = this.theme;
-    const photos = (travel.gallery || [])
-      .map((item) => {
-        const raw = typeof item === 'string' ? item : item?.url;
-        return this.buildSafeImageUrl(raw);
-      })
-      .filter((url): url is string => !!url && url.trim().length > 0);
-
-    if (!photos.length) return [];
-
-    const { layout, columns: configuredColumns, spacing: gallerySpacing } =
-      this.getGalleryOptions();
-    const twoPerPageLayout = this.currentSettings?.galleryTwoPerPageLayout || 'vertical';
-
-    const gapMm = this.getGalleryGapMm(gallerySpacing);
-
-    const photosPerPage = this.getGalleryPhotosPerPage(layout, photos.length);
-    const chunks: string[][] = [];
-    for (let start = 0; start < photos.length; start += photosPerPage) {
-      chunks.push(photos.slice(start, start + photosPerPage));
-    }
-
-    return chunks.map((pagePhotos, pageIndex) => {
-      const defaultColumns = calculateOptimalColumns(pagePhotos.length, layout);
-      const isTwoPerPage = photosPerPage === 2 && pagePhotos.length === 2;
-      const columns = pagePhotos.length === 1
-        ? 1
-        : isTwoPerPage && twoPerPageLayout === 'vertical'
-          ? 1
-          : Math.max(1, Math.min(4, configuredColumns ?? defaultColumns));
-
-      const imageHeight =
-        layout === 'slideshow'
-          ? '200mm'
-          : pagePhotos.length === 1
-            ? '210mm'
-            : pagePhotos.length === 2
-              ? (isTwoPerPage && twoPerPageLayout === 'vertical' ? '120mm' : '175mm')
-              : pagePhotos.length <= 4
-                ? '130mm'
-                : pagePhotos.length <= 6
-                  ? '95mm'
-                  : '80mm';
-
-      const gridContainerStyle =
-        layout === 'masonry'
-          ? `column-count: ${columns}; column-gap: ${gapMm}mm;`
-          : `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gapMm}mm; align-items: stretch;`;
-
-      const pageNumber = startPageNumber + pageIndex;
-      const _pageStartIndex = pageIndex * photosPerPage;
-      const title = pageIndex === 0 ? 'Фотогалерея' : this.escapeHtml(travel.name);
-      const subtitle = pageIndex === 0 ? this.escapeHtml(travel.name) : '';
-      return `
-      <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding}; display: flex; flex-direction: column;">
-        ${this.buildRunningHeader(travel.name, pageNumber)}
-        <div style="text-align: center; margin-bottom: 8mm;">
-          <h2 style="
-            font-size: ${typography.h2.size};
-            margin-bottom: 3mm;
-            font-weight: ${typography.h2.weight};
-            color: ${colors.text};
-            letter-spacing: 0.02em;
-            font-family: ${typography.headingFont};
-          ">${title}</h2>
-          ${subtitle ? `
-          <p style="
-            color: ${colors.textMuted};
-            font-size: ${typography.body.size};
-            font-weight: 500;
-            font-family: ${typography.bodyFont};
-          ">${subtitle}</p>` : ''}
-        </div>
-        <div style="${gridContainerStyle} flex: 1; min-height: 170mm;">
-          ${pagePhotos
-            .map((photo, index) => {
-              const wrapperStyle =
-                layout === 'masonry'
-                  ? `break-inside: avoid; margin-bottom: ${gapMm}mm;`
-                  : '';
-
-              const polaroidStyle =
-                layout === 'polaroid'
-                  ? `padding: 1.5mm; background: #fff; transform: rotate(${index % 2 === 0 ? '-1.4deg' : '1.3deg'});`
-                  : '';
-
-              const collageHero = layout === 'collage' && index === 0;
-              const collageSpan = collageHero ? 'grid-column: span 2; grid-row: span 2;' : '';
-              const resolvedHeight = collageHero ? '160mm' : imageHeight;
-              const isSingle = pagePhotos.length === 1;
-              const forceCover = pagePhotos.length <= 2;
-              const imgHeightStyle =
-                layout === 'polaroid'
-                  ? (forceCover ? `height: ${isSingle ? '210mm' : '190mm'};` : `height: auto; max-height: ${isSingle ? '210mm' : '190mm'};`)
-                  : (forceCover ? `height: ${isSingle ? '210mm' : resolvedHeight};` : `height: auto; max-height: ${resolvedHeight};`);
-              const wrapperMinHeight =
-                layout === 'polaroid'
-                  ? (isSingle ? 'min-height: 210mm;' : '')
-                  : `min-height: ${isSingle ? '210mm' : resolvedHeight};`;
-
-              // Для одиночных фото (slideshow) — blur-backdrop + contain
-              const useBlurBackdrop = isSingle && layout === 'slideshow';
-
-              return `
-            <div style="
-              ${wrapperStyle}
-              ${collageSpan}
-              border-radius: ${this.theme.blocks.borderRadius};
-              overflow: hidden;
-              position: relative;
-              box-shadow: ${this.theme.blocks.shadow};
-              background: ${layout === 'polaroid' ? '#fff' : colors.surfaceAlt};
-              ${polaroidStyle}
-              ${wrapperMinHeight}
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-              ${useBlurBackdrop ? `
-                <img src="${this.escapeHtml(photo)}" alt="" aria-hidden="true"
-                  style="
-                    position: absolute;
-                    inset: -20px;
-                    width: calc(100% + 40px);
-                    height: calc(100% + 40px);
-                    object-fit: cover;
-                    filter: blur(20px);
-                    opacity: 0.4;
-                    display: block;
-                  "
-                  crossorigin="anonymous" />
-              ` : ''}
-              <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                style="
-                  width: 100%;
-                  ${imgHeightStyle}
-                  object-fit: ${useBlurBackdrop ? 'contain' : 'cover'};
-                  display: block;
-                  ${useBlurBackdrop ? 'position: relative;' : ''}
-                  ${this.getImageFilterStyle()}
-                "
-                crossorigin="anonymous"
-                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
-            </div>
-          `;
-            })
-            .join('')}
-        </div>
-      </section>
-    `;
-    });
+    return this.galleryRenderer.renderPages(travel, startPageNumber);
   }
 
   /**
@@ -1188,7 +1039,6 @@ export class EnhancedPdfGenerator {
     locations: NormalizedLocation[],
     pageNumber: number
   ): Promise<string> {
-    const { colors, typography, spacing } = this.theme;
     if (!locations.length) return '';
 
     const mapSvg = this.buildRouteSvg(locations);
@@ -1214,48 +1064,15 @@ export class EnhancedPdfGenerator {
     }
 
     const locationQRCodes = await this.generateLocationQRCodes(locations);
-    const locationList = this.buildLocationList(locations, locationQRCodes);
+    const locationListHtml = this.buildLocationList(locations, locationQRCodes);
 
-    return `
-      <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
-        ${this.buildRunningHeader(travel.name, pageNumber)}
-        <div style="margin-bottom: ${spacing.sectionSpacing};">
-          <div style="
-            background: linear-gradient(135deg, ${colors.surfaceAlt} 0%, ${colors.surface} 100%);
-            border-radius: ${this.theme.blocks.borderRadius};
-            padding: 10px;
-            border: ${this.theme.blocks.borderWidth} solid ${colors.border};
-            box-shadow: ${this.theme.blocks.shadow};
-          ">
-            <div style="
-              border-radius: ${this.theme.blocks.borderRadius};
-              overflow: hidden;
-              height: 135mm;
-            ">
-              ${snapshotDataUrl ? `
-                <img src="${this.escapeHtml(snapshotDataUrl)}" alt="Карта маршрута"
-                  style="width: 100%; height: 100%; display: block; object-fit: cover; ${this.getImageFilterStyle()}" />
-              ` : `
-                ${mapSvg}
-              `}
-            </div>
-          </div>
-        </div>
-        <div>
-          <h2 style="
-            font-size: ${typography.h2.size};
-            margin-bottom: 4mm;
-            font-family: ${typography.headingFont};
-          ">Маршрут</h2>
-          <p style="
-            color: ${colors.textMuted};
-            margin-bottom: ${spacing.elementSpacing};
-            font-family: ${typography.bodyFont};
-          ">${this.escapeHtml(travel.name)}</p>
-          <div>${locationList}</div>
-        </div>
-      </section>
-    `;
+    return this.mapRenderer.render({
+      travelName: travel.name,
+      snapshotDataUrl,
+      mapSvg,
+      locationListHtml,
+      pageNumber,
+    });
   }
 
   /**
@@ -1376,147 +1193,7 @@ export class EnhancedPdfGenerator {
    * Рендерит финальную страницу
    */
   private renderFinalPage(pageNumber: number, travels: TravelForBook[] = []): string {
-    const { colors, typography } = this.theme;
-    const finalQuote = this.selectedQuotes?.final;
-
-    // Статистика
-    const totalTravels = travels.length;
-    const countries = new Set(travels.map((t) => t.countryName).filter(Boolean));
-    const totalDays = travels.reduce((sum, t) => {
-      const days = typeof t.number_days === 'number' ? t.number_days : 0;
-      return sum + Math.max(0, days);
-    }, 0);
-
-    const stats: Array<{ value: number; label: string }> = [];
-    if (totalTravels > 0) {
-      stats.push({ value: totalTravels, label: this.getTravelLabel(totalTravels) });
-    }
-    if (countries.size > 0) {
-      const cl = countries.size;
-      stats.push({ value: cl, label: cl === 1 ? 'страна' : cl < 5 ? 'страны' : 'стран' });
-    }
-    if (totalDays > 0) {
-      stats.push({ value: totalDays, label: this.formatDays(totalDays).replace(String(totalDays), '').trim() || 'дней' });
-    }
-
-    const statsHtml = stats.length > 0 ? `
-      <div style="
-        display: flex;
-        justify-content: center;
-        gap: 14mm;
-        margin-bottom: 12mm;
-        flex-wrap: wrap;
-      ">
-        ${stats.map((s) => `
-          <div style="text-align: center;">
-            <div style="
-              font-size: 28pt;
-              font-weight: 800;
-              color: ${colors.accent};
-              font-family: ${typography.headingFont};
-              line-height: 1.1;
-            ">${s.value}</div>
-            <div style="
-              font-size: ${typography.caption.size};
-              text-transform: uppercase;
-              letter-spacing: 0.08em;
-              color: ${colors.textMuted};
-              margin-top: 2mm;
-              font-family: ${typography.bodyFont};
-            ">${this.escapeHtml(s.label)}</div>
-          </div>
-        `).join('')}
-      </div>
-    ` : '';
-
-    return `
-      <section class="pdf-page final-page" style="
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 285mm;
-        text-align: center;
-        color: ${colors.cover.text};
-        background: linear-gradient(135deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%);
-      ">
-        <h2 style="
-          font-size: ${typography.h1.size};
-          margin-bottom: 6mm;
-          letter-spacing: -0.02em;
-          font-family: ${typography.headingFont};
-        ">Спасибо за путешествие!</h2>
-        <p style="
-          max-width: 120mm;
-          margin: 0 auto 10mm auto;
-          font-size: ${typography.body.size};
-          line-height: ${typography.body.lineHeight};
-          opacity: 0.85;
-          font-family: ${typography.bodyFont};
-        ">
-          Пусть эта книга напоминает о самых тёплых эмоциях
-          и помогает планировать новые приключения.
-        </p>
-        ${statsHtml}
-        ${finalQuote ? `
-          <p style="
-            max-width: 120mm;
-            margin: 0 auto 4mm auto;
-            font-size: 10.5pt;
-            line-height: 1.6;
-            opacity: 0.85;
-            font-style: italic;
-            font-family: ${typography.bodyFont};
-          ">
-            «${this.escapeHtml(finalQuote.text)}»
-          </p>
-          <p style="
-            max-width: 120mm;
-            margin: 0 auto;
-            font-size: 8.5pt;
-            line-height: 1.4;
-            opacity: 0.7;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            font-family: ${typography.bodyFont};
-          ">
-            ${this.escapeHtml(finalQuote.author || 'MeTravel.by')}
-          </p>
-        ` : ''}
-        <div style="
-          position: absolute;
-          bottom: 22mm;
-          width: 100%;
-          left: 0;
-          text-align: center;
-          font-size: ${typography.caption.size};
-          opacity: 0.7;
-          font-family: ${typography.bodyFont};
-        ">
-          <div style="
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 2mm;
-            font-size: ${typography.caption.size};
-          ">
-            <span style="font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">
-              MeTravel.by
-            </span>
-          </div>
-          <div>© ${new Date().getFullYear()}</div>
-        </div>
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          opacity: 0.6;
-          font-family: ${typography.bodyFont};
-        ">${pageNumber}</div>
-      </section>
-    `;
+    return this.finalRenderer.render(pageNumber, travels, this.selectedQuotes?.final);
   }
 
   /**

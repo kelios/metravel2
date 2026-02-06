@@ -4,7 +4,7 @@
  * Свайп влево/вправо, счётчик, кнопка закрытия.
  */
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   FlatList,
   Modal,

@@ -233,7 +233,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
         ))}
       </View>
     );
-  }, [getParentChain, replies, isAuthenticated, handleReply, handleEdit]);
+  }, [getParentChain, replies, isAuthenticated, handleReply, handleEdit, styles.parentChainContainer, styles.parentChainHeader, styles.parentChainLabel]);
 
   const toggleThread = useCallback((commentId: number) => {
     setExpandedThreads((prev) => {

@@ -264,23 +264,12 @@ export const getStyles = (
       tabIconBubbleActive: {
         backgroundColor: themedColors.primaryLight,
       },
-      tabLabelColumn: {
-        flex: 1,
-      },
       tabText: {
         fontSize: 14,
         fontWeight: '600',
         color: themedColors.text,
       },
       tabTextActive: {
-        color: themedColors.textInverse,
-      },
-      tabHint: {
-        fontSize: 12,
-        fontWeight: '500',
-        color: themedColors.textMuted,
-      },
-      tabHintActive: {
         color: themedColors.textInverse,
       },
       panelContent: {

@@ -155,85 +155,72 @@ describe('safeJsonParseString', () => {
 
 describe('openBookPreviewWindow', () => {
   const originalWindow = global.window
+  let mockCreateObjectURL: jest.Mock
+  let mockRevokeObjectURL: jest.Mock
+
+  beforeEach(() => {
+    mockCreateObjectURL = jest.fn(() => 'blob:http://localhost/mock-blob-url')
+    mockRevokeObjectURL = jest.fn()
+    global.URL.createObjectURL = mockCreateObjectURL
+    global.URL.revokeObjectURL = mockRevokeObjectURL
+  })
 
   afterEach(() => {
-    // Восстанавливаем window после каждого теста
     global.window = originalWindow as any
+    jest.restoreAllMocks()
   })
 
   it('does nothing when window.open returns null', () => {
     const mockWindow: any = {
+      ...window,
       open: jest.fn(() => null),
     }
     global.window = mockWindow as any
 
     openBookPreviewWindow('<html></html>')
 
-    expect(mockWindow.open).toHaveBeenCalledWith('about:blank', '_blank')
+    expect(mockCreateObjectURL).toHaveBeenCalled()
+    expect(mockWindow.open).toHaveBeenCalledWith('blob:http://localhost/mock-blob-url', '_blank')
   })
 
-  it('writes HTML into newly opened window document', () => {
-    const write = jest.fn()
-    const open = jest.fn(() => ({
-      document: {
-        open: jest.fn(),
-        write,
-        close: jest.fn(),
-      },
-    }))
+  it('opens Blob URL in a new window', () => {
+    const winInstance: any = {}
+    const open = jest.fn(() => winInstance)
 
-    const mockWindow: any = { open }
+    const mockWindow: any = { ...window, open }
     global.window = mockWindow as any
 
     const html = '<html><body>Test</body></html>'
     openBookPreviewWindow(html)
 
-    expect(open).toHaveBeenCalledWith('about:blank', '_blank')
-    expect(write).toHaveBeenCalledWith(html)
+    expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+    expect(open).toHaveBeenCalledWith('blob:http://localhost/mock-blob-url', '_blank')
   })
 
-  it('attempts to write HTML even if initial write throws', () => {
-    jest.useFakeTimers()
-
-    const firstWrite = jest.fn(() => {
-      throw new Error('document not ready')
+  it('falls back to document.write when Blob URL fails', () => {
+    mockCreateObjectURL.mockImplementation(() => {
+      throw new Error('Blob not supported')
     })
-    const secondWrite = jest.fn()
 
-    const mockWindow: any = {
-      open: jest.fn(() => ({
-        document: {
-          open: jest.fn(),
-          write: firstWrite,
-          close: jest.fn(),
-        },
-      })),
-    }
-
-    // При повторной попытке подменим document.write
-    // При повторной попытке используем тот же window, но подменяем write
+    const write = jest.fn()
     const winInstance: any = {
       document: {
         open: jest.fn(),
-        write: firstWrite,
+        write,
         close: jest.fn(),
       },
     }
 
-    mockWindow.open.mockReturnValue(winInstance)
-
+    const mockWindow: any = {
+      ...window,
+      open: jest.fn(() => winInstance),
+    }
     global.window = mockWindow as any
 
-    const html = '<html><body>Retry</body></html>'
+    const html = '<html><body>Fallback</body></html>'
     openBookPreviewWindow(html)
 
-    // Подменяем write перед срабатыванием таймера fallback-записи
-    winInstance.document.write = secondWrite
-
-    // продвигаем таймер, чтобы сработал setTimeout внутри утилиты
-    jest.advanceTimersByTime(60)
-
-    expect(firstWrite).toHaveBeenCalled()
-    expect(secondWrite).toHaveBeenCalledWith(html)
+    expect(mockWindow.open).toHaveBeenCalledWith('about:blank', '_blank')
+    expect(write).toHaveBeenCalledWith(html)
   })
 })

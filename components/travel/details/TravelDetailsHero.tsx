@@ -36,7 +36,6 @@ import { Icon } from './TravelDetailsIcons'
 const Slider: React.FC<any> = withLazy(() => import('@/components/travel/Slider'))
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
-const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
 const HERO_QUICK_JUMP_KEYS = ['description', 'map', 'points', 'comments', 'video'] as const
 
 const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
@@ -312,10 +311,6 @@ function TravelHeroSectionInner({
   const { width: winW, height: winH } = useWindowDimensions()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
   const [extrasReady, setExtrasReady] = useState(!deferExtras || Platform.OS !== 'web')
-  const isWebAutomation =
-    Platform.OS === 'web' &&
-    typeof navigator !== 'undefined' &&
-    Boolean((navigator as any).webdriver)
 
   const { isAuthenticated } = useAuth()
   const { requireAuth } = useRequireAuth({ intent: 'favorite' })

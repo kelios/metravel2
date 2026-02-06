@@ -164,14 +164,9 @@ export default function MapScreen() {
                         color={rightPanelTab === 'filters' ? themedColors.textInverse : themedColors.text}
                     />
                     {!isMobile && (
-                        <View style={styles.tabLabelColumn}>
-                            <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
-                                Фильтры
-                            </Text>
-                            <Text style={[styles.tabHint, rightPanelTab === 'filters' && styles.tabHintActive]}>
-                                Настрой параметров
-                            </Text>
-                        </View>
+                        <Text style={[styles.tabText, rightPanelTab === 'filters' && styles.tabTextActive]}>
+                            Фильтры
+                        </Text>
                     )}
                 </Pressable>
 
@@ -195,16 +190,11 @@ export default function MapScreen() {
                         color={rightPanelTab === 'travels' ? themedColors.textInverse : themedColors.text}
                     />
                     {!isMobile && (
-                        <View style={styles.tabLabelColumn}>
-                            <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
-                                Список
-                            </Text>
-                            <Text style={[styles.tabHint, rightPanelTab === 'travels' && styles.tabHintActive]}>
-                                {travelsData.length} мест
-                            </Text>
-                        </View>
+                        <Text style={[styles.tabText, rightPanelTab === 'travels' && styles.tabTextActive]}>
+                            Список
+                        </Text>
                     )}
-                    {isMobile && travelsData.length > 0 && (
+                    {travelsData.length > 0 && (
                         <View style={[
                             styles.badge,
                             rightPanelTab === 'travels' && styles.badgeActive,

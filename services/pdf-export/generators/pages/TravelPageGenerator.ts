@@ -2,6 +2,7 @@
 // Генератор разворота путешествия (фото + контент)
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
+import { escapeHtml } from '../../utils/htmlUtils';
 import type { TravelForBook } from '@/types/pdf-export';
 
 export type PhotoPageLayout = 'full-bleed' | 'framed' | 'split';
@@ -606,14 +607,7 @@ export class TravelPageGenerator {
   }
 
   private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+    return escapeHtml(text);
   }
 
   private renderPdfIcon(

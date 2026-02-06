@@ -6,6 +6,8 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import Feather from '@expo/vector-icons/Feather';
 import MapIcon from './MapIcon';
 import Button from '@/components/ui/Button';
 import CardActionPressable from '@/components/ui/CardActionPressable';
@@ -105,6 +107,8 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
                 )
               : null;
 
+          const thumbUrl = place.travelImageThumbUrl || null;
+
           return (
             <CardActionPressable
               key={place.id || index}
@@ -112,35 +116,53 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
               onPress={() => onPlacePress(place)}
               accessibilityLabel={`Открыть ${place.address || 'место'}`}
             >
-              <View style={styles.cardHeader}>
-                <Text style={styles.placeNumber}>{index + 1}</Text>
-                <Text style={styles.placeName} numberOfLines={1}>
-                  {place.address || 'Неизвестное место'}
-                </Text>
-              </View>
-
-              {distanceInfo && (
-                <View style={styles.distanceRow}>
-                  <View style={styles.distanceBadge}>
-                    <MapIcon name="place" size={12} color={colors.primary} />
-                    <Text style={styles.distanceText}>{distanceInfo.distanceText}</Text>
-                  </View>
-                  <View style={styles.timeBadge}>
-                    <MapIcon
-                      name={
-                        transportMode === 'car'
-                          ? 'directions-car'
-                          : transportMode === 'bike'
-                          ? 'directions-bike'
-                          : 'directions-walk'
-                      }
-                      size={12}
-                      color={colors.accent}
+              <View style={styles.cardRow}>
+                <View style={styles.thumbnail}>
+                  {thumbUrl ? (
+                    <ImageCardMedia
+                      src={thumbUrl}
+                      fit="cover"
+                      loading="lazy"
+                      priority="low"
+                      cachePolicy="memory-disk"
+                      style={StyleSheet.absoluteFillObject}
                     />
-                    <Text style={styles.timeText}>{distanceInfo.travelTimeText}</Text>
-                  </View>
+                  ) : (
+                    <Feather name="map-pin" size={16} color={colors.primary} />
+                  )}
                 </View>
-              )}
+                <View style={styles.cardContent}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.placeNumber}>{index + 1}</Text>
+                    <Text style={styles.placeName} numberOfLines={1}>
+                      {place.address || 'Неизвестное место'}
+                    </Text>
+                  </View>
+
+                  {distanceInfo && (
+                    <View style={styles.distanceRow}>
+                      <View style={styles.distanceBadge}>
+                        <MapIcon name="place" size={12} color={colors.primary} />
+                        <Text style={styles.distanceText}>{distanceInfo.distanceText}</Text>
+                      </View>
+                      <View style={styles.timeBadge}>
+                        <MapIcon
+                          name={
+                            transportMode === 'car'
+                              ? 'directions-car'
+                              : transportMode === 'bike'
+                              ? 'directions-bike'
+                              : 'directions-walk'
+                          }
+                          size={12}
+                          color={colors.accent}
+                        />
+                        <Text style={styles.timeText}>{distanceInfo.travelTimeText}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
             </CardActionPressable>
           );
         })}
@@ -191,17 +213,35 @@ const getStyles = (colors: ThemedColors) =>
     placeCard: {
       backgroundColor: colors.backgroundSecondary,
       borderRadius: 12,
-      padding: 12,
-      minWidth: 160,
-      maxWidth: 200,
+      padding: 10,
+      minWidth: 140,
+      maxWidth: 220,
       borderWidth: 1,
       borderColor: colors.border,
+    },
+    cardRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    thumbnail: {
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      overflow: 'hidden',
+      backgroundColor: colors.primaryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    cardContent: {
+      flex: 1,
+      minWidth: 0,
+      gap: 6,
     },
     cardHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      marginBottom: 8,
+      gap: 6,
     },
     placeNumber: {
       width: 24,

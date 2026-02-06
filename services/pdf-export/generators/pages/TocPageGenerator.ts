@@ -2,6 +2,7 @@
 // Генератор оглавления
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
+import { escapeHtml } from '../../utils/htmlUtils';
 
 export interface TocEntry {
   travel: {
@@ -173,13 +174,6 @@ export class TocPageGenerator {
   }
 
   private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+    return escapeHtml(text);
   }
 }

@@ -18,11 +18,6 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
   // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // P1-4: Не показываем секцию без URL в production
-  if (!baseUrl && !__DEV__) {
-    return null;
-  }
-
   const handleOpen = useCallback(() => {
     if (!baseUrl) return;
 
@@ -34,7 +29,6 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
       }
     } else {
       Linking.openURL(url).catch((error) => {
-        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки открытия Telegram
         if (__DEV__) {
           console.warn('[TelegramDiscussionSection] Не удалось открыть Telegram:', error);
         }
@@ -43,6 +37,11 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
   }, [baseUrl]);
 
   const hasUrl = Boolean(baseUrl);
+
+  // P1-4: Не показываем секцию без URL в production
+  if (!baseUrl && !__DEV__) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

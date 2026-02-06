@@ -109,7 +109,7 @@ export default function TravelStickyActions({
       void addFavorite({ id: travelId, type: 'travel', title: travel?.name || '', url });
       void showToast({ type: 'success', text1: 'Добавлено в избранное', position: 'bottom' });
     }
-  }, [travelId, isAuthenticated, isFav, addFavorite, removeFavorite, requireAuth]);
+  }, [travelId, isAuthenticated, isFav, addFavorite, removeFavorite, requireAuth, travel?.name, travel?.slug]);
 
   const handleShare = useCallback(async () => {
     const url = travel?.slug

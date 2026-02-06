@@ -2,6 +2,8 @@
 // Генератор страниц с картами
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
+import { escapeHtml } from '../../utils/htmlUtils';
+import { getLocationLabel } from '../../utils/pluralize';
 import type { TravelForBook } from '@/types/pdf-export';
 import { generateStaticMapUrl } from '@/utils/mapImageGenerator';
 
@@ -305,19 +307,10 @@ export class MapPageGenerator {
   }
 
   private getLocationLabel(count: number): string {
-    if (count === 1) return 'локация';
-    if (count >= 2 && count <= 4) return 'локации';
-    return 'локаций';
+    return getLocationLabel(count);
   }
 
   private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+    return escapeHtml(text);
   }
 }

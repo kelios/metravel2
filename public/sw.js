@@ -8,7 +8,6 @@ const CRITICAL_CACHE = `metravel-critical-${CACHE_VERSION}`;
 const STATIC_ASSETS = [
   '/manifest.json',
   '/favicon.ico',
-  '/icon.svg',
 ];
 
 // Критичні JS chunks для travel pages (будуть prefetch при першому візиті)

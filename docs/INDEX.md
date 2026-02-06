@@ -36,6 +36,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/UI_UX_IMPROVEMENT_SPEC.md` — общее ТЗ по улучшению визуальной части
 - `docs/TRAVEL_DETAILS_UI_SPEC.md` — ТЗ по UI/UX-редизайну страницы путешествия
 - `docs/PDF_EXPORT_DESIGN_SPEC.md` — ТЗ по улучшению дизайна PDF-экспорта (книга путешествий)
+- `docs/MAP_PAGE_DESIGN_SPEC.md` — ТЗ по UI/UX-улучшениям страницы карты
 
 ## Map page refactoring
 

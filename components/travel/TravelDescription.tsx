@@ -7,7 +7,6 @@ import {
     Platform,
     InteractionManager,
 } from "react-native";
-import ImageCardMedia from "@/components/ui/ImageCardMedia";
 import StableContent from "@/components/travel/StableContent";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';

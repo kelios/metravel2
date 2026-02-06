@@ -1,6 +1,6 @@
 // components/MapPage/SegmentedControl.tsx
-import React, { useMemo, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Animated, Platform, View, Text, StyleSheet } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import MapIcon from './MapIcon';
@@ -37,12 +37,43 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors, compact), [colors, compact]);
 
+  const activeIndex = options.findIndex((o) => o.key === value);
+  const pillAnim = useRef(new Animated.Value(activeIndex >= 0 ? activeIndex : 0)).current;
+
+  useEffect(() => {
+    const idx = options.findIndex((o) => o.key === value);
+    if (idx < 0) return;
+    Animated.spring(pillAnim, {
+      toValue: idx,
+      friction: 8,
+      tension: 60,
+      useNativeDriver: false,
+    }).start();
+  }, [value, options, pillAnim]);
+
+  const count = options.length || 1;
+  const pillLeft = pillAnim.interpolate({
+    inputRange: options.map((_, i) => i),
+    outputRange: options.map((_, i) => `${(i / count) * 100}%`),
+    extrapolate: 'clamp',
+  });
+
   return (
     <View
       style={styles.segmentedControl}
       accessibilityRole="radiogroup"
       accessibilityLabel={accessibilityLabel}
     >
+      <Animated.View
+        style={[
+          styles.pill,
+          {
+            width: `${100 / count}%` as any,
+            left: pillLeft as any,
+          },
+        ]}
+        pointerEvents="none"
+      />
       {options.map(({ key, label, icon, badge }) => {
         const active = value === key;
         const isDisabled = disabled || disabledKeys.includes(key);
@@ -116,13 +147,13 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     position: 'relative',
     overflow: 'hidden',
   },
-  indicator: {
+  pill: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    height: 3,
+    top: 2,
+    bottom: 2,
+    borderRadius: 6,
     backgroundColor: colors.primary,
-    borderRadius: 2,
+    ...(Platform.OS === 'web' ? ({ transition: 'left 0.2s ease' } as any) : null),
   },
   segment: {
     flex: 1,
@@ -134,7 +165,8 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     paddingHorizontal: compact ? 12 : 8,
     borderRadius: 6,
     minWidth: compact ? 80 : 0,
-    backgroundColor: 'transparent', // Убираем fill background
+    backgroundColor: 'transparent',
+    zIndex: 1,
   },
   segmentPressed: {
     opacity: 0.6,
@@ -148,7 +180,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     color: colors.textMuted,
   },
   segmentTextActive: {
-    color: colors.primary,
+    color: colors.textOnPrimary,
     fontWeight: '700',
   },
   badge: {
@@ -162,7 +194,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     marginLeft: 4,
   },
   badgeActive: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
   },
   badgeText: {
     fontSize: 11,
@@ -170,7 +202,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     color: colors.text,
   },
   badgeTextActive: {
-    color: colors.primary,
+    color: colors.textOnPrimary,
   },
 });
 

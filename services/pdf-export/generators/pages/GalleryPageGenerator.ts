@@ -2,6 +2,7 @@
 // Генератор страниц с фотогалереями
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
+import { escapeHtml } from '../../utils/htmlUtils';
 
 export type GalleryLayout = 'grid' | 'mosaic' | 'collage' | 'polaroid' | 'dynamic';
 
@@ -404,13 +405,6 @@ export class GalleryPageGenerator {
   }
 
   private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+    return escapeHtml(text);
   }
 }

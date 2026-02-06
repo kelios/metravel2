@@ -1,32 +1,39 @@
 export function openBookPreviewWindow(html: string): void {
   if (typeof window === 'undefined') return;
 
-  // Открываем about:blank в той же origin, без noopener/noreferrer, чтобы иметь доступ к document
-  const win = window.open('about:blank', '_blank');
-  if (!win) {
-    return;
-  }
+  // Используем Blob URL вместо document.write(), чтобы изолировать PDF-превью
+  // от service worker и manifest родительского окна (предотвращает ошибки icon.svg)
   try {
-    win.opener = null;
-  } catch {
-    // ignore
-  }
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
 
-  // Небольшая задержка, чтобы браузер успел инициализировать документ вкладки
-  try {
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-  } catch {
-    // fallback: пробуем записать ещё раз после небольшого таймаута
+    // Освобождаем Blob URL после открытия (с задержкой, чтобы браузер успел загрузить)
     setTimeout(() => {
-      try {
-        win.document.open();
-        win.document.write(html);
-        win.document.close();
-      } catch {
-        // если и это не удалось, просто оставляем вкладку пустой
-      }
-    }, 50);
+      URL.revokeObjectURL(url);
+    }, 60_000);
+
+    if (!win) return;
+    try {
+      win.opener = null;
+    } catch {
+      // ignore
+    }
+  } catch {
+    // Fallback: document.write для старых браузеров
+    const win = window.open('about:blank', '_blank');
+    if (!win) return;
+    try {
+      win.opener = null;
+    } catch {
+      // ignore
+    }
+    try {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } catch {
+      // ignore
+    }
   }
 }

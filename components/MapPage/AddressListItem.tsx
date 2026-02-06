@@ -333,8 +333,6 @@ const AddressListItem: React.FC<Props> = ({
         }
     }, [isNoImage]);
 
-    const listTransportMode: 'car' = 'car';
-
     // Расчет расстояния и времени в пути
     const distanceInfo = useMemo(() => {
         const parsed = parseCoord(coord);
@@ -343,13 +341,13 @@ const AddressListItem: React.FC<Props> = ({
         return getDistanceInfo(
             { lat: userLocation.latitude, lng: userLocation.longitude },
             { lat: parsed.lat, lng: parsed.lon },
-            listTransportMode
+            _transportMode
         );
-    }, [coord, userLocation, listTransportMode]);
+    }, [coord, userLocation, _transportMode]);
 
     if (Platform.OS === 'web') {
         const categoryLabel = categories.join(', ');
-        const travelModeLabel = 'Авто';
+        const travelModeLabel = _transportMode === 'car' ? 'Авто' : _transportMode === 'bike' ? 'Велосипед' : 'Пешком';
         const badges = distanceInfo
           ? [distanceInfo.distanceText, `${travelModeLabel} ${distanceInfo.travelTimeText}`]
           : [];
@@ -556,9 +554,9 @@ const AddressListItem: React.FC<Props> = ({
                           </View>
                           <View style={styles.timeBadge}>
                               <Text style={styles.timeText}>
-                                  {listTransportMode === 'car'
+                                  {_transportMode === 'car'
                                     ? 'Авто'
-                                    : listTransportMode === 'bike'
+                                    : _transportMode === 'bike'
                                       ? 'Велосипед'
                                       : 'Пешком'}{' '}
                                   {distanceInfo.travelTimeText}

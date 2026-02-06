@@ -66,13 +66,6 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
     router.push('/travel/new');
   }, [isAuthenticated, requireAuth, router]);
 
-  const handleViewAuthorTravels = useCallback(() => {
-    const userId = (travel as any).userIds ?? (travel as any).userId;
-    if (userId) {
-      router.push(`/search?user_id=${userId}` as any);
-    }
-  }, [travel, router]);
-
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',

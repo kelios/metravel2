@@ -2,6 +2,8 @@
 // Генератор финальной страницы
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
+import { escapeHtml } from '../../utils/htmlUtils';
+import { getTravelLabel, getCountryLabel } from '../../utils/pluralize';
 
 export interface FinalPageData {
   totalTravels: number;
@@ -254,15 +256,11 @@ export class FinalPageGenerator {
   }
 
   private getTravelLabel(count: number): string {
-    if (count === 1) return 'путешествие';
-    if (count >= 2 && count <= 4) return 'путешествия';
-    return 'путешествий';
+    return getTravelLabel(count);
   }
 
   private getCountryLabel(count: number): string {
-    if (count === 1) return 'страна';
-    if (count >= 2 && count <= 4) return 'страны';
-    return 'стран';
+    return getCountryLabel(count);
   }
 
   private getDayLabel(count: number): string {
@@ -272,13 +270,6 @@ export class FinalPageGenerator {
   }
 
   private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+    return escapeHtml(text);
   }
 }

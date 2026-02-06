@@ -2,6 +2,8 @@
 // Генератор обложки книги с улучшенным дизайном
 
 import type { PdfThemeConfig } from '../../themes/PdfThemeConfig';
+import { escapeHtml } from '../../utils/htmlUtils';
+import { getTravelLabel } from '../../utils/pluralize';
 import {
   analyzeImageBrightness,
   analyzeImageComposition,
@@ -301,25 +303,15 @@ export class CoverPageGenerator {
   }
 
   private getTravelLabel(count: number): string {
-    if (count === 1) return 'путешествие';
-    if (count >= 2 && count <= 4) return 'путешествия';
-    return 'путешествий';
+    return getTravelLabel(count);
   }
 
   private buildSafeImageUrl(url?: string): string | undefined {
     if (!url) return undefined;
-    // Здесь можно добавить логику проксирования изображений
     return url;
   }
 
   private escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    };
-    return text.replace(/[&<>"']/g, (m) => map[m]);
+    return escapeHtml(text);
   }
 }
