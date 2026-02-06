@@ -17,7 +17,7 @@ const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID 
 
 const AccountMenuLazy = lazy(() => import('./AccountMenu'));
 const HeaderContextBarLazy = lazy(() => import('./HeaderContextBar'));
-const ThemeToggleLazy = lazy(() => import('@/components/ThemeToggle'));
+const ThemeToggleLazy = lazy(() => import('@/components/layout/ThemeToggle'));
 const CustomHeaderMobileMenuComp = isTestEnv
   ? (require('./CustomHeaderMobileMenu').default as React.ComponentType<any>)
   : lazy(() => import('./CustomHeaderMobileMenu'));

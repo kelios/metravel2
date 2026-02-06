@@ -28,7 +28,7 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 const mockMultiSelectField: jest.Mock<any, any> = jest.fn();
-jest.mock('@/components/MultiSelectField', () => {
+jest.mock('@/components/forms/MultiSelectField', () => {
     return {
         __esModule: true,
         default: (props: any) => {

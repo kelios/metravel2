@@ -19,7 +19,7 @@ let mockAuthState = {
 const mockFetchFilters = jest.fn();
 const mockFetchAllCountries = jest.fn();
 
-jest.mock('@/components/MultiSelectField', () => ({
+jest.mock('@/components/forms/MultiSelectField', () => ({
   __esModule: true,
   default: jest.fn(() => null),
 }));

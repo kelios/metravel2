@@ -2,7 +2,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import { Platform, View } from 'react-native';
 import { Tabs } from 'expo-router';
-const CustomHeaderLazy = React.lazy(() => import('@/components/CustomHeader'));
+const CustomHeaderLazy = React.lazy(() => import('@/components/layout/CustomHeader'));
 
 const Header = React.memo(function Header() {
     const [mounted, setMounted] = useState(Platform.OS !== 'web');

@@ -46,12 +46,12 @@ type PersonalizedRecommendationsComponent = React.ComponentType<{
 }>;
 
 const PersonalizedRecommendations = lazy(async () => {
-  const m: any = await import('@/components/PersonalizedRecommendations');
+  const m: any = await import('@/components/travel/PersonalizedRecommendations');
   return { default: (m?.default ?? m?.PersonalizedRecommendations) as PersonalizedRecommendationsComponent };
 });
 
 const WeeklyHighlights = lazy(async () => {
-  const m: any = await import('@/components/WeeklyHighlights');
+  const m: any = await import('@/components/travel/WeeklyHighlights');
   return { default: (m?.default ?? m?.WeeklyHighlights) as WeeklyHighlightsComponent };
 });
 

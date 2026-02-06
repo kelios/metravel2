@@ -3,8 +3,8 @@ import { View, Platform } from "react-native";
 import { useResponsive } from "@/hooks/useResponsive";
 
 // ✅ ОПТИМИЗАЦИЯ: Убираем синхронные require для уменьшения entry bundle
-const BottomDockLazy = lazy(() => import('@/components/BottomDock'));
-const FooterDesktopLazy = lazy(() => import('@/components/FooterDesktop'));
+const BottomDockLazy = lazy(() => import('@/components/layout/BottomDock'));
+const FooterDesktopLazy = lazy(() => import('@/components/layout/FooterDesktop'));
 
 /** ========= Prop для передачи высоты дока ========= */
 type FooterProps = {
@@ -19,7 +19,7 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
 
   if (isMobile) {
     if (isTestEnv) {
-      const BottomDock = require('@/components/BottomDock').default;
+      const BottomDock = require('@/components/layout/BottomDock').default;
       return <BottomDock onDockHeight={onDockHeight} />;
     }
     return (
@@ -30,7 +30,7 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   }
 
   if (isTestEnv) {
-    const FooterDesktop = require('@/components/FooterDesktop').default;
+    const FooterDesktop = require('@/components/layout/FooterDesktop').default;
     return (
       <View style={{ paddingVertical: 0 }}>
         <FooterDesktop />

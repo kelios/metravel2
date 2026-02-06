@@ -113,7 +113,7 @@ jest.mock('@/components/filters/CategoryChips', () => {
   };
 });
 
-jest.mock('@/components/CollapsibleBlock', () => {
+jest.mock('@/components/ui/CollapsibleBlock', () => {
   const React = require('react');
   const { View, Pressable, Text } = require('react-native');
   return function MockCollapsibleSection({ title, children, defaultOpen = true }: any) {

@@ -22,7 +22,7 @@ describe('Map.ios Component', () => {
 
   beforeAll(async () => {
     // Импортируем iOS версию напрямую
-    Map = (await import('@/components/Map.ios')).default;
+    Map = (await import('@/components/map/Map.ios')).default;
   });
 
   const mockTravel = {

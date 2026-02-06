@@ -26,7 +26,7 @@ jest.mock('@/src/api/misc', () => ({
   deleteImage: jest.fn(),
 }));
 
-jest.mock('@/components/ConfirmDialog', () => {
+jest.mock('@/components/ui/ConfirmDialog', () => {
   const React = require('react');
   const { View, Text, Pressable } = require('react-native');
   return {

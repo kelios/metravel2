@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
 import MarkersListComponent from '@/components/map/MarkersListComponent';
 
-jest.mock('@/components/MultiSelectField', () => {
+jest.mock('@/components/forms/MultiSelectField', () => {
     return jest.fn((props: any) => (
         <div data-testid="marker-categories-value">{JSON.stringify(props.value)}</div>
     ));

@@ -56,7 +56,7 @@ jest.mock('react-dropzone', () => {
   };
 });
 
-jest.mock('@/components/ConfirmDialog', () => {
+jest.mock('@/components/ui/ConfirmDialog', () => {
   const React = require('react');
   const { View, TouchableOpacity, Text } = require('react-native');
   return ({ visible, onConfirm, onClose }: any) =>

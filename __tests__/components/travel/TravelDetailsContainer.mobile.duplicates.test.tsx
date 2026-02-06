@@ -94,7 +94,7 @@ jest.mock('@/hooks/useTravelDetailsPerformance', () => ({
   }),
 }));
 
-jest.mock('@/components/SectionSkeleton', () => ({
+jest.mock('@/components/ui/SectionSkeleton', () => ({
   SectionSkeleton: () => null,
 }));
 
@@ -132,12 +132,12 @@ jest.mock('@/components/travel/TravelSectionsSheet', () => ({
   default: () => null,
 }));
 
-jest.mock('@/components/ReadingProgressBar', () => ({
+jest.mock('@/components/ui/ReadingProgressBar', () => ({
   __esModule: true,
   default: () => null,
 }));
 
-jest.mock('@/components/ScrollToTopButton', () => ({
+jest.mock('@/components/ui/ScrollToTopButton', () => ({
   __esModule: true,
   default: () => null,
 }));

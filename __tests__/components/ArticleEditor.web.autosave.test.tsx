@@ -21,7 +21,7 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }))
 
-jest.mock('@/components/QuillEditor.web', () => {
+jest.mock('@/components/article/QuillEditor.web', () => {
   const React = require('react')
   const { View } = require('react-native')
 

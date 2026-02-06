@@ -4,14 +4,14 @@ import { render } from '@testing-library/react-native';
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 
-jest.mock('@/components/MultiSelectField', () => {
+jest.mock('@/components/forms/MultiSelectField', () => {
   return {
     __esModule: true,
     default: jest.fn(() => null),
   };
 });
 
-jest.mock('@/components/CheckboxComponent', () => {
+jest.mock('@/components/forms/CheckboxComponent', () => {
   return {
     __esModule: true,
     default: () => null,

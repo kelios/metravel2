@@ -34,7 +34,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 jest.mock('react-native-vector-icons/Feather', () => 'Feather');
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => 'MCIcon');
-jest.mock('@/components/HeaderContextBar', () => {
+jest.mock('@/components/layout/HeaderContextBar', () => {
   const React = require('react');
   const Stub = () => React.createElement(React.Fragment, null);
   return { __esModule: true, default: Stub };

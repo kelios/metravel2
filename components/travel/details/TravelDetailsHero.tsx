@@ -31,7 +31,7 @@ const Slider = withLazy(() => import('@/components/travel/Slider'))
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
-const WeatherWidget = withLazy(() => import('@/components/WeatherWidget'))
+const WeatherWidget = withLazy(() => import('@/components/home/WeatherWidget'))
 const HERO_QUICK_JUMP_KEYS = ['map', 'description', 'points'] as const
 
 const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>

@@ -33,7 +33,7 @@ jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
   default: () => null,
 }));
 
-jest.mock('@/components/KeyboardShortcutsHelp', () => ({
+jest.mock('@/components/accessibility/KeyboardShortcutsHelp', () => ({
   __esModule: true,
   default: () => null,
 }));
@@ -45,7 +45,7 @@ jest.mock('@/hooks/useKeyboardShortcuts', () => ({
   },
 }));
 
-jest.mock('@/components/ConfirmDialog', () => {
+jest.mock('@/components/ui/ConfirmDialog', () => {
   const React = require('react');
   const ConfirmDialogMock = ({ visible, onConfirm }: any) => {
     React.useEffect(() => {
