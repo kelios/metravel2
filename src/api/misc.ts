@@ -2,7 +2,7 @@ import { Filters, TravelFormData } from '@/src/types/types';
 import { devError } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { sanitizeInput } from '@/src/utils/security';
-import { validateAIMessage, validateImageFile } from '@/src/utils/validation';
+import { validateAIMessage, validateImageFile } from '@/src/utils/aiValidation';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { getSecureItem } from '@/src/utils/secureStorage';
 import { apiClient } from '@/src/api/client';

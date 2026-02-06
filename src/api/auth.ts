@@ -6,7 +6,7 @@ import { FormValues } from '@/src/types/types';
 import { devError } from '@/src/utils/logger';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { sanitizeInput } from '@/src/utils/security';
-import { validatePassword } from '@/src/utils/validation';
+import { validatePassword } from '@/src/utils/aiValidation';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
 import { getUserFriendlyError } from '@/src/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/src/utils/retry';

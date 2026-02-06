@@ -6,7 +6,7 @@ import {
   validateFileSize,
   validateImageType,
   validatePassword,
-} from '@/src/utils/validation';
+} from '@/src/utils/aiValidation';
 
 describe('src/utils/validation', () => {
   describe('validateAIMessage', () => {

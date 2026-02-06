@@ -6,7 +6,7 @@ import {
   sendPasswordApi,
 } from '@/src/api/auth';
 import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
-import { validatePassword } from '@/src/utils/validation';
+import { validatePassword } from '@/src/utils/aiValidation';
 import { sanitizeInput } from '@/src/utils/security';
 import { safeJsonParse } from '@/src/utils/safeJsonParse';
 import { devError } from '@/src/utils/logger';
