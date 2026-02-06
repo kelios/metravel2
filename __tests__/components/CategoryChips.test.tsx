@@ -1,6 +1,6 @@
 // CategoryChips.test.tsx - Тесты для компонента CategoryChips
 import { render, fireEvent } from '@testing-library/react-native';
-import CategoryChips from '@/components/CategoryChips';
+import CategoryChips from '@/components/filters/CategoryChips';
 
 // Mock Chip component
 jest.mock('@/components/ui/Chip', () => {

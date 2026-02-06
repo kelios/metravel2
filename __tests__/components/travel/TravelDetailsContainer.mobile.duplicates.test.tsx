@@ -179,7 +179,7 @@ jest.mock('@/components/travel/AuthorCard', () => ({
   default: () => null,
 }));
 
-jest.mock('@/components/WeatherWidget', () => ({
+jest.mock('@/components/home/WeatherWidget', () => ({
   __esModule: true,
   default: () => null,
 }));

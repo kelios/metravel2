@@ -32,7 +32,7 @@ jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
   default: () => null,
 }));
 
-jest.mock('@/components/FavoriteButton', () => ({
+jest.mock('@/components/travel/FavoriteButton', () => ({
   __esModule: true,
   default: () => null,
 }));

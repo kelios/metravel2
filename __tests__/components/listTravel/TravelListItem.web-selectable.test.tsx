@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import TravelListItem from '@/components/listTravel/TravelListItem';
 import type { Travel } from '@/src/types/types';
 
-jest.mock('@/components/OptimizedFavoriteButton', () => ({
+jest.mock('@/components/travel/OptimizedFavoriteButton', () => ({
   __esModule: true,
   default: () => null,
 }));

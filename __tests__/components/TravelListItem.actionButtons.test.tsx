@@ -16,7 +16,7 @@ jest.mock('@tanstack/react-query', () => ({
   }),
 }));
 
-jest.mock('@/components/OptimizedFavoriteButton', () => {
+jest.mock('@/components/travel/OptimizedFavoriteButton', () => {
   return function MockOptimizedFavoriteButton(props: any) {
     const { Pressable, Text } = require('react-native');
     return (

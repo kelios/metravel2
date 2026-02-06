@@ -1,6 +1,6 @@
 import { act, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
-import WeatherWidget from '@/components/WeatherWidget'
+import WeatherWidget from '@/components/home/WeatherWidget'
 
 describe('WeatherWidget', () => {
   const originalPlatform = Platform.OS

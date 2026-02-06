@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import ThemeToggle from '@/components/ThemeToggle';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';

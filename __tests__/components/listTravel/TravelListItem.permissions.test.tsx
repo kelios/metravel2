@@ -7,7 +7,7 @@ import TravelListItem from '@/components/listTravel/TravelListItem';
 import type { Travel } from '@/src/types/types';
 
 // Не тестируем избранное здесь, поэтому подменяем FavoriteButton
-jest.mock('@/components/FavoriteButton', () => ({
+jest.mock('@/components/travel/FavoriteButton', () => ({
   __esModule: true,
   default: () => null,
 }));

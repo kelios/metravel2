@@ -26,7 +26,7 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => mockUseFavorites(),
 }));
 
-jest.mock('@/components/WeeklyHighlights', () => ({
+jest.mock('@/components/travel/WeeklyHighlights', () => ({
   __esModule: true,
   default: () => {
     const React = require('react');
@@ -35,7 +35,7 @@ jest.mock('@/components/WeeklyHighlights', () => ({
   },
 }));
 
-jest.mock('@/components/PersonalizedRecommendations', () => ({
+jest.mock('@/components/travel/PersonalizedRecommendations', () => ({
   __esModule: true,
   default: () => {
     const React = require('react');

@@ -7,7 +7,7 @@ import MainHubLayout from '@/components/layout/MainHubLayout';
 import CollapsibleBlock from '@/components/ui/CollapsibleBlock';
 import WelcomeBanner from '@/components/layout/WelcomeBanner';
 import RecentViews from '@/components/travel/RecentViews';
-import FiltersPanelCollapsible from '@/components/FiltersPanelCollapsible';
+import FiltersPanelCollapsible from '@/components/filters/FiltersPanelCollapsible';
 import { useBlockVisibility } from '@/hooks/useBlockVisibility';
 import { useResponsive } from '@/hooks/useResponsive';
 

@@ -106,7 +106,7 @@ jest.mock('@/components/MapPage/ValidationMessage', () => {
   };
 });
 
-jest.mock('@/components/CategoryChips', () => {
+jest.mock('@/components/filters/CategoryChips', () => {
   const { View } = require('react-native');
   return function MockCategoryChips() {
     return <View testID="category-chips" />;

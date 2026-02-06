@@ -26,13 +26,13 @@ jest.mock('@/context/AuthContext', () => ({
   }),
 }))
 
-jest.mock('@/components/PersonalizedRecommendations', () => {
+jest.mock('@/components/travel/PersonalizedRecommendations', () => {
   const React = require('react')
   const { View } = require('react-native')
   return () => React.createElement(View, { testID: 'personalized-recommendations' })
 })
 
-jest.mock('@/components/WeeklyHighlights', () => {
+jest.mock('@/components/travel/WeeklyHighlights', () => {
   const React = require('react')
   const { View } = require('react-native')
   return (props: any) => React.createElement(View, { testID: 'weekly-highlights', enabled: props.enabled })

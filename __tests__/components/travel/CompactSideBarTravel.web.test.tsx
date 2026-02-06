@@ -20,7 +20,7 @@ jest.mock('@/src/hooks/useUserProfileCached', () => ({
   }),
 }));
 
-jest.mock('@/components/WeatherWidget', () => ({
+jest.mock('@/components/home/WeatherWidget', () => ({
   __esModule: true,
   default: () => <div data-testid="weather-widget" />,
 }));

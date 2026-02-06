@@ -25,7 +25,7 @@ jest.mock('expo-image', () => ({
 }));
 
 // Mock WeatherWidget
-jest.mock('@/components/WeatherWidget', () => {
+jest.mock('@/components/home/WeatherWidget', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
   return () =>
