@@ -382,6 +382,12 @@ export default function SettingsScreen() {
                                     placeholderTextColor={colors.textMuted}
                                 />
                             </View>
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <Text style={styles.subsectionTitle}>Социальные сети</Text>
+                        <View style={styles.formGrid}>
                             <View style={[styles.field, styles.fieldHalf]}>
                                 <Text style={styles.fieldLabel}>YouTube</Text>
                                 <TextInput
@@ -439,6 +445,7 @@ export default function SettingsScreen() {
 
                         <View style={styles.divider} />
 
+                        <Text style={styles.subsectionTitle}>Аватар</Text>
                         <View style={styles.avatarRow}>
                             <View style={styles.avatarField}>
                                 <Text style={styles.fieldLabel}>Аватар</Text>
@@ -660,6 +667,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 14,
         fontWeight: '700',
         color: colors.text,
+    },
+    subsectionTitle: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.textMuted,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     card: {
         backgroundColor: colors.surface,
