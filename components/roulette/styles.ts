@@ -48,6 +48,7 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     shadowRadius: 24,
     elevation: 8,
     padding: 16,
+    ...(Platform.OS === 'web' ? { overflow: 'auto' as any } : {}),
   },
   mainMobile: {
     padding: 12,
@@ -138,7 +139,8 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     flexShrink: 1,
   },
   resultsContainer: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 0,
     paddingBottom: 32,
   },
   resultsContainerMobile: {
@@ -195,7 +197,8 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     paddingHorizontal: 0,
   },
   cardsContainer: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 0,
     position: 'relative',
   },
   cardWrapper: {
@@ -205,21 +208,15 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   rouletteWrapper: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 24,
     paddingHorizontal: 8,
-  },
-  // Верхняя карточка — над компасом
-  rouletteTopCardRow: {
-    alignItems: 'center',
-    zIndex: 2,
-    marginBottom: -14,
+    gap: 28,
   },
   // Группа: компас + центральная кнопка
   rouletteCompassGroup: {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    zIndex: 4,
   },
   // Компас — контейнер для изображения (вращается)
   rouletteCompassWrap: {
@@ -273,29 +270,19 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
   },
-  // Нижний ряд карточек — под компасом
-  rouletteBottomCardsRow: {
+  // Ряд из 3 карточек под компасом
+  rouletteCardsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 24,
-    marginTop: -14,
-    zIndex: 2,
+    gap: 20,
     width: '100%',
-    maxWidth: 720,
+    maxWidth: 960,
+    flexWrap: 'wrap',
   },
   rouletteCard: {
     width: 280,
-    maxWidth: '44%',
-  },
-  rouletteCardTop: {
-    width: 300,
-    transform: [{ rotate: '-1deg' }],
-  },
-  rouletteCardBottomLeft: {
-    transform: [{ rotate: '-4deg' }, { translateY: 4 }],
-  },
-  rouletteCardBottomRight: {
-    transform: [{ rotate: '4deg' }, { translateY: 4 }],
+    maxWidth: '31%',
+    minWidth: 240,
   },
   overlaySpinner: {
     position: 'absolute',

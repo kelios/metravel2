@@ -311,7 +311,6 @@ export const PointsListGrid: React.FC<{
 	        extraData={listExtraData}
 	        keyExtractor={(item) => String((item as any)?.id)}
 	        testID="userpoints-panel-content-list"
-	        estimatedItemSize={120}
 	        renderItem={({ item }) => {
 	          const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
 	          return (
@@ -476,7 +475,6 @@ export const PointsListGrid: React.FC<{
 	    return (
 	      <FlashList
 	        data={filteredPoints}
-	        estimatedItemSize={120}
 	        renderItem={({ item, index }: { item: any; index: number }) => {
 	          if (columns <= 1) {
 	            return renderItem({ item })

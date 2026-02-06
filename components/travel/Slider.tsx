@@ -1068,18 +1068,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   counter: {
     position: "absolute",
     top: 16,
-    right: 16,
+    left: 16,
     zIndex: DESIGN_TOKENS.zIndex.fixed, // 300
     ...Platform.select({
       web: {
         top: 16,
-        right: 16,
+        left: 16,
       },
     }),
   },
   counterMobile: {
     top: 12,
-    right: 12,
+    left: 12,
   },
   counterContainer: {
     backgroundColor: colors.overlayLight,

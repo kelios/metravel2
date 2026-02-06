@@ -242,7 +242,17 @@ const patchWebShapeEsm = (src) => {
     .replace(
       /import\s+\{\s*hasTouchableProperty\s*,\s*camelCaseToDashed\s*,\s*remeasure\s*\}\s+from\s+['"].\/utils['"];?/,
       "import { hasTouchableProperty as _hasTouchableProperty, camelCaseToDashed, remeasure } from './utils';"
+    )
+    // Handle standalone import from './utils/hasProperty'
+    .replace(
+      /import\s+\{\s*hasTouchableProperty\s*\}\s+from\s+['"].\/utils\/hasProperty['"];?/,
+      "import { hasTouchableProperty as _hasTouchableProperty } from './utils/hasProperty';"
     );
+
+  // Only insert fallback if the alias was actually introduced
+  if (!rewritten.includes('_hasTouchableProperty')) {
+    return rewritten;
+  }
 
   const lastImportIdx = rewritten.lastIndexOf('import ');
   if (lastImportIdx === -1) {

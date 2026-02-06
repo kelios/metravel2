@@ -704,7 +704,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     counter: {
       position: 'absolute',
       top: 16,
-      right: 16,
+      left: 16,
       zIndex: 50,
     },
     counterContainer: {

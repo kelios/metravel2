@@ -60,7 +60,7 @@ export const strToLatLng = (
   if (!baseValid && !swappedValid) return null;
   if (!hintCenter || !CoordinateConverter.isValid(hintCenter)) {
     const chosen = baseValid ?? swappedValid;
-    const out = chosen ? [chosen.lng, chosen.lat] : null;
+    const out: [number, number] | null = chosen ? [chosen.lng, chosen.lat] : null;
     setCache(cacheKey, out);
     return out;
   }
@@ -75,7 +75,7 @@ export const strToLatLng = (
   }
 
   const chosen = baseValid ?? swappedValid;
-  const out = chosen ? [chosen.lng, chosen.lat] : null;
+  const out: [number, number] | null = chosen ? [chosen.lng, chosen.lat] : null;
   setCache(cacheKey, out);
   return out;
 };

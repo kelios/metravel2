@@ -245,41 +245,7 @@ export default function RouletteScreen() {
                 )}
                 {Platform.OS === 'web' && !isMobile ? (
                   <View style={styles.rouletteWrapper}>
-                    {/* Верхняя карточка — над компасом */}
-                    {result.length > 0 && (
-                      <Animated.View
-                        style={[
-                          styles.rouletteTopCardRow,
-                          {
-                            opacity: cardAnims[0] ?? 1,
-                            transform: [{
-                              translateY: (cardAnims[0] ?? new Animated.Value(1)).interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [-30, 0],
-                              }),
-                            }],
-                          },
-                        ]}
-                      >
-                        <View style={styles.rouletteCardTop}>
-                          <RenderTravelItem
-                            item={result[0]}
-                            index={0}
-                            isMobile={false}
-                            isSuperuser={false}
-                            isMetravel={false}
-                            onDeletePress={undefined}
-                            isFirst
-                            selectable={false}
-                            isSelected={false}
-                            onToggle={undefined}
-                            cardWidth={300}
-                          />
-                        </View>
-                      </Animated.View>
-                    )}
-
-                    {/* Компас + кнопка в центре */}
+                    {/* Компас + кнопка */}
                     <View style={styles.rouletteCompassGroup}>
                       <Animated.View
                         style={[
@@ -294,7 +260,6 @@ export default function RouletteScreen() {
                         />
                       </Animated.View>
 
-                      {/* Кнопка поверх компаса */}
                       <Pressable
                         style={styles.rouletteCompassButton}
                         onPress={handleSpin}
@@ -313,22 +278,20 @@ export default function RouletteScreen() {
                       </Pressable>
                     </View>
 
-                    {/* Нижние две карточки — под компасом */}
-                    {result.length > 1 && (
-                      <View style={styles.rouletteBottomCardsRow}>
-                        {result.slice(1, 3).map((item, index) => (
+                    {/* Три карточки в ряд */}
+                    {result.length > 0 && (
+                      <View style={styles.rouletteCardsRow}>
+                        {result.slice(0, 3).map((item, index) => (
                           <Animated.View
                             key={String(item.id)}
                             style={[
                               styles.rouletteCard,
-                              index === 0 && styles.rouletteCardBottomLeft,
-                              index === 1 && styles.rouletteCardBottomRight,
                               {
-                                opacity: cardAnims[index + 1] ?? 1,
+                                opacity: cardAnims[index] ?? 1,
                                 transform: [{
-                                  translateY: (cardAnims[index + 1] ?? new Animated.Value(1)).interpolate({
+                                  translateY: (cardAnims[index] ?? new Animated.Value(1)).interpolate({
                                     inputRange: [0, 1],
-                                    outputRange: [30, 0],
+                                    outputRange: [20, 0],
                                   }),
                                 }],
                               },
@@ -336,12 +299,12 @@ export default function RouletteScreen() {
                           >
                             <RenderTravelItem
                               item={item}
-                              index={index + 1}
+                              index={index}
                               isMobile={false}
                               isSuperuser={false}
                               isMetravel={false}
                               onDeletePress={undefined}
-                              isFirst={false}
+                              isFirst={index === 0}
                               selectable={false}
                               isSelected={false}
                               onToggle={undefined}

@@ -4,7 +4,7 @@ import type {
   TravelCommentThread,
   TravelCommentCreate,
   TravelCommentUpdate,
-} from '../../types/comments';
+} from '@/types/comments';
 
 const getErrorStatus = (error: unknown): number | undefined => {
   if (error instanceof ApiError) return error.status;

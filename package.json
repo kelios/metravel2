@@ -210,7 +210,8 @@
     "tar": "^7.5.3",
     "yaml": "^2.5.1",
     "follow-redirects": "^1.15.6",
-    "cookie": "^0.6.0"
+    "cookie": "^0.6.0",
+    "@isaacs/brace-expansion": ">=5.0.1"
   },
   "prettier": {
     "jsxBracketSameLine": true,

@@ -37,6 +37,7 @@ interface OptimizedMapProps {
   setRoutingLoading?: (loading: boolean) => void;
   setRoutingError?: (error: string | null) => void;
   placesAlongRoute?: any[]; // For compatibility, not used in Map.web
+  radius?: string;
   onMapUiApiReady?: (api: any | null) => void;
   onUserLocationChange?: (loc: Coordinates | null) => void;
 }
@@ -57,6 +58,7 @@ const OptimizedMap: React.FC<OptimizedMapProps> = ({
   setRoutingLoading,
   setRoutingError,
   placesAlongRoute: _placesAlongRoute, // Accepted but not passed to Map.web
+  radius: _radius, // Accepted for API compatibility but not used by Map.web
   onMapUiApiReady,
   onUserLocationChange,
 }) => {

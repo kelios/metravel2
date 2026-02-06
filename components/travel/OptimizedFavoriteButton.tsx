@@ -89,8 +89,8 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
                 <Feather
                     name="heart"
                     size={size}
-                    color={serverIsFav ? colors.danger : colors.textMuted}
-                    {...(!serverIsFav ? ({ style: { opacity: 0.55 } } as any) : null)}
+                    color={serverIsFav ? colors.danger : '#fff'}
+                    {...(!serverIsFav ? ({ style: { opacity: 0.85 } } as any) : null)}
                 />
             </WebView>
         );
@@ -106,18 +106,21 @@ const OptimizedFavoriteButton = memo(function OptimizedFavoriteButton({
             <Feather
                 name="heart"
                 size={size}
-                color={serverIsFav ? colors.danger : colors.textMuted}
-                {...(!serverIsFav ? ({ style: { opacity: 0.55 } } as any) : null)}
+                color={serverIsFav ? colors.danger : '#fff'}
+                {...(!serverIsFav ? ({ style: { opacity: 0.85 } } as any) : null)}
             />
         </Pressable>
     );
 });
 
-const getStyles = (colors: ThemedColors) => StyleSheet.create({
+const getStyles = (_colors: ThemedColors) => StyleSheet.create({
     favoriteButton: {
-        padding: 4,
-        borderRadius: 4,
-        backgroundColor: colors.surface,
+        padding: 8,
+        borderRadius: 999,
+        backgroundColor: 'rgba(0, 0, 0, 0.25)',
+        ...(Platform.OS === 'web'
+            ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } as any
+            : {}),
     },
 });
 
