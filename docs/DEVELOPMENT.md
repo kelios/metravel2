@@ -54,7 +54,7 @@ Optional:
 
 - `app/` — Expo Router routes/pages.
 - `components/` — UI/components.
-- `hooks/`, `utils/`, `src/` — business logic and utilities.
+- `hooks/`, `utils/`, `api/`, `services/` — business logic and utilities.
 - `__tests__/` — unit/integration tests.
 - `e2e/` — Playwright end-to-end tests.
 - `constants/` — design system tokens.

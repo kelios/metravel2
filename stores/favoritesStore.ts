@@ -235,8 +235,11 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     ensureServerData: async (userId) => {
         if (!userId) return;
         const state = get();
-        if (state._fetched && state._userId === userId) return;
-        set({ _fetched: true, _userId: userId });
+        if (state._userId !== userId) {
+            set({ _fetched: false, _userId: userId });
+        }
+        if (get()._fetched) return;
+        set({ _fetched: true });
         await get().refreshFromServer(userId);
     },
 

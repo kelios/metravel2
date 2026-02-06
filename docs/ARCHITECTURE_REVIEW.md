@@ -277,10 +277,10 @@ __tests__/components/
 2. ✅ Удалены 7 легаси файлов дизайн-системы: `Colors.ts`, `designTokens.ts`, `airyColors.ts`, `lightModernDesignTokens.ts`, `modernRedesign.ts`, `src/theme.ts`, тест
 3. ✅ Объединены `context/` + `contexts/` + `providers/` → единая папка `context/` (5 файлов). Обновлены все 11 импортов + 3 jest.mock пути
 
-### Фаза 2: Консолидация структуры (3-5 дней)
-4. Выбрать и реализовать единую структуру `src/` vs корень (п. 2.1)
-5. Исправить babel/tsconfig алиасы (п. 2.4)
-6. Реструктурировать `components/MapPage/` (п. 4.2)
+### Фаза 2: Консолидация структуры ✅ (выполнено 6 фев 2026)
+4. ✅ Удалена папка `src/` — все модули перенесены в корень: `api/`, `services/`, `infrastructure/`, `ui/`, `screens/`, `generators/`, `queryClient.ts`, `queryKeys.ts`. Объединены `hooks/`, `utils/`, `types/`, `config/`. Обновлены 331 импорт + 10 относительных путей.
+5. ✅ Исправлены babel алиасы (убраны stale `./src/` overrides) и tsconfig `typeRoots`. Единый алиас `@/ → ./`.
+6. Реструктурировать `components/MapPage/` (п. 4.2) — отложено на Фазу 4
 
 ### Фаза 3: Рефакторинг крупных модулей (1-2 недели)
 7. Разбить `FavoritesContext` на Zustand-сторы (п. 2.3)

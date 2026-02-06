@@ -69,6 +69,14 @@ describe('FavoritesContext', () => {
     (AsyncStorage as any).__reset?.();
     mockAuthContext.isAuthenticated = false;
     mockAuthContext.userId = null;
+
+    // Reset Zustand store state between tests
+    const { useFavoritesStore } = require('@/stores/favoritesStore');
+    const { useViewHistoryStore } = require('@/stores/viewHistoryStore');
+    const { useRecommendationsStore } = require('@/stores/recommendationsStore');
+    useFavoritesStore.setState({ favorites: [], _inFlight: new Set(), _fetched: false, _userId: null });
+    useViewHistoryStore.setState({ viewHistory: [], _fetched: false, _userId: null });
+    useRecommendationsStore.setState({ recommended: [], _fetched: false, _userId: null });
   });
 
   it('clears favorites (guest/local)', async () => {
@@ -128,11 +136,9 @@ describe('FavoritesContext', () => {
       },
     ];
 
-    (AsyncStorage.multiGet as jest.Mock).mockResolvedValue([
-      [serverFavoritesKey, JSON.stringify(cachedFavorites)],
-      [serverHistoryKey, JSON.stringify([])],
-      [serverRecommendationsKey, JSON.stringify([])],
-    ]);
+    await AsyncStorage.setItem(serverFavoritesKey, JSON.stringify(cachedFavorites));
+    await AsyncStorage.setItem(serverHistoryKey, JSON.stringify([]));
+    await AsyncStorage.setItem(serverRecommendationsKey, JSON.stringify([]));
 
     let contextValue: any;
 
@@ -495,8 +501,8 @@ describe('FavoritesContext', () => {
     );
 
     await waitFor(() => {
-      const firstCall = (AsyncStorage.multiGet as jest.Mock).mock.calls[0]?.[0] || [];
-      expect(firstCall).toEqual(
+      const getItemCalls = (AsyncStorage.getItem as jest.Mock).mock.calls.map((c: any[]) => c[0]);
+      expect(getItemCalls).toEqual(
         expect.arrayContaining([
           'metravel_favorites_server_user123',
           'metravel_view_history_server_user123',
