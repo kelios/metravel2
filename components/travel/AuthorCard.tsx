@@ -239,7 +239,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
                 </Text>
               </Pressable>
             )}
-            {authorCountryName && (
+            {!!authorCountryName && (
               <SafeView style={styles.locationRow}>
                 <Feather name="map-pin" size={14} color={colors.textMuted} />
                 <Text style={[styles.locationText, { color: colors.textSecondary }]}>{authorCountryName}</Text>
