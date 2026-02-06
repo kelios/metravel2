@@ -9,7 +9,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import TravelCardCompact from '@/components/travel/TravelCardCompact';
+import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+import FavoriteButton from '@/components/travel/FavoriteButton';
+import { useRouter } from 'expo-router';
 import type { Travel } from '@/types/types';
 
 interface RecentViewsProps {
@@ -47,9 +49,10 @@ export default function RecentViews({
   compact = false,
   initialTravels,
 }: RecentViewsProps) {
+  const router = useRouter();
   const [recentTravels, setRecentTravels] = React.useState<Travel[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Динамическая поддержка тем
+  const colors = useThemedColors();
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -210,11 +213,33 @@ export default function RecentViews({
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <View style={styles.cardWrapper}>
-            <TravelCardCompact travel={item} />
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const countries = item.countryName?.split(',').map((c: string) => c.trim()).filter(Boolean) || [];
+          return (
+            <View style={styles.cardWrapper}>
+              <UnifiedTravelCard
+                testID={`travel-card-${item.id}`}
+                title={item.name}
+                imageUrl={item.travel_image_thumb_url}
+                metaText={countries.length > 0 ? countries.join(', ') : null}
+                onPress={() => router.push(`/travels/${item.slug || item.id}`)}
+                rightTopSlot={
+                  <FavoriteButton
+                    id={item.id}
+                    type="travel"
+                    title={item.name || ''}
+                    imageUrl={item.travel_image_thumb_url}
+                    url={`/travels/${item.slug || item.id}`}
+                    country={countries[0]}
+                    size={18}
+                  />
+                }
+                imageHeight={Platform.OS === 'web' ? 200 : 180}
+                style={{ height: '100%', backgroundColor: colors.surface }}
+              />
+            </View>
+          );
+        }}
         contentContainerStyle={styles.listContent}
         {...(Platform.OS === 'web' ? { onWheel: handleHorizontalWheel } : {})}
         drawDistance={800}

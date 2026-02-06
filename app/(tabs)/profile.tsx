@@ -49,7 +49,6 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   const scrollRef = useRef<ScrollView | null>(null);
-  const sectionOffsetsRef = useRef<Record<string, number>>({});
 
   const socialLinks = useMemo(
     () =>
@@ -235,116 +234,6 @@ export default function ProfileScreen() {
       marginTop: 4,
       marginBottom: 12,
     },
-    logoutButton: {
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.dangerSoft,
-      borderWidth: 1,
-      borderColor: colors.danger,
-    },
-    logoutButtonText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.danger,
-    },
-    quickNav: {
-      flexDirection: 'row',
-      gap: 8,
-      marginBottom: 16,
-      paddingHorizontal: 2,
-    },
-    quickNavButton: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primarySoft,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-    },
-    quickNavButtonActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    quickNavButtonText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.primary,
-    },
-    quickNavButtonTextActive: {
-      color: colors.textOnPrimary,
-    },
-    statsRow: {
-      flexDirection: 'row',
-      gap: 12,
-      marginBottom: 16,
-    },
-    statCard: {
-      flex: 1,
-      padding: 14,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.surface,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    statValue: {
-      fontSize: 22,
-      fontWeight: '700',
-      color: colors.primary,
-      marginBottom: 4,
-    },
-    statLabel: {
-      fontSize: 12,
-      color: colors.textMuted,
-    },
-    socialLinks: {
-      flexDirection: 'row',
-      gap: 10,
-      marginBottom: 8,
-    },
-    socialButton: {
-      padding: 10,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    grid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 14,
-    },
-    gridItem: {
-      width: '48%',
-      minWidth: 160,
-    },
-    emptyText: {
-      fontSize: 13,
-      color: colors.textMuted,
-      textAlign: 'center',
-      paddingVertical: 24,
-      fontStyle: 'italic',
-    },
-    linkButton: {
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginBottom: 8,
-    },
-    linkButtonContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    linkButtonText: {
-      fontSize: 15,
-      fontWeight: '600',
-      color: colors.text,
-    },
     editProfileButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -358,25 +247,6 @@ export default function ProfileScreen() {
       fontSize: 13,
       fontWeight: '700',
       color: colors.primary,
-    },
-    quickNavRow: {
-      paddingHorizontal: 6,
-      paddingBottom: 4,
-      gap: 8,
-      alignItems: 'center',
-    },
-    quickNavChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 999,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    quickNavChipText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.text,
     },
     socialsRow: {
       flexDirection: 'row',
@@ -395,18 +265,6 @@ export default function ProfileScreen() {
       color: colors.primary,
       fontSize: 12,
       fontWeight: '700',
-    },
-    statsContainer: {
-      flexDirection: 'row',
-      gap: 12,
-      marginBottom: 16,
-    },
-    statNumber: {
-      fontSize: 24,
-      fontWeight: '700',
-      color: colors.text,
-      marginTop: 8,
-      marginBottom: 4,
     },
     sectionHeaderRow: {
       flexDirection: 'row',
@@ -602,9 +460,6 @@ export default function ProfileScreen() {
       <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.content}>
         <View
           style={styles.header}
-          onLayout={(e) => {
-            sectionOffsetsRef.current.profile = e.nativeEvent.layout.y;
-          }}
         >
           <View style={styles.headerRow}>
               <View style={styles.avatar}>
@@ -677,9 +532,6 @@ export default function ProfileScreen() {
                 <View
                   key="favorites"
                   style={styles.dashboardSectionCard}
-                  onLayout={(e) => {
-                    sectionOffsetsRef.current.favorites = e.nativeEvent.layout.y;
-                  }}
                 >
                   <View style={styles.sectionHeaderRow}>
                     <View style={styles.sectionHeaderLeft}>
@@ -729,9 +581,6 @@ export default function ProfileScreen() {
                 <View
                   key="history"
                   style={styles.dashboardSectionCard}
-                  onLayout={(e) => {
-                    sectionOffsetsRef.current.history = e.nativeEvent.layout.y;
-                  }}
                 >
                   <View style={styles.sectionHeaderRow}>
                     <View style={styles.sectionHeaderLeft}>
@@ -785,9 +634,6 @@ export default function ProfileScreen() {
         {/* Menu Items */}
         <View
           style={styles.menuSection}
-          onLayout={(e) => {
-            sectionOffsetsRef.current.sections = e.nativeEvent.layout.y;
-          }}
         >
           <Text style={styles.menuSectionTitle}>Разделы</Text>
           <View style={styles.menuContainer}>{menuItems.map((item, index) => (

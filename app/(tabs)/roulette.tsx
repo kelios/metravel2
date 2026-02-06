@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Text, View, Pressable, Image } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, Platform, Text, View, Pressable, Image, Animated, Easing } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import Feather from '@expo/vector-icons/Feather';
 import { usePathname } from 'expo-router';
@@ -63,6 +63,52 @@ export default function RouletteScreen() {
   const compassBackground = require('../../assets/travel/roulette-compass-bg.jpg');
 
   const [showFilters, setShowFilters] = useState(false);
+
+  // Compass spin animation
+  const compassSpin = useRef(new Animated.Value(0)).current;
+  const compassSpinRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    if (spinning) {
+      compassSpin.setValue(0);
+      compassSpinRef.current = Animated.loop(
+        Animated.timing(compassSpin, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.linear,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+      );
+      compassSpinRef.current.start();
+    } else {
+      compassSpinRef.current?.stop();
+      compassSpin.setValue(0);
+    }
+    return () => { compassSpinRef.current?.stop(); };
+  }, [spinning, compassSpin]);
+
+  const compassRotate = compassSpin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  // Stagger animation for result cards
+  const cardAnims = useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
+  const prevResultLen = useRef(0);
+
+  useEffect(() => {
+    if (result.length > 0 && prevResultLen.current === 0) {
+      cardAnims.forEach(a => a.setValue(0));
+      Animated.stagger(120, cardAnims.map(a =>
+        Animated.timing(a, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+      )).start();
+    }
+    prevResultLen.current = result.length;
+  }, [result.length, cardAnims]);
 
   return (
     <View style={styles.root}>
@@ -163,7 +209,10 @@ export default function RouletteScreen() {
           <View style={[styles.resultsContainer, isMobile && styles.resultsContainerMobile]}>
             {showLoading && (
               <View style={styles.loaderBox}>
-                <Text style={styles.loaderText}>Подбираем маршруты…</Text>
+                <Animated.View style={{ transform: [{ rotate: compassRotate }] }}>
+                  <Feather name="compass" size={40} color={colors.primary} />
+                </Animated.View>
+                <Text style={[styles.loaderText, { marginTop: 12 }]}>Подбираем маршруты…</Text>
               </View>
             )}
 
@@ -205,13 +254,22 @@ export default function RouletteScreen() {
                       />
 
                       {result.slice(0, 3).map((item, index) => (
-                        <View
+                        <Animated.View
                           key={String(item.id)}
                           style={[
                             styles.rouletteCard,
                             index === 0 && styles.rouletteCardTop,
                             index === 1 && styles.rouletteCardLeft,
                             index === 2 && styles.rouletteCardRight,
+                            {
+                              opacity: cardAnims[index] ?? 1,
+                              transform: [{
+                                translateY: (cardAnims[index] ?? new Animated.Value(1)).interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [20, 0],
+                                }),
+                              }],
+                            },
                           ]}
                         >
                           <RenderTravelItem
@@ -227,7 +285,7 @@ export default function RouletteScreen() {
                             isSelected={false}
                             onToggle={undefined}
                           />
-                        </View>
+                        </Animated.View>
                       ))}
 
                       <Pressable style={styles.rouletteCenter} onPress={handleSpin}>

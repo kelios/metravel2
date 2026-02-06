@@ -16,6 +16,7 @@ const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));
 const HomeFAQSection = lazy(() => import('./HomeFAQSection'));
 const HomeInspirationSections = lazy(() => import('./HomeInspirationSection'));
 const HomeFinalCTA = lazy(() => import('./HomeFinalCTA'));
+const OnboardingBanner = lazy(() => import('./OnboardingBanner'));
 
 const SectionSkeleton = memo(({ hydrated }: { hydrated: boolean }) => {
   const { isSmallPhone, isPhone } = useResponsive();
@@ -110,16 +111,18 @@ function Home() {
     queueAnalyticsEvent('HomeViewed', payload);
   }, [isFocused, isAuthenticated, travelsCount]);
 
-  const sections = useMemo(() => (
-    [
+  const sections = useMemo(() => {
+    const base: Array<'hero' | 'onboarding' | 'trust' | 'howItWorks' | 'inspiration' | 'faq' | 'finalCta'> = [
       'hero',
+      ...(isAuthenticated ? ['onboarding' as const] : []),
       'trust',
       'howItWorks',
       'inspiration',
       'faq',
       'finalCta',
-    ] as const
-  ), []);
+    ];
+    return base;
+  }, [isAuthenticated]);
 
   const sectionCount = sections.length;
 
@@ -127,6 +130,12 @@ function Home() {
     switch (item) {
       case 'hero':
         return <HomeHero travelsCount={travelsCount} />;
+      case 'onboarding':
+        return (
+          <Suspense fallback={null}>
+            <OnboardingBanner />
+          </Suspense>
+        );
       case 'trust':
         if (!hydrated) return <View style={{ minHeight: 220 }} />;
         return (

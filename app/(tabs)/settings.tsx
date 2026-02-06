@@ -17,6 +17,7 @@ import { ApiError } from '@/api/client';
 import { removeStorageBatch, setStorageBatch } from '@/utils/storageBatch';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -295,9 +296,19 @@ export default function SettingsScreen() {
     if (!authReady) {
         return (
             <SafeAreaView style={styles.container}>
-                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator size="small" color={colors.primary} />
-                </View>
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <View style={styles.pageContainer}>
+                        <View style={styles.header}>
+                            <SkeletonLoader width={140} height={22} borderRadius={4} />
+                            <SkeletonLoader width={180} height={14} borderRadius={4} style={{ marginTop: 6 }} />
+                        </View>
+                        <View style={{ gap: 14 }}>
+                            <SkeletonLoader width="100%" height={180} borderRadius={12} />
+                            <SkeletonLoader width="100%" height={120} borderRadius={12} />
+                            <SkeletonLoader width="100%" height={100} borderRadius={12} />
+                        </View>
+                    </View>
+                </ScrollView>
             </SafeAreaView>
         );
     }

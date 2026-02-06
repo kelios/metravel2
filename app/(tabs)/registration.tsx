@@ -1,5 +1,5 @@
 // app/register.tsx (или соответствующий путь)
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Platform,

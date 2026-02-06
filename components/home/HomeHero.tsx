@@ -61,8 +61,8 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
-  const showImage = hydrated && !isMobile;
-  const shouldRenderImageSlot = isWeb && !isMobile;
+  const showImage = hydrated;
+  const shouldRenderImageSlot = isWeb;
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -228,11 +228,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
         <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={60} align="center">
           <View style={styles.content}>
             <ResponsiveText variant="h1" style={styles.title}>
-              Пиши о своих путешествиях
+              Находи маршруты. Делись историями.
             </ResponsiveText>
 
             <ResponsiveText variant="h4" style={styles.subtitle}>
-              Делись маршрутами и историями, собирай их в красивую книгу — или выбирай, куда поехать дальше, читая поездки других.
+              Читай поездки других путешественников, сохраняй лучшие маршруты и собирай свои истории в книгу.
             </ResponsiveText>
 
             {travelsCount === 0 && isAuthenticated && (
@@ -247,29 +247,29 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               style={styles.buttonsContainer}
             >
               <Button
-                onPress={handleCreateBook}
-                label={primaryButtonLabel}
+                onPress={handleOpenSearch}
+                label="Найти маршрут"
                 variant="primary"
                 size={isMobile ? 'md' : 'lg'}
                 fullWidth={isMobile}
+                icon={<Feather name="compass" size={18} color={colors.textOnPrimary} />}
                 style={styles.primaryButton}
                 labelStyle={styles.primaryButtonText}
                 hoverStyle={styles.primaryButtonHover}
                 pressedStyle={styles.primaryButtonHover}
+                accessibilityLabel="Найти маршрут"
               />
 
               <Button
-                onPress={handleOpenSearch}
-                label="Выбрать, куда поехать"
+                onPress={handleCreateBook}
+                label={primaryButtonLabel}
                 variant="secondary"
                 size={isMobile ? 'md' : 'lg'}
                 fullWidth={isMobile}
-                icon={<Feather name="compass" size={18} color={colors.text} />}
                 style={styles.secondaryButton}
                 labelStyle={styles.secondaryButtonText}
                 hoverStyle={styles.secondaryButtonHover}
                 pressedStyle={styles.secondaryButtonHover}
-                accessibilityLabel="Выбрать, куда поехать"
               />
             </ResponsiveStack>
           </View>

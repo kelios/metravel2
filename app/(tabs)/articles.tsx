@@ -1,10 +1,10 @@
-import {ActivityIndicator, Dimensions, SafeAreaView, StyleSheet, View} from 'react-native'
+import {ActivityIndicator, SafeAreaView, StyleSheet, View} from 'react-native'
 import ArticleListItem from '@/components/article/ArticleListItem'
 import {useEffect, useMemo, useState} from 'react'
 import {Articles} from '@/types/types'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import {fetchArticles} from '@/api/articles'
-import {DataTable} from '@/ui/paper'
+import PaginationComponent from '@/components/ui/PaginationComponent'
 import {useLocalSearchParams} from 'expo-router'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import EmptyState from '@/components/ui/EmptyState'
@@ -16,9 +16,8 @@ import { queryKeys } from '@/queryKeys'
 
 export default function TabOneScreen() {
   const initialPage = 0
-  const windowWidth = Dimensions.get('window').width
   const colors = useThemedColors()
-  const styles = useMemo(() => getStyles(windowWidth, colors), [windowWidth, colors])
+  const styles = useMemo(() => getStyles(colors), [colors])
 
   const itemsPerPageOptions = [10, 20, 30, 50, 100]
   const [currentPage, setCurrentPage] = useState(initialPage)
@@ -127,33 +126,24 @@ export default function TabOneScreen() {
               keyExtractor={(item: any, index: number) => (item?.id ? String(item.id) : String(index))}
               refreshing={isFetching}
               onRefresh={() => refetch()}
-              drawDistance={Dimensions.get('window').width > 900 ? 900 : 600}
+              drawDistance={600}
               style={{ flex: 1, alignSelf: 'stretch' }}
             />
-            <View style={styles.containerPaginator}>
-              <DataTable>
-                <DataTable.Pagination
-                    page={currentPage}
-                    numberOfPages={Math.ceil(articles?.total / itemsPerPage) ?? 20}
-                    onPageChange={(page) => handlePageChange(page)}
-                    label={`${currentPage + 1} of ${Math.ceil(
-                        articles?.total / itemsPerPage,
-                    )}`}
-                    showFastPaginationControls
-                    numberOfItemsPerPageList={itemsPerPageOptions}
-                    numberOfItemsPerPage={itemsPerPage}
-                    onItemsPerPageChange={setItemsPerPage}
-                    style={{ flexWrap: 'nowrap' }}
-                />
-              </DataTable>
-            </View>
+            <PaginationComponent
+              currentPage={currentPage}
+              itemsPerPage={itemsPerPage}
+              itemsPerPageOptions={itemsPerPageOptions}
+              onPageChange={handlePageChange}
+              onItemsPerPageChange={setItemsPerPage}
+              totalItems={articles?.total ?? 0}
+            />
           </View>
         </View>
       </SafeAreaView>
   )
 }
 
-const getStyles = (windowWidth: number, colors: ReturnType<typeof useThemedColors>) => {
+const getStyles = (colors: ReturnType<typeof useThemedColors>) => {
   return StyleSheet.create({
     container: {
       flex: 1,
@@ -166,7 +156,7 @@ const getStyles = (windowWidth: number, colors: ReturnType<typeof useThemedColor
       justifyContent: 'center',
       alignItems: 'center',
       width: '100%',
-      backgroundColor: 'white',
+      backgroundColor: colors.surface,
     },
     centerContent: {
       justifyContent: 'center',
@@ -176,13 +166,6 @@ const getStyles = (windowWidth: number, colors: ReturnType<typeof useThemedColor
       padding: 16,
       alignItems: 'center',
       backgroundColor: colors.surface,
-    },
-    containerPaginator: {
-      marginTop: 10,
-      paddingHorizontal: 10,
-      backgroundColor: colors.surface,
-      color: colors.text,
-      paddingBottom: windowWidth > 500 ? '7%' : '20%',
     },
   })
 }

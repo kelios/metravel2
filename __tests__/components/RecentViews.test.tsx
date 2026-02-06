@@ -57,14 +57,27 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   default: mockAsyncStorage,
 }));
 
-// Mock TravelCardCompact
-jest.mock('@/components/travel/TravelCardCompact', () => {
+// Mock UnifiedTravelCard
+jest.mock('@/components/ui/UnifiedTravelCard', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
-  return ({ travel }: any) =>
-    React.createElement(View, { testID: `travel-card-${travel.id}` }, 
-      React.createElement(Text, null, travel.title)
-    );
+  return {
+    __esModule: true,
+    default: ({ title, onPress: _onPress, testID, ..._props }: any) =>
+      React.createElement(View, { testID: testID || `travel-card-${title}` },
+        React.createElement(Text, null, title)
+      ),
+  };
+});
+
+// Mock FavoriteButton
+jest.mock('@/components/travel/FavoriteButton', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: (props: any) => React.createElement(View, { testID: `fav-btn-${props.id}` }),
+  };
 });
 
 // Mock safeJsonParse

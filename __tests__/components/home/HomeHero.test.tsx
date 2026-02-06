@@ -37,12 +37,12 @@ describe('HomeHero Component', () => {
   describe('Rendering', () => {
     it('should render title correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText('Пиши о своих путешествиях')).toBeTruthy();
+      expect(getByText(/Находи маршруты/)).toBeTruthy();
     });
 
     it('should render subtitle correctly', () => {
       const { getByText } = render(<HomeHero />);
-      expect(getByText(/Делись маршрутами и историями/)).toBeTruthy();
+      expect(getByText(/Читай поездки других/)).toBeTruthy();
     });
 
     it('should not show hint for unauthenticated users', () => {
@@ -147,9 +147,9 @@ describe('HomeHero Component', () => {
       expect(mockPush).toHaveBeenCalledWith('/export');
     });
 
-    it('should navigate to search when clicking "Выбрать, куда поехать"', () => {
+    it('should navigate to search when clicking "Найти маршрут"', () => {
       const { getByText } = render(<HomeHero />);
-      const button = getByText('Выбрать, куда поехать');
+      const button = getByText('Найти маршрут');
       
       fireEvent.press(button);
       
@@ -168,7 +168,7 @@ describe('HomeHero Component', () => {
       });
 
       const { getByText } = render(<HomeHero />);
-      expect(getByText('Пиши о своих путешествиях')).toBeTruthy();
+      expect(getByText(/Находи маршруты/)).toBeTruthy();
     });
 
     it('should apply mobile styles on medium screens (480px)', () => {
@@ -180,7 +180,7 @@ describe('HomeHero Component', () => {
       });
 
       const { getByText } = render(<HomeHero />);
-      expect(getByText('Пиши о своих путешествиях')).toBeTruthy();
+      expect(getByText(/Находи маршруты/)).toBeTruthy();
     });
 
     it('should apply mobile styles on tablets (768px)', () => {
@@ -192,7 +192,7 @@ describe('HomeHero Component', () => {
       });
 
       const { getByText } = render(<HomeHero />);
-      expect(getByText('Пиши о своих путешествиях')).toBeTruthy();
+      expect(getByText(/Находи маршруты/)).toBeTruthy();
     });
 
     it('should apply desktop styles on large screens (1024px)', () => {
@@ -204,15 +204,14 @@ describe('HomeHero Component', () => {
       });
 
       const { getByText } = render(<HomeHero />);
-      expect(getByText('Пиши о своих путешествиях')).toBeTruthy();
+      expect(getByText(/Находи маршруты/)).toBeTruthy();
     });
   });
 
   describe('Accessibility', () => {
     it('should have accessible buttons with proper labels', () => {
       const { getByLabelText } = render(<HomeHero />);
-      expect(getByLabelText('Рассказать о путешествии')).toBeTruthy();
-      expect(getByLabelText('Выбрать, куда поехать')).toBeTruthy();
+      expect(getByLabelText('Найти маршрут')).toBeTruthy();
     });
   });
 });
