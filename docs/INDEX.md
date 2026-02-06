@@ -35,3 +35,12 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/DESIGN_SYSTEM_CONSOLIDATION.md` — how to migrate to `DESIGN_TOKENS`
 - `docs/UI_UX_IMPROVEMENT_SPEC.md` — общее ТЗ по улучшению визуальной части
 - `docs/TRAVEL_DETAILS_UI_SPEC.md` — ТЗ по UI/UX-редизайну страницы путешествия
+- `docs/PDF_EXPORT_DESIGN_SPEC.md` — ТЗ по улучшению дизайна PDF-экспорта (книга путешествий)
+
+## Map page refactoring
+
+- `docs/MAP_PAGE_REFACTORING_SPEC.md` — полное ТЗ по рефакторингу страницы карты (50+ стр)
+- `docs/MAP_PAGE_QUICK_START.md` — быстрый старт с чек-листами
+- `docs/MAP_PAGE_ARCHITECTURE.md` — визуальные диаграммы (Mermaid)
+- `docs/MAP_PAGE_PRESENTATION.md` — презентация для стейкхолдеров
+

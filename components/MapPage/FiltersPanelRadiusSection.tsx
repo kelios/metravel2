@@ -117,10 +117,10 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
         <CollapsibleSection
           title="Категории"
           badge={filterValue.categories.length || undefined}
-          defaultOpen={filterValue.categories.length > 0}
+          defaultOpen={false}
           icon="grid"
         >
-          <Text style={styles.sectionHint}>Выберите подходящие тематики, чтобы сузить выдачу.</Text>
+          <Text style={styles.sectionHint}>Уточните поиск по категориям мест</Text>
           <MultiSelectField
             items={categoriesWithCount}
             value={(Array.isArray(filterValue.categories)

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Platform } from 'react-native';
+import React, { useMemo } from 'react';
+import { Platform, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { LatLng } from '@/types/coordinates';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -7,24 +7,36 @@ import { useThemedColors } from '@/hooks/useTheme';
 interface MapControlsProps {
   userLocation: LatLng | null;
   onCenterUserLocation: () => void;
+  /** Отступ снизу для избежания конфликта с Bottom Sheet (в пикселях) */
+  bottomOffset?: number;
+  /** Разместить контролы слева (для мобильного, чтобы не перекрывались Bottom Sheet) */
+  alignLeft?: boolean;
 }
 
 const MapControls: React.FC<MapControlsProps> = ({
   userLocation,
   onCenterUserLocation,
+  bottomOffset = 0,
+  alignLeft = false,
 }) => {
   const colors = useThemedColors();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
+
+  // На мобильном размещаем слева, чтобы не конфликтовать с Bottom Sheet
+  const shouldAlignLeft = alignLeft || isMobile;
+
+  const controlsStyle = useMemo(() => ({
+    position: 'absolute' as const,
+    bottom: Math.max(18, bottomOffset),
+    ...(shouldAlignLeft ? { left: 10 } : { right: 10 }),
+    zIndex: 1000,
+  }), [bottomOffset, shouldAlignLeft]);
+
   if (!userLocation || Platform.OS !== 'web') return null;
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: 18,
-        right: 10,
-        zIndex: 1000,
-      }}
-    >
+    <div style={controlsStyle}>
       <button
         onClick={onCenterUserLocation}
         style={{

@@ -162,9 +162,9 @@ describe('EnhancedPdfGenerator helpers', () => {
     expect(html).toContain('travel-content-page')
     expect(html).toContain('final-page')
 
-    expect(html).toContain('hyphens: none')
-    expect(html).toContain('word-break: normal')
-    expect(html).toContain('overflow-wrap: normal')
+    expect(html).toContain('hyphens: auto')
+    expect(html).toContain('word-break: break-word')
+    expect(html).toContain('overflow-wrap: anywhere')
   })
 
   it('falls back to MeTravel title and hides cover <h1> when settings.title is empty', async () => {

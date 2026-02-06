@@ -385,6 +385,27 @@ export const getStyles = (
         fontSize: 14,
         color: themedColors.textMuted,
       },
+      badge: {
+        backgroundColor: themedColors.surfaceLight,
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
+        paddingHorizontal: 6,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: 6,
+      },
+      badgeActive: {
+        backgroundColor: 'rgba(255, 255, 255, 0.25)',
+      },
+      badgeText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: themedColors.text,
+      },
+      badgeTextActive: {
+        color: themedColors.textInverse,
+      },
   });
 };
 

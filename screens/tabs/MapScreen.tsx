@@ -186,7 +186,7 @@ export default function MapScreen() {
                     android_ripple={{ color: themedColors.overlayLight }}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: rightPanelTab === 'travels' }}
-                    accessibilityLabel="Список"
+                    accessibilityLabel={`Список (${travelsData.length} мест)`}
                 >
                     <Feather
                         name="list"
@@ -200,6 +200,19 @@ export default function MapScreen() {
                             </Text>
                             <Text style={[styles.tabHint, rightPanelTab === 'travels' && styles.tabHintActive]}>
                                 {travelsData.length} мест
+                            </Text>
+                        </View>
+                    )}
+                    {isMobile && travelsData.length > 0 && (
+                        <View style={[
+                            styles.badge,
+                            rightPanelTab === 'travels' && styles.badgeActive,
+                        ]}>
+                            <Text style={[
+                                styles.badgeText,
+                                rightPanelTab === 'travels' && styles.badgeTextActive,
+                            ]}>
+                                {travelsData.length > 99 ? '99+' : travelsData.length}
                             </Text>
                         </View>
                     )}

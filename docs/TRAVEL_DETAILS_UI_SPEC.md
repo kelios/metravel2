@@ -105,7 +105,7 @@
 
 ## 2. Критические проблемы
 
-### 2.1. Нет видимого заголовка (P0)
+### 2.1. ~~Нет видимого заголовка~~ (P0) — DONE
 
 **Проблема:** `<h1>` скрыт через `clip: rect(0,0,0,0)` (sr-only). Пользователь видит только фото — **не понимает, что за путешествие** до скролла к описанию.
 
@@ -115,7 +115,7 @@
 
 ---
 
-### 2.2. ShareButtons и AuthorCard до контента (P0, mobile)
+### 2.2. ~~ShareButtons и AuthorCard до контента~~ (P0, mobile) — DONE
 
 **Проблема:** На мобильном «Поделиться» и «Автор» показываются **до описания**. Пользователь ещё не прочитал контент, но ему уже предлагают поделиться. Это нарушает логику потребления контента.
 
@@ -127,7 +127,7 @@
 
 ---
 
-### 2.3. CommentsSection не поддерживает тёмную тему (P0)
+### 2.3. ~~CommentsSection не поддерживает тёмную тему~~ (P0) — DONE
 
 **Проблема:** `CommentsSection.tsx` использует `DESIGN_TOKENS.colors.*` напрямую (статические значения) вместо `useThemedColors()`. В тёмной теме комментарии будут со светлым фоном на тёмной странице.
 
@@ -137,7 +137,7 @@
 
 ---
 
-### 2.4. Вложенный ScrollView в комментариях (P1)
+### 2.4. ~~Вложенный ScrollView в комментариях~~ (P1) — DONE
 
 **Проблема:** `CommentsSection` оборачивает список комментариев в `<ScrollView>` с `RefreshControl`. Но сам компонент уже находится внутри главного `<ScrollView>` страницы (`TravelDetailsContainer.tsx:397`). Вложенные ScrollView вызывают проблемы со скроллом на мобильных.
 
@@ -149,7 +149,7 @@
 
 ## 3. Что добавить
 
-### 3.1. Видимый заголовок в hero-блоке (P0)
+### 3.1. ~~Видимый заголовок в hero-блоке~~ (P0) — DONE
 
 **Текущее:** Заголовок скрыт (sr-only). Пользователь видит только фото.
 
@@ -163,7 +163,7 @@
 
 ---
 
-### 3.2. Breadcrumbs (P1)
+### 3.2. ~~Breadcrumbs~~ (P1) — DONE
 
 **Текущее:** Нет навигации «назад». Пользователь не может вернуться к списку путешествий по стране/городу.
 
@@ -177,7 +177,7 @@
 
 ---
 
-### 3.3. Кнопка «В избранное» в hero-блоке (P1)
+### 3.3. ~~Кнопка «В избранное» в hero-блоке~~ (P1) — DONE
 
 **Текущее:** Кнопка «В избранное» только в CTA-секции внизу страницы. Пользователь должен проскроллить всю страницу, чтобы сохранить путешествие.
 
@@ -191,7 +191,7 @@
 
 ---
 
-### 3.4. Счётчик фотографий в галерее (P2)
+### 3.4. ~~Счётчик фотографий в галерее~~ (P2) — DONE
 
 **Текущее:** Slider показывает стрелки (desktop) или точки (mobile), но нет индикатора «3 / 12».
 
@@ -203,7 +203,7 @@
 
 ---
 
-### 3.5. Оценка времени чтения (P2)
+### 3.5. ~~Оценка времени чтения~~ (P2) — DONE
 
 **Текущее:** Нет индикации длины описания. Пользователь не знает, сколько времени займёт чтение.
 
@@ -216,7 +216,7 @@
 
 ---
 
-### 3.6. Sticky-bar действий на мобильном (P2)
+### 3.6. ~~Sticky-bar действий на мобильном~~ (P2) — DONE
 
 **Текущее:** На мобильном кнопки действий (избранное, поделиться) разбросаны по странице.
 
@@ -232,7 +232,7 @@
 
 ---
 
-### 3.7. Fullscreen-просмотр галереи (P2)
+### 3.7. ~~Fullscreen-просмотр галереи~~ (P2) — DONE
 
 **Текущее:** Нажатие на фото в slider ничего не делает. Нет возможности рассмотреть фото крупнее.
 
@@ -247,7 +247,7 @@
 
 ---
 
-### 3.8. Skeleton для комментариев (P2)
+### 3.8. ~~Skeleton для комментариев~~ (P2) — DONE
 
 **Текущее:** `ActivityIndicator` при загрузке комментариев.
 
@@ -259,7 +259,7 @@
 
 ## 4. Что изменить
 
-### 4.1. Порядок секций на мобильном (P0)
+### 4.1. ~~Порядок секций на мобильном~~ (P0) — DONE
 
 **Текущий порядок:** Hero → QuickFacts → Weather → QuickJump → **ShareButtons** → **AuthorCard** → Sections Sheet → Description → ...
 
@@ -291,7 +291,7 @@ CTA Section
 
 ---
 
-### 4.2. QuickJump чипы — расширить набор (P1)
+### 4.2. ~~QuickJump чипы — расширить набор~~ (P1) — DONE
 
 **Текущее:** Только `map`, `description`, `points` (захардкожено в `HERO_QUICK_JUMP_KEYS`).
 
@@ -304,7 +304,7 @@ CTA Section
 
 ---
 
-### 4.3. WeatherWidget — унифицировать поведение (P2)
+### 4.3. ~~WeatherWidget — унифицировать поведение~~ (P2) — DONE
 
 **Текущее:** На мобильном показывается автоматически, на web — кнопка «Показать погоду». Виджет показывается только на мобильном (`isMobile && travel.travelAddress && extrasReady`).
 
@@ -317,7 +317,7 @@ CTA Section
 
 ---
 
-### 4.4. CollapsibleSection — улучшить индикацию (P2)
+### 4.4. ~~CollapsibleSection — улучшить индикацию~~ (P2) — DONE
 
 **Текущее:** Иконка `expand-less` / `expand-more` — не самая очевидная. Badge «Опыт автора» мелкий.
 
@@ -330,7 +330,7 @@ CTA Section
 
 ---
 
-### 4.5. Mobile Insight Tabs — переименовать и переосмыслить (P1)
+### 4.5. ~~Mobile Insight Tabs — переименовать и переосмыслить~~ (P1) — DONE
 
 **Текущее:** Блок «Быстрый доступ к разделам» с чипами «Советы», «Понравилось», «Не зашло». Название вводит в заблуждение — это не навигация по разделам, а переключатель между recommendation/plus/minus.
 
@@ -343,7 +343,7 @@ CTA Section
 
 ---
 
-### 4.6. TelegramDiscussionSection — скрывать без URL (P1)
+### 4.6. ~~TelegramDiscussionSection — скрывать без URL~~ (P1) — DONE
 
 **Текущее:** Если `EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL` не задан, показывается disabled кнопка + подсказка для администратора. Обычный пользователь видит бесполезный блок.
 
@@ -353,7 +353,7 @@ CTA Section
 
 ---
 
-### 4.7. CTASection — упростить (P1)
+### 4.7. ~~CTASection — упростить~~ (P1) — DONE
 
 **Текущее:** 3 кнопки для авторизованного пользователя: «В избранное», «Все путешествия автора», «Создать путешествие». Слишком много CTA — размывают фокус.
 
@@ -366,7 +366,7 @@ CTA Section
 
 ---
 
-### 4.8. Типографика — убрать смешение шрифтов (P2)
+### 4.8. ~~Типографика — убрать смешение шрифтов~~ (P2) — DONE
 
 **Текущее:** `fontFamily: 'Georgia'` используется в:
 - `AuthorCard` (authorName, viewButtonInlineText, viewButtonBottomText)
@@ -385,7 +385,7 @@ CTA Section
 
 ---
 
-### 4.9. PointList — улучшить UX раскрытия (P2)
+### 4.9. ~~PointList — улучшить UX раскрытия~~ (P2) — DONE
 
 **Текущее:** Длинный текст кнопки «Показать координаты мест (12)». Требует клика для раскрытия.
 
@@ -398,7 +398,7 @@ CTA Section
 
 ---
 
-### 4.10. NavigationArrows — показывать чаще (P2)
+### 4.10. ~~NavigationArrows — показывать чаще~~ (P2) — DONE
 
 **Текущее:** Показывается только если текущее путешествие найдено в `relatedTravels`. Часто не показывается.
 
@@ -410,7 +410,7 @@ CTA Section
 
 ---
 
-### 4.11. Описание — убрать декоративный штамп (P1)
+### 4.11. ~~Описание — убрать декоративный штамп~~ (P1) — DONE
 
 **Текущее:** `TravelDescription.tsx` рендерит декоративное изображение `travel-stamp.webp` с `opacity: 0.15` поверх контента. Это:
 - Добавляет визуальный шум
@@ -423,7 +423,7 @@ CTA Section
 
 ---
 
-### 4.12. Описание — убрать дублирующую кнопку «Назад к началу» (P2)
+### 4.12. ~~Описание — убрать дублирующую кнопку «Назад к началу»~~ (P2) — DONE
 
 **Текущее:** Внутри описания есть `Pressable` «Назад к началу страницы». Одновременно существует глобальный `ScrollToTopButton` на странице.
 
@@ -433,7 +433,7 @@ CTA Section
 
 ---
 
-### 4.13. Spacing — вернуть воздух (P1)
+### 4.13. ~~Spacing — вернуть воздух~~ (P1) — DONE
 
 **Текущее:** Недавний редизайн уменьшил все отступы на 15-25% (`COMPACT_SPACING`, `COMPACT_TYPOGRAPHY`). Страница выглядит «сжатой» — секции слипаются, текст тесный.
 
@@ -449,7 +449,7 @@ CTA Section
 
 ## 5. Что удалить / убрать
 
-### 5.1. Дублирование ShareButtons (P1)
+### 5.1. ~~Дублирование ShareButtons~~ (P1) — DONE
 
 **Текущее:** ShareButtons рендерится дважды:
 - В hero-блоке (mobile only) — `TravelDetailsHero.tsx:554-567`
@@ -459,19 +459,19 @@ CTA Section
 
 ---
 
-### 5.2. Декоративный штамп в описании (P1)
+### 5.2. ~~Декоративный штамп в описании~~ (P1) — DONE
 
 Описано в 4.11. Удалить `ImageCardMedia` с `travel-stamp.webp` из `TravelDescription.tsx`.
 
 ---
 
-### 5.3. Кнопка «Назад к началу» в описании (P2)
+### 5.3. ~~Кнопка «Назад к началу» в описании~~ (P2) — DONE
 
 Описано в 4.12. Удалить `backToTopWrapper` / `backToTopText` из `TravelDetailsContentSection.tsx` и `TravelDetailsStyles.ts`.
 
 ---
 
-### 5.4. Подсказка администратору в TelegramDiscussionSection (P1)
+### 5.4. ~~Подсказка администратору в TelegramDiscussionSection~~ (P1) — DONE
 
 **Текущее:** Текст «Администратору: задайте EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL...» виден всем пользователям.
 
@@ -479,7 +479,7 @@ CTA Section
 
 ---
 
-### 5.5. Inline стили (P3)
+### 5.5. ~~Inline стили~~ (P3) — DONE
 
 Множество inline-стилей в `TravelDetailsContainer.tsx` (строки 236-269, 280-300) для состояний ошибки и загрузки. Вынести в `TravelDetailsStyles.ts` (частично уже есть `errorContainer`, `errorTitle` и т.д.).
 
@@ -489,45 +489,45 @@ CTA Section
 
 ### P0 — Блокеры UX (влияют на первое впечатление)
 
-| # | Задача | Сложность | Файлы |
-|---|---|---|---|
-| 2.1 | Видимый заголовок в hero | Низкая | `TravelDetailsHero.tsx` |
-| 2.2 | Перенести Share/Author после контента (mobile) | Средняя | `TravelDetailsHero.tsx`, `TravelDetailsDeferred.tsx` |
-| 2.3 | Тёмная тема в CommentsSection | Средняя | `CommentsSection.tsx` |
-| 4.1 | Новый порядок секций (mobile) | Средняя | `TravelDetailsHero.tsx`, `TravelDetailsDeferred.tsx` |
+| # | Задача | Сложность | Файлы | Статус |
+|---|---|---|---|---|
+| 2.1 | Видимый заголовок в hero | Низкая | `TravelDetailsHero.tsx` | DONE |
+| 2.2 | Перенести Share/Author после контента (mobile) | Средняя | `TravelDetailsHero.tsx`, `TravelDetailsDeferred.tsx` | DONE |
+| 2.3 | Тёмная тема в CommentsSection | Средняя | `CommentsSection.tsx` | DONE |
+| 4.1 | Новый порядок секций (mobile) | Средняя | `TravelDetailsHero.tsx`, `TravelDetailsDeferred.tsx` | DONE |
 
 ### P1 — Важно (улучшает навигацию и читаемость)
 
-| # | Задача | Сложность | Файлы |
-|---|---|---|---|
-| 2.4 | Убрать вложенный ScrollView в комментариях | Низкая | `CommentsSection.tsx` |
-| 3.2 | Breadcrumbs | Низкая | `TravelDetailsContainer.tsx`, новый файл |
-| 3.3 | Кнопка «В избранное» в hero | Низкая | `TravelDetailsHero.tsx` |
-| 4.2 | Расширить QuickJump чипы | Низкая | `TravelDetailsHero.tsx` |
-| 4.5 | Переименовать Mobile Insight Tabs | Низкая | `TravelDetailsContentSection.tsx` |
-| 4.6 | Скрыть Telegram без URL | Низкая | `TelegramDiscussionSection.tsx` |
-| 4.7 | Упростить CTASection | Низкая | `CTASection.tsx` |
-| 4.11 | Убрать штамп из описания | Низкая | `TravelDescription.tsx` |
-| 4.13 | Вернуть воздух в spacing | Низкая | `TravelDetailsStyles.ts` |
-| 5.1 | Убрать дублирование ShareButtons | Низкая | `TravelDetailsHero.tsx`, `TravelDetailsFooterSection.tsx` |
-| 5.4 | Скрыть admin-подсказку в Telegram | Низкая | `TelegramDiscussionSection.tsx` |
+| # | Задача | Сложность | Файлы | Статус |
+|---|---|---|---|---|
+| 2.4 | Убрать вложенный ScrollView в комментариях | Низкая | `CommentsSection.tsx` | DONE |
+| 3.2 | Breadcrumbs | Низкая | `TravelDetailsContainer.tsx`, новый файл | DONE |
+| 3.3 | Кнопка «В избранное» в hero | Низкая | `TravelDetailsHero.tsx` | DONE |
+| 4.2 | Расширить QuickJump чипы | Низкая | `TravelDetailsHero.tsx` | DONE |
+| 4.5 | Переименовать Mobile Insight Tabs | Низкая | `TravelDetailsContentSection.tsx` | DONE |
+| 4.6 | Скрыть Telegram без URL | Низкая | `TelegramDiscussionSection.tsx` | DONE |
+| 4.7 | Упростить CTASection | Низкая | `CTASection.tsx` | DONE |
+| 4.11 | Убрать штамп из описания | Низкая | `TravelDescription.tsx` | DONE |
+| 4.13 | Вернуть воздух в spacing | Низкая | `TravelDetailsStyles.ts` | DONE |
+| 5.1 | Убрать дублирование ShareButtons | Низкая | `TravelDetailsHero.tsx`, `TravelDetailsFooterSection.tsx` | DONE |
+| 5.4 | Скрыть admin-подсказку в Telegram | Низкая | `TelegramDiscussionSection.tsx` | DONE |
 
 ### P2 — Улучшения (полировка UX)
 
-| # | Задача | Сложность | Файлы |
-|---|---|---|---|
-| 3.4 | Счётчик фото в галерее | Низкая | `Slider.tsx` |
-| 3.5 | Оценка времени чтения | Низкая | `TravelDetailsContentSection.tsx` |
-| 3.6 | Sticky-bar действий (mobile) | Средняя | Новый файл, `TravelDetailsContainer.tsx` |
-| 3.7 | Fullscreen галерея | Высокая | Новый файл, `TravelDetailsHero.tsx` |
-| 3.8 | Skeleton для комментариев | Низкая | `CommentsSection.tsx` |
-| 4.3 | WeatherWidget — унифицировать | Средняя | `TravelDetailsHero.tsx`, `TravelDetailsMapSection.tsx` |
-| 4.4 | CollapsibleSection — анимация | Средняя | `CollapsibleSection.tsx` |
-| 4.8 | Убрать смешение шрифтов | Низкая | 5 файлов |
-| 4.9 | PointList — превью точек | Средняя | `PointList.tsx` |
-| 4.10 | NavigationArrows — показывать чаще | Низкая | `NavigationArrows.tsx` |
-| 4.12 | Убрать «Назад к началу» из описания | Низкая | `TravelDetailsContentSection.tsx` |
-| 5.5 | Вынести inline-стили | Низкая | `TravelDetailsContainer.tsx`, `TravelDetailsStyles.ts` |
+| # | Задача | Сложность | Файлы | Статус |
+|---|---|---|---|---|
+| 3.4 | Счётчик фото в галерее | Низкая | `Slider.tsx` | DONE |
+| 3.5 | Оценка времени чтения | Низкая | `TravelDetailsContentSection.tsx` | DONE |
+| 3.6 | Sticky-bar действий (mobile) | Средняя | Новый файл, `TravelDetailsContainer.tsx` | DONE |
+| 3.7 | Fullscreen галерея | Высокая | Новый файл, `TravelDetailsHero.tsx` | DONE |
+| 3.8 | Skeleton для комментариев | Низкая | `CommentsSection.tsx` | DONE |
+| 4.3 | WeatherWidget — унифицировать | Средняя | `TravelDetailsHero.tsx`, `TravelDetailsMapSection.tsx` | DONE |
+| 4.4 | CollapsibleSection — анимация | Средняя | `CollapsibleSection.tsx` | DONE |
+| 4.8 | Убрать смешение шрифтов | Низкая | 5 файлов | DONE |
+| 4.9 | PointList — превью точек | Средняя | `PointList.tsx` | DONE |
+| 4.10 | NavigationArrows — показывать чаще | Низкая | `NavigationArrows.tsx` | DONE |
+| 4.12 | Убрать «Назад к началу» из описания | Низкая | `TravelDetailsContentSection.tsx` | DONE |
+| 5.5 | Вынести inline-стили | Низкая | `TravelDetailsContainer.tsx`, `TravelDetailsStyles.ts` | DONE |
 
 ---
 
@@ -543,3 +543,7 @@ CTA Section
 ---
 
 *Документ составлен на основе анализа 15+ компонентов страницы путешествия, стилей, навигации и 13 файлов документации.*
+
+---
+
+> **Статус: все 28 задач реализованы (DONE).** Верификация: tsc 0 новых ошибок, jest 315/315 suites, 2953/2953 tests.

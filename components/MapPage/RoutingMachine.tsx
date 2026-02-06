@@ -1,6 +1,7 @@
 // components/MapPage/RoutingMachine.tsx
 import { useEffect, useMemo, useRef } from 'react'
 import { useRouting } from './useRouting'
+import { showRouteBuiltToast, showRouteErrorToast } from '@/utils/mapToasts'
 
 // Open-Meteo elevation endpoint supports batch arrays; keep this comfortably under the limit
 // to reduce URL size and rate-limit pressure.
@@ -186,6 +187,7 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
             if (typeof routingState.error === 'string' && routingState.error) {
                 try {
                     setErrors({ routing: routingState.error })
+                    showRouteErrorToast(routingState.error)
                 } catch {
                     // noop
                 }
@@ -194,6 +196,13 @@ const RoutingMachine: React.FC<RoutingMachineProps> = ({
                     setErrors({ routing: false })
                 } catch {
                     // noop
+                }
+
+                // Показываем toast при успешном построении маршрута
+                if (!routingState.loading && routingState.distance > 0 && routingState.duration > 0) {
+                    const distanceKm = routingState.distance / 1000
+                    const durationMinutes = routingState.duration / 60
+                    showRouteBuiltToast(distanceKm, durationMinutes)
                 }
             }
             

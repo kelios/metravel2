@@ -14,6 +14,7 @@ import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
 import Button from '@/components/ui/Button';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
+import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 import { LAYOUT } from '@/constants/layout';
 
 interface MapMobileLayoutProps {
@@ -64,10 +65,14 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const openNonce = useMapPanelStore((s) => s.openNonce);
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce);
 
+  // Синхронизация состояния Bottom Sheet с глобальным store
+  const setBottomSheetState = useBottomSheetStore((s) => s.setState);
+
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'half' | 'full') => {
     sheetStateRef.current = state;
     setSheetState(state);
-  }, []);
+    setBottomSheetState(state); // Синхронизация с store
+  }, [setBottomSheetState]);
 
   useEffect(() => {
     if (!openNonce) return;
@@ -238,7 +243,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             <View style={styles.sheetTopPrimary}>
               <SegmentedControl
                 options={[
-                  { key: 'list', label: 'Список', icon: 'list' },
+                  { key: 'list', label: 'Список', icon: 'list', badge: travelsData.length },
                   { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
                 ]}
                 value={uiTab}

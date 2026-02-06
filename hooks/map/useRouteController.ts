@@ -8,6 +8,7 @@ import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
 import { logMessage } from '@/utils/logger';
+import { showRoutePointAddedToast } from '@/utils/mapToasts';
 import type { MapUiApi } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
 
@@ -264,11 +265,13 @@ export function useRouteController(
         // 1st click -> start, 2nd click -> end, 3rd click -> replace end.
         if (currentPoints.length === 0) {
           addPoint(coords, address);
+          showRoutePointAddedToast(1, true); // Первая точка
           return;
         }
 
         if (currentPoints.length === 1) {
           addPoint(coords, address);
+          showRoutePointAddedToast(2, false); // Вторая точка
           return;
         }
 

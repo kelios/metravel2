@@ -193,43 +193,16 @@ export class CoverPageGenerator {
   }
 
   /**
-   * Улучшенные декоративные элементы
+   * Декоративная рамка (без кругов — они не несут смысловой нагрузки)
    */
   private renderDecorativeElements(): string {
-    const { colors } = this.theme;
     return `
-      <!-- Рамка -->
       <div style="
         position: absolute;
         inset: 15mm;
-        border: 2px solid rgba(255,255,255,0.25);
+        border: 2px solid rgba(255,255,255,0.18);
         border-radius: 16px;
         pointer-events: none;
-        z-index: 1;
-      "></div>
-      
-      <!-- Декоративные круги -->
-      <div style="
-        position: absolute;
-        top: 20mm;
-        right: 20mm;
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-        opacity: 0.6;
-        z-index: 1;
-      "></div>
-      
-      <div style="
-        position: absolute;
-        bottom: 40mm;
-        left: 25mm;
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, ${colors.accent}40, ${colors.accent}20);
-        opacity: 0.5;
         z-index: 1;
       "></div>
     `;

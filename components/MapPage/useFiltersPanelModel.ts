@@ -2,6 +2,7 @@ import { useMemo, useCallback, useEffect } from 'react';
 import { Dimensions, LayoutAnimation } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getFiltersPanelStyles } from '@/components/MapPage/filtersPanelStyles';
+import { showRouteModeTip, showFiltersResetToast } from '@/utils/mapToasts';
 import type { RoutePoint } from '@/types/route';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
@@ -63,6 +64,7 @@ const useFiltersPanelModel = ({
   const safeResetFilters = useCallback(() => {
     if (typeof resetFilters !== 'function') return;
     resetFilters();
+    showFiltersResetToast();
   }, [resetFilters]);
 
   const safeCloseMenu = useCallback(() => {
@@ -79,8 +81,15 @@ const useFiltersPanelModel = ({
       }
 
       setMode(nextMode);
+
+      // Показать подсказку при переключении в режим маршрута
+      if (nextMode === 'route' && !routeHintDismissed) {
+        setTimeout(() => {
+          showRouteModeTip();
+        }, 300);
+      }
     },
-    [setMode, onClearRoute]
+    [setMode, onClearRoute, routeHintDismissed]
   );
 
   const hasActiveFilters = useMemo(

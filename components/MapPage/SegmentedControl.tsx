@@ -10,6 +10,7 @@ interface SegmentedControlOption {
   key: string;
   label: string;
   icon?: string;
+  badge?: number; // Количество для отображения в badge
 }
 
 interface SegmentedControlProps {
@@ -42,7 +43,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
       accessibilityRole="radiogroup"
       accessibilityLabel={accessibilityLabel}
     >
-      {options.map(({ key, label, icon }) => {
+      {options.map(({ key, label, icon, badge }) => {
         const active = value === key;
         const isDisabled = disabled || disabledKeys.includes(key);
         return (
@@ -66,7 +67,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
                 ? ({ checked: active, disabled: isDisabled } as any)
                 : ({ selected: active, disabled: isDisabled } as any)
             }
-            accessibilityLabel={label}
+            accessibilityLabel={badge ? `${label} (${badge})` : label}
             title={label}
             accessibilityRole={role}
           >
@@ -83,6 +84,19 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             ]}>
               {label}
             </Text>
+            {typeof badge === 'number' && badge > 0 && (
+              <View style={[
+                styles.badge,
+                active && styles.badgeActive,
+              ]}>
+                <Text style={[
+                  styles.badgeText,
+                  active && styles.badgeTextActive,
+                ]}>
+                  {badge > 99 ? '99+' : badge}
+                </Text>
+              </View>
+            )}
           </CardActionPressable>
         );
       })}
@@ -127,6 +141,27 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     color: colors.text,
   },
   segmentTextActive: {
+    color: colors.textOnPrimary,
+  },
+  badge: {
+    backgroundColor: colors.surfaceLight,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
+  badgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  badgeTextActive: {
     color: colors.textOnPrimary,
   },
 });

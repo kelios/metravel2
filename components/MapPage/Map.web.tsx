@@ -10,6 +10,7 @@ import { isValidCoordinate } from '@/utils/coordinateValidator';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
+import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 import type { Coordinates, MapMode, MapProps, Point } from './Map/types';
 import { strToLatLng } from './Map/utils';
 
@@ -1196,6 +1197,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
       <MapControls
         userLocation={userLocationLatLng}
         onCenterUserLocation={centerOnUserLocation}
+        bottomOffset={useBottomSheetStore.getState().getControlsBottomOffset()}
+        alignLeft={true}
       />
     </View>
   );
