@@ -639,8 +639,8 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                         <BelkrajWidgetLazy
                                             points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
                                             countryCode={city.countryCode ?? 'BY'}
-                                            collapsedHeight={520}
-                                            expandedHeight={1200}
+                                            collapsedHeight={compactNav ? 320 : 520}
+                                            expandedHeight={compactNav ? 600 : 1200}
                                             className="belkraj-slot"
                                         />
                                     </Suspense>
@@ -842,15 +842,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
     },
 
-    actions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.sm, gap: 8 },
+    actions: { flexDirection: 'column', marginBottom: SPACING.sm, gap: 8 },
     primaryButton: { 
         backgroundColor: colors.primary, 
         paddingHorizontal: SPACING.lg, 
         paddingVertical: 12, 
         borderRadius: DESIGN_TOKENS.radii.md, 
-        flex: 1, 
-        minWidth: '45%',
-        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        minHeight: 44,
         justifyContent: 'center',
         alignItems: 'center',
         ...globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
@@ -871,14 +869,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     buttonText: { color: colors.textOnPrimary, fontWeight: '600', textAlign: 'center', fontSize: 14 },
     secondaryButton: { 
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
         paddingHorizontal: SPACING.lg, 
         paddingVertical: 12, 
         borderRadius: DESIGN_TOKENS.radii.md, 
         backgroundColor: colors.surface, 
-        flex: 1, 
-        minWidth: '45%',
-        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        minHeight: 44,
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: colors.shadows.light.shadowColor,
@@ -904,9 +899,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         paddingHorizontal: SPACING.lg, 
         paddingVertical: 12, 
         borderRadius: DESIGN_TOKENS.radii.md, 
-        flex: 1, 
-        minWidth: '45%',
-        minHeight: 44, // ✅ ИСПРАВЛЕНИЕ: Минимальный размер для touch-целей
+        minHeight: 44,
         justifyContent: 'center',
         alignItems: 'center',
         ...globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
@@ -931,8 +924,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     answerValue: { fontSize: 16, fontWeight: '600', color: colors.text },
 
     mapActions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.md },
-    mapButton: { backgroundColor: colors.surface, // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-        paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, minWidth: 110, marginRight: 6, marginBottom: 6,
+    mapButton: { backgroundColor: colors.surface,
+        paddingHorizontal: 10, paddingVertical: 10, borderRadius: 8, minWidth: 90, marginRight: 6, marginBottom: 6,
         shadowColor: colors.shadows.light.shadowColor, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
     mapButtonText: { color: colors.text, fontSize: 12, fontWeight: '500', textAlign: 'center' },
 
@@ -980,7 +973,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center' },
     gestureContainer: { flex: 1, width: '100%' },
     animatedContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    zoomedImage: { width: Dimensions.get('window').width, height: Dimensions.get('window').height },
+    zoomedImage: { width: '100%', height: '100%' },
     closeButton: { position: 'absolute', top: 50, right: 20, backgroundColor: colors.overlay, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     closeButtonText: { color: colors.textOnDark, fontSize: 18, fontWeight: 'bold' },
     zoomHintContainer: { position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' },

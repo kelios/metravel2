@@ -9,6 +9,7 @@ import {
     Pressable,
     ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -26,6 +27,7 @@ type Point = {
 export default function QuestsMapScreen() {
     const router = useRouter();
     const colors = useThemedColors();
+    const insets = useSafeAreaInsets();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const { quests, loading: questsLoading } = useQuestsList();
@@ -112,7 +114,7 @@ export default function QuestsMapScreen() {
             {/* Плавающая кнопка Назад поверх карты */}
             <Pressable
                 onPress={handleBack}
-                style={styles.fabBack}
+                style={[styles.fabBack, { top: Math.max(12, insets.top + 4) }]}
                 accessibilityRole="button"
                 accessibilityLabel="Назад"
             >

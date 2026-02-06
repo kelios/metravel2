@@ -84,7 +84,7 @@ function getStyles(colors: ThemedColors, ui: UiTheme) {
 
         citiesContainer: { gap: 8 },
         citiesRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-start' },
-        cityCard: { flex: 1, minWidth: 100, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+        cityCard: { flex: 1, minWidth: 100, maxWidth: '50%', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
         cityCardMobile: { minWidth: 80, padding: 10, borderRadius: 10 },
         cityCardActive: { borderColor: ui.primary, backgroundColor: ui.cardAlt },
         cityName: { color: colors.text, fontSize: 15, fontWeight: '800' },
@@ -140,7 +140,13 @@ function getStyles(colors: ThemedColors, ui: UiTheme) {
         questMetaRowMobile: { gap: 8 },
         metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
         metaText: { color: colors.textOnDark, fontSize: 12, fontWeight: '600' },
+        metaTextAlt: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
         metaTextMobile: { fontSize: 11 },
+
+        noCoverBody: { padding: 16, backgroundColor: colors.surface, gap: 8 },
+        noCoverBodyMobile: { padding: 12 },
+        noCoverTitle: { color: colors.text, fontSize: 16, fontWeight: '800' },
+        noCoverTitleMobile: { fontSize: 14 },
     });
 }
 
@@ -366,7 +372,7 @@ export default function QuestsScreen() {
                                                 style={sx(s.cityCard, active && s.cityCardActive, isMobile && s.cityCardMobile)}
                                             >
                                                 <Text style={sx(s.cityName, isMobile && s.cityNameMobile)}>
-                                                    {item.id === NEARBY_ID ? '🧭 Рядом' : item.name}
+                                                    {item.id === NEARBY_ID ? 'Рядом' : item.name}
                                                 </Text>
                                                 <Text style={sx(s.cityCountry, isMobile && s.cityCountryMobile)}>
                                                     {item.id === NEARBY_ID
@@ -462,46 +468,57 @@ function QuestCardLink({
 }) {
     const durationText = quest.durationMin ? `${Math.round((quest.durationMin ?? 60) / 5) * 5} мин` : '1–2 часа';
 
+    const metaRow = (
+        <View style={sx(s.questMetaRow, isMobile && s.questMetaRowMobile)}>
+            <View style={s.metaItem}>
+                <Suspense fallback={null}>
+                    {/* @ts-ignore */}
+                    <Ion name="navigate" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
+                </Suspense>
+                <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>{quest.points}</Text>
+            </View>
+            <View style={s.metaItem}>
+                <Suspense fallback={null}>
+                    {/* @ts-ignore */}
+                    <Ion name="time" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
+                </Suspense>
+                <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>{durationText}</Text>
+            </View>
+            {nearby && typeof quest._distanceKm === 'number' && (
+                <View style={s.metaItem}>
+                    <Suspense fallback={null}>
+                        {/* @ts-ignore */}
+                        <Ion name="walk" size={12} color={quest.cover ? colors.textOnDark : colors.textMuted} />
+                    </Suspense>
+                    <Text style={sx(quest.cover ? s.metaText : s.metaTextAlt, isMobile && s.metaTextMobile)}>
+                        {quest._distanceKm < 1
+                            ? `${Math.round(quest._distanceKm * 1000)} м`
+                            : `${quest._distanceKm.toFixed(1)} км`}
+                    </Text>
+                </View>
+            )}
+        </View>
+    );
+
     return (
         <Link href={`/quests/${cityId}/${quest.id}`} asChild>
             <Pressable style={sx(s.questCard, isMobile && s.questCardMobile)}>
-                {quest.cover && (
+                {quest.cover ? (
                     <View style={sx(s.coverWrap, isMobile && s.coverWrapMobile)}>
                         <Image source={typeof quest.cover === 'string' ? { uri: quest.cover } : quest.cover} style={s.questCover} resizeMode="cover" />
                         <View style={sx(s.coverOverlay, isMobile && s.coverOverlayMobile)}>
                             <Text style={sx(s.questTitle, isMobile && s.questTitleMobile)} numberOfLines={2}>
                                 {quest.title}
                             </Text>
-                            <View style={sx(s.questMetaRow, isMobile && s.questMetaRowMobile)}>
-                                <View style={s.metaItem}>
-                                    <Suspense fallback={null}>
-                                        {/* @ts-ignore */}
-                                        <Ion name="navigate" size={12} color={colors.textOnDark} />
-                                    </Suspense>
-                                    <Text style={sx(s.metaText, isMobile && s.metaTextMobile)}>{quest.points}</Text>
-                                </View>
-                                <View style={s.metaItem}>
-                                    <Suspense fallback={null}>
-                                        {/* @ts-ignore */}
-                                        <Ion name="time" size={12} color={colors.textOnDark} />
-                                    </Suspense>
-                                    <Text style={sx(s.metaText, isMobile && s.metaTextMobile)}>{durationText}</Text>
-                                </View>
-                                {nearby && typeof quest._distanceKm === 'number' && (
-                                    <View style={s.metaItem}>
-                                        <Suspense fallback={null}>
-                                            {/* @ts-ignore */}
-                                            <Ion name="walk" size={12} color={colors.textOnDark} />
-                                        </Suspense>
-                                        <Text style={sx(s.metaText, isMobile && s.metaTextMobile)}>
-                                            {quest._distanceKm < 1
-                                                ? `${Math.round(quest._distanceKm * 1000)} м`
-                                                : `${quest._distanceKm.toFixed(1)} км`}
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
+                            {metaRow}
                         </View>
+                    </View>
+                ) : (
+                    <View style={sx(s.noCoverBody, isMobile && s.noCoverBodyMobile)}>
+                        <Text style={sx(s.noCoverTitle, isMobile && s.noCoverTitleMobile)} numberOfLines={2}>
+                            {quest.title}
+                        </Text>
+                        {metaRow}
                     </View>
                 )}
             </Pressable>
