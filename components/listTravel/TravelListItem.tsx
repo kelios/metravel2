@@ -5,7 +5,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Travel } from "@/src/types/types";
-import OptimizedFavoriteButton from "@/components/OptimizedFavoriteButton";
+import OptimizedFavoriteButton from "@/components/travel/OptimizedFavoriteButton";
 import { fetchTravel, fetchTravelBySlug } from "@/src/api/travelsApi";
 import { queryKeys } from "@/src/queryKeys";
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";

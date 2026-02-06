@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import MarkersListComponent from '../MarkersListComponent';
+import MarkersListComponent from '@/components/map/MarkersListComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 

@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import MultiSelectField from '../MultiSelectField';
+import MultiSelectField from '@/components/forms/MultiSelectField';
 import MapIcon from './MapIcon';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import type { ThemedColors } from '@/hooks/useTheme';
