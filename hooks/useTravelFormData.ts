@@ -17,12 +17,10 @@ import { showToast } from '@/utils/toast';
 import { ApiError } from '@/api/client';
 import {
   isLocalPreviewUrl,
-  isEmptyImageValue,
   mergeMarkersPreserveImages,
   ensureRequiredDraftFields,
   normalizeDraftPlaceholders,
   isDraftPlaceholder,
-  DRAFT_PLACEHOLDER_PREFIX,
 } from '@/utils/travelFormNormalization';
 
 async function showToastMessage(payload: any) {
