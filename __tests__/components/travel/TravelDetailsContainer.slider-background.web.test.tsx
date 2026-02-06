@@ -19,6 +19,26 @@ jest.mock('@/components/travel/AuthorCard', () => ({
   default: () => null,
 }))
 
+jest.mock('@/context/FavoritesContext', () => ({
+  useFavorites: () => ({
+    addFavorite: jest.fn(),
+    removeFavorite: jest.fn(),
+    isFavorite: () => false,
+  }),
+}))
+
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ isAuthenticated: false, userId: null }),
+}))
+
+jest.mock('@/hooks/useRequireAuth', () => ({
+  useRequireAuth: () => ({ requireAuth: jest.fn() }),
+}))
+
+jest.mock('@/utils/toast', () => ({
+  showToast: jest.fn(),
+}))
+
 jest.mock('@/hooks/useMenuState', () => ({
   useMenuState: () => ({
     menuOpen: false,

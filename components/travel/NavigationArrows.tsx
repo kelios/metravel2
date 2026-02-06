@@ -40,18 +40,33 @@ export default function NavigationArrows({
     );
   }, [currentTravel, relatedTravels]);
 
-  // Определяем предыдущее и следующее путешествие
-  const { prevTravel, nextTravel } = useMemo(() => {
-    if (currentIndex === -1 || relatedTravels.length < 2) {
-      return { prevTravel: null, nextTravel: null };
+  // P2-6: Если текущее путешествие не в списке — показываем первые 2 как «Похожие маршруты»
+  const { prevTravel, nextTravel, isFallback } = useMemo(() => {
+    if (relatedTravels.length === 0) {
+      return { prevTravel: null, nextTravel: null, isFallback: false };
+    }
+
+    if (currentIndex === -1) {
+      const filtered = relatedTravels.filter(
+        (t) => t.id !== currentTravel?.id
+      );
+      return {
+        prevTravel: filtered[0] ?? null,
+        nextTravel: filtered[1] ?? null,
+        isFallback: true,
+      };
+    }
+
+    if (relatedTravels.length < 2) {
+      return { prevTravel: null, nextTravel: null, isFallback: false };
     }
 
     const prev = currentIndex > 0 ? relatedTravels[currentIndex - 1] : null;
     const next =
       currentIndex < relatedTravels.length - 1 ? relatedTravels[currentIndex + 1] : null;
 
-    return { prevTravel: prev, nextTravel: next };
-  }, [currentIndex, relatedTravels]);
+    return { prevTravel: prev, nextTravel: next, isFallback: false };
+  }, [currentIndex, relatedTravels, currentTravel]);
 
   const handleNavigate = useCallback(
     (travel: Travel | null) => {
@@ -154,7 +169,6 @@ export default function NavigationArrows({
       fontSize: DESIGN_TOKENS.typography.sizes.md,
       color: colors.text,
       fontWeight: '600',
-      fontFamily: 'Georgia',
     },
     navImageWrap: {
       width: 60,
@@ -178,15 +192,14 @@ export default function NavigationArrows({
           onPress={() => handleNavigate(prevTravel)}
           style={[styles.navCard, styles.prevCard, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           accessibilityRole="button"
-          accessibilityLabel={`Предыдущее путешествие: ${prevTravel.name || ''}`}
+          accessibilityLabel={`${isFallback ? 'Похожий маршрут' : 'Предыдущее путешествие'}: ${prevTravel.name || ''}`}
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>
-            {/* ✅ ИСПРАВЛЕНИЕ: Используем единый primary цвет */}
             <Feather name="chevron-left" size={24} color={colors.primary} />
             <View style={styles.navInfo}>
               <Text style={styles.navLabel} numberOfLines={1}>
-                Предыдущее
+                {isFallback ? 'Похожий маршрут' : 'Предыдущее'}
               </Text>
               <Text style={styles.navTitle} numberOfLines={2}>
                 {prevTravel.name || 'Без названия'}
@@ -218,7 +231,7 @@ export default function NavigationArrows({
           onPress={() => handleNavigate(nextTravel)}
           style={[styles.navCard, styles.nextCard, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
           accessibilityRole="button"
-          accessibilityLabel={`Следующее путешествие: ${nextTravel.name || ''}`}
+          accessibilityLabel={`${isFallback ? 'Похожий маршрут' : 'Следующее путешествие'}: ${nextTravel.name || ''}`}
           android_ripple={{ color: 'rgba(0,0,0,0.05)' }}
         >
           <View style={styles.navContent}>
@@ -238,7 +251,7 @@ export default function NavigationArrows({
             )}
             <View style={styles.navInfo}>
               <Text style={styles.navLabel} numberOfLines={1}>
-                Следующее
+                {isFallback ? 'Похожий маршрут' : 'Следующее'}
               </Text>
               <Text style={styles.navTitle} numberOfLines={2}>
                 {nextTravel.name || 'Без названия'}

@@ -37,6 +37,7 @@ import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
+import TravelStickyActions from "@/components/travel/details/TravelStickyActions";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import SkipToContentLink from "@/components/accessibility/SkipToContentLink";
@@ -233,10 +234,10 @@ export default function TravelDetailsContainer() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          <Text style={{ color: themedColors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+          <Text style={styles.errorTitle}>
             Путешествие не найдено
           </Text>
-          <Text style={{ color: themedColors.textMuted, fontSize: 14, textAlign: 'center' }}>
+          <Text style={styles.errorText}>
             В ссылке отсутствует идентификатор путешествия.
           </Text>
         </View>
@@ -248,24 +249,19 @@ export default function TravelDetailsContainer() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          <Text style={{ color: themedColors.text, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>
+          <Text style={styles.errorTitle}>
             Не удалось загрузить путешествие
           </Text>
-          <Text style={{ color: themedColors.textMuted, fontSize: 14, textAlign: 'center', marginBottom: 12 }}>
+          <Text style={styles.errorText}>
             {error?.message || 'Попробуйте обновить страницу.'}
           </Text>
           <TouchableOpacity
             onPress={() => refetch()}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 10,
-              backgroundColor: themedColors.primary,
-            }}
+            style={styles.errorButton}
             accessibilityRole="button"
             accessibilityLabel="Повторить"
           >
-            <Text style={{ color: themedColors.textOnPrimary, fontWeight: '700' }}>Повторить</Text>
+            <Text style={styles.errorButtonText}>Повторить</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -277,18 +273,11 @@ export default function TravelDetailsContainer() {
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, styles.mainContainerMobile]}>
           {Platform.OS === 'web' ? (
-            <View style={{ width: '100%' as any }}>
-              <View
-                style={{
-                  height: 260,
-                  margin: 16,
-                  borderRadius: 12,
-                  backgroundColor: themedColors.backgroundSecondary,
-                }}
-              />
-              <View style={{ paddingHorizontal: 16 }}>
+            <View style={styles.loadingSkeletonWrap}>
+              <View style={styles.loadingSkeletonHero} />
+              <View style={styles.loadingSkeletonContent}>
                 <SectionSkeleton lines={6} />
-                <View style={{ height: 16 }} />
+                <View style={styles.loadingSkeletonSpacer} />
                 <SectionSkeleton lines={4} />
               </View>
             </View>
@@ -489,6 +478,14 @@ export default function TravelDetailsContainer() {
             scrollY={scrollY}
             threshold={300}
           />
+          {/* 3.6: Sticky-bar действий на мобильном */}
+          {isMobile && travel && (
+            <TravelStickyActions
+              travel={travel}
+              scrollY={scrollY}
+              scrollToComments={() => scrollToWithMenuClose('comments')}
+            />
+          )}
         </View>
       </SafeAreaView>
     </View>

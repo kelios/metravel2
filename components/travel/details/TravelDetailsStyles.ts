@@ -695,7 +695,6 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     marginTop: DESIGN_TOKENS.spacing.lg,
     marginBottom: DESIGN_TOKENS.spacing.xs,
     textAlign: "center",
-    fontFamily: "Georgia",
   },
   errorText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
@@ -723,6 +722,23 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     color: colors.textOnPrimary,
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: "600",
+  },
+
+  // 5.5: Стили для состояния загрузки (skeleton)
+  loadingSkeletonWrap: {
+    width: '100%' as any,
+  },
+  loadingSkeletonHero: {
+    height: 260,
+    margin: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  loadingSkeletonContent: {
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+  },
+  loadingSkeletonSpacer: {
+    height: DESIGN_TOKENS.spacing.md,
   },
 });
 

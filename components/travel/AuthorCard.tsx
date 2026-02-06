@@ -361,7 +361,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   viewButtonInlineText: {
     fontSize: Platform.select({ default: 14, web: 14 }),
     fontWeight: '600',
-    fontFamily: 'Georgia',
     letterSpacing: -0.2,
   },
   containerMobile: {
@@ -471,7 +470,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: '700',
     color: colors.text,
-    fontFamily: 'Georgia',
     letterSpacing: -0.3,
   },
   authorNameMobile: {
@@ -567,7 +565,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   viewButtonBottomText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
-    fontFamily: 'Georgia',
     letterSpacing: -0.2,
   },
   viewButtonTextMobile: {

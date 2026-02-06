@@ -258,7 +258,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
             color: colors.textMuted,
             fontSize: DESIGN_TOKENS.typography.sizes.md,
             paddingVertical: DESIGN_TOKENS.spacing.xxs,
-            fontFamily: "Georgia",
+            
         },
 
         fixedHeightBlock: {

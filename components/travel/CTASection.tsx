@@ -102,7 +102,6 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
       fontWeight: '700',
       color: colors.text,
       marginBottom: DESIGN_TOKENS.spacing.xs,
-      fontFamily: 'Georgia',
       letterSpacing: -0.3,
     },
     titleMobile: {

@@ -193,21 +193,18 @@ export const TravelDetailsContentSection: React.FC<{
                     }`}
                     {travel.countryName ? ` · ${travel.countryName}` : ''}
                     {travel.monthName ? ` · лучший сезон: ${travel.monthName.toLowerCase()}` : ''}
+                    {/* P2-2: Оценка времени чтения */}
+                    {travel.description ? (() => {
+                      const wordCount = travel.description.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length
+                      const minutes = Math.max(1, Math.ceil(wordCount / 200))
+                      return ` · ~${minutes} мин чтения`
+                    })() : ''}
                   </Text>
                 </View>
 
                 <TravelDescription title={travel.name} htmlContent={travel.description} noBox />
 
-                {Platform.OS === 'web' && (
-                  <Pressable
-                    onPress={scrollToTop}
-                    style={styles.backToTopWrapper}
-                    accessibilityRole="button"
-                    accessibilityLabel="Назад к началу страницы"
-                  >
-                    <Text style={styles.backToTopText}>Назад к началу</Text>
-                  </Pressable>
-                )}
+                {/* P2-3: Кнопка «Назад к началу» удалена — глобальный ScrollToTopButton достаточен */}
               </View>
             </CollapsibleSection>
           </View>

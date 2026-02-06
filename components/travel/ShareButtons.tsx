@@ -444,7 +444,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontWeight: '700',
     color: colors.text,
     marginBottom: 0,
-    fontFamily: 'Georgia',
     letterSpacing: -0.3,
   },
   collapseButton: {

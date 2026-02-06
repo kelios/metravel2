@@ -3,12 +3,12 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   Pressable,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { CommentsSkeleton } from '@/components/travel/TravelDetailSkeletons';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { usePathname, useRouter } from 'expo-router';
 import { CommentItem } from './CommentItem';
@@ -276,12 +276,8 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
 
   if (isLoading && !isRefreshing) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator
-          testID="activity-indicator"
-          size="large"
-          color={colors.primary}
-        />
+      <View style={styles.centerContainer} testID="comments-skeleton">
+        <CommentsSkeleton />
       </View>
     );
   }

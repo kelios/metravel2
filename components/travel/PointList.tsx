@@ -897,6 +897,39 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         </View>
       </Pressable>
 
+      {/* P2-5: Компактное превью первых 3 точек когда список свёрнут */}
+      {!showList && safePoints.length > 0 && (
+        <Pressable
+          onPress={() => setShowList(true)}
+          style={styles.previewContainer}
+          accessibilityRole="button"
+          accessibilityLabel="Показать все точки маршрута"
+        >
+          {safePoints.slice(0, 3).map((pt, idx) => (
+            <View key={pt.id} style={styles.previewRow}>
+              <View style={styles.previewBullet}>
+                <Text style={styles.previewBulletText}>{idx + 1}</Text>
+              </View>
+              <View style={styles.previewTextWrap}>
+                <Text style={styles.previewAddress} numberOfLines={1}>
+                  {pt.address || 'Без адреса'}
+                </Text>
+                {pt.coord ? (
+                  <Text style={styles.previewCoord} numberOfLines={1}>
+                    {pt.coord}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          ))}
+          {safePoints.length > 3 && (
+            <Text style={styles.previewMore}>
+              + ещё {safePoints.length - 3}
+            </Text>
+          )}
+        </Pressable>
+      )}
+
       {showList && (
         <FlashList
           key={`cols-${numColumns}`}
@@ -972,6 +1005,60 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   toggleTextSm: { 
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     letterSpacing: -0.2,
+  },
+
+  // P2-5: Стили превью точек
+  previewContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    gap: DESIGN_TOKENS.spacing.xs,
+    ...Platform.select({
+      web: { cursor: 'pointer' as any },
+    }),
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: 4,
+  },
+  previewBullet: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewBulletText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  previewTextWrap: {
+    flex: 1,
+    gap: 1,
+  },
+  previewAddress: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '500',
+    color: colors.text,
+  },
+  previewCoord: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  previewMore: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
+    color: colors.primary,
+    textAlign: 'center',
+    paddingTop: DESIGN_TOKENS.spacing.xs,
   },
 
   listContent: { 

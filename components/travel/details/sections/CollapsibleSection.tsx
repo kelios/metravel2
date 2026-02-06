@@ -86,7 +86,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
           </View>
           <View style={styles.sectionHeaderRight}>
             {badgeLabel && <Text style={styles.sectionHeaderBadge}>{badgeLabel}</Text>}
-            <Icon name={open ? 'expand-less' : 'expand-more'} size={22} />
+            <Icon name={open ? 'chevron-up' : 'chevron-down'} size={22} />
           </View>
         </CardActionPressable>
         {open ? <View style={{ marginTop: 12 }}>{children}</View> : null}

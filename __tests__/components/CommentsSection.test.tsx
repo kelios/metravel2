@@ -240,7 +240,7 @@ describe('CommentsSection', () => {
 
       render(<CommentsSection travelId={123} />, { wrapper });
 
-      expect(screen.getByTestId('activity-indicator')).toBeTruthy();
+      expect(screen.getByTestId('comments-skeleton')).toBeTruthy();
     });
 
     it('should show error message on fetch error', () => {

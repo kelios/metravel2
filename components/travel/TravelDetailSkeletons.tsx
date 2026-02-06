@@ -142,6 +142,43 @@ export const VideoSkeleton: React.FC = () => {
 };
 
 /**
+ * Skeleton для комментариев (P2-8)
+ */
+export const CommentsSkeleton: React.FC = () => {
+  const colors = useThemedColors();
+
+  const styles = useMemo(() => StyleSheet.create({
+    container: {
+      padding: DESIGN_TOKENS.spacing.md,
+      gap: DESIGN_TOKENS.spacing.md,
+    },
+    commentRow: {
+      flexDirection: 'row',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    textBlock: {
+      flex: 1,
+      gap: 6,
+    },
+  }), []);
+
+  return (
+    <View style={styles.container}>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <View key={i} style={styles.commentRow}>
+          <SkeletonLoader width={36} height={36} borderRadius={18} />
+          <View style={styles.textBlock}>
+            <SkeletonLoader width="40%" height={14} borderRadius={4} />
+            <SkeletonLoader width="90%" height={14} borderRadius={4} />
+            <SkeletonLoader width="65%" height={14} borderRadius={4} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+/**
  * Универсальный skeleton для секций
  */
 export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => {
