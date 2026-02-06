@@ -10,7 +10,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 
-const ArticleEditor = lazy(() => import('@/components/ArticleEditor'));
+const ArticleEditor = lazy(() => import('@/components/article/ArticleEditor'));
 
 interface TravelWizardStepDetailsProps {
     currentStep: number;

@@ -1,5 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native'
-import ArticleListItem from '@/components/ArticleListItem'
+import ArticleListItem from '@/components/article/ArticleListItem'
 
 // Mock expo-router
 const mockPush = jest.fn()

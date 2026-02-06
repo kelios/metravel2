@@ -13,7 +13,7 @@ import RenderHTML from 'react-native-render-html'
 import { WebView } from 'react-native-webview'
 import { Card, Title } from '@/src/ui/paper'
 import { fetchArticle } from '@/src/api/articles'
-import { SafeHtml } from '@/components/SafeHtml'
+import { SafeHtml } from '@/components/article/SafeHtml'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 

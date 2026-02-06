@@ -54,7 +54,7 @@ describe('ArticleEditor.ios Component', () => {
   let ArticleEditor: any;
 
   beforeAll(async () => {
-    ArticleEditor = (await import('@/components/ArticleEditor.ios')).default;
+    ArticleEditor = (await import('@/components/article/ArticleEditor.ios')).default;
   });
 
   const mockOnChange = jest.fn();

@@ -132,7 +132,7 @@ describe('ArticleEditor.web autosave', () => {
     })
 
     it('does not autosave on mount and autosaves only after user changes', async () => {
-      const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+      const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
       const onAutosave = jest.fn(async () => {})
       const autosaveDelay = 30
@@ -177,7 +177,7 @@ describe('ArticleEditor.web autosave', () => {
     })
 
     it('does not autosave for non-user changes', async () => {
-      const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+      const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
       const onAutosave = jest.fn(async () => {})
       const autosaveDelay = 20
@@ -209,7 +209,7 @@ describe('ArticleEditor.web autosave', () => {
     })
 
     it('retries autosave if the previous attempt fails (without requiring a new edit)', async () => {
-      const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+      const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
       const autosaveDelay = 20
       const onAutosave = jest
@@ -247,7 +247,7 @@ describe('ArticleEditor.web autosave', () => {
   })
 
   it('keeps caret after inserted anchor token (no selection)', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
     const autosaveDelay = 30
     const { getByTestId, getByLabelText, getByPlaceholderText } = render(
@@ -276,7 +276,7 @@ describe('ArticleEditor.web autosave', () => {
   })
 
   it('moves caret to end of selection when applying link to selection', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
     const { getByTestId, getByLabelText } = render(
       <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} onAutosave={jest.fn(async () => {})} autosaveDelay={20} />
@@ -312,7 +312,7 @@ describe('ArticleEditor.web autosave', () => {
   })
 
   it('emits sanitized HTML but keeps Quill value raw (prevents caret jumps on attribute stripping)', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
     const onChange = jest.fn()
 

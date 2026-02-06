@@ -95,7 +95,7 @@ describe('ArticleEditor.web link', () => {
   });
 
   it('applies link to selected text using stored selection (custom link modal)', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     ;(globalThis as any).__quillSelection__ = { index: 6, length: 5 };
 
@@ -136,7 +136,7 @@ describe('ArticleEditor.web link', () => {
   });
 
   it('inserts link text when selection is collapsed', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     ;(globalThis as any).__quillSelection__ = { index: 3, length: 0 };
 

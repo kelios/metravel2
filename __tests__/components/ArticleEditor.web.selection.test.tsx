@@ -119,7 +119,7 @@ describe('ArticleEditor.web selection + paste', () => {
   });
 
   it('preserves content and selection while typing', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
     const onChange = jest.fn();
 
     ;(globalThis as any).__quillSelection__ = { index: 5, length: 0 };
@@ -157,7 +157,7 @@ describe('ArticleEditor.web selection + paste', () => {
   });
 
   it('pastes html without wiping existing content and preserves caret', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
     const onChange = jest.fn();
 
     ;(globalThis as any).__quillSelection__ = { index: 5, length: 0 };
@@ -190,7 +190,7 @@ describe('ArticleEditor.web selection + paste', () => {
   });
 
   it('pastes plain text without wiping content and preserves caret', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
     const onChange = jest.fn();
 
     ;(globalThis as any).__quillSelection__ = { index: 5, length: 0 };

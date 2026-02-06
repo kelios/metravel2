@@ -103,7 +103,7 @@ describe('ArticleEditor.web anchors', () => {
   });
 
   it('inserts an anchor and it is visible in HTML mode', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     const onChange = jest.fn();
     const { getByLabelText, getByPlaceholderText, getAllByRole, UNSAFE_getAllByType, getByTestId } = render(
@@ -133,7 +133,7 @@ describe('ArticleEditor.web anchors', () => {
   });
 
   it('supports Cyrillic anchors (unicode) and normalizes spaces to dashes', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     const { getByLabelText, getByPlaceholderText, getAllByRole, UNSAFE_getAllByType, getByTestId } = render(
       <ArticleEditor content={'<p>hello</p>'} onChange={jest.fn()} />
@@ -160,7 +160,7 @@ describe('ArticleEditor.web anchors', () => {
   });
 
   it('wraps selected text with the anchor instead of inserting at the end', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     // We use plain text content to make mock index math deterministic.
     const initial = 'hello world';
@@ -199,7 +199,7 @@ describe('ArticleEditor.web anchors', () => {
   });
 
   it('opens travel preview in a new tab', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     const openSpy = jest.fn();
     ;(globalThis as any).open = openSpy;
@@ -222,7 +222,7 @@ describe('ArticleEditor.web anchors', () => {
   });
 
   it('normalizes full HTML document to body HTML when leaving HTML mode (content should not disappear)', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
       <ArticleEditor content={''} onChange={jest.fn()} />
@@ -263,7 +263,7 @@ describe('ArticleEditor.web anchors', () => {
   });
 
   it('does not wipe non-empty content on non-user empty Quill onChange', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
       <ArticleEditor content={'<p>keep</p>'} onChange={jest.fn()} />
@@ -289,7 +289,7 @@ describe('ArticleEditor.web anchors', () => {
   });
 
   it('preserves a normal HTML fragment when toggling HTML mode on and off', async () => {
-    const ArticleEditor = (await import('@/components/ArticleEditor.web')).default;
+    const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
       <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} />

@@ -9,7 +9,7 @@ import { Stack, useLocalSearchParams } from 'expo-router'
 import { Article } from '@/src/types/types'
 import { Card, Title } from '@/src/ui/paper'
 import { fetchArticle } from '@/src/api/articles'
-import { SafeHtml } from '@/components/SafeHtml'
+import { SafeHtml } from '@/components/article/SafeHtml'
 import { useThemedColors } from '@/hooks/useTheme'
 
 export default function ArticleDetails() {
