@@ -4,7 +4,7 @@ import {Button, Card, Text} from '@/ui/paper'
 import {useNavigation} from '@react-navigation/native'
 import {useRoute} from "@react-navigation/core";
 import {useAuth} from "@/context/AuthContext";
-import {Formik, FormikHelpers} from 'formik';
+import { useYupForm } from '@/hooks/useYupForm';
 import {setNewPasswordSchema} from '@/utils/validation';
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -30,7 +30,7 @@ export default function SetPassword() {
 
     const handleResetPassword = async (
         values: SetPasswordFormValues,
-        { setSubmitting }: FormikHelpers<SetPasswordFormValues>
+        { setSubmitting }: { setSubmitting: (v: boolean) => void }
     ) => {
         try {
             const success = await setNewPassword(password_reset_token as string, values.password);
@@ -49,6 +49,20 @@ export default function SetPassword() {
         }
     };
 
+    const {
+        values,
+        errors,
+        touched,
+        isSubmitting,
+        handleChange,
+        handleBlur,
+        handleSubmit,
+    } = useYupForm<SetPasswordFormValues>({
+        initialValues: { password: '', confirmPassword: '' },
+        validationSchema: setNewPasswordSchema,
+        onSubmit: handleResetPassword,
+    });
+
     return (
         <View style={styles.container}>
             <Image
@@ -63,21 +77,6 @@ export default function SetPassword() {
                         </Text>
                     )}
 
-                    <Formik
-                        initialValues={{ password: '', confirmPassword: '' }}
-                        validationSchema={setNewPasswordSchema}
-                        onSubmit={handleResetPassword}
-                    >
-                        {({
-                            handleChange,
-                            handleBlur,
-                            handleSubmit,
-                            values,
-                            errors,
-                            touched,
-                            isSubmitting,
-                        }) => (
-                            <>
                                 {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для пароля */}
                                 <FormFieldWithValidation
                                     label="Новый пароль"
@@ -130,9 +129,6 @@ export default function SetPassword() {
                                 >
                                     {isSubmitting ? 'Изменение...' : 'Сменить пароль'}
                                 </Button>
-                            </>
-                        )}
-                    </Formik>
                 </Card.Content>
             </Card>
         </View>

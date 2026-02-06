@@ -16,11 +16,16 @@ import {
 import { showToast } from '@/utils/toast';
 import { ApiError } from '@/api/client';
 import {
-  isLocalPreviewUrl,
   mergeMarkersPreserveImages,
   ensureRequiredDraftFields,
   normalizeDraftPlaceholders,
-  isDraftPlaceholder,
+  keepCurrentField,
+  normalizeNullableStrings,
+  normalizeMarkersForSave,
+  normalizeGalleryForSave,
+  sanitizeCoverUrl,
+  filterAllowedKeys,
+  mergeOverridePreservingUserInput,
 } from '@/utils/travelFormNormalization';
 
 async function showToastMessage(payload: any) {
@@ -107,73 +112,13 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
     try {
       const baseFormData = getEmptyFormData(data?.id ? String(data.id) : null);
-      const mergedData = {
+      const mergedData = normalizeNullableStrings({
         ...baseFormData,
         ...Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined)),
-      } as TravelFormData;
+      } as TravelFormData);
 
-      // Normalize nullable string fields (backend expects strings; null breaks drafts and can wipe UI after save)
-      ([
-        'name',
-        'budget',
-        'year',
-        'number_peoples',
-        'number_days',
-        'minus',
-        'plus',
-        'recommendation',
-        'description',
-        'youtube_link',
-      ] as Array<keyof TravelFormData>).forEach((key) => {
-        const value = mergedData[key];
-        if (value == null) {
-          (mergedData as any)[key] = '';
-        }
-      });
-
-      const normalizedMarkers = Array.isArray((mergedData as any).coordsMeTravel)
-        ? (mergedData as any).coordsMeTravel.map((m: any) => {
-            const { image, ...rest } = m ?? {};
-            // ✅ ИСПРАВЛЕНИЕ: Бэкенд требует ключ image, но не принимает пустую строку.
-            // Поэтому всегда отправляем `image: null`, если нет валидного значения.
-            const imageValue = typeof image === 'string' ? image.trim() : '';
-            const categories = Array.isArray(m?.categories)
-              ? m.categories
-                  .map((c: any) => Number(c))
-                  .filter((n: number) => Number.isFinite(n))
-              : [];
-
-            return {
-              ...rest,
-              categories,
-              image:
-                imageValue && imageValue.length > 0 && !isLocalPreviewUrl(imageValue)
-                  ? imageValue
-                  : null,
-            };
-          })
-        : [];
-
-      const normalizedGallery = Array.isArray(mergedData.gallery)
-        ? mergedData.gallery.filter((item: any) => {
-            if (typeof item === 'string') {
-              const value = item.trim();
-              return value.length > 0 && !isLocalPreviewUrl(value);
-            }
-            if (item && typeof item === 'object') {
-              const url = typeof item.url === 'string' ? item.url.trim() : '';
-              return url.length > 0 && !isLocalPreviewUrl(url);
-            }
-            return false;
-          })
-        : undefined;
-
-      const sanitizedCoverUrl = isLocalPreviewUrl(mergedData.travel_image_thumb_url)
-        ? null
-        : (mergedData.travel_image_thumb_url ?? null);
-      const sanitizedCoverSmallUrl = isLocalPreviewUrl(mergedData.travel_image_thumb_small_url)
-        ? null
-        : (mergedData.travel_image_thumb_small_url ?? null);
+      const normalizedMarkers = normalizeMarkersForSave((mergedData as any).coordsMeTravel);
+      const normalizedGallery = normalizeGalleryForSave(mergedData.gallery);
 
       const resolvedId = normalizeTravelId(mergedData.id) ?? stableTravelId ?? null;
       const cleanedData = cleanEmptyFields({
@@ -181,23 +126,11 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         id: resolvedId,
         coordsMeTravel: normalizedMarkers,
         ...(normalizedGallery ? { gallery: normalizedGallery } : {}),
-        travel_image_thumb_url: sanitizedCoverUrl,
-        travel_image_thumb_small_url: sanitizedCoverSmallUrl,
+        travel_image_thumb_url: sanitizeCoverUrl(mergedData.travel_image_thumb_url),
+        travel_image_thumb_small_url: sanitizeCoverUrl(mergedData.travel_image_thumb_small_url),
       });
 
-      // Не отправляем на сервер неформатные поля (например, вложенный `user` из ответа API),
-      // иначе DRF сериализатор может начать валидировать profile/user поля (first_name и т.п.).
-      const allowedKeys = new Set<string>([
-        ...Object.keys(baseFormData),
-        'slug',
-        'travel_image_thumb_url',
-        'travel_image_thumb_small_url',
-      ]);
-
-      const filteredCleanedData = Object.fromEntries(
-        Object.entries(cleanedData).filter(([key]) => allowedKeys.has(key))
-      ) as Partial<TravelFormData>;
-
+      const filteredCleanedData = filterAllowedKeys(cleanedData, Object.keys(baseFormData));
       const payload = ensureRequiredDraftFields(filteredCleanedData as unknown as TravelFormData);
 
       // ✅ FIX: Проверяем, что компонент всё ещё смонтирован перед сохранением
@@ -237,83 +170,26 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       const normalizedSavedData = normalizeDraftPlaceholders(savedData);
       const currentDataSnapshot = formState.data as TravelFormData;
 
-      const keepCurrentIfServerEmpty = <K extends keyof TravelFormData>(key: K) => {
-        const serverValue = normalizedSavedData[key];
-        const currentValue = currentDataSnapshot[key];
-        if (typeof serverValue === 'string' && serverValue.trim().length === 0) {
-          if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
-            (normalizedSavedData as any)[key] = currentValue;
-          }
-        }
-      };
-
-      const keepCurrentIfServerNil = <K extends keyof TravelFormData>(key: K) => {
-        const serverValue = (normalizedSavedData as any)[key];
-        const currentValue = (currentDataSnapshot as any)[key];
-        if (serverValue == null) {
-          if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
-            (normalizedSavedData as any)[key] = currentValue;
-          }
-        }
-      };
-
-      const keepCurrentIfServerEmptyArray = <K extends keyof TravelFormData>(key: K) => {
-        const serverValue = (normalizedSavedData as any)[key];
-        const currentValue = (currentDataSnapshot as any)[key];
-        if (Array.isArray(serverValue) && serverValue.length === 0) {
-          if (Array.isArray(currentValue) && currentValue.length > 0) {
-            (normalizedSavedData as any)[key] = currentValue;
-          }
-        }
-      };
-
-      const keepCurrentIfServerNilArray = <K extends keyof TravelFormData>(key: K) => {
-        const serverValue = (normalizedSavedData as any)[key];
-        const currentValue = (currentDataSnapshot as any)[key];
-        if (serverValue == null) {
-          if (Array.isArray(currentValue) && currentValue.length > 0) {
-            (normalizedSavedData as any)[key] = currentValue;
-          }
-        }
-      };
-
-      const keepCurrentIfServerMissingImageUrl = <K extends keyof TravelFormData>(key: K) => {
-        const serverValue = (normalizedSavedData as any)[key];
-        const currentValue = (currentDataSnapshot as any)[key];
-        if (serverValue == null || (typeof serverValue === 'string' && serverValue.trim().length === 0)) {
-          if (typeof currentValue === 'string' && currentValue.trim().length > 0) {
-            // ✅ FIX: Сохраняем локальное превью ИЛИ серверный URL если сервер вернул пустое значение
-            (normalizedSavedData as any)[key] = currentValue;
-          }
-        }
-      };
-
       // If backend returns placeholders/empty strings for rich text fields, don't wipe user input.
-      keepCurrentIfServerEmpty('description');
-      keepCurrentIfServerEmpty('plus');
-      keepCurrentIfServerEmpty('minus');
-      keepCurrentIfServerEmpty('recommendation');
-      keepCurrentIfServerEmpty('youtube_link');
-      keepCurrentIfServerNil('description');
-      keepCurrentIfServerNil('plus');
-      keepCurrentIfServerNil('minus');
-      keepCurrentIfServerNil('recommendation');
-      keepCurrentIfServerNil('youtube_link');
-      keepCurrentIfServerNil('name');
+      const kf = (key: keyof TravelFormData, mode: Parameters<typeof keepCurrentField>[3]) =>
+        keepCurrentField(normalizedSavedData, currentDataSnapshot, key, mode);
+
+      (['description', 'plus', 'minus', 'recommendation', 'youtube_link'] as const).forEach(k => {
+        kf(k, 'emptyString');
+        kf(k, 'nil');
+      });
+      kf('name', 'nil');
 
       // If backend returns empty arrays for filter fields, don't wipe user selections.
-      keepCurrentIfServerEmptyArray('categories');
-      keepCurrentIfServerEmptyArray('transports');
-      keepCurrentIfServerEmptyArray('complexity');
-      keepCurrentIfServerEmptyArray('companions');
-      keepCurrentIfServerEmptyArray('over_nights_stay');
-      keepCurrentIfServerEmptyArray('month');
+      (['categories', 'transports', 'complexity', 'companions', 'over_nights_stay', 'month'] as const).forEach(k => {
+        kf(k, 'emptyArray');
+      });
 
       // Preserve local preview images for cover/gallery while server hasn't produced permanent URLs yet.
-      keepCurrentIfServerMissingImageUrl('travel_image_thumb_url');
-      keepCurrentIfServerMissingImageUrl('travel_image_thumb_small_url');
-      keepCurrentIfServerEmptyArray('gallery');
-      keepCurrentIfServerNilArray('gallery');
+      kf('travel_image_thumb_url', 'missingImageUrl');
+      kf('travel_image_thumb_small_url', 'missingImageUrl');
+      kf('gallery', 'emptyArray');
+      kf('gallery', 'nilArray');
 
       const markersFromResponse = Array.isArray(normalizedSavedData.coordsMeTravel)
         ? (normalizedSavedData.coordsMeTravel as any)
@@ -442,46 +318,12 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           saveAbortControllerRef.current.abort();
         }
 
-        const mergeWithCurrentSnapshot = (override?: TravelFormData) => {
-          if (!override) return formDataRef.current as TravelFormData;
-          const current = (formDataRef.current as TravelFormData) ?? ({} as TravelFormData);
-          const merged: any = { ...current, ...override };
-
-          // Preserve current values if override contains empty/null/placeholder for user-entered fields.
-          (['name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link'] as Array<keyof TravelFormData>).forEach((key) => {
-            const o = (override as any)[key];
-            const c = (current as any)[key];
-            if (o == null) {
-              if (c != null) merged[key] = c;
-              return;
-            }
-            if (isDraftPlaceholder(o)) {
-              if (typeof c === 'string' && c.trim().length > 0 && !isDraftPlaceholder(c)) {
-                merged[key] = c;
-              }
-              return;
-            }
-            if (typeof o === 'string' && o.trim().length === 0) {
-              if (typeof c === 'string' && c.trim().length > 0) {
-                merged[key] = c;
-              }
-            }
-          });
-
-          (['categories', 'transports', 'complexity', 'companions', 'over_nights_stay', 'month', 'countries'] as Array<keyof TravelFormData>).forEach((key) => {
-            const o = (override as any)[key];
-            const c = (current as any)[key];
-            if (Array.isArray(o) && o.length === 0) {
-              if (Array.isArray(c) && c.length > 0) {
-                merged[key] = c;
-              }
-            }
-          });
-
-          return merged as TravelFormData;
-        };
-
-        const toSave = mergeWithCurrentSnapshot(dataOverride);
+        const toSave = dataOverride
+          ? mergeOverridePreservingUserInput(
+              (formDataRef.current as TravelFormData) ?? ({} as TravelFormData),
+              dataOverride,
+            )
+          : formDataRef.current as TravelFormData;
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
         const savedData = await cleanAndSave(toSave);
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);

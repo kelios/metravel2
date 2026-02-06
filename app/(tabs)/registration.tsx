@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Button, Card } from '@/ui/paper';
 import Feather from '@expo/vector-icons/Feather';
-import { Formik, FormikHelpers } from 'formik';
+import { useYupForm } from '@/hooks/useYupForm';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
@@ -45,7 +45,7 @@ export default function RegisterForm() {
 
     const onSubmit = async (
         values: FormValues,
-        { setSubmitting, resetForm }: FormikHelpers<FormValues>,
+        { setSubmitting, resetForm }: { setSubmitting: (v: boolean) => void; resetForm: () => void },
     ) => {
         setMsg({ text: '', error: false });
         try {
@@ -82,6 +82,20 @@ export default function RegisterForm() {
         }
     };
 
+    const {
+        values,
+        errors,
+        touched,
+        isSubmitting,
+        handleChange,
+        handleBlur,
+        handleSubmit,
+    } = useYupForm<FormValues>({
+        initialValues: { username: '', email: '', password: '', confirmPassword: '' },
+        validationSchema: registrationSchema,
+        onSubmit,
+    });
+
     const title = 'Регистрация | Metravel';
     const description =
         'Создайте аккаунт на Metravel, чтобы делиться своими путешествиями, маршрутами и впечатлениями.';
@@ -113,20 +127,6 @@ export default function RegisterForm() {
                 )}
                 <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
                     <View style={styles.bg}>
-                        <Formik<FormValues>
-                            initialValues={{ username: '', email: '', password: '', confirmPassword: '' }}
-                            validationSchema={registrationSchema}
-                            onSubmit={onSubmit}
-                        >
-                            {({
-                                  handleChange,
-                                  handleBlur,
-                                  handleSubmit,
-                                  values,
-                                  errors,
-                                  touched,
-                                  isSubmitting,
-                              }) => (
                                 <View style={styles.center}>
                                     <Card style={styles.card}>
                                         <Card.Content>
@@ -320,8 +320,6 @@ export default function RegisterForm() {
                                         </Card.Content>
                                     </Card>
                                 </View>
-                            )}
-                        </Formik>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

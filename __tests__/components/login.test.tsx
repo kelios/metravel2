@@ -4,15 +4,6 @@ import { TextInput } from 'react-native';
 import Login from '@/app/(tabs)/login';
 import { useAuth } from '@/context/AuthContext';
 
-// Polyfill for Formik / DOM usage in Jest + React Native environment
-// Formik references HTMLButtonElement in its internals, which is not defined in jsdom for RN tests.
-// Определяем минимальный класс, достаточный для проверок внутри Formik.
- 
-// @ts-ignore
-if (typeof (global as any).HTMLButtonElement === 'undefined') {
-  (global as any).HTMLButtonElement = class {};
-}
-
 // Mock dependencies
 jest.mock('@/context/AuthContext');
 jest.mock('expo-router', () => ({

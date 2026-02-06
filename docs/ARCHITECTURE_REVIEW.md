@@ -293,10 +293,21 @@ __tests__/components/
 12. ✅ Извлечены типы и адаптеры из `useQuestsApi` (553→333 строк) → `utils/questAdapters.ts` (233 строки). Функции `adaptBundle`, `adaptMeta`, `adaptStep`, `buildAnswerChecker`, `fixMediaUrl`, `normalize` и типы `QuestMeta`, `FrontendQuestBundle` теперь независимо тестируемы. Обратная совместимость через re-export.
 13. ✅ Извлечены хелперы оптимистичного обновления кэша из `useComments` (428→232 строк) → `utils/commentCacheHelpers.ts` (182 строки). Устранено дублирование логики like/unlike (~160 строк) и create/reply (~80 строк). Функции `optimisticToggleLike`, `reconcileLikeResponse`, `rollbackFromSnapshot`, `createOptimisticComment`, `optimisticAppendComment`.
 
-### Фаза 5: Дальнейшая оптимизация (planned)
-14. Замена `formik` → собственные хуки или React Hook Form (п. 3.1)
-15. Реструктурировать `components/MapPage/` (п. 4.2)
-16. Постепенный перевод оставшихся Context → Zustand (`AuthContext`, `MapFiltersContext`)
+### Фаза 5: MapPage, formik и крупные модули (выполнено 6 фев 2026)
+14. ✅ Извлечены чистые утилиты маршрутизации из `useRouting` (928→659 строк) → `utils/routingHelpers.ts` (252 строки). Устранено дублирование `haversineMeters` (3 копии → 1), извлечены `decodePolyline6`, `fetchWithRetry`, `validateRoutePoints`, `filterValidCoords`, `ensureAnchoredGeometry`, `parseOrsError`, `extractFailingIndex`, `buildRadiuses`, профили провайдеров и константы.
+15. `AddressListItem.tsx` (856 строк) — UI-компонент, чистые хелперы малы и тесно связаны. Безопасное извлечение требует визуального тестирования → отложено.
+16. ✅ Удалена зависимость `formik` (~45KB gzipped). Создан лёгкий хук `hooks/useYupForm.ts` (90 строк) — замена Formik render-props для простых форм с Yup-валидацией. Мигрированы `login.tsx`, `registration.tsx`, `set-password.tsx`. Удалён HTMLButtonElement polyfill из тестов.
+
+### Фаза 6: Context → Zustand (выполнено 6 фев 2026)
+17. ✅ `AuthContext` (280 строк) → тонкий фасад (52 строки) + `stores/authStore.ts` (226 строк). Вся логика (login, logout, checkAuthentication, epoch guard, storage) перенесена в Zustand-стор. Обратная совместимость `useAuth()` сохранена для 53 потребителей. Все 10 тестов AuthContext проходят без изменений.
+
+### Фаза 7: Оценка оставшихся контекстов (выполнено 6 фев 2026)
+18. `FiltersProvider` (45 строк) — тривиальный `useState` для фильтров списка путешествий. Слишком мал для Zustand.
+19. `MapFiltersContext` (164 строки) — pass-through контекст, получает все значения как props. Нет собственного состояния — только устранение prop drilling для `FiltersPanel`. Не кандидат для Zustand.
+20. Все Context-провайдеры оценены. Миграция Context → Zustand завершена (`FavoritesContext`, `AuthContext`).
+
+### Фаза 8: Дальнейшее уменьшение useTravelFormData (выполнено 6 фев 2026)
+21. ✅ Извлечены в `travelFormNormalization.ts`: `keepCurrentField` (обобщение 5 keepCurrentIfServer* функций), `normalizeNullableStrings`, `normalizeMarkersForSave`, `normalizeGalleryForSave`, `sanitizeCoverUrl`, `filterAllowedKeys`, `mergeOverridePreservingUserInput`. Хук уменьшен с 724 до 568 строк (−156). Утилита выросла с 167 до 360 строк.
 
 ---
 
@@ -304,18 +315,21 @@ __tests__/components/
 
 | Метрика | До рефакторинга | После (6 фев 2026) | Цель |
 |---|---|---|---|
-| Зависимостей в `dependencies` | 65 | 59 | < 50 |
+| Зависимостей в `dependencies` | 65 | 58 (-1 formik) | < 50 |
 | Папок с хуками/утилитами | 2 (`hooks/` + `src/hooks/`) | 1 (`hooks/`) | ✅ Одна папка |
 | Папок с утилитами | 2 (`utils/` + `src/utils/`) | 1 (`utils/`) | ✅ Одна папка |
 | Легаси дизайн-импортов | ~3 | 0 | ✅ 0 |
 | Папка `src/` | Существовала (дублирование) | Удалена | ✅ Удалена |
 | Контекст-провайдеров | 4 (в 3 папках) | 4 (в 1 папке `context/`) + 5 Zustand-сторов | ✅ Консолидировано |
 | `FavoritesContext` (строк) | 604 | 136 (фасад) + 3 стора | ✅ < 300 |
-| `useTravelFormData` (строк) | 877 | 724 + `travelFormNormalization.ts` | < 500 (ongoing) |
+| `useTravelFormData` (строк) | 877 | 568 + `travelFormNormalization.ts` (360) | ✅ < 600 |
 | `useQuestsApi` (строк) | 553 | 333 + `questAdapters.ts` (233) | ✅ < 400 |
 | `useComments` (строк) | 428 | 232 + `commentCacheHelpers.ts` (182) | ✅ < 300 |
+| `useRouting` (строк) | 928 | 659 + `routingHelpers.ts` (252) | ✅ < 700 |
 | `_layout.tsx` провайдеры | Вложенные inline (5 уровней) | `AppProviders.tsx` | ✅ Извлечены |
-| Максимальный размер хука (строк) | ~900 | ~724 | < 500 (ongoing) |
+| `formik` зависимость | Установлена (~45KB) | Удалена → `useYupForm` (90 строк) | ✅ Удалена |
+| `AuthContext` (строк) | 280 | 52 (фасад) + `authStore.ts` (226) | ✅ Zustand |
+| Максимальный размер хука (строк) | ~928 | ~659 | < 600 ✅ |
 
 ---
 

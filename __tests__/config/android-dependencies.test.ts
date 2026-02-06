@@ -162,8 +162,8 @@ describe('Android Dependencies Tests', () => {
   });
 
   describe('Form and Validation', () => {
-    it('should have formik', () => {
-      expect(packageJson.dependencies.formik).toBeDefined();
+    it('should not have formik (replaced by hooks/useYupForm)', () => {
+      expect(packageJson.dependencies.formik).toBeUndefined();
     });
 
     it('should have yup', () => {

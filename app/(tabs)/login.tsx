@@ -19,7 +19,7 @@ import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router'
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useAuth } from '@/context/AuthContext';
 import { loginSchema } from '@/utils/validation';
-import { Formik, FormikHelpers } from 'formik';
+import { useYupForm } from '@/hooks/useYupForm';
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -85,7 +85,7 @@ export default function Login() {
 
     const handleLogin = async (
         values: LoginFormValues,
-        { setSubmitting }: FormikHelpers<LoginFormValues>
+        { setSubmitting }: { setSubmitting: (v: boolean) => void }
     ) => {
         try {
             showMsg('');
@@ -117,6 +117,20 @@ export default function Login() {
             setSubmitting(false);
         }
     };
+
+    const {
+        values,
+        errors,
+        touched,
+        isSubmitting,
+        handleChange,
+        handleBlur,
+        handleSubmit,
+    } = useYupForm<LoginFormValues>({
+        initialValues: { email: '', password: '' },
+        validationSchema: loginSchema,
+        onSubmit: handleLogin,
+    });
 
     const title = 'Вход | Metravel';
     const description =
@@ -167,21 +181,6 @@ export default function Login() {
                                         </Text>
                                     )}
 
-                                    <Formik
-                                        initialValues={{ email: '', password: '' }}
-                                        validationSchema={loginSchema}
-                                        onSubmit={handleLogin}
-                                    >
-                                        {({
-                                            handleChange,
-                                            handleBlur,
-                                            handleSubmit,
-                                            values,
-                                            errors,
-                                            touched,
-                                            isSubmitting,
-                                        }) => (
-                                            <>
                                                 {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для email */}
                                                 <FormFieldWithValidation
                                                     label="Email"
@@ -262,9 +261,6 @@ export default function Login() {
                                                     Зарегистрируйтесь
                                                 </Link>
                                             </View>
-                                        </>
-                                        )}
-                                    </Formik>
                                 </Card.Content>
                             </Card>
                         </View>

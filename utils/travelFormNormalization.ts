@@ -164,3 +164,197 @@ export function isDraftPlaceholder(value: unknown): boolean {
     if (typeof value !== 'string') return false;
     return value.trim() === DRAFT_PLACEHOLDER_PREFIX;
 }
+
+// --- Helpers for applySavedData: keep local value when server returns empty/nil ---
+
+type KeepMode = 'emptyString' | 'nil' | 'emptyArray' | 'nilArray' | 'missingImageUrl';
+
+/**
+ * Универсальный хелпер: сохраняет текущее значение поля, если сервер вернул "пустое".
+ * Заменяет 5 отдельных keepCurrentIfServer* функций.
+ */
+export function keepCurrentField<T extends Record<string, any>>(
+    target: T,
+    current: T,
+    key: keyof T,
+    mode: KeepMode,
+): void {
+    const sv = target[key];
+    const cv = current[key];
+
+    switch (mode) {
+        case 'emptyString':
+            if (typeof sv === 'string' && sv.trim().length === 0) {
+                if (typeof cv === 'string' && cv.trim().length > 0) {
+                    (target as any)[key] = cv;
+                }
+            }
+            break;
+        case 'nil':
+            if (sv == null) {
+                if (typeof cv === 'string' && cv.trim().length > 0) {
+                    (target as any)[key] = cv;
+                }
+            }
+            break;
+        case 'emptyArray':
+            if (Array.isArray(sv) && sv.length === 0) {
+                if (Array.isArray(cv) && cv.length > 0) {
+                    (target as any)[key] = cv;
+                }
+            }
+            break;
+        case 'nilArray':
+            if (sv == null) {
+                if (Array.isArray(cv) && cv.length > 0) {
+                    (target as any)[key] = cv;
+                }
+            }
+            break;
+        case 'missingImageUrl':
+            if (sv == null || (typeof sv === 'string' && sv.trim().length === 0)) {
+                if (typeof cv === 'string' && cv.trim().length > 0) {
+                    (target as any)[key] = cv;
+                }
+            }
+            break;
+    }
+}
+
+// --- Helpers for cleanAndSave: pure data normalization before sending to server ---
+
+const NULLABLE_STRING_FIELDS: Array<keyof TravelFormData> = [
+    'name', 'budget', 'year', 'number_peoples', 'number_days',
+    'minus', 'plus', 'recommendation', 'description', 'youtube_link',
+];
+
+/**
+ * Нормализует nullable строковые поля (backend ожидает строки, null ломает черновики).
+ */
+export function normalizeNullableStrings(data: TravelFormData): TravelFormData {
+    const result = { ...data };
+    NULLABLE_STRING_FIELDS.forEach((key) => {
+        if ((result as any)[key] == null) {
+            (result as any)[key] = '';
+        }
+    });
+    return result;
+}
+
+/**
+ * Нормализует маркеры для отправки на сервер:
+ * - числовые categories
+ * - image: null если пустой или локальный превью
+ */
+export function normalizeMarkersForSave(markers: any[]): any[] {
+    if (!Array.isArray(markers)) return [];
+    return markers.map((m: any) => {
+        const { image, ...rest } = m ?? {};
+        const imageValue = typeof image === 'string' ? image.trim() : '';
+        const categories = Array.isArray(m?.categories)
+            ? m.categories.map((c: any) => Number(c)).filter((n: number) => Number.isFinite(n))
+            : [];
+        return {
+            ...rest,
+            categories,
+            image: imageValue && imageValue.length > 0 && !isLocalPreviewUrl(imageValue)
+                ? imageValue
+                : null,
+        };
+    });
+}
+
+/**
+ * Фильтрует галерею: убирает пустые и локальные превью.
+ */
+export function normalizeGalleryForSave(gallery: any[] | undefined): any[] | undefined {
+    if (!Array.isArray(gallery)) return undefined;
+    return gallery.filter((item: any) => {
+        if (typeof item === 'string') {
+            const value = item.trim();
+            return value.length > 0 && !isLocalPreviewUrl(value);
+        }
+        if (item && typeof item === 'object') {
+            const url = typeof item.url === 'string' ? item.url.trim() : '';
+            return url.length > 0 && !isLocalPreviewUrl(url);
+        }
+        return false;
+    });
+}
+
+/**
+ * Санитизирует URL обложки: null если локальный превью.
+ */
+export function sanitizeCoverUrl(url: string | null | undefined): string | null {
+    return isLocalPreviewUrl(url) ? null : (url ?? null);
+}
+
+/**
+ * Фильтрует payload, оставляя только разрешённые ключи для API.
+ */
+export function filterAllowedKeys(
+    data: Record<string, any>,
+    baseKeys: string[],
+): Partial<TravelFormData> {
+    const allowedKeys = new Set<string>([
+        ...baseKeys,
+        'slug',
+        'travel_image_thumb_url',
+        'travel_image_thumb_small_url',
+    ]);
+    return Object.fromEntries(
+        Object.entries(data).filter(([key]) => allowedKeys.has(key))
+    ) as Partial<TravelFormData>;
+}
+
+// --- Helper for handleManualSave: merge override with current snapshot ---
+
+const MERGE_STRING_FIELDS: Array<keyof TravelFormData> = [
+    'name', 'description', 'plus', 'minus', 'recommendation', 'youtube_link',
+];
+const MERGE_ARRAY_FIELDS: Array<keyof TravelFormData> = [
+    'categories', 'transports', 'complexity', 'companions', 'over_nights_stay', 'month', 'countries',
+];
+
+/**
+ * Объединяет override с текущим snapshot, сохраняя пользовательский ввод
+ * когда override содержит пустые/null/placeholder значения.
+ */
+export function mergeOverridePreservingUserInput(
+    current: TravelFormData,
+    override: TravelFormData,
+): TravelFormData {
+    const merged: any = { ...current, ...override };
+
+    MERGE_STRING_FIELDS.forEach((key) => {
+        const o = (override as any)[key];
+        const c = (current as any)[key];
+        if (o == null) {
+            if (c != null) merged[key] = c;
+            return;
+        }
+        if (isDraftPlaceholder(o)) {
+            if (typeof c === 'string' && c.trim().length > 0 && !isDraftPlaceholder(c)) {
+                merged[key] = c;
+            }
+            return;
+        }
+        if (typeof o === 'string' && o.trim().length === 0) {
+            if (typeof c === 'string' && c.trim().length > 0) {
+                merged[key] = c;
+            }
+        }
+    });
+
+    MERGE_ARRAY_FIELDS.forEach((key) => {
+        const o = (override as any)[key];
+        const c = (current as any)[key];
+        if (Array.isArray(o) && o.length === 0) {
+            if (Array.isArray(c) && c.length > 0) {
+                merged[key] = c;
+            }
+        }
+    });
+
+    return merged as TravelFormData;
+}
