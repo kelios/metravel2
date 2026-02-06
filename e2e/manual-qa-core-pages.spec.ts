@@ -124,10 +124,18 @@ test.describe('Manual QA automation: core pages data', () => {
   test('roulette loads filters and random results via API proxy', async ({ page }) => {
     await ensureApiProxy(page, 'roulette');
 
+    // Debug: log all API responses to diagnose timeout
+    page.on('response', (resp: any) => {
+      const url = resp.url();
+      if (url.includes('/api/')) {
+        console.log(`[roulette-debug] response: ${resp.status()} ${url}`);
+      }
+    });
+
     // Set up the response listener BEFORE navigating to avoid race condition
     // where the API response arrives before the listener is ready.
     const filtersPromise = waitForApiResponse(page, [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//], 'roulette-filters', {
-      timeoutMs: 90_000,
+      timeoutMs: 30_000,
     });
     await page.goto('/roulette', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 

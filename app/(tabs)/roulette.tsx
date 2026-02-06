@@ -245,28 +245,28 @@ export default function RouletteScreen() {
                 )}
                 {Platform.OS === 'web' && !isMobile ? (
                   <View style={styles.rouletteWrapper}>
-                    <View style={styles.rouletteCircle}>
-                      {/* Фон-компас внутри круга на web */}
-                      <Image
-                        source={compassBackground}
-                        style={styles.rouletteCompassImage}
-                        resizeMode="cover"
-                      />
+                    {/* Декоративный компас на фоне */}
+                    <Image
+                      source={compassBackground}
+                      style={styles.rouletteCompassImage}
+                      resizeMode="cover"
+                    />
 
+                    <View style={styles.rouletteCardsRow}>
                       {result.slice(0, 3).map((item, index) => (
                         <Animated.View
                           key={String(item.id)}
                           style={[
                             styles.rouletteCard,
-                            index === 0 && styles.rouletteCardTop,
-                            index === 1 && styles.rouletteCardLeft,
-                            index === 2 && styles.rouletteCardRight,
+                            index === 0 && styles.rouletteCardFirst,
+                            index === 1 && styles.rouletteCardMiddle,
+                            index === 2 && styles.rouletteCardLast,
                             {
                               opacity: cardAnims[index] ?? 1,
                               transform: [{
                                 translateY: (cardAnims[index] ?? new Animated.Value(1)).interpolate({
                                   inputRange: [0, 1],
-                                  outputRange: [20, 0],
+                                  outputRange: [30, 0],
                                 }),
                               }],
                             },
@@ -280,23 +280,26 @@ export default function RouletteScreen() {
                             isMetravel={false}
                             onDeletePress={undefined}
                             isFirst={index === 0}
-                            isSingle
                             selectable={false}
                             isSelected={false}
                             onToggle={undefined}
                           />
                         </Animated.View>
                       ))}
-
-                      <Pressable style={styles.rouletteCenter} onPress={handleSpin}>
-                        <Text style={styles.rouletteCenterTitle}>Случайный маршрут</Text>
-                        <Text style={styles.rouletteCenterSubtitle}>
-                          {result.length > 0
-                            ? `Выбрано ${result.length} маршрута`
-                            : 'Нажми, чтобы подобрать маршруты'}
-                        </Text>
-                      </Pressable>
                     </View>
+
+                    <Pressable style={styles.rouletteStatusBadge} onPress={handleSpin}>
+                      <Text style={styles.rouletteStatusTitle}>
+                        {result.length > 0
+                          ? `Выбрано ${result.length} маршрута`
+                          : 'Нажми, чтобы подобрать'}
+                      </Text>
+                      <Text style={styles.rouletteStatusSubtitle}>
+                        {result.length > 0
+                          ? 'Нажми для новой подборки'
+                          : 'Случайный маршрут'}
+                      </Text>
+                    </Pressable>
                   </View>
                 ) : (
                   <FlashList<Travel>
