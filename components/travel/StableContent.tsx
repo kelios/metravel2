@@ -2,7 +2,7 @@
 import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
 import { View, StyleSheet, Linking, Platform, Text, Pressable } from "react-native";
 import type { TDefaultRendererProps } from "react-native-render-html";
-import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
+import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type LazyInstagramProps = { url: string };

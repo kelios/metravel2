@@ -1,4 +1,4 @@
-import { GoogleMapsParser } from '@/src/api/parsers/googleMapsParser';
+import { GoogleMapsParser } from '@/api/parsers/googleMapsParser';
 import { PointStatus } from '@/types/userPoints';
 
 describe('Google Maps Parser', () => {

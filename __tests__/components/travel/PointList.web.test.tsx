@@ -29,13 +29,13 @@ jest.mock('@tanstack/react-query', () => ({
   }),
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   fetchFilters: jest.fn(async () => ({
     categoryTravelAddress: [],
   })),
 }));
 
-jest.mock('@/src/api/userPoints', () => ({
+jest.mock('@/api/userPoints', () => ({
   userPointsApi: {
     createPoint: jest.fn(async () => ({ id: 1 })),
   },
@@ -147,7 +147,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
-    const mockCreatePoint = require('@/src/api/userPoints').userPointsApi.createPoint as jest.Mock;
+    const mockCreatePoint = require('@/api/userPoints').userPointsApi.createPoint as jest.Mock;
     mockCreatePoint.mockClear();
 
     const { getByLabelText, getAllByLabelText } = render(

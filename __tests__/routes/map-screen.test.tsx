@@ -1,7 +1,7 @@
 import { render, waitFor, fireEvent, act } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Platform } from 'react-native'
-import MapScreen from '@/src/screens/tabs/MapScreen'
+import MapScreen from '@/screens/tabs/MapScreen'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, width: 390 }
@@ -159,7 +159,7 @@ const defaultTravelsForMapResponse = {
   },
 };
 
-jest.mock('@/src/api/map', () => ({
+jest.mock('@/api/map', () => ({
   fetchTravelsForMap: (...args: any[]) => mockFetchTravelsForMap(...args),
   fetchTravelsNearRoute: jest.fn().mockResolvedValue([]),
   fetchFiltersMap: jest.fn().mockResolvedValue({
@@ -183,7 +183,7 @@ jest.mock('@/components/ui/ErrorDisplay', () => {
   };
 });
 
-jest.mock('@/src/utils/networkErrorHandler', () => ({
+jest.mock('@/utils/networkErrorHandler', () => ({
   getUserFriendlyNetworkError: () => ({ message: 'Сетевая ошибка' }),
 }));
 

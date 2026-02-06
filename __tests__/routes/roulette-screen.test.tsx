@@ -95,7 +95,7 @@ jest.mock('@/components/seo/InstantSEO', () => {
   };
 });
 
-jest.mock('@/src/api/miscOptimized', () => ({
+jest.mock('@/api/miscOptimized', () => ({
   fetchAllCountries: jest.fn().mockResolvedValue([]),
   fetchAllFiltersOptimized: jest.fn().mockResolvedValue({
     countries: [],

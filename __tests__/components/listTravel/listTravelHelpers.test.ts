@@ -9,7 +9,7 @@ import {
   isMobile,
   isTablet,
 } from '@/components/listTravel/utils/listTravelHelpers'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 
 const baseTravel: Travel = {
   id: 0,

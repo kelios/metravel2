@@ -17,10 +17,10 @@ import RightColumn from './RightColumn'
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext'
-import { fetchAllFiltersOptimized } from '@/src/api/miscOptimized'
+import { fetchAllFiltersOptimized } from '@/api/miscOptimized'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useResponsive } from '@/hooks/useResponsive'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 import {
   BREAKPOINTS,
   RECOMMENDATIONS_VISIBLE_KEY

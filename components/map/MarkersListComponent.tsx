@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Feather from '@expo/vector-icons/Feather';
-import { MarkerData } from "@/src/types/types";
+import { MarkerData } from "@/types/types";
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';

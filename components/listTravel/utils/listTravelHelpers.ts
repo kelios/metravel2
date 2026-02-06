@@ -3,7 +3,7 @@
  * Централизация логики для переиспользования и тестирования
  */
 
-import type { Travel } from "@/src/types/types";
+import type { Travel } from "@/types/types";
 import type { FilterOptions, CategoryWithCount } from "./listTravelTypes";
 import { BREAKPOINTS, BADGE_THRESHOLDS, GRID_COLUMNS } from "./listTravelConstants";
 import { getThemedColors, type ThemedColors } from "@/hooks/useTheme";

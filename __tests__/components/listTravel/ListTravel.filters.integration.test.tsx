@@ -6,8 +6,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ListTravel from '@/components/listTravel/ListTravel';
-import { fetchTravels } from '@/src/api/travelsApi';
-import { fetchFilters, fetchFiltersCountry } from '@/src/api/misc';
+import { fetchTravels } from '@/api/travelsApi';
+import { fetchFilters, fetchFiltersCountry } from '@/api/misc';
 
 // Мокаем AuthContext, чтобы ListTravel не требовал реальный AuthProvider
 jest.mock('@/context/AuthContext', () => ({
@@ -54,11 +54,11 @@ jest.mock('expo-router', () => ({
 }));
 
 // Mock API
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchTravels: jest.fn(),
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   fetchFilters: jest.fn(),
   fetchFiltersCountry: jest.fn(),
 }));

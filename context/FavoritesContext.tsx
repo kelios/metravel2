@@ -8,13 +8,13 @@ import {
     fetchUserFavoriteTravels,
     fetchUserHistory,
     fetchUserRecommendedTravels,
-} from '@/src/api/user';
-import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/src/api/travelsFavorites';
-import { devError } from '@/src/utils/logger';
-import { getStorageBatch } from '@/src/utils/storageBatch';
-import { safeJsonParseString } from '@/src/utils/safeJsonParse';
-import { cleanupInvalidFavorites, isValidFavoriteId } from '@/src/utils/favoritesCleanup';
-import { showToast } from '@/src/utils/toast';
+} from '@/api/user';
+import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
+import { devError } from '@/utils/logger';
+import { getStorageBatch } from '@/utils/storageBatch';
+import { safeJsonParseString } from '@/utils/safeJsonParse';
+import { cleanupInvalidFavorites, isValidFavoriteId } from '@/utils/favoritesCleanup';
+import { showToast } from '@/utils/toast';
 
 const FAVORITES_KEY = 'metravel_favorites';
 const VIEW_HISTORY_KEY = 'metravel_view_history';

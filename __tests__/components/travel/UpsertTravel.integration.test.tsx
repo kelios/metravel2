@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, Text, TouchableOpacity } from 'react-native';
-import type { TravelFormData, Travel } from '@/src/types/types';
+import type { TravelFormData, Travel } from '@/types/types';
 import { getModerationErrors, getModerationIssues } from '@/utils/formValidation';
 
 const mockTrackWizardEvent = jest.fn();
@@ -14,7 +14,7 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
-jest.mock('@/src/utils/analytics', () => ({
+jest.mock('@/utils/analytics', () => ({
   trackWizardEvent: (...args: any[]) => mockTrackWizardEvent(...args),
 }));
 

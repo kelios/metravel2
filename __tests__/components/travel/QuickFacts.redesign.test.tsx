@@ -13,7 +13,7 @@ import { StyleSheet } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
 import QuickFacts from '@/components/travel/QuickFacts';
 import { ThemeProvider } from '@/hooks/useTheme';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
 // Mock dependencies
 jest.mock('@/hooks/useResponsive', () => ({

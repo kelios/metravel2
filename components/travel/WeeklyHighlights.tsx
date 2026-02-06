@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from 'react-n
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useFavorites } from '@/context/FavoritesContext';
-import { fetchTravelsOfMonth } from '@/src/api/map';
+import { fetchTravelsOfMonth } from '@/api/map';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
-import { queryConfigs } from '@/src/utils/reactQueryConfig';
+import { queryConfigs } from '@/utils/reactQueryConfig';
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
 

@@ -1,28 +1,28 @@
-import { EnhancedPdfGenerator } from '@/src/services/pdf-export/generators/EnhancedPdfGenerator'
-import type { TravelForBook } from '@/src/types/pdf-export'
+import { EnhancedPdfGenerator } from '@/services/pdf-export/generators/EnhancedPdfGenerator'
+import type { TravelForBook } from '@/types/pdf-export'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 
 jest.mock('qrcode', () => ({
   toDataURL: jest.fn(() => Promise.resolve('qr-data')),
 }))
 
-jest.mock('@/src/utils/mapImageGenerator', () => ({
+jest.mock('@/utils/mapImageGenerator', () => ({
   generateLeafletRouteSnapshot: jest.fn(() => Promise.resolve('leaflet-snapshot')),
 }))
 
-jest.mock('@/src/services/pdf-export/parsers/ContentParser', () => ({
+jest.mock('@/services/pdf-export/parsers/ContentParser', () => ({
   ContentParser: jest.fn().mockImplementation(() => ({
     parse: jest.fn(() => [{ type: 'paragraph', text: 'demo' }]),
   })),
 }))
 
-jest.mock('@/src/services/pdf-export/renderers/BlockRenderer', () => ({
+jest.mock('@/services/pdf-export/renderers/BlockRenderer', () => ({
   BlockRenderer: jest.fn().mockImplementation(() => ({
     renderBlocks: jest.fn(() => '<p>rendered</p>'),
   })),
 }))
 
-jest.mock('@/src/services/pdf-export/quotes/travelQuotes', () => ({
+jest.mock('@/services/pdf-export/quotes/travelQuotes', () => ({
   pickRandomQuote: jest.fn(() => ({ text: 'quote', author: 'author' })),
   pickRandomGalleryQuote: jest.fn(() => ({ text: 'gallery-quote' })),
 }))

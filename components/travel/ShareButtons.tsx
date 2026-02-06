@@ -9,10 +9,10 @@ import { View, Text, StyleSheet, Pressable, Platform, Alert } from 'react-native
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport';
-import { ExportStage } from '@/src/types/pdf-export';
+import { ExportStage } from '@/types/pdf-export';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';

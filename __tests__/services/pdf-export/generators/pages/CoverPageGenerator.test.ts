@@ -1,7 +1,7 @@
 // __tests__/services/pdf-export/generators/pages/CoverPageGenerator.test.ts
 
-import { CoverPageGenerator } from '@/src/services/pdf-export/generators/pages';
-import { minimalTheme } from '@/src/services/pdf-export/themes/PdfThemeConfig';
+import { CoverPageGenerator } from '@/services/pdf-export/generators/pages';
+import { minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig';
 
 describe('CoverPageGenerator', () => {
   let generator: CoverPageGenerator;

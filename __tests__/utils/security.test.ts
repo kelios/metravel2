@@ -4,7 +4,7 @@ import {
   isSafeUrl,
   isValidTokenFormat,
   isTokenExpired,
-} from '@/src/utils/security';
+} from '@/utils/security';
 
 describe('security utils', () => {
   describe('isPotentiallyDangerous', () => {

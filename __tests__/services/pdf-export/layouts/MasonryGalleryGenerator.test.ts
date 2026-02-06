@@ -1,8 +1,8 @@
 // __tests__/services/pdf-export/layouts/MasonryGalleryGenerator.test.ts
 // Тесты для генератора мозаичной галереи
 
-import { MasonryGalleryGenerator } from '@/src/services/pdf-export/generators/layouts/MasonryGalleryGenerator';
-import type { GalleryPhoto, FullGallerySettings } from '@/src/types/pdf-gallery';
+import { MasonryGalleryGenerator } from '@/services/pdf-export/generators/layouts/MasonryGalleryGenerator';
+import type { GalleryPhoto, FullGallerySettings } from '@/types/pdf-gallery';
 
 describe('MasonryGalleryGenerator', () => {
   let generator: MasonryGalleryGenerator;

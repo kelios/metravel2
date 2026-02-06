@@ -20,7 +20,7 @@ import {
     Platform,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { uploadImage } from '@/src/api/misc';
+import { uploadImage } from '@/api/misc';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';

@@ -11,7 +11,7 @@ jest.mock('@tanstack/react-query', () => ({
   useQuery: (opts: any) => mockUseQuery(opts),
 }))
 
-jest.mock('@/src/api/map', () => ({
+jest.mock('@/api/map', () => ({
   fetchTravelsOfMonth: jest.fn(async () => ({})),
 }))
 

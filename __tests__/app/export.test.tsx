@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ExportScreen from '@/app/(tabs)/export';
 import { useAuth } from '@/context/AuthContext';
 import { useIsFocused } from '@react-navigation/native';
-import { fetchMyTravels } from '@/src/api/travelsApi';
+import { fetchMyTravels } from '@/api/travelsApi';
 
 jest.mock('@/context/AuthContext');
 
@@ -18,7 +18,7 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
-jest.mock('@/src/utils/analytics', () => ({
+jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: jest.fn(),
 }));
 
@@ -46,7 +46,7 @@ jest.mock('@expo/vector-icons', () => ({
   },
 }));
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchMyTravels: jest.fn(),
 }));
 

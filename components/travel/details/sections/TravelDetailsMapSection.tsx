@@ -5,7 +5,7 @@ import { METRICS } from '@/constants/layout'
 import { useMapLazyLoad } from '@/hooks/useMapLazyLoad'
 
 import { MapSkeleton, PointListSkeleton } from '@/components/travel/TravelDetailSkeletons'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'

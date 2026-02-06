@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Animated, InteractionManager, Platform, View } from 'react-native'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'

@@ -1,4 +1,4 @@
-import { TravelFormData, Travel, MarkerData } from '@/src/types/types';
+import { TravelFormData, Travel, MarkerData } from '@/types/types';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 
 type UnknownRecord = Record<string, unknown>;

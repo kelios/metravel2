@@ -68,7 +68,7 @@ jest.mock('@/components/travel/TravelCardCompact', () => {
 });
 
 // Mock safeJsonParse
-jest.mock('@/src/utils/safeJsonParse', () => ({
+jest.mock('@/utils/safeJsonParse', () => ({
   safeJsonParseString: jest.fn((str, defaultValue) => {
     try {
       return JSON.parse(str);
@@ -79,7 +79,7 @@ jest.mock('@/src/utils/safeJsonParse', () => ({
 }));
 
 // Mock logger
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/utils/logger', () => ({
   devError: jest.fn(),
 }));
 

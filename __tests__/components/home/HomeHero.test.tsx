@@ -3,13 +3,13 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import HomeHero from '@/components/home/HomeHero';
 import { useAuth } from '@/context/AuthContext';
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { sendAnalyticsEvent } from '@/utils/analytics';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }));
 jest.mock('@/context/AuthContext');
-jest.mock('@/src/utils/analytics');
+jest.mock('@/utils/analytics');
 
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as Location from 'expo-location';
-import { logError, logMessage } from '@/src/utils/logger';
+import { logError, logMessage } from '@/utils/logger';
 
 export interface Coordinates {
   latitude: number;

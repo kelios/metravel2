@@ -27,7 +27,7 @@ import { useAuth } from '@/context/AuthContext';
 import { createTabCardTemplate } from './recommendationsCardTemplate';
 import TabTravelCard from './TabTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
-import { buildLoginHref } from '@/src/utils/authNavigation';
+import { buildLoginHref } from '@/utils/authNavigation';
 
 /* ---------------- Lazy Components ---------------- */
 

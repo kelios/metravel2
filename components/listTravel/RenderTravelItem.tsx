@@ -3,7 +3,7 @@ import React, { memo, useMemo } from "react";
 import { Platform, ViewStyle } from "react-native";
 import TravelListItem from "./TravelListItem";
 import AnimatedCard from "@/components/ui/AnimatedCard";
-import type { Travel } from "@/src/types/types";
+import type { Travel } from "@/types/types";
 import { useResponsive } from '@/hooks/useResponsive';
  
 

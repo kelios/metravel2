@@ -26,7 +26,7 @@ describe('RoutingMachine', () => {
     jest.clearAllMocks();
     (global.fetch as jest.Mock).mockClear();
     // Clear route cache to prevent rate limiting in tests
-    const { routeCache } = require('@/src/utils/routeCache');
+    const { routeCache } = require('@/utils/routeCache');
     routeCache.clear();
     clearResolvedRouteKeys();
   });
@@ -203,7 +203,7 @@ describe('RoutingMachine', () => {
   });
 
   it('should handle transport mode changes', async () => {
-    const { routeCache } = require('@/src/utils/routeCache');
+    const { routeCache } = require('@/utils/routeCache');
     
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
@@ -260,7 +260,7 @@ describe('RoutingMachine', () => {
     const prevNodeEnv = process.env.NODE_ENV;
     (process.env as any).NODE_ENV = 'development';
 
-    const { routeCache } = require('@/src/utils/routeCache');
+    const { routeCache } = require('@/utils/routeCache');
     jest.spyOn(routeCache, 'canMakeRequest').mockReturnValue(true);
 
     const abortSpy = jest.fn();

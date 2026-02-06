@@ -135,15 +135,15 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }))
 
-jest.mock('@/src/screens/tabs/map.styles', () => ({
+jest.mock('@/screens/tabs/map.styles', () => ({
   getStyles: () => ({}),
 }))
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/utils/logger', () => ({
   logMessage: jest.fn(),
 }))
 
-jest.mock('@/src/utils/mapFiltersStorage', () => ({
+jest.mock('@/utils/mapFiltersStorage', () => ({
   loadMapFilterValues: () => ({
     lastMode: 'radius',
     transportMode: 'car',

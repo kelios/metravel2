@@ -1,13 +1,13 @@
 // __tests__/services/pdf-v2/MapPageGenerator.test.ts
 // ✅ ТЕСТЫ: Генератор страницы карты маршрута
 
-import { MapPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/MapPageGenerator';
-import type { PageContext } from '@/src/services/pdf-export/generators/v2/types';
+import { MapPageGenerator } from '@/services/pdf-export/generators/v2/pages/MapPageGenerator';
+import type { PageContext } from '@/services/pdf-export/generators/v2/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import type { TravelForBook } from '@/src/types/pdf-export';
+import type { TravelForBook } from '@/types/pdf-export';
 
 // Мокируем generateLeafletRouteSnapshot
-jest.mock('@/src/utils/mapImageGenerator', () => ({
+jest.mock('@/utils/mapImageGenerator', () => ({
   generateLeafletRouteSnapshot: jest.fn().mockResolvedValue('data:image/png;base64,mockimage'),
 }));
 
@@ -158,7 +158,7 @@ describe('MapPageGenerator', () => {
     });
 
     it('должен использовать SVG fallback если generateLeafletRouteSnapshot fails', async () => {
-      const { generateLeafletRouteSnapshot } = require('@/src/utils/mapImageGenerator');
+      const { generateLeafletRouteSnapshot } = require('@/utils/mapImageGenerator');
       generateLeafletRouteSnapshot.mockRejectedValueOnce(new Error('Map error'));
 
       const html = await generator.generate(mockContext);

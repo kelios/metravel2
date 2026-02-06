@@ -6,7 +6,7 @@ import { AuthProvider } from '@/context/AuthContext';
 
 const mockToastShow = jest.fn();
 
-jest.mock('@/src/api/user', () => ({
+jest.mock('@/api/user', () => ({
   fetchUserFavoriteTravels: jest.fn(async () => []),
   fetchUserHistory: jest.fn(async () => []),
   fetchUserRecommendedTravels: jest.fn(async () => []),
@@ -14,7 +14,7 @@ jest.mock('@/src/api/user', () => ({
   clearUserFavorites: jest.fn(async () => null),
 }));
 
-jest.mock('@/src/api/travelsFavorites', () => ({
+jest.mock('@/api/travelsFavorites', () => ({
   markTravelAsFavorite: jest.fn(async () => ({})),
   unmarkTravelAsFavorite: jest.fn(async () => ({})),
 }));
@@ -109,7 +109,7 @@ describe('FavoritesContext', () => {
   });
 
   it('clears favorites (authenticated/server)', async () => {
-    const { clearUserFavorites, fetchUserFavoriteTravels } = require('@/src/api/user');
+    const { clearUserFavorites, fetchUserFavoriteTravels } = require('@/api/user');
 
     mockAuthContext.isAuthenticated = true;
     mockAuthContext.userId = 'user123' as any;

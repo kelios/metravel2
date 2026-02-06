@@ -1,5 +1,5 @@
-import { BlockRenderer } from '@/src/services/pdf-export/renderers/BlockRenderer'
-import { getThemeConfig } from '@/src/services/pdf-export/themes/PdfThemeConfig'
+import { BlockRenderer } from '@/services/pdf-export/renderers/BlockRenderer'
+import { getThemeConfig } from '@/services/pdf-export/themes/PdfThemeConfig'
 
 const theme = getThemeConfig('minimal')
 

@@ -25,7 +25,7 @@ jest.mock('expo-image-picker', () => ({
   },
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   uploadImage: jest.fn(),
 }));
 

@@ -3,9 +3,9 @@ import { Platform } from 'react-native';
 import { useGlobalSearchParams, useLocalSearchParams, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
-import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
-import { fetchQuestByQuestId } from '@/src/api/quests';
-import { queryKeys } from '@/src/queryKeys';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import { fetchQuestByQuestId } from '@/api/quests';
+import { queryKeys } from '@/queryKeys';
 
 const useGlobalSearchParamsSafe: typeof useGlobalSearchParams =
   typeof useGlobalSearchParams === 'function'

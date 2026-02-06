@@ -4,7 +4,7 @@ import { Platform, Pressable, Text, View } from 'react-native'
 import {
   DescriptionSkeleton,
 } from '@/components/travel/TravelDetailSkeletons'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'

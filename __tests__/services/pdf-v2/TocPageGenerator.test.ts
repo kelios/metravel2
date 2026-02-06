@@ -1,9 +1,9 @@
 // __tests__/services/pdf-v2/TocPageGenerator.test.ts
 // ✅ ТЕСТЫ: Генератор оглавления
 
-import { TocPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/TocPageGenerator';
-import { getThemeConfig } from '@/src/services/pdf-export/themes/PdfThemeConfig';
-import type { PageContext } from '@/src/services/pdf-export/generators/v2/types';
+import { TocPageGenerator } from '@/services/pdf-export/generators/v2/pages/TocPageGenerator';
+import { getThemeConfig } from '@/services/pdf-export/themes/PdfThemeConfig';
+import type { PageContext } from '@/services/pdf-export/generators/v2/types';
 
 describe('TocPageGenerator', () => {
   let mockContext: PageContext;

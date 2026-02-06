@@ -17,10 +17,10 @@ if (Platform.OS !== 'web') {
 }
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { userPointsApi } from '@/src/api/userPoints';
-import { fetchFilters } from '@/src/api/misc';
-import { normalizeCategoryDictionary, createCategoryNameToIdsMap, resolveCategoryIdsByNames as mapNamesToIds } from '@/src/utils/userPointsCategories';
-import { getPointCategoryNames } from '@/src/utils/travelPointMeta';
+import { userPointsApi } from '@/api/userPoints';
+import { fetchFilters } from '@/api/misc';
+import { normalizeCategoryDictionary, createCategoryNameToIdsMap, resolveCategoryIdsByNames as mapNamesToIds } from '@/utils/userPointsCategories';
+import { getPointCategoryNames } from '@/utils/travelPointMeta';
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation';
 import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect';
 import Button from '@/components/ui/Button';

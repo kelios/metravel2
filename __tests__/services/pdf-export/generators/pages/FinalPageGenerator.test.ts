@@ -1,7 +1,7 @@
 // __tests__/services/pdf-export/generators/pages/FinalPageGenerator.test.ts
 
-import { FinalPageGenerator } from '@/src/services/pdf-export/generators/pages';
-import { minimalTheme } from '@/src/services/pdf-export/themes/PdfThemeConfig';
+import { FinalPageGenerator } from '@/services/pdf-export/generators/pages';
+import { minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig';
 
 describe('FinalPageGenerator', () => {
   let generator: FinalPageGenerator;

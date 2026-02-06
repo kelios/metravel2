@@ -1,4 +1,4 @@
-import { OSMParser } from '@/src/api/parsers/osmParser';
+import { OSMParser } from '@/api/parsers/osmParser';
 import { PointStatus } from '@/types/userPoints';
 
 describe('OSM Parser', () => {

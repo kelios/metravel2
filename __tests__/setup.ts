@@ -83,7 +83,7 @@ jest.mock('react-leaflet', () => {
   }
 })
 
-jest.mock('@/src/utils/imageAnalysis', () => {
+jest.mock('@/utils/imageAnalysis', () => {
   return {
     __esModule: true,
     analyzeImageBrightness: jest.fn(async () => 128),

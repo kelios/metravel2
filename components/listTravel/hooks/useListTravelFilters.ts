@@ -6,7 +6,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { FilterState, FilterOptions } from '../utils/listTravelTypes';
 import { INITIAL_FILTER, BELARUS_ID } from '../utils/listTravelConstants';
-import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
+import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQuery';
 
 export interface UseListTravelFiltersProps {
   options?: FilterOptions;

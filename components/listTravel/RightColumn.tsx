@@ -14,7 +14,7 @@ import { FlashList } from '@shopify/flash-list'
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
 import EmptyState from '@/components/ui/EmptyState'
 import { TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
 const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS

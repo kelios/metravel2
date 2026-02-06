@@ -8,9 +8,9 @@ import { useQuery } from '@tanstack/react-query';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import EmptyState from '@/components/ui/EmptyState';
 import { useAuth } from '@/context/AuthContext';
-import { fetchMyTravels } from '@/src/api/travelsApi';
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
-import { buildLoginHref } from '@/src/utils/authNavigation';
+import { fetchMyTravels } from '@/api/travelsApi';
+import { sendAnalyticsEvent } from '@/utils/analytics';
+import { buildLoginHref } from '@/utils/authNavigation';
 
 const isWeb = Platform.OS === 'web';
 const isClient = typeof window !== 'undefined';

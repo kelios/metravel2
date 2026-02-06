@@ -3,7 +3,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import AboutScreen from '@/app/(tabs)/about';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
-import { sendFeedback } from '@/src/api/misc';
+import { sendFeedback } from '@/api/misc';
 
 jest.mock('@react-navigation/native', () => ({
   useIsFocused: jest.fn(),
@@ -13,8 +13,8 @@ jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
 }));
 
-jest.mock('@/src/api/misc', () => ({
-  ...jest.requireActual('@/src/api/misc'),
+jest.mock('@/api/misc', () => ({
+  ...jest.requireActual('@/api/misc'),
   sendFeedback: jest.fn(),
 }));
 

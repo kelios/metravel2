@@ -4,7 +4,7 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { Text } from 'react-native';
 
 // Mock logger
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/utils/logger', () => ({
   logError: jest.fn(),
 }));
 

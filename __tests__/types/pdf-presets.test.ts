@@ -1,4 +1,4 @@
-import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/src/types/pdf-presets'
+import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/types/pdf-presets'
 
 describe('pdf presets', () => {
   it('contains default minimal preset and categories metadata', () => {

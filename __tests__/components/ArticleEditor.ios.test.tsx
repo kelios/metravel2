@@ -39,7 +39,7 @@ jest.mock('expo-image-picker', () => ({
 }));
 
 // Mock uploadImage
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   uploadImage: jest.fn(() =>
     Promise.resolve({ id: 'img-123', url: 'https://example.com/uploaded.jpg' })
   ),

@@ -1,11 +1,11 @@
 // __tests__/services/pdf-v2/GalleryPageGenerator.test.ts
 // ✅ ТЕСТЫ: Генератор страницы галереи
 
-import { GalleryPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/GalleryPageGenerator';
-import type { PageContext } from '@/src/services/pdf-export/generators/v2/types';
+import { GalleryPageGenerator } from '@/services/pdf-export/generators/v2/pages/GalleryPageGenerator';
+import type { PageContext } from '@/services/pdf-export/generators/v2/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import type { TravelForBook } from '@/src/types/pdf-export';
-import { ImageProcessor } from '@/src/services/pdf-export/generators/v2/processors/ImageProcessor';
+import type { TravelForBook } from '@/types/pdf-export';
+import { ImageProcessor } from '@/services/pdf-export/generators/v2/processors/ImageProcessor';
 
 describe('GalleryPageGenerator', () => {
   let generator: GalleryPageGenerator;

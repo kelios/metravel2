@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { sendAnalyticsEvent } from '@/utils/analytics';
 import { usePathname, useRouter } from 'expo-router';
 import { CommentItem } from './CommentItem';
 import { CommentForm } from './CommentForm';

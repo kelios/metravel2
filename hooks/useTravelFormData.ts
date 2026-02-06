@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { fetchTravel } from '@/src/api/travelsApi';
-import { saveFormData } from '@/src/api/misc';
-import { TravelFormData, Travel, MarkerData } from '@/src/types/types';
+import { fetchTravel } from '@/api/travelsApi';
+import { saveFormData } from '@/api/misc';
+import { TravelFormData, Travel, MarkerData } from '@/types/types';
 import { useFormState } from '@/hooks/useFormState';
 import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
 import {
@@ -13,8 +13,8 @@ import {
   normalizeTravelId,
   checkTravelEditAccess,
 } from '@/utils/travelFormUtils';
-import { showToast } from '@/src/utils/toast';
-import { ApiError } from '@/src/api/client';
+import { showToast } from '@/utils/toast';
+import { ApiError } from '@/api/client';
 
 async function showToastMessage(payload: any) {
   await showToast(payload);

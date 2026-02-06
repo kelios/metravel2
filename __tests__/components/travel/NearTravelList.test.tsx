@@ -3,9 +3,9 @@ import { act, render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import NearTravelList from '@/components/travel/NearTravelList';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
-jest.mock('@/src/api/map', () => ({
+jest.mock('@/api/map', () => ({
   fetchTravelsNear: jest.fn().mockResolvedValue([]),
 }));
 
@@ -25,7 +25,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 describe('NearTravelList', () => {
   jest.setTimeout(15000);
-  const { fetchTravelsNear } = jest.requireMock('@/src/api/map') as {
+  const { fetchTravelsNear } = jest.requireMock('@/api/map') as {
     fetchTravelsNear: jest.Mock;
   };
   let queryClient: QueryClient;

@@ -1,4 +1,4 @@
-import { overpassToLines } from '@/src/utils/overpass';
+import { overpassToLines } from '@/utils/overpass';
 
 describe('overpassToLines', () => {
   it('maps ways with geometry to line features and skips invalid elements', () => {

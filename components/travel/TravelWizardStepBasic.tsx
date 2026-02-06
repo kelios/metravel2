@@ -1,11 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Snackbar } from '@/src/ui/paper';
+import { Snackbar } from '@/ui/paper';
 import { useRouter } from 'expo-router';
 
 import ContentUpsertSection from '@/components/travel/ContentUpsertSection';
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidatedTextInput } from '@/components/travel/ValidatedTextInput';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
@@ -15,7 +15,7 @@ import { useStepTransition } from '@/hooks/useStepTransition';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 
 async function showToastMessage(payload: any) {
     await showToast(payload);

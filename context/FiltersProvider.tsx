@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Filters, FiltersContextType } from '@/src/types/types';
+import { Filters, FiltersContextType } from '@/types/types';
 
 const FiltersContext = createContext<FiltersContextType | undefined>(undefined);
 

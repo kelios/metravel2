@@ -8,7 +8,7 @@ import { useHorizontalScroll } from '@/hooks/useHorizontalScroll';
 import { Toggle } from '@/components/ui/Toggle';
 import { SelectionGroup } from '@/components/ui/SelectionGroup';
 import { LayoutCard, type GalleryLayoutInfo } from './LayoutCard';
-import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
+import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
 
 const GALLERY_LAYOUTS: GalleryLayoutInfo[] = [
   {

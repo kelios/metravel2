@@ -3,7 +3,7 @@ import {
   saveMapFilterValues,
   sanitizeMapFilterValues,
   type StorageLike,
-} from '@/src/utils/mapFiltersStorage';
+} from '@/utils/mapFiltersStorage';
 
 describe('mapFiltersStorage', () => {
   const createStorage = (initial: Record<string, string> = {}): StorageLike & { data: Record<string, string> } => {

@@ -3,11 +3,11 @@ import { TouchableOpacity, StyleSheet, Platform, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
-import { devLog } from '@/src/utils/logger';
+import { devLog } from '@/utils/logger';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 
 type FavoriteButtonProps = {

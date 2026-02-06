@@ -2,32 +2,32 @@ import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/src/api/auth';
-import { getSecureItem, setSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
-import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/src/utils/storageBatch';
-import { fetchUserProfile } from '@/src/api/user';
+import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/api/auth';
+import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
+import { fetchUserProfile } from '@/api/user';
 
 jest.mock('@react-native-async-storage/async-storage');
-jest.mock('@/src/api/auth', () => ({
+jest.mock('@/api/auth', () => ({
   loginApi: jest.fn(),
   logoutApi: jest.fn(),
   resetPasswordLinkApi: jest.fn(),
   setNewPasswordApi: jest.fn(),
 }));
 
-jest.mock('@/src/utils/secureStorage', () => ({
+jest.mock('@/utils/secureStorage', () => ({
   getSecureItem: jest.fn(),
   setSecureItem: jest.fn(),
   removeSecureItems: jest.fn(),
 }));
 
-jest.mock('@/src/utils/storageBatch', () => ({
+jest.mock('@/utils/storageBatch', () => ({
   getStorageBatch: jest.fn(),
   setStorageBatch: jest.fn(),
   removeStorageBatch: jest.fn(),
 }));
 
-jest.mock('@/src/api/user', () => ({
+jest.mock('@/api/user', () => ({
   fetchUserProfile: jest.fn(),
 }));
 

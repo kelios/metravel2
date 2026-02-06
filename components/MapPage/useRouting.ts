@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { routeCache } from '@/src/utils/routeCache'
+import { routeCache } from '@/utils/routeCache'
 
 // Глобальный кеш успешно/аварийно обработанных routeKey, чтобы избегать повторных запросов в сессию
 const resolvedRouteKeys = new Set<string>()

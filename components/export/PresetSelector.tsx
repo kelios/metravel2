@@ -4,8 +4,8 @@
 import { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import type { BookPreset, PresetCategory } from '@/src/types/pdf-presets';
-import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/src/types/pdf-presets';
+import type { BookPreset, PresetCategory } from '@/types/pdf-presets';
+import { BOOK_PRESETS, PRESET_CATEGORIES } from '@/types/pdf-presets';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface PresetSelectorProps {

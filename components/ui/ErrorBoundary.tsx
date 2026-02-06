@@ -31,7 +31,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // ✅ УЛУЧШЕНИЕ: Используем новый logger с поддержкой мониторинга
-    const { logError } = require('@/src/utils/logger');
+    const { logError } = require('@/utils/logger');
     logError(error, {
       componentStack: errorInfo.componentStack,
       errorBoundary: true,

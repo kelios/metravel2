@@ -1,4 +1,4 @@
-import { extractGpsFromImageFile } from '@/src/utils/exifGps';
+import { extractGpsFromImageFile } from '@/utils/exifGps';
 
 jest.mock('exifr', () => ({
   gps: jest.fn(),

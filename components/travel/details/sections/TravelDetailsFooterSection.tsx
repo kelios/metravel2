@@ -4,7 +4,7 @@ import { View } from 'react-native'
 import ShareButtons from '@/components/travel/ShareButtons'
 import TelegramDiscussionSection from '@/components/travel/TelegramDiscussionSection'
 import CTASection from '@/components/travel/CTASection'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 

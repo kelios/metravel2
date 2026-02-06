@@ -1,7 +1,7 @@
-const loadTravelsApi = (): typeof import('@/src/api/travelsApi') => {
-  let mod!: typeof import('@/src/api/travelsApi');
+const loadTravelsApi = (): typeof import('@/api/travelsApi') => {
+  let mod!: typeof import('@/api/travelsApi');
   jest.isolateModules(() => {
-    mod = require('@/src/api/travelsApi') as typeof import('@/src/api/travelsApi');
+    mod = require('@/api/travelsApi') as typeof import('@/api/travelsApi');
   });
   return mod;
 };
@@ -10,21 +10,21 @@ import {
   fetchTravelsPopular, 
   fetchTravelsForMap, 
   fetchTravelsNearRoute 
-} from '@/src/api/map';
+} from '@/api/map';
 import { 
   fetchArticles, 
   fetchArticle 
-} from '@/src/api/articles';
+} from '@/api/articles';
 import { 
   fetchFilters, 
   fetchFiltersCountry, 
   fetchAllCountries 
-} from '@/src/api/misc';
-import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
-import { safeJsonParse } from '@/src/utils/safeJsonParse';
-import { devError } from '@/src/utils/logger';
-import { getSecureItem } from '@/src/utils/secureStorage';
-import { apiClient } from '@/src/api/client';
+} from '@/api/misc';
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { safeJsonParse } from '@/utils/safeJsonParse';
+import { devError } from '@/utils/logger';
+import { getSecureItem } from '@/utils/secureStorage';
+import { apiClient } from '@/api/client';
 
 jest.mock('react-native', () => ({
   Alert: {
@@ -32,21 +32,21 @@ jest.mock('react-native', () => ({
   },
 }));
 
-jest.mock('@/src/utils/fetchWithTimeout', () => ({
+jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: jest.fn(),
 }));
 
-jest.mock('@/src/api/client', () => ({
+jest.mock('@/api/client', () => ({
   apiClient: {
     get: jest.fn(),
   },
 }));
 
-jest.mock('@/src/utils/safeJsonParse', () => ({
+jest.mock('@/utils/safeJsonParse', () => ({
   safeJsonParse: jest.fn(),
 }));
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/utils/logger', () => ({
   devError: jest.fn(),
   devWarn: jest.fn(),
   devLog: jest.fn(),
@@ -57,7 +57,7 @@ const mockedSafeJsonParse = safeJsonParse as jest.MockedFunction<typeof safeJson
 const mockedGetSecureItem = getSecureItem as jest.MockedFunction<typeof getSecureItem>;
 const mockedApiClientGet = apiClient.get as jest.MockedFunction<typeof apiClient.get>;
 
-jest.mock('@/src/utils/secureStorage', () => ({
+jest.mock('@/utils/secureStorage', () => ({
   getSecureItem: jest.fn(),
 }));
 

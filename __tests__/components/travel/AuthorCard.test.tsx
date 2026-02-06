@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import AuthorCard from '@/components/travel/AuthorCard'
 
-jest.mock('@/src/hooks/useUserProfileCached', () => ({
+jest.mock('@/hooks/useUserProfileCached', () => ({
   useUserProfileCached: () => ({ profile: mockProfile }),
 }))
 

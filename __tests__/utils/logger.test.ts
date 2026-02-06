@@ -1,4 +1,4 @@
-import * as logger from '@/src/utils/logger'
+import * as logger from '@/utils/logger'
 
 const originalEnv = process.env
 const originalDev = (global as any).__DEV__
@@ -9,7 +9,7 @@ const reloadLoggerWithEnv = (env: NodeJS.ProcessEnv, devFlag: boolean) => {
   process.env = env
   ;(global as any).__DEV__ = devFlag
    
-  return require('@/src/utils/logger') as typeof logger
+  return require('@/utils/logger') as typeof logger
 }
 
 describe('logger dev/prod behaviour', () => {

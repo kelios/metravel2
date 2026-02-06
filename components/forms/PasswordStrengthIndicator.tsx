@@ -3,7 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { checkPasswordStrength, getPasswordStrengthLabel, getPasswordStrengthColor } from '@/src/utils/passwordStrength';
+import { checkPasswordStrength, getPasswordStrengthLabel, getPasswordStrengthColor } from '@/utils/passwordStrength';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface PasswordStrengthIndicatorProps {

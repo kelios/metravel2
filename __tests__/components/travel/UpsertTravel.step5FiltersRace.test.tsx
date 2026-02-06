@@ -34,7 +34,7 @@ jest.mock('@/utils/formValidation', () => ({
   validateStep: jest.fn(() => ({ isValid: true, errors: [], warnings: [] })),
 }));
 
-jest.mock('@/src/utils/analytics', () => ({
+jest.mock('@/utils/analytics', () => ({
   trackWizardEvent: jest.fn(),
 }));
 
@@ -80,13 +80,13 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockAuthState,
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   fetchFilters: () => mockFetchFilters(),
   fetchAllCountries: () => mockFetchAllCountries(),
   saveFormData: jest.fn(async (d: any) => d),
 }));
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchTravel: jest.fn(),
 }));
 

@@ -24,7 +24,7 @@ jest.mock('expo-router', () => ({
 }))
 
 // Mock API (зарезервировано на будущее, компонент сейчас использует useQuery-собственный mock)
-jest.mock('@/src/api/map', () => ({
+jest.mock('@/api/map', () => ({
   fetchTravelsOfMonth: jest.fn(),
 }))
 

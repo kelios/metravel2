@@ -6,19 +6,19 @@ jest.mock('expo-document-picker', () => ({
   getDocumentAsync: jest.fn(),
 }));
 
-jest.mock('@/src/api/parsers/googleMapsParser', () => ({
+jest.mock('@/api/parsers/googleMapsParser', () => ({
   GoogleMapsParser: {
     parse: jest.fn(),
   },
 }));
 
-jest.mock('@/src/api/parsers/osmParser', () => ({
+jest.mock('@/api/parsers/osmParser', () => ({
   OSMParser: {
     parse: jest.fn(),
   },
 }));
 
-jest.mock('@/src/api/userPoints', () => ({
+jest.mock('@/api/userPoints', () => ({
   userPointsApi: {
     importPoints: jest.fn()
   }
@@ -63,9 +63,9 @@ describe('ImportWizard', () => {
   };
 
   const mockGetDocumentAsync = require('expo-document-picker').getDocumentAsync as jest.Mock;
-  const mockGoogleParse = require('@/src/api/parsers/googleMapsParser').GoogleMapsParser.parse as jest.Mock;
-  const mockOsmParse = require('@/src/api/parsers/osmParser').OSMParser.parse as jest.Mock;
-  const mockImportPoints = require('@/src/api/userPoints').userPointsApi.importPoints as jest.Mock;
+  const mockGoogleParse = require('@/api/parsers/googleMapsParser').GoogleMapsParser.parse as jest.Mock;
+  const mockOsmParse = require('@/api/parsers/osmParser').OSMParser.parse as jest.Mock;
+  const mockImportPoints = require('@/api/userPoints').userPointsApi.importPoints as jest.Mock;
 
   const mockAsset = {
     uri: 'file://test.json',

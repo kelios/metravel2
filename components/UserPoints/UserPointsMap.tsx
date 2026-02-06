@@ -9,25 +9,25 @@ import React from 'react';
 import { ActivityIndicator, Text, View, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import type { ImportedPoint } from '@/types/userPoints';
-import type { MapUiApi } from '@/src/types/mapUi';
+import type { MapUiApi } from '@/types/mapUi';
 import type { PointColor } from '@/types/userPoints';
-import { buildDropMarkerHtml } from '@/src/utils/markerSvg';
+import { buildDropMarkerHtml } from '@/utils/markerSvg';
 
 // Leaflet/react-leaflet через Metro (без CDN)
 import Leaflet from 'leaflet';
 import * as ReactLeaflet from 'react-leaflet';
-import '@/src/utils/leafletFix';
+import '@/utils/leafletFix';
 
 import { useThemedColors } from '@/hooks/useTheme';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
 import { useMapApi } from '@/components/MapPage/Map/useMapApi';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
-import { createLeafletLayer } from '@/src/utils/mapWebLayers';
+import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
+import { createLeafletLayer } from '@/utils/mapWebLayers';
 import { DESIGN_COLORS } from '@/constants/designSystem';
-import { ensureLeafletCss } from '@/src/utils/ensureLeafletCss';
+import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 
 interface UserPointsMapProps {
   /**

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { WEB_TOAST_EVENT_NAME } from '@/src/utils/toast.web';
+import { WEB_TOAST_EVENT_NAME } from '@/utils/toast.web';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type ToastPayload = {

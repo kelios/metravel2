@@ -1,7 +1,7 @@
 // __tests__/services/pdf-export/generators/pages/MapPageGenerator.test.ts
 
-import { MapPageGenerator } from '@/src/services/pdf-export/generators/pages';
-import { minimalTheme } from '@/src/services/pdf-export/themes/PdfThemeConfig';
+import { MapPageGenerator } from '@/services/pdf-export/generators/pages';
+import { minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig';
 
 describe('MapPageGenerator', () => {
   let generator: MapPageGenerator;

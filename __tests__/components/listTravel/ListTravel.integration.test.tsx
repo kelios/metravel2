@@ -110,7 +110,7 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
   };
 });
 
-jest.mock('@/src/api/miscOptimized', () => ({
+jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(() => Promise.resolve({
     countries: [
       { country_id: '1', title_ru: 'Россия', name: 'Russia' },

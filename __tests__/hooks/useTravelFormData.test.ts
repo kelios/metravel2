@@ -1,17 +1,17 @@
 import { renderHook, waitFor, act, cleanup } from '@testing-library/react-native';
 
 import { useTravelFormData } from '@/hooks/useTravelFormData';
-import { fetchTravel } from '@/src/api/travelsApi';
-import { saveFormData } from '@/src/api/misc';
-import { ApiError } from '@/src/api/client';
+import { fetchTravel } from '@/api/travelsApi';
+import { saveFormData } from '@/api/misc';
+import { ApiError } from '@/api/client';
 import Toast from 'react-native-toast-message';
 import { router } from 'expo-router';
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchTravel: jest.fn(),
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   saveFormData: jest.fn(),
 }));
 

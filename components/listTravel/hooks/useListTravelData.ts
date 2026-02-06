@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchTravels, fetchRandomTravels } from '@/src/api/travelsApi';
-import type { Travel } from '@/src/types/types';
+import { fetchTravels, fetchRandomTravels } from '@/api/travelsApi';
+import type { Travel } from '@/types/types';
 import {
   PER_PAGE,
   STALE_TIME,
@@ -9,7 +9,7 @@ import {
   QUERY_CONFIG,
 } from '../utils/listTravelConstants';
 import { normalizeApiResponse, deduplicateTravels } from '../utils/listTravelHelpers';
-import { safeJsonParseString } from '@/src/utils/safeJsonParse';
+import { safeJsonParseString } from '@/utils/safeJsonParse';
 
 export interface UseListTravelDataProps {
   queryParams: Record<string, any>;

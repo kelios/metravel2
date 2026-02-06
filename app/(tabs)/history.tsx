@@ -9,12 +9,12 @@ import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { confirmAction } from '@/src/utils/confirmAction';
+import { confirmAction } from '@/utils/confirmAction';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { buildLoginHref } from '@/src/utils/authNavigation';
+import { buildLoginHref } from '@/utils/authNavigation';
 
 export default function HistoryScreen() {
     const router = useRouter();

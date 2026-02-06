@@ -1,8 +1,8 @@
 // ✅ МИГРАЦИЯ: Добавлена поддержка useThemedColors для динамических тем
 import React, { useMemo } from 'react';
 import { View, Pressable, Dimensions, StyleSheet } from 'react-native';
-import { Article } from '@/src/types/types';
-import { Card, Title, Paragraph, Text } from '@/src/ui/paper';
+import { Article } from '@/types/types';
+import { Card, Title, Paragraph, Text } from '@/ui/paper';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import RenderHTML from 'react-native-render-html';
 import { router } from 'expo-router';

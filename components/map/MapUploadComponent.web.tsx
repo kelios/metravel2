@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { useDropzone } from 'react-dropzone';
-import { uploadImage } from "@/src/api/misc";
+import { uploadImage } from "@/api/misc";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 

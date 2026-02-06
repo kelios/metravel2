@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
-import { Button as PaperButton, IconButton as PaperIconButton } from '@/src/ui/paper';
+import { Button as PaperButton, IconButton as PaperIconButton } from '@/ui/paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

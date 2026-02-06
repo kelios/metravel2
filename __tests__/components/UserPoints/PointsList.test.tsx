@@ -27,7 +27,7 @@ jest.mock('expo-location', () => ({
   getCurrentPositionAsync: jest.fn(async () => ({ coords: { latitude: 0, longitude: 0 } })),
 }));
 
-jest.mock('@/src/api/userPoints', () => ({
+jest.mock('@/api/userPoints', () => ({
   userPointsApi: {
     getPoints: jest.fn(),
     createPoint: jest.fn(),
@@ -39,15 +39,15 @@ jest.mock('@/src/api/userPoints', () => ({
   },
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   fetchFilters: jest.fn(),
 }));
 
 describe('PointsList (manual create)', () => {
-  const mockGetPoints = require('@/src/api/userPoints').userPointsApi.getPoints as jest.Mock;
-  const mockCreatePoint = require('@/src/api/userPoints').userPointsApi.createPoint as jest.Mock;
-  const mockPurgePoints = require('@/src/api/userPoints').userPointsApi.purgePoints as jest.Mock;
-  const mockFetchFilters = require('@/src/api/misc').fetchFilters as jest.Mock;
+  const mockGetPoints = require('@/api/userPoints').userPointsApi.getPoints as jest.Mock;
+  const mockCreatePoint = require('@/api/userPoints').userPointsApi.createPoint as jest.Mock;
+  const mockPurgePoints = require('@/api/userPoints').userPointsApi.purgePoints as jest.Mock;
+  const mockFetchFilters = require('@/api/misc').fetchFilters as jest.Mock;
 
   const renderWithClient = () => {
     const client = new QueryClient({

@@ -5,7 +5,7 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ isAuthenticated: true }),
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   uploadImage: jest.fn(async () => ({ url: 'https://example.com/uploaded.jpg' })),
 }));
 

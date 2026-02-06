@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { FiltersProvider } from '@/context/MapFiltersContext';
-import type { MapUiApi } from '@/src/types/mapUi';
+import type { MapUiApi } from '@/types/mapUi';
 
 // Модульные хуки для карты
 import {

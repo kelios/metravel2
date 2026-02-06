@@ -1,4 +1,4 @@
-import { routeCache } from '@/src/utils/routeCache';
+import { routeCache } from '@/utils/routeCache';
 
 describe('routeCache', () => {
   beforeEach(() => {

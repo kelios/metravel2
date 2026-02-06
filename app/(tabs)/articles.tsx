@@ -1,18 +1,18 @@
 import {ActivityIndicator, Dimensions, SafeAreaView, StyleSheet, View} from 'react-native'
 import ArticleListItem from '@/components/article/ArticleListItem'
 import {useEffect, useMemo, useState} from 'react'
-import {Articles} from '@/src/types/types'
+import {Articles} from '@/types/types'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
-import {fetchArticles} from '@/src/api/articles'
-import {DataTable} from '@/src/ui/paper'
+import {fetchArticles} from '@/api/articles'
+import {DataTable} from '@/ui/paper'
 import {useLocalSearchParams} from 'expo-router'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import EmptyState from '@/components/ui/EmptyState'
 import { useThemedColors } from '@/hooks/useTheme'
 import { FlashList } from '@shopify/flash-list'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { queryConfigs } from '@/src/utils/reactQueryConfig'
-import { queryKeys } from '@/src/queryKeys'
+import { queryConfigs } from '@/utils/reactQueryConfig'
+import { queryKeys } from '@/queryKeys'
 
 export default function TabOneScreen() {
   const initialPage = 0

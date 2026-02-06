@@ -6,9 +6,9 @@ import ModernFilters from '@/components/listTravel/ModernFilters';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
 import { useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
 import { deduplicateTravels, normalizeApiResponse } from '@/components/listTravel/utils/listTravelHelpers';
-import { fetchAllCountries, fetchAllFiltersOptimized } from '@/src/api/miscOptimized';
-import { queryConfigs } from '@/src/utils/reactQueryConfig';
-import type { Travel } from '@/src/types/types';
+import { fetchAllCountries, fetchAllFiltersOptimized } from '@/api/miscOptimized';
+import { queryConfigs } from '@/utils/reactQueryConfig';
+import type { Travel } from '@/types/types';
 import type { FilterOptions } from '@/components/listTravel/utils/listTravelTypes';
 
 type FilterGroup = Parameters<typeof ModernFilters>[0]['filterGroups'][number];

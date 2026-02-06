@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, fin
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';

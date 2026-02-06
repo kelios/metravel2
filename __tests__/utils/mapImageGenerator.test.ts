@@ -1,4 +1,4 @@
-import { generateMapImageFromDOM, generateStaticMapUrl, generateLeafletRouteSnapshot } from '@/src/utils/mapImageGenerator'
+import { generateMapImageFromDOM, generateStaticMapUrl, generateLeafletRouteSnapshot } from '@/utils/mapImageGenerator'
 
 const mockMapRemove = jest.fn()
 const mockFitBounds = jest.fn()

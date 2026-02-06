@@ -7,7 +7,7 @@ import {
     View,
 } from "react-native";
 import { router } from "expo-router";
-import type { Travel } from "@/src/types/types";
+import type { Travel } from "@/types/types";
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { buildVersionedImageUrl, getOptimalImageSize, optimizeImageUrl } from "@/utils/imageOptimization";
 import { DESIGN_TOKENS } from '@/constants/designSystem';

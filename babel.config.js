@@ -18,12 +18,6 @@ module.exports = function (api) {
             !isTest && ['module-resolver', {
                 alias: {
                     '@': './',
-                    '@/components': './src/components',
-                    '@/screens': './src/screens',
-                    '@/assets': './assets',
-                    '@/utils': './src/utils',
-                    '@/hooks': './src/hooks',
-                    '@/types': './src/types',
                 },
                 extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
             }],

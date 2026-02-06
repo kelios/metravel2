@@ -14,22 +14,22 @@ import {
   Popup,
   useMap,
 } from 'react-leaflet';
-import '@/src/utils/leafletFix';
+import '@/utils/leafletFix';
 
 import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard';
 import { useLeafletIcons } from '@/components/MapPage/Map/useLeafletIcons';
 import { useAuth } from '@/context/AuthContext';
-import { showToast } from '@/src/utils/toast';
-import { userPointsApi } from '@/src/api/userPoints';
+import { showToast } from '@/utils/toast';
+import { userPointsApi } from '@/api/userPoints';
 import { PointStatus } from '@/types/userPoints';
-import { fetchFilters } from '@/src/api/misc';
+import { fetchFilters } from '@/api/misc';
 import {
   CategoryDictionaryItem,
   createCategoryNameToIdsMap,
   normalizeCategoryDictionary,
   resolveCategoryIdsByNames,
-} from '@/src/utils/userPointsCategories';
-import { getPointCategoryIds, getPointCategoryNames } from '@/src/utils/travelPointMeta';
+} from '@/utils/userPointsCategories';
+import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
 
 const LEAFLET_MAP_CONTAINER_ID_PREFIX = 'metravel-leaflet-map';
 const generateUniqueId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;

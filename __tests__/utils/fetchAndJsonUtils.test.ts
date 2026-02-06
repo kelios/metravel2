@@ -1,6 +1,6 @@
-import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout'
-import { safeJsonParse, safeJsonParseString } from '@/src/utils/safeJsonParse'
-import { openBookPreviewWindow } from '@/src/utils/openBookPreviewWindow'
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
+import { safeJsonParse, safeJsonParseString } from '@/utils/safeJsonParse'
+import { openBookPreviewWindow } from '@/utils/openBookPreviewWindow'
 
 class FakeResponse {
   status: number

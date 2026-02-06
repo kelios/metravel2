@@ -10,7 +10,7 @@ import {
   getQualityScore,
   STEP_VALIDATION_RULES,
 } from '@/utils/travelWizardValidation';
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 
 describe('travelWizardValidation', () => {
   describe('validateField', () => {

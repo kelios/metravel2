@@ -1,18 +1,18 @@
-import { fetchTravels } from '@/src/api/travelsApi';
+import { fetchTravels } from '@/api/travelsApi';
 
 // Мокаем fetchWithTimeout, чтобы не делать реальные запросы, и анализируем URL
-jest.mock('@/src/utils/fetchWithTimeout', () => ({
+jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: jest.fn(async () => ({
     ok: true,
   })),
 }));
 
-jest.mock('@/src/utils/safeJsonParse', () => ({
+jest.mock('@/utils/safeJsonParse', () => ({
   safeJsonParse: jest.fn(async () => ({ data: [], total: 0 })),
 }));
 
 const { fetchWithTimeout } =
-  require('@/src/utils/fetchWithTimeout') as {
+  require('@/utils/fetchWithTimeout') as {
     fetchWithTimeout: jest.Mock;
   };
 

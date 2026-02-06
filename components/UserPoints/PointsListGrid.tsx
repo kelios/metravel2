@@ -10,7 +10,7 @@ import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSetting
 import { getFiltersPanelStyles } from '@/components/MapPage/filtersPanelStyles'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import IconButton from '@/components/ui/IconButton'
-import type { MapUiApi } from '@/src/types/mapUi'
+import type { MapUiApi } from '@/types/mapUi'
 
 import type { PointsListStyles } from './PointsList'
 

@@ -7,9 +7,9 @@ import { useCallback, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
-import { logMessage } from '@/src/utils/logger';
-import type { MapUiApi } from '@/src/types/mapUi';
-import type { TravelCoords } from '@/src/types/types';
+import { logMessage } from '@/utils/logger';
+import type { MapUiApi } from '@/types/mapUi';
+import type { TravelCoords } from '@/types/types';
 
 interface UseRouteControllerOptions {
   /**

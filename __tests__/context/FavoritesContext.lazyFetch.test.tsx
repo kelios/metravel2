@@ -10,7 +10,7 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: jest.fn(),
 }))
 
-jest.mock('@/src/api/user', () => ({
+jest.mock('@/api/user', () => ({
   fetchUserFavoriteTravels: jest.fn(async () => []),
   fetchUserHistory: jest.fn(async () => []),
   fetchUserRecommendedTravels: jest.fn(async () => []),
@@ -18,7 +18,7 @@ jest.mock('@/src/api/user', () => ({
   clearUserFavorites: jest.fn(async () => null),
 }))
 
-jest.mock('@/src/api/travelsFavorites', () => ({
+jest.mock('@/api/travelsFavorites', () => ({
   markTravelAsFavorite: jest.fn(async () => ({})),
   unmarkTravelAsFavorite: jest.fn(async () => ({})),
 }))
@@ -33,7 +33,7 @@ describe('FavoritesContext lazy server fetching', () => {
 
   it('does not call backend fetches on mount; only when ensureServerData is called', async () => {
     const { FavoritesProvider, useFavorites } = require('@/context/FavoritesContext')
-    const apiUser = require('@/src/api/user')
+    const apiUser = require('@/api/user')
 
     const Harness = () => {
       const { ensureServerData } = useFavorites() as any

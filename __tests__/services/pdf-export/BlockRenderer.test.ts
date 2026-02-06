@@ -1,5 +1,5 @@
-import { BlockRenderer } from '@/src/services/pdf-export/renderers/BlockRenderer'
-import { minimalTheme } from '@/src/services/pdf-export/themes/PdfThemeConfig'
+import { BlockRenderer } from '@/services/pdf-export/renderers/BlockRenderer'
+import { minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig'
 
 describe('BlockRenderer', () => {
   it('keeps blob URLs for image blocks', () => {

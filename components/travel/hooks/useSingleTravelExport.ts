@@ -2,9 +2,9 @@
 // ✅ Хук для экспорта одного путешествия с поддержкой всех настроек
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
-import { usePdfExport } from '@/src/hooks/usePdfExport'
+import { usePdfExport } from '@/hooks/usePdfExport'
 
 const DEFAULT_CHECKLISTS: BookSettings['checklistSections'] = ['clothing', 'food', 'electronics']
 

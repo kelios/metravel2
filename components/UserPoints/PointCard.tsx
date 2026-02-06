@@ -8,7 +8,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 
 interface PointCardProps {
   point: ImportedPoint;

@@ -5,7 +5,7 @@ import {
   getSecureItem,
   removeSecureItem,
   isSecureStorageAvailable,
-} from '@/src/utils/secureStorage'
+} from '@/utils/secureStorage'
 
 const originalPlatformOS = Platform.OS
 const originalWindow = global.window

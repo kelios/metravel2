@@ -6,7 +6,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
-import type { MapUiApi } from '@/src/types/mapUi';
+import type { MapUiApi } from '@/types/mapUi';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 

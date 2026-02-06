@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import NavigationArrows from '@/components/travel/NavigationArrows';
 import { useRouter } from 'expo-router';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
 // Mock expo-router
 jest.mock('expo-router', () => ({

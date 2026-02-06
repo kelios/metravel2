@@ -1,7 +1,7 @@
 // __tests__/services/pdf-v2/HtmlBuilder.test.ts
 // ✅ ТЕСТЫ: HtmlBuilder v2
 
-import { HtmlBuilder } from '../../../src/services/pdf-export/generators/v2/builders/HtmlBuilder';
+import { HtmlBuilder } from '../../../services/pdf-export/generators/v2/builders/HtmlBuilder';
 
 describe('HtmlBuilder', () => {
   let builder: HtmlBuilder;

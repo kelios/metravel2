@@ -5,7 +5,7 @@
 
 import { renderHook, act } from '@testing-library/react-native';
 import { useListTravelFilters } from '@/components/listTravel/hooks/useListTravelFilters';
-import { buildTravelQueryParams } from '@/src/utils/filterQuery';
+import { buildTravelQueryParams } from '@/utils/filterQuery';
 
 describe('Year Filter Fix - API Request', () => {
   const defaultProps = {

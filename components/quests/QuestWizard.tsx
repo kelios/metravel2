@@ -398,7 +398,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 const saved = await AsyncStorage.getItem(storageKey);
                 if (saved) {
                     // ✅ FIX-010: Используем безопасный парсинг JSON
-                    const { safeJsonParseString } = require('@/src/utils/safeJsonParse');
+                    const { safeJsonParseString } = require('@/utils/safeJsonParse');
                     const data = safeJsonParseString(saved, { index: 0, unlocked: 0, answers: {}, attempts: {}, hints: {}, showMap: true });
                     setCurrentIndex(data.index ?? 0);
                     setUnlockedIndex(data.unlocked ?? 0);
@@ -411,7 +411,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                 }
             } catch (e) {
                 // ✅ FIX-007: Используем централизованный logger
-                const { devError } = require('@/src/utils/logger');
+                const { devError } = require('@/utils/logger');
                 devError('Error loading quest progress:', e);
             } finally {
                 setTimeout(() => { suppressSave.current = false; }, 0);

@@ -6,8 +6,8 @@ import {
 import { useDropzone } from 'react-dropzone'
 
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { uploadImage, deleteImage } from '@/src/api/misc'
-import { ApiError } from '@/src/api/client'
+import { uploadImage, deleteImage } from '@/api/misc'
+import { ApiError } from '@/api/client'
 import { useThemedColors } from '@/hooks/useTheme'
 
 import type { GalleryItem, ImageGalleryComponentProps } from './types'

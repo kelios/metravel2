@@ -7,7 +7,7 @@ import {
   checkTravelEditAccess,
   validateModerationRequirements,
 } from '@/utils/travelFormUtils';
-import { Travel, MarkerData } from '@/src/types/types';
+import { Travel, MarkerData } from '@/types/types';
 
 describe('travelFormUtils', () => {
   describe('getEmptyFormData', () => {

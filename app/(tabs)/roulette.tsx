@@ -9,7 +9,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ModernFilters from '@/components/listTravel/ModernFilters';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import UIButton from '@/components/ui/Button';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
 import { useResponsive } from '@/hooks/useResponsive';
 import { useRouletteLogic } from '@/components/roulette/useRoulette';

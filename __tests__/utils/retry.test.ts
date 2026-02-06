@@ -1,5 +1,5 @@
 // __tests__/utils/retry.test.ts
-import { retry, isRetryableError } from '@/src/utils/retry';
+import { retry, isRetryableError } from '@/utils/retry';
 
 describe('retry utility', () => {
   describe('isRetryableError', () => {

@@ -1,13 +1,13 @@
 // __tests__/components/travel/useSingleTravelExport.test.tsx
 
 import { renderHook, act } from '@testing-library/react-native'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import { useSingleTravelExport, buildDefaultSettingsForTravel } from '@/components/travel/hooks/useSingleTravelExport'
 
 const mockOpenPrintBook = jest.fn(() => Promise.resolve())
 
-jest.mock('@/src/hooks/usePdfExport', () => ({
+jest.mock('@/hooks/usePdfExport', () => ({
   usePdfExport: () => ({
     openPrintBook: mockOpenPrintBook,
     isGenerating: false,

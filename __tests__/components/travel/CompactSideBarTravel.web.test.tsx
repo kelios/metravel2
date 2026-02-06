@@ -8,7 +8,7 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 
-jest.mock('@/src/hooks/useUserProfileCached', () => ({
+jest.mock('@/hooks/useUserProfileCached', () => ({
   __esModule: true,
   useUserProfileCached: () => ({
     profile: { avatar: 'https://example.com/profile-avatar.jpg' },

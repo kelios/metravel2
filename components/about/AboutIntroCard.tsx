@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Paragraph } from '@/src/ui/paper';
+import { Paragraph } from '@/ui/paper';
 import Feather from '@expo/vector-icons/Feather';
 import { useAboutStyles } from './aboutStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';

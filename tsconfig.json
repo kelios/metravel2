@@ -33,7 +33,7 @@
     },
 
     // если реально используешь отдельную папку под типы — ок; иначе можно убрать
-    "typeRoots": ["./src/types", "./node_modules/@types"],
+    "typeRoots": ["./types", "./node_modules/@types"],
 
     "skipLibCheck": true,
     "types": ["jest", "node"]

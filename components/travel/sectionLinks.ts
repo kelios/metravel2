@@ -1,4 +1,4 @@
-import type { Travel } from "@/src/types/types"
+import type { Travel } from "@/types/types"
 
 export type TravelSectionLink = {
   key: string

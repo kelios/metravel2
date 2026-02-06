@@ -1,7 +1,7 @@
 // __tests__/services/pdf-export/generators/pages/TocPageGenerator.test.ts
 
-import { TocPageGenerator } from '@/src/services/pdf-export/generators/pages';
-import { minimalTheme } from '@/src/services/pdf-export/themes/PdfThemeConfig';
+import { TocPageGenerator } from '@/services/pdf-export/generators/pages';
+import { minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig';
 
 describe('TocPageGenerator', () => {
   let generator: TocPageGenerator;

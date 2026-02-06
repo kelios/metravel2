@@ -1,4 +1,4 @@
-import { ContentParser } from '@/src/services/pdf-export/parsers/ContentParser'
+import { ContentParser } from '@/services/pdf-export/parsers/ContentParser'
 
 describe('ContentParser', () => {
   let parser: ContentParser

@@ -23,9 +23,9 @@ import CardActionPressable from '@/components/ui/CardActionPressable';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useAuth } from '@/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { userPointsApi } from '@/src/api/userPoints';
-import { fetchFilters } from '@/src/api/misc';
-import { showToast } from '@/src/utils/toast';
+import { userPointsApi } from '@/api/userPoints';
+import { fetchFilters } from '@/api/misc';
+import { showToast } from '@/utils/toast';
 import type { ImportedPoint } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
 import {
@@ -33,8 +33,8 @@ import {
   normalizeCategoryDictionary,
   resolveCategoryIdsByNames as mapResolveCategoryIds,
   CategoryDictionaryItem,
-} from '@/src/utils/userPointsCategories';
-import { getPointCategoryIds, getPointCategoryNames } from '@/src/utils/travelPointMeta';
+} from '@/utils/userPointsCategories';
+import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
 
 type Point = {
   id: string;
@@ -193,7 +193,7 @@ const openExternal = async (url: string) => {
   } catch (error) {
     // ✅ FIX-009: Логируем ошибки открытия ссылок (не критично)
     if (__DEV__) {
-      const { devWarn } = require('@/src/utils/logger');
+      const { devWarn } = require('@/utils/logger');
       devWarn('Error opening URL:', error);
     }
   }

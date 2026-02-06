@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
+import { sanitizeRichText } from '@/utils/sanitizeRichText';
 
 interface SafeHtmlProps {
     html: string;

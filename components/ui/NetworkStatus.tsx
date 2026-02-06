@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Text, StyleSheet, Platform } from 'react-native';
-import { useNetworkStatus } from '@/src/hooks/useNetworkStatus';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';

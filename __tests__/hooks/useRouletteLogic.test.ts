@@ -19,7 +19,7 @@ jest.mock('@/components/listTravel/hooks/useListTravelData', () => ({
   useRandomTravelData: jest.fn(),
 }));
 
-jest.mock('@/src/api/miscOptimized', () => ({
+jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(),
   fetchAllCountries: jest.fn(),
 }));
@@ -31,7 +31,7 @@ const { useListTravelFilters } = jest.requireMock('@/components/listTravel/hooks
 const { useRandomTravelData } = jest.requireMock('@/components/listTravel/hooks/useListTravelData') as {
   useRandomTravelData: jest.Mock;
 };
-const { fetchAllFiltersOptimized, fetchAllCountries } = jest.requireMock('@/src/api/miscOptimized') as {
+const { fetchAllFiltersOptimized, fetchAllCountries } = jest.requireMock('@/api/miscOptimized') as {
   fetchAllFiltersOptimized: jest.Mock;
   fetchAllCountries: jest.Mock;
 };

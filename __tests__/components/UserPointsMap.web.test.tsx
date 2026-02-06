@@ -8,9 +8,9 @@ afterAll(() => {
   RN.Platform.OS = originalPlatformOS
 })
 
-jest.mock('@/src/utils/leafletFix', () => ({}))
+jest.mock('@/utils/leafletFix', () => ({}))
 
-jest.mock('@/src/utils/ensureLeafletCss', () => ({
+jest.mock('@/utils/ensureLeafletCss', () => ({
   ensureLeafletCss: () => {},
 }))
 

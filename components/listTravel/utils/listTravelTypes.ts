@@ -3,7 +3,7 @@
  * Централизация всех типов для улучшения типизации
  */
 
-import type { Travel } from "@/src/types/types";
+import type { Travel } from "@/types/types";
 
 // ✅ АРХИТЕКТУРА: Состояние фильтров
 export interface FilterState {

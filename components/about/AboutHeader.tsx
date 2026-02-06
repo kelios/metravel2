@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { Title } from '@/src/ui/paper';
+import { Title } from '@/ui/paper';
 import { useAboutStyles } from './aboutStyles';
 
 export const AboutHeader: React.FC = () => {

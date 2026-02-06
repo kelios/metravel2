@@ -5,7 +5,7 @@ import {
   removeStorageBatch,
   getAllStorageKeys,
   clearAllStorage,
-} from '@/src/utils/storageBatch'
+} from '@/utils/storageBatch'
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
   multiGet: jest.fn(),

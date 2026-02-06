@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { logError } from '@/src/utils/logger';
+import { logError } from '@/utils/logger';
 import {
   loadMapFilterValues,
   saveMapFilterValues,
   type MapFilterValues,
   type StorageLike,
-} from '@/src/utils/mapFiltersStorage';
-import { fetchFiltersMap } from '@/src/api/map';
+} from '@/utils/mapFiltersStorage';
+import { fetchFiltersMap } from '@/api/map';
 import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS } from '@/constants/mapConfig';
 
 export interface FiltersData {

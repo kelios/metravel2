@@ -6,7 +6,7 @@ import {
   blackWhiteTheme,
   sepiaTheme,
   newspaperTheme,
-} from '../../../../src/services/pdf-export/themes/PdfThemeConfig';
+} from '../../../../services/pdf-export/themes/PdfThemeConfig';
 
 describe('PdfThemeConfig - Новые темы', () => {
   describe('Черно-белая тема (black-white)', () => {

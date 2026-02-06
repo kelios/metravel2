@@ -4,11 +4,11 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { sendAnalyticsEvent } from '@/utils/analytics';
 import { ResponsiveContainer } from '@/components/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
-import { buildLoginHref } from '@/src/utils/authNavigation';
+import { buildLoginHref } from '@/utils/authNavigation';
 
 interface HomeFinalCTAProps {
   travelsCount?: number;

@@ -1,4 +1,4 @@
-import { cleanupInvalidFavorites, isValidFavoriteId } from '@/src/utils/favoritesCleanup';
+import { cleanupInvalidFavorites, isValidFavoriteId } from '@/utils/favoritesCleanup';
 
 describe('favoritesCleanup', () => {
   describe('isValidFavoriteId', () => {

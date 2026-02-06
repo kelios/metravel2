@@ -6,7 +6,7 @@
  * before being rendered or used in URLs
  */
 
-import type { Travel } from "@/src/types/types";
+import type { Travel } from "@/types/types";
 import DOMPurify from 'dompurify';
 
 /**

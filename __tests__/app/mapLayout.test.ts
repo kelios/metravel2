@@ -1,6 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 
-import { getStyles } from '@/src/screens/tabs/map.styles';
+import { getStyles } from '@/screens/tabs/map.styles';
 import { METRICS } from '@/constants/layout';
 
 describe('map layout header offset', () => {

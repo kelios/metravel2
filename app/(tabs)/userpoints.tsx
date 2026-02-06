@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { View, ActivityIndicator } from 'react-native'
 
 // Keep the route module tiny to avoid pulling UserPoints + location deps into the entry bundle.
-const UserPointsScreenImpl = React.lazy(() => import('@/src/screens/tabs/UserPointsScreen'))
+const UserPointsScreenImpl = React.lazy(() => import('@/screens/tabs/UserPointsScreen'))
 
 export default function UserPointsScreen() {
   return (

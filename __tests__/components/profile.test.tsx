@@ -16,7 +16,7 @@ jest.mock('expo-router', () => ({
   }),
 }));
 
-jest.mock('@/src/api/user', () => ({
+jest.mock('@/api/user', () => ({
   fetchUserProfile: jest.fn().mockResolvedValue({
     id: '123',
     first_name: 'Test',
@@ -25,7 +25,7 @@ jest.mock('@/src/api/user', () => ({
   }),
 }));
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchMyTravels: jest.fn().mockResolvedValue([
     { id: 1 },
     { id: 2 },
@@ -33,7 +33,7 @@ jest.mock('@/src/api/travelsApi', () => ({
   ]),
 }));
 
-jest.mock('@/src/utils/storageBatch', () => ({
+jest.mock('@/utils/storageBatch', () => ({
   getStorageBatch: jest.fn().mockResolvedValue({
     userName: 'Test User',
     userId: '123',

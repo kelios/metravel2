@@ -1,8 +1,8 @@
 // __tests__/services/pdf-v2/StyleGenerator.test.ts
 // ✅ ТЕСТЫ: StyleGenerator v2
 
-import { StyleGenerator } from '../../../src/services/pdf-export/generators/v2/builders/StyleGenerator';
-import { getThemeConfig } from '../../../src/services/pdf-export/themes/PdfThemeConfig';
+import { StyleGenerator } from '../../../services/pdf-export/generators/v2/builders/StyleGenerator';
+import { getThemeConfig } from '../../../services/pdf-export/themes/PdfThemeConfig';
 
 describe('StyleGenerator', () => {
   let generator: StyleGenerator;

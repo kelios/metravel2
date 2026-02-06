@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image, Dimensions } from 'react-native';
-import { Button, Card } from '@/src/ui/paper';
+import { Button, Card } from '@/ui/paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { confirmAccount } from '@/src/api/auth';
+import { confirmAccount } from '@/api/auth';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
 

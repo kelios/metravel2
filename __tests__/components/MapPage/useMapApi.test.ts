@@ -1,17 +1,17 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useMapApi } from '@/components/MapPage/Map/useMapApi';
 
-jest.mock('@/src/utils/routeExport', () => ({
+jest.mock('@/utils/routeExport', () => ({
   buildGpx: jest.fn(() => 'gpx'),
   buildKml: jest.fn(() => 'kml'),
   downloadTextFileWeb: jest.fn(),
 }));
 
-jest.mock('@/src/config/mapWebLayers', () => ({
+jest.mock('@/config/mapWebLayers', () => ({
   WEB_MAP_BASE_LAYERS: [],
 }));
 
-jest.mock('@/src/utils/mapWebLayers', () => ({
+jest.mock('@/utils/mapWebLayers', () => ({
   createLeafletLayer: jest.fn(() => null),
 }));
 

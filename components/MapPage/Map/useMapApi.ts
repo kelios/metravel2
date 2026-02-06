@@ -1,12 +1,12 @@
 // useMapApi.ts - Hook for exposing map API to parent components
 import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import type { MapUiApi } from '@/src/types/mapUi';
+import type { MapUiApi } from '@/types/mapUi';
 import type { LatLng } from '@/types/coordinates';
-import { buildGpx, buildKml, downloadTextFileWeb } from '@/src/utils/routeExport';
-import { WEB_MAP_BASE_LAYERS } from '@/src/config/mapWebLayers';
-import { createLeafletLayer } from '@/src/utils/mapWebLayers';
-import type { OsmPoiCategory } from '@/src/utils/overpass';
+import { buildGpx, buildKml, downloadTextFileWeb } from '@/utils/routeExport';
+import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
+import { createLeafletLayer } from '@/utils/mapWebLayers';
+import type { OsmPoiCategory } from '@/utils/overpass';
 
 interface Point {
   id?: number;

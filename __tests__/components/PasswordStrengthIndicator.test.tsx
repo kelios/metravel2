@@ -3,7 +3,7 @@ import { render } from '@testing-library/react-native';
 import { PasswordStrengthIndicator } from '@/components/forms/PasswordStrengthIndicator';
 
 // Mock password strength utilities
-jest.mock('@/src/utils/passwordStrength', () => ({
+jest.mock('@/utils/passwordStrength', () => ({
   checkPasswordStrength: jest.fn((password: string) => {
     if (password.length < 4) {
       return { score: 0, feedback: ['Слишком короткий пароль'] };

@@ -7,12 +7,12 @@ import Feather from '@expo/vector-icons/Feather';
 import ThemePreview, { type PdfThemeName } from './ThemePreview';
 import PresetSelector from './PresetSelector';
 import GalleryLayoutSelector from './GalleryLayoutSelector';
-import type { BookPreset } from '@/src/types/pdf-presets';
-import type { GalleryLayout, CaptionPosition } from '@/src/types/pdf-gallery';
+import type { BookPreset } from '@/types/pdf-presets';
+import type { GalleryLayout, CaptionPosition } from '@/types/pdf-gallery';
 import { METRICS } from '@/constants/layout';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { getThemedColors, useTheme } from '@/hooks/useTheme';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 // ✅ ИСПРАВЛЕНИЕ: Picker не используется в веб-версии модального окна
 // import { Picker } from '@react-native-picker/picker';
 

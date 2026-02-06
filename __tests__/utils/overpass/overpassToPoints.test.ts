@@ -1,4 +1,4 @@
-import { overpassToPoints } from '@/src/utils/overpass';
+import { overpassToPoints } from '@/utils/overpass';
 
 describe('overpassToPoints', () => {
   it('maps nodes and ways with center to points', () => {

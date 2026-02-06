@@ -17,15 +17,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { fetchUserProfile, type UserProfileDto } from '@/src/api/user';
-import { fetchMyTravels } from '@/src/api/travelsApi';
-import { ApiError } from '@/src/api/client';
+import { fetchUserProfile, type UserProfileDto } from '@/api/user';
+import { fetchMyTravels } from '@/api/travelsApi';
+import { ApiError } from '@/api/client';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { openExternalUrl } from '@/src/utils/externalLinks';
+import { openExternalUrl } from '@/utils/externalLinks';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
-import { buildLoginHref } from '@/src/utils/authNavigation';
+import { buildLoginHref } from '@/utils/authNavigation';
 
 interface UserStats {
   travelsCount: number;
@@ -88,7 +88,7 @@ export default function ProfileScreen() {
     setIsLoading(true);
     try {
       // ✅ FIX-004: Используем батчинг для загрузки данных
-      const { getStorageBatch } = await import('@/src/utils/storageBatch');
+      const { getStorageBatch } = await import('@/utils/storageBatch');
       const storageData = await getStorageBatch(['userName', 'userId', 'userEmail']);
       const userName = storageData.userName || '';
       const userIdFromStorage = storageData.userId;
@@ -109,7 +109,7 @@ export default function ProfileScreen() {
           if (normalizedAvatar) {
             setUserAvatar(normalizedAvatar);
 
-            const { setStorageBatch } = await import('@/src/utils/storageBatch');
+            const { setStorageBatch } = await import('@/utils/storageBatch');
             await setStorageBatch([['userAvatar', normalizedAvatar]]);
           }
 

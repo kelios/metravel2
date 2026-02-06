@@ -6,15 +6,15 @@ import { useThemedColors } from '@/hooks/useTheme';
 // Leaflet/react-leaflet через Metro (без CDN)
 import Leaflet from 'leaflet';
 import * as ReactLeaflet from 'react-leaflet';
-import '@/src/utils/leafletFix';
+import '@/utils/leafletFix';
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';
-import { ensureLeafletCss } from '@/src/utils/ensureLeafletCss';
-import { extractGpsFromImageFile } from '@/src/utils/exifGps';
-import { showToast } from '@/src/utils/toast';
-import { uploadImage } from '@/src/api/misc';
-import { getPendingImageFile, registerPendingImageFile, removePendingImageFile } from '@/src/utils/pendingImageFiles';
+import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
+import { extractGpsFromImageFile } from '@/utils/exifGps';
+import { showToast } from '@/utils/toast';
+import { uploadImage } from '@/api/misc';
+import { getPendingImageFile, registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 
 const normalizeImageUrl = (url?: string | null) => normalizeMediaUrl(url);
 

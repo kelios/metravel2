@@ -1,8 +1,8 @@
-import { commentsApi } from '@/src/api/comments';
-import { apiClient } from '@/src/api/client';
+import { commentsApi } from '@/api/comments';
+import { apiClient } from '@/api/client';
 import type { TravelComment, TravelCommentThread } from '@/types/comments';
 
-jest.mock('@/src/api/client');
+jest.mock('@/api/client');
 
 const mockedApiClient = apiClient as jest.Mocked<typeof apiClient>;
 

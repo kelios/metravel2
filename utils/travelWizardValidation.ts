@@ -3,7 +3,7 @@
  * Каждый шаг имеет свои правила валидации
  */
 
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 
 type UnknownRecord = Record<string, unknown>;
 

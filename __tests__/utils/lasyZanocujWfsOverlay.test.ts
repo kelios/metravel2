@@ -1,4 +1,4 @@
-import { __wfsXmlToGeoJson } from '@/src/utils/mapWebOverlays/lasyZanocujWfsOverlay';
+import { __wfsXmlToGeoJson } from '@/utils/mapWebOverlays/lasyZanocujWfsOverlay';
 
 describe('lasyZanocujWfsOverlay', () => {
   it('parses a minimal WFS GML FeatureCollection into GeoJSON', () => {

@@ -4,7 +4,7 @@ import { Alert, Platform } from 'react-native';
 import ShareButtons from '@/components/travel/ShareButtons';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
 // Mock expo-router
 jest.mock('expo-router', () => ({

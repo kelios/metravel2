@@ -9,7 +9,7 @@ import { VideoCard } from '@/components/about/VideoCard';
 import { FeaturesSection } from '@/components/about/FeaturesSection';
 import { ContactForm } from '@/components/about/ContactForm';
 import { SocialSection } from '@/components/about/SocialSection';
-import { sendFeedback } from '@/src/api/misc';
+import { sendFeedback } from '@/api/misc';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAboutStyles } from '@/components/about/aboutStyles';

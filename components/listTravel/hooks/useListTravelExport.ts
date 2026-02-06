@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import { usePdfExport } from '@/src/hooks/usePdfExport';
-import type { ExportConfig } from '@/src/types/pdf-export';
+import { usePdfExport } from '@/hooks/usePdfExport';
+import type { ExportConfig } from '@/types/pdf-export';
 
 interface UseListTravelExportOptions {
   ownerName?: string | null;

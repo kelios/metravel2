@@ -18,7 +18,7 @@ jest.mock('expo-router', () => {
   };
 });
 
-jest.mock('@/src/utils/analytics', () => ({
+jest.mock('@/utils/analytics', () => ({
   __esModule: true,
   trackWizardEvent: jest.fn(),
 }));

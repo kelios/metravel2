@@ -3,9 +3,9 @@ import { render, waitFor, act } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useListTravelData, useRandomTravelData } from '@/components/listTravel/hooks/useListTravelData';
-import { fetchTravels, fetchRandomTravels } from '@/src/api/travelsApi';
+import { fetchTravels, fetchRandomTravels } from '@/api/travelsApi';
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchTravels: jest.fn(),
   fetchRandomTravels: jest.fn(),
 }));

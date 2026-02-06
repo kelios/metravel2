@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { useQuery } from '@tanstack/react-query';
 import HomeInspirationSections from '@/components/home/HomeInspirationSection';
-import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/src/api/map';
+import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/api/map';
 
 jest.mock('@tanstack/react-query');
 jest.mock('expo-router', () => ({
@@ -15,7 +15,7 @@ jest.mock('@/components/listTravel/RenderTravelItem', () => {
   };
 });
 
-jest.mock('@/src/api/map');
+jest.mock('@/api/map');
 
 const mockUseQuery = useQuery as jest.MockedFunction<typeof useQuery>;
 const mockFetchTravelsPopular = fetchTravelsPopular as jest.MockedFunction<typeof fetchTravelsPopular>;

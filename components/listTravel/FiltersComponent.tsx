@@ -1,5 +1,5 @@
 import React from 'react';
-import type { TravelFilters } from '@/src/types/types';
+import type { TravelFilters } from '@/types/types';
 
 interface FiltersComponentProps {
   filters: TravelFilters | null;

@@ -5,9 +5,9 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
-import type { Travel } from '@/src/types/types';
-import { queryKeys } from '@/src/queryKeys';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import type { Travel } from '@/types/types';
+import { queryKeys } from '@/queryKeys';
 
 export function useTravelPrefetch() {
   const queryClient = useQueryClient();

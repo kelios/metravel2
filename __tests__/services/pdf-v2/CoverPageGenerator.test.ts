@@ -1,10 +1,10 @@
 // __tests__/services/pdf-v2/CoverPageGenerator.test.ts
 // ✅ ТЕСТЫ: Генератор обложки
 
-import { CoverPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/CoverPageGenerator';
-import { ImageProcessor } from '@/src/services/pdf-export/generators/v2/processors/ImageProcessor';
-import { getThemeConfig } from '@/src/services/pdf-export/themes/PdfThemeConfig';
-import type { PageContext } from '@/src/services/pdf-export/generators/v2/types';
+import { CoverPageGenerator } from '@/services/pdf-export/generators/v2/pages/CoverPageGenerator';
+import { ImageProcessor } from '@/services/pdf-export/generators/v2/processors/ImageProcessor';
+import { getThemeConfig } from '@/services/pdf-export/themes/PdfThemeConfig';
+import type { PageContext } from '@/services/pdf-export/generators/v2/types';
 
 describe('CoverPageGenerator', () => {
   let imageProcessor: ImageProcessor;

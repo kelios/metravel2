@@ -5,10 +5,10 @@
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { fetchTravel, fetchTravelBySlug } from '@/src/api/travelsApi';
-import type { Travel } from '@/src/types/types';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import type { Travel } from '@/types/types';
 import { Platform } from 'react-native';
-import { queryKeys } from '@/src/queryKeys';
+import { queryKeys } from '@/queryKeys';
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;

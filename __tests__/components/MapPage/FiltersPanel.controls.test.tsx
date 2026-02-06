@@ -4,7 +4,7 @@
 import { render, fireEvent } from '@testing-library/react-native';
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { FiltersProvider } from '@/context/MapFiltersContext';
-import type { MapUiApi } from '@/src/types/mapUi';
+import type { MapUiApi } from '@/types/mapUi';
 import { makeFiltersContext } from '@/__tests__/utils/makeFiltersContext';
 
 // All mocks must be at the top

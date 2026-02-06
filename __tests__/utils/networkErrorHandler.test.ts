@@ -1,6 +1,6 @@
 // __tests__/utils/networkErrorHandler.test.ts
 import { Platform } from 'react-native';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 import { 
   handleNetworkError, 
   isNetworkError,
@@ -8,10 +8,10 @@ import {
   isServerError,
   getUserFriendlyNetworkError,
   withNetworkErrorHandler
-} from '@/src/utils/networkErrorHandler';
-import { ApiError } from '@/src/api/client';
+} from '@/utils/networkErrorHandler';
+import { ApiError } from '@/api/client';
 
-jest.mock('@/src/utils/toast', () => ({
+jest.mock('@/utils/toast', () => ({
   __esModule: true,
   showToast: jest.fn(),
 }));

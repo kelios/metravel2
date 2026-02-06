@@ -4,7 +4,7 @@ import {
   getPasswordStrengthLabel, 
   getPasswordStrengthColor,
   meetsMinimumRequirements 
-} from '@/src/utils/passwordStrength';
+} from '@/utils/passwordStrength';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 describe('passwordStrength', () => {

@@ -1,9 +1,9 @@
 import { render, fireEvent } from '@testing-library/react-native';
 import { Linking } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
-jest.mock('@/src/hooks/useUserProfileCached', () => ({
+jest.mock('@/hooks/useUserProfileCached', () => ({
   __esModule: true,
   useUserProfileCached: () => ({
     profile: { avatar: 'https://example.com/profile-avatar.jpg' },

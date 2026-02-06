@@ -10,11 +10,11 @@ import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { confirmAction } from '@/src/utils/confirmAction';
+import { confirmAction } from '@/utils/confirmAction';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
-import { buildLoginHref } from '@/src/utils/authNavigation';
+import { buildLoginHref } from '@/utils/authNavigation';
 
 export default function FavoritesScreen() {
     const router = useRouter();

@@ -1,10 +1,10 @@
 // __tests__/services/pdf-v2/ChecklistPageGenerator.test.ts
 // ✅ ТЕСТЫ: Генератор страницы чек-листа
 
-import { ChecklistPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/ChecklistPageGenerator';
-import type { PageContext } from '@/src/services/pdf-export/generators/v2/types';
+import { ChecklistPageGenerator } from '@/services/pdf-export/generators/v2/pages/ChecklistPageGenerator';
+import type { PageContext } from '@/services/pdf-export/generators/v2/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import type { TravelForBook } from '@/src/types/pdf-export';
+import type { TravelForBook } from '@/types/pdf-export';
 
 describe('ChecklistPageGenerator', () => {
   let generator: ChecklistPageGenerator;

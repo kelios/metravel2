@@ -335,7 +335,7 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
         if (cancelled) return;
 
         // Import Leaflet fix for React (icon paths)
-        await import('@/src/utils/leafletFix');
+        await import('@/utils/leafletFix');
         if (cancelled) return;
 
         setL(LeafletModule.default);

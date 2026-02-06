@@ -1,23 +1,23 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, View, StyleSheet, Text, ScrollView, TextInput, Platform, findNodeHandle, UIManager } from 'react-native';
-import { Button } from '@/src/ui/paper';
+import { Button } from '@/ui/paper';
 import { useRouter } from 'expo-router';
 
 import LocationSearchInput from '@/components/travel/LocationSearchInput';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
-import { MarkerData, TravelFormData } from '@/src/types/types';
+import { MarkerData, TravelFormData } from '@/types/types';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import { matchCountryId, buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelFilters } from '@/hooks/useTravelFilters';
-import { showToast } from '@/src/utils/toast';
-import { extractGpsFromImageFile } from '@/src/utils/exifGps';
-import { registerPendingImageFile, removePendingImageFile } from '@/src/utils/pendingImageFiles';
+import { showToast } from '@/utils/toast';
+import { extractGpsFromImageFile } from '@/utils/exifGps';
+import { registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 
 async function showToastMessage(payload: any) {
     await showToast(payload);

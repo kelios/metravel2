@@ -12,7 +12,7 @@ import {
     View,
     Image,
 } from 'react-native';
-import { Button, Card } from '@/src/ui/paper';
+import { Button, Card } from '@/ui/paper';
 import { useIsFocused } from '@react-navigation/native';
 import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
@@ -23,7 +23,7 @@ import { Formik, FormikHelpers } from 'formik';
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 
 const { height } = Dimensions.get('window');

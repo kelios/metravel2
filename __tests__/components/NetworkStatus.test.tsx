@@ -4,7 +4,7 @@ import { NetworkStatus } from '@/components/ui/NetworkStatus';
 
 // Mock useNetworkStatus hook
 const mockIsConnected = jest.fn(() => true);
-jest.mock('@/src/hooks/useNetworkStatus', () => ({
+jest.mock('@/hooks/useNetworkStatus', () => ({
   useNetworkStatus: () => ({
     isConnected: mockIsConnected(),
   }),

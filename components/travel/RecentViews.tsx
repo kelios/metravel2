@@ -10,7 +10,7 @@ import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import TravelCardCompact from '@/components/travel/TravelCardCompact';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
 interface RecentViewsProps {
   maxItems?: number;
@@ -134,13 +134,13 @@ export default function RecentViews({
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
         if (stored) {
           // ✅ FIX-010: Используем безопасный парсинг JSON
-          const { safeJsonParseString } = require('@/src/utils/safeJsonParse');
+          const { safeJsonParseString } = require('@/utils/safeJsonParse');
           const parsed = safeJsonParseString(stored, []);
           setRecentTravels(parsed.slice(0, maxItems));
         }
       } catch (error) {
         // ✅ FIX-007: Используем централизованный logger
-        const { devError } = require('@/src/utils/logger');
+        const { devError } = require('@/utils/logger');
         devError('Error loading recent views:', error);
       } finally {
         setIsLoading(false);

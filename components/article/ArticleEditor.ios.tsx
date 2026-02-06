@@ -5,9 +5,9 @@ import { WebView } from 'react-native-webview';
 import * as ImagePicker from 'expo-image-picker';
 import Feather from '@expo/vector-icons/Feather';
 
-import { uploadImage } from '@/src/api/misc';
+import { uploadImage } from '@/api/misc';
 import { useAuth } from '@/context/AuthContext';
-import { sanitizeRichText } from '@/src/utils/sanitizeRichText';
+import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { normalizeAnchorId, safeJsonString } from '@/utils/htmlUtils';

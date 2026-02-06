@@ -3,7 +3,7 @@ import { Platform, Text, View } from 'react-native'
 
 import NavigationArrows from '@/components/travel/NavigationArrows'
 import { TravelListSkeleton } from '@/components/travel/TravelDetailSkeletons'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
 
 import type { AnchorsMap } from '../TravelDetailsTypes'

@@ -7,7 +7,7 @@ import FiltersPanelRouteSection from '@/components/MapPage/FiltersPanelRouteSect
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import type { ThemedColors } from '@/hooks/useTheme';
-import type { MapUiApi } from '@/src/types/mapUi';
+import type { MapUiApi } from '@/types/mapUi';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
 

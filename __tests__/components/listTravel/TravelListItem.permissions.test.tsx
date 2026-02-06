@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/context/AuthContext';
 import { FavoritesProvider } from '@/context/FavoritesContext';
 import TravelListItem from '@/components/listTravel/TravelListItem';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
 // Не тестируем избранное здесь, поэтому подменяем FavoriteButton
 jest.mock('@/components/travel/FavoriteButton', () => ({

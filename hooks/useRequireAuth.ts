@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useRouter } from 'expo-router'
 import { useAuth } from '@/context/AuthContext'
-import { buildLoginHref, getWebRedirectPath } from '@/src/utils/authNavigation'
+import { buildLoginHref, getWebRedirectPath } from '@/utils/authNavigation'
 
 type Params = {
   intent?: string

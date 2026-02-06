@@ -2,7 +2,7 @@ import {
   getUserFriendlyError,
   getErrorTitle,
   isCriticalError,
-} from '@/src/utils/userFriendlyErrors'
+} from '@/utils/userFriendlyErrors'
 
 describe('userFriendlyErrors', () => {
   describe('getUserFriendlyError', () => {

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 
 import TravelWizardStepPublish from '@/components/travel/TravelWizardStepPublish';
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),

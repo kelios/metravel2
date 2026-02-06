@@ -19,7 +19,7 @@ const ConsentBannerLazy = React.lazy(() => import('@/components/layout/ConsentBa
 const ToastLazy = React.lazy(() => import('@/components/ui/ToastHost'));
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
-import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";
+import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 
 if (__DEV__) {

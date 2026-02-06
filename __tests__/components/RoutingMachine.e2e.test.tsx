@@ -14,7 +14,7 @@ describe('RoutingMachine E2E Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (global.fetch as jest.Mock).mockClear();
-    const { routeCache } = require('@/src/utils/routeCache');
+    const { routeCache } = require('@/utils/routeCache');
     routeCache.clear();
     clearResolvedRouteKeys();
   });

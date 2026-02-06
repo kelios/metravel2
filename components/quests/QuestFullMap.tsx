@@ -18,7 +18,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 // Leaflet/react-leaflet через Metro (без CDN)
 import Leaflet from 'leaflet';
 import * as ReactLeaflet from 'react-leaflet';
-import '@/src/utils/leafletFix';
+import '@/utils/leafletFix';
 
 type StepPoint = { lat: number; lng: number; title?: string };
 
@@ -154,7 +154,7 @@ export default function QuestFullMap({
         let cancelled = false;
         (async () => {
             try {
-                const { ensureLeafletCss } = await import('@/src/utils/ensureLeafletCss');
+                const { ensureLeafletCss } = await import('@/utils/ensureLeafletCss');
                 await ensureLeafletCss();
                 if (cancelled) return;
                 setMods({

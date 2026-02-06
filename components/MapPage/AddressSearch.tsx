@@ -12,7 +12,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
-import { queryKeys } from '@/src/queryKeys';
+import { queryKeys } from '@/queryKeys';
 import type { LatLng } from '@/types/coordinates';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import MapIcon from './MapIcon';

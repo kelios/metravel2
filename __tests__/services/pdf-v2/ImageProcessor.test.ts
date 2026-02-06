@@ -1,8 +1,8 @@
 // __tests__/services/pdf-v2/ImageProcessor.test.ts
 // ✅ ТЕСТЫ: ImageProcessor v2
 
-import { ImageProcessor } from '../../../src/services/pdf-export/generators/v2/processors/ImageProcessor';
-import type { ImageProcessorConfig } from '../../../src/services/pdf-export/generators/v2/types';
+import { ImageProcessor } from '../../../services/pdf-export/generators/v2/processors/ImageProcessor';
+import type { ImageProcessorConfig } from '../../../services/pdf-export/generators/v2/types';
 
 describe('ImageProcessor', () => {
   let processor: ImageProcessor;

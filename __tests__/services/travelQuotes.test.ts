@@ -1,4 +1,4 @@
-import { TRAVEL_QUOTES, pickRandomQuote } from '@/src/services/pdf-export/quotes/travelQuotes'
+import { TRAVEL_QUOTES, pickRandomQuote } from '@/services/pdf-export/quotes/travelQuotes'
 
 describe('travelQuotes', () => {
   it('returns different quote when exclude provided', () => {

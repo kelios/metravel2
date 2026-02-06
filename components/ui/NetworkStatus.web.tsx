@@ -3,7 +3,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
-import { useNetworkStatus } from '@/src/hooks/useNetworkStatus'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 
 interface NetworkStatusProps {
   showWhenOnline?: boolean

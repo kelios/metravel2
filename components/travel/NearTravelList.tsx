@@ -16,18 +16,18 @@ import {
   ScrollView,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import { Title } from '@/src/ui/paper';
+import { Title } from '@/ui/paper';
 
-import { Travel } from '@/src/types/types';
-import { fetchTravelsNear } from '@/src/api/map';
+import { Travel } from '@/types/types';
+import { fetchTravelsNear } from '@/api/map';
 import TravelTmlRound from '@/components/travel/TravelTmlRound';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import Button from '@/components/ui/Button';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { queryConfigs } from '@/src/utils/reactQueryConfig';
-import { queryKeys } from '@/src/queryKeys';
+import { queryConfigs } from '@/utils/reactQueryConfig';
+import { queryKeys } from '@/queryKeys';
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy imports для map-компонентов
 const MapClientSideComponent = React.lazy(() => import('@/components/map/Map'));

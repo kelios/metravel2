@@ -10,7 +10,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/components/layout';
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import { buildLoginHref } from '@/src/utils/authNavigation';
+import { buildLoginHref } from '@/utils/authNavigation';
 
 interface HomeHeroProps {
   travelsCount?: number;
@@ -30,7 +30,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const queueAnalyticsEvent = (eventName: string, eventParams: Record<string, unknown> = {}) => {
     if (process.env.NODE_ENV === 'test') {
       try {
-        const m = require('@/src/utils/analytics');
+        const m = require('@/utils/analytics');
         if (typeof m?.sendAnalyticsEvent === 'function') {
           const isEmptyParams = !eventParams || Object.keys(eventParams).length === 0;
           if (isEmptyParams) {
@@ -46,7 +46,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     }
 
     const run = () => {
-      import('@/src/utils/analytics')
+      import('@/utils/analytics')
         .then((m) => m.sendAnalyticsEvent(eventName, eventParams))
         .catch(() => {
           // noop

@@ -9,7 +9,7 @@ import type {
     ApiQuestCity,
     ApiQuestFinale,
     ApiQuestProgress,
-} from '@/src/api/quests';
+} from '@/api/quests';
 import {
     fetchQuestsList,
     fetchQuestByQuestId,
@@ -17,7 +17,7 @@ import {
     fetchOrCreateProgress,
     updateProgress as apiUpdateProgress,
     deleteProgress as apiDeleteProgress,
-} from '@/src/api/quests';
+} from '@/api/quests';
 
 // ===================== ТИПЫ ФРОНТЕНДА =====================
 

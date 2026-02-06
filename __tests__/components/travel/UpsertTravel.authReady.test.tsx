@@ -43,13 +43,13 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockAuthState,
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   fetchFilters: () => mockFetchFilters(),
   fetchAllCountries: () => mockFetchCountries(),
   saveFormData: jest.fn(),
 }));
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchTravel: () => mockFetchTravel(),
 }));
 

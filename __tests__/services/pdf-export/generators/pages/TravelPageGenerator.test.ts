@@ -1,7 +1,7 @@
 // __tests__/services/pdf-export/generators/pages/TravelPageGenerator.test.ts
 
-import { TravelPageGenerator } from '@/src/services/pdf-export/generators/pages';
-import { minimalTheme } from '@/src/services/pdf-export/themes/PdfThemeConfig';
+import { TravelPageGenerator } from '@/services/pdf-export/generators/pages';
+import { minimalTheme } from '@/services/pdf-export/themes/PdfThemeConfig';
 
 describe('TravelPageGenerator', () => {
   let generator: TravelPageGenerator;

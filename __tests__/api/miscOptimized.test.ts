@@ -1,7 +1,7 @@
-import { fetchAllFiltersOptimized, clearFiltersCache } from '@/src/api/miscOptimized';
+import { fetchAllFiltersOptimized, clearFiltersCache } from '@/api/miscOptimized';
 
 // Mock оригинальных функций
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   fetchFilters: jest.fn(),
   fetchFiltersCountry: jest.fn(),
 }));
@@ -13,7 +13,7 @@ describe('miscOptimized', () => {
   });
 
   it('should cache filters results', async () => {
-    const { fetchFilters, fetchFiltersCountry } = require('@/src/api/misc');
+    const { fetchFilters, fetchFiltersCountry } = require('@/api/misc');
     fetchFilters.mockResolvedValue({ categories: ['test'] });
     fetchFiltersCountry.mockResolvedValue(['US', 'RU']);
 
@@ -34,7 +34,7 @@ describe('miscOptimized', () => {
   });
 
   it('should handle errors gracefully', async () => {
-    const { fetchFilters, fetchFiltersCountry } = require('@/src/api/misc');
+    const { fetchFilters, fetchFiltersCountry } = require('@/api/misc');
     fetchFilters.mockRejectedValue(new Error('Network error'));
     fetchFiltersCountry.mockResolvedValue(['US']);
 
@@ -46,7 +46,7 @@ describe('miscOptimized', () => {
   });
 
   it('should serve cached data on error after successful fetch', async () => {
-    const { fetchFilters, fetchFiltersCountry } = require('@/src/api/misc');
+    const { fetchFilters, fetchFiltersCountry } = require('@/api/misc');
     fetchFilters.mockResolvedValue({ categories: ['test'] });
     fetchFiltersCountry.mockResolvedValue(['US', 'RU']);
 

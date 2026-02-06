@@ -19,7 +19,7 @@ import {
   buildResponsiveImageProps,
   buildVersionedImageUrl,
 } from '@/utils/imageOptimization'
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
 
 import type { AnchorsMap } from './TravelDetailsTypes'

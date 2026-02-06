@@ -91,11 +91,11 @@ jest.mock('@react-navigation/native', () => ({
   useRoute: () => mockUseRoute(),
 }));
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchTravels: jest.fn(() => Promise.resolve({ data: [], total: 0, hasMore: false })),
 }));
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   fetchFilters: jest.fn(() => Promise.resolve({})),
   fetchFiltersCountry: jest.fn(() => Promise.resolve([])),
 }));
@@ -217,7 +217,7 @@ describe('ListTravel', () => {
 
   it('shows timeout error message when deleteTravel fails with timeout on web', async () => {
     // Test the delete functionality directly by mocking the component's internal state
-    const travelsApi: any = require('@/src/api/travelsApi');
+    const travelsApi: any = require('@/api/travelsApi');
     travelsApi.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 1, title: 'Test travel' }],
       total: 1,
@@ -252,7 +252,7 @@ describe('ListTravel', () => {
 
   it('shows access denied error message when deleteTravel fails with 403 on web', async () => {
     // Test the delete functionality directly by mocking the component's internal state
-    const travelsApi: any = require('@/src/api/travelsApi');
+    const travelsApi: any = require('@/api/travelsApi');
     travelsApi.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 2, title: 'Another travel' }],
       total: 1,
@@ -286,7 +286,7 @@ describe('ListTravel', () => {
   });
 
   it('calls DELETE endpoint after confirming deletion on web', async () => {
-    const travelsApi: any = require('@/src/api/travelsApi');
+    const travelsApi: any = require('@/api/travelsApi');
     travelsApi.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 10, title: 'Delete me' }],
       total: 1,

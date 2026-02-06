@@ -18,7 +18,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
-import type { TravelFormData } from '@/src/types/types';
+import type { TravelFormData } from '@/types/types';
 
 interface UpsertTravelViewProps {
   controller: UpsertTravelController;

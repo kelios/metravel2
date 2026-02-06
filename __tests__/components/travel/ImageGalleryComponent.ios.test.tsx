@@ -1,7 +1,7 @@
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 
 import ImageGalleryComponentIOS from '@/components/travel/ImageGalleryComponent';
-import { uploadImage, deleteImage } from '@/src/api/misc';
+import { uploadImage, deleteImage } from '@/api/misc';
 
 jest.mock('expo-image-picker', () => {
   return {
@@ -20,7 +20,7 @@ jest.mock('expo-image-picker', () => {
   };
 });
 
-jest.mock('@/src/api/misc', () => ({
+jest.mock('@/api/misc', () => ({
   __esModule: true,
   uploadImage: jest.fn(),
   deleteImage: jest.fn(),

@@ -7,7 +7,7 @@ import GroupedFiltersSection from '@/components/travel/GroupedFiltersSection';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
-import { TravelFormData, Travel, type TravelFilters } from '@/src/types/types';
+import { TravelFormData, Travel, type TravelFilters } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';

@@ -1,13 +1,13 @@
 import React from 'react';
 import { render, waitFor, act } from '@testing-library/react-native';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
-import { uploadImage } from '@/src/api/misc';
+import { uploadImage } from '@/api/misc';
 import { Platform } from 'react-native';
 
 const ORIGINAL_PLATFORM_OS = Platform.OS;
 
 // Mock dependencies
-jest.mock('@/src/api/misc');
+jest.mock('@/api/misc');
 jest.mock('react-native-image-picker', () => ({
     launchImageLibrary: jest.fn(),
 }));

@@ -8,7 +8,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import FiltersComponent from '@/components/listTravel/FiltersComponent';
-import type { TravelFilters } from '@/src/types/types';
+import type { TravelFilters } from '@/types/types';
 
 interface FiltersPanelCollapsibleProps {
   filters: TravelFilters | null;

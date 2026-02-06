@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import isEqual from 'fast-deep-equal';
-import type { TravelFormData } from '@/src/types/types';
+import type { TravelFormData } from '@/types/types';
 
 function stripUndefinedDeep<T>(value: T): T {
   if (Array.isArray(value)) {

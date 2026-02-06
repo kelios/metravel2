@@ -1,12 +1,12 @@
 // useMapInstance.ts - Hook for managing map instance and layers
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/src/config/mapWebLayers';
-import { createLeafletLayer } from '@/src/utils/mapWebLayers';
-import { attachOsmCampingOverlay } from '@/src/utils/mapWebOverlays/osmCampingOverlay';
-import { attachLasyZanocujWfsOverlay } from '@/src/utils/mapWebOverlays/lasyZanocujWfsOverlay';
-import { attachOsmPoiOverlay } from '@/src/utils/mapWebOverlays/osmPoiOverlay';
-import { attachOsmRoutesOverlay } from '@/src/utils/mapWebOverlays/osmRoutesOverlay';
+import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
+import { createLeafletLayer } from '@/utils/mapWebLayers';
+import { attachOsmCampingOverlay } from '@/utils/mapWebOverlays/osmCampingOverlay';
+import { attachLasyZanocujWfsOverlay } from '@/utils/mapWebOverlays/lasyZanocujWfsOverlay';
+import { attachOsmPoiOverlay } from '@/utils/mapWebOverlays/osmPoiOverlay';
+import { attachOsmRoutesOverlay } from '@/utils/mapWebOverlays/osmRoutesOverlay';
 
 interface UseMapInstanceProps {
   map: any;

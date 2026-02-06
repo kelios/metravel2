@@ -2,7 +2,7 @@ import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, Pressable } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport'
 

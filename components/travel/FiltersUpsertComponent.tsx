@@ -9,13 +9,13 @@ import {
     Platform,
     Linking,
 } from 'react-native';
-import { Button } from '@/src/ui/paper';
+import { Button } from '@/ui/paper';
 import ButtonBase from '@/components/ui/Button';
 
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import CheckboxComponent from '@/components/forms/CheckboxComponent';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
-import { TravelFormData, TravelFilters, Travel } from '@/src/types/types';
+import { TravelFormData, TravelFilters, Travel } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';

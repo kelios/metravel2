@@ -1,10 +1,10 @@
 // __tests__/services/pdf-v2/TravelPageGenerator.test.ts
 // ✅ ТЕСТЫ: Генератор страниц путешествия
 
-import { TravelPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/TravelPageGenerator';
-import type { PageContext } from '@/src/services/pdf-export/generators/v2/types';
+import { TravelPageGenerator } from '@/services/pdf-export/generators/v2/pages/TravelPageGenerator';
+import type { PageContext } from '@/services/pdf-export/generators/v2/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
-import type { TravelForBook } from '@/src/types/pdf-export';
+import type { TravelForBook } from '@/types/pdf-export';
 
 describe('TravelPageGenerator', () => {
   let generator: TravelPageGenerator;

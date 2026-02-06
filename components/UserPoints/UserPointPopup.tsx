@@ -9,7 +9,7 @@ import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { ImportedPoint } from '@/types/userPoints';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Feather from '@expo/vector-icons/Feather';
 

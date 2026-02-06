@@ -2,9 +2,9 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { Platform, Alert, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation } from 'expo-router';
-import { trackWizardEvent } from '@/src/utils/analytics';
+import { trackWizardEvent } from '@/utils/analytics';
 import type { ValidationError, ModerationIssue } from '@/utils/formValidation';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 
 async function showToastMessage(payload: any) {
   await showToast(payload);

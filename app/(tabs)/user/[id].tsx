@@ -4,8 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { openExternalUrl } from '@/src/utils/externalLinks';
-import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
+import { openExternalUrl } from '@/utils/externalLinks';
+import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export default function PublicUserProfileScreen() {

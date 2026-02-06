@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 import TextInputComponent from '@/components/forms/TextInputComponent';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -13,7 +13,7 @@ import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Т�
 import Button from '@/components/ui/Button';
 import { appendPlainTextToHtml } from '@/utils/htmlUtils';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 
 const ArticleEditor = lazy(() => import('@/components/article/ArticleEditor'));
 

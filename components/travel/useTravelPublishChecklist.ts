@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { TravelFormData } from '@/src/types/types';
+import type { TravelFormData } from '@/types/types';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
 import { getQualityScore } from '@/utils/travelWizardValidation';
 

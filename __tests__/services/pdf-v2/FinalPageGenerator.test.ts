@@ -1,9 +1,9 @@
 // __tests__/services/pdf-v2/FinalPageGenerator.test.ts
 // ✅ ТЕСТЫ: Генератор финальной страницы
 
-import { FinalPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/FinalPageGenerator';
-import { getThemeConfig } from '@/src/services/pdf-export/themes/PdfThemeConfig';
-import type { PageContext } from '@/src/services/pdf-export/generators/v2/types';
+import { FinalPageGenerator } from '@/services/pdf-export/generators/v2/pages/FinalPageGenerator';
+import { getThemeConfig } from '@/services/pdf-export/themes/PdfThemeConfig';
+import type { PageContext } from '@/services/pdf-export/generators/v2/types';
 
 describe('FinalPageGenerator', () => {
   let mockContext: PageContext;

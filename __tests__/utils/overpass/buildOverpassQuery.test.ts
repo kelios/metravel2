@@ -3,7 +3,7 @@ import {
   buildOsmPoiOverpassQL,
   buildOsmRoutesOverpassQL,
   normalizeBBox,
-} from '@/src/utils/overpass';
+} from '@/utils/overpass';
 
 describe('overpass query builder', () => {
   it('normalizes bbox and produces query with bbox values', () => {

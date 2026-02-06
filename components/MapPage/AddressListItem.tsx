@@ -8,11 +8,11 @@ import {
     ActivityIndicator,
     Platform,
 } from 'react-native';
-import { Text } from '@/src/ui/paper';
+import { Text } from '@/ui/paper';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import * as Clipboard from 'expo-clipboard';
-import { TravelCoords } from '@/src/types/types';
+import { TravelCoords } from '@/types/types';
 import { METRICS } from '@/constants/layout';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import PlaceListCard from '@/components/places/PlaceListCard';
@@ -23,10 +23,10 @@ import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { getSiteBaseUrl } from '@/utils/seo';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
-import { userPointsApi } from '@/src/api/userPoints';
+import { userPointsApi } from '@/api/userPoints';
 import { PointStatus } from '@/types/userPoints';
 
 type Props = {

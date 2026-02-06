@@ -1,5 +1,5 @@
 // components/MapPage/map/types.ts
-import type { MapUiApi } from '@/src/types/mapUi';
+import type { MapUiApi } from '@/types/mapUi';
 export type Point = {
   id?: number;
   coord: string;

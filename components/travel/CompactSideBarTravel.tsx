@@ -12,8 +12,8 @@ import {
   Alert,
 } from "react-native";
 import Feather from '@expo/vector-icons/Feather';
-import { Text } from "@/src/ui/paper";
-import type { Travel } from "@/src/types/types";
+import { Text } from "@/ui/paper";
+import type { Travel } from "@/types/types";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
 import WeatherWidget from "@/components/home/WeatherWidget";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -21,7 +21,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, useTheme } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Button from '@/components/ui/Button';
-import { useUserProfileCached } from '@/src/hooks/useUserProfileCached';
+import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для современных стилей (только для web)

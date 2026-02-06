@@ -1,5 +1,5 @@
-import type { WebMapLayerDefinition } from '../../src/config/mapWebLayers';
-import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '../../src/config/mapWebLayers';
+import type { WebMapLayerDefinition } from '../../config/mapWebLayers';
+import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '../../config/mapWebLayers';
 
 describe('WEB_MAP_OVERLAY_LAYERS (waymarked trails)', () => {
   it('includes Waymarked Trails overlays for hiking and cycling', () => {

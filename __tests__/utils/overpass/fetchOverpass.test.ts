@@ -1,4 +1,4 @@
-import { fetchOsmPoi, fetchOsmRoutes, normalizeBBox } from '@/src/utils/overpass';
+import { fetchOsmPoi, fetchOsmRoutes, normalizeBBox } from '@/utils/overpass';
 
 describe('fetchOverpass', () => {
   beforeEach(() => {

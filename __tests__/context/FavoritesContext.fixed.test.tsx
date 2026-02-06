@@ -10,12 +10,12 @@ import { AuthProvider } from '@/context/AuthContext'
 
 const mockUseAuth = jest.fn()
 
-jest.mock('@/src/api/travelsFavorites', () => ({
+jest.mock('@/api/travelsFavorites', () => ({
   markTravelAsFavorite: jest.fn(async () => null),
   unmarkTravelAsFavorite: jest.fn(async () => null),
 }))
 
-jest.mock('@/src/api/user', () => ({
+jest.mock('@/api/user', () => ({
   fetchUserFavoriteTravels: jest.fn(async () => []),
   fetchUserHistory: jest.fn(async () => []),
   fetchUserRecommendedTravels: jest.fn(async () => []),

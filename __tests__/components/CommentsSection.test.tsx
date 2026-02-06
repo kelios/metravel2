@@ -13,7 +13,7 @@ import {
   useDeleteComment,
 } from '@/hooks/useComments';
 import { useAuth } from '@/context/AuthContext';
-import { ApiError } from '@/src/api/client';
+import { ApiError } from '@/api/client';
 
 jest.mock('@/hooks/useComments');
 jest.mock('@/context/AuthContext');

@@ -2,14 +2,14 @@
 // ✅ ТЕСТЫ: Тесты для usePdfExport hook
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { Platform, Alert } from 'react-native';
-import { usePdfExport } from '@/src/hooks/usePdfExport';
-import { ExportStage } from '@/src/types/pdf-export';
+import { usePdfExport } from '@/hooks/usePdfExport';
+import { ExportStage } from '@/types/pdf-export';
 import type { ChecklistSection } from '@/components/export/BookSettingsModal';
 
 const mockGenerateTravelsHtml = jest.fn(async () => '<html><body><section class="pdf-page">Test</section></body></html>');
 const mockOpenBookPreviewWindow = jest.fn();
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchTravel: jest.fn(async () => ({
     id: 99,
     name: 'Detailed Travel',
@@ -32,13 +32,13 @@ jest.mock('@/src/api/travelsApi', () => ({
   })),
 }));
 
-jest.mock('@/src/services/book/BookHtmlExportService', () => ({
+jest.mock('@/services/book/BookHtmlExportService', () => ({
   BookHtmlExportService: jest.fn().mockImplementation(() => ({
     generateTravelsHtml: mockGenerateTravelsHtml,
   })),
 }));
 
-jest.mock('@/src/utils/openBookPreviewWindow', () => ({
+jest.mock('@/utils/openBookPreviewWindow', () => ({
   openBookPreviewWindow: (...args: any[]) => mockOpenBookPreviewWindow(...args),
 }));
 

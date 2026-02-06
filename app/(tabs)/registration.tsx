@@ -12,20 +12,20 @@ import {
     View,
     Image,
 } from 'react-native';
-import { Button, Card } from '@/src/ui/paper';
+import { Button, Card } from '@/ui/paper';
 import Feather from '@expo/vector-icons/Feather';
 import { Formik, FormikHelpers } from 'formik';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import { registration } from '@/src/api/auth';
-import type { FormValues } from '@/src/types/types';
+import { registration } from '@/api/auth';
+import type { FormValues } from '@/types/types';
 import { registrationSchema } from '@/utils/validation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
+import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 
 const { height } = Dimensions.get('window');

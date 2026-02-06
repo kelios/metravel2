@@ -1,11 +1,11 @@
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useLikeComment, useUnlikeComment, useTravelComments, commentKeys } from '@/hooks/useComments';
-import { commentsApi } from '@/src/api/comments';
+import { commentsApi } from '@/api/comments';
 import type { TravelComment } from '@/types/comments';
 import React from 'react';
 
-jest.mock('@/src/api/comments');
+jest.mock('@/api/comments');
 
 const mockedCommentsApi = commentsApi as jest.Mocked<typeof commentsApi>;
 

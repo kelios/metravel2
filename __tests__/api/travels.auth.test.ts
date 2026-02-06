@@ -4,13 +4,13 @@ import {
   resetPasswordLinkApi,
   setNewPasswordApi,
   sendPasswordApi,
-} from '@/src/api/auth';
-import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
-import { validatePassword } from '@/src/utils/aiValidation';
-import { sanitizeInput } from '@/src/utils/security';
-import { safeJsonParse } from '@/src/utils/safeJsonParse';
-import { devError } from '@/src/utils/logger';
-import { setSecureItem } from '@/src/utils/secureStorage';
+} from '@/api/auth';
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { validatePassword } from '@/utils/aiValidation';
+import { sanitizeInput } from '@/utils/security';
+import { safeJsonParse } from '@/utils/safeJsonParse';
+import { devError } from '@/utils/logger';
+import { setSecureItem } from '@/utils/secureStorage';
 
 jest.mock('react-native', () => ({
   Alert: {
@@ -18,27 +18,27 @@ jest.mock('react-native', () => ({
   },
 }));
 
-jest.mock('@/src/utils/fetchWithTimeout', () => ({
+jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: jest.fn(),
 }));
 
-jest.mock('@/src/utils/validation', () => ({
+jest.mock('@/utils/aiValidation', () => ({
   validatePassword: jest.fn(() => ({ valid: true })),
 }));
 
-jest.mock('@/src/utils/security', () => ({
+jest.mock('@/utils/security', () => ({
   sanitizeInput: jest.fn((v: string) => v.trim()),
 }));
 
-jest.mock('@/src/utils/safeJsonParse', () => ({
+jest.mock('@/utils/safeJsonParse', () => ({
   safeJsonParse: jest.fn(),
 }));
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/utils/logger', () => ({
   devError: jest.fn(),
 }));
 
-jest.mock('@/src/utils/secureStorage', () => ({
+jest.mock('@/utils/secureStorage', () => ({
   setSecureItem: jest.fn(),
 }));
 

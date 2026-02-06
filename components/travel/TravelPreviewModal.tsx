@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Modal, Pressable, ScrollView, Platform } from '
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 interface TravelPreviewModalProps {

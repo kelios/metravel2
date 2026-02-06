@@ -1,12 +1,12 @@
-import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/src/api/travelsFavorites';
+import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
 
-jest.mock('@/src/api/client', () => ({
+jest.mock('@/api/client', () => ({
   apiClient: {
     patch: jest.fn(),
   },
 }));
 
-const mockedPatch = (require('@/src/api/client').apiClient.patch as jest.Mock);
+const mockedPatch = (require('@/api/client').apiClient.patch as jest.Mock);
 
 describe('src/api/travelsFavorites', () => {
   beforeEach(() => {

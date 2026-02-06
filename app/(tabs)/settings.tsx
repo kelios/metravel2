@@ -5,16 +5,16 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '@/context/AuthContext';
-import { buildLoginHref } from '@/src/utils/authNavigation';
+import { buildLoginHref } from '@/utils/authNavigation';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { confirmAction } from '@/src/utils/confirmAction';
-import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type UpdateUserProfilePayload, type UploadUserProfileAvatarFile, type UserProfileDto } from '@/src/api/user';
-import { ApiError } from '@/src/api/client';
-import { removeStorageBatch, setStorageBatch } from '@/src/utils/storageBatch';
+import { confirmAction } from '@/utils/confirmAction';
+import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type UpdateUserProfilePayload, type UploadUserProfileAvatarFile, type UserProfileDto } from '@/api/user';
+import { ApiError } from '@/api/client';
+import { removeStorageBatch, setStorageBatch } from '@/utils/storageBatch';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 
 export default function SettingsScreen() {

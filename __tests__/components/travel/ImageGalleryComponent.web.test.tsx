@@ -78,7 +78,7 @@ jest.mock('@/components/ui/ConfirmDialog', () => {
       : null;
 });
 
-jest.mock('@/src/api/misc', () => {
+jest.mock('@/api/misc', () => {
   const uploadImageMock = jest.fn(async () => ({ id: 'uploaded-1', url: '/uploaded.jpg' }));
   const deleteImageMock = jest.fn(async () => undefined);
   return {
@@ -89,7 +89,7 @@ jest.mock('@/src/api/misc', () => {
   };
 });
 
-const { __mocks } = jest.requireMock('@/src/api/misc') as any;
+const { __mocks } = jest.requireMock('@/api/misc') as any;
 const uploadImageMock = __mocks.uploadImageMock as jest.Mock;
 const deleteImageMock = __mocks.deleteImageMock as jest.Mock;
 

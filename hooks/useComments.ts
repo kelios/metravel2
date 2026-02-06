@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { commentsApi } from '../src/api/comments';
+import { commentsApi } from '@/api/comments';
 import type {
   TravelComment,
   TravelCommentCreate,

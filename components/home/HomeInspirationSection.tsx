@@ -6,14 +6,14 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive, useResponsiveColumns } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
-import { sendAnalyticsEvent } from '@/src/utils/analytics';
-import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/src/api/map';
+import { sendAnalyticsEvent } from '@/utils/analytics';
+import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/api/map';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
 import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 import Button from '@/components/ui/Button';
-import { queryConfigs } from '@/src/utils/reactQueryConfig';
+import { queryConfigs } from '@/utils/reactQueryConfig';
 
 interface HomeSectionProps {
   title: string;

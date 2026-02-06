@@ -12,7 +12,7 @@ import {
   getSafeOrigin,
   isSafePreconnectDomain,
 } from '@/utils/travelDetailsSecure';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 
 const baseTravel: Travel = {
   id: 1,

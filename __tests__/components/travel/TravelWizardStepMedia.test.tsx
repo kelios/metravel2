@@ -3,12 +3,12 @@ import { Platform, Text } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import TravelWizardStepMedia from '@/components/travel/TravelWizardStepMedia';
-import type { TravelFormData } from '@/src/types/types';
+import type { TravelFormData } from '@/types/types';
 
 const mockDeleteTravelMainImage = jest.fn();
 
-jest.mock('@/src/api/misc', () => {
-  const actual = jest.requireActual('@/src/api/misc');
+jest.mock('@/api/misc', () => {
+  const actual = jest.requireActual('@/api/misc');
   return {
     ...actual,
     deleteTravelMainImage: (...args: any[]) => mockDeleteTravelMainImage(...args),

@@ -1,20 +1,20 @@
 import { Platform } from 'react-native'
-import { BookHtmlExportService } from '@/src/services/book/BookHtmlExportService'
-import type { Travel } from '@/src/types/types'
+import { BookHtmlExportService } from '@/services/book/BookHtmlExportService'
+import type { Travel } from '@/types/types'
 import type { BookSettings } from '@/components/export/BookSettingsModal'
 
 const mockGenerate = jest.fn()
 const mockValidate = jest.fn()
 const mockTransform = jest.fn()
 
-jest.mock('@/src/services/pdf-export/TravelDataTransformer', () => ({
+jest.mock('@/services/pdf-export/TravelDataTransformer', () => ({
   TravelDataTransformer: jest.fn().mockImplementation(() => ({
     validate: mockValidate,
     transform: mockTransform,
   })),
 }))
 
-jest.mock('@/src/services/pdf-export/generators/EnhancedPdfGenerator', () => ({
+jest.mock('@/services/pdf-export/generators/EnhancedPdfGenerator', () => ({
   EnhancedPdfGenerator: jest.fn().mockImplementation(() => ({
     generate: mockGenerate,
   })),

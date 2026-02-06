@@ -1,19 +1,19 @@
-import { apiClient, ApiError } from '@/src/api/client';
-import { fetchWithTimeout } from '@/src/utils/fetchWithTimeout';
-import { getSecureItem, setSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
-import { devError } from '@/src/utils/logger';
+import { apiClient, ApiError } from '@/api/client';
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { getSecureItem, setSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { devError } from '@/utils/logger';
 
-jest.mock('@/src/utils/fetchWithTimeout', () => ({
+jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: jest.fn(),
 }));
 
-jest.mock('@/src/utils/secureStorage', () => ({
+jest.mock('@/utils/secureStorage', () => ({
   getSecureItem: jest.fn(),
   setSecureItem: jest.fn(),
   removeSecureItems: jest.fn(),
 }));
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/utils/logger', () => ({
   devError: jest.fn(),
 }));
 

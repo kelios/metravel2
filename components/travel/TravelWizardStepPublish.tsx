@@ -10,20 +10,20 @@ import {
     UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Icon } from '@/src/ui/paper';
+import { Icon } from '@/ui/paper';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 import Button from '@/components/ui/Button';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import { getModerationIssues, type ModerationIssue } from '@/utils/formValidation';
-import { trackWizardEvent } from '@/src/utils/analytics';
+import { trackWizardEvent } from '@/utils/analytics';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { showToast } from '@/src/utils/toast';
+import { showToast } from '@/utils/toast';
 import { useTravelPublishChecklist } from '@/components/travel/useTravelPublishChecklist';
 import PublishChecklistCard from '@/components/travel/PublishChecklistCard';
 

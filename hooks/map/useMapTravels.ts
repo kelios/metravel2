@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/src/api/map';
-import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/src/utils/filterQuery';
-import type { TravelCoords } from '@/src/types/types';
-import { logError } from '@/src/utils/logger';
+import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/api/map';
+import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQuery';
+import type { TravelCoords } from '@/types/types';
+import { logError } from '@/utils/logger';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
-import type { MapFilterValues } from '@/src/utils/mapFiltersStorage';
+import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 
 interface UseMapTravelsParams {
   coordinates: Coordinates | null;

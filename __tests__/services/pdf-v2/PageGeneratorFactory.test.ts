@@ -1,15 +1,15 @@
 // __tests__/services/pdf-v2/PageGeneratorFactory.test.ts
 // ✅ ТЕСТЫ: Фабрика генераторов страниц
 
-import { PageGeneratorFactory, PageType } from '@/src/services/pdf-export/generators/v2/factories/PageGeneratorFactory';
-import { ImageProcessor } from '@/src/services/pdf-export/generators/v2/processors/ImageProcessor';
-import { CoverPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/CoverPageGenerator';
-import { TocPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/TocPageGenerator';
-import { TravelPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/TravelPageGenerator';
-import { GalleryPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/GalleryPageGenerator';
-import { MapPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/MapPageGenerator';
-import { ChecklistPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/ChecklistPageGenerator';
-import { FinalPageGenerator } from '@/src/services/pdf-export/generators/v2/pages/FinalPageGenerator';
+import { PageGeneratorFactory, PageType } from '@/services/pdf-export/generators/v2/factories/PageGeneratorFactory';
+import { ImageProcessor } from '@/services/pdf-export/generators/v2/processors/ImageProcessor';
+import { CoverPageGenerator } from '@/services/pdf-export/generators/v2/pages/CoverPageGenerator';
+import { TocPageGenerator } from '@/services/pdf-export/generators/v2/pages/TocPageGenerator';
+import { TravelPageGenerator } from '@/services/pdf-export/generators/v2/pages/TravelPageGenerator';
+import { GalleryPageGenerator } from '@/services/pdf-export/generators/v2/pages/GalleryPageGenerator';
+import { MapPageGenerator } from '@/services/pdf-export/generators/v2/pages/MapPageGenerator';
+import { ChecklistPageGenerator } from '@/services/pdf-export/generators/v2/pages/ChecklistPageGenerator';
+import { FinalPageGenerator } from '@/services/pdf-export/generators/v2/pages/FinalPageGenerator';
 
 describe('PageGeneratorFactory', () => {
   let factory: PageGeneratorFactory;

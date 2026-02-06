@@ -5,7 +5,7 @@ import React, { memo, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
-import type { Travel } from '@/src/types/types';
+import type { Travel } from '@/types/types';
 import FavoriteButton from '@/components/travel/FavoriteButton';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

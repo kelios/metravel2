@@ -7,8 +7,8 @@ import {
   fetchAllCountries,
   sendFeedback,
   sendAIMessage,
-} from '@/src/api/misc'
-import type { TravelFormData } from '@/src/types/types'
+} from '@/api/misc'
+import type { TravelFormData } from '@/types/types'
 
 const mockGetSecureItem = jest.fn()
 const mockFetchWithTimeout = jest.fn()
@@ -22,32 +22,32 @@ const mockApiClientUploadFormData = jest.fn()
 const mockApiClientRequest = jest.fn()
 const mockApiClientDelete = jest.fn()
 
-jest.mock('@/src/utils/secureStorage', () => ({
+jest.mock('@/utils/secureStorage', () => ({
   getSecureItem: (...args: any[]) => mockGetSecureItem(...args),
 }))
 
-jest.mock('@/src/utils/fetchWithTimeout', () => ({
+jest.mock('@/utils/fetchWithTimeout', () => ({
   fetchWithTimeout: (...args: any[]) => mockFetchWithTimeout(...args),
 }))
 
-jest.mock('@/src/utils/safeJsonParse', () => ({
+jest.mock('@/utils/safeJsonParse', () => ({
   safeJsonParse: (...args: any[]) => mockSafeJsonParse(...args),
 }))
 
-jest.mock('@/src/utils/validation', () => ({
+jest.mock('@/utils/aiValidation', () => ({
   validateImageFile: (...args: any[]) => mockValidateImageFile(...args),
   validateAIMessage: (...args: any[]) => mockValidateAIMessage(...args),
 }))
 
-jest.mock('@/src/utils/security', () => ({
+jest.mock('@/utils/security', () => ({
   sanitizeInput: (...args: any[]) => mockSanitizeInput(...args),
 }))
 
-jest.mock('@/src/utils/logger', () => ({
+jest.mock('@/utils/logger', () => ({
   devError: (...args: any[]) => mockDevError(...args),
 }))
 
-jest.mock('@/src/api/client', () => ({
+jest.mock('@/api/client', () => ({
   apiClient: {
     put: (...args: any[]) => mockApiClientPut(...args),
     uploadFormData: (...args: any[]) => mockApiClientUploadFormData(...args),

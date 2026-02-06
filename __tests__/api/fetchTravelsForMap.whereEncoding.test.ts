@@ -1,6 +1,6 @@
-import { fetchTravelsForMap } from '@/src/api/map';
+import { fetchTravelsForMap } from '@/api/map';
 
-jest.mock('@/src/utils/fetchWithTimeout', () => {
+jest.mock('@/utils/fetchWithTimeout', () => {
   return {
     __esModule: true,
     fetchWithTimeout: jest.fn(async (_url: string) => {
@@ -16,7 +16,7 @@ jest.mock('@/src/utils/fetchWithTimeout', () => {
 
 describe('fetchTravelsForMap where encoding', () => {
   test('serializes lat/lng as strings inside where', async () => {
-    const { fetchWithTimeout } = require('@/src/utils/fetchWithTimeout');
+    const { fetchWithTimeout } = require('@/utils/fetchWithTimeout');
 
     await fetchTravelsForMap(
       0,

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
-import type { GalleryLayout } from '@/src/types/pdf-gallery';
+import type { GalleryLayout } from '@/types/pdf-gallery';
 
 export interface GalleryLayoutInfo {
   id: GalleryLayout;

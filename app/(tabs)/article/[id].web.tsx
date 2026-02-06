@@ -6,9 +6,9 @@ import {
   ScrollView,
 } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
-import { Article } from '@/src/types/types'
-import { Card, Title } from '@/src/ui/paper'
-import { fetchArticle } from '@/src/api/articles'
+import { Article } from '@/types/types'
+import { Card, Title } from '@/ui/paper'
+import { fetchArticle } from '@/api/articles'
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useThemedColors } from '@/hooks/useTheme'
 

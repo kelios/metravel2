@@ -1,9 +1,9 @@
 import { createContext, FC, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import {loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi,} from '@/src/api/auth';
-import { setAuthInvalidationHandler } from '@/src/api/client';
-import { setSecureItem, getSecureItem, removeSecureItems } from '@/src/utils/secureStorage';
-import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/src/utils/storageBatch';
-import { fetchUserProfile } from '@/src/api/user';
+import {loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi,} from '@/api/auth';
+import { setAuthInvalidationHandler } from '@/api/client';
+import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
+import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
+import { fetchUserProfile } from '@/api/user';
 
 interface AuthContextType {
     isAuthenticated: boolean;

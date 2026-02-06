@@ -90,7 +90,7 @@ export function useListTravelVisibility({
           setInternalWeeklyHighlightsVisible(weeklyHighlightsVisible !== 'false');
         } else {
           // ✅ FIX-004: Используем батчинг для загрузки данных
-          const { getStorageBatch } = await import('@/src/utils/storageBatch');
+          const { getStorageBatch } = await import('@/utils/storageBatch');
           const storageData = await getStorageBatch([PERSONALIZATION_VISIBLE_KEY, WEEKLY_HIGHLIGHTS_VISIBLE_KEY]);
           
           setInternalPersonalizationVisible(storageData[PERSONALIZATION_VISIBLE_KEY] !== 'false');

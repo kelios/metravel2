@@ -3,7 +3,7 @@ import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-nativ
 import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
 import { MapSkeleton } from '@/components/ui/SkeletonLoader';
-import type { MapUiApi } from '@/src/types/mapUi';
+import type { MapUiApi } from '@/types/mapUi';
 
 type LatLng = { latitude: number; longitude: number };
 

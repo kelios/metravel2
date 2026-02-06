@@ -1,9 +1,9 @@
 // __tests__/services/pdf-export/TravelDataTransformer.test.ts
 // ✅ ТЕСТЫ: Проверка трансформации данных для PDF экспорта
 
-import { TravelDataTransformer } from '@/src/services/pdf-export/TravelDataTransformer';
-import { ExportError } from '@/src/types/pdf-export';
-import type { Travel } from '@/src/types/types';
+import { TravelDataTransformer } from '@/services/pdf-export/TravelDataTransformer';
+import { ExportError } from '@/types/pdf-export';
+import type { Travel } from '@/types/types';
 
 describe('TravelDataTransformer', () => {
   let transformer: TravelDataTransformer;

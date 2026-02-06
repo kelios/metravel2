@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchFilters, fetchAllCountries } from '@/src/api/misc';
+import { fetchFilters, fetchAllCountries } from '@/api/misc';
 
 export interface TravelFilters {
   categories: Array<{ id: string; name: string }>;

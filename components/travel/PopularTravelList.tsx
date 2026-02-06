@@ -16,15 +16,15 @@ import {
   View,
 } from "react-native";
 import { useQuery } from '@tanstack/react-query';
-import { Title } from "@/src/ui/paper";
+import { Title } from "@/ui/paper";
 import TravelTmlRound from "@/components/travel/TravelTmlRound";
-import { fetchTravelsPopular } from "@/src/api/map";
-import type { TravelsMap } from "@/src/types/types";
+import { fetchTravelsPopular } from "@/api/map";
+import type { TravelsMap } from "@/types/types";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme'; // РЕДИЗАЙН: Темная тема
-import { queryKeys } from '@/src/queryKeys';
-import { queryConfigs } from '@/src/utils/reactQueryConfig';
+import { queryKeys } from '@/queryKeys';
+import { queryConfigs } from '@/utils/reactQueryConfig';
 import {
   FLATLIST_CONFIG,
   FLATLIST_CONFIG_MOBILE,

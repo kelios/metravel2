@@ -1,7 +1,7 @@
 import {
   buildTravelQueryParams,
   mapCategoryNamesToIds,
-} from '@/src/utils/filterQuery'
+} from '@/utils/filterQuery'
 
 describe('buildTravelQueryParams', () => {
   it('adds default publish/moderation for public listings', () => {

@@ -1,4 +1,4 @@
-import { sanitizeRichText, sanitizeRichTextForPdf } from '@/src/utils/sanitizeRichText'
+import { sanitizeRichText, sanitizeRichTextForPdf } from '@/utils/sanitizeRichText'
 
 describe('sanitizeRichText', () => {
   it('keeps instagram embeds intact', () => {

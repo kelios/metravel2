@@ -13,7 +13,7 @@ const isWeb = Platform.OS === 'web';
 const queueAnalyticsEvent = (eventName: string, eventParams: Record<string, unknown> = {}) => {
   if (process.env.NODE_ENV === 'test') {
     try {
-      const m = require('@/src/utils/analytics');
+      const m = require('@/utils/analytics');
       if (typeof m?.sendAnalyticsEvent === 'function') {
         const isEmptyParams = !eventParams || Object.keys(eventParams).length === 0;
         if (isEmptyParams) {
@@ -29,7 +29,7 @@ const queueAnalyticsEvent = (eventName: string, eventParams: Record<string, unkn
   }
 
   const run = () => {
-    import('@/src/utils/analytics')
+    import('@/utils/analytics')
       .then((m) => m.sendAnalyticsEvent(eventName, eventParams))
       .catch(() => {
         // noop

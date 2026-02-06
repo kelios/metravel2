@@ -5,9 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { useListTravelVisibility, type UseListTravelVisibilityProps } from '@/components/listTravel/hooks/useListTravelVisibility'
 import { PERSONALIZATION_VISIBLE_KEY, WEEKLY_HIGHLIGHTS_VISIBLE_KEY } from '@/components/listTravel/utils/listTravelConstants'
-import { getStorageBatch } from '@/src/utils/storageBatch'
+import { getStorageBatch } from '@/utils/storageBatch'
 
-jest.mock('@/src/utils/storageBatch', () => ({
+jest.mock('@/utils/storageBatch', () => ({
   getStorageBatch: jest.fn(),
 }))
 

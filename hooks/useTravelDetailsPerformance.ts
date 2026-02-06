@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { Platform } from 'react-native'
 
-import type { Travel } from '@/src/types/types'
+import type { Travel } from '@/types/types'
 import { useLCPPreload } from '@/components/travel/details/TravelDetailsSections'
 import { injectCriticalStyles } from '@/styles/criticalCSS'
 import { initPerformanceMonitoring } from '@/utils/performance'

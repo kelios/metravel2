@@ -1,4 +1,4 @@
-import { TravelFormData } from '@/src/types/types';
+import { TravelFormData } from '@/types/types';
 
 /**
  * ✅ ФАЗА 2: Умные подсказки (Contextual Tips)

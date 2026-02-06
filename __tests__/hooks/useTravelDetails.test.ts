@@ -13,14 +13,14 @@ jest.mock('@tanstack/react-query', () => {
   };
 });
 
-jest.mock('@/src/api/travelsApi', () => ({
+jest.mock('@/api/travelsApi', () => ({
   fetchTravel: jest.fn(),
   fetchTravelBySlug: jest.fn(),
 }));
 
 const useLocalSearchParams = jest.requireMock('expo-router').useLocalSearchParams as jest.Mock;
 const { useQuery } = jest.requireMock('@tanstack/react-query');
-const { fetchTravel, fetchTravelBySlug } = jest.requireMock('@/src/api/travelsApi');
+const { fetchTravel, fetchTravelBySlug } = jest.requireMock('@/api/travelsApi');
 
 describe('useTravelDetails', () => {
   beforeEach(() => {
