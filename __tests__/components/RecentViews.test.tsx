@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import RecentViews from '@/components/RecentViews';
+import RecentViews from '@/components/travel/RecentViews';
 import { Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 
@@ -58,7 +58,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 // Mock TravelCardCompact
-jest.mock('@/components/TravelCardCompact', () => {
+jest.mock('@/components/travel/TravelCardCompact', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
   return ({ travel }: any) =>

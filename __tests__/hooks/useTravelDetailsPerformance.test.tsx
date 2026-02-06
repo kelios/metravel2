@@ -36,7 +36,7 @@ jest.mock('@/components/travel/ToggleableMapSection', () => ({
   __esModule: true,
   default: () => null,
 }))
-jest.mock('@/components/Map', () => ({
+jest.mock('@/components/map/Map', () => ({
   __esModule: true,
   default: () => null,
 }))

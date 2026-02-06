@@ -121,7 +121,7 @@ export function SearchWithTransition() {
 // 4. Suspense для lazy loading компонентов
 // ============================================
 
-const HeavyMap = React.lazy(() => import('@/components/Map'));
+const HeavyMap = React.lazy(() => import('@/components/map/Map'));
 
 export function LazyLoadedMap() {
   return (

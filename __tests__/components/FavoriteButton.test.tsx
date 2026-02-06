@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
-import FavoriteButton from '@/components/FavoriteButton'
+import FavoriteButton from '@/components/travel/FavoriteButton'
 
 // Mock FavoritesContext
 const mockAddFavorite = jest.fn()

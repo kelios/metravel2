@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import TravelCardCompact from '@/components/TravelCardCompact';
+import TravelCardCompact from '@/components/travel/TravelCardCompact';
 import type { Travel } from '@/src/types/types';
 
 interface RecentViewsProps {

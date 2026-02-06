@@ -30,7 +30,7 @@ import { queryConfigs } from '@/src/utils/reactQueryConfig';
 import { queryKeys } from '@/src/queryKeys';
 
 // ✅ ОПТИМИЗАЦИЯ: Lazy imports для map-компонентов
-const MapClientSideComponent = React.lazy(() => import('@/components/Map'));
+const MapClientSideComponent = React.lazy(() => import('@/components/map/Map'));
 const SegmentedControl = React.lazy(() => import('@/components/MapPage/SegmentedControl'));
 
 type Segment = 'list' | 'map';

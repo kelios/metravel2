@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import WeeklyHighlights from '@/components/WeeklyHighlights'
+import WeeklyHighlights from '@/components/travel/WeeklyHighlights'
 
 // Mock React Query
 const mockUseQuery = jest.fn()

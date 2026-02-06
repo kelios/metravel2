@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 
-import MarkersListComponent from '@/components/MarkersListComponent';
+import MarkersListComponent from '@/components/map/MarkersListComponent';
 
 jest.mock('@/components/MultiSelectField', () => {
     return jest.fn((props: any) => (

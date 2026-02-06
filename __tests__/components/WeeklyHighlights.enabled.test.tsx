@@ -15,7 +15,7 @@ jest.mock('@/src/api/map', () => ({
   fetchTravelsOfMonth: jest.fn(async () => ({})),
 }))
 
-import WeeklyHighlights from '@/components/WeeklyHighlights'
+import WeeklyHighlights from '@/components/travel/WeeklyHighlights'
 
 describe('WeeklyHighlights enabled gating', () => {
   beforeEach(() => {

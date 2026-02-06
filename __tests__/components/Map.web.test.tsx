@@ -1,5 +1,5 @@
 import { render } from '@testing-library/react-native';
-import MapClientSideComponent from '@/components/Map.web';
+import MapClientSideComponent from '@/components/map/Map.web';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock leaflet modules

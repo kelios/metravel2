@@ -9,7 +9,7 @@ jest.mock('@/src/api/map', () => ({
   fetchTravelsNear: jest.fn().mockResolvedValue([]),
 }));
 
-jest.mock('@/components/Map', () => () => null);
+jest.mock('@/components/map/Map', () => () => null);
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({
