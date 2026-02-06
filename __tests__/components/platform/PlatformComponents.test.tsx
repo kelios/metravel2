@@ -36,19 +36,19 @@ jest.mock('@/context/AuthContext', () => ({
 describe('Platform-Specific Components', () => {
   describe('ArticleEditor Component', () => {
     it('should have iOS version', () => {
-      expect(() => require('../../../components/ArticleEditor.ios')).not.toThrow();
+      expect(() => require('../../../components/article/ArticleEditor.ios')).not.toThrow();
     });
 
     it('should have Android version', () => {
-      expect(() => require('../../../components/ArticleEditor.android')).not.toThrow();
+      expect(() => require('../../../components/article/ArticleEditor.android')).not.toThrow();
     });
 
     it('should have Web version', () => {
-      expect(() => require('../../../components/ArticleEditor.web')).not.toThrow();
+      expect(() => require('../../../components/article/ArticleEditor.web')).not.toThrow();
     });
 
     it('Android should export iOS implementation', () => {
-      const ArticleEditorAndroid = require('../../../components/ArticleEditor.android');
+      const ArticleEditorAndroid = require('../../../components/article/ArticleEditor.android');
       expect(ArticleEditorAndroid.default).toBeDefined();
     });
   });
@@ -69,15 +69,15 @@ describe('Platform-Specific Components', () => {
 
   describe('MapUploadComponent', () => {
     it('should have iOS version', () => {
-      expect(() => require('../../../components/MapUploadComponent.ios')).not.toThrow();
+      expect(() => require('../../../components/map/MapUploadComponent.ios')).not.toThrow();
     });
 
     it('should have Android version', () => {
-      expect(() => require('../../../components/MapUploadComponent.android')).not.toThrow();
+      expect(() => require('../../../components/map/MapUploadComponent.android')).not.toThrow();
     });
 
     it('should have Web version', () => {
-      expect(() => require('../../../components/MapUploadComponent.web')).not.toThrow();
+      expect(() => require('../../../components/map/MapUploadComponent.web')).not.toThrow();
     });
   });
 
@@ -124,23 +124,23 @@ describe('Platform-Specific Components', () => {
 
   describe('Component Consistency', () => {
     it('all platforms should have Map component', () => {
-      expect(() => require('../../../components/Map.ios')).not.toThrow();
-      expect(() => require('../../../components/Map.android')).not.toThrow();
-      expect(() => require('../../../components/Map.web')).not.toThrow();
+      expect(() => require('../../../components/map/Map.ios')).not.toThrow();
+      expect(() => require('../../../components/map/Map.android')).not.toThrow();
+      expect(() => require('../../../components/map/Map.web')).not.toThrow();
     });
 
     it('all platforms should have ArticleEditor', () => {
-      expect(() => require('../../../components/ArticleEditor.ios')).not.toThrow();
-      expect(() => require('../../../components/ArticleEditor.android')).not.toThrow();
-      expect(() => require('../../../components/ArticleEditor.web')).not.toThrow();
+      expect(() => require('../../../components/article/ArticleEditor.ios')).not.toThrow();
+      expect(() => require('../../../components/article/ArticleEditor.android')).not.toThrow();
+      expect(() => require('../../../components/article/ArticleEditor.web')).not.toThrow();
     });
   });
 
   describe('Shared Components', () => {
     it('Android should reuse iOS implementation where appropriate', () => {
       // Проверяем, что Android компоненты экспортируют iOS версии
-      const ArticleEditorAndroid = require('../../../components/ArticleEditor.android');
-      const MapAndroid = require('../../../components/Map.android');
+      const ArticleEditorAndroid = require('../../../components/article/ArticleEditor.android');
+      const MapAndroid = require('../../../components/map/Map.android');
       
       expect(ArticleEditorAndroid.default).toBeDefined();
       expect(MapAndroid.default).toBeDefined();

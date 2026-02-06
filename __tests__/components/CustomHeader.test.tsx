@@ -39,7 +39,7 @@ jest.mock('@/providers/FiltersProvider', () => ({
     useFilters: () => mockFiltersContext,
 }));
 
-jest.mock('../../components/AccountMenu', () => () => null);
+jest.mock('../../components/layout/AccountMenu', () => () => null);
 
 // Моки для expo-router
 jest.mock('expo-router', () => ({
