@@ -66,6 +66,7 @@ export interface SliderProps {
   blurBackground?: boolean;
   onFirstImageLoad?: () => void;
   mobileHeightPercent?: number;
+  onImagePress?: (index: number) => void;
 }
 
 export interface SliderRef {
@@ -280,6 +281,7 @@ type SlideProps = {
   aspectRatio: number;
   imageProps?: any;
   onFirstImageLoad?: () => void;
+  onImagePress?: (index: number) => void;
 };
 
 const Slide = memo(function Slide({
@@ -294,6 +296,7 @@ const Slide = memo(function Slide({
   blurBackground,
   imageProps,
   onFirstImageLoad,
+  onImagePress,
 }: SlideProps) {
   const [status, setStatus] = useState<LoadStatus>('loading');
 
@@ -318,7 +321,11 @@ const Slide = memo(function Slide({
     setStatus('error');
   }, []);
 
-  return (
+  const handlePress = useCallback(() => {
+    onImagePress?.(index);
+  }, [onImagePress, index]);
+
+  const slideContent = (
     <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
       {/* Blur background - only when image is loaded */}
       {shouldRenderBlurBg ? (
@@ -382,6 +389,16 @@ const Slide = memo(function Slide({
       )}
     </View>
   );
+
+  if (onImagePress) {
+    return (
+      <TouchableOpacity activeOpacity={0.9} onPress={handlePress} accessibilityRole="button" accessibilityLabel={`Открыть фото ${index + 1} на весь экран`}>
+        {slideContent}
+      </TouchableOpacity>
+    );
+  }
+
+  return slideContent;
 });
 
 /* --------------------------------- Slider ---------------------------------- */
@@ -403,6 +420,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     blurBackground = true,
     onFirstImageLoad,
     mobileHeightPercent = MOBILE_HEIGHT_PERCENT,
+    onImagePress,
   } = props;
 
   const insets = useSafeAreaInsets();
@@ -742,6 +760,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           aspectRatio={aspectRatio}
           imageProps={imageProps}
           onFirstImageLoad={onFirstImageLoad}
+          onImagePress={onImagePress}
         />
       );
     },
@@ -753,6 +772,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       containerH,
       computeHeight,
       onFirstImageLoad,
+      onImagePress,
       imageProps,
       reduceMotion,
       images.length,

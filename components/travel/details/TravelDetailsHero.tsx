@@ -11,6 +11,7 @@ import {
 } from 'react-native'
 
 import Feather from '@expo/vector-icons/Feather'
+import GalleryLightbox from '@/components/travel/GalleryLightbox'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useFavorites } from '@/context/FavoritesContext'
@@ -509,6 +510,7 @@ function TravelHeroSectionInner({
               aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.6}
               onFirstImageLoad={onFirstImageLoad}
+              onImagePress={handleOpenLightbox}
             />
           )}
 
