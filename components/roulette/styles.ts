@@ -205,72 +205,97 @@ export const createStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   rouletteWrapper: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 24,
+    paddingVertical: 8,
     paddingHorizontal: 8,
-    position: 'relative',
   },
-  rouletteCardsRow: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    justifyContent: 'center',
-    gap: 20,
-    position: 'relative',
+  // Верхняя карточка — над компасом
+  rouletteTopCardRow: {
+    alignItems: 'center',
     zIndex: 2,
-    width: '100%',
-    maxWidth: 960,
+    marginBottom: -14,
   },
-  rouletteCard: {
-    flex: 1,
-    maxWidth: 300,
-    minWidth: 200,
+  // Группа: компас + центральная кнопка
+  rouletteCompassGroup: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    zIndex: 4,
   },
-  rouletteCardFirst: {
-    transform: [{ rotate: '-2deg' }, { translateY: 6 }],
-  },
-  rouletteCardMiddle: {
-    transform: [{ translateY: -4 }],
-    zIndex: 3,
-  },
-  rouletteCardLast: {
-    transform: [{ rotate: '2deg' }, { translateY: 6 }],
-  },
-  rouletteStatusBadge: {
-    alignSelf: 'center',
-    marginTop: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 999,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
+  // Компас — контейнер для изображения (вращается)
+  rouletteCompassWrap: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 3,
     borderColor: colors.borderLight,
-    shadowColor: colors.shadows.light.shadowColor,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    zIndex: 3,
+    shadowColor: colors.shadows.heavy.shadowColor,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  rouletteCompassImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 100,
+  },
+  // Кнопка поверх компаса
+  rouletteCompassButton: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    shadowColor: colors.shadows.heavy.shadowColor,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    zIndex: 5,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
-  rouletteStatusTitle: {
-    fontSize: 14,
+  rouletteCompassButtonTitle: {
+    fontSize: 11,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
+    marginBottom: 2,
   },
-  rouletteStatusSubtitle: {
-    fontSize: 12,
+  rouletteCompassButtonSubtitle: {
+    fontSize: 10,
     color: colors.textMuted,
     textAlign: 'center',
-    marginTop: 2,
   },
-  rouletteCompassImage: {
-    position: 'absolute',
-    width: 420,
-    height: 420,
-    borderRadius: 210,
-    opacity: 0.18,
-    zIndex: 1,
-    alignSelf: 'center',
+  // Нижний ряд карточек — под компасом
+  rouletteBottomCardsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    marginTop: -14,
+    zIndex: 2,
+    width: '100%',
+    maxWidth: 720,
+  },
+  rouletteCard: {
+    width: 280,
+    maxWidth: '44%',
+  },
+  rouletteCardTop: {
+    width: 300,
+    transform: [{ rotate: '-1deg' }],
+  },
+  rouletteCardBottomLeft: {
+    transform: [{ rotate: '-4deg' }, { translateY: 4 }],
+  },
+  rouletteCardBottomRight: {
+    transform: [{ rotate: '4deg' }, { translateY: 4 }],
   },
   overlaySpinner: {
     position: 'absolute',

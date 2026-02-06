@@ -245,61 +245,112 @@ export default function RouletteScreen() {
                 )}
                 {Platform.OS === 'web' && !isMobile ? (
                   <View style={styles.rouletteWrapper}>
-                    {/* Декоративный компас на фоне */}
-                    <Image
-                      source={compassBackground}
-                      style={styles.rouletteCompassImage}
-                      resizeMode="cover"
-                    />
-
-                    <View style={styles.rouletteCardsRow}>
-                      {result.slice(0, 3).map((item, index) => (
-                        <Animated.View
-                          key={String(item.id)}
-                          style={[
-                            styles.rouletteCard,
-                            index === 0 && styles.rouletteCardFirst,
-                            index === 1 && styles.rouletteCardMiddle,
-                            index === 2 && styles.rouletteCardLast,
-                            {
-                              opacity: cardAnims[index] ?? 1,
-                              transform: [{
-                                translateY: (cardAnims[index] ?? new Animated.Value(1)).interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [30, 0],
-                                }),
-                              }],
-                            },
-                          ]}
-                        >
+                    {/* Верхняя карточка — над компасом */}
+                    {result.length > 0 && (
+                      <Animated.View
+                        style={[
+                          styles.rouletteTopCardRow,
+                          {
+                            opacity: cardAnims[0] ?? 1,
+                            transform: [{
+                              translateY: (cardAnims[0] ?? new Animated.Value(1)).interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [-30, 0],
+                              }),
+                            }],
+                          },
+                        ]}
+                      >
+                        <View style={styles.rouletteCardTop}>
                           <RenderTravelItem
-                            item={item}
-                            index={index}
+                            item={result[0]}
+                            index={0}
                             isMobile={false}
                             isSuperuser={false}
                             isMetravel={false}
                             onDeletePress={undefined}
-                            isFirst={index === 0}
+                            isFirst
                             selectable={false}
                             isSelected={false}
                             onToggle={undefined}
+                            cardWidth={300}
                           />
-                        </Animated.View>
-                      ))}
+                        </View>
+                      </Animated.View>
+                    )}
+
+                    {/* Компас + кнопка в центре */}
+                    <View style={styles.rouletteCompassGroup}>
+                      <Animated.View
+                        style={[
+                          styles.rouletteCompassWrap,
+                          spinning && { transform: [{ rotate: compassRotate }] },
+                        ]}
+                      >
+                        <Image
+                          source={compassBackground}
+                          style={styles.rouletteCompassImage}
+                          resizeMode="cover"
+                        />
+                      </Animated.View>
+
+                      {/* Кнопка поверх компаса */}
+                      <Pressable
+                        style={styles.rouletteCompassButton}
+                        onPress={handleSpin}
+                        accessibilityLabel={spinning ? 'Подбираем маршруты' : 'Крутить рулетку'}
+                        accessibilityRole="button"
+                      >
+                        <Feather name="compass" size={22} color={colors.primary} style={{ marginBottom: 4 }} />
+                        <Text style={styles.rouletteCompassButtonTitle}>
+                          {spinning ? 'Крутим…' : 'Случайный маршрут'}
+                        </Text>
+                        {!spinning && (
+                          <Text style={styles.rouletteCompassButtonSubtitle}>
+                            {result.length > 0 ? 'Ещё раз' : 'Нажми'}
+                          </Text>
+                        )}
+                      </Pressable>
                     </View>
 
-                    <Pressable style={styles.rouletteStatusBadge} onPress={handleSpin}>
-                      <Text style={styles.rouletteStatusTitle}>
-                        {result.length > 0
-                          ? `Выбрано ${result.length} маршрута`
-                          : 'Нажми, чтобы подобрать'}
-                      </Text>
-                      <Text style={styles.rouletteStatusSubtitle}>
-                        {result.length > 0
-                          ? 'Нажми для новой подборки'
-                          : 'Случайный маршрут'}
-                      </Text>
-                    </Pressable>
+                    {/* Нижние две карточки — под компасом */}
+                    {result.length > 1 && (
+                      <View style={styles.rouletteBottomCardsRow}>
+                        {result.slice(1, 3).map((item, index) => (
+                          <Animated.View
+                            key={String(item.id)}
+                            style={[
+                              styles.rouletteCard,
+                              index === 0 && styles.rouletteCardBottomLeft,
+                              index === 1 && styles.rouletteCardBottomRight,
+                              {
+                                opacity: cardAnims[index + 1] ?? 1,
+                                transform: [{
+                                  translateY: (cardAnims[index + 1] ?? new Animated.Value(1)).interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [30, 0],
+                                  }),
+                                }],
+                              },
+                            ]}
+                          >
+                            <RenderTravelItem
+                              item={item}
+                              index={index + 1}
+                              isMobile={false}
+                              isSuperuser={false}
+                              isMetravel={false}
+                              onDeletePress={undefined}
+                              isFirst={false}
+                              selectable={false}
+                              isSelected={false}
+                              onToggle={undefined}
+                              cardWidth={280}
+                            />
+                          </Animated.View>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 ) : (
                   <FlashList<Travel>

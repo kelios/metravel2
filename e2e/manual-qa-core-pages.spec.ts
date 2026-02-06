@@ -124,12 +124,26 @@ test.describe('Manual QA automation: core pages data', () => {
   test('roulette loads filters and random results via API proxy', async ({ page }) => {
     await ensureApiProxy(page, 'roulette');
 
-    // Debug: log all API responses to diagnose timeout
+    // Debug: log all responses and console messages to diagnose timeout
     page.on('response', (resp: any) => {
       const url = resp.url();
-      if (url.includes('/api/')) {
+      if (url.includes('/api/') || url.includes('getFilters') || url.includes('countries')) {
         console.log(`[roulette-debug] response: ${resp.status()} ${url}`);
       }
+    });
+    page.on('request', (req: any) => {
+      const url = req.url();
+      if (url.includes('/api/') || url.includes('getFilters') || url.includes('countries')) {
+        console.log(`[roulette-debug] request: ${req.method()} ${url}`);
+      }
+    });
+    page.on('console', (msg: any) => {
+      if (msg.type() === 'error') {
+        console.log(`[roulette-debug] console.error: ${msg.text()}`);
+      }
+    });
+    page.on('pageerror', (err: any) => {
+      console.log(`[roulette-debug] pageerror: ${err.message || err}`);
     });
 
     // Set up the response listener BEFORE navigating to avoid race condition
