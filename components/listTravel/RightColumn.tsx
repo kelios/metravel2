@@ -448,6 +448,14 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                   title={getEmptyStateMessage.title}
                   description={getEmptyStateMessage.description}
                   variant={getEmptyStateMessage.variant}
+                  action={activeFiltersCount > 0 || search ? {
+                    label: 'Сбросить фильтры',
+                    onPress: () => {
+                      onClearAll?.();
+                      setSearch?.('');
+                    },
+                  } : undefined}
+                  suggestions={getEmptyStateMessage.suggestions}
                 />
               </View>
             )}

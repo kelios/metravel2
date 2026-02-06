@@ -1,19 +1,18 @@
 // app/register.tsx (или соответствующий путь)
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-    Dimensions,
     KeyboardAvoidingView,
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
     Image,
 } from 'react-native';
-import { Button, Card } from '@/ui/paper';
 import Feather from '@expo/vector-icons/Feather';
+import Button from '@/components/ui/Button';
 import { useYupForm } from '@/hooks/useYupForm';
 import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
@@ -28,7 +27,26 @@ import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 
-const { height } = Dimensions.get('window');
+type PasswordStrength = 'weak' | 'medium' | 'strong';
+
+function getPasswordStrength(password: string): PasswordStrength {
+    if (!password || password.length < 4) return 'weak';
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    if (password.length >= 12) score++;
+    if (score <= 1) return 'weak';
+    if (score <= 3) return 'medium';
+    return 'strong';
+}
+
+const STRENGTH_CONFIG: Record<PasswordStrength, { label: string; color: string; width: string }> = {
+    weak: { label: 'Слабый', color: '#ef4444', width: '33%' },
+    medium: { label: 'Средний', color: '#f59e0b', width: '66%' },
+    strong: { label: 'Сильный', color: '#22c55e', width: '100%' },
+};
 
 export default function RegisterForm() {
     const [showPass, setShowPass] = useState(false);
@@ -128,8 +146,7 @@ export default function RegisterForm() {
                 <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
                     <View style={styles.bg}>
                                 <View style={styles.center}>
-                                    <Card style={styles.card}>
-                                        <Card.Content>
+                                    <View style={styles.card}>
                                             {generalMsg.text !== '' && (
                                                 <Text
                                                     style={[
@@ -241,18 +258,43 @@ export default function RegisterForm() {
                                                         secureTextEntry={!showPass}
                                                         returnKeyType="next"
                                                     />
-                                                    <TouchableOpacity 
+                                                    <Pressable
                                                         onPress={() => setShowPass(v => !v)}
-                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                        hitSlop={8}
                                                         style={styles.eyeButton}
+                                                        accessibilityRole="button"
+                                                        accessibilityLabel={showPass ? 'Скрыть пароль' : 'Показать пароль'}
                                                     >
                                                         <Feather
                                                             name={showPass ? 'eye-off' : 'eye'}
                                                             size={20}
                                                             color={colors.textMuted}
                                                         />
-                                                    </TouchableOpacity>
+                                                    </Pressable>
                                                 </View>
+                                                {values.password.length > 0 && (
+                                                    <View style={styles.strengthContainer}>
+                                                        <View style={styles.strengthBarBg}>
+                                                            <View
+                                                                style={[
+                                                                    styles.strengthBarFill,
+                                                                    {
+                                                                        width: STRENGTH_CONFIG[getPasswordStrength(values.password)].width as any,
+                                                                        backgroundColor: STRENGTH_CONFIG[getPasswordStrength(values.password)].color,
+                                                                    },
+                                                                ]}
+                                                            />
+                                                        </View>
+                                                        <Text
+                                                            style={[
+                                                                styles.strengthLabel,
+                                                                { color: STRENGTH_CONFIG[getPasswordStrength(values.password)].color },
+                                                            ]}
+                                                        >
+                                                            {STRENGTH_CONFIG[getPasswordStrength(values.password)].label}
+                                                        </Text>
+                                                    </View>
+                                                )}
                                             </FormFieldWithValidation>
 
                                             {/* ✅ ИСПРАВЛЕНИЕ: Используем улучшенный компонент для подтверждения пароля */}
@@ -292,33 +334,33 @@ export default function RegisterForm() {
 
                                             {/* ---------- button ---------- */}
                                             <Button
-                                                mode="contained"
+                                                label={isSubmitting ? 'Подождите…' : 'Зарегистрироваться'}
                                                 onPress={() => handleSubmit()}
                                                 disabled={isSubmitting}
-                                                loading={isSubmitting}
+                                                variant="primary"
+                                                size="lg"
                                                 style={styles.btn}
-                                                contentStyle={styles.btnContent}
-                                            >
-                                                {isSubmitting ? 'Подождите…' : 'Зарегистрироваться'}
-                                            </Button>
+                                                accessibilityLabel="Зарегистрироваться"
+                                            />
 
-                                            <TouchableOpacity
-                                                onPress={() =>
-                                                    router.push(
-                                                        (redirect && typeof redirect === 'string')
-                                                            ? (`/login?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
-                                                            : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
-                                                    )
-                                                }
-                                                disabled={isSubmitting}
-                                                style={{ marginTop: 12 }}
-                                            >
-                                                <Text style={{ textAlign: 'center', color: colors.primary, fontWeight: '600' }}>
-                                                    Уже есть аккаунт? Войти
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </Card.Content>
-                                    </Card>
+                                            <View style={styles.loginContainer}>
+                                                <Text style={styles.loginText}>Уже есть аккаунт? </Text>
+                                                <Pressable
+                                                    onPress={() =>
+                                                        router.push(
+                                                            (redirect && typeof redirect === 'string')
+                                                                ? (`/login?redirect=${encodeURIComponent(redirect)}${intent ? `&intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                                : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
+                                                        )
+                                                    }
+                                                    disabled={isSubmitting}
+                                                    accessibilityRole="button"
+                                                    accessibilityLabel="Войти в аккаунт"
+                                                >
+                                                    <Text style={styles.loginLink}>Войти</Text>
+                                                </Pressable>
+                                            </View>
+                                    </View>
                                 </View>
                     </View>
                 </ScrollView>
@@ -333,13 +375,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        height,
     },
     mapBackground: {
         ...StyleSheet.absoluteFillObject,
         width: '100%',
         height: '100%',
-        opacity: 0.9,
     },
     center: {
         width: '100%',
@@ -426,6 +466,53 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         padding: 12,
         borderRadius: 8,
         fontWeight: '500',
+    },
+    strengthContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 6,
+    },
+    strengthBarBg: {
+        flex: 1,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: colors.border,
+        overflow: 'hidden',
+    },
+    strengthBarFill: {
+        height: '100%',
+        borderRadius: 2,
+        ...Platform.select({
+            web: {
+                transition: 'width 0.3s ease, background-color 0.3s ease',
+            },
+        }),
+    },
+    strengthLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        minWidth: 56,
+        textAlign: 'right',
+    },
+    loginContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+    },
+    loginText: {
+        fontSize: 14,
+        color: colors.textMuted,
+    },
+    loginLink: {
+        fontSize: 14,
+        color: colors.primary,
+        fontWeight: '600',
+        textDecorationLine: 'underline',
     },
     btn: {
         backgroundColor: colors.primary,

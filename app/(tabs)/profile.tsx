@@ -64,25 +64,8 @@ export default function ProfileScreen() {
     [profile]
   );
 
-  const favoritesPreview = Array.isArray(favorites) ? favorites.slice(0, 8) : [];
-  const historyPreview = Array.isArray(viewHistory) ? viewHistory.slice(0, 8) : [];
-
-  const quickNavItems = useMemo(
-    () =>
-      [
-        { key: 'profile', label: 'Профиль' },
-        ...(favoritesPreview.length > 0 ? [{ key: 'favorites', label: 'Избранное' }] : []),
-        ...(historyPreview.length > 0 ? [{ key: 'history', label: 'История' }] : []),
-        { key: 'sections', label: 'Разделы' },
-      ] as const,
-    [favoritesPreview.length, historyPreview.length]
-  );
-
-  const handleScrollToSection = useCallback((key: string) => {
-    const y = sectionOffsetsRef.current[key];
-    if (typeof y !== 'number') return;
-    scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
-  }, []);
+  const favoritesPreview = Array.isArray(favorites) ? favorites.slice(0, 4) : [];
+  const historyPreview = Array.isArray(viewHistory) ? viewHistory.slice(0, 4) : [];
 
   const loadUserData = useCallback(async () => {
     setIsLoading(true);
@@ -245,6 +228,12 @@ export default function ProfileScreen() {
     userEmail: {
       fontSize: 13,
       color: colors.textMuted,
+    },
+    statsInline: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginTop: 4,
+      marginBottom: 12,
     },
     logoutButton: {
       paddingHorizontal: 14,
@@ -599,6 +588,13 @@ export default function ProfileScreen() {
       color: colors.textMuted,
       bg: colors.surfaceMuted,
     },
+    {
+      icon: 'log-out',
+      label: 'Выйти',
+      onPress: handleLogout,
+      color: colors.danger,
+      bg: colors.dangerSoft,
+    },
   ];
 
   return (
@@ -652,30 +648,9 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickNavRow}
-            {...Platform.select({
-              web: {
-                style: { overflowX: 'auto', overflowY: 'hidden', width: '100%' } as any,
-              },
-              default: {},
-            })}
-          >
-            {quickNavItems.map((item) => (
-              <Pressable
-                key={item.key}
-                style={[styles.quickNavChip, globalFocusStyles.focusable]}
-                onPress={() => handleScrollToSection(item.key)}
-                accessibilityRole="button"
-                accessibilityLabel={`Перейти к секции: ${item.label}`}
-                {...Platform.select({ web: { cursor: 'pointer' } })}
-              >
-                <Text style={styles.quickNavChipText}>{item.label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <Text style={styles.statsInline}>
+            {stats.travelsCount} маршрутов · {stats.favoritesCount} избранных · {stats.viewsCount} просмотров
+          </Text>
 
           {socialLinks.length > 0 && (
             <View style={styles.socialsRow}>
@@ -693,21 +668,6 @@ export default function ProfileScreen() {
               ))}
             </View>
           )}
-
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.travelsCount}</Text>
-              <Text style={styles.statLabel}>Путешествий</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.favoritesCount}</Text>
-              <Text style={styles.statLabel}>Избранное</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{stats.viewsCount}</Text>
-              <Text style={styles.statLabel}>Просмотров</Text>
-            </View>
-          </View>
         </View>
 
         {(favoritesPreview.length > 0 || historyPreview.length > 0) && (
@@ -855,19 +815,6 @@ export default function ProfileScreen() {
           ))}</View>
         </View>
 
-        {/* Logout Button */}
-        <Pressable
-          style={[styles.logoutButton, globalFocusStyles.focusable]} // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-          onPress={handleLogout}
-          accessibilityRole="button"
-          accessibilityLabel="Выйти из аккаунта"
-          {...Platform.select({
-            web: { cursor: 'pointer' },
-          })}
-        >
-          <Feather name="log-out" size={20} color={colors.danger} /> {/* ✅ ИСПРАВЛЕНИЕ: Используем единый danger цвет */}
-          <Text style={styles.logoutText}>Выйти</Text>
-        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );

@@ -11,8 +11,8 @@ import {
     View,
     Image,
 } from 'react-native';
-import { Button, Card } from '@/ui/paper';
 import Feather from '@expo/vector-icons/Feather';
+import Button from '@/components/ui/Button';
 import { useIsFocused } from '@react-navigation/native';
 import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
@@ -167,8 +167,7 @@ export default function Login() {
                 >
                     <View style={styles.bg}>
                         <View style={styles.inner}>
-                            <Card style={styles.card}>
-                                <Card.Content>
+                            <View style={styles.card}>
                                     {msg.text !== '' && (
                                         <Text
                                             style={[
@@ -246,15 +245,14 @@ export default function Login() {
                                                 </FormFieldWithValidation>
 
                                                 <Button
-                                                    mode="contained"
+                                                    label={isSubmitting ? 'Подождите…' : 'Войти'}
                                                     onPress={() => handleSubmit()}
                                                     disabled={isSubmitting}
-                                                    loading={isSubmitting}
+                                                    variant="primary"
+                                                    size="lg"
                                                     style={styles.btn}
-                                                    contentStyle={styles.btnContent}
-                                                >
-                                                    {isSubmitting ? 'Подождите…' : 'Войти'}
-                                                </Button>
+                                                    accessibilityLabel="Войти"
+                                                />
 
                                                 <Pressable
                                                     onPress={() => handleResetPassword(values.email)}
@@ -282,8 +280,7 @@ export default function Login() {
                                                     Зарегистрируйтесь
                                                 </Link>
                                             </View>
-                                </Card.Content>
-                            </Card>
+                            </View>
                         </View>
                     </View>
                 </ScrollView>

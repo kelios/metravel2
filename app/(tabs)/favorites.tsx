@@ -229,10 +229,15 @@ export default function FavoritesScreen() {
             <SafeAreaView style={styles.container}>
                 <EmptyState
                     icon="heart"
-                    title="В избранном пока пусто"
-                    description="Откройте путешествие и нажмите на сердечко — оно появится здесь."
+                    title="Сохраняй маршруты, чтобы вернуться к ним позже"
+                    description="Нажми на сердечко на карточке маршрута, чтобы добавить его в избранное."
+                    variant="empty"
                     action={{
-                        label: 'К путешествиям',
+                        label: 'Найти маршруты',
+                        onPress: () => router.push('/search'),
+                    }}
+                    secondaryAction={{
+                        label: 'Популярные маршруты',
                         onPress: () => router.push('/travelsby'),
                     }}
                 />

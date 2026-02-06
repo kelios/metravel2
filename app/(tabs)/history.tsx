@@ -208,11 +208,16 @@ export default function HistoryScreen() {
             <SafeAreaView style={styles.container}>
                 <EmptyState
                     icon="clock"
-                    title="История просмотров пуста"
-                    description="Откройте путешествие — оно появится здесь автоматически."
+                    title="Ты ещё не открывал маршруты"
+                    description="Открой любой маршрут — он автоматически сохранится в истории просмотров."
+                    variant="empty"
                     action={{
-                        label: 'К путешествиям',
-                        onPress: () => router.push('/travelsby'),
+                        label: 'Начать исследовать',
+                        onPress: () => router.push('/search'),
+                    }}
+                    secondaryAction={{
+                        label: 'Случайный маршрут',
+                        onPress: () => router.push('/roulette'),
                     }}
                 />
             </SafeAreaView>

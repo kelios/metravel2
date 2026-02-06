@@ -570,9 +570,14 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                               </Pressable>
                           </>
                       ) : (
-                          <Suspense fallback={null}>
-                            <AccountMenuLazy />
-                          </Suspense>
+                          <>
+                              <Suspense fallback={null}>
+                                  <ThemeToggleLazy compact />
+                              </Suspense>
+                              <Suspense fallback={null}>
+                                  <AccountMenuLazy />
+                              </Suspense>
+                          </>
                       )}
                   </View>
               </View>

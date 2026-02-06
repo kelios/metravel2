@@ -210,12 +210,35 @@ function SearchAndFilterBar({
             {/* Первая строка: фильтры, поиск, иконки */}
             <View style={[styles.topRow, isMobile && styles.topRowMobile]}>
                 {isMobile && onToggleFilters && (
-                    <IconButton
-                        label="Открыть фильтры"
-                        icon={<Feather name="filter" size={16} color={colors.primary} />}
-                        onPress={onToggleFilters}
-                        testID="toggle-filters"
-                    />
+                    <View style={{ position: 'relative' as any }}>
+                        <IconButton
+                            label="Открыть фильтры"
+                            icon={<Feather name="filter" size={16} color={colors.primary} />}
+                            onPress={onToggleFilters}
+                            testID="toggle-filters"
+                        />
+                        {activeFiltersCount > 0 && (
+                            <View
+                                style={{
+                                    position: 'absolute' as any,
+                                    top: 0,
+                                    right: 0,
+                                    minWidth: 18,
+                                    height: 18,
+                                    borderRadius: 9,
+                                    backgroundColor: colors.primary,
+                                    alignItems: 'center' as any,
+                                    justifyContent: 'center' as any,
+                                    paddingHorizontal: 4,
+                                }}
+                                pointerEvents="none"
+                            >
+                                <Text style={{ color: colors.textOnPrimary, fontSize: 10, fontWeight: '700' as any }}>
+                                    {activeFiltersCount}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
                 )}
 
                 <View style={styles.searchContainer} ref={searchBoxRef}>

@@ -5,7 +5,6 @@ import { useRouter, type Href } from "expo-router";
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from "@/hooks/useTheme";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
-import { PRIMARY_HEADER_NAV_ITEMS } from "@/constants/headerNavigation";
 import { globalFocusStyles } from "@/styles/globalFocus";
 
 type FooterDesktopProps = {
@@ -172,8 +171,8 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
       gap: 2,
     },
     iconBox: {
-      width: 18,
-      height: 18,
+      width: 20,
+      height: 20,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -184,8 +183,8 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
     },
     itemText: {
       color: colors.textMuted,
-      fontSize: 9,
-      lineHeight: 10,
+      fontSize: 12,
+      lineHeight: 16,
       marginTop: 0,
       textAlign: "center",
     },
@@ -218,8 +217,8 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
     },
 	    copy: {
 	      color: colors.textMuted,
-	      fontSize: 10,
-	      lineHeight: 12,
+	      fontSize: 12,
+	      lineHeight: 16,
 	    },
   }), [colors]);
 
@@ -291,63 +290,10 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
   });
 
 
-  const InstagramBelarusIcon = (
-    <View style={styles.igByIcon}>
-      <Feather name="instagram" size={16} color={iconColor} />
-      <View style={styles.byBadge}>
-        <Text style={styles.byBadgeText}>BY</Text>
-      </View>
-    </View>
-  );
-
-  const headerNavActions: LinkItem[] = PRIMARY_HEADER_NAV_ITEMS.map((item) => {
-    const safePathKey = item.path
-      .replace(/[^a-z0-9]+/gi, "-")
-      .replace(/^-+/, "")
-      .replace(/-+$/, "");
-
-    return {
-      key: `header-${safePathKey || "root"}`,
-      label: item.label,
-      route: item.path as any,
-      icon: <Feather name={item.icon as any} size={16} color={iconColor} />,
-    };
-  });
-
-  const extraActions: LinkItem[] = [
-    { key: "favorites", label: "Избранное", route: "/favorites" as any, icon: <Feather name="heart" size={16} color={iconColor} /> },
-    { key: "profile", label: "Профиль", route: "/profile" as any, icon: <Feather name="user" size={16} color={iconColor} /> },
-  ];
-
-  const featureLink: LinkItem = {
-    key: "press",
-    label: "Instagram + Беларусь",
-    route: "/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi" as any,
-    icon: InstagramBelarusIcon,
-  };
-
-  const dedupeByRoute = (items: LinkItem[]) =>
-    items.filter((item, index, arr) => {
-      if (!item.route) return true;
-      const routeKey = String(item.route);
-      return arr.findIndex((i) => (i.route ? String(i.route) : "") === routeKey) === index;
-    });
-
-  const primaryIconActions: LinkItem[] = dedupeByRoute(headerNavActions);
-  const primaryRouteKeys = new Set(primaryIconActions.map((i) => (i.route ? String(i.route) : "")));
-
-  const secondaryIconActions: LinkItem[] = dedupeByRoute([
-    ...extraActions,
-    featureLink,
-  ]).filter((i) => {
-    if (!i.route) return true;
-    return !primaryRouteKeys.has(String(i.route));
-  });
-
   const utilityLinks: LinkItem[] = [
     { key: "about", label: "О сайте", route: "/about" as any },
-    { key: "privacy", label: "Политика конфиденциальности", route: "/privacy" as any },
-    { key: "cookies", label: "Настройки cookies", route: "/cookies" as any },
+    { key: "privacy", label: "Политика", route: "/privacy" as any },
+    { key: "cookies", label: "Cookies", route: "/cookies" as any },
   ];
 
   const social: LinkItem[] = [
@@ -355,19 +301,19 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
       key: "tt",
       label: "TikTok",
       externalUrl: "https://www.tiktok.com/@metravel.by",
-      icon: <Feather name="music" size={14} color={iconColor} />,
+      icon: <Feather name="music" size={18} color={iconColor} />,
     },
     {
       key: "ig",
       label: "Instagram",
       externalUrl: "https://www.instagram.com/metravelby/",
-      icon: <Feather name="instagram" size={14} color={iconColor} />,
+      icon: <Feather name="instagram" size={18} color={iconColor} />,
     },
     {
       key: "yt",
       label: "YouTube",
       externalUrl: "https://www.youtube.com/@metravelby",
-      icon: <Feather name="youtube" size={14} color={iconColor} />,
+      icon: <Feather name="youtube" size={18} color={iconColor} />,
     },
   ];
 
@@ -398,23 +344,18 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
     <View style={styles.base} testID={testID || "footer-desktop"}>
       <ResponsiveContainer maxWidth="full" padding={false} paddingHorizontal={false} paddingVertical={false}>
         <View style={styles.bar} testID="footer-desktop-bar">
-          <View style={styles.columns}>
-            <View style={styles.leftColumn}>
-              <View style={styles.iconRows}>
-                <View style={styles.iconRow}>{primaryIconActions.map((i) => renderItem(i, { showLabel: false }))}</View>
-                <View style={styles.iconRow}>{secondaryIconActions.map((i) => renderItem(i, { showLabel: false }))}</View>
-              </View>
+          <View style={styles.topRow}>
+            <View style={styles.socialRow}>
+              {social.map((i) => renderItem(i, { showLabel: false }))}
             </View>
 
-            <View style={styles.rightColumn}>
-              <View style={styles.socialRow}>{social.map((i) => renderItem(i, { showLabel: false }))}</View>
-              <View style={styles.utilityRow}>
-                {utilityLinks.map((i) => renderItem(i))}
-                <Text style={styles.copy} numberOfLines={1}>
-                  © MeTravel 2020–{new Date().getFullYear()}
-                </Text>
-              </View>
+            <View style={styles.utilityRow}>
+              {utilityLinks.map((i) => renderItem(i))}
             </View>
+
+            <Text style={styles.copy} numberOfLines={1}>
+              © MeTravel 2020–{new Date().getFullYear()}
+            </Text>
           </View>
         </View>
       </ResponsiveContainer>

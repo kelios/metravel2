@@ -819,13 +819,18 @@ function ListTravelBase({
         description = `По фильтрам ${otherFilters} и ${lastFilter} ничего не найдено.`;
       }
 
-      description += ' Попробуйте изменить параметры поиска или выбрать другие фильтры.';
+      description += ' Попробуйте убрать фильтры или изменить запрос.';
+
+      const suggestions = debSearch
+        ? ['Проверьте написание', 'Попробуйте другие ключевые слова']
+        : ['Уберите один из фильтров', 'Выберите другую категорию'];
 
       return {
         icon: 'search',
         title: 'Ничего не найдено',
         description,
         variant: 'search' as const,
+        suggestions,
       };
     }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch]); // ✅ ОПТИМИЗАЦИЯ: Более точные зависимости
 

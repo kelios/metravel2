@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import {Image, StyleSheet, TextInput, View, Platform} from 'react-native'
-import {Button, Card, Text} from '@/ui/paper'
+import {Image, StyleSheet, TextInput, View, Platform, Text} from 'react-native'
+import Button from '@/components/ui/Button'
 import {useNavigation} from '@react-navigation/native'
 import {useRoute} from "@react-navigation/core";
 import {useAuth} from "@/context/AuthContext";
@@ -69,8 +69,7 @@ export default function SetPassword() {
                 source={require('@/assets/images/media/slider/about.jpg')}
                 style={styles.topImage}
             />
-            <Card style={styles.card}>
-                <Card.Content>
+            <View style={styles.card}>
                     {msg.text !== '' && (
                         <Text style={[styles.message, msg.error ? styles.err : styles.ok]}>
                             {msg.text}
@@ -120,17 +119,15 @@ export default function SetPassword() {
                                 </FormFieldWithValidation>
 
                                 <Button
-                                    mode="contained"
-                                    style={styles.applyButton}
-                                    contentStyle={styles.applyButtonContent}
+                                    label={isSubmitting ? 'Изменение...' : 'Сменить пароль'}
                                     onPress={() => handleSubmit()}
                                     disabled={isSubmitting}
-                                    loading={isSubmitting}
-                                >
-                                    {isSubmitting ? 'Изменение...' : 'Сменить пароль'}
-                                </Button>
-                </Card.Content>
-            </Card>
+                                    variant="primary"
+                                    size="lg"
+                                    style={styles.applyButton}
+                                    accessibilityLabel="Сменить пароль"
+                                />
+            </View>
         </View>
     )
 }

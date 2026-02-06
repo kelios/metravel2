@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { TouchableOpacity, StyleSheet, Platform, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, Platform, View, Animated } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
@@ -68,6 +68,27 @@ export default function FavoriteButton({
     }, [pendingSync, optimisticIsFav, serverIsFav]);
 
     const isFav = optimisticIsFav;
+
+    const pulseAnim = useRef(new Animated.Value(1)).current;
+    const prevIsFavRef = useRef(isFav);
+
+    useEffect(() => {
+        if (isFav && !prevIsFavRef.current) {
+            Animated.sequence([
+                Animated.timing(pulseAnim, {
+                    toValue: 1.3,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(pulseAnim, {
+                    toValue: 1,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        }
+        prevIsFavRef.current = isFav;
+    }, [isFav, pulseAnim]);
 
     const handlePress = useCallback(async (e?: any) => {
         if (e) {
@@ -182,12 +203,14 @@ export default function FavoriteButton({
                       accessibilityState: { selected: isFav },
                   })}
         >
-            <Feather
-                name={isFav ? 'heart' : 'heart'}
-                size={size}
-                color={color || (isFav ? colors.danger : colors.textMuted)}
-                {...(!isFav ? ({ style: { opacity: 0.55 } } as any) : null)}
-            />
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+                <Feather
+                    name={isFav ? 'heart' : 'heart'}
+                    size={size}
+                    color={color || (isFav ? colors.danger : colors.textMuted)}
+                    {...(!isFav ? ({ style: { opacity: 0.55 } } as any) : null)}
+                />
+            </Animated.View>
         </ButtonComponent>
     );
 }
