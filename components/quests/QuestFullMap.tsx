@@ -152,20 +152,27 @@ export default function QuestFullMap({
     useEffect(() => {
         if (Platform.OS !== 'web') return;
 
-        try {
-            setMods({
-                L: Leaflet,
-                MapContainer: (ReactLeaflet as any).MapContainer,
-                TileLayer: (ReactLeaflet as any).TileLayer,
-                Marker: (ReactLeaflet as any).Marker,
-                Polyline: (ReactLeaflet as any).Polyline,
-                Popup: (ReactLeaflet as any).Popup,
-                FeatureGroup: (ReactLeaflet as any).FeatureGroup,
-                useMap: (ReactLeaflet as any).useMap,
-            });
-        } catch (error) {
-            console.error('Error loading map modules:', error);
-        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const { ensureLeafletCss } = await import('@/src/utils/ensureLeafletCss');
+                await ensureLeafletCss();
+                if (cancelled) return;
+                setMods({
+                    L: Leaflet,
+                    MapContainer: (ReactLeaflet as any).MapContainer,
+                    TileLayer: (ReactLeaflet as any).TileLayer,
+                    Marker: (ReactLeaflet as any).Marker,
+                    Polyline: (ReactLeaflet as any).Polyline,
+                    Popup: (ReactLeaflet as any).Popup,
+                    FeatureGroup: (ReactLeaflet as any).FeatureGroup,
+                    useMap: (ReactLeaflet as any).useMap,
+                });
+            } catch (error) {
+                console.error('Error loading map modules:', error);
+            }
+        })();
+        return () => { cancelled = true; };
     }, []);
 
     const points = useMemo(
@@ -346,26 +353,12 @@ export default function QuestFullMap({
                     {title}
                 </Text>
 
-                {Platform.OS === 'web' ? (
-                    <View style={styles.webButtons}>
-                        <Pressable style={styles.btn} onPress={exportPNG}>
-                            <Text style={styles.btnTxt}>PNG</Text>
-                        </Pressable>
-                        <Pressable style={styles.btn} onPress={exportGPX}>
-                            <Text style={styles.btnTxt}>GPX</Text>
-                        </Pressable>
-                        <Pressable style={styles.btn} onPress={exportGeoJSON}>
-                            <Text style={styles.btnTxt}>GeoJSON</Text>
-                        </Pressable>
-                    </View>
-                ) : (
                     <TouchableOpacity
-                        style={styles.mobileMenuButton}
-                        onPress={() => setExportMenuVisible(true)}
-                    >
-                        <Text style={styles.mobileMenuText}>⋮</Text>
-                    </TouchableOpacity>
-                )}
+                    style={styles.mobileMenuButton}
+                    onPress={() => setExportMenuVisible(true)}
+                >
+                    <Text style={styles.mobileMenuText}>⋮</Text>
+                </TouchableOpacity>
             </View>
 
             {/* Mobile export menu modal */}
@@ -492,20 +485,20 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
         backgroundColor: colors.surface,
     },
     toolbar: {
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         backgroundColor: colors.backgroundSecondary,
-        minHeight: 60,
+        minHeight: 44,
     },
     toolbarTitle: {
-        fontWeight: '800',
+        fontWeight: '700',
         color: colors.text,
-        fontSize: 18,
+        fontSize: 15,
         flex: 1,
         marginRight: 12,
     },
@@ -537,7 +530,7 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     },
     mapBox: {
         flex: 1,
-        minHeight: 300,
+        minHeight: 420,
     },
     map: {
         width: '100%',

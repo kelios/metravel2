@@ -138,8 +138,8 @@ function adaptStep(apiStep: ApiQuestStep): QuestStep {
         task: apiStep.task,
         hint: apiStep.hint || undefined,
         answer: buildAnswerChecker(apiStep.answer_type, apiStep.answer_value),
-        lat: apiStep.lat,
-        lng: apiStep.lng,
+        lat: typeof apiStep.lat === 'string' ? parseFloat(apiStep.lat) : apiStep.lat,
+        lng: typeof apiStep.lng === 'string' ? parseFloat(apiStep.lng) : apiStep.lng,
         mapsUrl: apiStep.maps_url,
         image: apiStep.image_url || undefined,
         inputType: apiStep.input_type,
@@ -193,7 +193,7 @@ export function adaptBundle(apiBundle: ApiQuestBundle): FrontendQuestBundle {
             const rawIntro: ApiQuestStep = typeof apiBundle.intro === 'string'
                 ? JSON.parse(apiBundle.intro)
                 : apiBundle.intro;
-            intro = adaptStep(rawIntro);
+            intro = { ...adaptStep(rawIntro), id: 'intro' };
         }
     } catch (e) {
         console.error('Error parsing quest intro:', e);

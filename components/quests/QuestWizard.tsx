@@ -136,6 +136,7 @@ const StepCard = memo((props: StepCardProps) => {
     const [value, setValue] = useState(''); const [error, setError] = useState('');
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [hasOrganic, setHasOrganic] = useState(false); const [hasMapsme, setHasMapsme] = useState(false);
+    const [navExpanded, setNavExpanded] = useState(false);
     const shakeAnim = useRef(new Animated.Value(0)).current;
     const shouldUseNativeDriver = Platform.OS !== 'web';
 
@@ -217,11 +218,10 @@ const StepCard = memo((props: StepCardProps) => {
             </View>
 
             {/* Легенда */}
-            <View style={styles.section}><Text style={styles.sectionTitle}>Легенда</Text><Text style={styles.storyText}>{step.story}</Text></View>
+            <View style={styles.section}><Text style={styles.storyText}>{step.story}</Text></View>
 
             {/* Задание */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Задание</Text>
                 <Text style={styles.taskText}>{step.task}</Text>
 
                 {step.id !== 'intro' && !isPassed && (
@@ -232,62 +232,63 @@ const StepCard = memo((props: StepCardProps) => {
                             </Pressable>
                         ) : (
                             <>
-                                <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
-                                    <TextInput
-                                        style={[
-                                            styles.input, 
-                                            error ? styles.inputError : null,
-                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                                        ]}
-                                        placeholder="Ваш ответ..."
-                                        placeholderTextColor={colors.textMuted}
-                                        value={value}
-                                        onChangeText={setValue}
-                                        onSubmitEditing={handleCheck}
-                                        returnKeyType="done"
-                                        keyboardType={step.inputType === 'number' ? (Platform.OS === 'ios' ? 'number-pad' : 'numeric') : 'default'}
-                                        autoCapitalize="none"
-                                        autoCorrect={false}
-                                    />
-                                </Animated.View>
-                                {error && (
-                                    <View style={styles.errorContainer}>
-                                        <Text style={styles.errorText}>{error}</Text>
-                                    </View>
-                                )}
-                                <View style={styles.actions}>
+                                <View style={styles.inputRow}>
+                                    <Animated.View style={[{ flex: 1 }, { transform: [{ translateX: shakeAnim }] }]}>
+                                        <TextInput
+                                            style={[
+                                                styles.input, 
+                                                error ? styles.inputError : null,
+                                                globalFocusStyles.focusable,
+                                            ]}
+                                            placeholder="Ваш ответ..."
+                                            placeholderTextColor={colors.textMuted}
+                                            value={value}
+                                            onChangeText={setValue}
+                                            onSubmitEditing={handleCheck}
+                                            returnKeyType="done"
+                                            keyboardType={step.inputType === 'number' ? (Platform.OS === 'ios' ? 'number-pad' : 'numeric') : 'default'}
+                                            autoCapitalize="none"
+                                            autoCorrect={false}
+                                        />
+                                    </Animated.View>
                                     <Pressable 
-                                        style={styles.primaryButton} 
+                                        style={styles.checkButton} 
                                         onPress={handleCheck} 
                                         hitSlop={6}
                                         accessibilityRole="button"
                                         accessibilityLabel="Проверить ответ"
                                     >
-                                        <Text style={styles.buttonText}>Проверить</Text>
+                                        <Text style={styles.checkButtonText}>→</Text>
                                     </Pressable>
+                                </View>
+                                {error && (
+                                    <View style={styles.errorContainer}>
+                                        <Text style={styles.errorText}>{error}</Text>
+                                    </View>
+                                )}
+                                <View style={styles.inlineActions}>
                                     {step.hint && (
                                         <Pressable 
-                                            style={styles.secondaryButton} 
                                             onPress={onToggleHint} 
-                                            hitSlop={6}
+                                            hitSlop={8}
                                             accessibilityRole="button"
                                             accessibilityLabel={hintVisible ? 'Скрыть подсказку' : 'Показать подсказку'}
                                         >
-                                            <Text style={styles.secondaryButtonText}>{hintVisible ? 'Скрыть подсказку' : 'Подсказка'}</Text>
+                                            <Text style={styles.linkText}>{hintVisible ? 'Скрыть подсказку' : 'Подсказка'}</Text>
                                         </Pressable>
                                     )}
+                                    {step.hint && (<Text style={styles.linkSeparator}>·</Text>)}
                                     <Pressable 
-                                        style={styles.ghostButton} 
                                         onPress={onSkip} 
-                                        hitSlop={6}
+                                        hitSlop={8}
                                         accessibilityRole="button"
                                         accessibilityLabel="Пропустить шаг"
                                     >
-                                        <Text style={styles.ghostButtonText}>Пропустить</Text>
+                                        <Text style={styles.linkText}>Пропустить</Text>
                                     </Pressable>
                                 </View>
                                 {step.hint && attempts < showHintAfter && !hintVisible && (
-                                    <Text style={styles.hintPrompt}>Подсказка откроется после {showHintAfter - attempts} попыток</Text>
+                                    <Text style={styles.hintPrompt}>Подсказка доступна после {showHintAfter - attempts} попыток</Text>
                                 )}
                             </>
                         )
@@ -306,16 +307,31 @@ const StepCard = memo((props: StepCardProps) => {
             {/* Локация */}
             {step.id !== 'intro' && (
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Локация</Text>
-                    <View style={styles.mapActions}>
-                        <Pressable style={styles.mapButton} onPress={() => openInMap('google')} hitSlop={6}><Text style={styles.mapButtonText}>Google Maps</Text></Pressable>
-                        {Platform.OS === 'ios' && (<Pressable style={styles.mapButton} onPress={() => openInMap('apple')} hitSlop={6}><Text style={styles.mapButtonText}>Apple Maps</Text></Pressable>)}
-                        <Pressable style={styles.mapButton} onPress={() => openInMap('yandex')} hitSlop={6}><Text style={styles.mapButtonText}>Yandex Maps</Text></Pressable>
-                        {hasOrganic && (<Pressable style={styles.mapButton} onPress={() => openInMap('organic')} hitSlop={6}><Text style={styles.mapButtonText}>Organic Maps</Text></Pressable>)}
-                        {hasMapsme && (<Pressable style={styles.mapButton} onPress={() => openInMap('mapsme')} hitSlop={6}><Text style={styles.mapButtonText}>MAPS.ME</Text></Pressable>)}
-                        <Pressable style={styles.mapButton} onPress={copyCoords} hitSlop={6}><Text style={styles.mapButtonText}>Координаты</Text></Pressable>
-                        <Pressable style={styles.mapPhotoButton} onPress={onToggleMap} hitSlop={8}><Text style={styles.mapPhotoButtonText}>{showMap ? 'Скрыть фото локации' : 'Показать фото локации'}</Text></Pressable>
+                    <View style={styles.navRow}>
+                        <Pressable style={styles.navButton} onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')} hitSlop={6}>
+                            <Text style={styles.navButtonText}>Навигация</Text>
+                        </Pressable>
+                        <Pressable style={styles.navToggle} onPress={() => setNavExpanded(v => !v)} hitSlop={6}>
+                            <Text style={styles.navToggleText}>{navExpanded ? '▲' : '▼'}</Text>
+                        </Pressable>
+                        <Pressable style={styles.coordsButton} onPress={copyCoords} hitSlop={6}>
+                            <Text style={styles.coordsButtonText}>{step.lat.toFixed(4)}, {step.lng.toFixed(4)}</Text>
+                        </Pressable>
+                        {step.image && (
+                            <Pressable style={styles.photoToggle} onPress={onToggleMap} hitSlop={8}>
+                                <Text style={styles.photoToggleText}>{showMap ? 'Скрыть фото' : 'Фото'}</Text>
+                            </Pressable>
+                        )}
                     </View>
+                    {navExpanded && (
+                        <View style={styles.navDropdown}>
+                            <Pressable style={styles.navOption} onPress={() => { openInMap('google'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Google Maps</Text></Pressable>
+                            {Platform.OS === 'ios' && (<Pressable style={styles.navOption} onPress={() => { openInMap('apple'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Apple Maps</Text></Pressable>)}
+                            <Pressable style={styles.navOption} onPress={() => { openInMap('yandex'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Yandex Maps</Text></Pressable>
+                            {hasOrganic && (<Pressable style={styles.navOption} onPress={() => { openInMap('organic'); setNavExpanded(false); }}><Text style={styles.navOptionText}>Organic Maps</Text></Pressable>)}
+                            {hasMapsme && (<Pressable style={styles.navOption} onPress={() => { openInMap('mapsme'); setNavExpanded(false); }}><Text style={styles.navOptionText}>MAPS.ME</Text></Pressable>)}
+                        </View>
+                    )}
 
                     {showMap && step.image && (
                         <>
@@ -842,7 +858,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flex: 1,
     },
 
-    actions: { flexDirection: 'column', marginBottom: SPACING.sm, gap: 8 },
     primaryButton: { 
         backgroundColor: colors.primary, 
         paddingHorizontal: SPACING.lg, 
@@ -851,70 +866,36 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         minHeight: 44,
         justifyContent: 'center',
         alignItems: 'center',
-        ...globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
+        ...globalFocusStyles.focusable,
         ...Platform.select({
             web: {
                 transition: 'all 0.2s ease',
                 cursor: 'pointer',
-                // @ts-ignore
-                ':hover': {
-                    backgroundColor: colors.primaryDark,
-                    transform: 'translateY(-1px)',
-                },
-                ':active': {
-                    transform: 'translateY(0)',
-                },
             },
         }),
     },
     buttonText: { color: colors.textOnPrimary, fontWeight: '600', textAlign: 'center', fontSize: 14 },
-    secondaryButton: { 
-        paddingHorizontal: SPACING.lg, 
-        paddingVertical: 12, 
-        borderRadius: DESIGN_TOKENS.radii.md, 
-        backgroundColor: colors.surface, 
-        minHeight: 44,
+
+    inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: SPACING.sm },
+    checkButton: {
+        backgroundColor: colors.primary,
+        width: 48, height: 48,
+        borderRadius: DESIGN_TOKENS.radii.md,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: colors.shadows.light.shadowColor,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        elevation: 2,
-        ...globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-        ...Platform.select({
-            web: {
-                transition: 'all 0.2s ease',
-                cursor: 'pointer',
-                boxShadow: colors.boxShadows.light,
-                // @ts-ignore
-                ':hover': {
-                    backgroundColor: colors.primarySoft,
-                },
-            },
-        }),
+        ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } }),
     },
-    secondaryButtonText: { color: colors.text, fontWeight: '600', textAlign: 'center', fontSize: 14 },
-    ghostButton: { 
-        paddingHorizontal: SPACING.lg, 
-        paddingVertical: 12, 
-        borderRadius: DESIGN_TOKENS.radii.md, 
-        minHeight: 44,
-        justifyContent: 'center',
-        alignItems: 'center',
-        ...globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-        ...Platform.select({
-            web: {
-                transition: 'all 0.2s ease',
-                cursor: 'pointer',
-                // @ts-ignore
-                ':hover': {
-                    backgroundColor: colors.primarySoft,
-                },
-            },
-        }),
+    checkButtonText: { color: colors.textOnPrimary, fontSize: 20, fontWeight: '700' },
+
+    inlineActions: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        gap: 8, marginTop: 10, marginBottom: 4,
     },
-    ghostButtonText: { color: colors.textMuted, fontWeight: '600', textAlign: 'center', fontSize: 14 },
+    linkText: {
+        color: colors.textSecondary, fontSize: 13, fontWeight: '500',
+        ...Platform.select({ web: { cursor: 'pointer', textDecorationLine: 'underline' } }),
+    },
+    linkSeparator: { color: colors.textMuted, fontSize: 13 },
 
     hintPrompt: { fontSize: 12, color: colors.textSecondary, textAlign: 'center', marginTop: SPACING.xs },
     hintContainer: { backgroundColor: colors.successSoft, padding: SPACING.md, borderRadius: 8, marginTop: SPACING.md },
@@ -923,16 +904,44 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     answerLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
     answerValue: { fontSize: 16, fontWeight: '600', color: colors.text },
 
-    mapActions: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: SPACING.md },
-    mapButton: { backgroundColor: colors.surface,
-        paddingHorizontal: 10, paddingVertical: 10, borderRadius: 8, minWidth: 90, marginRight: 6, marginBottom: 6,
-        shadowColor: colors.shadows.light.shadowColor, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1 },
-    mapButtonText: { color: colors.text, fontSize: 12, fontWeight: '500', textAlign: 'center' },
-
-    mapPhotoButton: { // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только фон
-        backgroundColor: colors.primarySoft, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 999,
-        shadowColor: colors.primaryDark, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
-    mapPhotoButtonText: { color: colors.primaryDark, fontSize: 12, fontWeight: '700', textAlign: 'center' },
+    navRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+    },
+    navButton: {
+        backgroundColor: colors.primary, paddingHorizontal: 16, paddingVertical: 10,
+        borderRadius: 999, minHeight: 40, justifyContent: 'center', alignItems: 'center',
+        ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } }),
+    },
+    navButtonText: { color: colors.textOnPrimary, fontSize: 13, fontWeight: '700' },
+    navToggle: {
+        backgroundColor: colors.surface, width: 36, height: 36, borderRadius: 999,
+        justifyContent: 'center', alignItems: 'center',
+        borderWidth: 1, borderColor: colors.border,
+        ...Platform.select({ web: { cursor: 'pointer' } }),
+    },
+    navToggleText: { fontSize: 10, color: colors.textMuted },
+    coordsButton: {
+        backgroundColor: colors.backgroundSecondary, paddingHorizontal: 10, paddingVertical: 8,
+        borderRadius: 8,
+        ...Platform.select({ web: { cursor: 'pointer' } }),
+    },
+    coordsButtonText: { color: colors.textMuted, fontSize: 11, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined },
+    photoToggle: {
+        backgroundColor: colors.primarySoft, paddingHorizontal: 12, paddingVertical: 8,
+        borderRadius: 999,
+        ...Platform.select({ web: { cursor: 'pointer' } }),
+    },
+    photoToggleText: { color: colors.primaryDark, fontSize: 12, fontWeight: '600' },
+    navDropdown: {
+        marginTop: 8, backgroundColor: colors.surface, borderRadius: 12,
+        borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+    },
+    navOption: {
+        paddingHorizontal: 16, paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
+        ...Platform.select({ web: { cursor: 'pointer' } }),
+    },
+    navOptionText: { color: colors.text, fontSize: 14 },
 
     photoHint: { fontSize: 12, color: colors.textSecondary, marginBottom: SPACING.xs },
 
