@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { PasswordStrengthIndicator } from '@/components/PasswordStrengthIndicator';
+import { PasswordStrengthIndicator } from '@/components/forms/PasswordStrengthIndicator';
 
 // Mock password strength utilities
 jest.mock('@/src/utils/passwordStrength', () => ({

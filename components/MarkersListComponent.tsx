@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import Feather from '@expo/vector-icons/Feather';
 import { MarkerData } from "@/src/types/types";
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
-import MultiSelectField from '@/components/MultiSelectField';
+import MultiSelectField from '@/components/forms/MultiSelectField';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { useThemedColors } from '@/hooks/useTheme';
 import { normalizeMediaUrl } from '@/utils/mediaUrl';

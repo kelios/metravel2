@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import TextInputComponent from '@/components/TextInputComponent'
+import TextInputComponent from '@/components/forms/TextInputComponent'
 
 describe('TextInputComponent', () => {
   it('renders correctly with label', () => {

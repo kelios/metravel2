@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'expo-router';
-import HeaderContextBar from '@/components/HeaderContextBar';
+import HeaderContextBar from '@/components/layout/HeaderContextBar';
 
 jest.mock('@/stores/mapPanelStore', () => {
   const actual = jest.requireActual('@/stores/mapPanelStore');

@@ -2,7 +2,7 @@ import React from 'react'
 import { Platform } from 'react-native'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 
-import SearchAutocomplete from '@/components/SearchAutocomplete'
+import SearchAutocomplete from '@/components/forms/SearchAutocomplete'
 
 jest.mock('@expo/vector-icons', () => {
   const React = require('react')

@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import SimpleMultiSelect from '@/components/SimpleMultiSelect'
+import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect'
 
 describe('SimpleMultiSelect', () => {
   const dataNumericIds = [

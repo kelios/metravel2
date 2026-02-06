@@ -2,7 +2,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { TextInput } from 'react-native';
-import FormFieldWithValidation from '@/components/FormFieldWithValidation';
+import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation';
 
 describe('FormFieldWithValidation', () => {
   const defaultProps = {

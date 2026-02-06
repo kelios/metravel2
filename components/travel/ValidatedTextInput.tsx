@@ -4,7 +4,7 @@
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import TextInputComponent from '@/components/TextInputComponent';
+import TextInputComponent from '@/components/forms/TextInputComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { validateField, STEP_VALIDATION_RULES } from '@/utils/travelWizardValidation';
 import { CharacterCounter, FieldValidationMessage } from './ValidationFeedback';

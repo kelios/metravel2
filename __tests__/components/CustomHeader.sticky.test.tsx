@@ -2,7 +2,7 @@ import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { Platform, StyleSheet } from 'react-native';
 
-import CustomHeader from '@/components/CustomHeader';
+import CustomHeader from '@/components/layout/CustomHeader';
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),

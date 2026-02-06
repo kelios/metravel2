@@ -24,7 +24,7 @@ import type { FormValues } from '@/src/types/types';
 import { registrationSchema } from '@/utils/validation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
+import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 

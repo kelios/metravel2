@@ -12,8 +12,8 @@ import {
 import { Button } from '@/src/ui/paper';
 import ButtonBase from '@/components/ui/Button';
 
-import MultiSelectField from '@/components/MultiSelectField';
-import CheckboxComponent from '@/components/CheckboxComponent';
+import MultiSelectField from '@/components/forms/MultiSelectField';
+import CheckboxComponent from '@/components/forms/CheckboxComponent';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { TravelFormData, TravelFilters, Travel } from '@/src/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

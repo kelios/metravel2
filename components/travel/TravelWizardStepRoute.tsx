@@ -9,7 +9,7 @@ import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { MarkerData, TravelFormData } from '@/src/types/types';
-import MultiSelectField from '@/components/MultiSelectField';
+import MultiSelectField from '@/components/forms/MultiSelectField';
 import { matchCountryId, buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';

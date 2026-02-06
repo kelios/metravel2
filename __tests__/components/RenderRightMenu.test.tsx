@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import RenderRightMenu from '@/components/RenderRightMenu';
+import RenderRightMenu from '@/components/layout/RenderRightMenu';
 import { router } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -106,7 +106,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/providers/FiltersProvider';
-import AccountMenu from '@/components/AccountMenu';
+import AccountMenu from '@/components/layout/AccountMenu';
 
 const getLastImageSourceUri = () => (global as any).__lastImageSourceUri as string | null;
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import MultiSelectField from '@/components/MultiSelectField'
+import MultiSelectField from '@/components/forms/MultiSelectField'
 
 // Mock SimpleMultiSelect component
 jest.mock('@/components/SimpleMultiSelect', () => {

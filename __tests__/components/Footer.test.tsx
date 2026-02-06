@@ -1,5 +1,5 @@
 import { render, fireEvent } from '@testing-library/react-native'
-import Footer from '@/components/Footer'
+import Footer from '@/components/layout/Footer'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 jest.mock('@/hooks/useResponsive', () => ({

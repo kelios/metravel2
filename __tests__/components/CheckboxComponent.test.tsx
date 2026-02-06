@@ -1,6 +1,6 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
-import CheckboxComponent from '@/components/CheckboxComponent'
+import CheckboxComponent from '@/components/forms/CheckboxComponent'
 
 describe('CheckboxComponent', () => {
   it('renders correctly with label', () => {

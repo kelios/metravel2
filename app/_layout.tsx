@@ -7,16 +7,16 @@ import { AuthProvider } from "@/context/AuthContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 
 import { QueryClientProvider } from "@tanstack/react-query";
-import ErrorBoundary from "@/components/ErrorBoundary";
-import SkipLinks from "@/components/SkipLinks";
-const NetworkStatusLazy = React.lazy(() => import('@/components/NetworkStatus').then(m => ({ default: m.NetworkStatus })));
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import SkipLinks from "@/components/layout/SkipLinks";
+const NetworkStatusLazy = React.lazy(() => import('@/components/ui/NetworkStatus').then(m => ({ default: m.NetworkStatus })));
 const ReactQueryDevtoolsLazy: any = React.lazy(() =>
   import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
 );
-import ThemedPaperProvider from "@/components/ThemedPaperProvider";
-const FooterLazy = React.lazy(() => import('@/components/Footer'));
-const ConsentBannerLazy = React.lazy(() => import('@/components/ConsentBanner'));
-const ToastLazy = React.lazy(() => import('@/components/ToastHost'));
+import ThemedPaperProvider from "@/components/ui/ThemedPaperProvider";
+const FooterLazy = React.lazy(() => import('@/components/layout/Footer'));
+const ConsentBannerLazy = React.lazy(() => import('@/components/layout/ConsentBanner'));
+const ToastLazy = React.lazy(() => import('@/components/ui/ToastHost'));
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/src/utils/reactQueryConfig";

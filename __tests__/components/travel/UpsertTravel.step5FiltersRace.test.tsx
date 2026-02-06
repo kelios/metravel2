@@ -2,7 +2,7 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { act } from 'react-test-renderer';
 
 import UpsertTravel from '@/components/travel/UpsertTravel';
-import MultiSelectField from '@/components/MultiSelectField';
+import MultiSelectField from '@/components/forms/MultiSelectField';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();

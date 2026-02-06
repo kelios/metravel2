@@ -5,7 +5,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import { TravelFormData } from '@/src/types/types';
-import TextInputComponent from '@/components/TextInputComponent';
+import TextInputComponent from '@/components/forms/TextInputComponent';
 import { validateTravelForm, getFieldError, type ValidationError } from '@/utils/formValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -15,7 +15,7 @@ import { appendPlainTextToHtml } from '@/utils/htmlUtils';
 import { useWebSpeechDictation } from '@/hooks/useWebSpeechDictation';
 import { showToast } from '@/src/utils/toast';
 
-const ArticleEditor = lazy(() => import('@/components/ArticleEditor'));
+const ArticleEditor = lazy(() => import('@/components/article/ArticleEditor'));
 
 interface ContentUpsertSectionProps {
     formData: TravelFormData;

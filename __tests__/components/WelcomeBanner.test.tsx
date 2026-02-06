@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import WelcomeBanner from '@/components/WelcomeBanner';
+import WelcomeBanner from '@/components/layout/WelcomeBanner';
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({

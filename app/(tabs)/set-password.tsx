@@ -6,7 +6,7 @@ import {useRoute} from "@react-navigation/core";
 import {useAuth} from "@/context/AuthContext";
 import {Formik, FormikHelpers} from 'formik';
 import {setNewPasswordSchema} from '@/utils/validation';
-import FormFieldWithValidation from '@/components/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
+import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'; // ✅ ИСПРАВЛЕНИЕ: Импорт улучшенного компонента
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors } from '@/hooks/useTheme';

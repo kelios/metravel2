@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import Logo from '@/components/Logo';
+import Logo from '@/components/layout/Logo';
 
 // Mock expo-router
 jest.mock('expo-router', () => ({

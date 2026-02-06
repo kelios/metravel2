@@ -4,7 +4,7 @@ import { View, TextInput, Pressable, Platform, Keyboard, Text, ActivityIndicator
 import Feather from '@expo/vector-icons/Feather';
 import IconButton from '@/components/ui/IconButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import SearchAutocomplete from '@/components/SearchAutocomplete';
+import SearchAutocomplete from '@/components/forms/SearchAutocomplete';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { METRICS } from '@/constants/layout';

@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
-import MultiSelectField from '@/components/MultiSelectField';
+import MultiSelectField from '@/components/forms/MultiSelectField';
 
 jest.mock('@/components/MultiSelectField', () => {
   return {

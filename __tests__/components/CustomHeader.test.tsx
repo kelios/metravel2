@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { usePathname, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import CustomHeader from '@/components/CustomHeader';
+import CustomHeader from '@/components/layout/CustomHeader';
 import * as ReactNative from 'react-native';
 
 const mockAuthContext = {

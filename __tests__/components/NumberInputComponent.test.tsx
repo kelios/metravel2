@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import NumberInputComponent from '@/components/NumberInputComponent'
+import NumberInputComponent from '@/components/forms/NumberInputComponent'
 
 describe('NumberInputComponent', () => {
   it('renders correctly with label', () => {
