@@ -67,6 +67,41 @@ export default function QuestByIdScreen() {
         };
     }, [loaded, bundle, questId]);
 
+    // AUTH GATE — квесты только для зарегистрированных
+    if (!isAuthenticated) {
+        return (
+            <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
+                {isFocused && (
+                    <InstantSEO headKey={`quest-auth-${questId}`} title="Войдите, чтобы пройти квест" description="Для прохождения квестов необходима регистрация." ogType="website" />
+                )}
+                <View style={styles.authGate}>
+                    <Suspense fallback={null}>
+                        {/* @ts-ignore */}
+                        <Ion name="lock-closed" size={36} color={colors.primary} />
+                    </Suspense>
+                    <Text style={styles.authGateTitle}>Войдите, чтобы начать квест</Text>
+                    <Text style={styles.authGateText}>
+                        Для прохождения квестов нужна учётная запись — так мы сохраним ваш прогресс и результаты.
+                    </Text>
+                    <Link href="/login" asChild>
+                        <Pressable style={styles.backBtn}>
+                            <Suspense fallback={null}>
+                                {/* @ts-ignore */}
+                                <Ion name="log-in-outline" size={18} color={colors.textOnPrimary} />
+                            </Suspense>
+                            <Text style={styles.backBtnTxt}>Войти или зарегистрироваться</Text>
+                        </Pressable>
+                    </Link>
+                    <Link href="/quests" asChild>
+                        <Pressable style={styles.secondaryBtn}>
+                            <Text style={styles.secondaryBtnTxt}>К списку квестов</Text>
+                        </Pressable>
+                    </Link>
+                </View>
+            </View>
+        );
+    }
+
     // LOADING
     if (!loaded) {
         return (
@@ -107,7 +142,7 @@ export default function QuestByIdScreen() {
         );
     }
 
-    // READY
+    // READY (пользователь авторизован)
     return (
         <View style={styles.page}>
             {isFocused && (
@@ -122,9 +157,8 @@ export default function QuestByIdScreen() {
                     intro={bundle.intro}
                     storageKey={bundle.storageKey}
                     city={bundle.city}
-                    onProgressChange={isAuthenticated ? handleProgressChange : undefined}
-                    onProgressReset={isAuthenticated ? handleProgressReset : undefined}
-                    // Чтобы не жечь main thread: открываем превью карты не сразу
+                    onProgressChange={handleProgressChange}
+                    onProgressReset={handleProgressReset}
                     mapPreviewOpenByDefault={false}
                 />
             </Suspense>
@@ -147,4 +181,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
     },
     backBtnTxt: { color: colors.textOnPrimary, fontWeight: '800' },
+    authGate: {
+        backgroundColor: colors.surface,
+        borderWidth: 1, borderColor: colors.border,
+        padding: 24, borderRadius: 16, gap: 12, width: '90%', maxWidth: 420,
+        alignItems: 'center',
+    },
+    authGateTitle: { color: colors.text, fontWeight: '900', fontSize: 18, textAlign: 'center' },
+    authGateText: { color: colors.textMuted, textAlign: 'center', fontSize: 14, lineHeight: 20 },
+    secondaryBtn: {
+        paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12,
+        borderWidth: 1, borderColor: colors.border,
+    },
+    secondaryBtnTxt: { color: colors.textMuted, fontWeight: '600', fontSize: 14 },
 });

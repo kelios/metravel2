@@ -51,8 +51,11 @@ function normalize(s: string): string {
 /** Создаёт функцию проверки ответа из бэкенд-конфига */
 function buildAnswerChecker(answerType: string, answerValue: string): (input: string) => boolean {
     switch (answerType) {
-        case 'any':
-            return () => true;
+        case 'any': {
+            const fn = () => true;
+            (fn as any)._isAny = true;
+            return fn;
+        }
 
         case 'exact': {
             const target = answerValue.toLowerCase();
@@ -128,20 +131,32 @@ function buildAnswerChecker(answerType: string, answerValue: string): (input: st
     }
 }
 
+/** Исправляет URL медиа, если бэкенд приклеил свой хост перед S3/CDN URL */
+function fixMediaUrl(url: string | null | undefined): string | undefined {
+    if (!url) return undefined;
+    // Паттерн: http://host:porthttp(s)://real-url → оставляем только real-url
+    const match = url.match(/^https?:\/\/[^/]+?(https?:\/\/.+)$/);
+    return match ? match[1] : url;
+}
+
 /** Конвертирует шаг из API формата во фронтенд формат */
 function adaptStep(apiStep: ApiQuestStep): QuestStep {
+    // answer_pattern (новый формат) или answer_type/answer_value (старый)
+    const answerType = apiStep.answer_pattern?.type ?? apiStep.answer_type ?? 'any';
+    const answerValue = apiStep.answer_pattern?.value ?? apiStep.answer_value ?? '';
+
     return {
-        id: apiStep.id,
+        id: String(apiStep.step_id ?? apiStep.id),
         title: apiStep.title,
         location: apiStep.location,
         story: apiStep.story,
         task: apiStep.task,
         hint: apiStep.hint || undefined,
-        answer: buildAnswerChecker(apiStep.answer_type, apiStep.answer_value),
+        answer: buildAnswerChecker(answerType, answerValue),
         lat: typeof apiStep.lat === 'string' ? parseFloat(apiStep.lat) : apiStep.lat,
         lng: typeof apiStep.lng === 'string' ? parseFloat(apiStep.lng) : apiStep.lng,
         mapsUrl: apiStep.maps_url,
-        image: apiStep.image_url || undefined,
+        image: fixMediaUrl(apiStep.image_url),
         inputType: apiStep.input_type,
     };
 }
@@ -150,8 +165,8 @@ function adaptStep(apiStep: ApiQuestStep): QuestStep {
 function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
     return {
         text: apiFinale.text,
-        video: apiFinale.video_url || undefined,
-        poster: apiFinale.poster_url || undefined,
+        video: fixMediaUrl(apiFinale.video_url),
+        poster: fixMediaUrl(apiFinale.poster_url),
     };
 }
 
@@ -222,7 +237,7 @@ export function adaptMeta(apiMeta: ApiQuestMeta): QuestMeta {
         difficulty: (apiMeta.difficulty as 'easy' | 'medium' | 'hard') || undefined,
         tags: apiMeta.tags ? Object.keys(apiMeta.tags) : undefined,
         petFriendly: apiMeta.pet_friendly,
-        cover: apiMeta.cover_url || undefined,
+        cover: fixMediaUrl(apiMeta.cover_url),
     };
 }
 

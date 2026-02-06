@@ -310,36 +310,49 @@ export default function QuestFullMap({
         useEffect(() => {
             if (!map) return;
 
-            // Фильтруем точки с валидными координатами
-            const validPoints = points.filter(p =>
-                Number.isFinite(p.lat) &&
-                Number.isFinite(p.lng) &&
-                p.lat >= -90 && p.lat <= 90 &&
-                p.lng >= -180 && p.lng <= 180
-            );
+            const fit = () => {
+                try {
+                    const container: HTMLElement | undefined = map.getContainer?.();
+                    if (!container || !container.isConnected) return;
 
-            if (validPoints.length === 0) return;
+                    const { clientWidth, clientHeight } = container;
+                    if (!clientWidth || !clientHeight) return;
 
-            const nextBounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng] as [number, number])).pad(0.15);
+                    // Фильтруем точки с валидными координатами
+                    const validPoints = points.filter(p =>
+                        Number.isFinite(p.lat) &&
+                        Number.isFinite(p.lng) &&
+                        p.lat >= -90 && p.lat <= 90 &&
+                        p.lng >= -180 && p.lng <= 180
+                    );
 
-            if (!nextBounds.isValid()) return;
+                    if (validPoints.length === 0) return;
 
-            map.whenReady(() => {
-                const container: HTMLElement | undefined = map.getContainer?.();
-                if (!container) return;
+                    const nextBounds = L.latLngBounds(validPoints.map(p => [p.lat, p.lng] as [number, number])).pad(0.15);
+                    if (!nextBounds.isValid()) return;
 
-                const { clientWidth, clientHeight } = container;
-                if (!clientWidth || !clientHeight) return;
+                    const current = map.getBounds?.();
+                    const already = current && current.contains(nextBounds) && nextBounds.contains(current);
 
-                const current = map.getBounds?.();
-                const already = current && current.contains(nextBounds) && nextBounds.contains(current);
+                    if (!already) {
+                        map.fitBounds(nextBounds, { animate: false });
+                    }
 
-                if (!already) {
-                    map.fitBounds(nextBounds, { animate: false });
-                }
+                    requestAnimationFrame(() => {
+                        try {
+                            const c = map.getContainer?.();
+                            if (c && c.isConnected) map.invalidateSize();
+                        } catch { /* pane not ready */ }
+                    });
+                } catch { /* map not ready */ }
+            };
 
-                requestAnimationFrame(() => map.invalidateSize());
-            });
+            // Задержка, чтобы Leaflet успел инициализировать mapPane
+            const timer = setTimeout(() => {
+                map.whenReady(fit);
+            }, 100);
+
+            return () => clearTimeout(timer);
         }, [map]);
 
         return null;
@@ -416,7 +429,7 @@ export default function QuestFullMap({
                 </TouchableOpacity>
             </Modal>
 
-            <View ref={mapDivRef as any} style={styles.mapBox}>
+            <View ref={mapDivRef as any} style={styles.mapBox} {...{ 'data-quest-map': 'true' } as any}>
                 <MapContainer
                     bounds={bounds}
                     style={styles.map}

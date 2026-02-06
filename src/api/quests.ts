@@ -21,19 +21,25 @@ export type ApiQuestFinale = {
 
 /** Шаг квеста (из бэкенда — JSON поле steps) */
 export type ApiQuestStep = {
-    id: string;
+    id: number | string;
+    step_id?: string;
     title: string;
     location: string;
     story: string;
     task: string;
     hint?: string;
-    answer_type: 'exact' | 'range' | 'any' | 'regex' | 'function';
-    answer_value: string; // JSON-encoded answer config
+    // Новый формат: answer_pattern объект
+    answer_pattern?: { type: string; value: string };
+    // Старый формат (для обратной совместимости)
+    answer_type?: string;
+    answer_value?: string;
     lat: number;
     lng: number;
     maps_url: string;
     image_url?: string | null;
     input_type?: 'number' | 'text';
+    order?: number;
+    is_intro?: boolean;
 };
 
 /** Метаданные квеста для каталога */

@@ -17,6 +17,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 
+import { generatePrintableQuest } from './QuestPrintable';
+
 // ⚡️ Heavy deps lazy-loaded to keep chunk small
 const BelkrajWidgetLazy = lazy(() => import("@/components/belkraj/BelkrajWidget"));
 const getClipboard = () => import('expo-clipboard');
@@ -227,7 +229,7 @@ const StepCard = memo((props: StepCardProps) => {
                 <Text style={styles.taskText}>{step.task}</Text>
 
                 {step.id !== 'intro' && !isPassed && (
-                    step.answer.toString() === '() => true'
+                    ((step.answer as any)._isAny === true || /\(\)\s*=>\s*true/.test(step.answer.toString()))
                         ? (
                             <Pressable style={styles.primaryButton} onPress={() => onSubmit('ok')} hitSlop={6}>
                                 <Text style={styles.buttonText}>Далее</Text>
@@ -425,8 +427,9 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             index: currentIndex, unlocked: unlockedIndex, answers, attempts, hints, showMap
         })).catch(e => console.error('Error saving progress:', e));
         // Синхронизация с бэкендом
+        const completed = steps.length > 0 && steps.every(s => !!answers[s.id]);
         onProgressChange?.({
-            currentIndex, unlockedIndex: unlockedIndex, answers, attempts, hints, showMap,
+            currentIndex, unlockedIndex: unlockedIndex, answers, attempts, hints, showMap, completed,
         });
     }, [currentIndex, unlockedIndex, answers, attempts, hints, showMap, storageKey]);
 
@@ -638,6 +641,26 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                         showMap={showMap}
                                         onToggleMap={toggleMap}
                                     />
+
+                                    {currentStep.id === 'intro' && Platform.OS === 'web' && (
+                                        <View style={styles.printSection}>
+                                            <Text style={styles.printHint}>
+                                                Вы также можете скачать бумажную версию квеста с картой и заданиями. Ответы можно записать от руки и проверить позднее на сайте.
+                                            </Text>
+                                            <Pressable
+                                                style={styles.printButton}
+                                                onPress={() => {
+                                                    const questUrl = typeof window !== 'undefined'
+                                                        ? window.location.href.replace(/^http:\/\/localhost:\d+/, 'https://metravel.by')
+                                                        : undefined;
+                                                    generatePrintableQuest({ title, steps, intro, questUrl });
+                                                }}
+                                                hitSlop={6}
+                                            >
+                                                <Text style={styles.printButtonText}>Скачать печатную версию</Text>
+                                            </Pressable>
+                                        </View>
+                                    )}
                                 </View>
 
                                 {!!steps.length && (
@@ -955,13 +978,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     photoHint: { fontSize: 12, color: colors.textSecondary, marginBottom: SPACING.xs },
 
-    imagePreview: { height: 200, borderRadius: 8, overflow: 'hidden', position: 'relative', maxWidth: 480 },
-    previewImage: { width: '100%', height: '100%' },
+    imagePreview: { borderRadius: 8, overflow: 'hidden', position: 'relative', maxWidth: 480 },
+    previewImage: { width: '100%', aspectRatio: 4 / 3, resizeMode: 'contain' },
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.overlay, padding: 6, alignItems: 'center' },
     overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '500' },
 
     startButton: { backgroundColor: colors.primary, padding: SPACING.lg, borderRadius: 10, alignItems: 'center' },
     startButtonText: { color: colors.textOnPrimary, fontSize: 16, fontWeight: '700' },
+
+    printSection: {
+        backgroundColor: colors.backgroundSecondary, borderRadius: 12, padding: SPACING.md,
+        marginBottom: SPACING.md, alignItems: 'center',
+    },
+    printHint: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 19, marginBottom: SPACING.sm },
+    printButton: {
+        backgroundColor: colors.surface, paddingHorizontal: 20, paddingVertical: 12,
+        borderRadius: 999, borderWidth: 1, borderColor: colors.border,
+        ...Platform.select({ web: { cursor: 'pointer', transition: 'all 0.15s ease' } }),
+    },
+    printButtonText: { color: colors.text, fontSize: 14, fontWeight: '600' },
 
     fullMapSection: { backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.md, marginBottom: SPACING.md },
 
