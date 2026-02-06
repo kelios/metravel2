@@ -81,11 +81,11 @@ describe('useScrollNavigation (web)', () => {
     expect((window as any).scrollTo).not.toHaveBeenCalled();
     expect((window as any).scrollBy).not.toHaveBeenCalled();
 
-    // targetTop = currentTop(10) + (elTop(120) - containerTop(0))
-    expect(container.scrollTo).toHaveBeenCalledWith({ top: 130, behavior: 'smooth' });
+    // targetTop = currentTop(10) + (elTop(120) - containerTop(0)) - headerOffset(88) = 42
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 42, behavior: 'smooth' });
   });
 
-  it('applies header offset via container.scrollBy (not window) when container supports it', () => {
+  it('applies header offset directly in scrollTo (not via separate scrollBy)', () => {
     const { result } = renderHook(() => useScrollNavigation());
     (result.current.scrollRef as any).current = {
       getScrollableNode: () => document.getElementById('scroll-container'),
@@ -97,13 +97,12 @@ describe('useScrollNavigation (web)', () => {
     });
 
     const container: any = document.getElementById('scroll-container');
+    // Header offset is baked into the single scrollTo call — no separate scrollBy.
     expect(container.scrollTo).toHaveBeenCalledTimes(1);
-    expect(container.scrollBy).toHaveBeenCalledTimes(1);
+    expect(container.scrollBy).not.toHaveBeenCalled();
 
-    // safeOffset = min(headerOffset, targetTop). We don't assert exact headerOffset here,
-    // only that it is applied negatively to the container (never to window).
-    expect(container.scrollBy.mock.calls[0][0]).toMatchObject({ top: expect.any(Number), left: 0 });
-    expect(container.scrollBy.mock.calls[0][0].top).toBeLessThanOrEqual(0);
+    // targetTop = 10 + (120 - 0) - 88 = 42
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 42, behavior: 'smooth' });
     expect((window as any).scrollBy).not.toHaveBeenCalled();
   });
 
@@ -130,30 +129,35 @@ describe('useScrollNavigation (web)', () => {
     });
 
     expect(container.scrollTo).toHaveBeenCalled();
-    expect(container.scrollTop).toBe(130);
+    // targetTop = 10 + (120 - 0) - 88 = 42
+    expect(container.scrollTop).toBe(42);
 
     // Regression guard: should not scroll the window
     expect((window as any).scrollTo).not.toHaveBeenCalled();
   });
 
-  it('falls back to scrollIntoView when no scrollable container is detected', () => {
+  it('falls back to window.scrollTo when no scrollable container is detected', () => {
     const { result } = renderHook(() => useScrollNavigation());
     (result.current.scrollRef as any).current = null;
-
-    const target = document.getElementById('target') as any;
-    target.scrollIntoView = jest.fn();
 
     // Make container appear non-scrollable
     const container: any = document.getElementById('scroll-container');
     Object.defineProperty(container, 'scrollHeight', { value: 200, writable: true });
     Object.defineProperty(container, 'clientHeight', { value: 200, writable: true });
 
+    const origScrollTo = window.scrollTo;
+    window.scrollTo = jest.fn() as any;
+
     act(() => {
       result.current.scrollTo('description');
       jest.runAllTimers();
     });
 
-    expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+    // Falls back to window.scrollTo with header offset baked in
+    // targetY = 0 + 120 - 88 = 32
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 32, behavior: 'smooth' });
+
+    window.scrollTo = origScrollTo;
   });
 
   it('retries and scrolls when section mounts lazily and is only available via ref (regression)', () => {
@@ -214,6 +218,7 @@ describe('useScrollNavigation (web)', () => {
 
     expect(el.getAttribute('data-section-key')).toBe('description');
     expect(container.scrollTo).toHaveBeenCalled();
-    expect(container.scrollTo).toHaveBeenCalledWith({ top: 120, behavior: 'smooth' });
+    // targetTop = 0 + (120 - 0) - 88 = 32
+    expect(container.scrollTo).toHaveBeenCalledWith({ top: 32, behavior: 'smooth' });
   });
 });

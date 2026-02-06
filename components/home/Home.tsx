@@ -1,5 +1,5 @@
-import React, { useEffect, Suspense, lazy, useState, useCallback, memo, useMemo } from 'react';
-import { View, StyleSheet, FlatList, Platform, Animated } from 'react-native';
+import React, { useEffect, Suspense, lazy, useState, memo, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
@@ -47,8 +47,6 @@ function Home() {
 
   const [showHeavyContent, setShowHeavyContent] = useState(false);
   const [hydrated, setHydrated] = useState(!isWeb);
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const shouldUseNativeDriver = Platform.OS !== 'web';
 
   useEffect(() => {
     if (!isWeb) return;
@@ -61,11 +59,6 @@ function Home() {
     const show = () => {
       if (cancelled) return;
       setShowHeavyContent(true);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: shouldUseNativeDriver,
-      }).start();
     };
 
     const fallbackMs = Platform.OS === 'web'
@@ -95,7 +88,7 @@ function Home() {
         }
       }
     };
-  }, [fadeAnim, isMobile, shouldUseNativeDriver]);
+  }, [isMobile]);
 
   // Lightweight: avoid fetching full list of user travels on home screen.
   // Count can be provided later from a dedicated endpoint if needed.
@@ -111,76 +104,13 @@ function Home() {
     queueAnalyticsEvent('HomeViewed', payload);
   }, [isFocused, isAuthenticated, travelsCount]);
 
-  const sections = useMemo(() => {
-    const base: Array<'hero' | 'onboarding' | 'trust' | 'howItWorks' | 'inspiration' | 'faq' | 'finalCta'> = [
-      'hero',
-      ...(isAuthenticated ? ['onboarding' as const] : []),
-      'trust',
-      'howItWorks',
-      'inspiration',
-      'faq',
-      'finalCta',
-    ];
-    return base;
-  }, [isAuthenticated]);
-
-  const sectionCount = sections.length;
-
-  const renderSection = useCallback(({ item }: { item: typeof sections[number] }) => {
-    switch (item) {
-      case 'hero':
-        return <HomeHero travelsCount={travelsCount} />;
-      case 'onboarding':
-        return (
-          <Suspense fallback={null}>
-            <OnboardingBanner />
-          </Suspense>
-        );
-      case 'trust':
-        if (!hydrated) return <View style={{ minHeight: 220 }} />;
-        return (
-          <Suspense fallback={<View style={{ minHeight: 220 }} />}>
-            <HomeTrustBlock />
-          </Suspense>
-        );
-      case 'howItWorks':
-        if (!hydrated) return <View style={{ minHeight: 320 }} />;
-        return (
-          <Suspense fallback={<View style={{ minHeight: 320 }} />}>
-            <HomeHowItWorks />
-          </Suspense>
-        );
-      case 'inspiration':
-        return showHeavyContent ? (
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <Suspense fallback={<SectionSkeleton hydrated={hydrated} />}>
-              <HomeInspirationSections />
-            </Suspense>
-          </Animated.View>
-        ) : (
-          <SectionSkeleton hydrated={hydrated} />
-        );
-      case 'faq':
-        if (!hydrated) return <View style={{ minHeight: 260 }} />;
-        return (
-          <Suspense fallback={<View style={{ minHeight: 260 }} />}>
-            <HomeFAQSection />
-          </Suspense>
-        );
-      case 'finalCta':
-        return showHeavyContent ? (
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <Suspense fallback={<View style={{ height: 300 }} />}>
-              <HomeFinalCTA travelsCount={travelsCount} />
-            </Suspense>
-          </Animated.View>
-        ) : (
-          <View style={{ height: 300 }} />
-        );
-      default:
-        return null;
-    }
-  }, [travelsCount, showHeavyContent, hydrated, fadeAnim]);
+  const heavyFadeStyle = useMemo(
+    () =>
+      isWeb
+        ? ({ opacity: showHeavyContent ? 1 : 0, transition: 'opacity 0.3s ease' } as any)
+        : { opacity: showHeavyContent ? 1 : 0 },
+    [showHeavyContent],
+  );
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -197,34 +127,69 @@ function Home() {
     },
   }), [colors]);
 
-  const isTestEnv = process.env.NODE_ENV === 'test';
-  const initialNumToRender = isTestEnv ? sectionCount : 1;
-  const maxToRenderPerBatch = isTestEnv ? sectionCount : 1;
-
   return (
-    <FlatList
-      data={sections}
-      keyExtractor={(item) => item}
-      renderItem={renderSection}
-      style={styles.container}
+    <ScrollView
+      style={[
+        styles.container,
+        isWeb && ({ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } as any),
+      ]}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
-      scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
-      removeClippedSubviews={Platform.OS === 'android'}
-      initialNumToRender={Math.min(initialNumToRender, sectionCount)}
-      maxToRenderPerBatch={Math.min(maxToRenderPerBatch, sectionCount)}
-      windowSize={isMobile ? 3 : (Platform.OS === 'web' ? 5 : 7)}
-      updateCellsBatchingPeriod={isMobile ? 100 : (Platform.OS === 'web' ? 50 : 16)}
+      scrollEventThrottle={isWeb ? 32 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
-      {...Platform.select({
-        web: {
-          style: [
-            styles.container,
-            { touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' } as any,
-          ],
-        },
-      })}
-    />
+    >
+      <HomeHero travelsCount={travelsCount} />
+
+      {isAuthenticated && (
+        <Suspense fallback={null}>
+          <OnboardingBanner />
+        </Suspense>
+      )}
+
+      {hydrated ? (
+        <Suspense fallback={<View style={{ minHeight: 220 }} />}>
+          <HomeTrustBlock />
+        </Suspense>
+      ) : (
+        <View style={{ minHeight: 220 }} />
+      )}
+
+      {hydrated ? (
+        <Suspense fallback={<View style={{ minHeight: 320 }} />}>
+          <HomeHowItWorks />
+        </Suspense>
+      ) : (
+        <View style={{ minHeight: 320 }} />
+      )}
+
+      {showHeavyContent ? (
+        <View style={heavyFadeStyle}>
+          <Suspense fallback={<SectionSkeleton hydrated={hydrated} />}>
+            <HomeInspirationSections />
+          </Suspense>
+        </View>
+      ) : (
+        <SectionSkeleton hydrated={hydrated} />
+      )}
+
+      {hydrated ? (
+        <Suspense fallback={<View style={{ minHeight: 260 }} />}>
+          <HomeFAQSection />
+        </Suspense>
+      ) : (
+        <View style={{ minHeight: 260 }} />
+      )}
+
+      {showHeavyContent ? (
+        <View style={heavyFadeStyle}>
+          <Suspense fallback={<View style={{ height: 300 }} />}>
+            <HomeFinalCTA travelsCount={travelsCount} />
+          </Suspense>
+        </View>
+      ) : (
+        <View style={{ height: 300 }} />
+      )}
+    </ScrollView>
   );
 }
 

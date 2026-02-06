@@ -26,19 +26,7 @@ if (Platform.OS === 'web') {
   require('./global.css');
 }
 
-// Подавляем предупреждение useLayoutEffect для React Navigation на вебе
-if (Platform.OS === 'web') {
-  const originalError = console.error;
-  console.error = (...args) => {
-    if (
-      typeof args[0] === 'string' &&
-      args[0].includes('useLayoutEffect does nothing on the server')
-    ) {
-      return;
-    }
-    originalError.apply(console, args);
-  };
-}
+// useLayoutEffect warning is suppressed by the inline script in +html.tsx
 
 // Подавляем внешние депрекейшн-варнинги от зависимостей (react-native-element-dropdown)
 LogBox.ignoreLogs([

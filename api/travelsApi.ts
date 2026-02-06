@@ -50,7 +50,7 @@ const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
 const travelCache = new Map<number, Travel>();
 const TOKEN_KEY = 'userToken';
 
-const normalizeTravelItem = (input: any): Travel => {
+export const normalizeTravelItem = (input: any): Travel => {
     const t = (input && typeof input === 'object') ? input : {};
     const out: any = { ...t };
 

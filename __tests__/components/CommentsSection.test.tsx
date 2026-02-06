@@ -243,7 +243,7 @@ describe('CommentsSection', () => {
       expect(screen.getByTestId('comments-skeleton')).toBeTruthy();
     });
 
-    it('should show error message on fetch error', () => {
+    it('should show empty state when thread errors but comments load fine', () => {
       mockUseMainThread.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -260,10 +260,31 @@ describe('CommentsSection', () => {
 
       render(<CommentsSection travelId={123} />, { wrapper });
 
+      expect(screen.getByText('Пока нет комментариев')).toBeTruthy();
+      expect(screen.queryByText('Комментарии недоступны')).toBeNull();
+    });
+
+    it('should show error message when comments fail to load', () => {
+      mockUseMainThread.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: null,
+        refetch: jest.fn(),
+      } as any);
+
+      mockUseTravelComments.mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: new Error('Network error'),
+        refetch: jest.fn(),
+      } as any);
+
+      render(<CommentsSection travelId={123} />, { wrapper });
+
       expect(screen.getByText('Комментарии недоступны')).toBeTruthy();
     });
 
-    it('should show generic error on 401 error (view is public)', () => {
+    it('should show login prompt and empty state on 401 thread error (comments are public)', () => {
       mockUseAuth.mockReturnValue({
         isAuthenticated: false,
         userId: null,
@@ -301,7 +322,8 @@ describe('CommentsSection', () => {
       render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Войдите, чтобы оставить комментарий')).toBeTruthy();
-      expect(screen.getByText('Комментарии недоступны')).toBeTruthy();
+      expect(screen.getByText('Пока нет комментариев')).toBeTruthy();
+      expect(screen.queryByText('Комментарии недоступны')).toBeNull();
     });
   });
 

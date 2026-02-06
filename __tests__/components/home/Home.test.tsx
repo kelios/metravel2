@@ -203,8 +203,8 @@ describe('Home Component', () => {
 
     it('should have optimized scroll event throttle', () => {
       const { UNSAFE_getByType } = renderHome();
-      const FlatList = require('react-native').FlatList;
-      const list = UNSAFE_getByType(FlatList);
+      const ScrollView = require('react-native').ScrollView;
+      const list = UNSAFE_getByType(ScrollView);
       
       // Should have scrollEventThrottle prop
       expect(list.props.scrollEventThrottle).toBeDefined();

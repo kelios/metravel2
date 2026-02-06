@@ -5,7 +5,7 @@
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
+import { fetchTravel, fetchTravelBySlug, normalizeTravelItem } from '@/api/travelsApi';
 import type { Travel } from '@/types/types';
 import { Platform } from 'react-native';
 import { queryKeys } from '@/queryKeys';
@@ -19,6 +19,27 @@ export interface UseTravelDetailsReturn {
   slug: string;
   isId: boolean;
   isMissingParam: boolean;
+}
+
+/**
+ * Consume preloaded travel data from the inline script in +html.tsx.
+ * Returns normalized Travel if the preload matches the current slug/id, otherwise undefined.
+ * The preload is consumed (deleted) on first access to avoid stale data.
+ */
+function consumePreloadedTravel(slug: string, isId: boolean, idNum: number): Travel | undefined {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+  const preload = (window as any).__metravelTravelPreload;
+  if (!preload?.data) return undefined;
+  const matches = isId
+    ? preload.isId && String(preload.slug) === String(idNum)
+    : !preload.isId && preload.slug === slug;
+  if (!matches) return undefined;
+  delete (window as any).__metravelTravelPreload;
+  try {
+    return normalizeTravelItem(preload.data);
+  } catch {
+    return undefined;
+  }
 }
 
 export function useTravelDetails(): UseTravelDetailsReturn {
@@ -41,10 +62,14 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
     queryKey: queryKeys.travel(cacheKey),
     enabled: !isMissingParam,
-    queryFn: ({ signal } = {} as any) =>
-      isId
+    queryFn: ({ signal } = {} as any) => {
+      // Try to consume preloaded data from the inline script (avoids double API fetch)
+      const preloaded = consumePreloadedTravel(normalizedSlug, isId, idNum);
+      if (preloaded) return preloaded;
+      return isId
         ? fetchTravel(idNum, { signal })
-        : fetchTravelBySlug(normalizedSlug, { signal }),
+        : fetchTravelBySlug(normalizedSlug, { signal });
+    },
     // Travel page is a core landing route; retries can keep the UI in "loading"
     // for a long time when API is misconfigured/unreachable (hurts LCP).
     retry: Platform.OS === 'web' ? false : undefined,

@@ -259,7 +259,9 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   }, []);
 
   const isLoading = isLoadingThread || isLoadingComments;
-  const error = threadError || commentsError;
+  // Thread metadata is optional — comments are readable by everyone via travel_id
+  // fallback, so only commentsError should block the UI.
+  const error = commentsError;
   const isSubmitting =
     createComment.isPending || updateComment.isPending || replyToComment.isPending;
 

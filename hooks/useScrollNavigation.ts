@@ -207,46 +207,6 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             return didCall;
           };
 
-          const safeScrollBy = (node: any, deltaTop: number): boolean => {
-            if (!node) return false;
-            const before = Number(node.scrollTop ?? 0);
-            let didCall = false;
-
-            // 1) Standard DOM signature: scrollBy({ top, left })
-            try {
-              if (typeof node.scrollBy === 'function') {
-                node.scrollBy({ top: deltaTop, left: 0, behavior: 'instant' });
-                didCall = true;
-              }
-            } catch {
-              // noop
-            }
-
-            // 2) Numeric signature: scrollBy(x, y)
-            try {
-              const afterObj = Number(node.scrollTop ?? 0);
-              if (typeof node.scrollBy === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
-                node.scrollBy(0, deltaTop);
-                didCall = true;
-              }
-            } catch {
-              // noop
-            }
-
-            // 3) Manual fallback
-            try {
-              const afterNum = Number(node.scrollTop ?? 0);
-              if (Math.abs(afterNum - before) < 1) {
-                node.scrollTop = before + deltaTop;
-                didCall = true;
-              }
-            } catch {
-              // noop
-            }
-
-            return didCall;
-          };
-
           const scrollViewAny = scrollRef.current as any;
           const scrollNode: HTMLElement | null =
             (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
@@ -274,57 +234,38 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             const containerRect = bestScrollContainer.getBoundingClientRect();
             const elRect = el.getBoundingClientRect();
             const currentTop = (bestScrollContainer as any).scrollTop ?? 0;
-            const targetTopRaw = currentTop + (elRect.top - containerRect.top);
+            const HEADER_OFFSET = getHeaderOffset();
+            const adjustment = shouldApplyHeaderOffset(bestScrollContainer) ? HEADER_OFFSET : 0;
+            const targetTopRaw = currentTop + (elRect.top - containerRect.top) - adjustment;
             const targetTop = Math.max(0, Math.round(targetTopRaw));
 
             if (dbg) {
               // eslint-disable-next-line no-console
-              console.debug('[nav] scrollTo computed', { currentTop, targetTop });
+              console.debug('[nav] scrollTo computed', { currentTop, targetTop, adjustment });
             }
 
             if (safeScrollTo(bestScrollContainer as any, targetTop)) {
-              const HEADER_OFFSET = getHeaderOffset();
-              if (HEADER_OFFSET > 0 && typeof (bestScrollContainer as any).scrollBy === 'function') {
-                setTimeout(() => {
-                  try {
-                    const safeOffset = Math.min(HEADER_OFFSET, targetTop);
-                    safeScrollBy(bestScrollContainer as any, -safeOffset);
-                  } catch {
-                    // noop
-                  }
-                }, 0);
-              }
               return true;
             }
           }
 
-          // Fallback: scrollIntoView (браузер сам выбирает scroll container)
-          if (typeof el.scrollIntoView === 'function') {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-
+          // Fallback: manual scroll calculation using window/document scroll
+          {
             const HEADER_OFFSET = getHeaderOffset();
-            setTimeout(() => {
-              try {
-                const bestAfter = findScrollableAncestor(el.parentElement);
-                const safeOffset = Math.max(0, HEADER_OFFSET);
-                if (bestAfter && typeof (bestAfter as any).scrollBy === 'function') {
-                  const shouldOffset = shouldApplyHeaderOffset(bestAfter as any);
-                  if (shouldOffset) {
-                    (bestAfter as any).scrollBy({ top: -safeOffset, left: 0, behavior: 'instant' });
-                  }
-                  return;
-                }
+            const elRect = el.getBoundingClientRect();
+            const win = (typeof window !== 'undefined' ? window : undefined) as any;
+            if (win && typeof win.scrollTo === 'function') {
+              const currentScrollY = win.pageYOffset ?? win.scrollY ?? 0;
+              const targetY = Math.max(0, Math.round(currentScrollY + elRect.top - HEADER_OFFSET));
+              win.scrollTo({ top: targetY, behavior: 'smooth' });
+              return true;
+            }
 
-                const win = (typeof window !== 'undefined' ? window : undefined) as any;
-                if (win && typeof win.scrollBy === 'function') {
-                  win.scrollBy({ top: -safeOffset, left: 0, behavior: 'instant' });
-                }
-              } catch {
-                // noop
-              }
-            }, 0);
-
-            return true;
+            // Last resort: scrollIntoView
+            if (typeof el.scrollIntoView === 'function') {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+              return true;
+            }
           }
         }
 

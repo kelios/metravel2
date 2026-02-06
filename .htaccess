@@ -115,7 +115,7 @@
   Header unset X-Powered-By
   
   # Content Security Policy (adjust as needed)
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://mc.yandex.ru https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.metravel.by https://cdn.metravel.by; frame-ancestors 'self';"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://mc.yandex.ru https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.metravel.by https://cdn.metravel.by https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://mc.yandex.ru https://images.weserv.nl https://tile.openstreetmap.org; frame-ancestors 'self';"
 </IfModule>
 
 # Cache Control

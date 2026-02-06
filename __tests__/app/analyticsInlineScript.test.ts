@@ -187,7 +187,7 @@ describe('analytics inline script', () => {
 
     const pageViewEvents = () =>
       (windowMock.dataLayer || []).filter(
-        (entry: any[]) => Array.isArray(entry) && entry[0] === 'event' && entry[1] === 'page_view'
+        (entry: any) => entry && entry[0] === 'event' && entry[1] === 'page_view'
       )
 
     expect(pageViewEvents().length).toBeGreaterThanOrEqual(1)

@@ -71,7 +71,7 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
 
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function(){
-      window.dataLayer.push(Array.prototype.slice.call(arguments));
+      window.dataLayer.push(arguments);
     };
     window.gtag('js', new Date());
     window.gtag('config', GA_ID, { transport_type: 'beacon' });
@@ -216,21 +216,82 @@ const getEntryPreloadScript = () => String.raw`
 const getFontFaceSwapScript = () => String.raw`
 (function(){
   try {
-    if (!window.CSSStyleSheet) return;
-    var proto = window.CSSStyleSheet.prototype;
-    if (!proto || proto.__metravelFontSwapPatched) return;
-    var originalInsertRule = proto.insertRule;
-    if (typeof originalInsertRule !== 'function') return;
-    proto.insertRule = function(rule, index) {
-      try {
-        if (typeof rule === 'string' && rule.indexOf('@font-face') === 0 && rule.indexOf('font-display') === -1) {
-          rule = rule.replace(/\}\s*$/, ';font-display:swap;}');
+    // 1. Patch CSSStyleSheet.insertRule (catches dynamically inserted rules)
+    if (window.CSSStyleSheet) {
+      var proto = window.CSSStyleSheet.prototype;
+      if (proto && !proto.__metravelFontSwapPatched && typeof proto.insertRule === 'function') {
+        var originalInsertRule = proto.insertRule;
+        proto.insertRule = function(rule, index) {
+          try {
+            if (typeof rule === 'string' && rule.indexOf('@font-face') !== -1 && rule.indexOf('font-display') === -1) {
+              rule = rule.replace(/\}\s*$/, ';font-display:swap;}');
+            }
+          } catch (_e) {}
+          return originalInsertRule.call(this, rule, index);
+        };
+        proto.__metravelFontSwapPatched = true;
+      }
+    }
+
+    // 2. MutationObserver to catch <style> elements injected via textContent/innerHTML
+    //    (e.g. @expo/vector-icons injects icon font-face this way)
+    function patchFontDisplay(css) {
+      return css.replace(/@font-face\s*\{([^}]*)\}/g, function(match, body) {
+        if (body.indexOf('font-display') !== -1) return match;
+        return match.replace(/\}\s*$/, ';font-display:swap;}');
+      });
+    }
+    if (typeof MutationObserver !== 'undefined') {
+      new MutationObserver(function(mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          var nodes = mutations[i].addedNodes;
+          for (var j = 0; j < nodes.length; j++) {
+            var node = nodes[j];
+            if (node.tagName === 'STYLE' && node.textContent && node.textContent.indexOf('@font-face') !== -1) {
+              var patched = patchFontDisplay(node.textContent);
+              if (patched !== node.textContent) node.textContent = patched;
+            }
+          }
         }
-      } catch (_e) {}
-      return originalInsertRule.call(this, rule, index);
-    };
-    proto.__metravelFontSwapPatched = true;
+      }).observe(document.head || document.documentElement, { childList: true, subtree: true });
+    }
   } catch (_e) {}
+})();
+`;
+
+const getHomeHeroPreloadScript = () => String.raw`
+(function(){
+  try {
+    var path = window.location && window.location.pathname;
+    if (path && path !== '/' && path !== '/index') return;
+
+    // Expo static export hashes asset filenames. Scan existing scripts/links
+    // for a reference to the pdf.webp asset so we can preload the correct URL.
+    function findAssetUrl() {
+      // Check if Expo already emitted a <link> or <img> referencing pdf.webp (or pdf-<hash>.webp)
+      var imgs = document.querySelectorAll('img[src*="pdf"]');
+      for (var i = 0; i < imgs.length; i++) {
+        var s = imgs[i].getAttribute('src') || '';
+        if (s.indexOf('pdf') !== -1 && s.indexOf('.webp') !== -1) return s;
+      }
+      return null;
+    }
+
+    // Try immediately (SSR may already have the asset reference)
+    var href = findAssetUrl();
+    if (href) {
+      if (document.querySelector('link[rel="preload"][href="' + href + '"]')) return;
+      var link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = href;
+      link.type = 'image/webp';
+      try { link.fetchPriority = 'high'; link.setAttribute('fetchPriority', 'high'); } catch(_e){}
+      document.head.appendChild(link);
+    }
+    // If not found in SSR, a MutationObserver will pick it up once React renders
+    // (handled by the component-level preload in HomeHero.tsx as fallback).
+  } catch(_e){}
 })();
 `;
 
@@ -252,7 +313,6 @@ const getTravelHeroPreloadScript = () => String.raw`
       ? apiBase + '/api/travels/' + encodeURIComponent(slug) + '/'
       : apiBase + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
 
-    // Detect AVIF support (same logic as utils/imageOptimization.ts)
     function supportsAvif() {
       try {
         var canvas = document.createElement('canvas');
@@ -264,11 +324,41 @@ const getTravelHeroPreloadScript = () => String.raw`
       }
     }
 
-    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id) {
+    function supportsWebP() {
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+      } catch (_e) {
+        return false;
+      }
+    }
+
+    var _preferredFormat = null;
+    function getPreferredFormat() {
+      if (_preferredFormat) return _preferredFormat;
+      _preferredFormat = supportsAvif() ? 'avif' : (supportsWebP() ? 'webp' : 'jpg');
+      return _preferredFormat;
+    }
+
+    // Must match optimizeImageUrl() in utils/imageOptimization.ts exactly.
+    // Key difference from old code: metravel.by/cdn.metravel.by/api.metravel.by are
+    // "allowed transform hosts" — params are added directly (using 'f' for format),
+    // NOT proxied through images.weserv.nl (which uses 'output' for format).
+    function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id, explicitDpr) {
       try {
         var resolved = new URL(rawUrl, window.location.origin);
-        
-        // Add version param to match React component logic
+
+        // Force HTTPS for non-local hosts (matches optimizeImageUrl)
+        if (resolved.protocol === 'http:') {
+          var h = resolved.hostname.toLowerCase();
+          if (h !== 'localhost' && h !== '127.0.0.1' && !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(h)) {
+            resolved.protocol = 'https:';
+          }
+        }
+
+        // Add version param (matches buildVersionedImageUrl)
         if (updatedAt) {
           var ts = Date.parse(updatedAt);
           if (!isNaN(ts)) resolved.searchParams.set('v', String(ts));
@@ -276,52 +366,43 @@ const getTravelHeroPreloadScript = () => String.raw`
           resolved.searchParams.set('v', String(id));
         }
 
-        var host = (resolved.hostname || '').toLowerCase();
-        // Force proxy for metravel domains to ensure resizing
-        var allowed = host === 'images.weserv.nl';
-        
-        // Match format detection with optimizeImageUrl (format: 'auto')
-        var preferredFormat = supportsAvif() ? 'avif' : 'webp';
-        
-        // Apply DPR (match optimizeImageUrl logic: Math.min(dpr, 2) for web)
-        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var rHost = (resolved.hostname || '').toLowerCase();
+        var isAllowedHost = rHost === 'metravel.by' || rHost === 'cdn.metravel.by' || rHost === 'api.metravel.by' || rHost === 'images.weserv.nl';
+        var isWeserv = rHost === 'images.weserv.nl';
+
+        var preferredFormat = getPreferredFormat();
+        var dpr = typeof explicitDpr === 'number' ? explicitDpr : Math.min(window.devicePixelRatio || 1, 2);
         var actualWidth = width ? Math.round(width * dpr) : width;
-        
-        if (allowed) {
-          if (actualWidth) resolved.searchParams.set('w', String(actualWidth));
-          if (quality) resolved.searchParams.set('q', String(quality));
-          // images.weserv.nl is NOT isWeserv in the logic (allowed means it's already weserv host)
-          // But wait - if host === 'images.weserv.nl', in optimizeImageUrl it's detected as isWeserv
-          // and uses 'output' param. Let me re-check...
-          // Actually: if original URL is already images.weserv.nl, we don't proxy again.
-          // So 'allowed' here means the URL is already on weserv, which means isWeserv=true in component.
-          // Therefore we should use 'output' param.
-          resolved.searchParams.set('output', preferredFormat);
-          resolved.searchParams.set('fit', 'cover');
-          return resolved.toString();
-        } else {
-          // Fallback to images.weserv.nl for external images
+
+        if (!isAllowedHost) {
+          // Proxy through weserv for non-allowed external hosts
           var proxy = new URL('https://images.weserv.nl/');
           var cleanUrl = resolved.toString().replace(/^https?:\/\//i, '');
           proxy.searchParams.set('url', cleanUrl);
           if (actualWidth) proxy.searchParams.set('w', String(actualWidth));
           if (quality) proxy.searchParams.set('q', String(quality));
-          // For weserv proxy, use 'output' param
           proxy.searchParams.set('output', preferredFormat);
           proxy.searchParams.set('fit', 'cover');
           return proxy.toString();
         }
+
+        // For allowed hosts, add params directly (matching optimizeImageUrl exactly)
+        if (actualWidth) resolved.searchParams.set('w', String(actualWidth));
+        if (quality && quality !== 100) resolved.searchParams.set('q', String(quality));
+
+        if (isWeserv) {
+          resolved.searchParams.set('output', preferredFormat);
+        } else {
+          resolved.searchParams.set('f', preferredFormat);
+        }
+        resolved.searchParams.set('fit', 'cover');
+
+        return resolved.toString();
       } catch (_e) {
         return null;
       }
     }
 
-    // Defer API fetch to idle time and skip on constrained networks to avoid hurting LCP/TBT.
-    var conn = (navigator && (navigator.connection || navigator.mozConnection || navigator.webkitConnection)) || null;
-    var effectiveType = conn && conn.effectiveType ? String(conn.effectiveType) : '';
-    // REMOVED: Network constraint check that was blocking preload on Lighthouse throttled networks.
-    // We want to prioritize the hero image even on slow networks for LCP.
-    
     function run(){
       var controller = window.AbortController ? new AbortController() : null;
       var timeout = setTimeout(function(){
@@ -337,7 +418,10 @@ const getTravelHeroPreloadScript = () => String.raw`
         return res.json();
       }).then(function(data){
         if (!data) return;
-        
+
+        // Cache API response globally so React Query can reuse it (avoids double fetch)
+        try { window.__metravelTravelPreload = { data: data, slug: slug, isId: isId }; } catch (_e) {}
+
         var url = data.travel_image_thumb_url;
         var updatedAt = data.updated_at;
         var id = data.id;
@@ -351,26 +435,30 @@ const getTravelHeroPreloadScript = () => String.raw`
                 id = typeof first === 'string' ? undefined : first.id;
             }
         }
-        
+
         if (!url || typeof url !== 'string') return;
 
-        var viewport = Math.max(320, Math.min(window.innerWidth || 400, 860));
+        // Skip preload if the LCP image is already rendered and loaded
+        var existingLcp = document.querySelector('img[data-lcp]');
+        if (existingLcp && existingLcp.complete && existingLcp.naturalWidth > 0) return;
+
         var isMobile = (window.innerWidth || 0) <= 540;
-        var targetWidth = isMobile ? Math.min(viewport, 400) : Math.min(viewport, 860);
-        // Match quality with OptimizedLCPHero component (lcpQuality = isMobile ? 60 : 65)
         var quality = isMobile ? 60 : 65;
-        // Desktop max width in component is 860, so we shouldn't preload 1080
-        var highWidth = isMobile ? 400 : 860; 
-        
-        // Only preload if page is still loading (not complete)
-        // This ensures the preload is used immediately when React renders
-        if (document.readyState === 'complete') return;
-        
-        var preloadHref = buildOptimizedUrl(url, targetWidth, quality, updatedAt, id);
+
+        // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [640, 860]
+        var widths = isMobile ? [320, 400] : [640, 860];
+
+        // Build srcSet entries with dpr=1 (matches generateSrcSet in buildResponsiveImageProps)
+        var srcSetParts = [];
+        for (var i = 0; i < widths.length; i++) {
+          var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id, 1);
+          if (u) srcSetParts.push(u + ' ' + widths[i] + 'w');
+        }
+
+        // The main src uses the widest breakpoint with DEFAULT dpr (matches buildResponsiveImageProps)
+        var widest = widths[widths.length - 1];
+        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id);
         if (!preloadHref) return;
-        var optimizedHrefHigh = highWidth !== targetWidth
-          ? buildOptimizedUrl(url, highWidth, quality, updatedAt, id)
-          : null;
 
         try {
           var resolved = new URL(preloadHref, window.location.origin);
@@ -389,12 +477,12 @@ const getTravelHeroPreloadScript = () => String.raw`
         link.rel = 'preload';
         link.as = 'image';
         link.href = preloadHref;
-        
+
         // Exact match with TravelDetailsHero.tsx sizes
         var sizesAttr = isMobile ? '100vw' : '(max-width: 1024px) 92vw, 860px';
-        
-        if (optimizedHrefHigh) {
-          link.setAttribute('imagesrcset', preloadHref + ' ' + Math.round(targetWidth) + 'w, ' + optimizedHrefHigh + ' ' + Math.round(highWidth) + 'w');
+
+        if (srcSetParts.length > 0) {
+          link.setAttribute('imagesrcset', srcSetParts.join(', '));
           link.setAttribute('imagesizes', sizesAttr);
         }
         try {
@@ -498,6 +586,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
         dangerouslySetInnerHTML={{ __html: getEntryPreloadScript() }}
       />
 
+      {/* Preload home hero image on "/" to reduce LCP */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getHomeHeroPreloadScript() }}
+      />
+
       {/* Early travel hero preload to improve LCP on /travels/* */}
       <script
         dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
@@ -510,46 +603,18 @@ export default function Root({ children }: { children: React.ReactNode }) {
         dangerouslySetInnerHTML={{ __html: `window.__EXPO_ROUTER_INSPECTOR=false;` }}
       />
 
-      {/* Suppress known react-native-svg console errors */}
+      {/* Suppress known RN/SVG/navigation console noise */}
       <script
         dangerouslySetInnerHTML={{
-          __html:
-            '(function() {\n'
-            + "  if (typeof window !== 'undefined') {\n"
-            + "    var host = window.location && window.location.hostname;\n"
-            + "    var isProdHost = host === 'metravel.by' || host === 'www.metravel.by';\n"
-            + "    var isLocalHost = host === 'localhost' || host === '127.0.0.1';\n"
-            + "    if (!isProdHost && !isLocalHost) return;\n"
-            + '    const shouldSuppress = (args) => {\n'
-            + '      const msg = args && args[0];\n'
-            + "      if (!msg || typeof msg !== 'string') return false;\n"
-            + "      if (msg.includes('CSSStyleDeclaration') && msg.includes('Indexed property setter is not supported')) {\n"
-            + '        return true;\n'
-            + '      }\n'
-            + '      if (\n'
-            + '        msg.includes("\\"shadow*\\" style props are deprecated") ||\n'
-            + '        msg.includes("\\"textShadow*\\" style props are deprecated") ||\n'
-            + "        msg.includes('props.pointerEvents is deprecated')\n"
-            + '      ) {\n'
-            + '        return true;\n'
-            + '      }\n'
-            + "      if (msg.includes('Animated:') && msg.includes('useNativeDriver') && msg.includes('native animated module is missing')) {\n"
-            + '        return true;\n'
-            + '      }\n'
-            + '      return false;\n'
-            + '    };\n'
-            + '    const originalError = console.error;\n'
-            + '    console.error = function(...args) {\n'
-            + '      if (shouldSuppress(args)) return;\n'
-            + '      originalError.apply(console, args);\n'
-            + '    };\n'
-            + '    const originalWarn = console.warn;\n'
-            + '    console.warn = function(...args) {\n'
-            + '      if (shouldSuppress(args)) return;\n'
-            + '      originalWarn.apply(console, args);\n'
-            + '    };\n'
-            + '  }\n'
-            + '})();\n',
+          __html: String.raw`(function(){
+  if(typeof window==='undefined')return;
+  var h=window.location&&window.location.hostname;
+  if(h!=='metravel.by'&&h!=='www.metravel.by'&&h!=='localhost'&&h!=='127.0.0.1')return;
+  var re=/Indexed property setter is not supported|shadow\*.*deprecated|textShadow\*.*deprecated|pointerEvents is deprecated|useNativeDriver.*native animated module|useLayoutEffect does nothing on the server/;
+  var oe=console.error,ow=console.warn;
+  console.error=function(){var m=arguments[0];if(typeof m==='string'&&re.test(m))return;oe.apply(console,arguments)};
+  console.warn=function(){var m=arguments[0];if(typeof m==='string'&&re.test(m))return;ow.apply(console,arguments)};
+})();`,
         }}
       />
     </head>
@@ -637,7 +702,7 @@ a{color:inherit;text-decoration:none}
 [hidden]{display:none !important}
 img[data-lcp]{content-visibility:auto;contain:layout style paint;min-height:300px;background:var(--color-backgroundSecondary,${DESIGN_COLORS.criticalBgSecondaryLight});aspect-ratio:16/9}
 img[width][height]{aspect-ratio:attr(width)/attr(height)}
-img[fetchpriority="high"]{content-visibility:auto;will-change:transform}
+img[fetchpriority="high"]{content-visibility:auto}
 img[loading="lazy"]{content-visibility:auto}
 [data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,${DESIGN_COLORS.criticalBgSecondaryLight})}
 [data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:cover}
