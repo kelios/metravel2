@@ -24,7 +24,7 @@ jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({ favorites: [] }),
 }));
 
-jest.mock('@/providers/FiltersProvider', () => ({
+jest.mock('@/context/FiltersProvider', () => ({
   useFilters: () => ({ updateFilters: jest.fn() }),
 }));
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { ThemeProvider } from '@/hooks/useTheme';
-import { FiltersProvider } from '@/contexts/FiltersContext';
+import { FiltersProvider } from '@/context/MapFiltersContext';
 import type { RoutePoint } from '@/types/route';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 

@@ -9,7 +9,7 @@ import ThemeToggle from '@/components/layout/ThemeToggle';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { useFilters } from '@/providers/FiltersProvider';
+import { useFilters } from '@/context/FiltersProvider';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

@@ -1,4 +1,4 @@
-import type { FiltersContextValue } from '@/contexts/FiltersContext';
+import type { FiltersContextValue } from '@/context/MapFiltersContext';
 
 export function makeFiltersContext(
   overrides: Partial<FiltersContextValue> = {}

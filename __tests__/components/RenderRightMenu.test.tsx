@@ -38,7 +38,7 @@ jest.mock('@/context/FavoritesContext', () => ({
   })),
 }));
 
-jest.mock('@/providers/FiltersProvider', () => ({
+jest.mock('@/context/FiltersProvider', () => ({
   useFilters: jest.fn(() => ({
     updateFilters: jest.fn(),
   })),
@@ -105,7 +105,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { useFilters } from '@/providers/FiltersProvider';
+import { useFilters } from '@/context/FiltersProvider';
 import AccountMenu from '@/components/layout/AccountMenu';
 
 const getLastImageSourceUri = () => (global as any).__lastImageSourceUri as string | null;

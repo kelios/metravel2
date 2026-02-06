@@ -11,20 +11,6 @@ jest.mock('@expo/vector-icons', () => ({
   },
 }));
 
-// Mock constants
-jest.mock('@/constants/airyColors', () => ({
-  AIRY_COLORS: {
-    primary: '#ff9f5a',
-    primaryLight: '#ffd28f',
-  },
-  AIRY_GRADIENTS: {
-    primary: 'linear-gradient(135deg, #ff9f5a 0%, #ff6b35 100%)',
-  },
-  AIRY_BOX_SHADOWS: {
-    medium: '0 4px 12px rgba(255, 159, 90, 0.2)',
-  },
-}));
-
 // Mock useWindowDimensions
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');

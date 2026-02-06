@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox, useColorScheme } from "react-native";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
-import { FiltersProvider } from "@/providers/FiltersProvider";
+import { FiltersProvider } from "@/context/FiltersProvider";
 import { AuthProvider } from "@/context/AuthContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 

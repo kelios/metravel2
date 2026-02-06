@@ -35,7 +35,7 @@ jest.mock('@/context/FavoritesContext', () => ({
     useFavorites: () => mockFavoritesContext,
 }));
 
-jest.mock('@/providers/FiltersProvider', () => ({
+jest.mock('@/context/FiltersProvider', () => ({
     useFilters: () => mockFiltersContext,
 }));
 

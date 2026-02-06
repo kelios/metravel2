@@ -1,6 +1,6 @@
 /**
  * Filters Context - centralized state management for FiltersPanel
- * @module contexts/FiltersContext
+ * @module context/MapFiltersContext
  */
 
 import React, { createContext, useContext, ReactNode } from 'react';

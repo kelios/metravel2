@@ -5,7 +5,7 @@ import FiltersPanelFooter from '@/components/MapPage/FiltersPanelFooter';
 import FiltersPanelHeader from '@/components/MapPage/FiltersPanelHeader';
 import FiltersPanelBody from '@/components/MapPage/FiltersPanelBody';
 import useFiltersPanelModel from '@/components/MapPage/useFiltersPanelModel';
-import { useFiltersContext } from '@/contexts/FiltersContext';
+import { useFiltersContext } from '@/context/MapFiltersContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);

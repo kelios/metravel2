@@ -5,7 +5,7 @@ import Feather from '@expo/vector-icons/Feather';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { useFilters } from '@/providers/FiltersProvider';
+import { useFilters } from '@/context/FiltersProvider';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
