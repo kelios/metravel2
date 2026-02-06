@@ -15,6 +15,15 @@ import {
 } from '@/utils/travelFormUtils';
 import { showToast } from '@/utils/toast';
 import { ApiError } from '@/api/client';
+import {
+  isLocalPreviewUrl,
+  isEmptyImageValue,
+  mergeMarkersPreserveImages,
+  ensureRequiredDraftFields,
+  normalizeDraftPlaceholders,
+  isDraftPlaceholder,
+  DRAFT_PLACEHOLDER_PREFIX,
+} from '@/utils/travelFormNormalization';
 
 async function showToastMessage(payload: any) {
   await showToast(payload);
@@ -45,73 +54,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const formDataRef = useRef<TravelFormData>(initialFormData);
   const saveAbortControllerRef = useRef<AbortController | null>(null);
 
-  const isLocalPreviewUrl = useCallback((value: unknown) => {
-    if (typeof value !== 'string') return false;
-    const trimmed = value.trim();
-    if (!trimmed) return false;
-    return /^(blob:|data:)/i.test(trimmed);
-  }, []);
-
-  const isEmptyImageValue = useCallback((value: unknown) => {
-    if (value == null) return true;
-    if (typeof value !== 'string') return false;
-    return value.trim().length === 0;
-  }, []);
-
-  const mergeMarkersPreserveImages = useCallback(
-    (serverMarkers: any[], currentMarkers: any[]) => {
-      if (!Array.isArray(serverMarkers) || serverMarkers.length === 0) return currentMarkers;
-      if (!Array.isArray(currentMarkers) || currentMarkers.length === 0) return serverMarkers;
-
-      const normalizeCoord = (value: any): string => {
-        const num = typeof value === 'number' ? value : Number(value);
-        if (Number.isFinite(num)) return num.toFixed(6);
-        return String(value ?? '');
-      };
-
-      const makeIdKey = (m: any) => {
-        const idRaw = m?.id != null ? String(m.id) : '';
-        const id = idRaw && idRaw !== 'null' && idRaw !== 'undefined' ? idRaw : '';
-        return id ? `id:${id}` : '';
-      };
-
-      const makeLlKey = (m: any) => {
-        const lat = normalizeCoord(m?.lat);
-        const lng = normalizeCoord(m?.lng);
-        return `ll:${lat},${lng}`;
-      };
-
-      // Keep both indices:
-      // - by id for stable updates
-      // - by lat/lng for the first save when server assigns ids (client still had id:null)
-      const currentById = new Map<string, any>();
-      const currentByLl = new Map<string, any>();
-      currentMarkers.forEach(m => {
-        const idKey = makeIdKey(m);
-        if (idKey) currentById.set(idKey, m);
-        currentByLl.set(makeLlKey(m), m);
-      });
-
-      return serverMarkers.map(m => {
-        const idKey = makeIdKey(m);
-        const llKey = makeLlKey(m);
-        const current = (idKey ? currentById.get(idKey) : null) ?? currentByLl.get(llKey);
-        if (!current) return m;
-
-        // If server did not return image (or returned empty), keep current image.
-        const serverImage = m?.image;
-        const currentImage = current?.image;
-        if (isEmptyImageValue(serverImage)) {
-          if (typeof currentImage === 'string' && currentImage.trim().length > 0) {
-            return { ...m, image: currentImage };
-          }
-        }
-
-        return m;
-      });
-    },
-    [isEmptyImageValue]
-  );
 
   const [markers, setMarkers] = useState<MarkerData[]>([]);
   const [travelDataOld, setTravelDataOld] = useState<Travel | null>(null);
@@ -154,94 +96,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     });
   }, []);
 
-  const DRAFT_PLACEHOLDER_PREFIX = '__draft_placeholder__';
-
-  const ensureRequiredDraftFields = useCallback((payload: TravelFormData) => {
-    const normalized: TravelFormData = { ...payload };
-    // ✅ FIX: Более безопасный placeholder без раскрытия ID
-    const draftPlaceholder = DRAFT_PLACEHOLDER_PREFIX;
-    const arrayFields: Array<keyof TravelFormData> = [
-      'categories',
-      'transports',
-      'month',
-      'complexity',
-      'companions',
-      'over_nights_stay',
-      'countries',
-      'thumbs200ForCollectionArr',
-      'travelImageThumbUrlArr',
-      'travelImageAddress',
-    ];
-    const stringFields: Array<keyof TravelFormData> = [
-      'minus',
-      'plus',
-      'recommendation',
-      'description',
-      'youtube_link',
-    ];
-    const booleanFields: Array<keyof TravelFormData> = ['publish', 'visa', 'moderation'];
-
-    arrayFields.forEach(field => {
-      if (!Array.isArray(normalized[field])) {
-        (normalized as any)[field] = [];
-      }
-    });
-
-    booleanFields.forEach(field => {
-      const value = normalized[field];
-      if (typeof value !== 'boolean') {
-        const valueAny: any = value;
-        if (valueAny === 'false' || valueAny === '0' || valueAny === 0) {
-          (normalized as any)[field] = false;
-        } else if (valueAny === 'true' || valueAny === '1' || valueAny === 1) {
-          (normalized as any)[field] = true;
-        } else {
-          (normalized as any)[field] = Boolean(value);
-        }
-      }
-    });
-
-    const isDraft = !normalized.publish && !normalized.moderation;
-
-    stringFields.forEach(field => {
-      const value = normalized[field];
-      const isBlank =
-        value == null ||
-        (typeof value === 'string' && value.trim().length === 0);
-      if (isBlank) {
-        // Для черновиков нужно отправлять непустые значения (плейсхолдер), иначе бэкенд может затирать поля.
-        // Для moderation/publish пустая строка часто валидируется как "blank" (DRF: "may not be blank"),
-        // поэтому отправляем null и даём бэкенду трактовать поле как отсутствующее.
-        (normalized as any)[field] = isDraft ? draftPlaceholder : null;
-      }
-    });
-
-    return normalized;
-  }, []);
-
-  const normalizeDraftPlaceholders = useCallback((payload: TravelFormData) => {
-    const normalized: TravelFormData = { ...payload };
-    const stringFields: Array<keyof TravelFormData> = [
-      'minus',
-      'plus',
-      'recommendation',
-      'description',
-      'youtube_link',
-    ];
-
-    stringFields.forEach(field => {
-      const value = normalized[field];
-      if (typeof value === 'string' && value.startsWith(DRAFT_PLACEHOLDER_PREFIX)) {
-        (normalized as any)[field] = '';
-        return;
-      }
-      if (typeof value === 'string' && value.trim().length === 0) {
-        (normalized as any)[field] = '';
-      }
-    });
-
-    return normalized;
-  }, []);
 
   const cleanAndSave = useCallback(async (data: TravelFormData) => {
     // ✅ FIX: Отменяем предыдущий запрос для предотвращения race condition
@@ -375,7 +229,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         saveAbortControllerRef.current = null;
       }
     }
-  }, [ensureRequiredDraftFields, isLocalPreviewUrl, stableTravelId]);
+  }, [stableTravelId]);
 
   const applySavedData = useCallback(
     (savedData: TravelFormData) => {
@@ -488,7 +342,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       // ✅ FIX: Обновляем версию данных при получении с сервера
       setDataVersion(prev => prev + 1);
     },
-    [formState, mergeMarkersPreserveImages, normalizeDraftPlaceholders]
+    [formState]
   );
 
   const handleSaveSuccess = useCallback(
@@ -590,11 +444,6 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
           saveAbortControllerRef.current.abort();
         }
 
-        const isDraftPlaceholder = (value: unknown) => {
-          if (typeof value !== 'string') return false;
-          return value.trim() === '__draft_placeholder__';
-        };
-
         const mergeWithCurrentSnapshot = (override?: TravelFormData) => {
           if (!override) return formDataRef.current as TravelFormData;
           const current = (formDataRef.current as TravelFormData) ?? ({} as TravelFormData);
@@ -658,7 +507,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
     manualSavePromiseRef.current = promise;
     return promise;
-  }, [applySavedData, autosave, cleanAndSave, normalizeDraftPlaceholders, showToast]);
+  }, [applySavedData, autosave, cleanAndSave, showToast]);
 
   // ✅ FIX: Выносим updateBaseline в ref чтобы избежать stale closure
   const updateBaselineRef = useRef<((data: any) => void) | null>(null);
@@ -766,7 +615,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         setLoadError({ status, message });
       }
     },
-    [formState, isNew, normalizeDraftPlaceholders, onAuthRequired, router, userId, isSuperAdmin]
+    [formState, isNew, onAuthRequired, router, userId, isSuperAdmin]
   );
 
   const retryLoad = useCallback(async () => {
