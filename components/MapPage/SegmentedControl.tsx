@@ -1,6 +1,6 @@
 // components/MapPage/SegmentedControl.tsx
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import MapIcon from './MapIcon';
@@ -52,7 +52,6 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
             testID={`segmented-${key}`}
             style={({ pressed }) => [
               styles.segment,
-              active && styles.segmentActive,
               pressed && styles.segmentPressed,
               isDisabled && styles.segmentDisabled,
               globalFocusStyles.focusable,
@@ -114,6 +113,16 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     marginVertical: compact ? 4 : 8,
     borderWidth: 1,
     borderColor: colors.border,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  indicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    height: 3,
+    backgroundColor: colors.primary,
+    borderRadius: 2,
   },
   segment: {
     flex: 1,
@@ -125,12 +134,10 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     paddingHorizontal: compact ? 12 : 8,
     borderRadius: 6,
     minWidth: compact ? 80 : 0,
-  },
-  segmentActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: 'transparent', // Убираем fill background
   },
   segmentPressed: {
-    opacity: 0.8,
+    opacity: 0.6,
   },
   segmentDisabled: {
     opacity: 0.5,
@@ -138,10 +145,11 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   segmentText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.text,
+    color: colors.textMuted,
   },
   segmentTextActive: {
-    color: colors.textOnPrimary,
+    color: colors.primary,
+    fontWeight: '700',
   },
   badge: {
     backgroundColor: colors.surfaceLight,
@@ -154,7 +162,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     marginLeft: 4,
   },
   badgeActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: colors.primaryLight,
   },
   badgeText: {
     fontSize: 11,
@@ -162,7 +170,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     color: colors.text,
   },
   badgeTextActive: {
-    color: colors.textOnPrimary,
+    color: colors.primary,
   },
 });
 

@@ -11,6 +11,8 @@ import type { BlockRenderer } from '../renderers/BlockRenderer';
 import type { TravelQuote } from '../quotes/travelQuotes';
 import { pickRandomGalleryQuote, pickRandomQuote } from '../quotes/travelQuotes';
 import { CoverPageGenerator } from './pages/CoverPageGenerator';
+import { escapeHtml as sharedEscapeHtml, buildSafeImageUrl as sharedBuildSafeImageUrl } from '../utils/htmlUtils';
+import { formatDays as sharedFormatDays, getTravelLabel as sharedGetTravelLabel, getPhotoLabel as sharedGetPhotoLabel } from '../utils/pluralize';
 
 const CHECKLIST_LIBRARY: Record<BookSettings['checklistSections'][number], string[]> = {
   clothing: ['Термобельё', 'Тёплый слой/флис', 'Дождевик/пончо', 'Треккинговая обувь', 'Шапка, перчатки, бафф'],
@@ -212,9 +214,15 @@ export class EnhancedPdfGenerator {
     }
 
     // Страницы путешествий
+    const useSeparators = meta.length >= 3;
     for (let index = 0; index < meta.length; index++) {
       const item = meta[index];
       const travel = item.travel;
+
+      // Разделительная страница между путешествиями (при 3+ путешествиях)
+      if (useSeparators && index > 0) {
+        pages.push(this.renderSeparatorPage(travel, index + 1, meta.length));
+      }
 
       // Страница с большим обложечным фото
       pages.push(this.renderTravelPhotoPage(travel, currentPage));
@@ -539,9 +547,10 @@ export class EnhancedPdfGenerator {
   }
 
   /**
-   * Рендерит страницу с фото путешествия
+   * Рендерит страницу с фото путешествия (поддерживает 3 layout'а)
    */
   private renderTravelPhotoPage(travel: TravelForBook, pageNumber: number): string {
+    const layout = this.currentSettings?.photoPageLayout || 'full-bleed';
     const { colors, typography, spacing } = this.theme;
     const coverImage = this.buildSafeImageUrl(
       travel.travel_image_url || travel.travel_image_thumb_url
@@ -553,16 +562,51 @@ export class EnhancedPdfGenerator {
       this.formatDays(travel.number_days),
     ].filter(Boolean);
 
-    return `
-      <section class="pdf-page travel-photo-page" style="padding: ${spacing.pagePadding};">
-        ${coverImage ? `
+    const metaHtml = metaPieces.length ? this.escapeHtml(metaPieces.join(' \u2022 ')) : '';
+
+    // Fallback без фото — одинаковый для всех layout'ов
+    const noImageFallback = `
+      <div style="
+        border-radius: ${this.theme.blocks.borderRadius};
+        background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
+        height: 235mm;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: ${colors.accentStrong};
+        box-shadow: ${this.theme.blocks.shadow};
+      ">
+        <h1 style="
+          font-size: ${typography.h1.size};
+          font-weight: ${typography.h1.weight};
+          text-align: center;
+          padding: 20mm;
+          font-family: ${typography.headingFont};
+        ">${this.escapeHtml(travel.name)}</h1>
+      </div>
+    `;
+
+    let content: string;
+
+    if (!coverImage) {
+      content = noImageFallback;
+    } else if (layout === 'framed') {
+      // Framed: фото в рамке с подписью снизу (книжный стиль)
+      content = `
+        <div style="
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          min-height: 240mm;
+        ">
           <div style="
+            flex: 1;
             border-radius: ${this.theme.blocks.borderRadius};
             overflow: hidden;
-            position: relative;
             box-shadow: ${this.theme.blocks.shadow};
-            height: 100%;
-            min-height: 235mm;
+            border: 6px solid ${colors.surface};
+            outline: 1px solid ${colors.border};
+            background: ${colors.surfaceAlt};
           ">
             <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
               style="
@@ -574,61 +618,153 @@ export class EnhancedPdfGenerator {
               "
               crossorigin="anonymous"
               onerror="this.style.display='none'; this.parentElement.style.background='${colors.accentSoft}';" />
-            <div style="
-              position: absolute;
-              left: 0;
-              right: 0;
-              bottom: 0;
-              background:
-                linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.65) 100%);
-              padding: 16mm 18mm 14mm 18mm;
-            ">
-                <h1 style="
-                  color: #ffffff;
-                  font-size: ${typography.h1.size};
-                  margin: 0 0 5mm 0;
-                  font-weight: ${typography.h1.weight};
-                  line-height: ${typography.h1.lineHeight};
-                  text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.3);
-                  font-family: ${typography.headingFont};
-                  overflow-wrap: anywhere;
-                  word-break: break-word;
-                  hyphens: auto;
-                ">${this.escapeHtml(travel.name)}</h1>
-              ${metaPieces.length ? `
-                <div style="
-                  color: rgba(255,255,255,0.92);
-                  font-size: 11pt;
-                  display: block;
-                  font-weight: 500;
-                  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-                  font-family: ${typography.bodyFont};
-                ">
-                  ${this.escapeHtml(metaPieces.join(' \u2022 '))}
-                </div>
-              ` : ''}
-            </div>
           </div>
-        ` : `
           <div style="
-            border-radius: ${this.theme.blocks.borderRadius};
-            background: linear-gradient(135deg, ${colors.accentSoft} 0%, ${colors.accentLight} 100%);
-            height: 235mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: ${colors.accentStrong};
-            box-shadow: ${this.theme.blocks.shadow};
+            text-align: center;
+            padding: 8mm 10mm 0 10mm;
           ">
             <h1 style="
               font-size: ${typography.h1.size};
               font-weight: ${typography.h1.weight};
-              text-align: center;
-              padding: 20mm;
+              line-height: ${typography.h1.lineHeight};
+              color: ${colors.text};
+              margin: 0 0 3mm 0;
               font-family: ${typography.headingFont};
+              overflow-wrap: anywhere;
+              word-break: break-word;
             ">${this.escapeHtml(travel.name)}</h1>
+            ${metaHtml ? `
+              <div style="
+                color: ${colors.textMuted};
+                font-size: 11pt;
+                font-weight: 500;
+                font-family: ${typography.bodyFont};
+              ">${metaHtml}</div>
+            ` : ''}
           </div>
-        `}
+        </div>
+      `;
+    } else if (layout === 'split') {
+      // Split: 70% фото слева + 30% цветной блок с названием справа
+      content = `
+        <div style="
+          display: flex;
+          height: 100%;
+          min-height: 240mm;
+          gap: 0;
+          border-radius: ${this.theme.blocks.borderRadius};
+          overflow: hidden;
+          box-shadow: ${this.theme.blocks.shadow};
+        ">
+          <div style="
+            width: 70%;
+            position: relative;
+            overflow: hidden;
+          ">
+            <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
+              style="
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+                ${this.getImageFilterStyle()}
+              "
+              crossorigin="anonymous"
+              onerror="this.style.display='none'; this.parentElement.style.background='${colors.accentSoft}';" />
+          </div>
+          <div style="
+            width: 30%;
+            background: linear-gradient(180deg, ${colors.cover.backgroundGradient[0]} 0%, ${colors.cover.backgroundGradient[1]} 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 12mm;
+            color: ${colors.cover.text};
+          ">
+            <h1 style="
+              font-size: ${typography.h2.size};
+              font-weight: ${typography.h1.weight};
+              line-height: ${typography.h1.lineHeight};
+              margin: 0 0 6mm 0;
+              font-family: ${typography.headingFont};
+              overflow-wrap: anywhere;
+              word-break: break-word;
+              hyphens: auto;
+            ">${this.escapeHtml(travel.name)}</h1>
+            ${metaHtml ? `
+              <div style="
+                font-size: 10pt;
+                font-weight: 500;
+                opacity: 0.85;
+                font-family: ${typography.bodyFont};
+                line-height: 1.5;
+              ">${metaHtml}</div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    } else {
+      // Full-bleed (default): фото на всю страницу с gradient overlay
+      content = `
+        <div style="
+          border-radius: ${this.theme.blocks.borderRadius};
+          overflow: hidden;
+          position: relative;
+          box-shadow: ${this.theme.blocks.shadow};
+          height: 100%;
+          min-height: 235mm;
+        ">
+          <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
+            style="
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              display: block;
+              ${this.getImageFilterStyle()}
+            "
+            crossorigin="anonymous"
+            onerror="this.style.display='none'; this.parentElement.style.background='${colors.accentSoft}';" />
+          <div style="
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+              linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.65) 100%);
+            padding: 16mm 18mm 14mm 18mm;
+          ">
+              <h1 style="
+                color: #ffffff;
+                font-size: ${typography.h1.size};
+                margin: 0 0 5mm 0;
+                font-weight: ${typography.h1.weight};
+                line-height: ${typography.h1.lineHeight};
+                text-shadow: 0 2px 8px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.3);
+                font-family: ${typography.headingFont};
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                hyphens: auto;
+              ">${this.escapeHtml(travel.name)}</h1>
+            ${metaHtml ? `
+              <div style="
+                color: rgba(255,255,255,0.92);
+                font-size: 11pt;
+                display: block;
+                font-weight: 500;
+                text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+                font-family: ${typography.bodyFont};
+              ">
+                ${metaHtml}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <section class="pdf-page travel-photo-page" style="padding: ${spacing.pagePadding};">
+        ${content}
         <div style="
           position: absolute;
           bottom: 15mm;
@@ -695,7 +831,11 @@ export class EnhancedPdfGenerator {
             widows: 3;
           }
         </style>
-        
+
+        ${this.buildRunningHeader(travel.name, pageNumber)}
+
+        ${this.buildStatsMiniCard(travel, colors, typography, spacing)}
+
         ${descriptionBlocks.length > 0 ? `
           <div style="margin-bottom: ${spacing.sectionSpacing};">
             <div style="
@@ -875,16 +1015,6 @@ export class EnhancedPdfGenerator {
           </div>
         ` : ''}
 
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-family: ${typography.bodyFont};
-          z-index: 10;
-          pointer-events: none;
-        ">${pageNumber}</div>
       </section>
     `;
   }
@@ -952,6 +1082,7 @@ export class EnhancedPdfGenerator {
       const subtitle = pageIndex === 0 ? this.escapeHtml(travel.name) : '';
       return `
       <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding}; display: flex; flex-direction: column;">
+        ${this.buildRunningHeader(travel.name, pageNumber)}
         <div style="text-align: center; margin-bottom: 8mm;">
           <h2 style="
             font-size: ${typography.h2.size};
@@ -1044,15 +1175,6 @@ export class EnhancedPdfGenerator {
             })
             .join('')}
         </div>
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-weight: 500;
-          font-family: ${typography.bodyFont};
-        ">${pageNumber}</div>
       </section>
     `;
     });
@@ -1096,6 +1218,7 @@ export class EnhancedPdfGenerator {
 
     return `
       <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
+        ${this.buildRunningHeader(travel.name, pageNumber)}
         <div style="margin-bottom: ${spacing.sectionSpacing};">
           <div style="
             background: linear-gradient(135deg, ${colors.surfaceAlt} 0%, ${colors.surface} 100%);
@@ -1131,14 +1254,6 @@ export class EnhancedPdfGenerator {
           ">${this.escapeHtml(travel.name)}</p>
           <div>${locationList}</div>
         </div>
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-family: ${typography.bodyFont};
-        ">${pageNumber}</div>
       </section>
     `;
   }
@@ -1230,6 +1345,7 @@ export class EnhancedPdfGenerator {
 
     return `
       <section class="pdf-page checklist-page" style="padding: ${spacing.pagePadding};">
+        ${this.buildRunningHeader('Чек-листы', pageNumber)}
         <div style="text-align: center; margin-bottom: ${spacing.sectionSpacing};">
           <h2 style="
             font-size: ${typography.h2.size};
@@ -1252,14 +1368,6 @@ export class EnhancedPdfGenerator {
         ">
           ${cards}
         </div>
-        <div style="
-          position: absolute;
-          bottom: 15mm;
-          right: 25mm;
-          font-size: ${typography.caption.size};
-          color: ${colors.textMuted};
-          font-family: ${typography.bodyFont};
-        ">${pageNumber}</div>
       </section>
     `;
   }
@@ -1550,6 +1658,154 @@ export class EnhancedPdfGenerator {
   ${pages.join('\n')}
 </body>
 </html>
+    `;
+  }
+
+  /**
+   * Компактная мини-карточка со статистикой путешествия (страна, год, дни, фото, локации)
+   */
+  private buildStatsMiniCard(
+    travel: TravelForBook,
+    colors: ReturnType<typeof getThemeConfig>['colors'],
+    typography: ReturnType<typeof getThemeConfig>['typography'],
+    spacing: ReturnType<typeof getThemeConfig>['spacing']
+  ): string {
+    const items: Array<{ icon: string; value: string }> = [];
+
+    if (travel.countryName) {
+      items.push({ icon: '🌍', value: travel.countryName });
+    }
+    if (travel.year) {
+      items.push({ icon: '📅', value: String(travel.year) });
+    }
+    if (typeof travel.number_days === 'number' && travel.number_days > 0) {
+      items.push({ icon: '⏱', value: this.formatDays(travel.number_days) });
+    }
+    const photoCount = (travel.gallery || []).length;
+    if (photoCount > 0) {
+      items.push({ icon: '📷', value: `${photoCount} фото` });
+    }
+    const locationCount = (travel.travelAddress || []).length;
+    if (locationCount > 0) {
+      items.push({ icon: '📍', value: `${locationCount} ${locationCount === 1 ? 'место' : locationCount < 5 ? 'места' : 'мест'}` });
+    }
+
+    if (!items.length) return '';
+
+    return `
+      <div style="
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 12px;
+        background: ${colors.surfaceAlt};
+        border-radius: ${this.theme.blocks.borderRadius};
+        margin-bottom: ${spacing.sectionSpacing};
+        font-size: ${typography.caption.size};
+        color: ${colors.textMuted};
+        font-family: ${typography.bodyFont};
+        align-items: center;
+      ">
+        ${items.map((item) => `
+          <span style="display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
+            <span style="font-size: 11pt;">${item.icon}</span>
+            <span>${this.escapeHtml(item.value)}</span>
+          </span>
+        `).join(`<span style="color: ${colors.border};">•</span>`)}
+      </div>
+    `;
+  }
+
+  /**
+   * Разделительная страница между путешествиями (при 3+ путешествиях в книге)
+   */
+  private renderSeparatorPage(travel: TravelForBook, travelIndex: number, totalTravels: number): string {
+    const { colors, typography } = this.theme;
+    const country = travel.countryName || '';
+    const year = travel.year ? String(travel.year) : '';
+    const meta = [country, year].filter(Boolean).join(' • ');
+
+    return `
+      <section class="pdf-page separator-page" style="
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 285mm;
+        text-align: center;
+        background: ${colors.surface};
+      ">
+        <div style="
+          font-size: 48pt;
+          font-weight: 800;
+          color: ${colors.accentSoft};
+          font-family: ${typography.headingFont};
+          line-height: 1;
+          margin-bottom: 6mm;
+        ">${travelIndex}</div>
+        <div style="
+          width: 40mm;
+          height: 0;
+          border-top: 2px solid ${colors.accentSoft};
+          margin-bottom: 8mm;
+        "></div>
+        <h2 style="
+          font-size: ${typography.h1.size};
+          font-weight: ${typography.h1.weight};
+          color: ${colors.text};
+          margin-bottom: 4mm;
+          max-width: 160mm;
+          font-family: ${typography.headingFont};
+          line-height: ${typography.h1.lineHeight};
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        ">${this.escapeHtml(travel.name)}</h2>
+        ${meta ? `
+          <p style="
+            font-size: ${typography.body.size};
+            color: ${colors.textMuted};
+            font-family: ${typography.bodyFont};
+          ">${this.escapeHtml(meta)}</p>
+        ` : ''}
+        <div style="
+          position: absolute;
+          bottom: 22mm;
+          font-size: ${typography.caption.size};
+          color: ${colors.textMuted};
+          font-family: ${typography.bodyFont};
+          opacity: 0.6;
+        ">${travelIndex} / ${totalTravels}</div>
+      </section>
+    `;
+  }
+
+  /**
+   * Running header для контент-страниц (не для обложки, TOC, фото-страницы и финала)
+   */
+  private buildRunningHeader(travelName: string, pageNumber: number): string {
+    const { colors, typography } = this.theme;
+    return `
+      <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 4mm;
+        margin-bottom: 6mm;
+        border-bottom: 0.5pt solid ${colors.border};
+        font-size: ${typography.caption.size};
+        color: ${colors.textMuted};
+        font-family: ${typography.bodyFont};
+        letter-spacing: 0.02em;
+      ">
+        <span style="
+          max-width: 70%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        ">${this.escapeHtml(travelName)}</span>
+        <span>${pageNumber}</span>
+      </div>
     `;
   }
 
@@ -1914,26 +2170,15 @@ export class EnhancedPdfGenerator {
   }
 
   private formatDays(days?: number | null): string {
-    if (typeof days !== 'number' || Number.isNaN(days)) return '';
-    const normalized = Math.max(0, Math.round(days));
-    if (normalized === 0) return '';
-    if (normalized % 10 === 1 && normalized % 100 !== 11) return `${normalized} день`;
-    if ([2, 3, 4].includes(normalized % 10) && ![12, 13, 14].includes(normalized % 100)) {
-      return `${normalized} дня`;
-    }
-    return `${normalized} дней`;
+    return sharedFormatDays(days);
   }
 
   private getTravelLabel(count: number): string {
-    if (count === 1) return 'путешествие';
-    if (count < 5) return 'путешествия';
-    return 'путешествий';
+    return sharedGetTravelLabel(count);
   }
 
   private getPhotoLabel(count: number): string {
-    if (count === 1) return 'фотография';
-    if (count >= 2 && count <= 4) return 'фотографии';
-    return 'фотографий';
+    return sharedGetPhotoLabel(count);
   }
 
   private renderPdfIcon(
@@ -2021,13 +2266,7 @@ export class EnhancedPdfGenerator {
   }
 
   private escapeHtml(value: string | null | undefined): string {
-    if (value == null) return '';
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return sharedEscapeHtml(value);
   }
 
   /**

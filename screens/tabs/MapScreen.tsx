@@ -16,6 +16,7 @@ import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { useMapScreenController } from '@/hooks/useMapScreenController';
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
+import MapOnboarding from '@/components/MapPage/MapOnboarding';
 
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'));
@@ -340,6 +341,9 @@ export default function MapScreen() {
                     <ActivityIndicator color={themedColors.primary} />
                 </View>
             )}
+
+            {/* Onboarding для новых пользователей */}
+            <MapOnboarding />
         </View>
     );
 }
