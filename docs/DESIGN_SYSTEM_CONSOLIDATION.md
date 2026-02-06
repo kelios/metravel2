@@ -5,17 +5,25 @@
 - Tokens: `constants/designSystem.ts` (`DESIGN_TOKENS`)
 - Web CSS variables: `app/global.css` (driven by `data-theme`)
 
-## Rules (summary)
+## Status: ✅ Migration complete (Feb 2026)
 
-- Prefer `DESIGN_TOKENS` over hardcoded colors.
-- Avoid importing legacy design modules directly:
-  - `@/constants/Colors`
-  - `@/constants/designTokens`
-  - `@/styles/modernRedesign`
-  - `@/constants/airyColors`
-  - `@/constants/modernMattePalette` (should only be imported by `constants/designSystem.ts`)
+Legacy files have been deleted:
+- `constants/Colors.ts`
+- `constants/designTokens.ts`
+- `constants/airyColors.ts`
+- `constants/lightModernDesignTokens.ts`
+- `styles/modernRedesign.ts`
+- `src/theme.ts`
 
-## Migration helpers
+Remaining internal module (not for direct import):
+- `constants/modernMattePalette.ts` — only imported by `constants/designSystem.ts`
+
+## Rules
+
+- Use `DESIGN_TOKENS` for all colors, spacing, typography.
+- Do not create new color/design files — extend `constants/designSystem.ts`.
+
+## Migration helpers (kept for reference)
 
 - Dry run: `yarn design:migrate:dry`
 - Apply: `yarn design:migrate`

@@ -272,10 +272,10 @@ __tests__/components/
 
 ## 6. План действий (приоритизированный)
 
-### Фаза 1: Чистка (1-2 дня)
-1. Удалить неиспользуемые зависимости (п. 3.1)
-2. Удалить легаси файлы дизайн-системы (п. 3.3)
-3. Объединить `context/` + `contexts/` + `providers/` (п. 2.2)
+### Фаза 1: Чистка ✅ (выполнено 6 фев 2026)
+1. ✅ Удалены 6 неиспользуемых зависимостей: `deprecated-react-native-prop-types`, `react-native-multiple-select`, `react-native-flash-message`, `sharp-cli`, `ms`, `json5`
+2. ✅ Удалены 7 легаси файлов дизайн-системы: `Colors.ts`, `designTokens.ts`, `airyColors.ts`, `lightModernDesignTokens.ts`, `modernRedesign.ts`, `src/theme.ts`, тест
+3. ✅ Объединены `context/` + `contexts/` + `providers/` → единая папка `context/` (5 файлов). Обновлены все 11 импортов + 3 jest.mock пути
 
 ### Фаза 2: Консолидация структуры (3-5 дней)
 4. Выбрать и реализовать единую структуру `src/` vs корень (п. 2.1)
