@@ -109,7 +109,7 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
     return (
         <View style={styles.container}>
             <Text style={styles.label}>{label}</Text>
-            {hint && !displayError && (
+            {!!hint && !displayError && (
                 <Text style={styles.hint}>{hint}</Text>
             )}
             <TextInput

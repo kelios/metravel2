@@ -293,7 +293,7 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
                             {title}
                             {required && <Text style={styles.required}> *</Text>}
                         </Text>
-                        {hint && (
+                        {!!hint && (
                             <Text style={styles.editorHint}>{hint}</Text>
                         )}
                         {isDescription && (

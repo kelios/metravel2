@@ -170,7 +170,7 @@ const LocationSearchInput: React.FC<LocationSearchInputProps> = ({
                 )}
             </View>
 
-            {error && (
+            {!!error && (
                 <View style={styles.errorContainer}>
                     <Feather name="alert-circle" size={16} color={colors.danger} />
                     <Text style={styles.errorText}>{error}</Text>

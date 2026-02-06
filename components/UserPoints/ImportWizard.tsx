@@ -140,7 +140,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       ) : null}
 
       {isLoading && <ActivityIndicator size="large" style={styles.loader} />}
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
 
       <Button
         label="Отмена"
@@ -178,7 +178,7 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
         )}
       </ScrollView>
 
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {!!error && <Text style={styles.errorText}>{error}</Text>}
 
       <View style={styles.buttonRow}>
         <Button

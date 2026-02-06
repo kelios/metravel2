@@ -117,7 +117,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                                     {formData.name || 'Без названия'}
                                 </Text>
 
-                                {description && (
+                                {!!description && (
                                     <Text style={styles.cardDescription} numberOfLines={3}>
                                         {description}
                                     </Text>

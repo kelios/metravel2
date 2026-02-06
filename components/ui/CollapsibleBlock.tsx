@@ -305,7 +305,7 @@ export default function CollapsibleBlock({
           )}
           <View style={styles.headerText}>
             <Text style={[styles.title, compactMode && styles.titleCompact]}>{title}</Text>
-            {description && !compactMode && (
+            {!!description && !compactMode && (
               <Text style={styles.description} numberOfLines={1}>{description}</Text>
             )}
             {/* ✅ UX УЛУЧШЕНИЕ: Индикатор что блок можно развернуть */}

@@ -265,7 +265,7 @@ const StepCard = memo((props: StepCardProps) => {
                                         <Text style={styles.checkButtonText}>→</Text>
                                     </Pressable>
                                 </View>
-                                {error && (
+                                {!!error && (
                                     <View style={styles.errorContainer}>
                                         <Text style={styles.errorText}>{error}</Text>
                                     </View>

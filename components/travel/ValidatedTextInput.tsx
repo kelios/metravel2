@@ -98,7 +98,7 @@ export const ValidatedTextInput: React.FC<ValidatedTextInputProps> = ({
         </Text>
       </View>
 
-      {hint && <Text style={styles.hint}>{hint}</Text>}
+      {!!hint && <Text style={styles.hint}>{hint}</Text>}
 
       <TextInputComponent
         label=""
