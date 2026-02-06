@@ -40,6 +40,7 @@ describe('useRouteStoreAdapter', () => {
     };
 
     ;(useRouteStore as unknown as jest.Mock).mockReturnValue(mockStore);
+    ;(useRouteStore as any).getState = jest.fn(() => mockStore);
   });
 
   afterEach(() => {

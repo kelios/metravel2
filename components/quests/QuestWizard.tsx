@@ -12,7 +12,7 @@ import {
     View, Text, StyleSheet, TextInput, Pressable,
     ScrollView, Platform, Linking,
     Animated, KeyboardAvoidingView, SafeAreaView, Vibration,
-    Dimensions, Modal, Image, Keyboard
+    Modal, Image, Keyboard
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
@@ -431,7 +431,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
         onProgressChange?.({
             currentIndex, unlockedIndex: unlockedIndex, answers, attempts, hints, showMap, completed,
         });
-    }, [currentIndex, unlockedIndex, answers, attempts, hints, showMap, storageKey]);
+    }, [currentIndex, unlockedIndex, answers, attempts, hints, showMap, storageKey, onProgressChange, steps]);
 
     const completedSteps = steps.filter(s => answers[s.id]);
     const progress = steps.length > 0 ? completedSteps.length / steps.length : 0;

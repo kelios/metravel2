@@ -66,56 +66,6 @@ if (!isWeb) {
     SplashScreen.preventAutoHideAsync().catch(() => {});
 }
 
-/** Хук готовности по бездействию (web) */
-// ✅ FIX-006: Исправлена утечка памяти - все подписки и таймеры очищаются
-function useIdleFlag(timeout = 2000) {
-    const [ready, setReady] = useState(!isWeb ? true : false);
-
-    useEffect(() => {
-        if (!isWeb) return;
-
-        let fired = false;
-        let idleHandle: number | null = null;
-        let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
-
-        const arm = () => {
-            if (fired) return;
-            fired = true;
-            setReady(true);
-        };
-
-        const cleanup = () => {
-            // Очищаем все подписки
-            ["scroll", "mousemove", "touchstart", "keydown", "click"].forEach((e) => {
-                window.removeEventListener(e, arm, { passive: true } as any);
-            });
-            
-            // Очищаем таймеры
-            if (idleHandle && 'cancelIdleCallback' in window) {
-                (window as any).cancelIdleCallback(idleHandle);
-            }
-            if (timeoutHandle) {
-                clearTimeout(timeoutHandle);
-            }
-        };
-
-        if ("requestIdleCallback" in window) {
-            idleHandle = (window as any).requestIdleCallback(arm, { timeout });
-        } else {
-            timeoutHandle = setTimeout(arm, timeout);
-        }
-
-        ["scroll", "mousemove", "touchstart", "keydown", "click"].forEach((e) =>
-          window.addEventListener(e, arm, { passive: true, once: true } as any)
-        );
-
-        // ✅ FIX-006: Всегда возвращаем cleanup функцию
-        return cleanup;
-    }, [timeout]);
-
-    return ready;
-}
-
 export default function RootLayout() {
     useEffect(() => {
         if (!isWeb) SplashScreen.hideAsync().catch((error) => {

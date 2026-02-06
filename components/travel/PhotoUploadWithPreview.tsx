@@ -183,6 +183,7 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
     }, [uploadPendingIfPossible]);
 
     useEffect(() => {
+        const currentBlobUrls = blobUrlsRef.current;
         return () => {
             if (remoteRetryTimerRef.current) {
                 clearTimeout(remoteRetryTimerRef.current);
@@ -193,10 +194,10 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                 progressIntervalRef.current = null;
             }
             // Revoke all blob URLs to prevent memory leaks
-            blobUrlsRef.current.forEach(url => {
+            currentBlobUrls.forEach((url: string) => {
                 try { URL.revokeObjectURL(url); } catch { /* noop */ }
             });
-            blobUrlsRef.current.clear();
+            currentBlobUrls.clear();
         };
     }, []);
 

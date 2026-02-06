@@ -100,7 +100,7 @@ function serializeAnswer(answerFn) {
     return { type: 'function', value: fnStr };
 }
 
-function serializeStep(step, imageBaseUrl = '') {
+function serializeStep(step) {
     const answer = serializeAnswer(step.answer);
     return {
         id: step.id,

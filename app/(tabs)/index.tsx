@@ -25,7 +25,7 @@ function HomeScreen() {
         const raw = String(effectivePathname ?? '').trim();
         const normalized = raw === '' || raw === '/' ? '/' : raw.startsWith('/') ? raw : `/${raw}`;
         return buildCanonicalUrl(normalized);
-    }, [buildCanonicalUrl, effectivePathname]);
+    }, [effectivePathname]);
 
     const shouldRenderSeo = useMemo(() => {
         if (Platform.OS !== 'web') return false;

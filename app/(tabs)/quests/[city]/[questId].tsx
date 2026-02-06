@@ -25,7 +25,7 @@ export default function QuestByIdScreen() {
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     // Загружаем бандл квеста из бэкенда по quest_id
-    const { bundle, loading: loaded_loading, error } = useQuestBundle(questId ? String(questId) : undefined);
+    const { bundle, loading: loaded_loading, error: _error } = useQuestBundle(questId ? String(questId) : undefined);
     const loaded = !loaded_loading;
 
     // Синхронизация прогресса с бэкендом для авторизованных пользователей

@@ -119,7 +119,6 @@ function buildAnswerChecker(answerType: string, answerValue: string): (input: st
         case 'function': {
             // Fallback: пробуем eval (только для миграции, в проде не должно быть)
             try {
-                // eslint-disable-next-line no-eval
                 const fn = eval(`(${answerValue})`);
                 if (typeof fn === 'function') return fn;
             } catch { /* ignore */ }

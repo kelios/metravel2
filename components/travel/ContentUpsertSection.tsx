@@ -480,14 +480,21 @@ const ContentUpsertSection: React.FC<ContentUpsertSectionProps> = ({
         },
         [
             autosaveStatus,
+            colors.text,
+            colors.textOnPrimary,
             descriptionPlainLength,
             descriptionPlainText,
             descriptionProgress,
             descriptionProgressColor,
             descriptionStatusText,
+            dictation,
             idTravelStr,
+            importDescriptionText,
             isDescriptionFullscreen,
+            isImportingDescriptionText,
             isMobile,
+            isPastingDescriptionText,
+            pasteDescriptionText,
             styles,
         ]
     );

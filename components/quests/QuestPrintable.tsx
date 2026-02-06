@@ -187,7 +187,7 @@ export function generatePrintableQuest({ title, steps, intro, questUrl }: Printa
 
     ${validSteps.length > 0 ? `
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><${'/'}script>
     <script>
     (function() {
         var pts = ${JSON.stringify(validSteps.map((s, i) => ({ lat: s.lat, lng: s.lng, num: i + 1, loc: s.location })))};
@@ -206,7 +206,7 @@ export function generatePrintableQuest({ title, steps, intro, questUrl }: Printa
         });
         if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
     })();
-    <\/script>
+    <${'/'}script>
     ` : ''}
 </body>
 </html>`;

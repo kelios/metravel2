@@ -307,7 +307,7 @@ export const useRouting = (
 
                     if (!geometry?.coordinates?.length) throw new Error('Пустой маршрут от ORS')
 
-                    try {
+                    {
                         const first = geometry.coordinates?.[0] as any
                         const last = geometry.coordinates?.[geometry.coordinates.length - 1] as any
                         const start = points[0]
@@ -329,9 +329,6 @@ export const useRouting = (
                                 })
                             }
                         }
-                    } catch (e) {
-                        // If this throws, treat as ORS failure so we can fallback to Valhalla/OSRM/direct line.
-                        throw e
                     }
 
                     return {
@@ -899,7 +896,7 @@ export const useRouting = (
                 // noop
             }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, estimateDurationSeconds, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv, supportsPublicOsrmProfile])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, estimateDurationSeconds, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv, supportsPublicOsrmProfile, ensureAnchoredGeometry])
 
     useEffect(() => {
         return () => {

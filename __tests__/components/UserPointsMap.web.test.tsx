@@ -52,13 +52,14 @@ jest.mock('react-leaflet', () => {
   const MapContainer = React.forwardRef((props: any, ref: any) => {
     ;(globalThis as any).__lastUserPointsMapContainerProps = props
 
+    const { whenReady } = props
     React.useEffect(() => {
       if (ref) {
         if (typeof ref === 'function') ref(fakeMap)
         else ref.current = fakeMap
       }
-      props.whenReady?.()
-    }, [props.whenReady, ref])
+      whenReady?.()
+    }, [whenReady, ref])
 
     return <View testID="userpoints-map-container">{props.children}</View>
   })

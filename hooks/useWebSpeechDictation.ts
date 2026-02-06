@@ -97,7 +97,6 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
         recognitionRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctor, lang, continuous]);
 
   const start = useCallback(() => {
