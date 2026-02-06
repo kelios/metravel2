@@ -18,6 +18,11 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
   // ✅ УЛУЧШЕНИЕ: Мемоизация стилей с динамическими цветами
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  // P1-4: Не показываем секцию без URL в production
+  if (!baseUrl && !__DEV__) {
+    return null;
+  }
+
   const handleOpen = useCallback(() => {
     if (!baseUrl) return;
 
@@ -62,7 +67,8 @@ export default function TelegramDiscussionSection({ travel }: TelegramDiscussion
           {hasUrl ? 'Открыть обсуждение в Telegram' : 'Скоро здесь будет обсуждение в Telegram'}
         </Text>
       </Pressable>
-      {!hasUrl && (
+      {/* P1-9: Admin hint only in dev mode */}
+      {!hasUrl && __DEV__ && (
         <Text style={styles.helperText}>
           Администратору: задайте EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL в настройках окружения,
           чтобы включить ссылку на канал.

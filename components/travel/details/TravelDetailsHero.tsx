@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   LayoutChangeEvent,
   Platform,
@@ -10,8 +10,13 @@ import {
   useWindowDimensions,
 } from 'react-native'
 
+import Feather from '@expo/vector-icons/Feather'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useFavorites } from '@/context/FavoritesContext'
+import { useAuth } from '@/context/AuthContext'
+import { useRequireAuth } from '@/hooks/useRequireAuth'
+import { showToast } from '@/utils/toast'
 import {
   createSafeImageUrl,
 } from '@/utils/travelDetailsSecure'
@@ -32,7 +37,7 @@ const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
 const WeatherWidget = withLazy(() => import('@/components/home/WeatherWidget'))
-const HERO_QUICK_JUMP_KEYS = ['map', 'description', 'points'] as const
+const HERO_QUICK_JUMP_KEYS = ['description', 'map', 'points', 'comments', 'video'] as const
 
 const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
   createSafeImageUrl(url, updated_at, id)
@@ -313,6 +318,53 @@ function TravelHeroSectionInner({
     typeof navigator !== 'undefined' &&
     Boolean((navigator as any).webdriver)
 
+  const { isAuthenticated } = useAuth()
+  const { requireAuth } = useRequireAuth({ intent: 'favorite' })
+  const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites()
+  const isFavorite = checkIsFavorite(travel.id, 'travel')
+
+  const handleFavoriteToggle = useCallback(async () => {
+    if (!isAuthenticated) {
+      requireAuth()
+      return
+    }
+    try {
+      if (isFavorite) {
+        await removeFavorite(travel.id, 'travel')
+        showToast({ type: 'success', text1: 'Удалено из избранного', visibilityTime: 2000 })
+      } else {
+        await addFavorite({
+          id: travel.id,
+          type: 'travel',
+          title: travel.name,
+          imageUrl: travel.travel_image_thumb_url,
+          url: `/travels/${(travel as any).slug || travel.id}`,
+          country: (travel as any).countryName,
+        })
+        showToast({ type: 'success', text1: 'Добавлено в избранное', visibilityTime: 2000 })
+      }
+    } catch {
+      showToast({ type: 'error', text1: 'Не удалось обновить избранное', visibilityTime: 3000 })
+    }
+  }, [isAuthenticated, requireAuth, isFavorite, travel, addFavorite, removeFavorite])
+
+  const heroMetaLine = useMemo(() => {
+    const parts: string[] = []
+    const countryName = (travel as any).countryName || ''
+    const numberDays = (travel as any).number_days
+    const monthName = (travel as any).monthName || ''
+    const year = (travel as any).year
+
+    if (countryName) parts.push(countryName)
+    if (numberDays != null && Number.isFinite(Number(numberDays))) {
+      const d = Number(numberDays)
+      parts.push(`${d} ${d === 1 ? 'день' : d < 5 ? 'дня' : 'дней'}`)
+    }
+    const when = [monthName, year].filter(Boolean).join(' ')
+    if (when) parts.push(when)
+    return parts.join(' \u00B7 ')
+  }, [travel])
+
   const firstRaw = travel?.travel_image_thumb_url || travel?.gallery?.[0]
   const firstImg = useMemo(() => {
     if (!firstRaw) return null
@@ -459,6 +511,41 @@ function TravelHeroSectionInner({
               onFirstImageLoad={onFirstImageLoad}
             />
           )}
+
+          {/* P0-1: Видимый заголовок поверх hero-изображения */}
+          {travel?.name ? (
+            <View style={styles.heroOverlay} pointerEvents="box-none">
+              <Text
+                style={styles.heroTitle}
+                numberOfLines={2}
+                accessibilityRole="header"
+              >
+                {travel.name}
+              </Text>
+              {heroMetaLine ? (
+                <Text style={styles.heroMeta} numberOfLines={1}>
+                  {heroMetaLine}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+
+          {/* P1-1: Кнопка «В избранное» в hero */}
+          <Pressable
+            onPress={handleFavoriteToggle}
+            style={[
+              styles.heroFavoriteBtn,
+              isFavorite && styles.heroFavoriteBtnActive,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
+          >
+            <Feather
+              name="heart"
+              size={22}
+              color={isFavorite ? '#fff' : 'rgba(255,255,255,0.9)'}
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -551,22 +638,9 @@ function TravelHeroSectionInner({
         </View>
       )}
 
-      {isMobile && extrasReady && (
-        <View
-          testID="travel-details-primary-actions"
-          accessibilityRole="none"
-          accessibilityLabel="Поделиться маршрутом"
-          style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
-        >
-          <View testID="travel-details-share" accessibilityLabel="Поделиться маршрутом">
-            <Suspense fallback={<View style={{ minHeight: 56 }} />}>
-              <ShareButtons travel={travel} />
-            </Suspense>
-          </View>
-        </View>
-      )}
-
-      {extrasReady && (
+      {/* P0-2: AuthorCard показывается только на desktop в hero.
+         На mobile — перенесён после контента (TravelDetailsDeferred). */}
+      {!isMobile && extrasReady && (
         <View
           testID="travel-details-author"
           accessibilityRole="none"

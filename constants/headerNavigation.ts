@@ -12,9 +12,8 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/search', label: 'Поиск', icon: 'search', priority: 'primary' },
   { path: '/travelsby', label: 'Беларусь', icon: 'map', priority: 'primary' },
   { path: '/map', label: 'Карта', icon: 'map-pin', priority: 'primary' },
-  { path: '/roulette', label: 'Случайный маршрут', icon: 'shuffle', priority: 'primary' },
+  { path: '/roulette', label: 'Рулетка', icon: 'shuffle', priority: 'primary' },
   { path: '/quests', label: 'Квесты', icon: 'target', priority: 'primary' },
-  { path: '/export', label: 'Экспорт', icon: 'download', priority: 'primary' },
 ];
 
 export const DOCUMENT_NAV_ITEMS: HeaderNavItem[] = [

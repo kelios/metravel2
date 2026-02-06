@@ -108,14 +108,14 @@ describe('HeaderContextBar', () => {
     });
   });
 
-  it('should show page context title on home', () => {
+  it('should hide context bar on desktop home (page name already in nav)', () => {
     (usePathname as jest.Mock).mockReturnValue('/');
-    const { getByText, queryByText } = renderWithClient(<HeaderContextBar />);
-    expect(getByText('Путешествия')).toBeTruthy();
-    expect(queryByText('Главная')).toBeNull();
+    const { queryByText, queryByTestId } = renderWithClient(<HeaderContextBar />);
+    expect(queryByText('Путешествия')).toBeNull();
+    expect(queryByTestId('header-context-bar')).toBeNull();
   });
 
-  it('should show page context title on top-level routes', () => {
+  it('should hide context bar on desktop top-level routes (page name already in nav)', () => {
     (usePathname as jest.Mock).mockReturnValue('/map');
 
     useBreadcrumbModel.mockReturnValue({
@@ -126,9 +126,9 @@ describe('HeaderContextBar', () => {
       items: [],
     });
 
-    const { getByText, queryByText } = renderWithClient(<HeaderContextBar />);
-    expect(getByText('Карта')).toBeTruthy();
-    expect(queryByText('Главная')).toBeNull();
+    const { queryByText, queryByTestId } = renderWithClient(<HeaderContextBar />);
+    expect(queryByText('Карта')).toBeNull();
+    expect(queryByTestId('header-context-bar')).toBeNull();
   });
 
   it('should render breadcrumb chain on nested routes and navigate on click', () => {

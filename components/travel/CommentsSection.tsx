@@ -1,15 +1,14 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
-  RefreshControl,
   Pressable,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { usePathname, useRouter } from 'expo-router';
 import { CommentItem } from './CommentItem';
@@ -32,6 +31,8 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [replyTo, setReplyTo] = useState<TravelComment | null>(null);
   const [editComment, setEditComment] = useState<TravelComment | null>(null);
   const [expandedThreads, setExpandedThreads] = useState<Set<number>>(new Set());
@@ -279,7 +280,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
         <ActivityIndicator
           testID="activity-indicator"
           size="large"
-          color={DESIGN_TOKENS.colors.primary}
+          color={colors.primary}
         />
       </View>
     );
@@ -294,7 +295,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   return (
     <View style={styles.container} nativeID="comments">
       <View style={styles.header}>
-        <Feather name="message-circle" size={24} color={DESIGN_TOKENS.colors.text} />
+        <Feather name="message-circle" size={24} color={colors.text} />
         <Text style={styles.title}>
           Комментарии {comments.length > 0 && `(${comments.length})`}
         </Text>
@@ -302,7 +303,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
 
       {hasError && (
         <View style={styles.errorBanner} accessibilityRole="alert">
-          <Feather name="alert-triangle" size={16} color={DESIGN_TOKENS.colors.warning} />
+          <Feather name="alert-triangle" size={16} color={colors.warning} />
           <Text style={styles.errorBannerText}>
             Не удалось загрузить комментарии. Проверьте соединение и попробуйте ещё раз.
           </Text>
@@ -325,7 +326,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
             style={styles.threadControlButton}
             accessibilityLabel="Развернуть все треды"
           >
-            <Feather name="maximize-2" size={16} color={DESIGN_TOKENS.colors.primary} />
+            <Feather name="maximize-2" size={16} color={colors.primary} />
             <Text style={styles.threadControlText}>Развернуть все</Text>
           </Pressable>
           <Pressable
@@ -333,7 +334,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
             style={styles.threadControlButton}
             accessibilityLabel="Свернуть все треды"
           >
-            <Feather name="minimize-2" size={16} color={DESIGN_TOKENS.colors.primary} />
+            <Feather name="minimize-2" size={16} color={colors.primary} />
             <Text style={styles.threadControlText}>Свернуть все</Text>
           </Pressable>
         </View>
@@ -360,27 +361,23 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
           accessibilityLabel="Войти, чтобы оставить комментарий"
         >
           <View style={styles.loginPromptRow}>
-            <Feather name="log-in" size={18} color={DESIGN_TOKENS.colors.primary} />
+            <Feather name="log-in" size={18} color={colors.primary} />
             <Text style={styles.loginText}>Войдите, чтобы оставить комментарий</Text>
           </View>
         </Pressable>
       )}
 
-      <ScrollView
-        style={styles.commentsList}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
-        }
-      >
+      {/* P0-4: Заменён ScrollView на View — компонент уже внутри главного ScrollView страницы */}
+      <View style={styles.commentsList}>
         {hasError && topLevel.length === 0 ? (
           <View style={styles.emptyState}>
-            <Feather name="message-circle" size={48} color={DESIGN_TOKENS.colors.disabled} />
+            <Feather name="message-circle" size={48} color={colors.disabled} />
             <Text style={styles.emptyText}>Комментарии недоступны</Text>
             <Text style={styles.emptySubtext}>Попробуйте обновить страницу или повторить позже</Text>
           </View>
         ) : topLevel.length === 0 ? (
           <View style={styles.emptyState}>
-            <Feather name="message-circle" size={48} color={DESIGN_TOKENS.colors.disabled} />
+            <Feather name="message-circle" size={48} color={colors.disabled} />
             <Text style={styles.emptyText}>Пока нет комментариев</Text>
             <Text style={styles.emptySubtext}>Будьте первым, кто оставит комментарий!</Text>
           </View>
@@ -409,7 +406,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
                       <Feather
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
                         size={20}
-                        color={DESIGN_TOKENS.colors.primary}
+                        color={colors.primary}
                       />
                       <Text style={styles.toggleThreadText}>
                         {isExpanded
@@ -421,15 +418,12 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
                     {isExpanded && (
                       <View style={styles.repliesContainer}>
                         {replies[comment.id].map((reply) => {
-                          // Проверяем, есть ли у ответа свой sub_thread (вложенный ответ)
                           const hasParentChain = reply.sub_thread && reply.sub_thread !== comment.id;
 
                           return (
                             <View key={reply.id}>
-                              {/* Если это ответ на ответ, показываем родительскую цепочку */}
                               {hasParentChain && renderCommentWithParents(reply, true)}
 
-                              {/* Сам комментарий */}
                               <CommentItem
                                 comment={reply}
                                 onReply={isAuthenticated ? handleReply : undefined}
@@ -437,7 +431,6 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
                                 level={hasParentChain ? getParentChain(reply.id).length : 1}
                               />
 
-                              {/* Рекурсивно показываем ответы на этот комментарий */}
                               {replies[reply.id] && replies[reply.id].length > 0 && (
                                 <View style={styles.nestedRepliesContainer}>
                                   {replies[reply.id].map((nestedReply) => (
@@ -462,15 +455,15 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
             );
           })
         )}
-      </ScrollView>
+      </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create<Record<string, any>>({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<Record<string, any>>({
   container: {
     flex: 1,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     padding: DESIGN_TOKENS.spacing.md,
   },
   centerContainer: {
@@ -488,10 +481,10 @@ const styles = StyleSheet.create<Record<string, any>>({
   title: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg,
     fontWeight: DESIGN_TOKENS.typography.weights.bold,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
   },
   loginPrompt: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.sm,
     padding: DESIGN_TOKENS.spacing.md,
     marginBottom: DESIGN_TOKENS.spacing.md,
@@ -504,37 +497,37 @@ const styles = StyleSheet.create<Record<string, any>>({
   },
   loginText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
   },
-	  errorBanner: {
-	    flexDirection: 'row',
-	    alignItems: 'center',
-	    gap: DESIGN_TOKENS.spacing.xs,
-	    paddingVertical: DESIGN_TOKENS.spacing.sm,
-	    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-	    marginBottom: DESIGN_TOKENS.spacing.md,
-	    borderRadius: DESIGN_TOKENS.radii.sm,
-	    backgroundColor: DESIGN_TOKENS.colors.warningSoft,
-	    borderWidth: 1,
-	    borderColor: DESIGN_TOKENS.colors.warningAlpha40,
-	  },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.md,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: colors.warningSoft,
+    borderWidth: 1,
+    borderColor: colors.warningAlpha40,
+  },
   errorBannerText: {
     flex: 1,
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.warning,
+    color: colors.warning,
     fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
-	  errorBannerButton: {
-	    paddingVertical: DESIGN_TOKENS.spacing.xxs,
-	    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-	    borderRadius: DESIGN_TOKENS.radii.pill,
-	    backgroundColor: DESIGN_TOKENS.colors.surface,
-	    borderWidth: 1,
-	    borderColor: DESIGN_TOKENS.colors.warningAlpha40,
-	  },
+  errorBannerButton: {
+    paddingVertical: DESIGN_TOKENS.spacing.xxs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.warningAlpha40,
+  },
   errorBannerButtonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm - 1,
-    color: DESIGN_TOKENS.colors.warning,
+    color: colors.warning,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
   commentsList: {
@@ -547,12 +540,12 @@ const styles = StyleSheet.create<Record<string, any>>({
   emptyText: {
     fontSize: DESIGN_TOKENS.typography.sizes.lg - 2,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginTop: DESIGN_TOKENS.spacing.md,
   },
   emptySubtext: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textSubtle,
+    color: colors.textTertiary,
     marginTop: DESIGN_TOKENS.spacing.xs,
   },
   retryButton: {
@@ -560,23 +553,23 @@ const styles = StyleSheet.create<Record<string, any>>({
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.md,
     borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   retryButtonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
   errorText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     marginTop: DESIGN_TOKENS.spacing.md,
   },
   errorSubtext: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textSubtle,
+    color: colors.textTertiary,
     marginTop: DESIGN_TOKENS.spacing.xs,
   },
   threadControls: {
@@ -591,14 +584,14 @@ const styles = StyleSheet.create<Record<string, any>>({
     gap: DESIGN_TOKENS.spacing.xs,
     paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: DESIGN_TOKENS.colors.surface,
+    backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.sm,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.border,
   },
   threadControlText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   commentThread: {
@@ -614,40 +607,40 @@ const styles = StyleSheet.create<Record<string, any>>({
     marginTop: DESIGN_TOKENS.spacing.xs,
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
-	  threadLine: {
-	    position: 'absolute',
-	    left: 0,
-	    top: 0,
-	    bottom: 0,
-	    width: 2,
-	    backgroundColor: DESIGN_TOKENS.colors.primaryAlpha30,
-	  },
+  threadLine: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: colors.primaryAlpha30,
+  },
   toggleThreadText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.primary,
+    color: colors.primary,
     fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   repliesContainer: {
     marginLeft: DESIGN_TOKENS.spacing.md,
     paddingLeft: DESIGN_TOKENS.spacing.md,
     borderLeftWidth: 2,
-    borderLeftColor: DESIGN_TOKENS.colors.border,
+    borderLeftColor: colors.border,
   },
-	  nestedRepliesContainer: {
-	    marginLeft: DESIGN_TOKENS.spacing.lg,
-	    paddingLeft: DESIGN_TOKENS.spacing.md,
-	    borderLeftWidth: 2,
-	    borderLeftColor: DESIGN_TOKENS.colors.borderLight, // Lighter for nested
-	    marginTop: DESIGN_TOKENS.spacing.xs,
-	  },
-	  parentChainContainer: {
-	    backgroundColor: DESIGN_TOKENS.colors.surfaceAlpha40, // Subtle background
-	    borderRadius: DESIGN_TOKENS.radii.sm,
-	    padding: DESIGN_TOKENS.spacing.sm,
-	    marginBottom: DESIGN_TOKENS.spacing.sm,
-	    borderLeftWidth: 3,
-	    borderLeftColor: DESIGN_TOKENS.colors.primaryAlpha50,
-	  },
+  nestedRepliesContainer: {
+    marginLeft: DESIGN_TOKENS.spacing.lg,
+    paddingLeft: DESIGN_TOKENS.spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.borderLight,
+    marginTop: DESIGN_TOKENS.spacing.xs,
+  },
+  parentChainContainer: {
+    backgroundColor: colors.surfaceAlpha40,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    padding: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.primaryAlpha50,
+  },
   parentChainHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -655,11 +648,11 @@ const styles = StyleSheet.create<Record<string, any>>({
     marginBottom: DESIGN_TOKENS.spacing.xs,
     paddingBottom: DESIGN_TOKENS.spacing.xs,
     borderBottomWidth: 1,
-    borderBottomColor: DESIGN_TOKENS.colors.border,
+    borderBottomColor: colors.border,
   },
   parentChainLabel: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textMuted,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
 });

@@ -137,7 +137,7 @@ describe('CustomHeader', () => {
             expect(utils.getByLabelText('Поиск')).toBeTruthy();
             expect(utils.getByLabelText('Беларусь')).toBeTruthy();
             expect(utils.getByLabelText('Карта')).toBeTruthy();
-            expect(utils.getByLabelText('Случайный маршрут')).toBeTruthy();
+            expect(utils.getByLabelText('Рулетка')).toBeTruthy();
             expect(utils.getByLabelText('Квесты')).toBeTruthy();
         });
 

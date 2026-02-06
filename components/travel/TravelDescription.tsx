@@ -317,19 +317,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           { pointerEvents: 'box-none' } as any,
         ]}
       >
-          {/* Декоративный штамп — не участвует в доступности и не перехватывает клики */}
-          <ImageCardMedia
-            source={require("@/assets/travel-stamp.webp")}
-            fit="contain"
-            blurBackground={false}
-            transition={0}
-            loading="lazy"
-            priority="low"
-            style={[
-              styles.stamp,
-              { pointerEvents: 'none' } as any,
-            ]}
-          />
+          {/* P1-6: Декоративный штамп удалён — добавлял визуальный шум и лишний запрос */}
 
           {/* Контент */}
           {isEmptyHtml ? (

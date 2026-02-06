@@ -172,7 +172,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         },
         inner: {
             width: '100%',
-            maxWidth: '100%',
+            maxWidth: 1280,
             paddingHorizontal: 12,
             paddingVertical: 8,
             flexDirection: 'row',
@@ -190,7 +190,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                 },
                 web: {
                     minHeight: 56,
-                    paddingHorizontal: 16,
+                    paddingHorizontal: 24,
                     paddingVertical: 10,
                 }
             }),
@@ -205,8 +205,8 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         navContainer: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
-            paddingHorizontal: 8,
+            gap: 4,
+            paddingHorizontal: 4,
             justifyContent: 'center',
         },
         navScroll: {
@@ -283,18 +283,18 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         navItem: {
             flexDirection: 'row',
             alignItems: 'center',
-            paddingHorizontal: 14,
-            paddingVertical: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
             borderRadius: 999,
-            gap: 8,
+            gap: 6,
             backgroundColor: 'transparent',
             justifyContent: 'center',
-            minHeight: 44,
-            minWidth: 44,
+            minHeight: 40,
+            minWidth: 40,
             flexShrink: 0,
             ...Platform.select({
                 web: {
-                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)' as any,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' as any,
                     cursor: 'pointer' as any,
                 },
             }),
@@ -570,14 +570,9 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                               </Pressable>
                           </>
                       ) : (
-                          <>
-                              <Suspense fallback={null}>
-                                  <ThemeToggleLazy compact />
-                              </Suspense>
-                              <Suspense fallback={null}>
-                                  <AccountMenuLazy />
-                              </Suspense>
-                          </>
+                          <Suspense fallback={null}>
+                              <AccountMenuLazy />
+                          </Suspense>
                       )}
                   </View>
               </View>

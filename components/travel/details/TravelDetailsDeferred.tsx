@@ -1,13 +1,18 @@
-import React, { useEffect, useState } from 'react'
-import { Animated, InteractionManager, Platform, View } from 'react-native'
+import React, { Suspense, useEffect, useState } from 'react'
+import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
+import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
 import { TravelDetailsMapSection } from './sections/TravelDetailsMapSection'
 import { TravelDetailsSidebarSection } from './sections/TravelDetailsSidebarSection'
 import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSection'
 import { CommentsSection } from '@/components/travel/CommentsSection'
+import { withLazy } from './TravelDetailsLazy'
+
+const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
+const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
 
 const rIC = (cb: () => void, timeout = 300) => {
   if (typeof (window as any)?.requestIdleCallback === 'function') {
@@ -62,15 +67,20 @@ export const TravelDeferredSections: React.FC<{
         scrollRef={scrollRef}
       />
 
-      {canRenderHeavy && travel?.id && (
-        <View 
-          ref={anchors.comments} 
-          collapsable={false}
-          {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
-        >
-          <CommentsSection travelId={travel.id} />
-        </View>
+      {/* P0-2: AuthorCard и ShareButtons после контента на mobile */}
+      {isMobile && (
+        <MobileAuthorShareSection travel={travel} />
       )}
+
+      <View 
+        ref={anchors.comments} 
+        collapsable={false}
+        {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
+      >
+        {canRenderHeavy && travel?.id && (
+          <CommentsSection travelId={travel.id} />
+        )}
+      </View>
 
       <TravelDetailsMapSection
         travel={travel}
@@ -88,6 +98,39 @@ export const TravelDeferredSections: React.FC<{
       />
 
       <TravelEngagementSection travel={travel} isMobile={isMobile} />
+    </>
+  )
+}
+
+const MobileAuthorShareSection: React.FC<{ travel: Travel }> = ({ travel }) => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <>
+      <View
+        testID="travel-details-author-mobile"
+        accessibilityRole="none"
+        accessibilityLabel="Автор маршрута"
+        style={[styles.sectionContainer, styles.contentStable, styles.authorCardContainer]}
+      >
+        <Text style={styles.sectionHeaderText}>Автор</Text>
+        <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
+        <View style={{ marginTop: 12 }}>
+          <Suspense fallback={<View style={{ minHeight: 160 }} />}>
+            <AuthorCard travel={travel} />
+          </Suspense>
+        </View>
+      </View>
+
+      <View
+        testID="travel-details-share-mobile"
+        accessibilityRole="none"
+        accessibilityLabel="Поделиться маршрутом"
+        style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
+      >
+        <Suspense fallback={<View style={{ minHeight: 56 }} />}>
+          <ShareButtons travel={travel} />
+        </Suspense>
+      </View>
     </>
   )
 }

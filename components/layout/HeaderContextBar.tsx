@@ -94,6 +94,11 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
     );
   }
 
+  // On desktop, hide context bar when there are no breadcrumbs (page name is already in nav)
+  if (!model.showBreadcrumbs) {
+    return <BreadcrumbsJsonLd model={model} pathname={pathname} />;
+  }
+
   return (
     <>
       <BreadcrumbsJsonLd model={model} pathname={pathname} />

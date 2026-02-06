@@ -232,10 +232,10 @@ export const TravelDetailsContentSection: React.FC<{
 
       {shouldUseMobileInsights && (
         <View
-          accessibilityLabel="Быстрый доступ к разделам"
+          accessibilityLabel="Впечатления автора"
           style={[styles.sectionContainer, styles.mobileInsightTabsWrapper]}
         >
-          <Text style={styles.mobileInsightLabel}>Быстрый доступ к разделам</Text>
+          <Text style={styles.mobileInsightLabel}>Впечатления автора</Text>
           <View style={styles.mobileInsightTabs}>
             {insightConfigs.map((section) => (
               <Pressable

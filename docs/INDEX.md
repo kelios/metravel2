@@ -33,3 +33,5 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 ## Design system
 
 - `docs/DESIGN_SYSTEM_CONSOLIDATION.md` — how to migrate to `DESIGN_TOKENS`
+- `docs/UI_UX_IMPROVEMENT_SPEC.md` — общее ТЗ по улучшению визуальной части
+- `docs/TRAVEL_DETAILS_UI_SPEC.md` — ТЗ по UI/UX-редизайну страницы путешествия

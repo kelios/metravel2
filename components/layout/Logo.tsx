@@ -18,7 +18,7 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
             accessibilityLabel="MeTravel - Главная страница"
         >
             <Image
-                source={require('../assets/icons/logo_yellow_60x60.png')}
+                source={require('../../assets/icons/logo_yellow_60x60.png')}
                 style={[styles.logo, isMobile && styles.logoMobile]}
                 resizeMode="contain"
             />

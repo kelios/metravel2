@@ -7,44 +7,42 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 export const HEADER_OFFSET_DESKTOP = 72
 export const HEADER_OFFSET_MOBILE = 56
 
-/* ✅ РЕДИЗАЙН: Компактные константы (по аналогии с CompactSideBarTravel) */
+/* P1-7: Увеличенные отступы — возвращаем воздух после чрезмерного сжатия */
 export const COMPACT_SPACING = {
-  // Уменьшение на 20-25%
   hero: {
-    mobile: 18, // было 24
-    desktop: 24, // было 32
+    mobile: 20, // было 18, оригинал 24
+    desktop: 28, // было 24, оригинал 32
   },
   section: {
-    mobile: 14, // было 18-20
-    desktop: 18, // было 24
+    mobile: 18, // было 14, оригинал 18-20
+    desktop: 24, // было 18, оригинал 24
   },
   card: {
-    mobile: 12, // было 16
-    desktop: 14, // было 18
+    mobile: 14, // было 12, оригинал 16
+    desktop: 16, // было 14, оригинал 18
   },
   margin: {
-    section: 14, // было 18
-    card: 9, // было 12
+    section: 18, // было 14, оригинал 18
+    card: 10, // было 9, оригинал 12
   },
 } as const;
 
 export const COMPACT_TYPOGRAPHY = {
-  // Уменьшение font sizes на 15-20%
   title: {
-    mobile: 20, // было 24
-    desktop: 22, // было 26-28
+    mobile: 22, // было 20, оригинал 24
+    desktop: 24, // было 22, оригинал 26-28
   },
   subtitle: {
-    mobile: 16, // было 18-20
-    desktop: 18, // было 20-22
+    mobile: 17, // было 16, оригинал 18-20
+    desktop: 19, // было 18, оригинал 20-22
   },
   body: {
-    mobile: 14, // было 16
-    desktop: 14, // было 16
+    mobile: 14, // без изменений
+    desktop: 15, // было 14, оригинал 16
   },
   caption: {
-    mobile: 12, // было 13-14
-    desktop: 13, // было 14
+    mobile: 12, // без изменений
+    desktop: 13, // без изменений
   },
 } as const;
 
@@ -457,7 +455,73 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     overflow: "hidden",
     marginBottom: 0,
     backgroundColor: "transparent",
+    position: "relative" as any,
     ...(getShadowStyle(colors, 'light') as any),
+  },
+
+  heroOverlay: {
+    position: "absolute" as any,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2,
+    paddingHorizontal: Platform.select({ default: 16, web: 24 }),
+    paddingBottom: Platform.select({ default: 16, web: 20 }),
+    paddingTop: Platform.select({ default: 48, web: 64 }),
+    ...(Platform.OS === 'web' ? {
+      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.25) 60%, transparent 100%)',
+    } as any : {
+      backgroundColor: 'rgba(0,0,0,0.35)',
+    }),
+  },
+  heroTitle: {
+    fontSize: Platform.select({ default: 22, web: 28 }),
+    fontWeight: "800" as any,
+    color: '#fff',
+    letterSpacing: -0.5,
+    lineHeight: Platform.select({ default: 28, web: 34 }),
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+    } as any : {
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 4,
+    }),
+  },
+  heroMeta: {
+    fontSize: Platform.select({ default: 13, web: 14 }),
+    fontWeight: "600" as any,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 4,
+    letterSpacing: 0,
+    ...(Platform.OS === 'web' ? {
+      textShadow: '0 1px 3px rgba(0,0,0,0.4)',
+    } as any : {
+      textShadowColor: 'rgba(0,0,0,0.4)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
+    }),
+  },
+  heroFavoriteBtn: {
+    position: "absolute" as any,
+    top: Platform.select({ default: 12, web: 16 }),
+    right: Platform.select({ default: 12, web: 16 }),
+    zIndex: 3,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: "center" as any,
+    justifyContent: "center" as any,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+      transition: 'background-color 0.2s ease, transform 0.2s ease',
+    } as any : {}),
+  },
+  heroFavoriteBtnActive: {
+    backgroundColor: colors.primary,
   },
 
   videoContainer: {

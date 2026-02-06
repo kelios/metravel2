@@ -255,23 +255,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
           accessibilityLabel={isFavorite ? 'Удалить из избранного' : 'Добавить в избранное'}
         />
 
-        {/* Кнопка "Смотреть все путешествия автора" */}
-        {(travel as any).userIds || (travel as any).userId ? (
-          <Button
-            label="Все путешествия автора"
-            onPress={handleViewAuthorTravels}
-            variant="secondary"
-            size="md"
-            icon={<Feather name="user" size={20} color={colors.primary} />}
-            style={[
-              styles.actionButton,
-              isMobile && styles.actionButtonMobile,
-              styles.actionButtonSecondary,
-            ]}
-            labelStyle={[styles.actionButtonText, isMobile && styles.actionButtonTextMobile]}
-            accessibilityLabel="Смотреть все путешествия автора"
-          />
-        ) : null}
+        {/* P1-5: «Все путешествия автора» убрана — уже есть в AuthorCard */}
 
         {/* Кнопка "Создать путешествие" */}
         <Button
