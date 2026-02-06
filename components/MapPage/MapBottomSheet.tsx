@@ -156,10 +156,10 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           {sheetIndex >= 0 && (
             <View style={styles.header}>
               <View style={styles.headerContent}>
-                {title && (
+                {!!title && (
                   <View style={styles.titleContainer}>
                     <Text style={styles.title}>{title}</Text>
-                    {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+                    {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
                   </View>
                 )}
               </View>
@@ -203,10 +203,10 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         {/* Header - always visible */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
-            {title && (
+            {!!title && (
               <View style={styles.titleContainer}>
                 <Text style={styles.title}>{title}</Text>
-                {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+                {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
               </View>
             )}
           </View>

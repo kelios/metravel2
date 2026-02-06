@@ -113,7 +113,7 @@ const SelectComponent: React.FC<SelectProps> = ({
         // ✅ На web используем нативный select
         return (
             <div style={{ marginBottom: DESIGN_TOKENS.spacing.md }}>
-                {label && (
+                {!!label && (
                     <div style={{ marginBottom: DESIGN_TOKENS.spacing.xs }}>
                         <label style={{
                             fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -159,7 +159,7 @@ const SelectComponent: React.FC<SelectProps> = ({
                 </select>
 
                 {/* ✅ УЛУЧШЕНИЕ: Подсказка */}
-                {hint && !error && (
+                {!!hint && !error && (
                     <div
                         id="hint-message"
                         style={{
@@ -173,7 +173,7 @@ const SelectComponent: React.FC<SelectProps> = ({
                 )}
 
                 {/* ✅ УЛУЧШЕНИЕ: Сообщение об ошибке */}
-                {error && (
+                {!!error && (
                     <div
                         id="error-message"
                         role="alert"
@@ -201,7 +201,7 @@ const SelectComponent: React.FC<SelectProps> = ({
     // ✅ На mobile используем простой компонент (можно расширить с @react-native-picker/picker при необходимости)
     return (
         <View style={styles.container}>
-            {label && (
+            {!!label && (
                 <View style={styles.labelRow}>
                     <Text style={styles.label}>
                         {label}
@@ -215,12 +215,12 @@ const SelectComponent: React.FC<SelectProps> = ({
             </Text>
 
             {/* ✅ УЛУЧШЕНИЕ: Подсказка */}
-            {hint && !error && (
+            {!!hint && !error && (
                 <Text style={styles.hint}>{hint}</Text>
             )}
 
             {/* ✅ УЛУЧШЕНИЕ: Сообщение об ошибке */}
-            {error && (
+            {!!error && (
                 <View
                     style={styles.errorContainer}
                     accessibilityRole="alert"

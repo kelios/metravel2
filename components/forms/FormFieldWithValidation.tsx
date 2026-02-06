@@ -129,7 +129,7 @@ export default function FormFieldWithValidation({
           {label}
           {required && <Text style={styles.required}> *</Text>}
         </Text>
-        {hint && (
+        {!!hint && (
           <View style={styles.hintContainer}>
             <Pressable
               onPress={() => setShowHint(!showHint)}
@@ -159,7 +159,7 @@ export default function FormFieldWithValidation({
 
       {children}
 
-      {showError && error && (
+      {showError && !!error && (
         <View
           style={styles.errorContainer}
           accessibilityRole="alert"
@@ -170,7 +170,7 @@ export default function FormFieldWithValidation({
         </View>
       )}
 
-      {hint && showHint && Platform.OS !== 'web' && (
+      {!!hint && showHint && Platform.OS !== 'web' && (
         <View style={styles.hintMobile}>
           <Text style={styles.hintText}>{hint}</Text>
         </View>

@@ -161,7 +161,7 @@ const NumberInputComponent: React.FC<NumberInputComponentProps> = ({
             />
 
             {/* ✅ УЛУЧШЕНИЕ: Подсказка */}
-            {hint && !error && (
+            {!!hint && !error && (
                 <Text
                     style={styles.hint}
                     {...Platform.select({
@@ -176,7 +176,7 @@ const NumberInputComponent: React.FC<NumberInputComponentProps> = ({
             )}
 
             {/* ✅ УЛУЧШЕНИЕ: Сообщение об ошибке */}
-            {error && (
+            {!!error && (
                 <View
                     style={styles.errorContainer}
                     accessibilityRole="alert"

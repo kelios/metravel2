@@ -141,7 +141,7 @@ export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps)
       )}
 
       {/* Страна */}
-      {countryName && (
+      {!!countryName && (
         <SafeView style={styles.factItem}>
           <Feather
             name="map-pin"

@@ -109,11 +109,11 @@ export default function ProgressIndicator({
 
         {/* Информация о прогрессе */}
         <View style={styles.info}>
-          {stage && (
+          {!!stage && (
             <Text style={styles.stage}>{stage}</Text>
           )}
           
-          {message && (
+          {!!message && (
             <Text style={styles.message}>{message}</Text>
           )}
 
