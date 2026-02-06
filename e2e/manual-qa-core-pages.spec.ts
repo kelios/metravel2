@@ -123,12 +123,16 @@ test.describe('Manual QA automation: core pages data', () => {
 
   test('roulette loads filters and random results via API proxy', async ({ page }) => {
     await ensureApiProxy(page, 'roulette');
+
+    // Set up the response listener BEFORE navigating to avoid race condition
+    // where the API response arrives before the listener is ready.
+    const filtersPromise = waitForApiResponse(page, [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//], 'roulette-filters', {
+      timeoutMs: 90_000,
+    });
     await page.goto('/roulette', { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
     // Upstream API can be slow/flaky; allow a longer window for proxy responses.
-    await waitForApiResponse(page, [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//], 'roulette-filters', {
-      timeoutMs: 90_000,
-    });
+    await filtersPromise;
 
     const spinButton = page.getByRole('button', { name: 'Подобрать маршруты' }).first();
     await expect(spinButton).toBeVisible({ timeout: 20_000 });
@@ -144,10 +148,12 @@ test.describe('Manual QA automation: core pages data', () => {
       } catch (err: any) {
         lastErr = err;
         // Retry once: reload to recover from transient proxy hiccups.
-        await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
-        await waitForApiResponse(page, [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//], 'roulette-filters', {
+        // Set up listener BEFORE reload to avoid race condition.
+        const retryFilters = waitForApiResponse(page, [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//], 'roulette-filters', {
           timeoutMs: 90_000,
         }).catch(() => null);
+        await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+        await retryFilters;
       }
     }
 

@@ -13,7 +13,7 @@ export class V1GalleryRenderer {
   constructor(private ctx: V1RenderContext) {}
 
   renderPages(travel: TravelForBook, startPageNumber: number): string[] {
-    const { colors, typography, spacing } = this.ctx.theme;
+    const { colors, spacing } = this.ctx.theme;
     const photos = (travel.gallery || [])
       .map((item) => {
         const raw = typeof item === 'string' ? item : item?.url;

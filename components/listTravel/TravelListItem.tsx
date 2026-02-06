@@ -128,7 +128,7 @@ function TravelListItem({
         return '';
     }, [userName, travel]);
 
-    const authorNameDisplay = useMemo(() => {
+    const _authorNameDisplay = useMemo(() => {
         const v = (authorName || '').trim();
         // Если в данных приходит плейсхолдер вроде "....." — показываем нормальный fallback
         if (!v) return 'Аноним';

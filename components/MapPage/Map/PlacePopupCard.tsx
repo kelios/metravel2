@@ -87,7 +87,7 @@ const PlacePopupCard: React.FC<Props> = ({
   const bp = getBreakpoint(viewportWidth);
   const isNarrow = bp === 'narrow';
   const sp = SPACING[bp];
-  const fs = FONT_SIZES[bp];
+  const _fs = FONT_SIZES[bp];
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
   const maxPopupWidth = Math.min(width, Math.max(260, viewportWidth - (isNarrow ? 28 : 56)));
   const thumbSize = sp.thumbSize === 72 ? imageHeight : sp.thumbSize;
