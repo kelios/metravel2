@@ -597,17 +597,22 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   },
   mobileInsightTabs: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: DESIGN_TOKENS.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   mobileInsightChip: {
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    borderRadius: 999,
-    backgroundColor: colors.backgroundTertiary,
+    flex: 1,
+    alignItems: "center" as const,
+    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: DESIGN_TOKENS.spacing.xs,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    flexDirection: "row" as const,
+    justifyContent: "center" as const,
+    gap: 6,
   },
   mobileInsightChipActive: {
-    backgroundColor: colors.primary,
+    borderBottomColor: colors.primary,
   },
   mobileInsightChipText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -615,7 +620,22 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     color: colors.textMuted,
   },
   mobileInsightChipTextActive: {
-    color: colors.textOnPrimary,
+    color: colors.primary,
+    fontWeight: "700",
+  },
+  mobileInsightChipBadge: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.textMuted,
+    backgroundColor: colors.backgroundTertiary,
+    borderRadius: 8,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    overflow: "hidden" as const,
+  },
+  mobileInsightChipBadgeActive: {
+    color: colors.primary,
+    backgroundColor: colors.primarySoft,
   },
 
   mapEmptyState: {

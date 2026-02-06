@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Platform, Text, View, useWindowDimensions } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, Text, View, useWindowDimensions } from 'react-native'
 
 import { METRICS } from '@/constants/layout'
 import { useMapLazyLoad } from '@/hooks/useMapLazyLoad'
@@ -7,6 +7,8 @@ import { useMapLazyLoad } from '@/hooks/useMapLazyLoad'
 import { MapSkeleton, PointListSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import type { Travel } from '@/types/types'
 
+import { useThemedColors } from '@/hooks/useTheme'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
@@ -16,6 +18,8 @@ const ToggleableMap = withLazy(() => import('@/components/travel/ToggleableMapSe
 const TravelMap = withLazy(() =>
   import('@/components/MapPage/TravelMap').then((m) => ({ default: m.TravelMap }))
 )
+
+const WeatherWidget = withLazy(() => import('@/components/home/WeatherWidget'))
 
 const BelkrajWidgetComponent =
   Platform.OS === 'web'
@@ -132,9 +136,11 @@ export const TravelDetailsMapSection: React.FC<{
     threshold: isWebAutomation ? 0 : 0.1,
   })
 
+  const colors = useThemedColors()
   const [highlightedPoint, setHighlightedPoint] = useState<{ coord: string; key: string } | null>(null)
   const [mapOpenTrigger, setMapOpenTrigger] = useState(0)
   const [mapResizeTrigger, setMapResizeTrigger] = useState(0)
+  const [weatherVisible, setWeatherVisible] = useState(false)
 
   const handlePointCardPress = useCallback((point: any) => {
     const coord = String(point?.coord ?? '').trim()
@@ -235,6 +241,46 @@ export const TravelDetailsMapSection: React.FC<{
           )}
         </View>
       </View>
+
+      {/* 4.3: WeatherWidget — unified across all devices, lazy via button */}
+      {travel.travelAddress && (travel.travelAddress as any[]).length > 0 && !isWebAutomation && (
+        <View
+          accessibilityRole="none"
+          accessibilityLabel="Погода"
+          style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}
+        >
+          <Text style={styles.sectionHeaderText}>Погода</Text>
+          {!weatherVisible ? (
+            <Pressable
+              onPress={() => setWeatherVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Показать погоду"
+              style={({ pressed }) => [{
+                minHeight: 44,
+                borderRadius: DESIGN_TOKENS.radii.md,
+                paddingHorizontal: DESIGN_TOKENS.spacing.md,
+                paddingVertical: DESIGN_TOKENS.spacing.sm,
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.border,
+                opacity: pressed ? 0.85 : 1,
+                alignSelf: 'flex-start',
+                marginTop: DESIGN_TOKENS.spacing.sm,
+              } as any]}
+            >
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: DESIGN_TOKENS.typography.sizes.sm } as any}>
+                Показать погоду
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={{ marginTop: DESIGN_TOKENS.spacing.sm }}>
+              <Suspense fallback={<View style={{ minHeight: 120 }} />}>
+                <WeatherWidget points={travel.travelAddress as any} />
+              </Suspense>
+            </View>
+          )}
+        </View>
+      )}
 
       {travel.travelAddress && (travel.travelAddress as any[]).length > 0 && (
         <View

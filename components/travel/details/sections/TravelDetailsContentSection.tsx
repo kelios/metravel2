@@ -43,17 +43,20 @@ export const TravelDetailsContentSection: React.FC<{
         hasRecommendation && {
           key: 'recommendation' as InsightKey,
           label: 'Советы',
+          charCount: (travel.recommendation || '').replace(/<[^>]*>/g, '').length,
         },
         hasPlus && {
           key: 'plus' as InsightKey,
           label: 'Понравилось',
+          charCount: (travel.plus || '').replace(/<[^>]*>/g, '').length,
         },
         hasMinus && {
           key: 'minus' as InsightKey,
           label: 'Не зашло',
+          charCount: (travel.minus || '').replace(/<[^>]*>/g, '').length,
         },
-      ].filter(Boolean) as Array<{ key: InsightKey; label: string }>,
-    [hasRecommendation, hasPlus, hasMinus]
+      ].filter(Boolean) as Array<{ key: InsightKey; label: string; charCount: number }>,
+    [hasRecommendation, hasPlus, hasMinus, travel.recommendation, travel.plus, travel.minus]
   )
 
   const shouldUseMobileInsights = isMobile && insightConfigs.length > 0
@@ -253,6 +256,16 @@ export const TravelDetailsContentSection: React.FC<{
                 >
                   {section.label}
                 </Text>
+                {section.charCount > 0 && (
+                  <Text
+                    style={[
+                      styles.mobileInsightChipBadge,
+                      mobileInsightKey === section.key && styles.mobileInsightChipBadgeActive,
+                    ]}
+                  >
+                    {section.charCount > 999 ? `${Math.round(section.charCount / 100) / 10}k` : section.charCount}
+                  </Text>
+                )}
               </Pressable>
             ))}
           </View>

@@ -33,11 +33,10 @@ import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
 
-const Slider = withLazy(() => import('@/components/travel/Slider'))
+const Slider: React.FC<any> = withLazy(() => import('@/components/travel/Slider'))
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
-const WeatherWidget = withLazy(() => import('@/components/home/WeatherWidget'))
 const HERO_QUICK_JUMP_KEYS = ['description', 'map', 'points', 'comments', 'video'] as const
 
 const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
@@ -313,7 +312,6 @@ function TravelHeroSectionInner({
   const { width: winW, height: winH } = useWindowDimensions()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
   const [extrasReady, setExtrasReady] = useState(!deferExtras || Platform.OS !== 'web')
-  const [weatherVisible, setWeatherVisible] = useState(Platform.OS !== 'web')
   const isWebAutomation =
     Platform.OS === 'web' &&
     typeof navigator !== 'undefined' &&
@@ -398,6 +396,15 @@ function TravelHeroSectionInner({
   const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : 'Фото путешествия'
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
   const canShowSlider = renderSlider
+
+  // 3.7: Fullscreen gallery lightbox state
+  const [lightboxIndex, setLightboxIndex] = useState(-1)
+  const handleOpenLightbox = useCallback((index: number) => {
+    setLightboxIndex(index)
+  }, [])
+  const handleCloseLightbox = useCallback(() => {
+    setLightboxIndex(-1)
+  }, [])
   const quickJumpLinks = useMemo(() => {
     return HERO_QUICK_JUMP_KEYS.map((key) => sectionLinks.find((link) => link.key === key)).filter(
       Boolean
@@ -505,8 +512,6 @@ function TravelHeroSectionInner({
               autoPlay={false}
               preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
               blurBackground
-              fit="contain"
-              fullBleed={Platform.OS === 'web'}
               aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.6}
               onFirstImageLoad={onFirstImageLoad}
@@ -566,40 +571,7 @@ function TravelHeroSectionInner({
         )}
       </View>
 
-      {isMobile && travel.travelAddress && extrasReady && !isWebAutomation && (
-        <View
-          accessibilityRole="none"
-          accessibilityLabel="Погода"
-          style={[styles.sectionContainer, styles.contentStable, { marginTop: 16 }]}
-        >
-          {Platform.OS === 'web' && !weatherVisible ? (
-            <Pressable
-              onPress={() => setWeatherVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Показать погоду"
-              style={({ pressed }) => [
-                {
-                  minHeight: 44,
-                  borderRadius: 12,
-                  paddingHorizontal: 14,
-                  paddingVertical: 10,
-                  backgroundColor: colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  opacity: pressed ? 0.85 : 1,
-                  alignSelf: 'flex-start',
-                } as any,
-              ]}
-            >
-              <Text style={{ color: colors.text, fontWeight: '700' } as any}>Показать погоду</Text>
-            </Pressable>
-          ) : (
-            <Suspense fallback={<View style={{ minHeight: 120 }} />}>
-              <WeatherWidget points={travel.travelAddress as any} />
-            </Suspense>
-          )}
-        </View>
-      )}
+      {/* 4.3: WeatherWidget перенесён в TravelDetailsMapSection */}
 
       {quickJumpLinks.length > 0 && extrasReady && (
         <View style={[styles.sectionContainer, styles.contentStable, styles.quickJumpWrapper]}>
@@ -657,6 +629,16 @@ function TravelHeroSectionInner({
             </Suspense>
           </View>
         </View>
+      )}
+
+      {/* 3.7: Fullscreen gallery lightbox */}
+      {galleryImages.length > 0 && lightboxIndex >= 0 && (
+        <GalleryLightbox
+          images={galleryImages}
+          initialIndex={lightboxIndex}
+          visible={lightboxIndex >= 0}
+          onClose={handleCloseLightbox}
+        />
       )}
     </>
   )
