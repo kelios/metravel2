@@ -15,7 +15,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { Text } from "@/src/ui/paper";
 import type { Travel } from "@/src/types/types";
 import { buildTravelSectionLinks, type TravelSectionLink } from "@/components/travel/sectionLinks";
-import WeatherWidget from "@/components/WeatherWidget";
+import WeatherWidget from "@/components/home/WeatherWidget";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, useTheme } from '@/hooks/useTheme';

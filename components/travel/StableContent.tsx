@@ -13,7 +13,7 @@ const LazyRenderHTML = React.lazy(() =>
 const LazyInstagram = React.lazy<React.ComponentType<LazyInstagramProps>>(() =>
   import("@/components/iframe/InstagramEmbed").then((m: any) => ({ default: m.default }))
 );
-import CustomImageRenderer from "@/components/CustomImageRenderer";
+import CustomImageRenderer from "@/components/ui/CustomImageRenderer";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface StableContentProps {
