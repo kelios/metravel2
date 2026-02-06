@@ -6,12 +6,12 @@ import { FlashList } from '@shopify/flash-list';
 
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import EmptyState from '@/components/EmptyState';
+import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/src/utils/confirmAction';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/src/utils/authNavigation';

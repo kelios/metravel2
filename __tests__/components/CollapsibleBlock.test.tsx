@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import CollapsibleBlock from '@/components/CollapsibleBlock';
+import CollapsibleBlock from '@/components/ui/CollapsibleBlock';
 import { Text } from 'react-native';
 
 // Mock Feather icons

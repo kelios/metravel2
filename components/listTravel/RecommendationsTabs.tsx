@@ -21,7 +21,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { createTabCardTemplate } from './recommendationsCardTemplate';

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 

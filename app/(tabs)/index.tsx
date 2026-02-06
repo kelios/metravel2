@@ -3,8 +3,8 @@ import { Platform, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import ErrorDisplay from '@/components/ErrorDisplay';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import Home from '@/components/home/Home';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';

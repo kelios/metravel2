@@ -4,8 +4,8 @@ import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import ErrorDisplay from '@/components/ErrorDisplay';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 

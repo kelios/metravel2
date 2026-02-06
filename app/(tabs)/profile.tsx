@@ -15,7 +15,7 @@ import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import EmptyState from '@/components/EmptyState';
+import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { fetchUserProfile, type UserProfileDto } from '@/src/api/user';
 import { fetchMyTravels } from '@/src/api/travelsApi';
@@ -23,7 +23,7 @@ import { ApiError } from '@/src/api/client';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl } from '@/src/utils/externalLinks';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/src/utils/authNavigation';
 

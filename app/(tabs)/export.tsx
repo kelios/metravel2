@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
-import EmptyState from '@/components/EmptyState';
+import EmptyState from '@/components/ui/EmptyState';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMyTravels } from '@/src/api/travelsApi';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';

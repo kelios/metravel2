@@ -2,7 +2,7 @@ import React, { useEffect, Suspense, lazy, useState, useCallback, memo, useMemo 
 import { View, StyleSheet, FlatList, Platform, Animated } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';

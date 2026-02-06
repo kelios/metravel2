@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import { ExternalLink } from '@/components/ExternalLink'
+import { ExternalLink } from '@/components/ui/ExternalLink'
 
 // Mock expo-web-browser
 jest.mock('expo-web-browser', () => ({

@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import { Platform } from 'react-native'
-import ConfirmDialog from '@/components/ConfirmDialog'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const mockCreatePortal = jest.fn((node: any, _container?: any) => node)
 

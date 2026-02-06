@@ -9,7 +9,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { sendAnalyticsEvent } from '@/src/utils/analytics';
 import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/src/api/map';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
 import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 import Button from '@/components/ui/Button';

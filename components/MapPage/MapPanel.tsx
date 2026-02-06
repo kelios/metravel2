@@ -2,7 +2,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
-import { MapSkeleton } from '@/components/SkeletonLoader';
+import { MapSkeleton } from '@/components/ui/SkeletonLoader';
 import type { MapUiApi } from '@/src/types/mapUi';
 
 type LatLng = { latitude: number; longitude: number };

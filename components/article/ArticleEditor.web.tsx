@@ -44,7 +44,7 @@ const isTestEnv =
 // Важно: грузим в отдельном модуле, чтобы Quill не попадал в initial chunk
 const QuillEditor =
     isWeb && win
-        ? (React.lazy(() => import('@/components/QuillEditor.web')) as any)
+        ? (React.lazy(() => import('@/components/article/QuillEditor.web')) as any)
         : undefined;
 
 const quillModulesDefault = {

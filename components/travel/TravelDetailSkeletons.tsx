@@ -5,10 +5,10 @@
 
 import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import ReservedSpace from '@/components/ReservedSpace';
+import ReservedSpace from '@/components/ui/ReservedSpace';
 
 /**
  * Skeleton для текстового описания

@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { Animated } from 'react-native';
-import ReadingProgressBar from '@/components/ReadingProgressBar';
+import ReadingProgressBar from '@/components/ui/ReadingProgressBar';
 
 describe('ReadingProgressBar', () => {
   let scrollY: Animated.Value;

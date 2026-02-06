@@ -5,7 +5,7 @@ import {
 } from 'react-native'
 import { useDropzone } from 'react-dropzone'
 
-import ConfirmDialog from '@/components/ConfirmDialog'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { uploadImage, deleteImage } from '@/src/api/misc'
 import { ApiError } from '@/src/api/client'
 import { useThemedColors } from '@/hooks/useTheme'

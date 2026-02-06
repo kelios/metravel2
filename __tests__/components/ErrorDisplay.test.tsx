@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import ErrorDisplay from '@/components/ErrorDisplay';
+import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { Platform } from 'react-native';
 
 // Mock Feather icons

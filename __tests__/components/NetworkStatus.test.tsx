@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react-native';
-import { NetworkStatus } from '@/components/NetworkStatus';
+import { NetworkStatus } from '@/components/ui/NetworkStatus';
 
 // Mock useNetworkStatus hook
 const mockIsConnected = jest.fn(() => true);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import AnimatedCard from '@/components/AnimatedCard';
+import AnimatedCard from '@/components/ui/AnimatedCard';
 import { Text, View } from 'react-native';
 
 // Mock Animated API

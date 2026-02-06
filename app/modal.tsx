@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { Platform, StatusBar, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+import EditScreenInfo from '@/components/ui/EditScreenInfo';
+import { Text, View } from '@/components/ui/Themed';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export default function ModalScreen() {

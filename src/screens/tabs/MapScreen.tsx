@@ -12,7 +12,7 @@ import { Feather } from '@expo/vector-icons';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { getUserFriendlyNetworkError } from '@/src/utils/networkErrorHandler';
-import ErrorDisplay from '@/components/ErrorDisplay';
+import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { useMapScreenController } from '@/hooks/useMapScreenController';
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton';
 import { useMapPanelStore } from '@/stores/mapPanelStore';

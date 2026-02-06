@@ -3,14 +3,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardAvoidingView, Platform, View, StyleSheet, Text, ScrollView, findNodeHandle, UIManager } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import YoutubeLinkComponent from '@/components/YoutubeLinkComponent';
+import YoutubeLinkComponent from '@/components/ui/YoutubeLinkComponent';
 import PhotoUploadWithPreview from '@/components/travel/PhotoUploadWithPreview';
 import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { TravelFormData, Travel } from '@/src/types/types';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import ConfirmDialog from '@/components/ConfirmDialog';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { deleteTravelMainImage } from '@/src/api/misc';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';

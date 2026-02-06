@@ -32,7 +32,7 @@ import ReadingProgressBar from "@/components/ReadingProgressBar";
 import TravelSectionsSheet from "@/components/travel/TravelSectionsSheet";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
-import { SectionSkeleton } from '@/components/SectionSkeleton';
+import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";

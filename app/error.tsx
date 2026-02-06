@@ -2,7 +2,7 @@ import { Stack, router } from 'expo-router'
 import { useMemo } from 'react'
 import { Platform, Pressable, StyleSheet } from 'react-native'
 
-import { Text, View } from '@/components/Themed'
+import { Text, View } from '@/components/ui/Themed'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 

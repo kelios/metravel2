@@ -1,6 +1,6 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
-import EditScreenInfo from '@/components/EditScreenInfo'
+import EditScreenInfo from '@/components/ui/EditScreenInfo'
 
 describe('EditScreenInfo', () => {
   it('renders correctly', () => {

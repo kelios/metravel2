@@ -53,7 +53,7 @@ jest.mock('@/context/FavoritesContext', () => ({
   }),
 }));
 
-jest.mock('@/components/SkeletonLoader', () => {
+jest.mock('@/components/ui/SkeletonLoader', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {

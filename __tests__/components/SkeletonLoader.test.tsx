@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { SkeletonLoader, TravelCardSkeleton, TravelListSkeleton } from '@/components/SkeletonLoader';
+import { SkeletonLoader, TravelCardSkeleton, TravelListSkeleton } from '@/components/ui/SkeletonLoader';
 import { StyleSheet } from 'react-native';
 import { TRAVEL_CARD_IMAGE_HEIGHT, TRAVEL_CARD_WEB_MOBILE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
 

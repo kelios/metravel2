@@ -17,7 +17,7 @@ jest.mock('@/context/AuthContext', () => ({
 }));
 
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
-import { TravelCardSkeleton } from '@/components/SkeletonLoader';
+import { TravelCardSkeleton } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 // Мок данных для тестирования

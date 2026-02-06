@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
-import ConfirmDialog from '@/components/ConfirmDialog';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { uploadImage, deleteImage } from '@/src/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';

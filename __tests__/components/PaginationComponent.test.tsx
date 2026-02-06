@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import PaginationComponent from '@/components/PaginationComponent'
+import PaginationComponent from '@/components/ui/PaginationComponent'
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () =>

@@ -13,7 +13,7 @@ import { StyleSheet } from 'react-native';
 
 // We only care about the structure and the sizing invariants.
 // Mock SkeletonLoader to make counting deterministic.
-jest.mock('@/components/SkeletonLoader', () => {
+jest.mock('@/components/ui/SkeletonLoader', () => {
   const React = require('react');
   const { View } = require('react-native');
 

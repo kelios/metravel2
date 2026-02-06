@@ -169,7 +169,7 @@ jest.mock('@/src/api/map', () => ({
 }));
 
 // Мокаем ErrorDisplay и нормализатор сетевых ошибок
-jest.mock('@/components/ErrorDisplay', () => {
+jest.mock('@/components/ui/ErrorDisplay', () => {
   const React = require('react');
   const { View, Text } = require('react-native');
   return {

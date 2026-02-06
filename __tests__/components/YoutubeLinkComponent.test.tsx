@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
-import YoutubeLinkComponent from '@/components/YoutubeLinkComponent'
+import YoutubeLinkComponent from '@/components/ui/YoutubeLinkComponent'
 
 describe('YoutubeLinkComponent', () => {
   it('renders correctly with label', () => {

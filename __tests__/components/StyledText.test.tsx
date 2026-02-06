@@ -1,6 +1,6 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
-import { MonoText } from '@/components/StyledText'
+import { MonoText } from '@/components/ui/StyledText'
 
 describe('StyledText', () => {
   it('renders correctly', () => {

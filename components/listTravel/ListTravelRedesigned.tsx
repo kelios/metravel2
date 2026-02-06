@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import MainHubLayout from '@/components/layout/MainHubLayout';
-import CollapsibleBlock from '@/components/CollapsibleBlock';
+import CollapsibleBlock from '@/components/ui/CollapsibleBlock';
 import WelcomeBanner from '@/components/layout/WelcomeBanner';
 import RecentViews from '@/components/RecentViews';
 import FiltersPanelCollapsible from '@/components/FiltersPanelCollapsible';

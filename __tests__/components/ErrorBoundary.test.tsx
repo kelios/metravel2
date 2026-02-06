@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { Text } from 'react-native';
 
 // Mock logger

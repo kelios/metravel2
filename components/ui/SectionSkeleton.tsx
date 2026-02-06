@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import ReservedSpace from '@/components/ReservedSpace';
+import ReservedSpace from '@/components/ui/ReservedSpace';
 
 interface SectionSkeletonProps {
   lines?: number;

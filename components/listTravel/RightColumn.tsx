@@ -12,8 +12,8 @@ import {
 import { FlashList } from '@shopify/flash-list'
 
 import StickySearchBar from '@/components/mainPage/StickySearchBar'
-import EmptyState from '@/components/EmptyState'
-import { TravelCardSkeleton } from '@/components/SkeletonLoader'
+import EmptyState from '@/components/ui/EmptyState'
+import { TravelCardSkeleton } from '@/components/ui/SkeletonLoader'
 import type { Travel } from '@/src/types/types'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;

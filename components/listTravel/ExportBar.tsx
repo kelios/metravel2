@@ -1,7 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
 import UIButton from '@/components/ui/Button';
-import ProgressIndicator from '@/components/ProgressIndicator';
+import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import { createStyles } from './listTravelStyles';
 import { useThemedColors } from '@/hooks/useTheme';
 

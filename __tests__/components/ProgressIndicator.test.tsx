@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import ProgressIndicator from '@/components/ProgressIndicator';
+import ProgressIndicator from '@/components/ui/ProgressIndicator';
 
 // Mock design system
 jest.mock('@/constants/designSystem', () => ({

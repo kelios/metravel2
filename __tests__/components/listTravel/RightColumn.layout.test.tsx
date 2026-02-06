@@ -19,7 +19,7 @@ jest.mock('@/components/mainPage/StickySearchBar', () => {
   };
 });
 
-jest.mock('@/components/SkeletonLoader', () => {
+jest.mock('@/components/ui/SkeletonLoader', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {
@@ -27,7 +27,7 @@ jest.mock('@/components/SkeletonLoader', () => {
   };
 });
 
-jest.mock('@/components/EmptyState', () => {
+jest.mock('@/components/ui/EmptyState', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return function MockEmptyState(props: any) {

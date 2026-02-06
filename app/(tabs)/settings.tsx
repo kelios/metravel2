@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/src/utils/authNavigation';
 import { useFavorites } from '@/context/FavoritesContext';
-import EmptyState from '@/components/EmptyState';
+import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';

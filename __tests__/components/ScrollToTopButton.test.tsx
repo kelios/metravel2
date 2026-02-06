@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import ScrollToTopButton from '@/components/ScrollToTopButton';
+import ScrollToTopButton from '@/components/ui/ScrollToTopButton';
 import { Animated, Platform } from 'react-native';
 
 // Mock Feather icons
