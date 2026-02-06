@@ -274,9 +274,24 @@ export function useQuestsList() {
         setError(null);
 
         fetchQuestsList()
-            .then((data) => {
+            .then(async (data) => {
+                if (cancelled) return;
+                let adapted = data.map(adaptMeta);
+                // Merge missing covers from local registry
+                try {
+                    const local = await fallbackQuestsList();
+                    if (local.length && !cancelled) {
+                        const localMap = new Map(local.map(q => [q.id, q]));
+                        adapted = adapted.map(q => {
+                            if (!q.cover && localMap.has(q.id)) {
+                                return { ...q, cover: localMap.get(q.id)!.cover };
+                            }
+                            return q;
+                        });
+                    }
+                } catch { /* skip */ }
                 if (!cancelled) {
-                    setQuests(data.map(adaptMeta));
+                    setQuests(adapted);
                     setLoading(false);
                 }
             })
@@ -367,9 +382,35 @@ export function useQuestBundle(questId: string | undefined) {
         setBundle(null);
 
         fetchQuestByQuestId(questId)
-            .then((data) => {
+            .then(async (data) => {
+                if (cancelled) return;
+                const adapted = adaptBundle(data);
+                // Merge missing media from local registry (images, video, poster)
+                try {
+                    const local = await fallbackQuestBundle(questId);
+                    if (local && !cancelled) {
+                        // Fill step images from local data
+                        adapted.steps = adapted.steps.map((step, i) => {
+                            if (!step.image && local.steps[i]?.image) {
+                                return { ...step, image: local.steps[i].image };
+                            }
+                            return step;
+                        });
+                        // Fill intro image
+                        if (adapted.intro && !adapted.intro.image && local.intro?.image) {
+                            adapted.intro = { ...adapted.intro, image: local.intro.image };
+                        }
+                        // Fill finale video/poster
+                        if (!adapted.finale.video && local.finale?.video) {
+                            adapted.finale = { ...adapted.finale, video: local.finale.video };
+                        }
+                        if (!adapted.finale.poster && local.finale?.poster) {
+                            adapted.finale = { ...adapted.finale, poster: local.finale.poster };
+                        }
+                    }
+                } catch { /* local registry unavailable, skip merge */ }
                 if (!cancelled) {
-                    setBundle(adaptBundle(data));
+                    setBundle(adapted);
                     setLoading(false);
                 }
             })

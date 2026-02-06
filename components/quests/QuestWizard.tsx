@@ -205,9 +205,11 @@ const StepCard = memo((props: StepCardProps) => {
         <Animated.View style={[styles.card, { transform: [{ perspective: 800 }, { rotateY: rot }] }]}>
             {/* Заголовок */}
             <View style={styles.cardHeader}>
-                <View style={[styles.stepNumber, isPassed && styles.stepNumberCompleted]}>
-                    <Text style={styles.stepNumberText}>{step.id === 'intro' ? '0' : index}</Text>
-                </View>
+                {step.id !== 'intro' && (
+                    <View style={[styles.stepNumber, isPassed && styles.stepNumberCompleted]}>
+                        <Text style={styles.stepNumberText}>{index}</Text>
+                    </View>
+                )}
                 <View style={styles.headerContent}>
                     <Text style={styles.stepTitle}>{step.title}</Text>
                     <Pressable onPress={() => openInMap(Platform.OS === 'ios' ? 'apple' : 'google')}>
@@ -617,50 +619,53 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                         onScrollBeginDrag={Keyboard.dismiss}
-                        contentContainerStyle={{ paddingBottom: SPACING.xl + 96 }}
+                        contentContainerStyle={[{ paddingBottom: SPACING.xl + 96 }, wideDesktop && styles.contentInner]}
                     >
                         {/* Шаги/карты — скрываем, если показываем только финал */}
                         {(!showFinaleOnly) && currentStep && (
-                            <>
-                                <StepCard
-                                    step={currentStep}
-                                    index={currentIndex}
-                                    attempts={attempts[currentStep.id] || 0}
-                                    hintVisible={hints[currentStep.id] || false}
-                                    savedAnswer={answers[currentStep.id]}
-                                    onSubmit={(a) => handleAnswer(currentStep, a)}
-                                    onWrongAttempt={() => handleWrongAttempt(currentStep)}
-                                    onToggleHint={() => toggleHint(currentStep)}
-                                    onSkip={skipStep}
-                                    showMap={showMap}
-                                    onToggleMap={toggleMap}
-                                />
+                            <View style={wideDesktop ? styles.desktopRow : undefined}>
+                                <View style={wideDesktop ? styles.desktopMain : undefined}>
+                                    <StepCard
+                                        step={currentStep}
+                                        index={currentIndex}
+                                        attempts={attempts[currentStep.id] || 0}
+                                        hintVisible={hints[currentStep.id] || false}
+                                        savedAnswer={answers[currentStep.id]}
+                                        onSubmit={(a) => handleAnswer(currentStep, a)}
+                                        onWrongAttempt={() => handleWrongAttempt(currentStep)}
+                                        onToggleHint={() => toggleHint(currentStep)}
+                                        onSkip={skipStep}
+                                        showMap={showMap}
+                                        onToggleMap={toggleMap}
+                                    />
+                                </View>
 
                                 {!!steps.length && (
-                                    <View style={styles.fullMapSection}>
-                                        <Text style={styles.sectionTitle}>Полный маршрут квеста</Text>
+                                    <View style={[styles.fullMapSection, wideDesktop && styles.desktopSide]}>
                                         <Suspense fallback={<QuestMapSkeleton />}>
                                             <QuestFullMap
                                                 steps={steps}
-                                                height={300}
+                                                height={wideDesktop ? 520 : 360}
                                                 title={`Карта квеста: ${title}`}
                                             />
                                         </Suspense>
                                     </View>
                                 )}
+                            </View>
+                        )}
 
-                                {city && <View style={{ height: SPACING.xl - 4 }} />}
-                                {city && (
-                                    <Suspense fallback={null}>
-                                        <BelkrajWidgetLazy
-                                            points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
-                                            countryCode={city.countryCode ?? 'BY'}
-                                            collapsedHeight={compactNav ? 320 : 520}
-                                            expandedHeight={compactNav ? 600 : 1200}
-                                            className="belkraj-slot"
-                                        />
-                                    </Suspense>
-                                )}
+                        {(!showFinaleOnly) && currentStep && city && (
+                            <>
+                                <View style={{ height: SPACING.xl - 4 }} />
+                                <Suspense fallback={null}>
+                                    <BelkrajWidgetLazy
+                                        points={[{ id: 1, address: city.name ?? title, lat: city.lat, lng: city.lng }]}
+                                        countryCode={city.countryCode ?? 'BY'}
+                                        collapsedHeight={compactNav ? 320 : 520}
+                                        expandedHeight={compactNav ? 600 : 1200}
+                                        className="belkraj-slot"
+                                    />
+                                </Suspense>
                             </>
                         )}
 
@@ -731,6 +736,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         padding: SPACING.md,
         borderBottomWidth: 1,
         borderBottomColor: colors.border,
+        ...Platform.select({ web: { maxWidth: 1140, width: '100%', alignSelf: 'center' } }),
     },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
     title: { fontSize: 20, fontWeight: '700', color: colors.text, flex: 1 },
@@ -785,6 +791,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     navHint: { fontSize: 11, color: colors.textSecondary, marginTop: 6 },
 
     content: { flex: 1, padding: SPACING.md },
+    contentInner: { maxWidth: 1100, alignSelf: 'center', width: '100%' },
+    desktopRow: { flexDirection: 'row', gap: SPACING.md },
+    desktopMain: { flex: 1, minWidth: 0 },
+    desktopSide: { width: 420, flexShrink: 0 },
 
     card: {
         backgroundColor: colors.surface, borderRadius: 12, padding: SPACING.lg, marginBottom: SPACING.md,
@@ -945,7 +955,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
     photoHint: { fontSize: 12, color: colors.textSecondary, marginBottom: SPACING.xs },
 
-    imagePreview: { height: 120, borderRadius: 8, overflow: 'hidden', position: 'relative' },
+    imagePreview: { height: 200, borderRadius: 8, overflow: 'hidden', position: 'relative', maxWidth: 480 },
     previewImage: { width: '100%', height: '100%' },
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.overlay, padding: 6, alignItems: 'center' },
     overlayText: { color: colors.textOnDark, fontSize: 12, fontWeight: '500' },
