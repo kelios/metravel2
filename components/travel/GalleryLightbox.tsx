@@ -19,6 +19,7 @@ import Feather from '@expo/vector-icons/Feather';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { optimizeImageUrl, buildVersionedImageUrl } from '@/utils/imageOptimization';
 import type { SliderImage } from '@/components/travel/Slider';
+import { useThemedColors } from '@/hooks/useTheme';
 
 interface GalleryLightboxProps {
   images: SliderImage[];
@@ -34,6 +35,7 @@ export default function GalleryLightbox({
   onClose,
 }: GalleryLightboxProps) {
   const { width, height } = useWindowDimensions();
+  const colors = useThemedColors();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const listRef = useRef<FlatList<SliderImage>>(null);
 
@@ -114,13 +116,13 @@ export default function GalleryLightbox({
         accessibilityRole="button"
         accessibilityLabel="Закрыть галерею"
       >
-        <Feather name="x" size={24} color="#fff" />
+        <Feather name="x" size={24} color={colors.textOnDark} />
       </Pressable>
 
       {/* Counter */}
       {images.length > 1 && (
         <View style={styles.counter}>
-          <Text style={styles.counterText}>
+          <Text style={[styles.counterText, { color: colors.textOnDark }]}>
             {currentIndex + 1} / {images.length}
           </Text>
         </View>

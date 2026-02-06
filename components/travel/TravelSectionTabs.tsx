@@ -9,7 +9,6 @@ import {
   Modal,
 } from "react-native"
 import Feather from '@expo/vector-icons/Feather';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { TravelSectionLink } from "@/components/travel/sectionLinks"
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -218,7 +217,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
               accessibilityLabel={label}
               accessibilityState={{ selected: isActive }}
             >
-              <MaterialIcons
+              <Feather
                 name={icon as any}
                 size={Platform.select({
                   default: 16,
@@ -252,8 +251,8 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
             accessibilityRole="button"
             accessibilityLabel="Еще разделы"
           >
-            <MaterialIcons
-              name={"more-horiz" as any}
+            <Feather
+              name={"more-horizontal" as any}
               size={Platform.select({ default: 16, web: 18 })}
               color={colors.textSecondary}
             />
@@ -302,7 +301,7 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
                     accessibilityLabel={label}
                     accessibilityState={{ selected: isActive }}
                   >
-                    <MaterialIcons
+                    <Feather
                       name={icon as any}
                       size={18}
                       color={isActive ? colors.text : colors.textSecondary}

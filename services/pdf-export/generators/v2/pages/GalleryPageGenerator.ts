@@ -57,22 +57,6 @@ export class GalleryPageGenerator extends BasePageGenerator {
 
     return `
       <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding};">
-        <div style="text-align: center; margin-bottom: 18mm;">
-          <h2 style="
-            font-size: ${typography.h2.size};
-            margin-bottom: 6mm;
-            font-weight: ${typography.h2.weight};
-            color: ${colors.text};
-            letter-spacing: 0.02em;
-            font-family: ${typography.headingFont};
-          ">Фотогалерея</h2>
-          <p style="
-            color: ${colors.textMuted};
-            font-size: ${typography.body.size};
-            font-weight: 500;
-            font-family: ${typography.bodyFont};
-          ">${this.escapeHtml(travel.name)}</p>
-        </div>
         <div style="${gridContainerStyle}">
           ${photos
             .map((photo, index) => {
@@ -104,47 +88,14 @@ export class GalleryPageGenerator extends BasePageGenerator {
               ${polaroidStyle}
             ">
               ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                style="
-                  width: 100%;
-                  height: ${resolvedHeight};
-                  object-fit: cover;
-                  display: block;
-                "
-                crossorigin="anonymous"
-                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+              ${this.buildContainImage(photo, `Фото ${index + 1}`, resolvedHeight, { onerrorBg: colors.surfaceAlt })}
               ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
               ${caption && captionPosition === 'bottom' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              <div style="
-                position: absolute;
-                top: 8px;
-                right: 8px;
-                background: rgba(0,0,0,0.7);
-                color: #fff;
-                width: 32px;
-                height: 32px;
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 11pt;
-                font-weight: 700;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-                z-index: 3;
-              ">${index + 1}</div>
             </div>
           `;
             })
             .join('')}
         </div>
-        <div style="
-          margin-top: 14mm;
-          text-align: center;
-          color: ${colors.textMuted};
-          font-size: ${typography.body.size};
-          font-weight: 500;
-          font-family: ${typography.bodyFont};
-        ">${photos.length} ${this.getPhotoLabel(photos.length)}</div>
         <div style="
           position: absolute;
           bottom: 15mm;

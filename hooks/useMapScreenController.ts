@@ -261,7 +261,7 @@ export function useMapScreenController() {
       onOpenList: selectTravelsTab,
       hideTopControls: false,
       hideFooterCta: false,
-      hideFooterReset: false,
+      hideFooterReset: !isMobile,
     };
 
     return { Component: FiltersProvider, contextValue, props: contextValue, Panel: FiltersPanel };

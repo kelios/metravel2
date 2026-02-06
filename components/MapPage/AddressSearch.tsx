@@ -59,7 +59,7 @@ const AddressSearch: React.FC<AddressSearchProps> = ({
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?` +
           `format=json&q=${encodeURIComponent(debouncedQuery)}&` +
-          `limit=5&addressdetails=1&countrycodes=by`,
+          `limit=5&addressdetails=1`,
         {
           signal,
           headers: {

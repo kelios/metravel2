@@ -52,6 +52,7 @@ export class HtmlBuilder {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Travel Book</title>
+  <link rel="manifest" href="data:application/json,%7B%7D">
   ${this.head}
   <style>
     ${this.styles}

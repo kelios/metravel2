@@ -165,6 +165,9 @@ config.server = {
         // Serve static files from public/
         const shouldServe =
           pathname === '/manifest.json' ||
+          pathname === '/icon.svg' ||
+          pathname === '/robots.txt' ||
+          pathname === '/sw.js' ||
           pathname.startsWith('/assets/') ||
           pathname === '/favicon.ico' ||
           pathname.startsWith('/favicon-') ||

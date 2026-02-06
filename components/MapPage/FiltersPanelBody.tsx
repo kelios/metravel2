@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations';
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings';
 import FiltersPanelRadiusSection from '@/components/MapPage/FiltersPanelRadiusSection';
@@ -141,7 +141,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         onOpenList={onOpenList}
       />
 
-      {Platform.OS !== 'web' && mode === 'radius' && userLocation && onPlaceSelect && (
+      {mode === 'radius' && userLocation && onPlaceSelect && (
         <QuickRecommendations
           places={travelsData}
           userLocation={userLocation}

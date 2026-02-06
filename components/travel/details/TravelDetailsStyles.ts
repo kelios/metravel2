@@ -312,9 +312,6 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     marginBottom: DESIGN_TOKENS.spacing.md,
   },
   
-  ctaContainer: {
-    marginTop: DESIGN_TOKENS.spacing.xl,
-  },
   
   sideMenuNative: {
     position: "absolute",
@@ -477,7 +474,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   heroTitle: {
     fontSize: Platform.select({ default: 22, web: 28 }),
     fontWeight: "800" as any,
-    color: '#fff',
+    color: colors.textOnDark,
     letterSpacing: -0.5,
     lineHeight: Platform.select({ default: 28, web: 34 }),
     ...(Platform.OS === 'web' ? {

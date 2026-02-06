@@ -133,6 +133,7 @@ const AddressListItem: React.FC<Props> = ({
     const [imgLoaded, setImgLoaded] = useState(false);
     const [hovered, setHovered] = useState(false);
     const [isAddingPoint, setIsAddingPoint] = useState(false);
+    const [pointAdded, setPointAdded] = useState(false);
     const colors = useThemedColors();
     const styles = useMemo(() => getStyles(colors), [colors]);
 
@@ -277,15 +278,21 @@ const AddressListItem: React.FC<Props> = ({
             payload.tags = tags;
         }
 
+        if (pointAdded) {
+            void showToast({ type: 'info', text1: 'Точка уже добавлена', position: 'bottom' });
+            return;
+        }
         setIsAddingPoint(true);
         try {
             await userPointsApi.createPoint(payload);
+            setPointAdded(true);
             void showToast({
                 type: 'success',
                 text1: 'Точка добавлена в «Мои точки»',
                 position: 'bottom',
             });
             void queryClient.invalidateQueries({ queryKey: ['userPointsAll'] });
+            setTimeout(() => setPointAdded(false), 2000);
         } catch {
             void showToast({
                 type: 'error',
@@ -302,6 +309,7 @@ const AddressListItem: React.FC<Props> = ({
         rawCategoryName,
         isAddingPoint,
         isAuthenticated,
+        pointAdded,
         queryClient,
         travel.lat,
         travel.lng,
@@ -311,7 +319,8 @@ const AddressListItem: React.FC<Props> = ({
 
     // Адаптивная высота в зависимости от размера экрана
     const getCardHeight = () => {
-        if (width <= 480) return 240;      // Малые мобильные
+        if (width <= 320) return 200;       // Очень малые экраны
+        if (width <= 480) return 240;       // Малые мобильные
         if (width <= METRICS.breakpoints.tablet) return 280;      // Планшеты
         if (width <= METRICS.breakpoints.largeTablet) return 320;     // Небольшие десктопы
         return 360;                         // Большие экраны
@@ -496,14 +505,16 @@ const AddressListItem: React.FC<Props> = ({
               {/* верхние иконки — по hover на web, всегда на мобиле */}
               {showOverlays && (
                 <View style={styles.iconCol}>
-                    <ActionIconButton
-                      name="eye-off"
-                      size={iconSize}
-                      onPress={onHidePress ? handleIconPress(onHidePress) : undefined}
-                      color={colors.textOnDark}
-                      style={[styles.iconBtnDanger, { width: iconButtonSize, height: iconButtonSize }]}
-                      accessibilityLabel="Скрыть объект"
-                    />
+                    {!isMobile && onHidePress && (
+                      <ActionIconButton
+                        name="eye-off"
+                        size={iconSize}
+                        onPress={handleIconPress(onHidePress)}
+                        color={colors.textOnDark}
+                        style={[styles.iconBtnDanger, { width: iconButtonSize, height: iconButtonSize }]}
+                        accessibilityLabel="Скрыть объект"
+                      />
+                    )}
                     <ActionIconButton
                       name="link"
                       size={iconSize}
@@ -543,24 +554,16 @@ const AddressListItem: React.FC<Props> = ({
                       </Text>
                     )}
 
-                    {/* Расстояние и время в пути */}
+                    {/* Расстояние и время в пути — компактный бейдж */}
                     {distanceInfo && (
                       <View style={styles.distanceRow}>
                           <View style={styles.distanceBadge}>
                               <View style={styles.distanceTextRow}>
                                   <Feather name="map-pin" size={12} color={colors.textOnPrimary} />
-                                  <Text style={styles.distanceText}>{distanceInfo.distanceText}</Text>
+                                  <Text style={styles.distanceText}>
+                                      {distanceInfo.distanceText} · {distanceInfo.travelTimeText}
+                                  </Text>
                               </View>
-                          </View>
-                          <View style={styles.timeBadge}>
-                              <Text style={styles.timeText}>
-                                  {_transportMode === 'car'
-                                    ? 'Авто'
-                                    : _transportMode === 'bike'
-                                      ? 'Велосипед'
-                                      : 'Пешком'}{' '}
-                                  {distanceInfo.travelTimeText}
-                              </Text>
                           </View>
                       </View>
                     )}
@@ -577,7 +580,7 @@ const AddressListItem: React.FC<Props> = ({
 
                     {!!categories.length && (
                       <View style={styles.catWrap}>
-                          {categories.slice(0, 3).map((cat, i) => (
+                          {categories.slice(0, 1).map((cat, i) => (
                             <View key={`${cat}-${i}`} style={styles.catChip}>
                                 <Text style={styles.catText}>{cat}</Text>
                             </View>
@@ -587,18 +590,26 @@ const AddressListItem: React.FC<Props> = ({
 
                     <View style={styles.addButtonRow}>
                       <CardActionPressable
-                        accessibilityLabel="Мои точки"
+                        accessibilityLabel={pointAdded ? 'Добавлено' : 'Мои точки'}
                         onPress={() => void handleAddPoint()}
                         disabled={!authReady || !isAuthenticated || isAddingPoint}
                         style={({ pressed }) => [
                           styles.addButton,
+                          pointAdded && styles.addButtonSuccess,
                           (pressed || isAddingPoint) && styles.addButtonPressed,
                           (!authReady || !isAuthenticated || isAddingPoint) && styles.addButtonDisabled,
                         ]}
-                        title="Мои точки"
+                        title={pointAdded ? 'Добавлено' : 'Мои точки'}
                       >
                         {isAddingPoint ? (
                           <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                        ) : pointAdded ? (
+                          <>
+                            <Feather name="check" size={14} color={colors.textOnPrimary} />
+                            <Text style={[styles.addButtonText, { color: colors.textOnPrimary }]}>
+                              Добавлено
+                            </Text>
+                          </>
                         ) : (
                           <>
                             <Feather name="map-pin" size={14} color={colors.textOnPrimary} />
@@ -758,19 +769,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         fontWeight: '700',
         letterSpacing: 0.2,
     },
-    timeBadge: {
-        backgroundColor: colors.accent,
-        borderRadius: 12,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        ...colors.shadows.light,
-    },
-    timeText: {
-        color: colors.textOnPrimary,
-        fontSize: 12,
-        fontWeight: '700',
-        letterSpacing: 0.2,
-    },
     coordPressable: {
         alignSelf: 'flex-start',
         marginBottom: 12,
@@ -835,6 +833,9 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
                 transition: 'all 0.2s ease',
             },
         }),
+    },
+    addButtonSuccess: {
+        backgroundColor: colors.success,
     },
     addButtonPressed: {
         opacity: 0.95,

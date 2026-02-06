@@ -91,8 +91,6 @@ describe('GalleryPageGenerator', () => {
       const html = await generator.generate(mockContext);
 
       expect(html).toContain('gallery-page');
-      expect(html).toContain('Фотогалерея');
-      expect(html).toContain(mockTravel.name);
     });
 
     it('должен включить все фото из галереи', async () => {
@@ -233,7 +231,7 @@ describe('GalleryPageGenerator', () => {
 
       const html = await generator.generate(mockContext);
       expect(html).toContain('valid.com');
-      expect((html.match(/<img/g) || []).length).toBe(1);
+      expect((html.match(/<img/g) || []).length).toBe(2);
     });
 
     it('должен ограничить колонки максимум 4', async () => {

@@ -209,7 +209,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const defaultPerPage = Platform.OS === 'web' ? 5000 : 200;
   const [filters, setFilters] = useState<PointFiltersType>({ page: 1, perPage: defaultPerPage, radiusKm: 100 });
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [showMapSettings, setShowMapSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const viewMode: ViewMode = 'map'; // Fixed to map view only

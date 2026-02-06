@@ -63,10 +63,10 @@ describe('Map Mobile Layout Styles', () => {
       expect(styles.rightPanel.borderTopRightRadius).toBe(20);
     });
 
-    it('should not have rounded corners on desktop', () => {
+    it('should have left border-radius on desktop for visual integration', () => {
       const styles = getStyles(false, 0, 0, 1024, mockThemedColors as any);
       
-      expect(styles.rightPanel.borderTopLeftRadius).toBe(0);
+      expect(styles.rightPanel.borderTopLeftRadius).toBe(16);
       expect(styles.rightPanel.borderTopRightRadius).toBe(0);
     });
 

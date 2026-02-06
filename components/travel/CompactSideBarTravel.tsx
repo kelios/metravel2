@@ -277,9 +277,7 @@ function CompactSideBarTravel({
               style={styles.avatar}
             />
           ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Feather name="user" size={22} color={mutedText} />
-            </View>
+            <View style={[styles.avatar, styles.avatarPlaceholder]} />
           )}
         </View>
 

@@ -238,49 +238,49 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
     return (
       <View style={styles.sheetRoot}>
-        <View style={styles.sheetTopControls}>
-          <View style={styles.sheetTopRow}>
-            <View style={styles.sheetTopPrimary}>
-              <SegmentedControl
-                options={[
-                  { key: 'list', label: 'Список', icon: 'list', badge: travelsData.length },
-                  { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
-                ]}
-                value={uiTab}
-                onChange={(key) => {
-                  const next = key === 'filters' ? 'filters' : 'list';
-                  setTabDeferred(next);
-                  bottomSheetRef.current?.snapToHalf();
-                }}
-                compact={true}
-                accessibilityLabel="Переключение между фильтрами и списком"
-              />
-            </View>
-
-            {uiTab === 'filters' && typeof filtersPanelProps?.props?.resetFilters === 'function' && (
-              <IconButton
-                testID="map-panel-reset"
-                icon={<Feather name="rotate-cw" size={20} color={colors.textMuted} />}
-                label="Сбросить фильтры"
-                size="sm"
-                onPress={() => {
-                  filtersPanelProps?.props?.resetFilters?.();
-                }}
-                style={styles.sheetIconButton}
-              />
-            )}
+        <View style={styles.sheetToolbar}>
+          <View style={styles.sheetToolbarLeft}>
+            <SegmentedControl
+              options={[
+                { key: 'list', label: 'Список', icon: 'list', badge: travelsData.length },
+                { key: 'filters', label: 'Фильтры', icon: 'filter-list' },
+              ]}
+              value={uiTab}
+              onChange={(key) => {
+                const next = key === 'filters' ? 'filters' : 'list';
+                setTabDeferred(next);
+                bottomSheetRef.current?.snapToHalf();
+              }}
+              compact={true}
+              accessibilityLabel="Переключение между фильтрами и списком"
+            />
           </View>
 
           {showModeToggle && (
-            <SegmentedControl
-              options={[
-                { key: 'radius', label: 'Радиус', icon: 'my-location' },
-                { key: 'route', label: 'Маршрут', icon: 'alt-route' },
-              ]}
-              value={filtersMode}
-              onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
-              compact={true}
-              accessibilityLabel="Выбор режима поиска"
+            <View style={styles.sheetToolbarRight}>
+              <SegmentedControl
+                options={[
+                  { key: 'radius', label: 'Радиус', icon: 'my-location' },
+                  { key: 'route', label: 'Маршрут', icon: 'alt-route' },
+                ]}
+                value={filtersMode}
+                onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
+                compact={true}
+                accessibilityLabel="Выбор режима поиска"
+              />
+            </View>
+          )}
+
+          {uiTab === 'filters' && !showModeToggle && typeof filtersPanelProps?.props?.resetFilters === 'function' && (
+            <IconButton
+              testID="map-panel-reset"
+              icon={<Feather name="rotate-cw" size={18} color={colors.textMuted} />}
+              label="Сбросить фильтры"
+              size="sm"
+              onPress={() => {
+                filtersPanelProps?.props?.resetFilters?.();
+              }}
+              style={styles.sheetIconButton}
             />
           )}
         </View>
@@ -302,17 +302,15 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     setTabDeferred,
     setFiltersMode,
     styles.sheetIconButton,
-    styles.sheetTopPrimary,
-    styles.sheetTopRow,
+    styles.sheetToolbarLeft,
+    styles.sheetToolbarRight,
     styles.sheetBody,
     styles.sheetRoot,
-    styles.sheetTopControls,
+    styles.sheetToolbar,
     transportMode,
     travelsData,
   ]);
 
-  const sheetTitle = uiTab === 'filters' ? 'Фильтры' : 'Места рядом';
-  const sheetSubtitle = uiTab === 'list' ? `${travelsData.length} мест` : undefined;
 
   return (
     <GestureHandlerRootView style={styles.container}>
@@ -324,8 +322,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       {/* Bottom Sheet */}
       <MapBottomSheet
         ref={bottomSheetRef}
-        title={sheetTitle}
-        subtitle={sheetSubtitle}
         peekContent={peekContent}
         onStateChange={handleSheetStateChange}
         bottomInset={
@@ -350,19 +346,21 @@ const getStyles = (colors: ThemedColors) =>
     sheetRoot: {
       flex: 1,
     },
-    sheetTopControls: {
-      gap: 8,
-      paddingTop: 8,
-      paddingBottom: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    sheetTopRow: {
+    sheetToolbar: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 8,
+      maxHeight: 48,
+      paddingVertical: 4,
+      paddingHorizontal: 4,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
-    sheetTopPrimary: {
+    sheetToolbarLeft: {
+      flex: 1,
+      minWidth: 0,
+    },
+    sheetToolbarRight: {
       flex: 1,
       minWidth: 0,
     },

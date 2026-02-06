@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Feather from '@expo/vector-icons/Feather';
@@ -56,13 +57,13 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
       if (Platform.OS === 'web') {
         const completed = localStorage.getItem(ONBOARDING_STORAGE_KEY);
         if (!completed) {
-          // Небольшая задержка для плавного появления
           setTimeout(() => setVisible(true), 500);
         }
       } else {
-        // На native можно использовать AsyncStorage
-        // Пока просто показываем
-        setTimeout(() => setVisible(true), 500);
+        const completed = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
+        if (!completed) {
+          setTimeout(() => setVisible(true), 500);
+        }
       }
     } catch {
       // Игнорируем ошибки storage
@@ -73,6 +74,8 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
     try {
       if (Platform.OS === 'web') {
         localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
+      } else {
+        void AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
       }
     } catch {
       // Игнорируем ошибки storage
@@ -176,10 +179,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     ...(Platform.OS === 'web'
       ? ({ boxShadow: colors.boxShadows.heavy } as any)
       : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 16,
+          ...colors.shadows.heavy,
           elevation: 8,
         }),
   },

@@ -472,13 +472,13 @@ const leftTopSlot = canEdit ? (
 // Проверяем, есть ли какая-либо информация для отображения в контентной области
 const hasContentInfo = useMemo(() => {
   return (
-    (!hideAuthor && (authorName || authorNameDisplay)) ||
+    (!hideAuthor && !!authorName) ||
     countries.length > 0 ||
     views > 0 ||
     popularityFlags.isPopular ||
     popularityFlags.isNew
   );
-}, [hideAuthor, authorName, authorNameDisplay, countries.length, popularityFlags.isPopular, popularityFlags.isNew, views]);
+}, [hideAuthor, authorName, countries.length, popularityFlags.isPopular, popularityFlags.isNew, views]);
 
 const contentSlotWithoutTitle = hasContentInfo ? (
   <>
@@ -500,9 +500,9 @@ const contentSlotWithoutTitle = hasContentInfo ? (
         },
       ]}
     >
-      {(!hideAuthor || views > 0) && (
+      {((!hideAuthor && !!authorName) || views > 0) && (
         <View style={styles.metaInfoTopRow}>
-          {!hideAuthor && (
+          {!hideAuthor && !!authorName && (
             <View style={styles.metaBox}>
               <Feather
                 name="user"

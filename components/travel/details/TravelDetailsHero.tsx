@@ -545,7 +545,7 @@ function TravelHeroSectionInner({
             <Feather
               name="heart"
               size={22}
-              color={isFavorite ? '#fff' : 'rgba(255,255,255,0.9)'}
+              color={isFavorite ? colors.textOnDark : 'rgba(255,255,255,0.9)'}
             />
           </Pressable>
         </View>

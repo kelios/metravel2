@@ -1,7 +1,7 @@
-import React from 'react';
-import { ActivityIndicator, Platform, Text, View, useWindowDimensions } from 'react-native';
+import React, { useMemo } from 'react';
+import { ActivityIndicator, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useThemedColors } from '@/hooks/useTheme';
+import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 
@@ -24,6 +24,26 @@ type Props = {
   addLabel?: string;
   width?: number;
   imageHeight?: number;
+};
+
+type BreakpointKey = 'narrow' | 'compact' | 'default';
+
+const getBreakpoint = (viewportWidth: number): BreakpointKey => {
+  if (viewportWidth <= 480) return 'narrow';
+  if (viewportWidth <= 640) return 'compact';
+  return 'default';
+};
+
+const FONT_SIZES: Record<BreakpointKey, { title: number; small: number }> = {
+  narrow: { title: 11, small: 9 },
+  compact: { title: 12, small: 10 },
+  default: { title: 13, small: 11 },
+};
+
+const SPACING: Record<BreakpointKey, { gap: number; btnPadV: number; btnPadH: number; radius: number; thumbSize: number }> = {
+  narrow: { gap: 4, btnPadV: 3, btnPadH: 5, radius: 6, thumbSize: 60 },
+  compact: { gap: 6, btnPadV: 4, btnPadH: 6, radius: 7, thumbSize: 68 },
+  default: { gap: 8, btnPadV: 5, btnPadH: 7, radius: 8, thumbSize: 72 },
 };
 
 const PlacePopupCard: React.FC<Props> = ({
@@ -62,27 +82,28 @@ const PlacePopupCard: React.FC<Props> = ({
     const kmLabel = km >= 10 ? `${Math.round(km)} км` : `${km.toFixed(1)} км`;
     return `${kmLabel} · ${mins} мин`;
   }, [drivingDistanceMeters, drivingDurationSeconds, hasDrivingInfo]);
+
   const { width: viewportWidth } = useWindowDimensions();
-  const isCompactPopup = viewportWidth <= 640;
-  const isNarrowPopup = viewportWidth <= 480;
-  const compactLabel = isNarrowPopup ? 'В мои точки' : addLabel;
-  const maxPopupWidth = Math.min(width, Math.max(260, viewportWidth - (isNarrowPopup ? 28 : 56)));
-  const thumbSize = isNarrowPopup ? 60 : isCompactPopup ? 68 : imageHeight;
+  const bp = getBreakpoint(viewportWidth);
+  const isNarrow = bp === 'narrow';
+  const sp = SPACING[bp];
+  const fs = FONT_SIZES[bp];
+  const compactLabel = isNarrow ? 'В мои точки' : addLabel;
+  const maxPopupWidth = Math.min(width, Math.max(260, viewportWidth - (isNarrow ? 28 : 56)));
+  const thumbSize = sp.thumbSize === 72 ? imageHeight : sp.thumbSize;
+
+  const styles = useMemo(() => getStyles(colors, bp), [colors, bp]);
+
+  const actionBtnStyle = useMemo(
+    () =>
+      ({ pressed }: { pressed: boolean }) => [styles.actionBtn, pressed && styles.actionBtnPressed],
+    [styles],
+  );
 
   return (
-    <View style={{ width: '100%', maxWidth: maxPopupWidth, gap: isCompactPopup ? 4 : 8 }}>
-      <View style={{ flexDirection: 'row', gap: isCompactPopup ? 6 : 10 }}>
-        <View
-          style={{
-            width: thumbSize,
-            minWidth: thumbSize,
-            flexShrink: 0,
-            aspectRatio: 1,
-            borderRadius: isNarrowPopup ? 8 : isCompactPopup ? 10 : 12,
-            overflow: 'hidden',
-            backgroundColor: colors.backgroundSecondary ?? colors.surface,
-          }}
-        >
+    <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
+      <View style={styles.headerRow}>
+        <View style={[styles.thumbWrap, { width: thumbSize, minWidth: thumbSize }]}>
           {imageUrl ? (
             <ImageCardMedia
               src={imageUrl}
@@ -92,92 +113,44 @@ const PlacePopupCard: React.FC<Props> = ({
               blurRadius={16}
               loading="lazy"
               priority="low"
-              style={{ width: '100%', height: '100%' } as any}
+              style={StyleSheet.absoluteFillObject}
             />
           ) : (
-            <View style={{ width: '100%', height: '100%', backgroundColor: colors.backgroundSecondary }} />
+            <View style={styles.thumbFallback} />
           )}
           {hasArticle && (
             <CardActionPressable
               accessibilityLabel="Открыть статью"
               onPress={onOpenArticle}
               title="Открыть статью"
-              style={{ position: 'absolute', inset: 0 } as any}
+              style={styles.thumbOverlay as any}
             >
               {null}
             </CardActionPressable>
           )}
         </View>
 
-        <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
-          <Text
-            style={{
-              fontSize: isNarrowPopup ? 11 : isCompactPopup ? 12 : 13,
-              fontWeight: '700',
-              color: colors.text,
-              ...(Platform.OS === 'web'
-                ? ({
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  } as any)
-                : null),
-            }}
-            numberOfLines={2}
-          >
+        <View style={styles.infoCol}>
+          <Text style={styles.titleText} numberOfLines={2}>
             {title}
           </Text>
 
           {!!categoryLabel && (
-            <View
-              style={{
-                alignSelf: 'flex-start',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                paddingVertical: isNarrowPopup ? 0 : isCompactPopup ? 1 : 2,
-                paddingHorizontal: isNarrowPopup ? 4 : isCompactPopup ? 6 : 7,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: colors.borderLight ?? colors.border,
-                backgroundColor: colors.backgroundSecondary ?? colors.surface,
-              }}
-            >
+            <View style={styles.categoryChip}>
               <Feather name="tag" size={12} color={colors.textMuted} />
-              <Text
-                style={{
-                  fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-                  color: colors.textMuted,
-                }}
-                numberOfLines={1}
-              >
+              <Text style={styles.smallText} numberOfLines={1}>
                 {categoryLabel}
               </Text>
             </View>
           )}
 
           {(isDrivingLoading || hasDrivingInfo) && (
-            <View
-              testID="popup-driving-info"
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                flexWrap: 'wrap',
-              }}
-            >
+            <View testID="popup-driving-info" style={styles.drivingRow}>
               <Feather name="navigation" size={12} color={colors.textMuted} />
               {isDrivingLoading ? (
                 <ActivityIndicator size="small" color={colors.textMuted} />
               ) : (
-                <Text
-                  style={{
-                    fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-                    color: colors.textMuted,
-                  }}
-                  numberOfLines={1}
-                >
+                <Text style={styles.smallText} numberOfLines={1}>
                   {drivingText}
                 </Text>
               )}
@@ -185,33 +158,14 @@ const PlacePopupCard: React.FC<Props> = ({
           )}
 
           {hasCoord && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <Text
-                style={{
-                  fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-                  color: colors.text,
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
-                }}
-              >
-                {coord}
-              </Text>
+            <View style={styles.coordRow}>
+              <Text style={styles.coordText}>{coord}</Text>
               {onCopyCoord && (
                 <CardActionPressable
                   accessibilityLabel="Скопировать координаты"
                   onPress={() => void onCopyCoord()}
                   title="Скопировать координаты"
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: isNarrowPopup ? 2 : isCompactPopup ? 3 : 4,
-                    paddingHorizontal: isNarrowPopup ? 5 : isCompactPopup ? 6 : 8,
-                    borderRadius: isNarrowPopup ? 6 : isCompactPopup ? 7 : 8,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    backgroundColor: colors.surface,
-                    opacity: pressed ? 0.9 : 1,
-                    cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-                  })}
+                  style={actionBtnStyle}
                 >
                   <Feather name="clipboard" size={13} color={colors.textMuted} />
                 </CardActionPressable>
@@ -221,35 +175,16 @@ const PlacePopupCard: React.FC<Props> = ({
         </View>
       </View>
 
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: isCompactPopup ? 4 : 6 }}>
+      <View style={styles.actionsRow}>
         {hasCoord && onOpenGoogleMaps && (
           <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
             onPress={onOpenGoogleMaps}
             title="Открыть в Google Maps"
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingVertical: isNarrowPopup ? 3 : isCompactPopup ? 4 : 5,
-              paddingHorizontal: isNarrowPopup ? 5 : isCompactPopup ? 6 : 7,
-              borderRadius: isNarrowPopup ? 6 : isCompactPopup ? 7 : 8,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
-              opacity: pressed ? 0.9 : 1,
-              cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-            })}
+            style={actionBtnStyle}
           >
             <Feather name="external-link" size={13} color={colors.textMuted} />
-            <Text
-              style={{
-                fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-                color: colors.text,
-              }}
-            >
-              Google Maps
-            </Text>
+            <Text style={styles.actionBtnText}>Google Maps</Text>
           </CardActionPressable>
         )}
 
@@ -258,29 +193,10 @@ const PlacePopupCard: React.FC<Props> = ({
             accessibilityLabel="Открыть в Organic Maps"
             onPress={onOpenOrganicMaps}
             title="Открыть в Organic Maps"
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingVertical: isNarrowPopup ? 4 : isCompactPopup ? 5 : 6,
-              paddingHorizontal: isNarrowPopup ? 6 : isCompactPopup ? 6 : 8,
-              borderRadius: isNarrowPopup ? 6 : isCompactPopup ? 7 : 8,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
-              opacity: pressed ? 0.9 : 1,
-              cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-            })}
+            style={actionBtnStyle}
           >
             <Feather name="navigation" size={13} color={colors.textMuted} />
-            <Text
-              style={{
-                fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-                color: colors.text,
-              }}
-            >
-              Organic Maps
-            </Text>
+            <Text style={styles.actionBtnText}>Organic Maps</Text>
           </CardActionPressable>
         )}
 
@@ -289,29 +205,10 @@ const PlacePopupCard: React.FC<Props> = ({
             accessibilityLabel="Поделиться в Telegram"
             onPress={onShareTelegram}
             title="Поделиться в Telegram"
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingVertical: isNarrowPopup ? 4 : isCompactPopup ? 5 : 6,
-              paddingHorizontal: isNarrowPopup ? 6 : isCompactPopup ? 6 : 8,
-              borderRadius: isNarrowPopup ? 6 : isCompactPopup ? 7 : 8,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
-              opacity: pressed ? 0.9 : 1,
-              cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-            })}
+            style={actionBtnStyle}
           >
             <Feather name="send" size={13} color={colors.textMuted} />
-            <Text
-              style={{
-                fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-                color: colors.text,
-              }}
-            >
-              Телеграм
-            </Text>
+            <Text style={styles.actionBtnText}>Телеграм</Text>
           </CardActionPressable>
         )}
 
@@ -320,29 +217,10 @@ const PlacePopupCard: React.FC<Props> = ({
             accessibilityLabel="Открыть статью"
             onPress={onOpenArticle}
             title="Открыть статью"
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              paddingVertical: isNarrowPopup ? 4 : isCompactPopup ? 5 : 6,
-              paddingHorizontal: isNarrowPopup ? 6 : isCompactPopup ? 6 : 8,
-              borderRadius: isNarrowPopup ? 6 : isCompactPopup ? 7 : 8,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.surface,
-              opacity: pressed ? 0.9 : 1,
-              cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-            })}
+            style={actionBtnStyle}
           >
             <Feather name="book-open" size={13} color={colors.textMuted} />
-            <Text
-              style={{
-                fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-                color: colors.text,
-              }}
-            >
-              Статья
-            </Text>
+            <Text style={styles.actionBtnText}>Статья</Text>
           </CardActionPressable>
         )}
       </View>
@@ -353,38 +231,158 @@ const PlacePopupCard: React.FC<Props> = ({
           onPress={() => void onAddPoint()}
           disabled={addDisabled || isAdding}
           title={compactLabel}
-          style={({ pressed }) => ({
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            paddingVertical: isNarrowPopup ? 4 : isCompactPopup ? 5 : 6,
-            paddingHorizontal: isNarrowPopup ? 7 : isCompactPopup ? 8 : 9,
-            borderRadius: isNarrowPopup ? 8 : isCompactPopup ? 9 : 10,
-            backgroundColor: addDisabled || isAdding ? 'rgba(0,0,0,0.08)' : colors.primary,
-            opacity: pressed ? 0.92 : 1,
-            cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
-          })}
+          style={({ pressed }) => [
+            styles.addBtn,
+            (addDisabled || isAdding) && styles.addBtnDisabled,
+            pressed && styles.addBtnPressed,
+          ]}
         >
           {isAdding ? (
             <ActivityIndicator size="small" color={colors.textOnPrimary} />
           ) : (
             <Feather name="map-pin" size={14} color={colors.textOnPrimary} />
           )}
-          <Text
-            style={{
-              fontSize: isNarrowPopup ? 9 : isCompactPopup ? 10 : 11,
-              fontWeight: '700',
-              color: colors.textOnPrimary,
-              letterSpacing: -0.2,
-            }}
-          >
-            {compactLabel}
-          </Text>
+          <Text style={styles.addBtnText}>{compactLabel}</Text>
         </CardActionPressable>
       )}
     </View>
   );
+};
+
+const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
+  const sp = SPACING[bp];
+  const fs = FONT_SIZES[bp];
+
+  return StyleSheet.create({
+    container: {
+      width: '100%',
+      gap: sp.gap,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      gap: bp === 'narrow' ? 6 : bp === 'compact' ? 6 : 10,
+    },
+    thumbWrap: {
+      flexShrink: 0,
+      aspectRatio: 1,
+      borderRadius: sp.radius + 2,
+      overflow: 'hidden',
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+    },
+    thumbFallback: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.backgroundSecondary,
+    },
+    thumbOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    infoCol: {
+      flex: 1,
+      minWidth: 0,
+      gap: 6,
+    },
+    titleText: {
+      fontSize: fs.title,
+      fontWeight: '700',
+      color: colors.text,
+      ...(Platform.OS === 'web'
+        ? ({
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          } as any)
+        : null),
+    },
+    categoryChip: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: bp === 'narrow' ? 0 : bp === 'compact' ? 1 : 2,
+      paddingHorizontal: bp === 'narrow' ? 4 : bp === 'compact' ? 6 : 7,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.borderLight ?? colors.border,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+    },
+    smallText: {
+      fontSize: fs.small,
+      color: colors.textMuted,
+    },
+    drivingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexWrap: 'wrap',
+    },
+    coordRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      flexWrap: 'wrap',
+    },
+    coordText: {
+      fontSize: fs.small,
+      color: colors.text,
+      fontFamily:
+        Platform.OS === 'web'
+          ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)
+          : undefined,
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: sp.gap,
+    },
+    actionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: sp.btnPadV,
+      paddingHorizontal: sp.btnPadH,
+      borderRadius: sp.radius,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    actionBtnPressed: {
+      opacity: 0.9,
+    },
+    actionBtnText: {
+      fontSize: fs.small,
+      color: colors.text,
+    },
+    addBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: sp.btnPadV + 1,
+      paddingHorizontal: sp.btnPadH + 2,
+      borderRadius: sp.radius + 2,
+      backgroundColor: colors.primary,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+    },
+    addBtnDisabled: {
+      backgroundColor: 'rgba(0,0,0,0.08)',
+    },
+    addBtnPressed: {
+      opacity: 0.92,
+    },
+    addBtnText: {
+      fontSize: fs.small,
+      fontWeight: '700',
+      color: colors.textOnPrimary,
+      letterSpacing: -0.2,
+    },
+  });
 };
 
 export default PlacePopupCard;

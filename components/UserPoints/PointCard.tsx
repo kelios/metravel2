@@ -89,6 +89,16 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     }
     return legacy;
   }, [countryLabel, point]);
+  const showAddress = React.useMemo(() => {
+    const addr = String(point.address ?? '').trim();
+    if (!addr) return false;
+    const name = String(point.name ?? '').trim();
+    if (!name) return true;
+    const addrLower = addr.toLowerCase();
+    const nameLower = name.toLowerCase();
+    if (addrLower.startsWith(nameLower) || nameLower.startsWith(addrLower)) return false;
+    return true;
+  }, [point.address, point.name]);
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   const photoUrl = React.useMemo(() => {
@@ -130,26 +140,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         onPress={onActivate}
         title={label}
       >
-        <Feather name={icon} size={16} color={colors.text} />
-      </CardActionPressable>
-    );
-  };
-
-  const ActionChip = ({
-    label,
-    onActivate,
-  }: {
-    label: string;
-    onActivate?: () => void;
-  }) => {
-    return (
-      <CardActionPressable
-        style={styles.webChipButton}
-        accessibilityLabel={label}
-        onPress={onActivate}
-        title={label}
-      >
-        <Text style={styles.webChipText}>{label}</Text>
+        <Feather name={icon} size={14} color={colors.text} />
       </CardActionPressable>
     );
   };
@@ -367,67 +358,52 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
           ) : null}
         </View>
         
-        {point.address && (
+        {showAddress ? (
           <Text style={styles.address} numberOfLines={1}>
             {point.address}
           </Text>
-        )}
+        ) : null}
 
         {hasCoords ? (
-          <View>
-            <View style={styles.sectionDivider} />
+          <View style={styles.coordsRow}>
+            <Text style={styles.coordsText} numberOfLines={1}>
+              {coordsText}
+            </Text>
 
-            <View style={styles.coordsRow}>
-              <View style={styles.coordsBox}>
-                <Text style={styles.coordsText} numberOfLines={2}>
-                  {coordsText}
-                </Text>
-              </View>
-
+            <View style={styles.coordsActionsRow as any}>
               {Platform.OS === 'web' ? (
-                <View style={styles.coordsActionsRow as any}>
+                <>
                   <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
                   <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
-                </View>
+                  {mapUrls ? (
+                    <ActionButton label="Открыть в картах" icon="navigation" onActivate={() => void openExternalUrl(mapUrls.google)} />
+                  ) : null}
+                </>
               ) : (
-                <View style={styles.coordsActionsRow as any}>
+                <>
                   <IconButton
-                    icon={<Feather name="copy" size={16} color={colors.textMuted} />}
+                    icon={<Feather name="copy" size={14} color={colors.textMuted} />}
                     label="Копировать координаты"
                     onPress={() => void copyCoords()}
                     size="sm"
                   />
                   <IconButton
-                    icon={<Feather name="send" size={16} color={colors.textMuted} />}
+                    icon={<Feather name="send" size={14} color={colors.textMuted} />}
                     label="Поделиться в Telegram"
                     onPress={() => void shareToTelegram()}
                     size="sm"
                   />
-                </View>
+                  {mapUrls ? (
+                    <IconButton
+                      icon={<Feather name="navigation" size={14} color={colors.textMuted} />}
+                      label="Открыть в картах"
+                      onPress={() => void openInMaps()}
+                      size="sm"
+                    />
+                  ) : null}
+                </>
               )}
             </View>
-
-            {Platform.OS === 'web' && mapUrls ? (
-              <View style={styles.mapChipsSection as any}>
-                <View style={styles.mapChipsRow as any}>
-                  <ActionChip label="Google" onActivate={() => void openExternalUrl(mapUrls.google)} />
-                  <ActionChip label="Apple" onActivate={() => void openExternalUrl(mapUrls.apple)} />
-                  <ActionChip label="Яндекс" onActivate={() => void openExternalUrl(mapUrls.yandex)} />
-                  <ActionChip label="OSM" onActivate={() => void openExternalUrl(mapUrls.osm)} />
-                </View>
-              </View>
-            ) : null}
-
-            {Platform.OS !== 'web' && mapUrls ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <IconButton
-                  icon={<Feather name="map-pin" size={16} color={colors.textMuted} />}
-                  label="Открыть в картах"
-                  onPress={() => void openInMaps()}
-                  size="sm"
-                />
-              </View>
-            ) : null}
           </View>
         ) : null}
         
@@ -511,9 +487,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexShrink: 0,
   },
   webActionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -574,63 +550,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textMuted,
     marginTop: 2,
   },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginTop: DESIGN_TOKENS.spacing.sm,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-    opacity: 0.8,
-  },
   coordsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: DESIGN_TOKENS.spacing.xs,
+    gap: 6,
   },
   coordsActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     flexShrink: 0,
   },
-  coordsBox: {
+  coordsText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.xs,
+    color: colors.textMuted,
     flex: 1,
     minWidth: 0,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginRight: DESIGN_TOKENS.spacing.sm,
-  },
-  coordsText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.textMuted,
-    flexShrink: 1,
-  },
-  mapChipsSection: {
-    marginTop: 10,
-  },
-  mapChipsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
-    flexWrap: 'wrap',
-  },
-  webChipButton: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
-  },
-  webChipText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: colors.text,
   },
   rating: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

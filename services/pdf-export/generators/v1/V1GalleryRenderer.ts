@@ -63,28 +63,9 @@ export class V1GalleryRenderer {
           : `display: grid; grid-template-columns: repeat(${columns}, 1fr); gap: ${gapMm}mm; align-items: stretch;`;
 
       const pageNumber = startPageNumber + pageIndex;
-      const title = pageIndex === 0 ? 'Фотогалерея' : escapeHtml(travel.name);
-      const subtitle = pageIndex === 0 ? escapeHtml(travel.name) : '';
       return `
       <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding}; display: flex; flex-direction: column;">
         ${buildRunningHeader(this.ctx, travel.name, pageNumber)}
-        <div style="text-align: center; margin-bottom: 8mm;">
-          <h2 style="
-            font-size: ${typography.h2.size};
-            margin-bottom: 3mm;
-            font-weight: ${typography.h2.weight};
-            color: ${colors.text};
-            letter-spacing: 0.02em;
-            font-family: ${typography.headingFont};
-          ">${title}</h2>
-          ${subtitle ? `
-          <p style="
-            color: ${colors.textMuted};
-            font-size: ${typography.body.size};
-            font-weight: 500;
-            font-family: ${typography.bodyFont};
-          ">${subtitle}</p>` : ''}
-        </div>
         <div style="${gridContainerStyle} flex: 1; min-height: 170mm;">
           ${pagePhotos
             .map((photo, index) => {
@@ -112,9 +93,6 @@ export class V1GalleryRenderer {
                   ? (isSingle ? 'min-height: 210mm;' : '')
                   : `min-height: ${isSingle ? '210mm' : resolvedHeight};`;
 
-              // Для одиночных фото (slideshow) — blur-backdrop + contain
-              const useBlurBackdrop = isSingle && layout === 'slideshow';
-
               return `
             <div style="
               ${wrapperStyle}
@@ -130,31 +108,30 @@ export class V1GalleryRenderer {
               align-items: center;
               justify-content: center;
             ">
-              ${useBlurBackdrop ? `
-                <img src="${escapeHtml(photo)}" alt="" aria-hidden="true"
-                  style="
-                    position: absolute;
-                    inset: -20px;
-                    width: calc(100% + 40px);
-                    height: calc(100% + 40px);
-                    object-fit: cover;
-                    filter: blur(20px);
-                    opacity: 0.4;
-                    display: block;
-                  "
-                  crossorigin="anonymous" />
-              ` : ''}
+              <img src="${escapeHtml(photo)}" alt="" aria-hidden="true"
+                style="
+                  position: absolute;
+                  inset: -10px;
+                  width: calc(100% + 20px);
+                  height: calc(100% + 20px);
+                  object-fit: cover;
+                  filter: blur(18px);
+                  opacity: 0.45;
+                  display: block;
+                  pointer-events: none;
+                "
+                crossorigin="anonymous" />
               <img src="${escapeHtml(photo)}" alt="Фото ${index + 1}"
                 style="
                   width: 100%;
                   ${imgHeightStyle}
-                  object-fit: ${useBlurBackdrop ? 'contain' : 'cover'};
+                  object-fit: contain;
                   display: block;
-                  ${useBlurBackdrop ? 'position: relative;' : ''}
+                  position: relative;
                   ${getImageFilterStyle(this.ctx)}
                 "
                 crossorigin="anonymous"
-                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+                onerror="this.style.display='none'; this.previousElementSibling.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
             </div>
           `;
             })

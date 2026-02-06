@@ -107,6 +107,15 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
       const domElement = element._nativeNode || element._domNode || element;
       if (domElement) {
         observerRef.current.observe(domElement);
+        // Safety-net: if IO is observing but the element never intersects
+        // (e.g., clipped inside a ScrollView with overflow), force load
+        // after a reasonable timeout to prevent content deadlock.
+        fallbackTimer = setTimeout(() => {
+          setShouldLoad(true);
+          if (observerRef.current) {
+            observerRef.current.disconnect();
+          }
+        }, fallbackDelay || 4000);
       } else {
         fallbackTimer = setTimeout(() => {
           setShouldLoad(true);

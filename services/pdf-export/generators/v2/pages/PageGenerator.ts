@@ -41,5 +41,27 @@ export abstract class BasePageGenerator implements PageGenerator {
     };
     return text.replace(/[&<>"']/g, (m) => map[m]);
   }
+
+  /**
+   * Строит изображение с blur-backdrop для сохранения пропорций без обрезки.
+   */
+  protected buildContainImage(
+    src: string,
+    alt: string,
+    height: string,
+    opts?: { onerrorBg?: string; filterStyle?: string }
+  ): string {
+    const bg = opts?.onerrorBg || '#f3f4f6';
+    const filterStyle = opts?.filterStyle || '';
+    return `
+      <img src="${this.escapeHtml(src)}" alt="" aria-hidden="true"
+        style="position:absolute;inset:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
+        crossorigin="anonymous" />
+      <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
+        style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}"
+        crossorigin="anonymous"
+        onerror="this.style.display='none';this.previousElementSibling.style.display='none';this.parentElement.style.background='${bg}';" />
+    `;
+  }
 }
 

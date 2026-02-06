@@ -32,7 +32,6 @@ export class GalleryPageGenerator {
         background: ${colors.background};
         position: relative;
       ">
-        ${this.renderHeader(travelName)}
         ${this.renderGallery(photos, layout)}
         ${this.renderPageNumber(pageNumber)}
       </section>
@@ -105,17 +104,7 @@ export class GalleryPageGenerator {
             position: relative;
             box-shadow: 0 4px 16px rgba(0,0,0,0.12);
           ">
-            <img
-              src="${this.escapeHtml(photos[0].url)}"
-              alt="${this.escapeHtml(photos[0].caption || 'Main photo')}"
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-                ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-              "
-              crossorigin="anonymous"
-            />
+            ${this.buildContainImage(photos[0].url, photos[0].caption || 'Main photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
             ${photos[0].caption ? `
               <div style="
                 position: absolute;
@@ -160,19 +149,10 @@ export class GalleryPageGenerator {
               grid-row: ${pos.row};
               border-radius: 8px;
               overflow: hidden;
+              position: relative;
               background: ${colors.surfaceAlt};
             ">
-              <img
-                src="${this.escapeHtml(photo.url)}"
-                alt="${this.escapeHtml(photo.caption || 'Gallery photo')}"
-                style="
-                  width: 100%;
-                  height: 100%;
-                  object-fit: contain;
-                  ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-                "
-                crossorigin="anonymous"
-              />
+              ${this.buildContainImage(photo.url, photo.caption || 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
             </div>
           `;
         }).join('')}
@@ -198,19 +178,10 @@ export class GalleryPageGenerator {
             aspect-ratio: 1;
             overflow: hidden;
             border-radius: 8px;
+            position: relative;
             background: ${colors.surfaceAlt};
           ">
-            <img
-              src="${this.escapeHtml(photo.url)}"
-              alt="Gallery photo"
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: contain;
-                ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-              "
-              crossorigin="anonymous"
-            />
+            ${this.buildContainImage(photo.url, 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
           </div>
         `).join('')}
       </div>
@@ -243,20 +214,11 @@ export class GalleryPageGenerator {
               grid-row: ${isLarge ? 'span 2' : 'span 1'};
               overflow: hidden;
               border-radius: 12px;
+              position: relative;
               background: ${colors.surfaceAlt};
               box-shadow: ${this.theme.blocks.shadow};
             ">
-              <img
-                src="${this.escapeHtml(photo.url)}"
-                alt="Gallery photo"
-                style="
-                  width: 100%;
-                  height: 100%;
-                  object-fit: contain;
-                  ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-                "
-                crossorigin="anonymous"
-              />
+              ${this.buildContainImage(photo.url, 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
             </div>
           `;
         }).join('')}
@@ -304,17 +266,7 @@ export class GalleryPageGenerator {
               border: 3px solid #ffffff;
               z-index: ${pos.zIndex};
             ">
-              <img
-                src="${this.escapeHtml(photo.url)}"
-                alt="Gallery photo"
-                style="
-                  width: 100%;
-                  height: 100%;
-                  object-fit: contain;
-                  ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-                "
-                crossorigin="anonymous"
-              />
+              ${this.buildContainImage(photo.url, 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
             </div>
           `;
         }).join('')}
@@ -346,20 +298,11 @@ export class GalleryPageGenerator {
             <div style="
               aspect-ratio: 1;
               overflow: hidden;
+              position: relative;
               background: ${colors.surfaceAlt};
               margin-bottom: 6mm;
             ">
-              <img
-                src="${this.escapeHtml(photo.url)}"
-                alt="Gallery photo"
-                style="
-                  width: 100%;
-                  height: 100%;
-                  object-fit: contain;
-                  ${this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : ''}
-                "
-                crossorigin="anonymous"
-              />
+              ${this.buildContainImage(photo.url, 'Gallery photo', this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '')}
             </div>
             ${photo.caption ? `
               <div style="
@@ -406,5 +349,17 @@ export class GalleryPageGenerator {
 
   private escapeHtml(text: string): string {
     return escapeHtml(text);
+  }
+
+  private buildContainImage(src: string, alt: string, filterStyle: string): string {
+    return `
+      <img src="${this.escapeHtml(src)}" alt="" aria-hidden="true"
+        style="position:absolute;inset:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
+        crossorigin="anonymous" />
+      <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
+        style="position:relative;width:100%;height:100%;object-fit:contain;display:block;${filterStyle}"
+        crossorigin="anonymous"
+        onerror="this.style.display='none';this.previousElementSibling.style.display='none';" />
+    `;
   }
 }

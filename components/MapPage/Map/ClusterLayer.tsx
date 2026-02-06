@@ -10,6 +10,7 @@ interface ClusterLayerProps {
   clusters: ClusterData[];
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
+  Tooltip?: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
   popupProps?: Record<string, unknown>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
@@ -28,6 +29,8 @@ interface ClusterLayerProps {
   hintCenter?: { lat: number; lng: number } | null;
 }
 
+const TOOLTIP_MAX_LEN = 30;
+
 const sanitizeCssValue = (val: string | undefined) => {
   if (!val) return '';
   return val.replace(/[^\w\s#(),.-]/g, '').slice(0, 100);
@@ -38,6 +41,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   clusters,
   Marker,
   Popup,
+  Tooltip,
   PopupContent,
   popupProps,
   onMarkerClick,
@@ -136,7 +140,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
   }, [L, colors]);
 
   const clusterIcon = useCallback(
-    (count: number) => {
+    (count: number, thumbUrl?: string) => {
       const leaflet = L ?? (window as any)?.L;
       if (!leaflet?.divIcon) return undefined;
 
@@ -145,7 +149,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
         return undefined;
       }
 
-      if (clusterIconsCache.has(count)) {
+      if (!thumbUrl && clusterIconsCache.has(count)) {
         return clusterIconsCache.get(count);
       }
 
@@ -174,6 +178,31 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
       const safeCount = Math.floor(count);
 
+      const thumbHtml = thumbUrl
+        ? `<img src="${thumbUrl}" style="
+            position: absolute;
+            top: 0; left: 0;
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            object-fit: cover;
+          " loading="lazy" alt="" />
+          <div style="
+            position: absolute;
+            top: 0; left: 0;
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.35);
+          "></div>`
+        : '';
+
+      const bgStyle = thumbUrl
+        ? `background: transparent;`
+        : `background: ${surfaceColor};`;
+
+      const innerBg = thumbUrl
+        ? `background: rgba(0,0,0,0.55);`
+        : `background: ${badgeColor};`;
+
       return leaflet.divIcon({
         className: 'metravel-cluster-icon',
         html: `
@@ -181,18 +210,20 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             position: relative;
             width: 56px;
             height: 56px;
-            background: ${surfaceColor};
+            ${bgStyle}
             border-radius: 50%;
             border: 1px solid ${borderColor};
             box-shadow: ${boxShadow};
+            overflow: hidden;
           ">
+            ${thumbHtml}
             <div style="
               position: absolute;
               top: 4px;
               left: 4px;
               width: 48px;
               height: 48px;
-              background: ${badgeColor};
+              ${innerBg}
               border-radius: 50%;
               display: flex;
               align-items: center;
@@ -281,6 +312,11 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
                 return (
                   <Marker key={markerKey} {...markerProps}>
+                    {Tooltip && item.address && (
+                      <Tooltip direction="top" offset={[0, -10]} opacity={0.95} className="metravel-marker-tooltip">
+                        {item.address.length > TOOLTIP_MAX_LEN ? item.address.slice(0, TOOLTIP_MAX_LEN) + '…' : item.address}
+                      </Tooltip>
+                    )}
                     <Popup>
                       <PopupContent point={item} />
                     </Popup>
@@ -291,7 +327,8 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           );
         }
 
-        const icon = clusterIcon(cluster.count);
+        const thumbItem = cluster.items.find(p => p.travelImageThumbUrl);
+        const icon = clusterIcon(cluster.count, thumbItem?.travelImageThumbUrl);
         if (cluster.count === 1 && cluster.items[0]) {
           const item = cluster.items[0];
           const ll = strToLatLng(item.coord, hintCenter);
@@ -317,6 +354,11 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
           return (
             <Marker key={`cluster-single-${idx}`} {...singleMarkerProps}>
+              {Tooltip && item.address && (
+                <Tooltip direction="top" offset={[0, -10]} opacity={0.95} className="metravel-marker-tooltip">
+                  {item.address.length > TOOLTIP_MAX_LEN ? item.address.slice(0, TOOLTIP_MAX_LEN) + '…' : item.address}
+                </Tooltip>
+              )}
               <Popup {...(popupProps || {})}>
                 <PopupContent point={item} />
               </Popup>

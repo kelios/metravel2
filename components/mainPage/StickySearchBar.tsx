@@ -11,7 +11,6 @@ import {
   Platform,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -437,8 +436,8 @@ function StickySearchBar({
               accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
               accessibilityState={{ selected: !!isRecommendationsVisible }}
             >
-              <MaterialIcons
-                name="lightbulb-outline"
+              <Feather
+                name="zap"
                 size={actionIconSize}
                 color={isRecommendationsVisible ? colors.primary : colors.textMuted}
               />

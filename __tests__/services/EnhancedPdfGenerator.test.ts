@@ -91,7 +91,7 @@ describe('EnhancedPdfGenerator helpers', () => {
 
   it('builds gallery, checklist and map sections', async () => {
     const galleryHtml = generator.renderGalleryPage(travelA, 2)
-    expect(galleryHtml).toContain('Фотогалерея')
+    expect(galleryHtml).toContain('gallery-page')
     expect(galleryHtml).toContain('images.weserv.nl')
 
     const checklist = generator.renderChecklistPage(baseSettings, 5)

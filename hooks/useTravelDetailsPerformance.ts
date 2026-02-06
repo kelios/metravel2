@@ -69,7 +69,7 @@ export function useTravelDetailsPerformance({
     window.addEventListener('keydown', onInteract, { passive: true, once: true })
 
     // Fallback: enable after idle if no interaction.
-    const t = setTimeout(enableSlider, 60000)
+    const t = setTimeout(enableSlider, 5000)
 
     return () => {
       clearTimeout(t)

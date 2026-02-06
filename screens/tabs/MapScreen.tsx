@@ -17,6 +17,10 @@ import { useMapScreenController } from '@/hooks/useMapScreenController';
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import MapOnboarding from '@/components/MapPage/MapOnboarding';
+import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar';
+import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
+import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
+import { MapShowListButton } from '@/components/MapPage/MapShowListButton';
 
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'));
@@ -81,10 +85,77 @@ export default function MapScreen() {
         [],
     );
 
-    // Map component for mobile layout
+    // Quick filter chips + active filters bar
+    const quickFilterCategories = useMemo(() => {
+        const cats = filtersPanelProps?.contextValue?.filters?.categories ?? [];
+        if (!cats.length || !travelsData.length) return cats;
+        // Sort by popularity: count how many travel items belong to each category
+        const countMap = new Map<string, number>();
+        for (const t of travelsData) {
+            const names = (t.categoryName || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+            for (const n of names) countMap.set(n, (countMap.get(n) || 0) + 1);
+        }
+        return [...cats].sort((a, b) => (countMap.get(b.name) || 0) - (countMap.get(a.name) || 0));
+    }, [filtersPanelProps?.contextValue?.filters?.categories, travelsData]);
+    const quickFilterSelected: string[] = useMemo(
+        () => filtersPanelProps?.contextValue?.filterValue?.categories ?? [],
+        [filtersPanelProps?.contextValue?.filterValue?.categories],
+    );
+    const currentRadius = filtersPanelProps?.contextValue?.filterValue?.radius ?? '';
+    const quickFilterToggle = useMemo(() => (name: string) => {
+        const onChange = filtersPanelProps?.contextValue?.onFilterChange;
+        if (!onChange) return;
+        const current: string[] = filtersPanelProps?.contextValue?.filterValue?.categories ?? [];
+        const next = current.includes(name)
+            ? current.filter((c: string) => c !== name)
+            : [...current, name];
+        onChange('categories', next);
+    }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories]);
+
+    const activeFilterItems = useMemo(() => {
+        const items: { key: string; label: string }[] = [];
+        quickFilterSelected.forEach((cat: string) => items.push({ key: `cat:${cat}`, label: cat }));
+        if (currentRadius && currentRadius !== '30') {
+            items.push({ key: 'radius', label: `${currentRadius} км` });
+        }
+        return items;
+    }, [quickFilterSelected, currentRadius]);
+
+    const handleRemoveActiveFilter = useMemo(() => (key: string) => {
+        const onChange = filtersPanelProps?.contextValue?.onFilterChange;
+        if (!onChange) return;
+        if (key.startsWith('cat:')) {
+            const catName = key.slice(4);
+            const current: string[] = filtersPanelProps?.contextValue?.filterValue?.categories ?? [];
+            onChange('categories', current.filter((c: string) => c !== catName));
+        } else if (key === 'radius') {
+            onChange('radius', '30');
+        }
+    }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories]);
+
+    const handleClearAllFilters = useMemo(() => () => {
+        const reset = filtersPanelProps?.contextValue?.resetFilters;
+        if (typeof reset === 'function') reset();
+    }, [filtersPanelProps?.contextValue?.resetFilters]);
+
     const mapComponent = useMemo(
         () => (
             <View style={styles.mapArea}>
+                <MapLoadingBar visible={isFetching} />
+                {Platform.OS === 'web' && !isMobile && quickFilterCategories.length > 0 && (
+                    <MapQuickFilters
+                        categories={quickFilterCategories}
+                        selectedCategories={quickFilterSelected}
+                        onToggleCategory={quickFilterToggle}
+                        maxVisible={5}
+                    />
+                )}
+                {Platform.OS === 'web' && !isMobile && travelsData.length > 0 && rightPanelTab !== 'travels' && (
+                    <MapShowListButton
+                        count={travelsData.length}
+                        onPress={selectTravelsTab}
+                    />
+                )}
                 {mapReady ? (
                     <Suspense fallback={mapPanelPlaceholder}>
                         <LazyMapPanel {...mapPanelProps} />
@@ -95,9 +166,17 @@ export default function MapScreen() {
             </View>
         ),
         [
+            isFetching,
+            isMobile,
             mapPanelPlaceholder,
             mapPanelProps,
             mapReady,
+            quickFilterCategories,
+            quickFilterSelected,
+            quickFilterToggle,
+            rightPanelTab,
+            selectTravelsTab,
+            travelsData.length,
             styles.mapArea,
         ]
     );
@@ -213,7 +292,7 @@ export default function MapScreen() {
             {Platform.OS === 'web' && !isMobile ? (
                 <Pressable
                     testID="map-reset-filters-button"
-                    style={({ pressed }) => [styles.closePanelButton, pressed && { opacity: 0.7 }]}
+                    style={({ pressed }) => [styles.resetButton, pressed && { opacity: 0.7 }]}
                     onPress={() => {
                         selectFiltersTab();
                         const reset = filtersPanelProps?.contextValue?.resetFilters;
@@ -223,7 +302,8 @@ export default function MapScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Сбросить фильтры"
                 >
-                    <Feather name="refresh-cw" size={20} color={themedColors.textMuted} />
+                    <Feather name="refresh-cw" size={14} color={themedColors.textMuted} />
+                    <Text style={styles.resetButtonText}>Сбросить</Text>
                 </Pressable>
             ) : (
                 <Pressable
@@ -280,11 +360,18 @@ export default function MapScreen() {
             <View style={styles.mapContainer}>
                 <Animated.View ref={panelRef} style={[styles.rightPanel, panelStyle]}>
                 {panelHeader}
+                {!isMobile && activeFilterItems.length > 0 && (
+                    <ActiveFiltersBar
+                        filters={activeFilterItems}
+                        onRemoveFilter={handleRemoveActiveFilter}
+                        onClearAll={handleClearAllFilters}
+                    />
+                )}
                 <View style={styles.panelContent}>
                     {rightPanelTab === 'filters' ? (
                         filtersPanelProps?.Component ? (
                             <filtersPanelProps.Component {...filtersPanelProps.contextValue}>
-                                <filtersPanelProps.Panel />
+                                <filtersPanelProps.Panel hideFooterReset={!isMobile} />
                             </filtersPanelProps.Component>
                         ) : (
                             <View style={styles.panelPlaceholder}>

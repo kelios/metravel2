@@ -17,6 +17,7 @@ interface MapMarkersProps {
   icon: any;
   Marker: React.ComponentType<any>;
   Popup: React.ComponentType<any>;
+  Tooltip?: React.ComponentType<any>;
   PopupContent: React.ComponentType<{ point: Point }>;
   popupProps?: Record<string, unknown>;
   onMarkerClick?: (point: Point, coords: { lat: number; lng: number }) => void;
@@ -24,11 +25,14 @@ interface MapMarkersProps {
   hintCenter?: { lat: number; lng: number } | null;
 }
 
+const TOOLTIP_MAX_LEN = 30;
+
 const MapMarkers: React.FC<MapMarkersProps> = ({
   points,
   icon,
   Marker,
   Popup,
+  Tooltip,
   PopupContent,
   popupProps,
   onMarkerClick,
@@ -130,6 +134,18 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             click: (e: any) => handleMarkerClick(e, point, coords),
           }}
         >
+          {Tooltip && point.address && (
+            <Tooltip
+              direction="top"
+              offset={[0, -10]}
+              opacity={0.95}
+              className="metravel-marker-tooltip"
+            >
+              {point.address.length > TOOLTIP_MAX_LEN
+                ? point.address.slice(0, TOOLTIP_MAX_LEN) + '…'
+                : point.address}
+            </Tooltip>
+          )}
           <Popup {...(popupProps || {})}>
             <PopupContent point={point} />
           </Popup>

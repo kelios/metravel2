@@ -1,11 +1,13 @@
 import React from 'react'
-import { Text, TextInput, View } from 'react-native'
+import { StyleSheet, Text, TextInput, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import { PointFilters } from '@/components/UserPoints/PointFilters'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import IconButton from '@/components/ui/IconButton'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useThemedColors } from '@/hooks/useTheme'
 import type { PointFilters as PointFiltersType } from '@/types/userPoints'
 
 import type { PointsListStyles } from './PointsList'
@@ -98,6 +100,9 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   siteCategoryOptions,
   availableColors,
 }) => {
+  const themed = useThemedColors();
+  const local = React.useMemo(() => createLocalStyles(themed), [themed]);
+
   return (
     <View style={styles.header}>
       <View style={styles.headerTopRow}>
@@ -136,17 +141,13 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             active={showMapSettings}
             size="sm"
           />
+          <IconButton
+            icon={<Feather name="compass" size={18} color={colors.text} />}
+            label="3 случайные точки"
+            onPress={onOpenRecommendations}
+            size="sm"
+          />
         </View>
-      </View>
-
-      <View style={styles.headerActionsRow}>
-        <Button
-          label="3 случайные точки"
-          onPress={onOpenRecommendations}
-          accessibilityLabel="3 случайные точки"
-          icon={<Feather name="compass" size={18} color={colors.textOnPrimary} />}
-          fullWidth
-        />
       </View>
 
       <View style={styles.searchContainer}>
@@ -162,9 +163,9 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
       <View style={styles.headerDivider} />
 
       {hasActiveFilters ? (
-        <View style={{ marginBottom: 10 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={[styles.subtitle, { marginBottom: 6 } as any]}>Активные фильтры</Text>
+        <View style={local.activeFiltersBlock}>
+          <View style={local.activeFiltersHeaderRow}>
+            <Text style={[styles.subtitle, local.activeFiltersLabel]}>Активные фильтры</Text>
             {isMobile ? (
               <IconButton
                 icon={<Feather name="x" size={18} color={colors.text} />}
@@ -183,9 +184,9 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
             )}
           </View>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+          <View style={local.activeFiltersChipsRow}>
             {activeFilterChips.map((chip) => (
-              <View key={chip.key} style={{ marginRight: 8, marginBottom: 8 }}>
+              <View key={chip.key} style={local.activeFiltersChipItem}>
                 <Chip
                   label={chip.label}
                   onPress={() => onRemoveFilterChip(chip.key)}
@@ -212,3 +213,25 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
     </View>
   )
 }
+
+const createLocalStyles = (_colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+  activeFiltersBlock: {
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+  activeFiltersHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  activeFiltersLabel: {
+    marginBottom: DESIGN_TOKENS.spacing.xs,
+  },
+  activeFiltersChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  activeFiltersChipItem: {
+    marginRight: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+  },
+})

@@ -74,15 +74,7 @@ export class TravelPageGenerator extends BasePageGenerator {
             height: 100%;
             min-height: 235mm;
           ">
-            <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
-              "
-              crossorigin="anonymous"
-              onerror="this.style.display='none'; this.parentElement.style.background='${colors.accentSoft}';" />
+            ${this.buildContainImage(coverImage, this.escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
             <div style="
               position: absolute;
               left: 0;

@@ -1148,6 +1148,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
               icon={customIcons.meTravel}
               Marker={Marker}
               Popup={Popup}
+              Tooltip={Tooltip}
               PopupContent={PopupComponent}
               popupProps={popupAutoPanPadding}
               onMarkerClick={handleMarkerZoom}
@@ -1169,6 +1170,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
               clusters={clusters as any}
               Marker={Marker}
               Popup={Popup}
+              Tooltip={Tooltip}
               PopupContent={PopupComponent}
               popupProps={popupAutoPanPadding}
               markerIcon={customIcons.meTravel}

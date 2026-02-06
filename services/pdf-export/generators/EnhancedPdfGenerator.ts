@@ -326,10 +326,7 @@ export class EnhancedPdfGenerator {
                 box-shadow: ${this.theme.blocks.shadow};
                 position: relative;
               ">
-                <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                  style="width: 100%; height: 48mm; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
-                  crossorigin="anonymous"
-                  onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+                ${this.buildContainImage(photo, `Фото ${index + 1}`, '48mm', { onerrorBg: colors.surfaceAlt })}
                 ${index === 3 ? `
                   <div style="
                     position: absolute;
@@ -368,10 +365,7 @@ export class EnhancedPdfGenerator {
             background: ${colors.surfaceAlt};
             position: relative;
           ">
-            <img src="${this.escapeHtml(photos[0])}" alt="Фото путешествия"
-              style="width: 100%; height: 85mm; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
-              crossorigin="anonymous"
-              onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+            ${this.buildContainImage(photos[0], 'Фото путешествия', '85mm', { onerrorBg: colors.surfaceAlt })}
             ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
           </div>
         </div>
@@ -407,10 +401,7 @@ export class EnhancedPdfGenerator {
               ${layout === 'polaroid' ? `transform: rotate(${index % 2 === 0 ? '-1.2deg' : '1.1deg'});` : ''}
             ">
               ${caption && captionPosition === 'top' ? caption.wrapperStart + caption.wrapperEnd : ''}
-              <img src="${this.escapeHtml(photo)}" alt="Фото ${index + 1}"
-                style="width: 100%; height: ${imageHeight}; object-fit: cover; display: block; ${this.getImageFilterStyle()}"
-                crossorigin="anonymous"
-                onerror="this.style.display='none'; this.parentElement.style.background='${colors.surfaceAlt}';" />
+              ${this.buildContainImage(photo, `Фото ${index + 1}`, imageHeight, { onerrorBg: colors.surfaceAlt })}
               ${caption && captionPosition === 'overlay' ? caption.wrapperStart + caption.wrapperEnd : ''}
               ${caption && captionPosition === 'bottom' ? caption.wrapperStart + caption.wrapperEnd : ''}
             </div>
@@ -608,17 +599,9 @@ export class EnhancedPdfGenerator {
             border: 6px solid ${colors.surface};
             outline: 1px solid ${colors.border};
             background: ${colors.surfaceAlt};
+            position: relative;
           ">
-            <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
-                ${this.getImageFilterStyle()}
-              "
-              crossorigin="anonymous"
-              onerror="this.style.display='none'; this.parentElement.style.background='${colors.accentSoft}';" />
+            ${this.buildContainImage(coverImage, this.escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
           </div>
           <div style="
             text-align: center;
@@ -661,17 +644,9 @@ export class EnhancedPdfGenerator {
             width: 70%;
             position: relative;
             overflow: hidden;
+            background: ${colors.surfaceAlt};
           ">
-            <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
-              style="
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
-                ${this.getImageFilterStyle()}
-              "
-              crossorigin="anonymous"
-              onerror="this.style.display='none'; this.parentElement.style.background='${colors.accentSoft}';" />
+            ${this.buildContainImage(coverImage, this.escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
           </div>
           <div style="
             width: 30%;
@@ -715,16 +690,7 @@ export class EnhancedPdfGenerator {
           height: 100%;
           min-height: 235mm;
         ">
-          <img src="${this.escapeHtml(coverImage)}" alt="${this.escapeHtml(travel.name)}"
-            style="
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              display: block;
-              ${this.getImageFilterStyle()}
-            "
-            crossorigin="anonymous"
-            onerror="this.style.display='none'; this.parentElement.style.background='${colors.accentSoft}';" />
+          ${this.buildContainImage(coverImage, this.escapeHtml(travel.name), '100%', { onerrorBg: colors.accentSoft })}
           <div style="
             position: absolute;
             left: 0;
@@ -1323,6 +1289,9 @@ export class EnhancedPdfGenerator {
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>${this.escapeHtml((settings.title || '').trim() || 'MeTravel')}</title>
+  
+  <!-- Пустой манифест: предотвращает Chrome от загрузки иконок родительского origin -->
+  <link rel="manifest" href="data:application/json,%7B%7D">
   
   <!-- Google Fonts для улучшенной типографики -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1951,6 +1920,30 @@ export class EnhancedPdfGenerator {
    */
   private getImageFilterStyle(): string {
     return this.theme.imageFilter ? `filter: ${this.theme.imageFilter};` : '';
+  }
+
+  /**
+   * Строит изображение с blur-backdrop для сохранения пропорций без обрезки.
+   * Blur-слой (object-fit: cover) заполняет фон, основное фото (object-fit: contain) сохраняет пропорции.
+   */
+  private buildContainImage(
+    src: string,
+    alt: string,
+    height: string,
+    opts?: { onerrorBg?: string; extraStyle?: string }
+  ): string {
+    const bg = opts?.onerrorBg || this.theme.colors.surfaceAlt;
+    const filterStyle = this.getImageFilterStyle();
+    const extra = opts?.extraStyle || '';
+    return `
+      <img src="${this.escapeHtml(src)}" alt="" aria-hidden="true"
+        style="position:absolute;inset:-10px;width:calc(100% + 20px);height:calc(100% + 20px);object-fit:cover;filter:blur(18px);opacity:0.45;display:block;pointer-events:none;"
+        crossorigin="anonymous" />
+      <img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(alt)}"
+        style="position:relative;width:100%;height:${height};object-fit:contain;display:block;${filterStyle}${extra}"
+        crossorigin="anonymous"
+        onerror="this.style.display='none';this.previousElementSibling.style.display='none';this.parentElement.style.background='${bg}';" />
+    `;
   }
 
   /**

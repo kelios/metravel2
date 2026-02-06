@@ -418,6 +418,28 @@ html[data-theme="dark"] .modal-select option {
   border-top-color: var(--color-border) !important;
 }
 
+/* Tooltip для маркеров мест на карте (hover) */
+.leaflet-tooltip.metravel-marker-tooltip {
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-medium) !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  line-height: 18px !important;
+  font-weight: 600 !important;
+  color: var(--color-text) !important;
+  white-space: nowrap !important;
+  max-width: 220px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+.leaflet-tooltip.metravel-marker-tooltip::before {
+  border-top-color: var(--color-border) !important;
+}
+
 /* Старые стили попапа - оставляем для обратной совместимости */
 .leaflet-popup.metravel-route-marker-popup {
   max-width: min(100px, calc(100vw - 48px)) !important;

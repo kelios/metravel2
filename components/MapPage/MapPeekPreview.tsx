@@ -6,6 +6,7 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
+import { parseCoordinateString } from '@/utils/coordinates';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Feather from '@expo/vector-icons/Feather';
 import MapIcon from './MapIcon';
@@ -18,18 +19,6 @@ interface MapPeekPreviewProps {
   transportMode?: 'car' | 'bike' | 'foot';
   onPlacePress: (place: any) => void;
   onExpandPress: () => void;
-}
-
-/**
- * Парсит координаты из строки
- */
-function parseCoord(coord?: string): { lat: number; lng: number } | null {
-  if (!coord) return null;
-  const parts = coord.split(',').map(s => parseFloat(s.trim()));
-  if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) {
-    return null;
-  }
-  return { lat: parts[0], lng: parts[1] };
 }
 
 export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
@@ -97,7 +86,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
         style={styles.scroll}
       >
         {topPlaces.map((place, index) => {
-          const coords = parseCoord(place.coord);
+          const coords = parseCoordinateString(place.coord ?? '');
           const distanceInfo =
             coords && userLocation
               ? getDistanceInfo(

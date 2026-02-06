@@ -31,7 +31,6 @@ import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
 import ReadingProgressBar from "@/components/ui/ReadingProgressBar";
 import TravelSectionsSheet from "@/components/travel/TravelSectionsSheet";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
-import { ProgressiveWrapper } from '@/hooks/useProgressiveLoading';
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
@@ -435,38 +434,18 @@ export default function TravelDetailsContainer() {
 
                   {/* -------- deferred heavy content -------- */}
                   <Defer when={deferAllowed || forceDeferMount || isWebAutomation}>
-                    {forceDeferMount || isWebAutomation ? (
-                      <Suspense fallback={<SectionSkeleton />}>
-                        <TravelDeferredSections
-                          travel={travel}
-                          isMobile={isMobile}
-                          forceOpenKey={forceOpenKey}
-                          anchors={anchors}
-                          scrollY={scrollY}
-                          viewportHeight={viewportHeight}
-                          scrollRef={scrollRef}
-                          scrollToMapSection={scrollToMapSection}
-                        />
-                      </Suspense>
-                    ) : (
-                      <ProgressiveWrapper
-                        config={{ priority: 'normal', rootMargin: '100px' }}
-                        fallback={<SectionSkeleton />}
-                      >
-                        <Suspense fallback={<SectionSkeleton />}>
-                          <TravelDeferredSections
-                            travel={travel}
-                            isMobile={isMobile}
-                            forceOpenKey={forceOpenKey}
-                            anchors={anchors}
-                            scrollY={scrollY}
-                            viewportHeight={viewportHeight}
-                            scrollRef={scrollRef}
-                            scrollToMapSection={scrollToMapSection}
-                          />
-                        </Suspense>
-                      </ProgressiveWrapper>
-                    )}
+                    <Suspense fallback={<SectionSkeleton />}>
+                      <TravelDeferredSections
+                        travel={travel}
+                        isMobile={isMobile}
+                        forceOpenKey={forceOpenKey}
+                        anchors={anchors}
+                        scrollY={scrollY}
+                        viewportHeight={viewportHeight}
+                        scrollRef={scrollRef}
+                        scrollToMapSection={scrollToMapSection}
+                      />
+                    </Suspense>
                   </Defer>
                 </SList>
               </View>

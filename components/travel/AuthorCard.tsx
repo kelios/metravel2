@@ -199,7 +199,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
             style={styles.avatarSection}
             onPress={handleOpenAuthorProfile}
             accessibilityRole={userId ? 'button' : undefined}
-            accessibilityLabel={userId ? `Открыть профиль автора ${userName || 'Аноним'}` : undefined}
+            accessibilityLabel={userId ? `Открыть профиль автора${userName ? ` ${userName}` : ''}` : undefined}
             disabled={!userId}
           >
             {avatarUri ? (
@@ -220,25 +220,25 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
                 styles.avatarPlaceholder,
                 isMobile && styles.avatarMobile,
                 { backgroundColor: colors.backgroundSecondary }
-              ]}>
-                <Feather name="user" size={isMobile ? 32 : 40} color={colors.textMuted} />
-              </SafeView>
+              ]} />
             )}
           </Pressable>
 
           {/* Информация об авторе */}
           <SafeView style={styles.infoSection}>
-            <Pressable
-              onPress={handleOpenAuthorProfile}
-              disabled={!userId}
-              accessibilityRole={userId ? 'button' : undefined}
-              accessibilityLabel={userId ? `Открыть профиль автора ${userName || 'Аноним'}` : undefined}
-              style={({ pressed }) => [pressed && userId ? { opacity: 0.85 } : null]}
-            >
-              <Text style={[styles.authorName, isMobile && styles.authorNameMobile, { color: colors.text }]}>
-                {userName || 'Аноним'}
-              </Text>
-            </Pressable>
+            {!!userName && (
+              <Pressable
+                onPress={handleOpenAuthorProfile}
+                disabled={!userId}
+                accessibilityRole={userId ? 'button' : undefined}
+                accessibilityLabel={userId ? `Открыть профиль автора ${userName}` : undefined}
+                style={({ pressed }) => [pressed && userId ? { opacity: 0.85 } : null]}
+              >
+                <Text style={[styles.authorName, isMobile && styles.authorNameMobile, { color: colors.text }]}>
+                  {userName}
+                </Text>
+              </Pressable>
+            )}
             {authorCountryName && (
               <SafeView style={styles.locationRow}>
                 <Feather name="map-pin" size={14} color={colors.textMuted} />

@@ -3,9 +3,10 @@
  */
 
 import React, { useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
+import { parseCoordinateString } from '@/utils/coordinates';
 import MapIcon from './MapIcon';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 
@@ -16,18 +17,6 @@ interface Props {
   transportMode?: 'car' | 'bike' | 'foot';
   onPlaceSelect: (place: any) => void;
   maxItems?: number;
-}
-
-/**
- * Парсит координаты из строки
- */
-function parseCoord(coord?: string): { lat: number; lng: number } | null {
-  if (!coord) return null;
-  const parts = coord.split(',').map(s => parseFloat(s.trim()));
-  if (parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) {
-    return null;
-  }
-  return { lat: parts[0], lng: parts[1] };
 }
 
 export const QuickRecommendations: React.FC<Props> = ({
@@ -48,7 +37,7 @@ export const QuickRecommendations: React.FC<Props> = ({
     // Добавляем расстояние к каждому месту
     const placesWithDistance = places
       .map(place => {
-        const coords = parseCoord(place.coord);
+        const coords = parseCoordinateString(place.coord ?? '');
         if (!coords) return null;
 
         const distanceInfo = getDistanceInfo(
@@ -87,10 +76,6 @@ export const QuickRecommendations: React.FC<Props> = ({
       })
       .slice(0, maxItems);
   }, [places, userLocation, transportMode, maxItems]);
-
-  if (Platform.OS === 'web') {
-    return null;
-  }
 
   if (!topPlaces.length) {
     return null;

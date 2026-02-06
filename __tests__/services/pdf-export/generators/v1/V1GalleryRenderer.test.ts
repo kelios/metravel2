@@ -36,8 +36,6 @@ describe('V1GalleryRenderer', () => {
 
     expect(pages).toHaveLength(1);
     expect(pages[0]).toContain('gallery-page');
-    expect(pages[0]).toContain('Фотогалерея');
-    expect(pages[0]).toContain('Тестовое путешествие');
   });
 
   it('должен генерировать страницу для нескольких фото', () => {

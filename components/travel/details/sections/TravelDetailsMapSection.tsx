@@ -98,7 +98,15 @@ const ExcursionsLazySection: React.FC<{ children: React.ReactNode }> = ({ childr
 
     observer.observe(targetNode as Element)
 
+    // Safety-net: if IO never triggers (e.g., element clipped inside ScrollView),
+    // force visibility after timeout to prevent content deadlock.
+    const fallback = setTimeout(() => {
+      setVisible(true)
+      observer.disconnect()
+    }, 4000)
+
     return () => {
+      clearTimeout(fallback)
       observer.disconnect()
     }
   }, [visible])

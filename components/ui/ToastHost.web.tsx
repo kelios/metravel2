@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { WEB_TOAST_EVENT_NAME } from '@/utils/toast.web';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -20,10 +21,10 @@ const ICON_MAP: Record<ToastType, string> = {
 };
 
 const ACCENT_COLORS: Record<ToastType, string> = {
-  success: '#22c55e',
-  error: '#ef4444',
-  info: '#3b82f6',
-  warning: '#f59e0b',
+  success: DESIGN_TOKENS.colors.success,
+  error: DESIGN_TOKENS.colors.error,
+  info: DESIGN_TOKENS.colors.info,
+  warning: DESIGN_TOKENS.colors.warning,
 };
 
 const SLIDE_DURATION_MS = 250;
@@ -95,7 +96,7 @@ export default function ToastHost() {
     padding: '12px 16px',
     borderRadius: 12,
     background: 'rgba(17, 17, 17, 0.94)',
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnDark,
     boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
     fontSize: 14,
     lineHeight: '1.4',
@@ -111,7 +112,7 @@ export default function ToastHost() {
     height: 22,
     borderRadius: 11,
     backgroundColor: accent,
-    color: '#fff',
+    color: DESIGN_TOKENS.colors.textOnDark,
     fontSize: 12,
     fontWeight: 700,
     flexShrink: 0,

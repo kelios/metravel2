@@ -133,9 +133,12 @@ export const getStyles = (
         flexShrink: 0,
         ...(Platform.OS === 'web'
           ? ({
-              boxShadow: themedColors.boxShadows.heavy,
-              borderTopLeftRadius: isMobile ? 20 : 0,
+              boxShadow: isMobile ? themedColors.boxShadows.heavy : 'none',
+              borderTopLeftRadius: isMobile ? 20 : 16,
+              borderBottomLeftRadius: isMobile ? 0 : 16,
               borderTopRightRadius: isMobile ? 20 : 0,
+              borderLeftWidth: isMobile ? 0 : 1,
+              borderLeftColor: isMobile ? undefined : themedColors.border,
             } as any)
           : Platform.OS === 'ios'
           ? shadowHeavy
@@ -278,6 +281,20 @@ export const getStyles = (
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: themedColors.surface,
+      },
+      resetButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 12,
+        backgroundColor: themedColors.surfaceLight,
+      },
+      resetButtonText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: themedColors.textMuted,
       },
       closePanelButton: {
         width: 44,

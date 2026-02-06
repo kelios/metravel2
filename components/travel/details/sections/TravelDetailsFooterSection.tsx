@@ -19,7 +19,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
       <View
         testID="travel-details-telegram"
         accessibilityLabel="Обсуждение в Telegram"
-        style={[styles.sectionContainer, styles.authorCardContainer, styles.webDeferredSection]}
+        style={[styles.sectionContainer, styles.authorCardContainer]}
       >
         <TelegramDiscussionSection travel={travel} />
       </View>
@@ -28,7 +28,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
         <View
           testID="travel-details-share"
           accessibilityLabel="Поделиться маршрутом"
-          style={[styles.sectionContainer, styles.shareButtonsContainer, styles.webDeferredSection]}
+          style={[styles.sectionContainer, styles.shareButtonsContainer]}
         >
           <ShareButtons travel={travel} />
         </View>
@@ -37,7 +37,7 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
       <View
         testID="travel-details-cta"
         accessibilityLabel="Призыв к действию"
-        style={[styles.sectionContainer, styles.ctaContainer, styles.webDeferredSection]}
+        style={[styles.sectionContainer]}
       >
         <CTASection travel={travel} />
       </View>

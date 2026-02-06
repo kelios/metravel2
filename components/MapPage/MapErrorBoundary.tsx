@@ -1,12 +1,9 @@
 // MapErrorBoundary.tsx
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { Platform, View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { ThemeContext, getThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
-
-const Lucide = Platform.OS === 'web' ? require('lucide-react') : require('lucide-react-native');
-const AlertCircle = (Lucide as any).AlertCircle as any;
-const RotateCw = (Lucide as any).RotateCw as any;
+import Feather from '@expo/vector-icons/Feather';
 
 interface Props {
   children: ReactNode;
@@ -106,14 +103,14 @@ class MapErrorBoundary extends Component<Props, State> {
       return (
         <View style={styles.container}>
           <View style={styles.content}>
-            <AlertCircle size={48} color={colors.danger} {...({} as any)} />
+            <Feather name="alert-circle" size={48} color={colors.danger} />
             <Text style={styles.title}>Ошибка загрузки карты</Text>
             <Text style={styles.message}>
               {this.state.error?.message || 'Произошла непредвиденная ошибка'}
             </Text>
             <Button
               label="Попробовать снова"
-              icon={<RotateCw size={20} color={colors.textOnPrimary} {...({} as any)} />}
+              icon={<Feather name="rotate-cw" size={20} color={colors.textOnPrimary} />}
               onPress={this.handleReset}
               variant="primary"
             />
