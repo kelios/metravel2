@@ -81,3 +81,36 @@ export const trackWizardEvent = async (
 ) => {
     return sendAnalyticsEvent(eventName, params);
 };
+
+export const queueAnalyticsEvent = (eventName: string, eventParams: Record<string, unknown> = {}) => {
+    if (process.env.NODE_ENV === 'test') {
+        try {
+            if (typeof sendAnalyticsEvent === 'function') {
+                const isEmptyParams = !eventParams || Object.keys(eventParams).length === 0;
+                if (isEmptyParams) {
+                    sendAnalyticsEvent(eventName);
+                } else {
+                    sendAnalyticsEvent(eventName, eventParams);
+                }
+            }
+        } catch {
+            // noop
+        }
+        return;
+    }
+
+    const run = () => {
+        import('@/utils/analytics')
+            .then((m) => m.sendAnalyticsEvent(eventName, eventParams))
+            .catch(() => {
+                // noop
+            });
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(run, { timeout: 2000 });
+        return;
+    }
+
+    setTimeout(run, 0);
+};

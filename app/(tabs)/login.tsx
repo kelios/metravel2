@@ -1,18 +1,18 @@
 // app/login.tsx (или соответствующий путь)
 import React, { useMemo, useRef, useState } from 'react';
 import {
-    Dimensions,
     KeyboardAvoidingView,
     Platform,
+    Pressable,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
     Image,
 } from 'react-native';
 import { Button, Card } from '@/ui/paper';
+import Feather from '@expo/vector-icons/Feather';
 import { useIsFocused } from '@react-navigation/native';
 import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
@@ -26,8 +26,6 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛ�
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useThemedColors } from '@/hooks/useTheme';
 
-const { height } = Dimensions.get('window');
-
 interface LoginFormValues {
     email: string;
     password: string;
@@ -36,6 +34,7 @@ interface LoginFormValues {
 export default function Login() {
     /* ---------- state ---------- */
     const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
+    const [showPassword, setShowPassword] = useState(false);
     const passwordRef = useRef<TextInput>(null);
 
     /* ---------- helpers ---------- */
@@ -212,22 +211,38 @@ export default function Login() {
                                                     error={touched.password && errors.password ? errors.password : null}
                                                     required
                                                 >
-                                                    <TextInput
-                                                        ref={passwordRef}
-                                                        style={[
-                                                            styles.input,
-                                                            touched.password && errors.password && styles.inputError,
-                                                            globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
-                                                        ]}
-                                                        placeholder="Пароль"
-                                                        value={values.password}
-                                                        onChangeText={handleChange('password')}
-                                                        onBlur={handleBlur('password')}
-                                                        secureTextEntry
-                                                        placeholderTextColor={colors.textMuted}
-                                                        returnKeyType="done"
-                                                        onSubmitEditing={() => handleSubmit()}
-                                                    />
+                                                    <View style={styles.passwordContainer}>
+                                                        <TextInput
+                                                            ref={passwordRef}
+                                                            style={[
+                                                                styles.input,
+                                                                styles.passwordInput,
+                                                                touched.password && errors.password && styles.inputError,
+                                                                globalFocusStyles.focusable,
+                                                            ]}
+                                                            placeholder="Пароль"
+                                                            value={values.password}
+                                                            onChangeText={handleChange('password')}
+                                                            onBlur={handleBlur('password')}
+                                                            secureTextEntry={!showPassword}
+                                                            placeholderTextColor={colors.textMuted}
+                                                            returnKeyType="done"
+                                                            onSubmitEditing={() => handleSubmit()}
+                                                        />
+                                                        <Pressable
+                                                            onPress={() => setShowPassword((v) => !v)}
+                                                            style={styles.eyeButton}
+                                                            accessibilityRole="button"
+                                                            accessibilityLabel={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                                                            hitSlop={8}
+                                                        >
+                                                            <Feather
+                                                                name={showPassword ? 'eye-off' : 'eye'}
+                                                                size={20}
+                                                                color={colors.textMuted}
+                                                            />
+                                                        </Pressable>
+                                                    </View>
                                                 </FormFieldWithValidation>
 
                                                 <Button
@@ -241,12 +256,18 @@ export default function Login() {
                                                     {isSubmitting ? 'Подождите…' : 'Войти'}
                                                 </Button>
 
-                                                <TouchableOpacity 
-                                                    onPress={() => handleResetPassword(values.email)} 
+                                                <Pressable
+                                                    onPress={() => handleResetPassword(values.email)}
                                                     disabled={isSubmitting}
+                                                    style={({ pressed }) => [
+                                                        styles.forgotButton,
+                                                        pressed && { opacity: 0.7 },
+                                                    ]}
+                                                    accessibilityRole="button"
+                                                    accessibilityLabel="Сбросить пароль"
                                                 >
                                                     <Text style={styles.forgot}>Забыли пароль?</Text>
-                                                </TouchableOpacity>
+                                                </Pressable>
                                             <View style={styles.registerContainer}>
                                                 <Text style={styles.registerText}>Нет аккаунта? </Text>
                                                 <Link
@@ -281,7 +302,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...StyleSheet.absoluteFillObject,
         width: '100%',
         height: '100%',
-        opacity: 0.9,
     },
     scrollViewContent: {
         flexGrow: 1,
@@ -292,8 +312,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         justifyContent: 'center',
         alignItems: 'center',
         width: '100%',
-        height,
-        opacity: 0.9,
     },
     inner: {
         width: '100%',
@@ -344,12 +362,44 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     btnContent: {
         paddingVertical: 12,
     },
+    passwordContainer: {
+        position: 'relative' as const,
+        width: '100%',
+    },
+    passwordInput: {
+        paddingRight: 48,
+    },
+    eyeButton: {
+        position: 'absolute' as const,
+        right: 12,
+        top: 0,
+        bottom: 0,
+        justifyContent: 'center' as const,
+        alignItems: 'center' as const,
+        width: 32,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer' as any,
+            },
+        }),
+    },
+    forgotButton: {
+        alignSelf: 'center' as const,
+        marginTop: 16,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 6,
+        ...Platform.select({
+            web: {
+                cursor: 'pointer' as any,
+                transition: 'opacity 0.15s ease' as any,
+            },
+        }),
+    },
     forgot: {
         color: colors.primary,
-        textDecorationLine: 'underline',
-        marginTop: 16,
-        textAlign: 'center',
         fontSize: 14,
+        fontWeight: '500' as const,
     },
     registerContainer: {
         flexDirection: 'row',

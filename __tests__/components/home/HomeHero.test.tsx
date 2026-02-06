@@ -3,7 +3,7 @@ import { render, fireEvent } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
 import HomeHero from '@/components/home/HomeHero';
 import { useAuth } from '@/context/AuthContext';
-import { sendAnalyticsEvent } from '@/utils/analytics';
+import { queueAnalyticsEvent } from '@/utils/analytics';
 
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
@@ -13,7 +13,7 @@ jest.mock('@/utils/analytics');
 
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-const mockSendAnalyticsEvent = sendAnalyticsEvent as jest.MockedFunction<typeof sendAnalyticsEvent>;
+const mockQueueAnalyticsEvent = queueAnalyticsEvent as jest.MockedFunction<typeof queueAnalyticsEvent>;
 
 describe('HomeHero Component', () => {
   const mockPush = jest.fn();
@@ -108,7 +108,7 @@ describe('HomeHero Component', () => {
       fireEvent.press(button);
       
       expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2F&intent=create-book');
-      expect(mockSendAnalyticsEvent).toHaveBeenCalledWith('HomeClick_CreateBook');
+      expect(mockQueueAnalyticsEvent).toHaveBeenCalledWith('HomeClick_CreateBook');
     });
 
     it('should navigate to new travel for authenticated users with no travels', () => {
@@ -154,7 +154,7 @@ describe('HomeHero Component', () => {
       fireEvent.press(button);
       
       expect(mockPush).toHaveBeenCalledWith('/search');
-      expect(mockSendAnalyticsEvent).toHaveBeenCalledWith('HomeClick_OpenSearch');
+      expect(mockQueueAnalyticsEvent).toHaveBeenCalledWith('HomeClick_OpenSearch');
     });
   });
 

@@ -11,6 +11,7 @@ import { ResponsiveContainer, ResponsiveText, ResponsiveStack } from '@/componen
 import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { queueAnalyticsEvent } from '@/utils/analytics';
 
 interface HomeHeroProps {
   travelsCount?: number;
@@ -26,40 +27,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const isWeb = Platform.OS === 'web';
   const [hydrated, setHydrated] = useState(!isWeb);
-
-  const queueAnalyticsEvent = (eventName: string, eventParams: Record<string, unknown> = {}) => {
-    if (process.env.NODE_ENV === 'test') {
-      try {
-        const m = require('@/utils/analytics');
-        if (typeof m?.sendAnalyticsEvent === 'function') {
-          const isEmptyParams = !eventParams || Object.keys(eventParams).length === 0;
-          if (isEmptyParams) {
-            m.sendAnalyticsEvent(eventName);
-          } else {
-            m.sendAnalyticsEvent(eventName, eventParams);
-          }
-        }
-      } catch {
-        // noop
-      }
-      return;
-    }
-
-    const run = () => {
-      import('@/utils/analytics')
-        .then((m) => m.sendAnalyticsEvent(eventName, eventParams))
-        .catch(() => {
-          // noop
-        });
-    };
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(run, { timeout: 2000 });
-      return;
-    }
-
-    setTimeout(run, 0);
-  };
 
   useEffect(() => {
     if (!isWeb) return;

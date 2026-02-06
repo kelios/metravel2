@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   LayoutChangeEvent,
 } from "react-native";
-import { useRouter, type Href } from "expo-router";
+import { usePathname, useRouter, type Href } from "expo-router";
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { useThemedColors } from "@/hooks/useTheme";
@@ -35,6 +35,13 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
   const [showMore, setShowMore] = useState(false);
   const colors = useThemedColors();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const activePath = useMemo(() => {
+    if (pathname === '/' || pathname === '/index') return '/';
+    if (pathname.startsWith('/travels/')) return '/';
+    return pathname;
+  }, [pathname]);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -45,6 +52,7 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
     testID,
     showLabel = true,
     onPress,
+    isActive = false,
   }: {
     label: string;
     href: Href;
@@ -52,6 +60,7 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
     testID?: string;
     showLabel?: boolean;
     onPress?: () => void;
+    isActive?: boolean;
   }) {
     const router = useRouter();
 
@@ -66,10 +75,12 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         }}
         accessibilityRole="link"
         accessibilityLabel={label}
+        accessibilityState={{ selected: isActive }}
         hitSlop={6}
         testID={testID}
         style={({ pressed }) => [
           styles.item,
+          isActive && styles.itemActive,
           pressed && styles.pressed,
           globalFocusStyles.focusable,
         ]}
@@ -77,7 +88,11 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
         <View style={styles.itemInner}>
           <View style={styles.iconBox}>{children}</View>
           {showLabel ? (
-            <Text style={styles.itemText} numberOfLines={1} ellipsizeMode="tail">
+            <Text
+              style={[styles.itemText, isActive && styles.itemTextActive]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
               {label}
             </Text>
           ) : null}
@@ -122,43 +137,31 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
     }
   }, [showMore]);
 
-  const iconColor = colors.primary;
+  const dockItemDefs = useMemo(
+    () => [
+      { key: "home", label: "Главная", route: "/" as any, iconName: "home" as const },
+      { key: "search", label: "Поиск", route: "/search" as any, iconName: "search" as const },
+      { key: "map", label: "Карта", route: "/map" as any, iconName: "map-pin" as const },
+      { key: "favorites", label: "Избранное", route: "/favorites" as any, iconName: "heart" as const },
+      { key: "more", label: "Ещё", route: "/more" as any, iconName: "more-horizontal" as const, isMore: true },
+    ],
+    []
+  );
 
   const items: DockItem[] = useMemo(
-    () => [
-      {
-        key: "home",
-        label: "Главная",
-        route: "/" as any,
-        icon: <Feather name="home" size={22} color={iconColor} />,
-      },
-      {
-        key: "search",
-        label: "Поиск",
-        route: "/search" as any,
-        icon: <Feather name="search" size={22} color={iconColor} />,
-      },
-      {
-        key: "map",
-        label: "Карта",
-        route: "/map" as any,
-        icon: <Feather name="map-pin" size={22} color={iconColor} />,
-      },
-      {
-        key: "favorites",
-        label: "Избранное",
-        route: "/favorites" as any,
-        icon: <Feather name="heart" size={22} color={iconColor} />,
-      },
-      {
-        key: "more",
-        label: "Ещё",
-        route: "/more" as any,
-        icon: <Feather name="more-horizontal" size={22} color={iconColor} />,
-        isMore: true,
-      },
-    ],
-    [iconColor]
+    () =>
+      dockItemDefs.map((def) => {
+        const isActive = !def.isMore && activePath === String(def.route);
+        const iconColor = isActive ? colors.primary : colors.textMuted;
+        return {
+          key: def.key,
+          label: def.label,
+          route: def.route,
+          icon: <Feather name={def.iconName} size={22} color={iconColor} />,
+          isMore: def.isMore,
+        };
+      }),
+    [dockItemDefs, activePath, colors.primary, colors.textMuted]
   );
 
   if (!isMobile) return null;
@@ -176,18 +179,22 @@ export default function BottomDock({ onDockHeight }: BottomDockProps) {
       >
         <View onLayout={handleDockLayout} testID="footer-dock-measure">
           <View style={styles.row} testID="footer-dock-row">
-            {items.map((item) => (
-              <DockButton
-                key={item.key}
-                testID={`footer-item-${item.key}`}
-                href={item.route}
-                label={item.label}
-                showLabel={Platform.OS === "web"}
-                onPress={item.isMore ? () => setShowMore(true) : undefined}
-              >
-                {item.icon}
-              </DockButton>
-            ))}
+            {items.map((item) => {
+              const isActive = !item.isMore && activePath === String(item.route);
+              return (
+                <DockButton
+                  key={item.key}
+                  testID={`footer-item-${item.key}`}
+                  href={item.route}
+                  label={item.label}
+                  showLabel={Platform.OS === "web"}
+                  onPress={item.isMore ? () => setShowMore(true) : undefined}
+                  isActive={isActive}
+                >
+                  {item.icon}
+                </DockButton>
+              );
+            })}
           </View>
         </View>
       </View>
@@ -315,6 +322,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     minHeight: 44,
     borderRadius: 10,
   },
+  itemActive: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: 10,
+  },
   pressed: { opacity: 0.7 },
   itemInner: {
     alignItems: "center",
@@ -333,6 +344,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     lineHeight: 12,
     marginTop: 2,
     textAlign: "center",
+  },
+  itemTextActive: {
+    color: colors.primary,
+    fontWeight: "600" as const,
   },
   itemTextOnly: {
     marginTop: 0,

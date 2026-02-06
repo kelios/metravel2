@@ -14,6 +14,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAboutStyles } from '@/components/about/aboutStyles';
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { showToast } from '@/utils/toast';
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
@@ -76,8 +77,10 @@ function AboutAndContactScreen() {
       const res = await sendFeedback(name.trim(), email.trim(), message.trim());
       setResp({ text: res, error: false });
       clearForm();
+      showToast({ type: 'success', text1: 'Сообщение отправлено', text2: 'Спасибо за обратную связь!', visibilityTime: 4000 });
     } catch (e: any) {
       setResp({ text: e?.message || 'Не удалось отправить сообщение.', error: true });
+      showToast({ type: 'error', text1: 'Ошибка отправки', text2: e?.message || 'Попробуйте позже', visibilityTime: 4000 });
     } finally {
       setSending(false);
     }

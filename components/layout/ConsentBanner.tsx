@@ -147,27 +147,25 @@ export default function ConsentBanner() {
         suspendForOverlay && styles.wrapperHidden,
       ]}
     >
-      <View testID="consent-banner" pointerEvents="none" style={styles.inner}>
-        <View pointerEvents="none" style={[styles.container, { backgroundColor: colors.surface }]}>
-          <View pointerEvents="none" style={styles.textBlock}>
-            <Text style={[styles.title, { color: colors.text }]}>Cookies</Text>
-            <Text style={[styles.text, { color: colors.textMuted }]}>
-              Используем аналитику для улучшения сервиса.{' '}
-              {isWeb && !isMobile && (
-                <Link href="/cookies" style={{ color: colors.primary, textDecorationLine: 'underline' }}>
-                  Подробнее
-                </Link>
-              )}
-            </Text>
-          </View>
-          <View style={styles.actionsSpacer} />
+      <View
+        testID="consent-banner"
+        style={[
+          styles.container,
+          { backgroundColor: colors.surface },
+          !isMobile && styles.containerDesktop,
+        ]}
+      >
+        <View style={[styles.textBlock, !isMobile && styles.textBlockDesktop]}>
+          <Text style={[styles.text, { color: colors.textMuted }]}>
+            🍪 Используем аналитику для улучшения сервиса.{' '}
+            <Link href="/cookies" style={{ color: colors.primary, textDecorationLine: 'underline', fontSize: 12 }}>
+              Подробнее
+            </Link>
+          </Text>
         </View>
-      </View>
-
-      <View pointerEvents={suspendForOverlay ? 'none' : 'box-none'} style={styles.actionsOverlay}>
-        <View pointerEvents="auto" style={styles.buttonsRow}>
+        <View style={styles.buttonsRow}>
           <Button
-            label="Только необходимые"
+            label="Отклонить"
             onPress={handleNecessaryOnly}
             variant="outline"
             size="sm"
@@ -175,7 +173,7 @@ export default function ConsentBanner() {
             accessibilityLabel="Только необходимые"
           />
           <Button
-            label="Принять всё"
+            label="Принять"
             onPress={handleAcceptAll}
             variant="primary"
             size="sm"
@@ -183,13 +181,6 @@ export default function ConsentBanner() {
             accessibilityLabel="Принять всё"
           />
         </View>
-        {isWeb && isMobile && (
-          <View pointerEvents="auto" style={styles.mobileLinkRow}>
-            <Link href="/cookies" style={styles.manageLink}>
-              <Text style={[styles.manageLinkText, { color: colors.primary }]}>Настройки</Text>
-            </Link>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -209,27 +200,14 @@ const styles = StyleSheet.create({
     opacity: 0,
     display: 'none',
   },
-  inner: {
-    width: '100%',
-    maxWidth: 480,
-    position: 'relative',
-  },
-  mobileLinkRow: {
-    marginTop: 6,
-    alignItems: 'center',
-  },
-  manageLink: {
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  manageLinkText: {
-    fontSize: 12,
-    textDecorationLine: 'underline',
-  },
   container: {
-    borderRadius: 16,
+    flexDirection: 'column',
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    maxWidth: 480,
+    width: '100%',
+    gap: 8 as any,
     ...Platform.select({
       web: {
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
@@ -245,43 +223,30 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  containerDesktop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: 560,
+  },
   textBlock: {
-    marginBottom: 8,
+    flexShrink: 1,
   },
-  actionsSpacer: {
-    minHeight: 40,
-  },
-  actionsOverlay: {
-    position: 'absolute' as any,
-    right: 12,
-    bottom: 12,
-    alignItems: 'flex-end',
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 3,
+  textBlockDesktop: {
+    flex: 1,
+    marginRight: 12,
   },
   text: {
     fontSize: 12,
     lineHeight: 17,
   },
-  linkHint: {
-    marginTop: 4,
-    fontSize: 12,
-  },
   buttonsRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8 as any,
-    marginTop: 4,
-    flexWrap: 'wrap',
+    gap: 6 as any,
+    flexShrink: 0,
   },
   button: {
     borderRadius: 9999,
-    minWidth: 120,
-    marginTop: 4,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
 });

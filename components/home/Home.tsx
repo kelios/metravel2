@@ -7,42 +7,9 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout';
 import HomeHero from './HomeHero';
+import { queueAnalyticsEvent } from '@/utils/analytics';
 
 const isWeb = Platform.OS === 'web';
-
-const queueAnalyticsEvent = (eventName: string, eventParams: Record<string, unknown> = {}) => {
-  if (process.env.NODE_ENV === 'test') {
-    try {
-      const m = require('@/utils/analytics');
-      if (typeof m?.sendAnalyticsEvent === 'function') {
-        const isEmptyParams = !eventParams || Object.keys(eventParams).length === 0;
-        if (isEmptyParams) {
-          m.sendAnalyticsEvent(eventName);
-        } else {
-          m.sendAnalyticsEvent(eventName, eventParams);
-        }
-      }
-    } catch {
-      // noop
-    }
-    return;
-  }
-
-  const run = () => {
-    import('@/utils/analytics')
-      .then((m) => m.sendAnalyticsEvent(eventName, eventParams))
-      .catch(() => {
-        // noop
-      });
-  };
-
-  if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(run, { timeout: 2000 });
-    return;
-  }
-
-  setTimeout(run, 0);
-};
 
 const HomeTrustBlock = lazy(() => import('./HomeTrustBlock'));
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import ShareButtons from '@/components/travel/ShareButtons';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
@@ -27,8 +27,11 @@ jest.mock('expo-linking', () => ({
   openURL: jest.fn(() => Promise.resolve()),
 }));
 
-// Mock Alert
-jest.spyOn(Alert, 'alert');
+// Mock showToast
+const mockShowToast = jest.fn(() => Promise.resolve());
+jest.mock('@/utils/toast', () => ({
+  showToast: (...args: any[]) => mockShowToast(...args),
+}));
 
 // Mock window for web platform
 const mockWindow = {
@@ -109,7 +112,7 @@ describe('ShareButtons', () => {
     });
   });
 
-  it('should show alert on mobile after copying', async () => {
+  it('should show toast after copying', async () => {
     (Platform.OS as any) = 'ios';
     const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
 
@@ -117,7 +120,9 @@ describe('ShareButtons', () => {
     fireEvent.press(copyButton);
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Скопировано', 'Ссылка скопирована в буфер обмена');
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'success', text1: 'Ссылка скопирована' })
+      );
     });
   });
 
@@ -155,7 +160,9 @@ describe('ShareButtons', () => {
     fireEvent.press(copyButton);
 
     await waitFor(() => {
-      expect(Alert.alert).toHaveBeenCalledWith('Ошибка', 'Не удалось скопировать ссылку');
+      expect(mockShowToast).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'error', text1: 'Не удалось скопировать' })
+      );
     });
   });
 

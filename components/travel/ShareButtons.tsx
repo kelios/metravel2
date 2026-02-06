@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import * as Linking from 'expo-linking';
@@ -16,6 +16,7 @@ import { ExportStage } from '@/types/pdf-export';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { showToast } from '@/utils/toast';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
@@ -65,12 +66,12 @@ export default function ShareButtons({ travel, url, variant = 'default' }: Share
         await Clipboard.setStringAsync(text);
       }
 
-      if (showSuccessAlert && Platform.OS !== 'web') {
-        Alert.alert('Скопировано', 'Ссылка скопирована в буфер обмена');
+      if (showSuccessAlert) {
+        showToast({ type: 'success', text1: 'Ссылка скопирована', visibilityTime: 2000 });
       }
     } catch (error) {
       console.error('Error copying link:', error);
-      Alert.alert('Ошибка', 'Не удалось скопировать ссылку');
+      showToast({ type: 'error', text1: 'Не удалось скопировать', text2: 'Попробуйте ещё раз', visibilityTime: 3000 });
     }
   }, []);
 

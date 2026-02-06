@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Image } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -16,6 +16,7 @@ import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type 
 import { ApiError } from '@/api/client';
 import { removeStorageBatch, setStorageBatch } from '@/utils/storageBatch';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
+import { showToast } from '@/utils/toast';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -113,7 +114,7 @@ export default function SettingsScreen() {
             setAvatarFile(null);
         } catch (error) {
             const message = error instanceof ApiError ? error.message : 'Не удалось загрузить профиль';
-            Alert.alert('Ошибка', message);
+            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
         } finally {
             setProfileLoading(false);
         }
@@ -138,10 +139,10 @@ export default function SettingsScreen() {
             };
             const saved = await updateUserProfile(userId, payload);
             setProfile(saved);
-            Alert.alert('Готово', 'Профиль обновлён');
+            showToast({ type: 'success', text1: 'Профиль обновлён', visibilityTime: 3000 });
         } catch (error) {
             const message = error instanceof ApiError ? error.message : 'Не удалось обновить профиль';
-            Alert.alert('Ошибка', message);
+            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
         } finally {
             setProfileSaving(false);
         }
@@ -158,7 +159,7 @@ export default function SettingsScreen() {
 
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== 'granted') {
-                Alert.alert('Разрешение', 'Нужен доступ к галерее');
+                showToast({ type: 'warning', text1: 'Разрешение', text2: 'Нужен доступ к галерее', visibilityTime: 3000 });
                 return;
             }
 
@@ -180,7 +181,7 @@ export default function SettingsScreen() {
                 setAvatarPreviewUrl(asset.uri);
             }
         } catch {
-            Alert.alert('Ошибка', 'Не удалось выбрать изображение');
+            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось выбрать изображение', visibilityTime: 3000 });
         }
     }, []);
 
@@ -199,7 +200,7 @@ export default function SettingsScreen() {
     const handleUploadAvatar = useCallback(async () => {
         if (!userId) return;
         if (!avatarFile) {
-            Alert.alert('Ошибка', 'Сначала выберите изображение');
+            showToast({ type: 'warning', text1: 'Выберите изображение', text2: 'Сначала выберите фото для аватара', visibilityTime: 3000 });
             return;
         }
 
@@ -225,10 +226,10 @@ export default function SettingsScreen() {
             }
 
             triggerProfileRefresh();
-            Alert.alert('Готово', 'Аватар обновлён');
+            showToast({ type: 'success', text1: 'Аватар обновлён', visibilityTime: 3000 });
         } catch (error) {
             const message = error instanceof ApiError ? error.message : 'Не удалось обновить аватар';
-            Alert.alert('Ошибка', message);
+            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
         } finally {
             setAvatarSaving(false);
         }
@@ -264,8 +265,10 @@ export default function SettingsScreen() {
             if (!confirmed) return;
 
             await clearHistory();
+            showToast({ type: 'success', text1: 'История очищена', visibilityTime: 2000 });
         } catch (error) {
             console.error('Error clearing history:', error);
+            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось очистить историю', visibilityTime: 3000 });
         }
     }, [clearHistory]);
 
@@ -282,8 +285,10 @@ export default function SettingsScreen() {
             if (!confirmed) return;
 
             await clearFavorites();
+            showToast({ type: 'success', text1: 'Избранное очищено', visibilityTime: 2000 });
         } catch (error) {
             console.error('Error clearing favorites:', error);
+            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось очистить избранное', visibilityTime: 3000 });
         }
     }, [clearFavorites]);
 

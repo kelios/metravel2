@@ -12,6 +12,7 @@ jest.mock('@react-navigation/native');
 jest.mock('@/api/travelsApi');
 jest.mock('@/utils/analytics', () => ({
   sendAnalyticsEvent: jest.fn(),
+  queueAnalyticsEvent: jest.fn(),
 }));
 
 // Mock lazy loaded components
