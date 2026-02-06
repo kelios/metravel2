@@ -287,12 +287,16 @@ __tests__/components/
 8. ✅ Извлечён `api/apiConfig.ts` (URL, таймауты, ключи хранилища) из `api/client.ts`. Клиент остался цельным классом — его методы тесно связаны (token refresh, retry, rate limiting).
 9. Крупные хуки (`useTravelFormData` 877 строк, `useQuestsApi` 552, `useComments` 427) — отложены на Фазу 4. Высокий риск при большом количестве зависимых тестов.
 
-### Фаза 4: Оптимизация (ongoing)
-10. Постепенный перевод Context → Zustand (п. 4.1)
-11. Замена `formik` → собственные хуки или React Hook Form (п. 3.1)
-12. Вынос логики из `_layout.tsx` и `+html.tsx` (п. 4.3, 4.4)
-13. Разбить крупные хуки (п. 3.4) — `useTravelFormData`, `useQuestsApi`, `useComments`
-14. Реструктурировать `components/MapPage/` (п. 4.2)
+### Фаза 4: Оптимизация (выполнено 6 фев 2026)
+10. ✅ Извлечены чистые функции нормализации из `useTravelFormData` (877→724 строк) → `utils/travelFormNormalization.ts`. Функции `ensureRequiredDraftFields`, `normalizeDraftPlaceholders`, `mergeMarkersPreserveImages`, `isLocalPreviewUrl`, `isDraftPlaceholder` теперь независимо тестируемы.
+11. ✅ Вынесен стек провайдеров из `_layout.tsx` → `components/layout/AppProviders.tsx` (Auth, Favorites, QueryClient, Filters, ThemedPaper). Упрощена вложенность в `ThemedContent`.
+12. ✅ Извлечены типы и адаптеры из `useQuestsApi` (553→333 строк) → `utils/questAdapters.ts` (233 строки). Функции `adaptBundle`, `adaptMeta`, `adaptStep`, `buildAnswerChecker`, `fixMediaUrl`, `normalize` и типы `QuestMeta`, `FrontendQuestBundle` теперь независимо тестируемы. Обратная совместимость через re-export.
+13. ✅ Извлечены хелперы оптимистичного обновления кэша из `useComments` (428→232 строк) → `utils/commentCacheHelpers.ts` (182 строки). Устранено дублирование логики like/unlike (~160 строк) и create/reply (~80 строк). Функции `optimisticToggleLike`, `reconcileLikeResponse`, `rollbackFromSnapshot`, `createOptimisticComment`, `optimisticAppendComment`.
+
+### Фаза 5: Дальнейшая оптимизация (planned)
+14. Замена `formik` → собственные хуки или React Hook Form (п. 3.1)
+15. Реструктурировать `components/MapPage/` (п. 4.2)
+16. Постепенный перевод оставшихся Context → Zustand (`AuthContext`, `MapFiltersContext`)
 
 ---
 
@@ -307,7 +311,11 @@ __tests__/components/
 | Папка `src/` | Существовала (дублирование) | Удалена | ✅ Удалена |
 | Контекст-провайдеров | 4 (в 3 папках) | 4 (в 1 папке `context/`) + 5 Zustand-сторов | ✅ Консолидировано |
 | `FavoritesContext` (строк) | 604 | 136 (фасад) + 3 стора | ✅ < 300 |
-| Максимальный размер хука (строк) | ~900 | ~877 | < 300 (ongoing) |
+| `useTravelFormData` (строк) | 877 | 724 + `travelFormNormalization.ts` | < 500 (ongoing) |
+| `useQuestsApi` (строк) | 553 | 333 + `questAdapters.ts` (233) | ✅ < 400 |
+| `useComments` (строк) | 428 | 232 + `commentCacheHelpers.ts` (182) | ✅ < 300 |
+| `_layout.tsx` провайдеры | Вложенные inline (5 уровней) | `AppProviders.tsx` | ✅ Извлечены |
+| Максимальный размер хука (строк) | ~900 | ~724 | < 500 (ongoing) |
 
 ---
 

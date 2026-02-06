@@ -1,5 +1,23 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { routeCache } from '@/utils/routeCache'
+import {
+    type RouteResult,
+    getORSProfile,
+    getOSRMProfile,
+    getValhallaCosting,
+    haversineMeters,
+    estimateDurationSeconds,
+    validateRoutePoints,
+    filterValidCoords,
+    ensureAnchoredGeometry,
+    decodePolyline6,
+    fetchWithRetry,
+    parseOrsError,
+    extractFailingIndex,
+    buildRadiuses,
+    WARN_ENDPOINT_SNAP_METERS,
+    ORS_RADIUSES_TO_TRY,
+} from '@/utils/routingHelpers'
 
 // Глобальный кеш успешно/аварийно обработанных routeKey, чтобы избегать повторных запросов в сессию
 const resolvedRouteKeys = new Set<string>()
@@ -7,37 +25,12 @@ const resolvedRouteKeys = new Set<string>()
 // Helper for tests to reset memoized route keys
 export const clearResolvedRouteKeys = () => resolvedRouteKeys.clear()
 
-interface RouteResult {
-    coords: [number, number][]
-    distance: number
-    duration: number
-    isOptimal: boolean
-}
-
 interface RoutingState {
     loading: boolean
     error: string | boolean
     distance: number
     duration: number
     coords: [number, number][]
-}
-
-const getORSProfile = (mode: 'car' | 'bike' | 'foot') => {
-    switch (mode) {
-        case 'bike': return 'cycling-regular'
-        case 'foot': return 'foot-walking'
-        default: return 'driving-car'
-    }
-}
-
-const getOSRMProfile = (mode: 'car' | 'bike' | 'foot') => {
-    // Публичный OSRM сервер (router.project-osrm.org) поддерживает только 'driving'
-    // Для bike/foot нужен ORS или GraphHopper
-    switch (mode) {
-        case 'bike': return 'cycling'  // Не поддерживается публичным OSRM
-        case 'foot': return 'walking'  // Не поддерживается публичным OSRM
-        default: return 'driving'
-    }
 }
 
 
@@ -70,15 +63,6 @@ export const useRouting = (
             hasORS_API_KEY: !!ORS_API_KEY,
         })
     }, [routePoints, transportMode, ORS_API_KEY])
-
-    const estimateDurationSeconds = useCallback((meters: number, mode: 'car' | 'bike' | 'foot') => {
-        const speedsKmh = { car: 60, bike: 20, foot: 5 }
-        const speed = speedsKmh[mode] ?? 60
-        if (!Number.isFinite(meters) || meters <= 0) return 0
-        const hours = (meters / 1000) / speed
-        const seconds = Math.round(hours * 3600)
-        return Number.isFinite(seconds) ? seconds : 0
-    }, [])
 
     const abortRef = useRef<AbortController | null>(null)
     const lastRouteKeyRef = useRef<string | null>(null)
@@ -118,140 +102,23 @@ export const useRouting = (
         return false;
     }, []);
 
-    // ✅ УЛУЧШЕНИЕ: Retry с exponential backoff для устойчивости к временным ошибкам
-    const fetchWithRetry = useCallback(async <T,>(
-        fetchFn: () => Promise<T>,
-        maxRetries: number = 3,
-        initialDelay: number = 1000
-    ): Promise<T> => {
-        let lastError: Error | null = null;
-
-        for (let attempt = 0; attempt < maxRetries; attempt++) {
-            try {
-                return await fetchFn();
-            } catch (error: any) {
-                lastError = error;
-
-                // Не ретраим 400, 401, 403, 404 - это постоянные ошибки
-                const isPermanentError =
-                    error.message?.includes('400') ||
-                    error.message?.includes('401') ||
-                    error.message?.includes('403') ||
-                    error.message?.includes('404') ||
-                    error.message?.includes('429') ||
-                    error.message?.includes('лимит') ||
-                    error.message?.includes('Некорректные координаты') ||
-                    error.message?.includes('Неверный API ключ');
-
-                if (isPermanentError) {
-                    throw error;
-                }
-
-                // Последняя попытка - выбрасываем ошибку
-                if (attempt === maxRetries - 1) {
-                    break;
-                }
-
-                // Exponential backoff: 1s, 2s, 4s
-                const delay = initialDelay * Math.pow(2, attempt);
-                console.info(`[useRouting] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
-
-                await new Promise(resolve => setTimeout(resolve, delay));
-            }
-        }
-
-        throw lastError || new Error('Fetch failed after retries');
-    }, []);
-
     const fetchORS = useCallback(async (
         points: [number, number][],
         mode: 'car' | 'bike' | 'foot',
         signal: AbortSignal
     ): Promise<RouteResult> => {
-        // ✅ БЕЗОПАСНОСТЬ: Валидация координат перед отправкой
-        if (!Array.isArray(points) || points.length < 2) {
-            throw new Error('Недостаточно точек для построения маршрута');
-        }
-
-        for (const [lng, lat] of points) {
-            if (
-                !Number.isFinite(lng) || !Number.isFinite(lat) ||
-                lng < -180 || lng > 180 || lat < -90 || lat > 90
-            ) {
-                throw new Error('Некорректные координаты маршрута');
-            }
-        }
+        validateRoutePoints(points)
 
         const apiKey = String(ORS_API_KEY ?? '').trim()
 
-        // ✅ БЕЗОПАСНОСТЬ: Валидация API ключа
         if (!apiKey || apiKey.length < 10) {
             throw new Error('Неверный API ключ или доступ запрещен.');
         }
 
-        // ✅ УЛУЧШЕНИЕ: Используем retry для устойчивости к временным ошибкам
-        const parseOrsError = (raw: string): { code?: number; message?: string } => {
-            if (!raw) return {}
-            try {
-                const parsed = JSON.parse(raw)
-                const code = Number(parsed?.error?.code)
-                const message = typeof parsed?.error?.message === 'string' ? parsed.error.message : undefined
-                return {
-                    code: Number.isFinite(code) ? code : undefined,
-                    message,
-                }
-            } catch {
-                return {}
-            }
-        }
-
-        // ORS по умолчанию "снэпает" точки к графу в радиусе 350м; иногда точка может быть дальше (поле/лес/река).
-        // В этом случае ORS возвращает 404 с error.code=2010. Тогда пробуем увеличить radiuses.
-        const radiusesToTry: Array<number | undefined> = [undefined, 800, 1200, 2000]
         let lastError: any = null
         let failingIndex: number | null = null
 
-        const extractFailingIndex = (message?: string) => {
-            if (!message) return null
-            const m = message.match(/coordinate\s+(\d+)/i)
-            if (!m) return null
-            const idx = Number(m[1])
-            return Number.isFinite(idx) ? idx : null
-        }
-
-        const buildRadiuses = (radius: number, len: number, idx: number | null) => {
-            const base = 350
-            const arr = new Array(len).fill(base)
-            if (typeof idx === 'number' && idx >= 0 && idx < len) {
-                arr[idx] = radius
-            } else {
-                // Fallback: bump endpoints (usually start/end are the only meaningful snap points).
-                arr[0] = radius
-                arr[len - 1] = radius
-            }
-            return arr
-        }
-
-        const haversineMeters = (a: [number, number], b: [number, number]) => {
-            const toRad = (deg: number) => (deg * Math.PI) / 180
-            const R = 6371000
-            const lng1 = a[0], lat1 = a[1]
-            const lng2 = b[0], lat2 = b[1]
-            const dLat = toRad(lat2 - lat1)
-            const dLng = toRad(lng2 - lng1)
-            const s1 = Math.sin(dLat / 2)
-            const s2 = Math.sin(dLng / 2)
-            const aa =
-                s1 * s1 +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * s2 * s2
-            const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa))
-            return R * c
-        }
-        // Guardrail: don't accept routes whose snapped endpoints are слишком далеко от выбранных точек.
-        // (We don't hard-fail; we log and we'll visually anchor the polyline to the user points later.)
-        const WARN_ENDPOINT_SNAP_METERS = 2000
-
-        for (const radius of radiusesToTry) {
+        for (const radius of ORS_RADIUSES_TO_TRY) {
             try {
                 // ✅ УЛУЧШЕНИЕ: Используем retry для устойчивости к временным ошибкам
                 return await fetchWithRetry(async () => {
@@ -343,7 +210,7 @@ export const useRouting = (
                 const orsCode = e?.orsCode
                 const maybeIndex = extractFailingIndex(String(e?.orsMessage || e?.responseText || e?.message || ''))
                 if (typeof maybeIndex === 'number') failingIndex = maybeIndex
-                if (orsCode === 2010 && radius !== radiusesToTry[radiusesToTry.length - 1]) {
+                if (orsCode === 2010 && radius !== ORS_RADIUSES_TO_TRY[ORS_RADIUSES_TO_TRY.length - 1]) {
                     const currentRadius = typeof radius === 'number' ? radius : 350
                     console.info(
                         `[useRouting] ORS: no routable point within ${currentRadius}m (coord idx ${failingIndex ?? 'unknown'}), retrying with larger radius...`
@@ -355,26 +222,14 @@ export const useRouting = (
         }
 
         throw lastError || new Error('Ошибка ORS')
-    }, [ORS_API_KEY, debugRouting, fetchWithRetry])
+    }, [ORS_API_KEY, debugRouting])
 
     const fetchOSRM = useCallback(async (
         points: [number, number][],
         mode: 'car' | 'bike' | 'foot',
         signal: AbortSignal
     ): Promise<RouteResult> => {
-        // ✅ БЕЗОПАСНОСТЬ: Валидация координат перед отправкой
-        if (!Array.isArray(points) || points.length < 2) {
-            throw new Error('Недостаточно точек для построения маршрута');
-        }
-
-        for (const [lng, lat] of points) {
-            if (
-                !Number.isFinite(lng) || !Number.isFinite(lat) ||
-                lng < -180 || lng > 180 || lat < -90 || lat > 90
-            ) {
-                throw new Error('Некорректные координаты маршрута');
-            }
-        }
+        validateRoutePoints(points)
 
         const profile = getOSRMProfile(mode)
         // В dev можно замокать OSRM, чтобы не зависеть от сети/CORS (только при явном флаге)
@@ -389,23 +244,10 @@ export const useRouting = (
         if (mockOsrm) {
             // Прямая линия через все точки (lng,lat)
             const coords = points.map(([lng, lat]) => [lng, lat] as [number, number])
-            const distance = (() => {
-                const toRad = (deg: number) => (deg * Math.PI) / 180
-                let total = 0
-                for (let i = 1; i < coords.length; i++) {
-                    const [lng1, lat1] = coords[i - 1]
-                    const [lng2, lat2] = coords[i]
-                    const R = 6371000
-                    const dLat = toRad(lat2 - lat1)
-                    const dLng = toRad(lng2 - lng1)
-                    const a =
-                        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-                    total += R * c
-                }
-                return total
-            })()
+            let distance = 0
+            for (let i = 1; i < coords.length; i++) {
+                distance += haversineMeters(coords[i - 1], coords[i])
+            }
             // Кэшируем мок, чтобы повторные вызовы не давали новые ссылки массива
             routeCache.set(points, transportMode, coords, distance, estimateDurationSeconds(distance, mode))
             if (routeKey) resolvedRouteKeys.add(routeKey)
@@ -456,7 +298,7 @@ export const useRouting = (
             duration: route.duration || 0,
             isOptimal: true,
         }
-    }, [estimateDurationSeconds, isTestEnv, routeKey, transportMode])
+    }, [isTestEnv, routeKey, transportMode])
 
     // Бесплатный routing через Valhalla (Mapzen/Mapbox альтернатива)
     // Используем публичный инстанс valhalla.openstreetmap.de
@@ -465,24 +307,9 @@ export const useRouting = (
         mode: 'car' | 'bike' | 'foot',
         signal: AbortSignal
     ): Promise<RouteResult> => {
-        // Валидация координат
-        if (!Array.isArray(points) || points.length < 2) {
-            throw new Error('Недостаточно точек для построения маршрута');
-        }
+        validateRoutePoints(points)
 
-        for (const [lng, lat] of points) {
-            if (
-                !Number.isFinite(lng) || !Number.isFinite(lat) ||
-                lng < -180 || lng > 180 || lat < -90 || lat > 90
-            ) {
-                throw new Error('Некорректные координаты маршрута');
-            }
-        }
-
-        // Valhalla costing modes
-        const costingMode = mode === 'bike' ? 'bicycle' : mode === 'foot' ? 'pedestrian' : 'auto';
-
-        // Формируем locations для Valhalla
+        const costingMode = getValhallaCosting(mode)
         const locations = points.map(([lng, lat]) => ({ lon: lng, lat }));
 
         const requestBody = {
@@ -512,47 +339,12 @@ export const useRouting = (
 
         if (!trip?.legs?.length) throw new Error('Пустой маршрут от Valhalla');
 
-        // Декодируем polyline6 (Valhalla использует precision 6)
-        const decodePolyline6 = (encoded: string): [number, number][] => {
-            const coords: [number, number][] = [];
-            let index = 0, lat = 0, lng = 0;
-
-            while (index < encoded.length) {
-                let shift = 0, result = 0, byte: number;
-                do {
-                    byte = encoded.charCodeAt(index++) - 63;
-                    result |= (byte & 0x1f) << shift;
-                    shift += 5;
-                } while (byte >= 0x20);
-                lat += (result & 1) ? ~(result >> 1) : (result >> 1);
-
-                shift = 0;
-                result = 0;
-                do {
-                    byte = encoded.charCodeAt(index++) - 63;
-                    result |= (byte & 0x1f) << shift;
-                    shift += 5;
-                } while (byte >= 0x20);
-                lng += (result & 1) ? ~(result >> 1) : (result >> 1);
-
-                coords.push([lng / 1e6, lat / 1e6]);
-            }
-            return coords;
-        };
-
         // Собираем координаты из всех legs
         const allCoords: [number, number][] = [];
         for (const leg of trip.legs) {
             if (leg.shape) {
                 const decoded = decodePolyline6(leg.shape);
-                // Фильтруем невалидные координаты
-                const validCoords = decoded.filter(([lng, lat]) =>
-                    Number.isFinite(lng) &&
-                    Number.isFinite(lat) &&
-                    lng >= -180 && lng <= 180 &&
-                    lat >= -90 && lat <= 90
-                );
-                allCoords.push(...validCoords);
+                allCoords.push(...filterValidCoords(decoded));
             }
         }
 
@@ -572,76 +364,15 @@ export const useRouting = (
     }, []);
 
     const calculateDirectDistance = useCallback((points: [number, number][]): number => {
-        if (typeof window === 'undefined' || !(window as any).L) return 0
-        
-        // Фильтруем невалидные координаты
-        const validPoints = points.filter(([lng, lat]) =>
-            Number.isFinite(lng) &&
-            Number.isFinite(lat) &&
-            lng >= -180 && lng <= 180 &&
-            lat >= -90 && lat <= 90
-        )
-
+        const validPoints = filterValidCoords(points)
         if (validPoints.length < 2) return 0
 
-        const L = (window as any).L
         let totalDistance = 0
-        
         for (let i = 1; i < validPoints.length; i++) {
-            const [lng1, lat1] = validPoints[i - 1]
-            const [lng2, lat2] = validPoints[i]
-            const point1 = L.latLng(lat1, lng1)
-            const point2 = L.latLng(lat2, lng2)
-            totalDistance += point1.distanceTo(point2)
+            totalDistance += haversineMeters(validPoints[i - 1], validPoints[i])
         }
-        
         return totalDistance
     }, [])
-
-    const ensureAnchoredGeometry = useCallback(
-        (points: [number, number][], coords: [number, number][]) => {
-            if (!Array.isArray(points) || points.length < 2) return coords
-            if (!Array.isArray(coords) || coords.length < 2) return coords
-
-            const start = points[0]
-            const end = points[points.length - 1]
-            const first = coords[0]
-            const last = coords[coords.length - 1]
-
-            const haversineMeters = (a: [number, number], b: [number, number]) => {
-                const toRad = (deg: number) => (deg * Math.PI) / 180
-                const R = 6371000
-                const lng1 = a[0], lat1 = a[1]
-                const lng2 = b[0], lat2 = b[1]
-                const dLat = toRad(lat2 - lat1)
-                const dLng = toRad(lng2 - lng1)
-                const s1 = Math.sin(dLat / 2)
-                const s2 = Math.sin(dLng / 2)
-                const aa =
-                    s1 * s1 +
-                    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * s2 * s2
-                const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa))
-                return R * c
-            }
-
-            const out = coords.slice()
-            const thresholdM = 25
-            try {
-                const ds = haversineMeters(start, first)
-                if (ds > thresholdM) out.unshift(start)
-            } catch {
-                // noop
-            }
-            try {
-                const de = haversineMeters(end, last)
-                if (de > thresholdM) out.push(end)
-            } catch {
-                // noop
-            }
-            return out
-        },
-        []
-    )
 
     const supportsPublicOsrmProfile = useMemo(() => {
         // Теперь поддерживаем все режимы: OSRM для car, Valhalla для bike/foot
@@ -896,7 +627,7 @@ export const useRouting = (
                 // noop
             }
         }
-    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, estimateDurationSeconds, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv, supportsPublicOsrmProfile, ensureAnchoredGeometry])
+    }, [hasTwoPoints, routePointsKey, routeKey, transportMode, ORS_API_KEY, calculateDirectDistance, fetchORS, fetchOSRM, fetchValhalla, forceOsrm, isTestEnv, supportsPublicOsrmProfile])
 
     useEffect(() => {
         return () => {

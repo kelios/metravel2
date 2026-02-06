@@ -2,18 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Platform, StyleSheet, View, LogBox, useColorScheme } from "react-native";
 import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
-import { FiltersProvider } from "@/context/FiltersProvider";
-import { AuthProvider } from "@/context/AuthContext";
-import { FavoritesProvider } from "@/context/FavoritesContext";
-
-import { QueryClientProvider } from "@tanstack/react-query";
+import AppProviders from "@/components/layout/AppProviders";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import SkipLinks from "@/components/layout/SkipLinks";
 const NetworkStatusLazy = React.lazy(() => import('@/components/ui/NetworkStatus').then(m => ({ default: m.NetworkStatus })));
 const ReactQueryDevtoolsLazy: any = React.lazy(() =>
   import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
 );
-import ThemedPaperProvider from "@/components/ui/ThemedPaperProvider";
 const FooterLazy = React.lazy(() => import('@/components/layout/Footer'));
 const ConsentBannerLazy = React.lazy(() => import('@/components/layout/ConsentBanner'));
 const ToastLazy = React.lazy(() => import('@/components/ui/ToastHost'));
@@ -353,11 +348,7 @@ function ThemedContent({
   }, [showFooter, isMobile, dockHeight]);
 
   return (
-    <ThemedPaperProvider>
-              <AuthProvider>
-                    <FavoritesProvider>
-                      <QueryClientProvider client={queryClient}>
-                        <FiltersProvider>
+    <AppProviders queryClient={queryClient}>
                           <View style={styles.container}>
                               {showMapBackground && (
                                 <Image
@@ -416,17 +407,13 @@ function ThemedContent({
                                 </View>
                               )}
                         </View>
-                        </FiltersProvider>
-                      </QueryClientProvider>
-                    </FavoritesProvider>
-            </AuthProvider>
             {/* ✅ FIX: Toast рендерится только на клиенте для избежания SSR warning */}
             {isMounted && (
               <React.Suspense fallback={null}>
                 <ToastLazy />
               </React.Suspense>
             )}
-        </ThemedPaperProvider>
+    </AppProviders>
   );
 }
 
