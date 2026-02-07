@@ -181,6 +181,13 @@ const subscribe = (onStoreChange: () => void) => {
 
 const getSnapshot = () => currentSnapshot;
 
+// Fixed snapshot for SSR / hydration. During static export window is undefined
+// so the server renders with {0,0}. The client must return the same value during
+// hydration to avoid React error #418. After hydration, useSyncExternalStore
+// switches to the live getSnapshot automatically.
+const SSR_SNAPSHOT: DimensionsSnapshot = { width: 0, height: 0 };
+const getServerSnapshot = () => SSR_SNAPSHOT;
+
 /**
  * Enhanced responsive hook that provides screen size and orientation information
  * with TypeScript support and performance optimizations
@@ -201,7 +208,7 @@ const getSnapshot = () => currentSnapshot;
  * }
  */
 export function useResponsive(): ResponsiveState {
-  const { width, height } = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const { width, height } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const isPortrait = height > width;
   const orientation: Orientation = isPortrait ? 'portrait' : 'landscape';
 
