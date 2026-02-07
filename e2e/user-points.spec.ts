@@ -191,10 +191,12 @@ test.describe('User points', () => {
     await expect(listPanel.getByRole('button', { name: 'Сбросить фильтры' }).first()).toBeVisible({ timeout: 30_000 });
     await expect(listPanel.getByRole('button', { name: 'Копировать координаты' }).first()).toBeVisible({ timeout: 30_000 });
     await expect(listPanel.getByRole('button', { name: 'Поделиться в Telegram' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(listPanel.getByRole('button', { name: 'Google' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(listPanel.getByRole('button', { name: 'Apple' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(listPanel.getByRole('button', { name: 'Яндекс' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(listPanel.getByRole('button', { name: 'OSM' }).first()).toBeVisible({ timeout: 30_000 });
+    // Individual map provider buttons (Google/Apple/Яндекс/OSM) live in the popup, not in the list card.
+    // The list card exposes a single "Открыть в картах" action.
+    await expect(
+      listPanel.getByRole('button', { name: /открыть в картах/i }).first()
+        .or(listPanel.getByRole('button', { name: 'Google' }).first())
+    ).toBeVisible({ timeout: 30_000 });
   });
 
   test('auto-zooms to show all points when geolocation is present', async ({ page }) => {

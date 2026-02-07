@@ -19,7 +19,6 @@ import {
   AppState,
   AccessibilityInfo,
   Platform,
-  ActivityIndicator,
 } from "react-native";
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { prefetchImage } from '@/components/ui/ImageCardMedia';
@@ -33,6 +32,7 @@ import Animated, {
   Extrapolate,
   type SharedValue,
 } from "react-native-reanimated";
+import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
 import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
 import Feather from '@expo/vector-icons/Feather';
@@ -291,7 +291,7 @@ const Slide = memo(function Slide({
   containerW,
   slideHeight,
   imagesLength,
-  colors,
+  colors: _colors,
   styles,
   blurBackground,
   imageProps,
@@ -381,11 +381,9 @@ const Slide = memo(function Slide({
         />
       )}
 
-      {/* Loading indicator */}
+      {/* Loading shimmer */}
       {status === 'loading' && (
-        <View style={[styles.loadingOverlay]} testID={`slider-loading-overlay-${index}`}>
-          <ActivityIndicator color={colors.textOnDark} />
-        </View>
+        <ShimmerOverlay testID={`slider-loading-overlay-${index}`} />
       )}
     </View>
   );
@@ -950,27 +948,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   neutralPlaceholder: {
     width: "100%",
     height: "100%",
-    borderRadius: 12,
+    borderRadius: 0,
     backgroundColor: colors.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         backgroundImage:
-          `linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 100%)`,
+          `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 50%, ${colors.backgroundSecondary} 100%)`,
+        backgroundSize: '100% 100%',
         boxSizing: "border-box",
       },
     }),
-  },
-  loadingOverlay: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: colors.overlay,
   },
   navBtn: {
     position: "absolute",

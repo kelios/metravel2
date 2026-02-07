@@ -146,10 +146,13 @@ export default function TravelDetailsContainer() {
   const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
     travelDetails.scroll
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
-  // Стабильный ключ для <Head>, чтобы избежать ReferenceError при отрисовке
+  // Стабильный ключ для <Head> — используем slug (доступен сразу из URL),
+  // чтобы Helmet instance НЕ пересоздавался при загрузке данных.
+  // Это критично: если key меняется, react-helmet-async теряет meta-теги
+  // при первичной загрузке страницы (race condition с requestAnimationFrame).
   const headKey = useMemo(
-    () => `travel-${travel?.id ?? slug ?? "unknown"}`,
-    [travel?.id, slug]
+    () => `travel-${slug ?? travel?.id ?? "unknown"}`,
+    [slug, travel?.id]
   );
 
   const {
@@ -168,7 +171,9 @@ export default function TravelDetailsContainer() {
         ? `https://metravel.by/travels/${travel.slug}`
         : typeof travel?.id === "number" || typeof travel?.id === "string"
           ? `https://metravel.by/travels/${travel.id}`
-          : undefined;
+          : typeof slug === "string" && slug
+            ? `https://metravel.by/travels/${slug}`
+            : undefined;
     const rawFirst = travel?.travel_image_thumb_url || travel?.gallery?.[0];
     const firstUrl = rawFirst
       ? typeof rawFirst === "string"
@@ -188,7 +193,7 @@ export default function TravelDetailsContainer() {
       firstImg: firstUrl ? { url: firstUrl } : null,
       jsonLd: structuredData,
     };
-  }, [travel]);
+  }, [travel, slug]);
   const forceDeferMount = !!forceOpenKey;
 
   // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation
@@ -225,101 +230,117 @@ export default function TravelDetailsContainer() {
   /* ---- user flags ---- */
   const { isSuperuser, userId } = useAuth();
 
+  /* -------------------- SEO (must mount before early returns) -------------------- */
+  // ⚠️ CRITICAL: InstantSEO must render from the FIRST render, not after async data loads.
+  // react-helmet-async has a race condition on direct page loads: if a Helmet instance
+  // mounts late (after requestAnimationFrame), meta tags are committed as empty.
+  // Rendering it here with fallback values ensures the Helmet instance is stable.
+  const seoBlock = isFocused ? (
+    <InstantSEO
+      headKey={headKey}
+      title={readyTitle}
+      description={readyDesc}
+      canonical={canonicalUrl}
+      image={readyImage}
+      ogType="article"
+      additionalTags={
+        <>
+          {firstImg?.url && firstImgOrigin && (
+            <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />
+          )}
+          <meta name="theme-color" content={themedColors.background} />
+          {jsonLd && (
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify(jsonLd),
+              }}
+            />
+          )}
+        </>
+      }
+    />
+  ) : null;
+
   /* -------------------- READY -------------------- */
 
   // Пока данные путешествия не загружены — показываем простой лоадер,
   // но делаем это после инициализации всех хуков, чтобы не нарушать порядок.
   if (isMissingParam) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          <Text style={styles.errorTitle}>
-            Путешествие не найдено
-          </Text>
-          <Text style={styles.errorText}>
-            В ссылке отсутствует идентификатор путешествия.
-          </Text>
-        </View>
-      </SafeAreaView>
+      <>
+        {seoBlock}
+        <SafeAreaView style={styles.safeArea}>
+          <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+            <Text style={styles.errorTitle}>
+              Путешествие не найдено
+            </Text>
+            <Text style={styles.errorText}>
+              В ссылке отсутствует идентификатор путешествия.
+            </Text>
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
   if (isError) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          <Text style={styles.errorTitle}>
-            Не удалось загрузить путешествие
-          </Text>
-          <Text style={styles.errorText}>
-            {error?.message || 'Попробуйте обновить страницу.'}
-          </Text>
-          <TouchableOpacity
-            onPress={() => refetch()}
-            style={styles.errorButton}
-            accessibilityRole="button"
-            accessibilityLabel="Повторить"
-          >
-            <Text style={styles.errorButtonText}>Повторить</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <>
+        {seoBlock}
+        <SafeAreaView style={styles.safeArea}>
+          <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+            <Text style={styles.errorTitle}>
+              Не удалось загрузить путешествие
+            </Text>
+            <Text style={styles.errorText}>
+              {error?.message || 'Попробуйте обновить страницу.'}
+            </Text>
+            <TouchableOpacity
+              onPress={() => refetch()}
+              style={styles.errorButton}
+              accessibilityRole="button"
+              accessibilityLabel="Повторить"
+            >
+              <Text style={styles.errorButtonText}>Повторить</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
   if (!travel) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-          {Platform.OS === 'web' ? (
-            <View style={styles.loadingSkeletonWrap}>
-              <View style={styles.loadingSkeletonHero} />
-              <View style={styles.loadingSkeletonContent}>
-                <SectionSkeleton lines={6} />
-                <View style={styles.loadingSkeletonSpacer} />
-                <SectionSkeleton lines={4} />
+      <>
+        {seoBlock}
+        <SafeAreaView style={styles.safeArea}>
+          <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+            {Platform.OS === 'web' ? (
+              <View style={styles.loadingSkeletonWrap}>
+                <View style={styles.loadingSkeletonHero} />
+                <View style={styles.loadingSkeletonContent}>
+                  <SectionSkeleton lines={6} />
+                  <View style={styles.loadingSkeletonSpacer} />
+                  <SectionSkeleton lines={4} />
+                </View>
               </View>
-            </View>
-          ) : (
-            <ActivityIndicator size="large" color={themedColors.primary} />
-          )}
-        </View>
-      </SafeAreaView>
+            ) : (
+              <ActivityIndicator size="large" color={themedColors.primary} />
+            )}
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
   return (
     <>
+      {seoBlock}
+
       {/* ✅ PHASE 2: Accessibility Components */}
       <SkipToContentLink targetId="travel-main-content" label="Skip to main content" />
       <AccessibilityAnnouncer message={announcement} priority={announcementPriority} id="travel-announcer" />
-
-      {isFocused && (
-        <InstantSEO
-          headKey={headKey}
-          title={readyTitle}
-          description={readyDesc}
-          canonical={canonicalUrl}
-          image={readyImage}
-          ogType="article"
-          additionalTags={
-            <>
-              {firstImg?.url && firstImgOrigin && (
-                <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />
-              )}
-              <meta name="theme-color" content={themedColors.background} />
-              {jsonLd && (
-                <script
-                  type="application/ld+json"
-                  dangerouslySetInnerHTML={{
-                    __html: JSON.stringify(jsonLd),
-                  }}
-                />
-              )}
-            </>
-          }
-        />
-      )}
 
     <View
       testID="travel-details-page"

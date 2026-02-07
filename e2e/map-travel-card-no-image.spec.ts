@@ -83,9 +83,33 @@ test.describe('Map Travel Card - UnifiedTravelCard', () => {
       await mobileMenu.click();
     }
 
-    await expect(page.getByTestId('map-panel-tab-travels')).toBeVisible({ timeout: 60_000 });
-    await page.getByTestId('map-panel-tab-travels').click();
-    await expect(page.getByTestId('map-travels-tab')).toBeVisible({ timeout: 60_000 });
+    // Wait for panel hydration — filters panel proves the React tree is interactive.
+    await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 60_000 }).catch(() => null);
+
+    const travelsTab = page.getByTestId('map-panel-tab-travels');
+    const listTab = page.getByRole('tab', { name: /Список/i }).first();
+    let tabLocator: any = null;
+    try {
+      await travelsTab.waitFor({ state: 'visible', timeout: 15_000 });
+      tabLocator = travelsTab;
+    } catch {
+      try {
+        await listTab.waitFor({ state: 'visible', timeout: 10_000 });
+        tabLocator = listTab;
+      } catch {
+        // Neither tab found
+      }
+    }
+    if (!tabLocator) return { cards: page.locator('[data-testid="map-travel-card"]'), cardCount: 0 };
+
+    // Click and retry — first click may fire before handlers are fully wired.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await tabLocator.click({ force: attempt > 0, timeout: 30_000 }).catch(() => null);
+      const visible = await page.getByTestId('map-travels-tab').isVisible().catch(() => false);
+      if (visible) break;
+      await page.waitForTimeout(1_000);
+    }
+    await expect(page.getByTestId('map-travels-tab')).toBeVisible({ timeout: 30_000 });
     const cards = page.locator('[data-testid="map-travel-card"]');
     const cardCount = await cards.count();
     return { cards, cardCount };

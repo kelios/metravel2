@@ -52,8 +52,13 @@ export const commentsApi = {
         `/travel-comments/?thread_id=${threadId}`
       );
     } catch (error) {
+      const status = getErrorStatus(error);
       // Some backends return 404 for an empty thread instead of [].
-      if (getErrorStatus(error) === 404) {
+      if (status === 404) {
+        return [];
+      }
+      // Some deployments protect comments behind auth; treat as empty.
+      if (status === 401 || status === 403) {
         return [];
       }
       throw error;
@@ -75,6 +80,10 @@ export const commentsApi = {
       // respond with 400 for travel_id lookups instead of returning an empty list.
       // Treat this as an empty state so comments remain publicly readable.
       if (status === 400) {
+        return [];
+      }
+      // Some deployments protect comments behind auth; treat as empty.
+      if (status === 401 || status === 403) {
         return [];
       }
       throw error;

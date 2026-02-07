@@ -169,7 +169,7 @@ test.describe('Auth logout', () => {
     }
 
     // Profile page should show logout button when authenticated.
-    const logoutButton = page.getByLabel('Выйти из аккаунта');
+    const logoutButton = page.getByRole('button', { name: /выйти/i }).first();
     await expect(logoutButton).toBeVisible({ timeout: 20_000 });
     await logoutButton.click({ timeout: 20_000 });
 

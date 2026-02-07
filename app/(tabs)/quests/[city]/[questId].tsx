@@ -30,10 +30,21 @@ export default function QuestByIdScreen() {
 
     // Синхронизация прогресса с бэкендом для авторизованных пользователей
     const { isAuthenticated } = useAuth();
-    const { saveProgress, resetProgress } = useQuestProgressSync(
+    const { progress: backendProgress, progressLoading, saveProgress, resetProgress } = useQuestProgressSync(
         questId ? String(questId) : undefined,
         isAuthenticated,
     );
+    const initialProgress = useMemo(() => {
+        if (!backendProgress) return undefined;
+        return {
+            currentIndex: backendProgress.current_index,
+            unlockedIndex: backendProgress.unlocked_index,
+            answers: backendProgress.answers ?? {},
+            attempts: backendProgress.attempts ?? {},
+            hints: backendProgress.hints ?? {},
+            showMap: backendProgress.show_map ?? true,
+        };
+    }, [backendProgress]);
     const handleProgressChange = useCallback((data: any) => {
         saveProgress(data);
     }, [saveProgress]);
@@ -102,8 +113,8 @@ export default function QuestByIdScreen() {
         );
     }
 
-    // LOADING
-    if (!loaded) {
+    // LOADING (bundle or backend progress)
+    if (!loaded || progressLoading) {
         return (
             <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
                 {isFocused && (
@@ -159,6 +170,7 @@ export default function QuestByIdScreen() {
                     city={bundle.city}
                     onProgressChange={handleProgressChange}
                     onProgressReset={handleProgressReset}
+                    initialProgress={initialProgress}
                     mapPreviewOpenByDefault={false}
                 />
             </Suspense>

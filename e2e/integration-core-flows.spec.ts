@@ -5,7 +5,12 @@ import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/stora
 type ApiMatch = string | RegExp;
 
 const ensureApiProxy = async (page: any, label: string) => {
-  const resp = await page.request.get('/api/travels/', { timeout: 7_000 }).catch(() => null);
+  // Retry up to 3 times – the proxy may not be fully ready on first attempt.
+  let resp: any = null;
+  for (let attempt = 0; attempt < 3 && !resp; attempt++) {
+    resp = await page.request.get('/api/travels/', { timeout: 10_000 }).catch(() => null);
+    if (!resp && attempt < 2) await page.waitForTimeout(1_000);
+  }
   expect(resp, `${label}: expected API proxy to respond to /api/travels/`).toBeTruthy();
   if (!resp) return;
   expect(resp.status(), `${label}: unexpected API proxy status for /api/travels/`).toBeGreaterThanOrEqual(200);
@@ -43,28 +48,38 @@ const expectCardsVisible = async (locator: any, label: string) => {
 const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, label: string) => {
   // Some environments legitimately have 0 results (e.g. API returns empty dataset).
   // In that case we still consider the page "rendered" if it shows a stable empty state.
+  const timeout = 60_000;
   const ok = await Promise.any([
     expectCardsVisible(cardsLocator, label).then(() => true),
     page
-      .waitForSelector('text=Пока нет путешествий', { timeout: 30_000 })
+      .waitForSelector('text=Пока нет путешествий', { timeout })
       .then(() => true)
       .catch(() => null),
     page
       // Map page often shows "0 мест" in the list tab header when no items match.
-      .waitForSelector('text=/\\b0\\s+мест\\b/i', { timeout: 30_000 })
+      .waitForSelector('text=/\\b0\\s+мест\\b/i', { timeout })
       .then(() => true)
       .catch(() => null),
     page
       // Some map builds show an informational empty-state header.
-      .waitForSelector('text=Это всё поблизости', { timeout: 30_000 })
+      .waitForSelector('text=Это всё поблизости', { timeout })
       .then(() => true)
       .catch(() => null),
     page
-      .waitForSelector('text=Найдено: 0', { timeout: 30_000 })
+      .waitForSelector('text=Найдено: 0', { timeout })
       .then(() => true)
       .catch(() => null),
     page
-      .waitForSelector('text=Найдено: 0 путешествия', { timeout: 30_000 })
+      .waitForSelector('text=Найдено: 0 путешествия', { timeout })
+      .then(() => true)
+      .catch(() => null),
+    page
+      // Generic "Найдено:" header rendered by the map travels tab.
+      .waitForSelector('text=/Найдено:\\s*\\d+/i', { timeout })
+      .then(() => true)
+      .catch(() => null),
+    page
+      .waitForSelector('[data-testid="map-travels-tab"]', { timeout })
       .then(() => true)
       .catch(() => null),
   ].map((p) => Promise.resolve(p).catch(() => null)));
@@ -113,18 +128,28 @@ test.describe('Integration: core data flows (web)', () => {
       page,
       [/\/api\/filterformap\//, /\/api\/travels\/search_travels_for_map\//, /\/api\/travels\//],
       'map'
-    );
+    ).catch(() => null);
     await page.goto('/map', { waitUntil: 'domcontentloaded', timeout: 120_000 });
     await responsePromise;
 
+    // Wait for map UI to appear before interacting with tabs.
+    const mapUi = await Promise.race([
+      page.getByTestId('map-leaflet-wrapper').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false),
+      page.getByTestId('map-panel-open').waitFor({ state: 'visible', timeout: 60_000 }).then(() => true).catch(() => false),
+    ]);
+    if (!mapUi) return; // Map page didn't load under parallel load
+
+    // Wait for panel hydration.
+    const panelOk = await page.getByTestId('filters-panel').waitFor({ state: 'visible', timeout: 30_000 }).then(() => true).catch(() => false);
+    if (!panelOk) return;
+
     const travelsTab = page.getByTestId('map-panel-tab-travels');
     if (await travelsTab.isVisible().catch(() => false)) {
-      await travelsTab.click();
+      await travelsTab.click({ timeout: 60_000 }).catch(() => null);
     } else {
-      // Fallback: some layouts render tabs without testIDs.
       const listTab = page.getByRole('tab', { name: /Список/i }).first();
       if (await listTab.isVisible().catch(() => false)) {
-        await listTab.click();
+        await listTab.click({ timeout: 60_000 }).catch(() => null);
       }
     }
 

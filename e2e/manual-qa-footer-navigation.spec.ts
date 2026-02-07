@@ -28,9 +28,9 @@ test.describe('Manual QA automation: footer navigation', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
 
     const actions = [
-      { testId: 'footer-item-header-travelsby', path: /\/travelsby/ },
-      { testId: 'footer-item-header-map', path: /\/map/ },
-      { testId: 'footer-item-header-roulette', path: /\/roulette/ },
+      { testId: 'footer-item-about', path: /\/about/ },
+      { testId: 'footer-item-privacy', path: /\/privacy/ },
+      { testId: 'footer-item-cookies', path: /\/cookies/ },
     ];
 
     for (const action of actions) {

@@ -371,8 +371,9 @@ test.describe('Travel Comments', () => {
 
       // Should see comment form
       const commentInput = page.getByPlaceholder('Написать комментарий...');
+      await commentInput.scrollIntoViewIfNeeded({ timeout: 15_000 }).catch(() => {});
       const hasCommentInput = await commentInput
-        .isVisible()
+        .isVisible({ timeout: 5_000 })
         .then((v: boolean) => v)
         .catch(() => false);
 	      if (!hasCommentInput) {
@@ -710,7 +711,7 @@ test.describe('Travel Comments', () => {
       
       if (isSidebarVisible) {
         // In current UI this entry is rendered as a button.
-        const commentsNavButton = page.getByRole('button', { name: /комментарии/i });
+        const commentsNavButton = page.getByRole('button', { name: /комментарии/i }).first();
         await expect(commentsNavButton).toBeVisible();
 
         // Click comments entry

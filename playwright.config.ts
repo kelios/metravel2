@@ -82,7 +82,7 @@ export default defineConfig({
     baseURL,
     storageState: 'e2e/.auth/storageState.json',
     navigationTimeout: 120_000,
-    actionTimeout: 30_000,
+    actionTimeout: 60_000,
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
   },

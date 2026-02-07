@@ -519,6 +519,12 @@ html[data-theme="dark"] .leaflet-control-attribution {
   }
 }
 
+/* Slider shimmer skeleton (web) */
+@keyframes slider-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
 /* Тултипы */
 .leaflet-tooltip {
   z-index: 650 !important;

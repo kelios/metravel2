@@ -47,6 +47,7 @@ export default function ProfileScreen() {
     viewsCount: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [profileAvatarError, setProfileAvatarError] = useState(false);
 
   const scrollRef = useRef<ScrollView | null>(null);
 
@@ -463,11 +464,12 @@ export default function ProfileScreen() {
         >
           <View style={styles.headerRow}>
               <View style={styles.avatar}>
-                {profile?.avatar ? (
+                {profile?.avatar && !profileAvatarError ? (
                   <Image
                     source={{ uri: profile.avatar }}
                     style={styles.avatarImage}
                     resizeMode="cover"
+                    onError={() => setProfileAvatarError(true)}
                   />
                 ) : (
                   <Feather name="user" size={28} color={colors.primary} />

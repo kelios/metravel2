@@ -348,9 +348,13 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   placeholder: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: colors.backgroundSecondary,
+    ...Platform.select({
+      web: {
+        backgroundImage:
+          `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 50%, ${colors.backgroundSecondary} 100%)`,
+      },
+    }),
   },
 });
 

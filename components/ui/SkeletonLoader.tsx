@@ -1,6 +1,13 @@
 // SkeletonLoader.tsx - компонент для skeleton loading состояний
 import React from 'react';
-import { View, StyleSheet, Animated, Easing, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing as ReanimatedEasing,
+} from 'react-native-reanimated';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
@@ -21,49 +28,53 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   style,
 }) => {
   const colors = useThemedColors();
-  const animatedValue = React.useRef(new Animated.Value(0)).current;
-  const shouldUseNativeDriver = Platform.OS !== 'web';
+  const opacity = useSharedValue(0.3);
 
   React.useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration: 1000,
-          easing: Easing.ease,
-          useNativeDriver: shouldUseNativeDriver,
-        }),
-        Animated.timing(animatedValue, {
-          toValue: 0,
-          duration: 1000,
-          easing: Easing.ease,
-          useNativeDriver: shouldUseNativeDriver,
-        }),
-      ])
+    opacity.value = withRepeat(
+      withTiming(0.7, { duration: 1200, easing: ReanimatedEasing.inOut(ReanimatedEasing.ease) }),
+      -1,
+      true,
     );
-    animation.start();
-    return () => animation.stop();
-  }, [animatedValue, shouldUseNativeDriver]);
+  }, [opacity]);
 
-  const opacity = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
-  });
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  const baseStyle = [
+    styles.skeleton,
+    {
+      width,
+      height,
+      borderRadius,
+      backgroundColor: colors.surfaceLight,
+    },
+    style,
+  ];
+
+  if (Platform.OS === 'web') {
+    return (
+      <View
+        testID={testID}
+        style={[
+          ...baseStyle,
+          // @ts-ignore — web-only: CSS shimmer sweep
+          {
+            backgroundImage:
+              `linear-gradient(90deg, ${colors.surfaceLight} 0%, ${colors.backgroundTertiary} 50%, ${colors.surfaceLight} 100%)`,
+            backgroundSize: '200% 100%',
+            animation: 'slider-shimmer 1.8s ease-in-out infinite',
+          },
+        ]}
+      />
+    );
+  }
 
   return (
     <Animated.View
       testID={testID}
-      style={[
-        styles.skeleton,
-        {
-          width,
-          height,
-          borderRadius,
-          backgroundColor: colors.surfaceLight,
-          opacity,
-        },
-        style,
-      ]}
+      style={[...baseStyle, pulseStyle]}
     />
   );
 };

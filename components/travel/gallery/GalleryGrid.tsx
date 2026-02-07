@@ -1,8 +1,9 @@
 import React from 'react'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay'
 
 import type { GalleryItem } from './types'
 
@@ -55,9 +56,8 @@ export const GalleryGrid: React.FC<{
           <View key={stableKey} style={styles.imageWrapper} testID="gallery-image">
             {image.isUploading ? (
               <View style={styles.uploadingImageContainer}>
-                <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
+                <ShimmerOverlay />
                 <View style={styles.uploadingOverlayImage}>
-                  <ActivityIndicator size="large" color={colors.textInverse} />
                   <Text style={[styles.uploadingImageText, { color: colors.textInverse }]}>Загрузка...</Text>
                 </View>
                 <DeleteAction
@@ -101,7 +101,7 @@ export const GalleryGrid: React.FC<{
               </View>
             ) : !image.url ? (
               <View style={styles.uploadingImageContainer}>
-                <View style={[styles.skeleton, { backgroundColor: colors.surfaceMuted }]} />
+                <ShimmerOverlay />
                 <DeleteAction
                   onActivate={() => onDelete(stableKey)}
                   style={[styles.deleteButton, { backgroundColor: 'rgba(255,255,255,0.9)' }]}
@@ -113,20 +113,7 @@ export const GalleryGrid: React.FC<{
             ) : (
               <>
                 {!image.hasLoaded && (
-                  <View
-                    style={[
-                      StyleSheet.absoluteFillObject,
-                      {
-                        backgroundColor: colors.surfaceMuted,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        zIndex: 0,
-                        pointerEvents: 'none',
-                      },
-                    ]}
-                  >
-                    <ActivityIndicator size="small" color={colors.primary} />
-                  </View>
+                  <ShimmerOverlay style={{ zIndex: 0, pointerEvents: 'none' } as any} />
                 )}
                 <ImageCardMedia
                   src={image.url}

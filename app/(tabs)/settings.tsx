@@ -47,6 +47,7 @@ export default function SettingsScreen() {
     const [vk, setVk] = useState('');
     const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string>('');
     const [avatarFile, setAvatarFile] = useState<UploadUserProfileAvatarFile | null>(null);
+    const [settingsAvatarError, setSettingsAvatarError] = useState(false);
     const webFileInputRef = useRef<any>(null);
 
     const cleanText = useCallback((value: unknown) => {
@@ -344,8 +345,8 @@ export default function SettingsScreen() {
                     <View style={styles.card}>
                         <View style={styles.profileHeaderRow}>
                             <View style={styles.profileAvatar}>
-                                {profile?.avatar ? (
-                                    <Image source={{ uri: profile.avatar }} style={styles.profileAvatarImage} />
+                                {profile?.avatar && !settingsAvatarError ? (
+                                    <Image source={{ uri: profile.avatar }} style={styles.profileAvatarImage} onError={() => setSettingsAvatarError(true)} />
                                 ) : (
                                     <Feather name="user" size={18} color={colors.primary} />
                                 )}

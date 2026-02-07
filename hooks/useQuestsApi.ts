@@ -232,15 +232,20 @@ const PROGRESS_SYNC_DEBOUNCE_MS = 2000;
 export function useQuestProgressSync(questId: string | undefined, isAuthenticated: boolean) {
     const [progress, setProgress] = useState<ApiQuestProgress | null>(null);
     const [syncing, setSyncing] = useState(false);
+    const [progressLoading, setProgressLoading] = useState(isAuthenticated && !!questId);
     const progressIdRef = useRef<number | null>(null);
     const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingDataRef = useRef<any>(null);
 
     // Загрузка прогресса при маунте
     useEffect(() => {
-        if (!questId || !isAuthenticated) return;
+        if (!questId || !isAuthenticated) {
+            setProgressLoading(false);
+            return;
+        }
 
         let cancelled = false;
+        setProgressLoading(true);
         fetchOrCreateProgress(questId)
             .then((data) => {
                 if (!cancelled) {
@@ -250,6 +255,9 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
             })
             .catch((err) => {
                 console.warn('Could not load quest progress from server:', err);
+            })
+            .finally(() => {
+                if (!cancelled) setProgressLoading(false);
             });
 
         return () => { cancelled = true; };
@@ -329,5 +337,5 @@ export function useQuestProgressSync(questId: string | undefined, isAuthenticate
         }
     }, [isAuthenticated]);
 
-    return { progress, syncing, saveProgress, resetProgress };
+    return { progress, progressLoading, syncing, saveProgress, resetProgress };
 }

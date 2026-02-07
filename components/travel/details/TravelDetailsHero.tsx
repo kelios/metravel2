@@ -85,11 +85,9 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
           width: '100%',
           height: height ? `${height}px` : '100%',
           borderRadius: 12,
-          // React Native Web doesn't support shorthand `background`; use long-form.
           backgroundColor: colors.backgroundSecondary,
           // @ts-ignore web-only property
-          backgroundImage: `linear-gradient(180deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 100%)`,
-          border: `1px solid ${colors.borderLight}`,
+          backgroundImage: `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 50%, ${colors.backgroundSecondary} 100%)`,
           boxSizing: 'border-box',
         }}
         aria-hidden="true"
@@ -104,8 +102,6 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
         height: height,
         borderRadius: 12,
         backgroundColor: colors.backgroundSecondary,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
       }}
     />
   )

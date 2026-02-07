@@ -68,6 +68,12 @@ export type QuestWizardProps = {
     }) => void;
     /** Callback при сбросе прогресса */
     onProgressReset?: () => void;
+    /** Начальный прогресс, загруженный с бэкенда (приоритет над AsyncStorage) */
+    initialProgress?: {
+        currentIndex: number; unlockedIndex: number;
+        answers: Record<string, string>; attempts: Record<string, number>;
+        hints: Record<string, boolean>; showMap: boolean;
+    };
 };
 
 // ===================== ТЕМА =====================
@@ -372,7 +378,7 @@ const StepCard = memo((props: StepCardProps) => {
 });
 
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, onProgressChange, onProgressReset }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_progress', city, onProgressChange, onProgressReset, initialProgress }: QuestWizardProps) {
     const { colors, styles } = useQuestWizardTheme();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
 
@@ -390,24 +396,42 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
     const compactNav = screenW < 600;
     const wideDesktop = screenW >= 900;
 
-    // Загрузка прогресса
+    // Загрузка прогресса: приоритет — initialProgress (бэкенд), fallback — AsyncStorage
     useEffect(() => {
         const loadProgress = async () => {
             try {
                 suppressSave.current = true;
-                const saved = await AsyncStorage.getItem(storageKey);
-                if (saved) {
-                    // ✅ FIX-010: Используем безопасный парсинг JSON
-                    const { safeJsonParseString } = require('@/utils/safeJsonParse');
-                    const data = safeJsonParseString(saved, { index: 0, unlocked: 0, answers: {}, attempts: {}, hints: {}, showMap: true });
-                    setCurrentIndex(data.index ?? 0);
-                    setUnlockedIndex(data.unlocked ?? 0);
-                    setAnswers(data.answers ?? {});
-                    setAttempts(data.attempts ?? {});
-                    setHints(data.hints ?? {});
-                    setShowMap(data.showMap !== undefined ? data.showMap : true);
+                if (initialProgress) {
+                    setCurrentIndex(initialProgress.currentIndex ?? 0);
+                    setUnlockedIndex(initialProgress.unlockedIndex ?? 0);
+                    setAnswers(initialProgress.answers ?? {});
+                    setAttempts(initialProgress.attempts ?? {});
+                    setHints(initialProgress.hints ?? {});
+                    setShowMap(initialProgress.showMap !== undefined ? initialProgress.showMap : true);
+                    // Синхронизируем бэкенд-прогресс в AsyncStorage для офлайн-доступа
+                    await AsyncStorage.setItem(storageKey, JSON.stringify({
+                        index: initialProgress.currentIndex ?? 0,
+                        unlocked: initialProgress.unlockedIndex ?? 0,
+                        answers: initialProgress.answers ?? {},
+                        attempts: initialProgress.attempts ?? {},
+                        hints: initialProgress.hints ?? {},
+                        showMap: initialProgress.showMap !== undefined ? initialProgress.showMap : true,
+                    })).catch(() => {});
                 } else {
-                    setCurrentIndex(0); setUnlockedIndex(0); setAnswers({}); setAttempts({}); setHints({}); setShowMap(true);
+                    const saved = await AsyncStorage.getItem(storageKey);
+                    if (saved) {
+                        // ✅ FIX-010: Используем безопасный парсинг JSON
+                        const { safeJsonParseString } = require('@/utils/safeJsonParse');
+                        const data = safeJsonParseString(saved, { index: 0, unlocked: 0, answers: {}, attempts: {}, hints: {}, showMap: true });
+                        setCurrentIndex(data.index ?? 0);
+                        setUnlockedIndex(data.unlocked ?? 0);
+                        setAnswers(data.answers ?? {});
+                        setAttempts(data.attempts ?? {});
+                        setHints(data.hints ?? {});
+                        setShowMap(data.showMap !== undefined ? data.showMap : true);
+                    } else {
+                        setCurrentIndex(0); setUnlockedIndex(0); setAnswers({}); setAttempts({}); setHints({}); setShowMap(true);
+                    }
                 }
             } catch (e) {
                 // ✅ FIX-007: Используем централизованный logger
@@ -418,6 +442,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
             }
         };
         loadProgress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [storageKey]);
 
     // Сохранение прогресса (локально + бэкенд)

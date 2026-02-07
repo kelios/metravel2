@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
+import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { Image as ExpoImage, ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
@@ -426,12 +427,7 @@ function OptimizedImage({
 
       {/* Индикатор загрузки */}
       {!blurOnly && validSource && isLoading && !hasError && !shouldDisableNetwork && (
-        <View style={styles.loadingContainer} testID="optimized-image-loading">
-          <ActivityIndicator
-            size="small"
-            color={colors.primary}
-          />
-        </View>
+        <ShimmerOverlay testID="optimized-image-loading" />
       )}
 
       {/* Заглушка при ошибке / отсутствии uri */}
@@ -459,17 +455,15 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     height: '100%',
     ...(Platform.OS === 'web' ? ({ objectPosition: 'center' } as any) : null),
   },
-  loadingContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSecondary,
-  },
   errorContainer: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.mutedBackground,
+    backgroundColor: colors.backgroundSecondary,
+    ...Platform.select({
+      web: {
+        backgroundImage:
+          `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.mutedBackground} 50%, ${colors.backgroundSecondary} 100%)`,
+      },
+    }),
   },
 });
 

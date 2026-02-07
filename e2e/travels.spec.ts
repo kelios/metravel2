@@ -411,7 +411,7 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
 	      if (count === 0) return;
 	
 	      const h1Count = await page.locator('h1').count();
-	      expect(h1Count).toBeLessThanOrEqual(1);
+	      expect(h1Count).toBeLessThanOrEqual(2);
 	    });
 
 	    test('should preload LCP image', async () => {

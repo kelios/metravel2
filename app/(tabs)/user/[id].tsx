@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Pressable, Platform, Image, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -24,6 +24,7 @@ export default function PublicUserProfileScreen() {
   const { profile, isLoading, error, fullName } = useUserProfileCached(userId, {
     enabled: !!userId,
   });
+  const [avatarError, setAvatarError] = useState(false);
 
   const socials = useMemo(
     () =>
@@ -80,8 +81,12 @@ export default function PublicUserProfileScreen() {
         <View style={styles.headerCard}>
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
-              {profile.avatar ? (
-                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
+              {profile.avatar && !avatarError ? (
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={styles.avatarImage}
+                  onError={() => setAvatarError(true)}
+                />
               ) : (
                 <Feather name="user" size={28} color={colors.primary} />
               )}

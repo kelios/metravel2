@@ -12,6 +12,7 @@ import Feather from '@expo/vector-icons/Feather';
 import * as ImagePicker from 'expo-image-picker';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import { uploadImage, deleteImage } from '@/api/misc';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -275,13 +276,15 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
       )}
 
       {isInitialLoading ? (
-        <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
+        <View style={styles.loader}>
+          <ShimmerOverlay />
+        </View>
       ) : images.length > 0 ? (
         <View style={styles.galleryGrid}>
           {images.map((image, index) => (
             <View key={image.id} style={[styles.imageWrapper, { backgroundColor: colors.surfaceMuted }]}>
               {loading[index] ? (
-                <ActivityIndicator size="large" color={colors.textInverse} />
+                <ShimmerOverlay />
               ) : (
                 <>
                   <ImageCardMedia
