@@ -168,8 +168,8 @@ export default function RootLayout() {
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
 
-        // Відкладаємо ConsentBanner на 2 секунди для покращення FCP/LCP
-        consentTimer = setTimeout(() => setShowConsentBanner(true), 2000);
+        // Відкладаємо ConsentBanner на 4 секунди для покращення FCP/LCP
+        consentTimer = setTimeout(() => setShowConsentBanner(true), 4000);
 
         return () => {
           if (mountedTimer) clearTimeout(mountedTimer);
@@ -251,15 +251,27 @@ export default function RootLayout() {
       if (!isProd) return;
 
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
+        const registerSW = () => {
           navigator.serviceWorker
             .register('/sw.js', { updateViaCache: 'none' as any })
             .then((registration) => {
-              // Ensure we check for an updated SW as soon as possible.
               registration.update().catch(() => {});
             })
             .catch(() => {});
-        });
+        };
+        // Defer SW registration to avoid competing with critical resources.
+        const onLoad = () => {
+          if ((window as any).requestIdleCallback) {
+            (window as any).requestIdleCallback(registerSW, { timeout: 5000 });
+          } else {
+            setTimeout(registerSW, 4000);
+          }
+        };
+        if (document.readyState === 'complete') {
+          onLoad();
+        } else {
+          window.addEventListener('load', onLoad, { once: true });
+        }
       }
     }, []);
 

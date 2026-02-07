@@ -3,7 +3,7 @@
 // ✅ РЕДИЗАЙН: Поддержка темной темы с useThemedColors
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FlashList } from '@shopify/flash-list';
@@ -207,43 +207,80 @@ export default function RecentViews({
         </Pressable>
       </View>
 
-      <FlashList
-        testID="recent-views-list"
-        data={recentTravels}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => {
-          const countries = item.countryName?.split(',').map((c: string) => c.trim()).filter(Boolean) || [];
-          return (
-            <View style={styles.cardWrapper}>
-              <UnifiedTravelCard
-                testID={`travel-card-${item.id}`}
-                title={item.name}
-                imageUrl={item.travel_image_thumb_url}
-                metaText={countries.length > 0 ? countries.join(', ') : null}
-                onPress={() => router.push(`/travels/${item.slug || item.id}`)}
-                rightTopSlot={
-                  <FavoriteButton
-                    id={item.id}
-                    type="travel"
-                    title={item.name || ''}
-                    imageUrl={item.travel_image_thumb_url}
-                    url={`/travels/${item.slug || item.id}`}
-                    country={countries[0]}
-                    size={18}
-                  />
-                }
-                imageHeight={Platform.OS === 'web' ? 200 : 180}
-                style={{ height: '100%', backgroundColor: colors.surface }}
-              />
-            </View>
-          );
-        }}
-        contentContainerStyle={styles.listContent}
-        {...(Platform.OS === 'web' ? { onWheel: handleHorizontalWheel } : {})}
-        drawDistance={800}
-      />
+      {Platform.OS === 'web' ? (
+        <ScrollView
+          testID="recent-views-list"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          {...({ onWheel: handleHorizontalWheel } as any)}
+        >
+          {recentTravels.map((item) => {
+            const countries = item.countryName?.split(',').map((c: string) => c.trim()).filter(Boolean) || [];
+            return (
+              <View key={String(item.id)} style={styles.cardWrapper}>
+                <UnifiedTravelCard
+                  testID={`travel-card-${item.id}`}
+                  title={item.name}
+                  imageUrl={item.travel_image_thumb_url}
+                  metaText={countries.length > 0 ? countries.join(', ') : null}
+                  onPress={() => router.push(`/travels/${item.slug || item.id}`)}
+                  rightTopSlot={
+                    <FavoriteButton
+                      id={item.id}
+                      type="travel"
+                      title={item.name || ''}
+                      imageUrl={item.travel_image_thumb_url}
+                      url={`/travels/${item.slug || item.id}`}
+                      country={countries[0]}
+                      size={18}
+                    />
+                  }
+                  imageHeight={200}
+                  style={{ height: '100%', backgroundColor: colors.surface }}
+                />
+              </View>
+            );
+          })}
+        </ScrollView>
+      ) : (
+        <FlashList
+          testID="recent-views-list"
+          data={recentTravels}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => {
+            const countries = item.countryName?.split(',').map((c: string) => c.trim()).filter(Boolean) || [];
+            return (
+              <View style={styles.cardWrapper}>
+                <UnifiedTravelCard
+                  testID={`travel-card-${item.id}`}
+                  title={item.name}
+                  imageUrl={item.travel_image_thumb_url}
+                  metaText={countries.length > 0 ? countries.join(', ') : null}
+                  onPress={() => router.push(`/travels/${item.slug || item.id}`)}
+                  rightTopSlot={
+                    <FavoriteButton
+                      id={item.id}
+                      type="travel"
+                      title={item.name || ''}
+                      imageUrl={item.travel_image_thumb_url}
+                      url={`/travels/${item.slug || item.id}`}
+                      country={countries[0]}
+                      size={18}
+                    />
+                  }
+                  imageHeight={180}
+                  style={{ height: '100%', backgroundColor: colors.surface }}
+                />
+              </View>
+            );
+          }}
+          contentContainerStyle={styles.listContent}
+          drawDistance={800}
+        />
+      )}
     </View>
   );
 }

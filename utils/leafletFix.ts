@@ -36,6 +36,36 @@ if (typeof window !== 'undefined') {
       }
     }
 
+    // Patch Map.prototype.remove to catch "Map container is being reused by another instance".
+    // react-leaflet's MapContainer calls map.remove() without try/catch on unmount.
+    // If the container's _leaflet_id was overwritten by a new instance, remove() throws.
+    if (leaflet?.Map?.prototype?.remove && !leaflet.Map.prototype.__metravelPatchedRemove) {
+      const originalRemove = leaflet.Map.prototype.remove
+      leaflet.Map.prototype.remove = function safeRemove() {
+        try {
+          return originalRemove.call(this)
+        } catch (err: any) {
+          if (
+            typeof err?.message === 'string' &&
+            err.message.includes('reused by another instance')
+          ) {
+            // Container was already claimed by a new map instance.
+            // Do best-effort cleanup without touching the container.
+            try { this._stop?.() } catch { /* noop */ }
+            try {
+              for (const i in this._handlers) {
+                try { this._handlers[i]?.remove?.() } catch { /* noop */ }
+              }
+            } catch { /* noop */ }
+            this._loaded = false
+            return this
+          }
+          throw err
+        }
+      }
+      leaflet.Map.prototype.__metravelPatchedRemove = true
+    }
+
     patchLeaflet(leaflet)
 
     const globalL = (globalThis as any)?.L

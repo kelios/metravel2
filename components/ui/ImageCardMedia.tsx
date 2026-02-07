@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
@@ -133,9 +133,7 @@ function ImageCardMedia({
       format: 'auto',
     }) ?? uri;
     
-    // Add cache-busting parameter to force reload with new fit parameter (remote URLs only).
-    const separator = optimized.includes('?') ? '&' : '?';
-    return `${optimized}${separator}cb=contain`;
+    return optimized;
   }, [resolvedSource]);
   const webBlurFallbackUri = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -156,10 +154,6 @@ function ImageCardMedia({
       }) ?? fallback
     );
   }, [resolvedSource]);
-  const [webBlurSrc, setWebBlurSrc] = useState<string | null>(null);
-  useEffect(() => {
-    setWebBlurSrc(webBlurUri);
-  }, [webBlurUri]);
 
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -234,10 +228,10 @@ function ImageCardMedia({
         <>
           {Platform.OS === 'web' &&
             blurBackground &&
-            (webBlurSrc || webBlurUri || webBlurFallbackUri) && (
+            (webBlurUri || webBlurFallbackUri) && (
               <img
                 aria-hidden
-                src={webBlurSrc || webBlurUri || webBlurFallbackUri || undefined}
+                src={webBlurUri || webBlurFallbackUri || undefined}
                 alt=""
                 style={{
                   position: 'absolute',
@@ -255,8 +249,8 @@ function ImageCardMedia({
                   borderRadius: resolvedBorderRadius,
                   display: 'block',
                 }}
-                loading="lazy"
-                decoding="async"
+                loading="eager"
+                decoding="auto"
                 // @ts-ignore
                 fetchPriority="low"
                 onError={(e) => {
@@ -287,7 +281,7 @@ function ImageCardMedia({
                 display: 'block',
               }}
               loading={loading}
-              decoding="async"
+              decoding="auto"
               // @ts-ignore
               fetchPriority={priority === 'high' ? 'high' : 'auto'}
               onLoad={onLoad}

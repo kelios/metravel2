@@ -194,9 +194,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, [prefetchEnabled, preloadCount])
 
   const renderWindow = useMemo(() => {
-    // Keep a small window of mounted slides to avoid triggering requests for the entire gallery.
-    // Wider on desktop to reduce "blank" risk while scrolling.
-    const base = isMobile ? 1 : 2
+    // Keep a window of mounted slides to avoid triggering requests for the entire gallery.
+    // Wider window reduces "blank" risk and flicker when scrolling.
+    const base = isMobile ? 2 : 3
     return Math.max(base, effectivePreload)
   }, [effectivePreload, isMobile])
 
@@ -314,8 +314,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const shouldRender = distance <= renderWindow
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
-      const mainPriority = isFirstSlide ? 'high' : 'low'
-      const shouldBlur = blurBackground && distance <= 1
+      const mainPriority = isFirstSlide ? 'high' : (distance <= 1 ? 'normal' : 'low')
+      // Disable blur for non-first slides to eliminate the gray→blur→photo flicker.
+      // The blur background fetches a separate 64px image from the server which adds
+      // visible latency on every slide transition.
+      const shouldBlur = blurBackground && isFirstSlide
 
       if (!shouldRender) {
         return (
@@ -336,7 +339,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 fit={fit}
                 blurBackground={shouldBlur}
                 priority={mainPriority as any}
-                loading={isFirstSlide ? 'eager' : 'lazy'}
+                loading={distance <= 1 ? 'eager' : 'lazy'}
                 prefetch={isFirstSlide}
                 transition={0}
                 style={styles.img}

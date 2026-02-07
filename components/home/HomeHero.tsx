@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
-import { Asset } from 'expo-asset';
 import { useAuth } from '@/context/AuthContext';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -64,34 +63,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   const showImage = hydrated;
   const shouldRenderImageSlot = isWeb;
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!showImage) return;
-    if (typeof document === 'undefined') return;
-
-    const moduleId = require('../../assets/images/pdf.webp');
-    const asset = Asset.fromModule(moduleId);
-    const href = typeof asset?.uri === 'string' ? asset.uri : '';
-    if (!href) return;
-
-    const id = 'preload-home-hero-pdf';
-    if (document.getElementById(id)) return;
-
-    const link = document.createElement('link');
-    link.id = id;
-    link.rel = 'preload';
-    link.as = 'image';
-    link.href = href;
-    document.head.appendChild(link);
-
-    return () => {
-      try {
-        link.parentNode?.removeChild(link);
-      } catch {
-        // noop
-      }
-    };
-  }, [showImage]);
+  // Preload removed: the <img loading="eager"> already fetches the image.
+  // A separate <link rel="preload"> caused "preloaded but not used" warnings,
+  // especially on mobile where the image slot is CSS-hidden (<768px).
 
   const styles = useMemo(() => StyleSheet.create({
     band: {

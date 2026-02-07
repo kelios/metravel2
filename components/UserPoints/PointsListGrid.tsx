@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText } from 'react-native'
+import React, { useMemo, useCallback } from 'react'
+import { Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText, RefreshControl } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'
 
@@ -303,36 +303,64 @@ export const PointsListGrid: React.FC<{
 
   const renderListPanel = React.useCallback(
     () => (
-	      <FlashList
-	        key={listKey ?? 'userpoints-list'}
-	        style={localStyles.rightPanelScroll}
-	        contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
-	        data={filteredPoints}
-	        extraData={listExtraData}
-	        keyExtractor={(item) => String((item as any)?.id)}
-	        testID="userpoints-panel-content-list"
-	        renderItem={({ item }) => {
-	          const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
-	          return (
-            <View style={localStyles.pointsListItem}>
-              {renderItem({ item })}
-              {showingRecommendations && routeInfo ? (
-                <View style={localStyles.routeInfo}>
-                  <RNText style={localStyles.routeInfoText}>
-                    {routeInfo.distance} км · ~{routeInfo.duration} мин
-                  </RNText>
-                </View>
-              ) : null}
-            </View>
-          )
-        }}
-        ListHeaderComponent={renderListHeader()}
-        showsVerticalScrollIndicator={true}
-        drawDistance={Platform.OS === 'web' ? 900 : 600}
-      />
+      isWeb ? (
+        <ScrollView
+          key={listKey ?? 'userpoints-list'}
+          style={localStyles.rightPanelScroll}
+          contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
+          testID="userpoints-panel-content-list"
+          showsVerticalScrollIndicator={true}
+        >
+          {renderListHeader()}
+          {filteredPoints.map((item: any) => {
+            const routeInfo = recommendedRoutes?.[Number(item?.id)]
+            return (
+              <View key={String(item?.id)} style={localStyles.pointsListItem}>
+                {renderItem({ item })}
+                {showingRecommendations && routeInfo ? (
+                  <View style={localStyles.routeInfo}>
+                    <RNText style={localStyles.routeInfoText}>
+                      {routeInfo.distance} км · ~{routeInfo.duration} мин
+                    </RNText>
+                  </View>
+                ) : null}
+              </View>
+            )
+          })}
+        </ScrollView>
+      ) : (
+        <FlashList
+          key={listKey ?? 'userpoints-list'}
+          style={localStyles.rightPanelScroll}
+          contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
+          data={filteredPoints}
+          extraData={listExtraData}
+          keyExtractor={(item) => String((item as any)?.id)}
+          testID="userpoints-panel-content-list"
+          renderItem={({ item }) => {
+            const routeInfo = recommendedRoutes?.[Number((item as any)?.id)]
+            return (
+              <View style={localStyles.pointsListItem}>
+                {renderItem({ item })}
+                {showingRecommendations && routeInfo ? (
+                  <View style={localStyles.routeInfo}>
+                    <RNText style={localStyles.routeInfoText}>
+                      {routeInfo.distance} км · ~{routeInfo.duration} мин
+                    </RNText>
+                  </View>
+                ) : null}
+              </View>
+            )
+          }}
+          ListHeaderComponent={renderListHeader()}
+          showsVerticalScrollIndicator={true}
+          drawDistance={600}
+        />
+      )
     ),
     [
       filteredPoints,
+      isWeb,
       listExtraData,
       listKey,
       localStyles.pointsList,
@@ -472,13 +500,50 @@ export const PointsListGrid: React.FC<{
 
   if (viewMode === 'list') {
     const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
-	    return (
-	      <FlashList
-	        data={filteredPoints}
-	        renderItem={({ item, index }: { item: any; index: number }) => {
-	          if (columns <= 1) {
-	            return renderItem({ item })
-	          }
+    if (isWeb) {
+      return (
+        <ScrollView
+          contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={onRefresh} />
+          }
+        >
+          {renderHeader()}
+          {filteredPoints.length === 0 && !isLoading ? renderEmpty() : null}
+          {columns > 1 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {filteredPoints.map((item: any, index: number) => {
+                const gap = 12
+                const col = columns > 0 ? index % columns : 0
+                const isFirst = col === 0
+                const isLast = col === columns - 1
+                const paddingLeft = isFirst ? 0 : gap / 2
+                const paddingRight = isLast ? 0 : gap / 2
+                return (
+                  <View key={String(item.id)} style={{ paddingLeft, paddingRight, width: `${100 / columns}%` }}>
+                    {renderItem({ item })}
+                  </View>
+                )
+              })}
+            </View>
+          ) : (
+            filteredPoints.map((item: any) => (
+              <React.Fragment key={String(item.id)}>
+                {renderItem({ item })}
+              </React.Fragment>
+            ))
+          )}
+          {renderFooter?.()}
+        </ScrollView>
+      )
+    }
+    return (
+      <FlashList
+        data={filteredPoints}
+        renderItem={({ item, index }: { item: any; index: number }) => {
+          if (columns <= 1) {
+            return renderItem({ item })
+          }
           const gap = 12
           const col = columns > 0 ? index % columns : 0
           const isFirst = col === 0
@@ -500,7 +565,7 @@ export const PointsListGrid: React.FC<{
         contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}
         refreshing={isLoading}
         onRefresh={onRefresh}
-        drawDistance={Platform.OS === 'web' ? 900 : 600}
+        drawDistance={600}
       />
     )
   }

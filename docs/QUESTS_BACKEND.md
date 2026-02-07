@@ -265,4 +265,5 @@ QuestMeta.objects.all().delete()
 # Затем повторить миграцию с шага 1
 ```
 
-Фронтенд автоматически переключится на локальный реестр (`components/quests/registry.ts`) если API недоступен (fallback в `useQuestsList`).
+> **Примечание:** Локальный реестр (`components/quests/registry.ts`, `cityQuests.ts`, `data/**`) удалён.
+> Фронтенд полностью зависит от API. Если API недоступен, пользователь увидит сообщение об ошибке.

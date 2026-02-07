@@ -2,7 +2,8 @@
  * @jest-environment jsdom
  */
 
-import { render } from '@testing-library/react-native';
+import React, { Suspense } from 'react';
+import { render, waitFor } from '@testing-library/react-native';
 import { TravelEngagementSection } from '@/components/travel/details/TravelDetailsDeferred';
 
 // Stub heavy child components to simple markers
@@ -25,19 +26,36 @@ const baseTravel: any = {
   travelAddress: [],
 };
 
+const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Suspense fallback={null}>{children}</Suspense>
+);
+
 describe('TravelEngagementSection', () => {
-  it('renders Telegram block once on web', () => {
-    const { getAllByTestId } = render(
-      <TravelEngagementSection travel={baseTravel} isMobile={false} />
+  it('renders Telegram block once on web', async () => {
+    const result = render(
+      <TravelEngagementSection travel={baseTravel} isMobile={false} />,
+      { wrapper: Wrapper }
     );
-    expect(getAllByTestId('travel-details-telegram')).toHaveLength(1);
+    await waitFor(() => {
+      expect(result.getAllByTestId('travel-details-telegram')).toHaveLength(1);
+    });
   });
 
-  it('renders ShareButtons only on desktop/web variant', () => {
-    const desktop = render(<TravelEngagementSection travel={baseTravel} isMobile={false} />);
-    expect(desktop.getAllByTestId('travel-details-share')).toHaveLength(1);
+  it('renders ShareButtons only on desktop/web variant', async () => {
+    const desktop = render(
+      <TravelEngagementSection travel={baseTravel} isMobile={false} />,
+      { wrapper: Wrapper }
+    );
+    await waitFor(() => {
+      expect(desktop.getAllByTestId('travel-details-share')).toHaveLength(1);
+    });
 
-    const mobile = render(<TravelEngagementSection travel={baseTravel} isMobile />);
-    expect(mobile.queryByTestId('travel-details-share')).toBeNull();
+    const mobile = render(
+      <TravelEngagementSection travel={baseTravel} isMobile />,
+      { wrapper: Wrapper }
+    );
+    await waitFor(() => {
+      expect(mobile.queryByTestId('travel-details-share')).toBeNull();
+    });
   });
 });

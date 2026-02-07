@@ -21,7 +21,7 @@ const CRITICAL_JS_CHUNKS = [
 ];
 
 const MAX_CACHE_SIZE = 100;
-const MAX_IMAGE_CACHE_SIZE = 50;
+const MAX_IMAGE_CACHE_SIZE = 80;
 const MAX_JS_CACHE_SIZE = 200;
 const CACHE_EXPIRATION_TIME = 7 * 24 * 60 * 60 * 1000; // 7 days
 const JS_CACHE_EXPIRATION_TIME = 30 * 24 * 60 * 60 * 1000; // 30 days для JS chunks
@@ -108,7 +108,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (request.destination === 'style' || request.destination === 'font') {
+  if (request.destination === 'font') {
+    event.respondWith(cacheFirstLongTerm(request, STATIC_CACHE, MAX_CACHE_SIZE));
+    return;
+  }
+
+  if (request.destination === 'style') {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }

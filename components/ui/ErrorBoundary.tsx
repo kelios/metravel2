@@ -19,6 +19,7 @@ interface State {
 export default class ErrorBoundary extends Component<Props, State> {
   static contextType = ThemeContext;
   override context: React.ContextType<typeof ThemeContext> | null = null;
+  private _leafletAutoRetryCount = 0;
 
   constructor(props: Props) {
     super(props);
@@ -37,6 +38,26 @@ export default class ErrorBoundary extends Component<Props, State> {
       errorBoundary: true,
     });
     this.props.onError?.(error, errorInfo);
+
+    // Auto-recover from Leaflet "Map container is being reused by another instance"
+    // by cleaning all map containers and resetting (max 2 retries to avoid loops).
+    const msg = String(error?.message ?? '');
+    if (
+      msg.includes('reused by another instance') &&
+      this._leafletAutoRetryCount < 2 &&
+      typeof document !== 'undefined'
+    ) {
+      this._leafletAutoRetryCount += 1;
+      try {
+        const containers = document.querySelectorAll('[id^="metravel-leaflet-map"]');
+        containers.forEach((el: any) => {
+          try { delete el._leaflet_map; } catch { /* noop */ }
+          try { delete el._leaflet_id; } catch { /* noop */ }
+          try { if (typeof el.innerHTML === 'string') el.innerHTML = ''; } catch { /* noop */ }
+        });
+      } catch { /* noop */ }
+      this.handleReset();
+    }
   }
 
   handleReset = () => {

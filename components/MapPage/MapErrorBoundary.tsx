@@ -26,7 +26,10 @@ class MapErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
     };
+    this._autoRetryCount = 0;
   }
+
+  private _autoRetryCount: number;
 
   static getDerivedStateFromError(error: Error): State {
     return {
@@ -40,6 +43,14 @@ class MapErrorBoundary extends Component<Props, State> {
 
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
+    }
+
+    // Auto-recover from "Map container is being reused by another instance"
+    // by cleaning all containers and resetting (max 2 retries to avoid loops).
+    const msg = String(error?.message ?? '');
+    if (msg.includes('reused by another instance') && this._autoRetryCount < 2) {
+      this._autoRetryCount += 1;
+      this.handleReset();
     }
   }
 
@@ -58,15 +69,9 @@ class MapErrorBoundary extends Component<Props, State> {
               delete (window as any).L.Util._stamps[leafletId];
             }
 
-            // Удаляем карту если есть
-            if (el._leaflet_map) {
-              try {
-                el._leaflet_map.remove();
-              } catch {
-                // Игнорируем ошибки удаления карты
-              }
-              delete el._leaflet_map;
-            }
+            // Удаляем ссылку на карту (не вызываем .remove() — leafletFix.ts
+            // патчит Map.prototype.remove для безопасной очистки).
+            try { delete el._leaflet_map; } catch { /* noop */ }
 
             // Очищаем свойства
             delete el._leaflet_id;
@@ -87,7 +92,7 @@ class MapErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: false,
       error: null,
-    });
+    } as State);
   };
 
   render() {

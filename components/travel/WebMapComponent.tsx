@@ -424,20 +424,12 @@ const WebMapComponent = ({
     }, []);
 
     // Очистка Leaflet контейнеров при размонтировании, чтобы избежать ошибки "Map container is already initialized"
+    // Do NOT call map.remove() here — react-leaflet's MapContainer handles its own
+    // cleanup via its unmount effect, and our leafletFix.ts patch makes that safe.
     useEffect(() => {
         const rootEl = rootRef.current;
         return () => {
-            // React (особенно StrictMode) может смонтировать/размонтировать компонент быстро.
-            // Leaflet требует корректного `map.remove()` для освобождения контейнера.
-            try {
-                if (mapRef.current && typeof mapRef.current.remove === 'function') {
-                    mapRef.current.remove();
-                }
-            } catch {
-                // noop
-            } finally {
-                mapRef.current = null;
-            }
+            mapRef.current = null;
 
             // Дополнительная страховка: сбрасываем id только в контейнере ЭТОГО компонента.
             try {

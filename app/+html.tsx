@@ -162,15 +162,20 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
   // Делаем функцию доступной глобально для React-баннера
   window.metravelLoadAnalytics = loadAnalytics;
 
+  // Synchronously set GA opt-out flag if user explicitly disabled analytics.
+  // This must happen before any GA script loads to prevent tracking.
+  if (HAS_GA && GA_ID && !isAnalyticsAllowed()) {
+    try { window['ga-disable-' + GA_ID] = true; } catch(_e) {}
+  }
+
   // Автозагрузка:
-  // - GA: сразу (если не было явного opt-out)
-  // - Метрика: по idle (если не было явного opt-out)
-  bootstrapGa();
+  // - GA + Метрика: по idle (если не было явного opt-out)
+  // Defer all analytics to avoid blocking the main thread during initial render.
   if (isAnalyticsAllowed()) {
     if (window.requestIdleCallback) {
-      window.requestIdleCallback(loadAnalytics, { timeout: 2000 });
+      window.requestIdleCallback(loadAnalytics, { timeout: 3000 });
     } else {
-      setTimeout(loadAnalytics, 2000);
+      setTimeout(loadAnalytics, 3000);
     }
   }
 })();
@@ -182,13 +187,11 @@ const getEntryPreloadScript = () => String.raw`
   try {
     if (typeof document === 'undefined') return;
     var scripts = document.getElementsByTagName('script');
-    var entrySrc = '';
     for (var i = 0; i < scripts.length; i++) {
       var s = scripts[i];
       var src = s && s.getAttribute ? s.getAttribute('src') : '';
       if (!src) continue;
       if (src.indexOf('/_expo/static/js/web/entry-') !== -1 && src.indexOf('.js') !== -1) {
-        entrySrc = src;
         try {
           if (!s.getAttribute('fetchPriority')) {
             s.setAttribute('fetchPriority', 'high');
@@ -200,15 +203,6 @@ const getEntryPreloadScript = () => String.raw`
         break;
       }
     }
-    if (!entrySrc) return;
-    if (document.querySelector('link[rel="preload"][as="script"][href="' + entrySrc + '"]')) return;
-    var link = document.createElement('link');
-    link.rel = 'preload';
-    link.as = 'script';
-    link.href = entrySrc;
-    link.setAttribute('fetchPriority', 'high');
-    try { link.fetchPriority = 'high'; } catch (_e) {}
-    document.head.appendChild(link);
   } catch (_e) {}
 })();
 `;
@@ -259,39 +253,112 @@ const getFontFaceSwapScript = () => String.raw`
 })();
 `;
 
+const getIconFontPreloadScript = () => String.raw`
+(function(){
+  try {
+    if (typeof document === 'undefined') return;
+    // Find the Feather icon font injected by @expo/vector-icons and preload it.
+    // The font is typically loaded via a dynamically inserted @font-face rule;
+    // preloading it avoids FOIT and reduces the font-loading penalty.
+    var sheets = document.styleSheets;
+    for (var i = 0; i < sheets.length; i++) {
+      try {
+        var rules = sheets[i].cssRules || sheets[i].rules;
+        if (!rules) continue;
+        for (var j = 0; j < rules.length; j++) {
+          var rule = rules[j];
+          if (rule.type === CSSRule.FONT_FACE_RULE) {
+            var src = rule.style.getPropertyValue('src') || '';
+            if (src.indexOf('Feather') !== -1 || src.indexOf('feather') !== -1) {
+              var match = src.match(/url\(["']?([^"')]+)["']?\)/);
+              if (match && match[1]) {
+                var link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'font';
+                link.type = 'font/ttf';
+                link.href = match[1];
+                link.crossOrigin = 'anonymous';
+                document.head.appendChild(link);
+                return;
+              }
+            }
+          }
+        }
+      } catch (_e) { /* cross-origin sheets */ }
+    }
+
+    // Fallback: scan <style> elements for @font-face with feather in the src
+    var styles = document.querySelectorAll('style');
+    for (var k = 0; k < styles.length; k++) {
+      var text = styles[k].textContent || '';
+      if (text.indexOf('@font-face') === -1) continue;
+      if (text.indexOf('feather') === -1 && text.indexOf('Feather') === -1) continue;
+      var m = text.match(/url\(["']?([^"')]+(?:Feather|feather)[^"')]*)["']?\)/);
+      if (!m) m = text.match(/url\(["']?([^"')]+\.ttf[^"')]*)["']?\)/);
+      if (m && m[1]) {
+        var l = document.createElement('link');
+        l.rel = 'preload';
+        l.as = 'font';
+        l.type = 'font/ttf';
+        l.href = m[1];
+        l.crossOrigin = 'anonymous';
+        document.head.appendChild(l);
+        return;
+      }
+    }
+  } catch (_e) {}
+})();
+`;
+
 const getHomeHeroPreloadScript = () => String.raw`
 (function(){
   try {
     var path = window.location && window.location.pathname;
+    // Only run on the home page
     if (path && path !== '/' && path !== '/index') return;
 
-    // Expo static export hashes asset filenames. Scan existing scripts/links
-    // for a reference to the pdf.webp asset so we can preload the correct URL.
+    // Preload the home hero image (pdf.webp) for faster LCP.
+    // The image is a static asset bundled by Expo, so we look for it in the
+    // rendered HTML or construct the known asset path.
     function findAssetUrl() {
-      // Check if Expo already emitted a <link> or <img> referencing pdf.webp (or pdf-<hash>.webp)
-      var imgs = document.querySelectorAll('img[src*="pdf"]');
-      for (var i = 0; i < imgs.length; i++) {
-        var s = imgs[i].getAttribute('src') || '';
-        if (s.indexOf('pdf') !== -1 && s.indexOf('.webp') !== -1) return s;
-      }
+      // In production builds, Expo hashes static assets into /_expo/static/...
+      // We can't know the exact hash at HTML-generation time, but we can
+      // discover it from <script> or <link> tags, or just preconnect to self.
+      // The most reliable approach: create an early <link rel="preload"> once
+      // we find the image in the DOM after first paint.
       return null;
     }
 
-    // Try immediately (SSR may already have the asset reference)
-    var href = findAssetUrl();
-    if (href) {
-      if (document.querySelector('link[rel="preload"][href="' + href + '"]')) return;
-      var link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'image';
-      link.href = href;
-      link.type = 'image/webp';
-      try { link.fetchPriority = 'high'; link.setAttribute('fetchPriority', 'high'); } catch(_e){}
-      document.head.appendChild(link);
+    // Instead of preloading the image (which we can't resolve the hashed URL for),
+    // we ensure the entry JS bundle gets high priority so React renders the hero faster.
+    var scripts = document.getElementsByTagName('script');
+    for (var i = 0; i < scripts.length; i++) {
+      var s = scripts[i];
+      var src = s && s.getAttribute ? s.getAttribute('src') : '';
+      if (!src) continue;
+      if (src.indexOf('/_expo/static/js/web/entry-') !== -1) {
+        try {
+          s.setAttribute('fetchPriority', 'high');
+          if (typeof s.fetchPriority !== 'undefined') s.fetchPriority = 'high';
+        } catch (_e) {}
+
+        // Also add a modulepreload/preload link for the entry bundle
+        if (!document.querySelector('link[rel="modulepreload"][href="' + src + '"]') &&
+            !document.querySelector('link[rel="preload"][href="' + src + '"]')) {
+          var link = document.createElement('link');
+          link.rel = s.type === 'module' ? 'modulepreload' : 'preload';
+          if (link.rel === 'preload') link.as = 'script';
+          link.href = src;
+          try {
+            link.fetchPriority = 'high';
+            link.setAttribute('fetchPriority', 'high');
+          } catch (_e) {}
+          document.head.appendChild(link);
+        }
+        break;
+      }
     }
-    // If not found in SSR, a MutationObserver will pick it up once React renders
-    // (handled by the component-level preload in HomeHero.tsx as fallback).
-  } catch(_e){}
+  } catch (_e) {}
 })();
 `;
 
@@ -586,7 +653,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         dangerouslySetInnerHTML={{ __html: getEntryPreloadScript() }}
       />
 
-      {/* Preload home hero image on "/" to reduce LCP */}
+      {/* Early home hero optimization: boost entry bundle priority on / */}
       <script
         dangerouslySetInnerHTML={{ __html: getHomeHeroPreloadScript() }}
       />
@@ -594,6 +661,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Early travel hero preload to improve LCP on /travels/* */}
       <script
         dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
+      />
+
+      {/* Preload icon font once injected by @expo/vector-icons */}
+      <script
+        dangerouslySetInnerHTML={{ __html: getIconFontPreloadScript() }}
       />
 
       <ScrollViewStyleReset />
@@ -706,6 +778,8 @@ img[fetchpriority="high"]{content-visibility:auto}
 img[loading="lazy"]{content-visibility:auto}
 [data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,${DESIGN_COLORS.criticalBgSecondaryLight})}
 [data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:cover}
+[data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}
+[data-testid="home-hero"]{contain:layout style}
 [data-testid="home-hero-stack"]{min-height:400px;contain:layout style paint;display:flex;flex-direction:column !important;width:100%}
 @media (min-width:768px){[data-testid="home-hero-stack"]{flex-direction:row !important;align-items:center}}
 [data-testid="home-hero-image-slot"]{display:none}

@@ -11,7 +11,6 @@ import {
 } from 'react-native'
 
 import Feather from '@expo/vector-icons/Feather'
-import GalleryLightbox from '@/components/travel/GalleryLightbox'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useFavorites } from '@/context/FavoritesContext'
@@ -33,6 +32,7 @@ import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
 
+const GalleryLightbox = withLazy(() => import('@/components/travel/GalleryLightbox'))
 const Slider: React.FC<any> = withLazy(() => import('@/components/travel/Slider'))
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
@@ -624,12 +624,14 @@ function TravelHeroSectionInner({
 
       {/* 3.7: Fullscreen gallery lightbox */}
       {galleryImages.length > 0 && lightboxIndex >= 0 && (
-        <GalleryLightbox
-          images={galleryImages}
-          initialIndex={lightboxIndex}
-          visible={lightboxIndex >= 0}
-          onClose={handleCloseLightbox}
-        />
+        <Suspense fallback={null}>
+          <GalleryLightbox
+            images={galleryImages}
+            initialIndex={lightboxIndex}
+            visible={lightboxIndex >= 0}
+            onClose={handleCloseLightbox}
+          />
+        </Suspense>
       )}
     </>
   )

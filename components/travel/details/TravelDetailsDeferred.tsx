@@ -4,12 +4,34 @@ import type { Travel } from '@/types/types'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
-import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
-import { TravelDetailsMapSection } from './sections/TravelDetailsMapSection'
-import { TravelDetailsSidebarSection } from './sections/TravelDetailsSidebarSection'
-import { TravelDetailsFooterSection } from './sections/TravelDetailsFooterSection'
-import { CommentsSection } from '@/components/travel/CommentsSection'
 import { withLazy } from './TravelDetailsLazy'
+
+const TravelDetailsContentSection = withLazy(() =>
+  import('./sections/TravelDetailsContentSection').then((m) => ({
+    default: m.TravelDetailsContentSection,
+  }))
+)
+const TravelDetailsMapSection = withLazy(() =>
+  import('./sections/TravelDetailsMapSection').then((m) => ({
+    default: m.TravelDetailsMapSection,
+  }))
+)
+const TravelDetailsSidebarSection = withLazy(() =>
+  import('./sections/TravelDetailsSidebarSection').then((m) => ({
+    default: m.TravelDetailsSidebarSection,
+  }))
+)
+const TravelDetailsFooterSection = withLazy(() =>
+  import('./sections/TravelDetailsFooterSection').then((m) => ({
+    default: m.TravelDetailsFooterSection,
+  }))
+)
+
+const CommentsSection = withLazy(() =>
+  import('@/components/travel/CommentsSection').then((m) => ({
+    default: m.CommentsSection,
+  }))
+)
 
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
@@ -42,6 +64,7 @@ export const TravelDeferredSections: React.FC<{
   scrollToMapSection,
 }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false)
+  const [canRenderComments, setCanRenderComments] = useState(false)
 
   useEffect(() => {
     if (Platform.OS === 'web') return
@@ -53,46 +76,65 @@ export const TravelDeferredSections: React.FC<{
     if (Platform.OS === 'web') {
       rIC(() => {
         setCanRenderHeavy(true)
-      }, 1200)
+      }, 600)
     }
   }, [])
 
+  // Defer comments even further to avoid blocking main thread during initial render.
+  // CommentsSection chunk is ~247ms to parse — loading it later reduces TBT.
+  useEffect(() => {
+    if (!canRenderHeavy) return
+    if (Platform.OS !== 'web') {
+      setCanRenderComments(true)
+      return
+    }
+    rIC(() => {
+      setCanRenderComments(true)
+    }, 1500)
+  }, [canRenderHeavy])
+
   return (
     <>
-      <TravelDetailsContentSection
-        travel={travel}
-        isMobile={isMobile}
-        anchors={anchors}
-        forceOpenKey={forceOpenKey}
-        scrollRef={scrollRef}
-      />
+      <Suspense fallback={null}>
+        <TravelDetailsContentSection
+          travel={travel}
+          isMobile={isMobile}
+          anchors={anchors}
+          forceOpenKey={forceOpenKey}
+          scrollRef={scrollRef}
+        />
+      </Suspense>
 
       {/* P0-2: AuthorCard и ShareButtons после контента на mobile */}
       {isMobile && (
         <MobileAuthorShareSection travel={travel} />
       )}
 
-      <TravelDetailsMapSection
-        travel={travel}
-        anchors={anchors}
-        canRenderHeavy={canRenderHeavy}
-        scrollToMapSection={scrollToMapSection}
-      />
+      <Suspense fallback={null}>
+        <TravelDetailsMapSection
+          travel={travel}
+          anchors={anchors}
+          canRenderHeavy={canRenderHeavy}
+          scrollToMapSection={scrollToMapSection}
+        />
+      </Suspense>
 
-      <TravelDetailsSidebarSection
-        travel={travel}
-        anchors={anchors}
-        scrollY={scrollY}
-        viewportHeight={viewportHeight}
-        canRenderHeavy={canRenderHeavy}
-      />
+      <Suspense fallback={null}>
+        <TravelDetailsSidebarSection
+          travel={travel}
+          anchors={anchors}
+          scrollY={scrollY}
+          viewportHeight={viewportHeight}
+          canRenderHeavy={canRenderHeavy}
+        />
+      </Suspense>
 
       <View 
         ref={anchors.comments} 
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
-        {canRenderHeavy && travel?.id && (
+        {canRenderComments && travel?.id && (
           <CommentsSection travelId={travel.id} />
         )}
       </View>

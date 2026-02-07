@@ -149,14 +149,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const { mapInstanceKeyRef, mapContainerIdRef } = useMapCleanup();
 
   // Defensive cleanup: if the component unmounts (route change / error boundary),
-  // make sure Leaflet map instance is removed so the container is not "stamped".
+  // clear the ref. Do NOT call map.remove() — react-leaflet's MapContainer handles
+  // its own cleanup via its unmount effect, and our leafletFix.ts patch makes that safe.
   useEffect(() => {
     return () => {
-      try {
-        mapRef.current?.remove?.();
-      } catch {
-        // noop
-      }
       mapRef.current = null;
     };
   }, []);

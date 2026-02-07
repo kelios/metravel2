@@ -8,6 +8,7 @@ import {
   Pressable,
   Text,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import Feather from '@expo/vector-icons/Feather';
@@ -931,15 +932,27 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       )}
 
       {showList && (
-        <FlashList
-          key={`cols-${numColumns}`}
-          data={safePoints as any}
-          renderItem={renderItem as any}
-          numColumns={numColumns as any}
-          keyExtractor={keyExtractor as any}
-          contentContainerStyle={styles.listContent as any}
-          {...(numColumns > 1 ? ({ columnWrapperStyle: styles.columnWrap } as any) : null)}
-        />
+        Platform.OS === 'web' ? (
+          <ScrollView
+            contentContainerStyle={[styles.listContent, numColumns > 1 && styles.columnWrap]}
+          >
+            {safePoints.map((item, index) => (
+              <React.Fragment key={keyExtractor(item)}>
+                {renderItem({ item } as any)}
+              </React.Fragment>
+            ))}
+          </ScrollView>
+        ) : (
+          <FlashList
+            key={`cols-${numColumns}`}
+            data={safePoints as any}
+            renderItem={renderItem as any}
+            numColumns={numColumns as any}
+            keyExtractor={keyExtractor as any}
+            contentContainerStyle={styles.listContent as any}
+            {...(numColumns > 1 ? ({ columnWrapperStyle: styles.columnWrap } as any) : null)}
+          />
+        )
       )}
     </View>
   );

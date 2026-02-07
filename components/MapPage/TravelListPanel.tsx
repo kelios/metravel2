@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { Image, View, StyleSheet, RefreshControl, Platform } from 'react-native';
+import { Image, View, StyleSheet, RefreshControl, Platform, ScrollView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Text } from '@/ui/paper';
 import AddressListItem from './AddressListItem';
@@ -154,6 +154,42 @@ const TravelListPanel: React.FC<Props> = ({
           )}
         </View>
       </View>
+    );
+  }
+
+  const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!hasMore || !onLoadMore) return;
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    if (distanceFromEnd < layoutMeasurement.height * 0.5) {
+      onLoadMore();
+    }
+  }, [hasMore, onLoadMore]);
+
+  if (Platform.OS === 'web') {
+    return (
+      <ScrollView
+        contentContainerStyle={styles.list}
+        onScroll={webScrollHandler}
+        scrollEventThrottle={32}
+        refreshControl={
+          onRefresh ? (
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={themeColors.primary}
+              colors={[themeColors.primary]}
+            />
+          ) : undefined
+        }
+      >
+        {travelsData.map((item: any, index: number) => (
+          <React.Fragment key={String(item.id ?? item._id ?? item.slug ?? index)}>
+            {renderItem({ item })}
+          </React.Fragment>
+        ))}
+        {footer}
+      </ScrollView>
     );
   }
 

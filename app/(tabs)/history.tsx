@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
@@ -244,49 +244,92 @@ export default function HistoryScreen() {
                 </Pressable>
             </View>
 
-            <FlashList
-                data={data}
-                keyExtractor={(item: any) => `history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
-                numColumns={numColumns}
-                key={numColumns}
-                contentContainerStyle={styles.gridContent}
-                drawDistance={Platform.OS === 'web' ? 800 : 500}
-                renderItem={({ item, index }: { item: any; index: number }) => {
-                    const gap = 14;
-                    const columnIndex = numColumns > 0 ? index % numColumns : 0;
-                    const isFirstColumn = numColumns <= 1 || columnIndex === 0;
-                    const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
-                    const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
-                    const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
+            {Platform.OS === 'web' ? (
+                <ScrollView
+                    contentContainerStyle={[styles.gridContent, numColumns > 1 && { flexDirection: 'row', flexWrap: 'wrap' }]}
+                >
+                    {data.map((item: any, index: number) => {
+                        const gap = 14;
+                        const columnIndex = numColumns > 0 ? index % numColumns : 0;
+                        const isFirstColumn = numColumns <= 1 || columnIndex === 0;
+                        const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
+                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
+                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
 
-                    return (
-                    <View
-                        style={[
-                        styles.gridItem,
-                        numColumns > 1 ? { maxWidth: `${100 / numColumns}%`, paddingLeft, paddingRight } : null,
-                        ]}
-                    >
-                        <TabTravelCard
-                            item={{
-                                id: item.id,
-                                title: cleanTitle(item.title, item.country ?? item.countryName),
-                                imageUrl: item.imageUrl,
-                                city: item.city ?? null,
-                                country: item.country ?? item.countryName ?? null,
-                            }}
-                            badge={{
-                                icon: 'clock',
-                                backgroundColor: colors.overlay,
-                                iconColor: colors.textOnDark,
-                            }}
-                            onPress={() => handleOpen(item.url)}
-                            layout="grid"
-                            style={styles.card}
-                        />
-                    </View>
-                    );
-                }}
-            />
+                        return (
+                        <View
+                            key={`history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
+                            style={[
+                            styles.gridItem,
+                            numColumns > 1 ? { width: `${100 / numColumns}%`, paddingLeft, paddingRight } : null,
+                            ]}
+                        >
+                            <TabTravelCard
+                                item={{
+                                    id: item.id,
+                                    title: cleanTitle(item.title, item.country ?? item.countryName),
+                                    imageUrl: item.imageUrl,
+                                    city: item.city ?? null,
+                                    country: item.country ?? item.countryName ?? null,
+                                }}
+                                badge={{
+                                    icon: 'clock',
+                                    backgroundColor: colors.overlay,
+                                    iconColor: colors.textOnDark,
+                                }}
+                                onPress={() => handleOpen(item.url)}
+                                layout="grid"
+                                style={styles.card}
+                            />
+                        </View>
+                        );
+                    })}
+                </ScrollView>
+            ) : (
+                <FlashList
+                    data={data}
+                    keyExtractor={(item: any) => `history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
+                    numColumns={numColumns}
+                    key={numColumns}
+                    contentContainerStyle={styles.gridContent}
+                    drawDistance={500}
+                    renderItem={({ item, index }: { item: any; index: number }) => {
+                        const gap = 14;
+                        const columnIndex = numColumns > 0 ? index % numColumns : 0;
+                        const isFirstColumn = numColumns <= 1 || columnIndex === 0;
+                        const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
+                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
+                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
+
+                        return (
+                        <View
+                            style={[
+                            styles.gridItem,
+                            numColumns > 1 ? { maxWidth: `${100 / numColumns}%`, paddingLeft, paddingRight } : null,
+                            ]}
+                        >
+                            <TabTravelCard
+                                item={{
+                                    id: item.id,
+                                    title: cleanTitle(item.title, item.country ?? item.countryName),
+                                    imageUrl: item.imageUrl,
+                                    city: item.city ?? null,
+                                    country: item.country ?? item.countryName ?? null,
+                                }}
+                                badge={{
+                                    icon: 'clock',
+                                    backgroundColor: colors.overlay,
+                                    iconColor: colors.textOnDark,
+                                }}
+                                onPress={() => handleOpen(item.url)}
+                                layout="grid"
+                                style={styles.card}
+                            />
+                        </View>
+                        );
+                    }}
+                />
+            )}
         </SafeAreaView>
     );
 }

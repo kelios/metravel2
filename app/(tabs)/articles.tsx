@@ -1,4 +1,4 @@
-import {ActivityIndicator, SafeAreaView, StyleSheet, View} from 'react-native'
+import {ActivityIndicator, SafeAreaView, StyleSheet, View, Platform, ScrollView, RefreshControl} from 'react-native'
 import ArticleListItem from '@/components/article/ArticleListItem'
 import {useEffect, useMemo, useState} from 'react'
 import {Articles} from '@/types/types'
@@ -120,15 +120,28 @@ export default function TabOneScreen() {
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
             )}
-            <FlashList
-              data={articles?.data}
-              renderItem={({ item }: any) => <ArticleListItem article={item} />}
-              keyExtractor={(item: any, index: number) => (item?.id ? String(item.id) : String(index))}
-              refreshing={isFetching}
-              onRefresh={() => refetch()}
-              drawDistance={600}
-              style={{ flex: 1, alignSelf: 'stretch' }}
-            />
+            {Platform.OS === 'web' ? (
+              <ScrollView
+                style={{ flex: 1, alignSelf: 'stretch' }}
+                refreshControl={
+                  <RefreshControl refreshing={isFetching} onRefresh={() => refetch()} />
+                }
+              >
+                {articles?.data?.map((item: any, index: number) => (
+                  <ArticleListItem key={item?.id ? String(item.id) : String(index)} article={item} />
+                ))}
+              </ScrollView>
+            ) : (
+              <FlashList
+                data={articles?.data}
+                renderItem={({ item }: any) => <ArticleListItem article={item} />}
+                keyExtractor={(item: any, index: number) => (item?.id ? String(item.id) : String(index))}
+                refreshing={isFetching}
+                onRefresh={() => refetch()}
+                drawDistance={600}
+                style={{ flex: 1, alignSelf: 'stretch' }}
+              />
+            )}
             <PaginationComponent
               currentPage={currentPage}
               itemsPerPage={itemsPerPage}

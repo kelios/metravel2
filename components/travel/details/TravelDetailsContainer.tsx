@@ -27,25 +27,25 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelDetails } from "@/hooks/travel-details";
 import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { createSafeJsonLd, stripHtml, getSafeOrigin } from "@/utils/travelDetailsSecure";
-import ScrollToTopButton from "@/components/ui/ScrollToTopButton";
-import ReadingProgressBar from "@/components/ui/ReadingProgressBar";
-import TravelSectionsSheet from "@/components/travel/TravelSectionsSheet";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
-import TravelStickyActions from "@/components/travel/details/TravelStickyActions";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
-import SkipToContentLink from "@/components/accessibility/SkipToContentLink";
-import AccessibilityAnnouncer from "@/components/accessibility/AccessibilityAnnouncer";
 import { useAccessibilityAnnounce, useReducedMotion } from "@/hooks/useKeyboardNavigation";
 import { useThemedColors } from "@/hooks/useTheme";
 
 /* -------------------- helpers -------------------- */
 
+const SkipToContentLink = withLazy(() => import("@/components/accessibility/SkipToContentLink"));
+const AccessibilityAnnouncer = withLazy(() => import("@/components/accessibility/AccessibilityAnnouncer"));
+const ScrollToTopButton = withLazy(() => import("@/components/ui/ScrollToTopButton"));
+const ReadingProgressBar = withLazy(() => import("@/components/ui/ReadingProgressBar"));
+const TravelSectionsSheet = withLazy(() => import("@/components/travel/TravelSectionsSheet"));
+const TravelStickyActions = withLazy(() => import("@/components/travel/details/TravelStickyActions"));
 const CompactSideBarTravel = withLazy(() => import("@/components/travel/CompactSideBarTravel"));
 const TravelDeferredSections = withLazy(() =>
   import("@/components/travel/details/TravelDetailsDeferred").then((m) => ({
@@ -339,8 +339,12 @@ export default function TravelDetailsContainer() {
       {seoBlock}
 
       {/* ✅ PHASE 2: Accessibility Components */}
-      <SkipToContentLink targetId="travel-main-content" label="Skip to main content" />
-      <AccessibilityAnnouncer message={announcement} priority={announcementPriority} id="travel-announcer" />
+      <Suspense fallback={null}>
+        <SkipToContentLink targetId="travel-main-content" label="Skip to main content" />
+      </Suspense>
+      <Suspense fallback={null}>
+        <AccessibilityAnnouncer message={announcement} priority={announcementPriority} id="travel-announcer" />
+      </Suspense>
 
     <View
       testID="travel-details-page"
@@ -396,11 +400,13 @@ export default function TravelDetailsContainer() {
 
           {/* Прогресс-бар чтения */}
           {contentHeight > viewportHeight && (
-            <ReadingProgressBar
-              scrollY={scrollY}
-              contentHeight={contentHeight}
-              viewportHeight={viewportHeight}
-            />
+            <Suspense fallback={null}>
+              <ReadingProgressBar
+                scrollY={scrollY}
+                contentHeight={contentHeight}
+                viewportHeight={viewportHeight}
+              />
+            </Suspense>
           )}
 
           <ScrollView
@@ -444,12 +450,14 @@ export default function TravelDetailsContainer() {
 
                   {responsiveWidth < METRICS.breakpoints.largeTablet && sectionLinks.length > 0 && (
                     <View style={styles.sectionTabsContainer}>
-                      <TravelSectionsSheet
-                        links={sectionLinks}
-                        activeSection={activeSection}
-                        onNavigate={scrollToWithMenuClose}
-                        testID="travel-sections-sheet-wrapper"
-                      />
+                      <Suspense fallback={null}>
+                        <TravelSectionsSheet
+                          links={sectionLinks}
+                          activeSection={activeSection}
+                          onNavigate={scrollToWithMenuClose}
+                          testID="travel-sections-sheet-wrapper"
+                        />
+                      </Suspense>
                     </View>
                   )}
 
@@ -473,18 +481,22 @@ export default function TravelDetailsContainer() {
             </View>
           </ScrollView>
           {/* ✅ Кнопка "Наверх" */}
-          <ScrollToTopButton
-            scrollViewRef={scrollRef}
-            scrollY={scrollY}
-            threshold={300}
-          />
+          <Suspense fallback={null}>
+            <ScrollToTopButton
+              scrollViewRef={scrollRef}
+              scrollY={scrollY}
+              threshold={300}
+            />
+          </Suspense>
           {/* 3.6: Sticky-bar действий на мобильном */}
           {isMobile && travel && (
-            <TravelStickyActions
-              travel={travel}
-              scrollY={scrollY}
-              scrollToComments={() => scrollToWithMenuClose('comments')}
-            />
+            <Suspense fallback={null}>
+              <TravelStickyActions
+                travel={travel}
+                scrollY={scrollY}
+                scrollToComments={() => scrollToWithMenuClose('comments')}
+              />
+            </Suspense>
           )}
         </View>
       </SafeAreaView>

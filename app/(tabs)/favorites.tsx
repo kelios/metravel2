@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
@@ -269,54 +269,101 @@ export default function FavoritesScreen() {
                 </View>
             </View>
 
-            <FlashList
-                data={data}
-                keyExtractor={(item: any) => `${item.type || 'travel'}-${item.id}`}
-                numColumns={numColumns}
-                key={numColumns}
-                contentContainerStyle={styles.listContent}
-                drawDistance={Platform.OS === 'web' ? 800 : 500}
-                renderItem={({ item, index }: { item: any; index: number }) => {
-                    const gap = 14;
-                    const columnIndex = numColumns > 0 ? index % numColumns : 0;
-                    const isFirstColumn = numColumns <= 1 || columnIndex === 0;
-                    const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
-                    const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
-                    const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
+            {Platform.OS === 'web' ? (
+                <ScrollView
+                    contentContainerStyle={[styles.listContent, numColumns > 1 && { flexDirection: 'row', flexWrap: 'wrap' }]}
+                >
+                    {data.map((item: any, index: number) => {
+                        const gap = 14;
+                        const columnIndex = numColumns > 0 ? index % numColumns : 0;
+                        const isFirstColumn = numColumns <= 1 || columnIndex === 0;
+                        const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
+                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
+                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
 
-                    return (
-                    <View style={[styles.gridItem, numColumns > 1 ? { paddingLeft, paddingRight } : null]}>
-                        <TabTravelCard
-                            item={{
-                                id: item.id,
-                                title: cleanTitle(item.title, item.country ?? item.countryName),
-                                imageUrl: item.imageUrl,
-                                city: item.city ?? null,
-                                country: item.country ?? item.countryName ?? null,
-                            }}
-                            badge={{
-                                icon: 'heart',
-                                backgroundColor: colors.danger,
-                                iconColor: colors.textOnDark,
-                            }}
-                            onPress={() => handleOpen(item.url)}
-                            layout="grid"
-                            style={styles.card}
-                        />
+                        return (
+                        <View key={`${item.type || 'travel'}-${item.id}`} style={[styles.gridItem, numColumns > 1 ? { paddingLeft, paddingRight, width: `${100 / numColumns}%` } : null]}>
+                            <TabTravelCard
+                                item={{
+                                    id: item.id,
+                                    title: cleanTitle(item.title, item.country ?? item.countryName),
+                                    imageUrl: item.imageUrl,
+                                    city: item.city ?? null,
+                                    country: item.country ?? item.countryName ?? null,
+                                }}
+                                badge={{
+                                    icon: 'heart',
+                                    backgroundColor: colors.danger,
+                                    iconColor: colors.textOnDark,
+                                }}
+                                onPress={() => handleOpen(item.url)}
+                                layout="grid"
+                                style={styles.card}
+                            />
 
-                        <Pressable
-                            style={[styles.removeButton, globalFocusStyles.focusable]}
-                            onPress={() => removeFavorite?.(item.id, item.type)}
-                            accessibilityRole="button"
-                            accessibilityLabel="Удалить из избранного"
-                            {...Platform.select({ web: { cursor: 'pointer' } })}
-                        >
-                            <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
-                        </Pressable>
-                    </View>
-                    );
-                }}
-            />
+                            <Pressable
+                                style={[styles.removeButton, globalFocusStyles.focusable]}
+                                onPress={() => removeFavorite?.(item.id, item.type)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Удалить из избранного"
+                                {...Platform.select({ web: { cursor: 'pointer' } })}
+                            >
+                                <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
+                            </Pressable>
+                        </View>
+                        );
+                    })}
+                </ScrollView>
+            ) : (
+                <FlashList
+                    data={data}
+                    keyExtractor={(item: any) => `${item.type || 'travel'}-${item.id}`}
+                    numColumns={numColumns}
+                    key={numColumns}
+                    contentContainerStyle={styles.listContent}
+                    drawDistance={500}
+                    renderItem={({ item, index }: { item: any; index: number }) => {
+                        const gap = 14;
+                        const columnIndex = numColumns > 0 ? index % numColumns : 0;
+                        const isFirstColumn = numColumns <= 1 || columnIndex === 0;
+                        const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
+                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
+                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
+
+                        return (
+                        <View style={[styles.gridItem, numColumns > 1 ? { paddingLeft, paddingRight } : null]}>
+                            <TabTravelCard
+                                item={{
+                                    id: item.id,
+                                    title: cleanTitle(item.title, item.country ?? item.countryName),
+                                    imageUrl: item.imageUrl,
+                                    city: item.city ?? null,
+                                    country: item.country ?? item.countryName ?? null,
+                                }}
+                                badge={{
+                                    icon: 'heart',
+                                    backgroundColor: colors.danger,
+                                    iconColor: colors.textOnDark,
+                                }}
+                                onPress={() => handleOpen(item.url)}
+                                layout="grid"
+                                style={styles.card}
+                            />
+
+                            <Pressable
+                                style={[styles.removeButton, globalFocusStyles.focusable]}
+                                onPress={() => removeFavorite?.(item.id, item.type)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Удалить из избранного"
+                                {...Platform.select({ web: { cursor: 'pointer' } })}
+                            >
+                                <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
+                            </Pressable>
+                        </View>
+                        );
+                    }}
+                />
+            )}
         </SafeAreaView>
     );
 }

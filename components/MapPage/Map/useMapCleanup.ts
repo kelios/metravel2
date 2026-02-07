@@ -27,32 +27,13 @@ export const useMapCleanup = () => {
 
     const clearContainer = (el: any) => {
       if (!el) return;
-      try {
-        if (el._leaflet_map) {
-          try {
-            el._leaflet_map.remove();
-          } catch {
-            // Ignore
-          }
-        }
-      } catch {
-        // Ignore
-      }
-      try {
-        delete el._leaflet_map;
-      } catch {
-        // Ignore
-      }
-      try {
-        delete el._leaflet_id;
-      } catch {
-        // Ignore
-      }
-      try {
-        if (typeof el.innerHTML === 'string') el.innerHTML = '';
-      } catch {
-        // Ignore
-      }
+      // Do NOT call el._leaflet_map.remove() here — react-leaflet handles its
+      // own cleanup via MapContainer's unmount effect, and our leafletFix.ts
+      // patch makes that safe. Calling .remove() here causes the container
+      // mismatch that triggers the "reused by another instance" error.
+      try { delete el._leaflet_map; } catch { /* noop */ }
+      try { delete el._leaflet_id; } catch { /* noop */ }
+      try { if (typeof el.innerHTML === 'string') el.innerHTML = ''; } catch { /* noop */ }
     };
 
     try {
@@ -65,10 +46,16 @@ export const useMapCleanup = () => {
 
       const allLeafletContainers = document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`);
       allLeafletContainers.forEach((el: any) => {
-        if (el.id === mapContainerIdRef.current) return;
+        // Always clean the TARGET container if it has a stale _leaflet_id
+        // (previous instance left it dirty before unmount cleanup ran).
+        if (el.id === mapContainerIdRef.current) {
+          if (el._leaflet_id) {
+            clearContainer(el);
+          }
+          return;
+        }
 
-        // Only touch containers that are truly orphaned (not connected to DOM).
-        // Avoid mutating Leaflet internal/private fields (_leaflet_id, _leaflet_events, L.Util._stamps).
+        // Only touch other containers that are truly orphaned (not connected to DOM).
         if (el && typeof el.isConnected === 'boolean' && el.isConnected) return;
 
         clearContainer(el);
@@ -90,29 +77,11 @@ export const useMapCleanup = () => {
         const container = (containerElRef.current as any) || (document.getElementById(containerId) as any);
         if (!container) return;
 
-        if (container._leaflet_map) {
-          try {
-            container._leaflet_map.remove();
-          } catch {
-            // Ignore
-          }
-        }
-
-        try {
-          delete container._leaflet_map;
-        } catch {
-          // Ignore
-        }
-        try {
-          delete container._leaflet_id;
-        } catch {
-          // Ignore
-        }
-        try {
-          if (typeof container.innerHTML === 'string') container.innerHTML = '';
-        } catch {
-          // Ignore
-        }
+        // Do NOT call container._leaflet_map.remove() — react-leaflet handles
+        // its own cleanup, and our leafletFix.ts patch makes that safe.
+        try { delete container._leaflet_map; } catch { /* noop */ }
+        try { delete container._leaflet_id; } catch { /* noop */ }
+        try { if (typeof container.innerHTML === 'string') container.innerHTML = ''; } catch { /* noop */ }
       } catch (e) {
         console.warn('[Map] Failed to clean container on unmount:', e);
       }

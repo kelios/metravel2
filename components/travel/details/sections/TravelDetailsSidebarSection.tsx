@@ -1,7 +1,6 @@
 import React, { Suspense, useCallback, useEffect, useState } from 'react'
 import { Platform, Text, View } from 'react-native'
 
-import NavigationArrows from '@/components/travel/NavigationArrows'
 import { TravelListSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import type { Travel } from '@/types/types'
 import { useProgressiveLoad } from '@/hooks/useProgressiveLoading'
@@ -10,6 +9,7 @@ import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
 
+const NavigationArrows = withLazy(() => import('@/components/travel/NavigationArrows'))
 const NearTravelList = withLazy(() => import('@/components/travel/NearTravelList'))
 const PopularTravelList = withLazy(() => import('@/components/travel/PopularTravelList'))
 
@@ -116,7 +116,9 @@ export const TravelDetailsSidebarSection: React.FC<{
           style={[styles.sectionContainer, styles.navigationArrowsContainer]}
           accessibilityLabel="Навигация по похожим маршрутам"
         >
-          <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
+          <Suspense fallback={null}>
+            <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
+          </Suspense>
         </View>
       )}
 

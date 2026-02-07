@@ -1,5 +1,5 @@
 // app/Map.tsx (бывш. MapClientSideComponent) — ультралёгкая web-карта
-import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -208,13 +208,25 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     return map;
   }, [categoryDictionaryVersion]);
 
-  if (isWeb && typeof document !== 'undefined') {
-    const existing = document.getElementById(mapContainerIdRef.current) as any;
-    if (!mapRef.current && existing && existing._leaflet_id) {
-      mapContainerIdRef.current = `${LEAFLET_MAP_CONTAINER_ID_PREFIX}-${generateUniqueId()}`;
-      mapInstanceKeyRef.current = `leaflet-map-${generateUniqueId()}`;
-    }
-  }
+  // Clean stale Leaflet state from containers before MapContainer initializes.
+  // useLayoutEffect runs synchronously before the browser paints, preventing the
+  // "Map container is being reused by another instance" error.
+  useLayoutEffect(() => {
+    if (!isWeb || typeof document === 'undefined') return;
+    try {
+      const allContainers = document.querySelectorAll(`[id^="${LEAFLET_MAP_CONTAINER_ID_PREFIX}"]`);
+      allContainers.forEach((el: any) => {
+        if (el.id !== mapContainerIdRef.current) return;
+        if (!el._leaflet_id) return;
+        // Container has a stale _leaflet_id from a previous instance — clean it.
+        // Do NOT call el._leaflet_map.remove() — react-leaflet handles its own
+        // cleanup, and our leafletFix.ts patch makes that safe.
+        try { delete el._leaflet_map; } catch { /* noop */ }
+        try { delete el._leaflet_id; } catch { /* noop */ }
+        try { if (typeof el.innerHTML === 'string') el.innerHTML = ''; } catch { /* noop */ }
+      });
+    } catch { /* noop */ }
+  }, []);
 
   useEffect(() => {
     if (!isWeb || typeof document === 'undefined') return;
@@ -227,35 +239,11 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         if (el.id === mapContainerIdRef.current) return;
         if (el && typeof el.isConnected === 'boolean' && el.isConnected) return;
 
-        try {
-          if (el._leaflet_map && typeof el._leaflet_map.remove === 'function') {
-            el._leaflet_map.remove();
-          }
-        } catch {
-          // noop
-        }
-
-        try {
-          if (el._leaflet_map) {
-            delete el._leaflet_map;
-          }
-        } catch {
-          // noop
-        }
-
-        try {
-          if (el._leaflet_id) {
-            delete el._leaflet_id;
-          }
-        } catch {
-          // noop
-        }
-
-        try {
-          if (typeof el.innerHTML === 'string') el.innerHTML = '';
-        } catch {
-          // noop
-        }
+        // Do NOT call el._leaflet_map.remove() — react-leaflet handles its own
+        // cleanup, and our leafletFix.ts patch makes that safe.
+        try { if (el._leaflet_map) delete el._leaflet_map; } catch { /* noop */ }
+        try { if (el._leaflet_id) delete el._leaflet_id; } catch { /* noop */ }
+        try { if (typeof el.innerHTML === 'string') el.innerHTML = ''; } catch { /* noop */ }
       });
     } catch (error) {
       console.warn('[Map] Failed to clean orphaned containers', error);
@@ -355,19 +343,13 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   }, []);
 
   // Очистка Leaflet контейнера при размонтировании, чтобы избежать "Map container is already initialized"
+  // Do NOT call map.remove() here — react-leaflet's MapContainer handles its own
+  // cleanup via its unmount effect, and our leafletFix.ts patch makes that safe.
   useEffect(() => {
     const rootEl = rootRef.current;
     const mapContainerId = mapContainerIdRef.current;
     return () => {
-      try {
-        if (mapRef.current && typeof mapRef.current.remove === 'function') {
-          mapRef.current.remove();
-        }
-      } catch {
-        // noop
-      } finally {
-        mapRef.current = null;
-      }
+      mapRef.current = null;
 
       try {
         if (typeof window !== 'undefined') {
@@ -389,28 +371,9 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         const containers = [container, idContainer].filter(Boolean);
 
         containers.forEach((el: any) => {
-          try {
-            if (el._leaflet_map && typeof el._leaflet_map.remove === 'function') {
-              el._leaflet_map.remove();
-            }
-          } catch {
-            // noop
-          }
-          try {
-            if (el._leaflet_map) delete el._leaflet_map;
-          } catch {
-            // noop
-          }
-          try {
-            if (el._leaflet_id) delete el._leaflet_id;
-          } catch {
-            // noop
-          }
-          try {
-            if (typeof el.innerHTML === 'string') el.innerHTML = '';
-          } catch {
-            // noop
-          }
+          try { if (el._leaflet_map) delete el._leaflet_map; } catch { /* noop */ }
+          try { if (el._leaflet_id) delete el._leaflet_id; } catch { /* noop */ }
+          try { if (typeof el.innerHTML === 'string') el.innerHTML = ''; } catch { /* noop */ }
         });
       } catch {
         // noop

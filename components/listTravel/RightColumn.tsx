@@ -2,10 +2,13 @@ import React, { memo, Suspense, lazy, useCallback, useEffect, useMemo, useRef, u
 import {
   ActivityIndicator,
   Platform,
+  ScrollView,
   View,
   ViewStyle,
   Text,
   LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   StyleProp,
   Dimensions,
 } from 'react-native'
@@ -18,6 +21,7 @@ import type { Travel } from '@/types/types'
 
 const RECOMMENDATIONS_TOTAL_HEIGHT = 376;
 const STABLE_PLACEHOLDER_HEIGHT = 1200; // Reserve vertical space on web mobile to avoid CLS
+const isWeb = Platform.OS === 'web';
 
 // Lazy load RecommendationsTabs with proper error boundary
 const RecommendationsTabs = lazy(async () => {
@@ -191,6 +195,17 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       return <View style={{ height: cardSpacing }} />
     }, [cardSpacing])
 
+    // Web: infinite scroll via onScroll instead of FlashList's onEndReached
+    const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!onEndReached) return
+      const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent
+      const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y
+      const threshold = (onEndReachedThreshold ?? 0.5) * layoutMeasurement.height
+      if (distanceFromEnd < threshold) {
+        onEndReached()
+      }
+    }, [onEndReached, onEndReachedThreshold])
+
     const topContentNodes = useMemo(() => {
       if (!topContent) return null
       const nodes = React.Children.toArray(topContent).filter((child) => {
@@ -299,7 +314,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 ))
               : null}
 
-            {showNextPageLoading && rowIndex === rows.length - 1 && (
+            {!isWeb && showNextPageLoading && rowIndex === rows.length - 1 && (
               <View style={footerLoaderStyle}>
                 <ActivityIndicator size="small" />
               </View>
@@ -462,24 +477,49 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
           {/* Travel Cards Grid - Only show when we have data */}
           {!showInitialLoading && !isError && !showEmptyState && travels.length > 0 && (
-            <FlashList
-              ref={listRef as any}
-              data={rows}
-              renderItem={renderRow as any}
-              extraData={gridColumns}
-              keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
-              ListHeaderComponent={ListHeader}
-              ItemSeparatorComponent={Platform.OS === 'web' ? RowSeparator : undefined}
-              onEndReached={onEndReached}
-              onEndReachedThreshold={onEndReachedThreshold}
-              drawDistance={Platform.OS === 'web' ? 900 : 600}
-              contentContainerStyle={{
-                paddingHorizontal: contentPadding,
-                paddingTop: 8,
-                paddingBottom: Platform.OS === 'web' && isMobile ? 32 + 8 : 28,
-              }}
-              scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
-            />
+            isWeb ? (
+              <ScrollView
+                ref={listRef as any}
+                onScroll={webScrollHandler}
+                scrollEventThrottle={32}
+                contentContainerStyle={{
+                  paddingHorizontal: contentPadding,
+                  paddingTop: 8,
+                  paddingBottom: isMobile ? 32 + 8 : 28,
+                }}
+              >
+                {ListHeader}
+                {rows.map((rowItems, rowIndex) => (
+                  <React.Fragment key={`row-${rowIndex}`}>
+                    {rowIndex > 0 && <RowSeparator />}
+                    {renderRow({ item: rowItems, index: rowIndex })}
+                  </React.Fragment>
+                ))}
+                {showNextPageLoading && (
+                  <View style={footerLoaderStyle}>
+                    <ActivityIndicator size="small" />
+                  </View>
+                )}
+              </ScrollView>
+            ) : (
+              <FlashList
+                ref={listRef as any}
+                data={rows}
+                renderItem={renderRow as any}
+                extraData={gridColumns}
+                keyExtractor={(_, index) => `row-${(isMobile ? 1 : gridColumns) || 1}-${index}`}
+                ListHeaderComponent={ListHeader}
+                onEndReached={onEndReached}
+                onEndReachedThreshold={onEndReachedThreshold}
+                drawDistance={600}
+                contentContainerStyle={{
+                  paddingHorizontal: contentPadding,
+                  paddingTop: 8,
+                  paddingBottom: 28,
+                }}
+                scrollEventThrottle={16}
+              />
+            )
           )}
         </View>
       </View>

@@ -62,7 +62,7 @@ function Home() {
     };
 
     const fallbackMs = Platform.OS === 'web'
-      ? (isMobile ? 1400 : 900)
+      ? (isMobile ? 600 : 300)
       : (isMobile ? 700 : 150);
     const timer = setTimeout(show, fallbackMs);
 
@@ -73,7 +73,7 @@ function Home() {
           clearTimeout(timer);
           show();
         },
-        { timeout: Math.max(900, fallbackMs) }
+        { timeout: Math.max(600, fallbackMs) }
       );
     }
 

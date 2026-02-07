@@ -236,14 +236,14 @@ describe('RecentViews', () => {
     });
   });
 
-  it('should attach onWheel handler on web for horizontal list', async () => {
+  it('should use ScrollView on web for horizontal list to prevent image reloading', async () => {
     (Platform.OS as any) = 'web';
 
     const mockTravels = [createTravel({ id: 1 }), createTravel({ id: 2, title: 'Travel 2' })];
     const utils = render(<RecentViews initialTravels={mockTravels} />);
 
-    const list = await waitFor(() => utils.UNSAFE_getByType(FlashList));
-    expect(list.props.horizontal).toBe(true);
-    expect(typeof list.props.onWheel).toBe('function');
+    const { ScrollView } = require('react-native');
+    const scrollView = await waitFor(() => utils.UNSAFE_getByType(ScrollView));
+    expect(scrollView.props.horizontal).toBe(true);
   });
 });

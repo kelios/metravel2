@@ -258,14 +258,8 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      // защитимся от утечек/устаревших ссылок при размонтировании (особенно в React StrictMode)
-      if (mapRef.current) {
-        try {
-          mapRef.current.remove();
-        } catch (e) {
-          if (__DEV__) console.warn('[TravelMap] Error removing map:', e);
-        }
-      }
+      // Do NOT call map.remove() — react-leaflet's MapContainer handles its own
+      // cleanup via its unmount effect, and our leafletFix.ts patch makes that safe.
       mapRef.current = null;
     };
   }, []);

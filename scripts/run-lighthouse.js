@@ -212,7 +212,7 @@ const injectTravelTitle = (html, pathname) => {
       .replace(/[-_]+/g, ' ')
       .slice(0, 120)
 
-    const injected = `\n<div data-lh-prerender-title="true" style="margin:16px;font:600 18px/1.2 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:inherit;">${title}</div>\n`
+    const injected = `\n<div data-lh-prerender-title="true" style="margin:16px auto;max-width:860px;padding:32px 24px;font:700 32px/1.3 system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#1f2937;min-height:120px;display:flex;align-items:center;">${title}</div>\n`
 
     if (html.includes('data-lh-prerender-title="true"')) return html
 

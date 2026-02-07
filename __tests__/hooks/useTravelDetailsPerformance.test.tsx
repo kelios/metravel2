@@ -69,12 +69,15 @@ describe('useTravelDetailsPerformance', () => {
     jest.useRealTimers()
   })
 
-  it('initializes performance helpers on web', () => {
+  it('initializes performance helpers on web', async () => {
     renderHook(() =>
       useTravelDetailsPerformance({ travel: undefined, isMobile: false, isLoading: true })
     )
 
-    act(() => {
+    // rIC schedules via requestIdleCallback (mocked as setTimeout(cb, 0)).
+    // The callback is now async (dynamic imports), so we need to flush both
+    // timers and microtask queue.
+    await act(async () => {
       jest.advanceTimersByTime(800)
     })
 

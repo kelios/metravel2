@@ -135,7 +135,19 @@ export async function fetchAllProgress(): Promise<ApiQuestProgress[]> {
 
 /** Получить или создать прогресс по quest_id */
 export async function fetchOrCreateProgress(questId: string): Promise<ApiQuestProgress> {
-    return apiClient.get<ApiQuestProgress>(`/quest-progress/quest/${questId}/`);
+    try {
+        return await apiClient.get<ApiQuestProgress>(`/quest-progress/quest/${questId}/`);
+    } catch (err: any) {
+        // If progress doesn't exist yet (404), create it
+        if (err?.status === 404) {
+            // Need numeric quest ID for creation — fetch the quest first
+            const quest = await apiClient.get<{ id: number }>(`/quests/by-quest-id/${questId}/`);
+            return apiClient.post<ApiQuestProgress>('/quest-progress/', {
+                quest: quest.id,
+            });
+        }
+        throw err;
+    }
 }
 
 /** Создать прогресс */

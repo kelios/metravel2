@@ -4,9 +4,6 @@ import { Platform } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import { useLCPPreload } from '@/components/travel/details/TravelDetailsSections'
-import { injectCriticalStyles } from '@/styles/criticalCSS'
-import { initPerformanceMonitoring } from '@/utils/performance'
-import { optimizeCriticalPath } from '@/utils/advancedPerformanceOptimization'
 
 export interface UseTravelDetailsPerformanceArgs {
   travel?: Travel
@@ -166,7 +163,13 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      rIC(() => {
+      rIC(async () => {
+        const [{ injectCriticalStyles }, { initPerformanceMonitoring }, { optimizeCriticalPath }] =
+          await Promise.all([
+            import('@/styles/criticalCSS'),
+            import('@/utils/performance'),
+            import('@/utils/advancedPerformanceOptimization'),
+          ])
         injectCriticalStyles()
         initPerformanceMonitoring()
         optimizeCriticalPath()

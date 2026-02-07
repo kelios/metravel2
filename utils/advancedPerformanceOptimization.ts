@@ -9,25 +9,10 @@ import { Platform } from 'react-native';
 export function preloadCriticalResources() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
 
-  // Preload LCP image (avoid duplicates)
-  const lcpImage = document.querySelector('img[data-lcp]') || document.querySelector('img[src*="travel"]');
-  if (lcpImage) {
-    const href = (lcpImage as HTMLImageElement).currentSrc || (lcpImage as HTMLImageElement).src;
-    if (href && !document.querySelector(`link[rel="preload"][as="image"][href="${href}"]`)) {
-      const preloadLink = document.createElement('link');
-      preloadLink.rel = 'preload';
-      preloadLink.as = 'image';
-      preloadLink.href = href;
-      preloadLink.setAttribute('fetchpriority', 'high');
-      try {
-        ;(preloadLink as any).fetchPriority = 'high';
-      } catch {
-        // noop
-      }
-      preloadLink.crossOrigin = 'anonymous';
-      document.head.appendChild(preloadLink);
-    }
-  }
+  // No-op: By the time this runs (via requestIdleCallback), the LCP image is
+  // already loaded. Adding a <link rel="preload"> for an already-fetched resource
+  // triggers Chrome's "preloaded but not used" warning. Early preloading is
+  // handled by the inline script in +html.tsx (getTravelHeroPreloadScript).
 }
 
 // 2. Optimize LCP with Resource Hints
