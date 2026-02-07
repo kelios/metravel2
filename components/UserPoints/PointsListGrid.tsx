@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo } from 'react'
 import { Platform, StyleSheet, View, useWindowDimensions, ScrollView, TextInput, Text as RNText, RefreshControl } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'

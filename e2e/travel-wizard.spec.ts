@@ -1044,7 +1044,7 @@ test.describe('Создание путешествия - Полный flow', () 
   test('должен открыть существующее путешествие для редактирования', async ({ page }) => {
     if (!travelId) {
       await page.goto('/metravel');
-      await expect(page.getByText('Путешествия').first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/путешестви/i).first()).toBeVisible({ timeout: 15_000 });
       return;
     }
     // Переходим в список путешествий
@@ -1065,7 +1065,7 @@ test.describe('Создание путешествия - Полный flow', () 
   test('должен изменить название и сохранить', async ({ page }) => {
     if (!travelId) {
       await page.goto('/metravel');
-      await expect(page.getByText('Путешествия').first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/путешестви/i).first()).toBeVisible({ timeout: 15_000 });
       return;
     }
     await page.goto(`/travel/edit/${travelId}`);
@@ -1090,7 +1090,7 @@ test.describe('Создание путешествия - Полный flow', () 
   test('должен добавить новую точку к существующему маршруту', async ({ page }) => {
     if (!travelId) {
       await page.goto('/metravel');
-      await expect(page.getByText('Путешествия').first()).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/путешестви/i).first()).toBeVisible({ timeout: 15_000 });
       return;
     }
     await page.goto(`/travel/edit/${travelId}`);

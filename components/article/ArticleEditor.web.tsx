@@ -123,6 +123,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
 
     const hasUserEditedRef = useRef(false);
     const lastAutosavedHtmlRef = useRef<string>(typeof content === 'string' ? content : '');
+    const sentToParentSetRef = useRef<Set<string>>(new Set());
     const autosaveInFlightHtmlRef = useRef<string | null>(null);
     const autosaveRetryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const autosaveIsMountedRef = useRef(true);
@@ -305,7 +306,19 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         };
     }, []);
 
-    const debouncedParentChange = useDebounce(onChange, 250);
+    const debouncedParentChangeRaw = useDebounce(onChange, 250);
+    const debouncedParentChange = useCallback(
+        (val: string) => {
+            sentToParentSetRef.current.add(val);
+            // Keep the set bounded to avoid memory leaks.
+            if (sentToParentSetRef.current.size > 20) {
+                const iter = sentToParentSetRef.current.values();
+                sentToParentSetRef.current.delete(iter.next().value as string);
+            }
+            debouncedParentChangeRaw(val);
+        },
+        [debouncedParentChangeRaw]
+    );
 
     useEffect(() => {
         const next = typeof content === 'string' ? content : '';
@@ -314,8 +327,9 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
         if (next === lastExternalContentRef.current) return;
 
         // Ignore prop updates that are simply echo of our own debounced onChange.
-        if (next === lastEmittedHtmlRef.current) {
+        if (next === lastEmittedHtmlRef.current || sentToParentSetRef.current.has(next)) {
             lastExternalContentRef.current = next;
+            sentToParentSetRef.current.delete(next);
             return;
         }
 
@@ -1071,7 +1085,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const handleQuillChange = useCallback(
         (val: string, _delta: unknown, source: unknown) => {
             const next = typeof val === 'string' ? val : '';
-            const local = typeof html === 'string' ? html : '';
+            const local = typeof htmlRef.current === 'string' ? htmlRef.current : '';
 
             // Quill may emit non-user changes (source !== 'user') during mount/toggle.
             // Some of those can be empty strings; do not let them wipe a non-empty local state.
@@ -1082,7 +1096,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             // (often observed as jumping to the beginning on the first character).
             fireChange(next, undefined, source === 'user');
         },
-        [fireChange, html]
+        [fireChange]
     );
 
     useEffect(() => {

@@ -29,6 +29,7 @@ import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { createSafeJsonLd, stripHtml, getSafeOrigin } from "@/utils/travelDetailsSecure";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
+import { TravelDetailPageSkeleton } from '@/components/travel/TravelDetailPageSkeleton';
 
 import { TravelHeroSection } from "@/components/travel/details/TravelDetailsSections";
 import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetailsStyles";
@@ -314,22 +315,15 @@ export default function TravelDetailsContainer() {
     return (
       <>
         {seoBlock}
-        <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-            {Platform.OS === 'web' ? (
-              <View style={styles.loadingSkeletonWrap}>
-                <View style={styles.loadingSkeletonHero} />
-                <View style={styles.loadingSkeletonContent}>
-                  <SectionSkeleton lines={6} />
-                  <View style={styles.loadingSkeletonSpacer} />
-                  <SectionSkeleton lines={4} />
-                </View>
-              </View>
-            ) : (
+        {Platform.OS === 'web' ? (
+          <TravelDetailPageSkeleton />
+        ) : (
+          <SafeAreaView style={styles.safeArea}>
+            <View style={[styles.mainContainer, styles.mainContainerMobile]}>
               <ActivityIndicator size="large" color={themedColors.primary} />
-            )}
-          </View>
-        </SafeAreaView>
+            </View>
+          </SafeAreaView>
+        )}
       </>
     );
   }

@@ -109,6 +109,15 @@ const TravelListPanel: React.FC<Props> = ({
     </View>
   ), [styles]);
 
+  const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!hasMore || !onLoadMore) return;
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    if (distanceFromEnd < layoutMeasurement.height * 0.5) {
+      onLoadMore();
+    }
+  }, [hasMore, onLoadMore]);
+
   const footer = useMemo(() => {
     if (isLoading) {
       return skeletonCards;
@@ -156,15 +165,6 @@ const TravelListPanel: React.FC<Props> = ({
       </View>
     );
   }
-
-  const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!hasMore || !onLoadMore) return;
-    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
-    if (distanceFromEnd < layoutMeasurement.height * 0.5) {
-      onLoadMore();
-    }
-  }, [hasMore, onLoadMore]);
 
   if (Platform.OS === 'web') {
     return (

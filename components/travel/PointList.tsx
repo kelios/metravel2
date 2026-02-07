@@ -936,7 +936,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
           <ScrollView
             contentContainerStyle={[styles.listContent, numColumns > 1 && styles.columnWrap]}
           >
-            {safePoints.map((item, index) => (
+            {safePoints.map((item) => (
               <React.Fragment key={keyExtractor(item)}>
                 {renderItem({ item } as any)}
               </React.Fragment>

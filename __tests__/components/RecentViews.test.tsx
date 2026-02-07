@@ -2,7 +2,7 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import RecentViews from '@/components/travel/RecentViews';
 import { Platform } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+
 
 // Mock Feather icons
 jest.mock('@expo/vector-icons', () => ({

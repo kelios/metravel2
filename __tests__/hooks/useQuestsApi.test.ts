@@ -1,5 +1,5 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
-import { ApiError } from '@/api/client';
+
 
 // Mock the API module
 const mockFetchQuestsList = jest.fn();

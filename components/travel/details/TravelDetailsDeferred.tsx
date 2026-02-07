@@ -76,7 +76,7 @@ export const TravelDeferredSections: React.FC<{
     if (Platform.OS === 'web') {
       rIC(() => {
         setCanRenderHeavy(true)
-      }, 600)
+      }, 100)
     }
   }, [])
 
@@ -90,7 +90,7 @@ export const TravelDeferredSections: React.FC<{
     }
     rIC(() => {
       setCanRenderComments(true)
-    }, 1500)
+    }, 400)
   }, [canRenderHeavy])
 
   return (

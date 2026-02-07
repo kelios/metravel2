@@ -41,75 +41,20 @@ export function useTravelDetailsPerformance({
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
 
-    // Enable the slider only after the LCP image has finished loading.
-    // This keeps the optimized hero image as the LCP candidate.
-    const enableSlider = () => {
-      setSliderReady(true)
-    }
-
+    // LCP metric is already captured. Enable the slider after a short idle
+    // delay so the browser can finish painting the static hero first.
     if (typeof window === 'undefined') {
-      enableSlider()
+      setSliderReady(true)
       return
     }
 
-    const onInteract = () => {
-      window.removeEventListener('scroll', onInteract)
-      window.removeEventListener('touchstart', onInteract)
-      window.removeEventListener('click', onInteract)
-      window.removeEventListener('keydown', onInteract)
-      enableSlider()
-    }
-
-    window.addEventListener('scroll', onInteract, { passive: true, once: true })
-    window.addEventListener('touchstart', onInteract, { passive: true, once: true })
-    window.addEventListener('click', onInteract, { passive: true, once: true })
-    window.addEventListener('keydown', onInteract, { passive: true, once: true })
-
-    // Fallback: enable after idle if no interaction.
-    const t = setTimeout(enableSlider, 5000)
-
-    return () => {
-      clearTimeout(t)
-      window.removeEventListener('scroll', onInteract)
-      window.removeEventListener('touchstart', onInteract)
-      window.removeEventListener('click', onInteract)
-      window.removeEventListener('keydown', onInteract)
-    }
-  }, [lcpLoaded])
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (!lcpLoaded) return
-    if (sliderReady) return
-    if (typeof window === 'undefined') return
-
     let cancelled = false
-
-    const enable = () => {
-      if (cancelled) return
-      rIC(() => {
-        if (!cancelled) setSliderReady(true)
-      }, 1200)
-    }
-
-    // After window load, enable in idle time.
-    if (typeof document !== 'undefined' && document.readyState === 'complete') {
-      enable()
-    } else {
-      window.addEventListener('load', enable, { once: true })
-    }
-
-    // Safety net: don't block forever.
-    const t = setTimeout(() => {
+    rIC(() => {
       if (!cancelled) setSliderReady(true)
-    }, 3500)
+    }, 200)
 
-    return () => {
-      cancelled = true
-      clearTimeout(t)
-      window.removeEventListener('load', enable as any)
-    }
-  }, [lcpLoaded, sliderReady])
+    return () => { cancelled = true }
+  }, [lcpLoaded])
 
   useEffect(() => {
     if (Platform.OS !== 'web') {
@@ -139,7 +84,7 @@ export function useTravelDetailsPerformance({
       if (cancelled) return
       rIC(() => {
         if (!cancelled) setDeferAllowed(true)
-      }, 1200)
+      }, 400)
     }
 
     // After window load, allow heavy content in idle time.
@@ -152,7 +97,7 @@ export function useTravelDetailsPerformance({
     // Safety net: do not block forever if image never loads.
     const t = setTimeout(() => {
       if (!cancelled) setDeferAllowed(true)
-    }, 3500)
+    }, 2000)
 
     return () => {
       cancelled = true

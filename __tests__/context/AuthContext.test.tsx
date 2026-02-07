@@ -93,6 +93,15 @@ describe('AuthContext', () => {
       isSuperuser: 'true',
     });
 
+    // Avatar missing from storage → background fetch will be triggered
+    (fetchUserProfile as jest.Mock).mockResolvedValueOnce({
+      id: 1,
+      first_name: 'John',
+      last_name: '',
+      avatar: 'https://example.com/avatar.webp',
+      user: 42,
+    });
+
     let contextValue: any;
 
     render(
@@ -108,7 +117,10 @@ describe('AuthContext', () => {
       expect(contextValue.isSuperuser).toBe(true);
     });
 
-    expect(fetchUserProfile).not.toHaveBeenCalled();
+    // Avatar missing from storage → fetchUserProfile called in background
+    await waitFor(() => {
+      expect(fetchUserProfile).toHaveBeenCalledWith('42');
+    });
   });
 
   it('resets auth state on checkAuthentication error', async () => {
@@ -140,6 +152,16 @@ describe('AuthContext', () => {
       is_superuser: true,
     });
 
+    // First call: background avatar fetch from checkAuthentication (no avatar in storage)
+    (fetchUserProfile as jest.Mock).mockResolvedValueOnce({
+      id: 78,
+      first_name: 'User Name',
+      last_name: '',
+      avatar: null,
+      user: 7,
+    });
+
+    // Second call: login fetches profile
     (fetchUserProfile as jest.Mock).mockResolvedValueOnce({
       id: 78,
       first_name: 'Юлия',
@@ -179,7 +201,7 @@ describe('AuthContext', () => {
     expect(setSecureItem).toHaveBeenCalledWith('userToken', 'token-123');
 
     expect(fetchUserProfile).toHaveBeenCalledWith('7');
-    expect(setStorageBatch).toHaveBeenCalledWith([
+    expect(setStorageBatch).toHaveBeenLastCalledWith([
       ['userId', '7'],
       ['userName', 'Юлия'],
       ['isSuperuser', 'true'],

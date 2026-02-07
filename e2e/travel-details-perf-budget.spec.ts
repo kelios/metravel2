@@ -44,7 +44,7 @@ const LCP_MAX_MS = envNum('PERF_LCP_MAX_MS', 2500);
 const TBT_MAX_MS = envNum('PERF_TBT_MAX_MS', 300);
 const CLS_MAX = envNum('PERF_CLS_MAX', 0.1);
 const FCP_MAX_MS = envNum('PERF_FCP_MAX_MS', 1800);
-const SI_MAX_MS = envNum('PERF_SI_MAX_MS', 3400);
+
 const MAX_JS_TRANSFER_KB = envNum('PERF_MAX_JS_KB', 600);
 const MAX_IMG_TRANSFER_KB = envNum('PERF_MAX_IMG_KB', 1500);
 const MAX_TOTAL_TRANSFER_KB = envNum('PERF_MAX_TOTAL_KB', 4000);

@@ -102,13 +102,29 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 return;
             }
 
+            const restoredAvatar = normalizeAvatar(storageData.userAvatar);
+
             set({
                 isAuthenticated: true,
                 userId: storageData.userId,
                 username: storageData.userName || '',
                 isSuperuser: storageData.isSuperuser === 'true',
-                userAvatar: normalizeAvatar(storageData.userAvatar),
+                userAvatar: restoredAvatar,
             });
+
+            // If avatar is missing from storage, fetch profile from API in background
+            if (!restoredAvatar && storageData.userId) {
+                fetchUserProfile(storageData.userId)
+                    .then((profile) => {
+                        if (epochAtStart !== authEpoch) return;
+                        const avatar = normalizeAvatar(profile?.avatar);
+                        if (avatar) {
+                            set({ userAvatar: avatar });
+                            setStorageBatch([['userAvatar', avatar]]).catch(() => undefined);
+                        }
+                    })
+                    .catch(() => undefined);
+            }
         } catch (error) {
             if (__DEV__) {
                 console.error('Ошибка при проверке аутентификации:', error);
