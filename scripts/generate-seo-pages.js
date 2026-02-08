@@ -44,7 +44,10 @@ const FALLBACK_DESC = 'Найди место для путешествия и п
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
-    const req = mod.get(url, { timeout: 30000 }, (res) => {
+    const opts = { timeout: 30000 };
+    // Allow self-signed certs in CI/local environments
+    if (mod === https) opts.rejectUnauthorized = false;
+    const req = mod.get(url, opts, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return fetchJson(res.headers.location).then(resolve, reject);
       }
