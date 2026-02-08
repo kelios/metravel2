@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.1.4';
+const CACHE_VERSION = 'v1.1.5';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -63,12 +63,88 @@ self.addEventListener('message', (event) => {
   }
 });
 
+function buildOfflineHTML() {
+  return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Metravel — нет соединения</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+         display:flex;align-items:center;justify-content:center;min-height:100vh;
+         background:#f5f5f5;color:#333;text-align:center;padding:24px}
+    .c{max-width:420px}
+    h1{font-size:1.5rem;margin-bottom:12px}
+    p{font-size:1rem;color:#666;margin-bottom:24px;line-height:1.5}
+    button{background:#e8a838;color:#fff;border:none;padding:12px 32px;
+           border-radius:8px;font-size:1rem;cursor:pointer;font-weight:600}
+    button:hover{background:#d4952e}
+    .spinner{display:none;margin:16px auto;width:24px;height:24px;
+             border:3px solid #ddd;border-top-color:#e8a838;border-radius:50%;
+             animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .retry-info{font-size:.85rem;color:#999;margin-top:16px}
+  </style>
+</head>
+<body>
+  <div class="c">
+    <h1>Нет соединения</h1>
+    <p>Сервер временно недоступен. Проверьте подключение к интернету или попробуйте позже.</p>
+    <button onclick="retry()">Попробовать снова</button>
+    <div class="spinner" id="sp"></div>
+    <p class="retry-info" id="ri"></p>
+  </div>
+  <script>
+    var attempt=0;
+    function retry(){
+      document.getElementById('sp').style.display='block';
+      document.getElementById('ri').textContent='Подключение...';
+      location.reload();
+    }
+    function autoRetry(){
+      attempt++;
+      if(attempt>10){
+        document.getElementById('ri').textContent='Автоматические попытки остановлены. Нажмите кнопку.';
+        return;
+      }
+      document.getElementById('ri').textContent='Попытка '+attempt+'… (авто-повтор через 5 сек)';
+      fetch(location.href,{method:'HEAD',cache:'no-store'}).then(function(r){
+        if(r.ok) location.reload();
+        else setTimeout(autoRetry,5000);
+      }).catch(function(){setTimeout(autoRetry,5000);});
+    }
+    setTimeout(autoRetry,5000);
+  </script>
+</body>
+</html>`;
+}
+
+function offlineResponse() {
+  return new Response(buildOfflineHTML(), {
+    status: 503,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  });
+}
+
 async function networkFirstDocument(request) {
   try {
     const response = await fetch(request);
+    // Cache successful document responses for offline fallback
+    if (response && response.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
     return response;
   } catch {
-    return new Response('Offline', { status: 503 });
+    // Try to serve cached version of the page
+    const cached = await caches.match(request).catch(() => null);
+    if (cached) return cached;
+    // Try to serve cached root page as fallback for any navigation
+    const rootCached = await caches.match(new Request(self.location.origin + '/')).catch(() => null);
+    if (rootCached) return rootCached;
+    return offlineResponse();
   }
 }
 
@@ -167,7 +243,7 @@ async function cacheFirst(request, cacheName = DYNAMIC_CACHE, maxSize = MAX_CACH
     return response;
   } catch {
     const cached = await caches.match(request);
-    return cached || new Response('Offline', { status: 503 });
+    return cached || offlineResponse();
   }
 }
 
@@ -187,7 +263,7 @@ async function networkFirst(request) {
     if (cached) return cached;
     
     if (request.destination === 'document') {
-      return new Response('Offline', { status: 503 });
+      return offlineResponse();
     }
     
     return new Response('Network error', { status: 503 });
@@ -227,7 +303,7 @@ async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_J
     return response;
   } catch {
     const cached = await caches.match(request);
-    return cached || new Response('Offline', { status: 503 });
+    return cached || offlineResponse();
   }
 }
 
@@ -260,7 +336,7 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
     return cached || fetchPromise;
   } catch {
     const cached = await caches.match(request);
-    return cached || new Response('Offline', { status: 503 });
+    return cached || offlineResponse();
   }
 }
 
