@@ -264,7 +264,7 @@ function CompactSideBarTravel({
           )}
         </View>
 
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
           <View style={styles.userRow}>
             <Pressable
               onPress={handleOpenAuthorProfile}
@@ -406,15 +406,15 @@ function CompactSideBarTravel({
               />
               {!canEdit && authorUserId && (
                 <View style={styles.sidebarActionsRow}>
-                  <SubscribeButton targetUserId={authorUserId} size="sm" style={{ flex: 1 }} />
+                  <SubscribeButton targetUserId={authorUserId} size="sm" />
                   <Button
                     label="Написать"
                     onPress={() => openUrl(`/messages?userId=${encodeURIComponent(authorUserId)}`)}
                     variant="secondary"
                     size="sm"
+                    fullWidth
                     icon={<Feather name="mail" size={14} color={themedColors.primary} />}
                     accessibilityLabel={`Написать автору ${userName || 'Пользователь'}`}
-                    style={{ flex: 1 }}
                   />
                 </View>
               )}
@@ -606,6 +606,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.borderLight,
     width: '100%',
     maxWidth: '100%',
+    overflow: 'hidden' as const,
     ...(Platform.OS === 'web' ? {
       boxShadow: colors.boxShadows.card,
       transition: 'all 0.2s ease',
@@ -613,7 +614,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   cardRow: { 
     flexDirection: "row", 
-    alignItems: "center",
+    alignItems: "flex-start",
     marginBottom: Platform.select({
       default: DESIGN_TOKENS.spacing.sm,
       web: DESIGN_TOKENS.spacing.xs,
@@ -990,7 +991,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
   },
   sidebarActionsRow: {
-    flexDirection: 'row' as const,
+    flexDirection: 'column' as const,
     gap: 6,
     marginTop: 6,
     width: '100%',

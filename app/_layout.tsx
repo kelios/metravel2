@@ -146,6 +146,8 @@ export default function RootLayout() {
       () => {
         const p = pathname || "";
         if (["/login", "/onboarding"].includes(p)) return false;
+        // Map page uses full viewport height — footer steals space from the map
+        if (p === "/map") return false;
         // On travel create/edit wizard we render our own bottom actions footer.
         // The global mobile dock would overlap it.
         // if (p.startsWith('/travel')) return false;

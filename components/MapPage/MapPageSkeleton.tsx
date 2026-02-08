@@ -4,7 +4,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
-export const MapPageSkeleton: React.FC = () => {
+export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
   const colors = useThemedColors();
 
   const styles = useMemo(() => StyleSheet.create({
@@ -51,6 +51,15 @@ export const MapPageSkeleton: React.FC = () => {
       marginBottom: DESIGN_TOKENS.spacing.sm,
     },
   }), [colors]);
+
+  if (inline) {
+    return (
+      <View style={styles.mapArea}>
+        <SkeletonLoader width="100%" height={1} borderRadius={0} style={StyleSheet.absoluteFillObject} />
+        <Text style={styles.placeholderText}>Загружаем карту…</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

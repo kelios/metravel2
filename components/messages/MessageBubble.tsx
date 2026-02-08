@@ -159,7 +159,7 @@ const createStyles = (_colors: ThemedColors) =>
     StyleSheet.create({
         container: {
             paddingHorizontal: DESIGN_TOKENS.spacing.md,
-            marginBottom: DESIGN_TOKENS.spacing.xs,
+            marginBottom: DESIGN_TOKENS.spacing.sm,
         },
         containerOwn: {
             alignItems: 'flex-end',

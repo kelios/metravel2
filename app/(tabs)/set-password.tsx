@@ -65,10 +65,12 @@ export default function SetPassword() {
 
     return (
         <View style={styles.container}>
-            <Image
-                source={require('@/assets/images/media/slider/about.jpg')}
-                style={styles.topImage}
-            />
+            <View style={styles.heroWrapper}>
+                <Image
+                    source={require('@/assets/images/media/slider/about.jpg')}
+                    style={styles.topImage}
+                />
+            </View>
             <View style={styles.card}>
                     {msg.text !== '' && (
                         <Text style={[styles.message, msg.error ? styles.err : styles.ok]}>
@@ -133,16 +135,40 @@ export default function SetPassword() {
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+    heroWrapper: {
+        width: '100%',
+        overflow: 'hidden',
+        height: 220,
+    },
     card: {
-        width: '50%', // Изменено для лучшей адаптации
+        width: '90%',
+        maxWidth: 480,
         backgroundColor: colors.surface,
-        alignItems: 'center',
-        marginTop: -400, // Поднять карточку, чтобы перекрыть часть изображения
-        borderRadius: 8, // Добавлено для скругления углов
-        padding: 10, // Добавлено для внутренних отступов
-        shadowOpacity: 0.2, // Добавлено для тени
-        shadowRadius: 5, // Радиус тени
-        shadowOffset: {width: 0, height: 2}, // Смещение тени
+        marginTop: -60,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        padding: 32,
+        ...Platform.select({
+            web: {
+                boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+            },
+            ios: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.10,
+                shadowRadius: 12,
+            },
+            android: {
+                elevation: 6,
+            },
+            default: {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.10,
+                shadowRadius: 12,
+                elevation: 6,
+            },
+        }),
+        zIndex: 1,
     },
     image: {
         width: '50%',
@@ -151,7 +177,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     topImage: {
         width: '100%',
-        height: 500,
+        height: 280,
+        resizeMode: 'cover',
     },
     input: {
         marginBottom: 0, // ✅ ИСПРАВЛЕНИЕ: Отступ управляется FormFieldWithValidation
@@ -160,7 +187,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: DESIGN_TOKENS.radii.sm,
         padding: 12,
         width: '100%',
-        maxWidth: 500,
         fontSize: 16,
         backgroundColor: colors.surface,
         color: colors.text,
@@ -168,6 +194,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...Platform.select({
             web: {
                 transition: 'border-color 0.2s ease',
+                outlineStyle: 'none',
             },
         }),
     },
@@ -185,6 +212,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         alignItems: 'center',
         width: '100%',
         backgroundColor: colors.background,
+        paddingBottom: 40,
     },
     applyButton: {
         backgroundColor: colors.primary

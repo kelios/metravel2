@@ -146,6 +146,19 @@ test.describe('Subscriptions @smoke', () => {
     if (menuVisible) {
       await accountMenuAnchor.first().click();
 
+      // "Подписки" is inside the collapsed "Аккаунт" section — expand it first
+      const accountSection = page.getByText('Аккаунт', { exact: true });
+      const sectionVisible = await accountSection
+        .first()
+        .waitFor({ state: 'visible', timeout: 5_000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (sectionVisible) {
+        await accountSection.first().click();
+        await page.waitForTimeout(300);
+      }
+
       // Look for "Подписки" menu item
       const subscriptionsLink = page.getByText('Подписки', { exact: true });
       const linkVisible = await subscriptionsLink

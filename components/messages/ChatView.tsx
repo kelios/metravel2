@@ -12,6 +12,7 @@ import {
     Image,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { useRouter } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MessageBubble from '@/components/messages/MessageBubble';
@@ -58,6 +59,7 @@ interface ChatViewProps {
     currentUserId: string | null;
     otherUserName: string;
     otherUserAvatar?: string | null;
+    otherUserId?: number | null;
     onSend: (text: string) => void;
     onBack: () => void;
     onLoadMore?: () => void;
@@ -73,6 +75,7 @@ function ChatView({
     currentUserId,
     otherUserName,
     otherUserAvatar,
+    otherUserId,
     onSend,
     onBack,
     onLoadMore,
@@ -81,6 +84,7 @@ function ChatView({
     onDeleteMessage,
 }: ChatViewProps) {
     const colors = useThemedColors();
+    const router = useRouter();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [text, setText] = useState('');
     const inputRef = useRef<TextInput>(null);
@@ -120,19 +124,20 @@ function ChatView({
         });
 
         const items: ChatListItem[] = [];
-        let prevDateKey: string | null = null;
 
-        for (const msg of sorted) {
+        for (let i = 0; i < sorted.length; i++) {
+            const msg = sorted[i];
+            items.push({ type: 'message', data: msg });
+
             const dk = getDateKey(msg.created_at);
-            if (dk !== prevDateKey) {
+            const nextDk = i + 1 < sorted.length ? getDateKey(sorted[i + 1].created_at) : null;
+            if (dk !== nextDk) {
                 items.push({
                     type: 'dateSeparator',
                     label: formatDateLabel(msg.created_at || ''),
                     key: `sep-${dk}`,
                 });
-                prevDateKey = dk;
             }
-            items.push({ type: 'message', data: msg });
         }
 
         return items;
@@ -188,19 +193,27 @@ function ChatView({
                         <Feather name="arrow-left" size={22} color={colors.text} />
                     </Pressable>
                 )}
-                <View style={[styles.headerAvatar, { backgroundColor: colors.primarySoft }]}>
-                    {otherUserAvatar ? (
-                        <Image
-                            source={{ uri: otherUserAvatar }}
-                            style={styles.headerAvatarImage}
-                        />
-                    ) : (
-                        <Feather name="user" size={18} color={colors.primary} />
-                    )}
-                </View>
-                <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-                    {otherUserName}
-                </Text>
+                <Pressable
+                    onPress={otherUserId ? () => router.push(`/user/${otherUserId}` as any) : undefined}
+                    disabled={!otherUserId}
+                    style={styles.headerProfileLink}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Профиль ${otherUserName}`}
+                >
+                    <View style={[styles.headerAvatar, { backgroundColor: colors.primarySoft }]}>
+                        {otherUserAvatar ? (
+                            <Image
+                                source={{ uri: otherUserAvatar }}
+                                style={styles.headerAvatarImage}
+                            />
+                        ) : (
+                            <Feather name="user" size={18} color={colors.primary} />
+                        )}
+                    </View>
+                    <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
+                        {otherUserName}
+                    </Text>
+                </Pressable>
             </View>
 
             {/* Messages */}
@@ -287,6 +300,11 @@ const createStyles = (_colors: ThemedColors) =>
             padding: DESIGN_TOKENS.spacing.xs,
             marginRight: DESIGN_TOKENS.spacing.xs,
         },
+        headerProfileLink: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            flex: 1,
+        },
         headerAvatar: {
             width: 36,
             height: 36,
@@ -318,7 +336,6 @@ const createStyles = (_colors: ThemedColors) =>
             alignItems: 'center',
             justifyContent: 'center',
             paddingVertical: DESIGN_TOKENS.spacing.xxl,
-            transform: [{ scaleY: -1 }],
         },
         emptyChatText: {
             fontSize: DESIGN_TOKENS.typography.sizes.sm,
@@ -356,7 +373,6 @@ const createStyles = (_colors: ThemedColors) =>
             paddingHorizontal: DESIGN_TOKENS.spacing.lg,
             paddingVertical: DESIGN_TOKENS.spacing.sm,
             gap: DESIGN_TOKENS.spacing.sm,
-            transform: [{ scaleY: -1 }],
         },
         dateSeparatorLine: {
             flex: 1,

@@ -50,8 +50,6 @@ export interface MessageThread {
     participants: number[];
     created_at: string | null;
     last_message_created_at: string | null;
-    unread_count?: number;
-    last_message_text?: string | null;
 }
 
 export interface Message {
@@ -93,6 +91,18 @@ export interface PaginatedMessages {
     next: string | null;
     previous: string | null;
     results: Message[];
+}
+
+// Backend may return a different pagination envelope
+interface RawPaginatedMessages {
+    data?: Message[];
+    results?: Message[];
+    count?: number;
+    total?: number;
+    next?: string | null;
+    next_page_url?: string | null;
+    previous?: string | null;
+    per_page?: number;
 }
 
 export interface ThreadByUserResponse {
@@ -139,9 +149,16 @@ export const fetchMessages = async (
     perPage: number = 50
 ): Promise<PaginatedMessages> => {
     try {
-        return await messagingFetch<PaginatedMessages>(
+        const raw = await messagingFetch<RawPaginatedMessages>(
             `/messages/?thread_id=${threadId}&page=${page}&perPage=${perPage}`,
         );
+        // Normalize: backend may use 'data' instead of 'results', 'next_page_url' instead of 'next'
+        return {
+            count: raw.count ?? raw.total ?? 0,
+            next: raw.next ?? raw.next_page_url ?? null,
+            previous: raw.previous ?? null,
+            results: raw.results ?? raw.data ?? [],
+        };
     } catch (e: any) {
         const status = e?.status ?? e?.response?.status;
         if (status === 401 || status === 404) {
@@ -151,17 +168,8 @@ export const fetchMessages = async (
     }
 };
 
-export const markThreadRead = async (threadId: number): Promise<null> => {
-    try {
-        return await messagingFetch<null>(`/message-threads/${threadId}/mark-read/`, {
-            method: 'POST',
-            body: JSON.stringify({}),
-        });
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
-        if (status === 401 || status === 404) return null;
-        throw e;
-    }
+export const markThreadRead = async (_threadId: number): Promise<null> => {
+    return null;
 };
 
 export interface UnreadCountResponse {
@@ -169,17 +177,7 @@ export interface UnreadCountResponse {
 }
 
 export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
-    try {
-        return await messagingFetch<UnreadCountResponse>('/messages/unread-count/');
-    } catch (e: any) {
-        const status = e?.status ?? e?.response?.status;
-        if (status === 401 || status === 403) {
-            // Re-throw so useUnreadCount consecutive failure tracking can detect it
-            throw e;
-        }
-        // Swallow other errors (network, 500, etc.) silently
-        return { count: 0 };
-    }
+    return { count: 0 };
 };
 
 export const sendMessage = async (

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,6 +34,7 @@ export default function MessagesScreen() {
     const [selectedThread, setSelectedThread] = useState<MessageThread | null>(null);
     const [initialLoading, setInitialLoading] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
+    const userDismissedDeepLink = useRef(false);
 
     const canFetch = authReady && isAuthenticated;
     const { threads, loading: threadsLoading, error: threadsError, refresh: refreshThreads } = useThreads(canFetch, isFocused);
@@ -86,6 +87,7 @@ export default function MessagesScreen() {
     // Deep-link: open thread with a specific user
     useEffect(() => {
         if (!params.userId || !isAuthenticated || !authReady) return;
+        if (userDismissedDeepLink.current) return;
         const targetUserId = Number(params.userId);
         if (isNaN(targetUserId)) return;
 
@@ -152,6 +154,7 @@ export default function MessagesScreen() {
     }, [markRead]);
 
     const handleBack = useCallback(() => {
+        userDismissedDeepLink.current = true;
         setSelectedThread(null);
         refreshThreads();
     }, [refreshThreads]);
@@ -213,10 +216,25 @@ export default function MessagesScreen() {
 
             const ok = await send(participants, text);
             if (ok) {
-                refreshMessages();
-                // If it was a virtual thread, refresh thread list to get the real one
                 if (selectedThread.id === -1) {
+                    // Virtual thread: resolve to the real thread created by the backend
+                    const otherUid = otherIds[0] ?? selectedThread.participants[0];
+                    try {
+                        const res = await fetchThreadByUser(otherUid);
+                        if (res.thread_id != null) {
+                            setSelectedThread({
+                                id: res.thread_id,
+                                participants: selectedThread.participants,
+                                created_at: null,
+                                last_message_created_at: null,
+                            });
+                        }
+                    } catch (e) {
+                        devError('handleSend: fetchThreadByUser error:', e);
+                    }
                     refreshThreads();
+                } else {
+                    refreshMessages();
                 }
             }
         },
@@ -312,6 +330,7 @@ export default function MessagesScreen() {
             currentUserId={userId}
             otherUserName={otherUserName}
             otherUserAvatar={otherUserAvatar}
+            otherUserId={otherUserId}
             onSend={handleSend}
             onBack={handleBack}
             onLoadMore={loadMore}

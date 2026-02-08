@@ -64,6 +64,16 @@ test.describe('@smoke QA pending scenarios: 404, SEO, cookies, legal', () => {
   // --- Scenario V: Registration canonical ---
 
   test('registration page has correct canonical', async ({ page }) => {
+    // Clear auth so we actually land on /registration (authenticated users get redirected)
+    await page.context().clearCookies();
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.removeItem('secure_userToken');
+        window.localStorage.removeItem('userId');
+        window.localStorage.removeItem('userName');
+      } catch { /* ignore */ }
+    });
+
     await gotoWithRetry(page, '/registration');
     await page.waitForTimeout(2_000);
 
@@ -88,9 +98,10 @@ test.describe('@smoke QA pending scenarios: 404, SEO, cookies, legal', () => {
   // --- Scenario S: Cookie consent lifecycle ---
 
   test('cookie consent banner appears and can be accepted', async ({ page }) => {
-    // Clear consent to see the banner
+    // Clear consent to see the banner (actual key used by ConsentBanner)
     await page.addInitScript(() => {
       try {
+        window.localStorage?.removeItem('metravel_consent_v1');
         window.localStorage?.removeItem('cookieConsent');
         window.localStorage?.removeItem('cookie_consent');
         window.localStorage?.removeItem('consent');
@@ -100,9 +111,11 @@ test.describe('@smoke QA pending scenarios: 404, SEO, cookies, legal', () => {
     });
 
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    // ConsentBanner is deferred by 4s in _layout.tsx — wait for it
+    await page.waitForTimeout(5_000);
 
-    // Look for consent banner — it may use various text patterns
-    const consentBanner = page.getByText(/cookie|Cookies|куки/i).first();
+    // Look for consent banner by testID (ConsentBanner uses testID="consent-banner")
+    const consentBanner = page.getByTestId('consent-banner');
     const bannerVisible = await consentBanner
       .waitFor({ state: 'visible', timeout: 10_000 })
       .then(() => true)
@@ -118,7 +131,7 @@ test.describe('@smoke QA pending scenarios: 404, SEO, cookies, legal', () => {
     }
 
     // Accept cookies
-    const acceptButton = page
+    const acceptButton = consentBanner
       .getByRole('button', { name: /принять|согласен|accept|все/i })
       .first();
     const acceptVisible = await acceptButton

@@ -9,16 +9,12 @@ const mockThreads: MessageThread[] = [
         participants: [1, 2],
         created_at: '2024-01-01T00:00:00Z',
         last_message_created_at: '2024-06-15T14:30:00Z',
-        unread_count: 3,
-        last_message_text: 'Привет! Как дела?',
     },
     {
         id: 2,
         participants: [1, 3],
         created_at: '2024-01-02T00:00:00Z',
         last_message_created_at: '2024-06-14T10:00:00Z',
-        unread_count: 0,
-        last_message_text: 'Спасибо за информацию',
     },
 ];
 
@@ -53,17 +49,6 @@ describe('ThreadList', () => {
         const { getByText } = render(<ThreadList {...defaultProps} />);
         expect(getByText('Иван Петров')).toBeTruthy();
         expect(getByText('Мария Сидорова')).toBeTruthy();
-    });
-
-    it('renders last message preview', () => {
-        const { getByText } = render(<ThreadList {...defaultProps} />);
-        expect(getByText('Привет! Как дела?')).toBeTruthy();
-        expect(getByText('Спасибо за информацию')).toBeTruthy();
-    });
-
-    it('renders unread badge for threads with unread messages', () => {
-        const { getByText } = render(<ThreadList {...defaultProps} />);
-        expect(getByText('3')).toBeTruthy();
     });
 
     it('calls onSelectThread when thread is pressed', () => {
@@ -118,8 +103,8 @@ describe('ThreadList', () => {
         expect(queryByText('Иван Петров')).toBeNull();
     });
 
-    it('includes unread count in accessibility label', () => {
+    it('includes participant name in accessibility label', () => {
         const { getByLabelText } = render(<ThreadList {...defaultProps} />);
-        expect(getByLabelText('Диалог с Иван Петров, 3 непрочитанных')).toBeTruthy();
+        expect(getByLabelText('Диалог с Иван Петров')).toBeTruthy();
     });
 });

@@ -128,7 +128,7 @@ export default function RegisterForm() {
                     canonical={canonical}
                     image={buildOgImageUrl('/og-preview.jpg')}
                     ogType="website"
-                    robots="noindex, nofollow"
+                    robots="index, follow"
                 />
             )}
 

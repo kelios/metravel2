@@ -195,9 +195,9 @@ export const setNewPasswordApi = async (password_reset_token: string, password: 
             throw new Error('Network response was not ok.');
         }
 
-        const json = await safeJsonParse<{ success?: boolean; message?: string }>(response, {});
-        if (json.success) {
-            Alert.alert('Успех', 'Пароль успешно изменен');
+        const json = await safeJsonParse<{ success?: boolean; detail?: string; message?: string }>(response, {});
+        if (json.success || json.detail) {
+            Alert.alert('Успех', json.detail || 'Пароль успешно изменен');
             return true;
         }
         Alert.alert('Ошибка', getUserFriendlyError(json.message || 'Не удалось изменить пароль'));

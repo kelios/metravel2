@@ -81,7 +81,7 @@ export default function MapScreen() {
 
 
     const mapPanelPlaceholder = useMemo(
-        () => <MapPageSkeleton />,
+        () => <MapPageSkeleton inline />,
         [],
     );
 
