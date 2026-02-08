@@ -236,6 +236,7 @@ function UnifiedTravelCard({
     isWeb
       ? (webPressableProps ?? {
           tabIndex: 0,
+          role: 'link',
           'aria-label': title,
           onClick: (e: any) => {
             const target = e?.target as any;

@@ -368,4 +368,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
 });
 
-export default ModernSearchBar;
+export default memo(ModernSearchBar);

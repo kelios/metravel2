@@ -26,7 +26,7 @@ type CustomHeaderProps = {
     onHeightChange?: (height: number) => void;
 };
 
-export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
+function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const colors = useThemedColors();
     const pathname = usePathname();
     const router = useRouter();
@@ -289,8 +289,8 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             gap: 6,
             backgroundColor: 'transparent',
             justifyContent: 'center',
-            minHeight: 40,
-            minWidth: 40,
+            minHeight: 44,
+            minWidth: 44,
             flexShrink: 0,
             ...Platform.select({
                 web: {
@@ -412,6 +412,10 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         },
         modalCloseButton: {
             padding: 4,
+            minWidth: 44,
+            minHeight: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
         },
         modalNavContainer: {
             paddingVertical: 8,
@@ -434,7 +438,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             minHeight: 48,
         },
         modalNavItemHover: {
-            backgroundColor: 'rgba(93, 140, 124, 0.10)',
+            backgroundColor: colors.primarySoft,
         },
         modalNavItemActive: {
             backgroundColor: colors.primaryLight,
@@ -496,7 +500,7 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
                                           isActive && styles.navItemActive,
                                           globalFocusStyles.focusable, 
                                       ]}
-                                      accessibilityRole="button"
+                                      accessibilityRole="link"
                                       accessibilityLabel={item.label}
                                       accessibilityState={{ selected: isActive }}
                                   >
@@ -663,3 +667,5 @@ export default function CustomHeader({ onHeightChange }: CustomHeaderProps) {
       </View>
     );
 }
+
+export default React.memo(CustomHeader);

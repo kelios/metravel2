@@ -273,7 +273,17 @@ export default function RegisterForm() {
                                                     </Pressable>
                                                 </View>
                                                 {values.password.length > 0 && (
-                                                    <View style={styles.strengthContainer}>
+                                                    <View
+                                                        style={styles.strengthContainer}
+                                                        accessibilityRole="progressbar"
+                                                        accessibilityValue={{
+                                                            min: 0,
+                                                            max: 100,
+                                                            now: getPasswordStrength(values.password) === 'weak' ? 33 : getPasswordStrength(values.password) === 'medium' ? 66 : 100,
+                                                            text: `Надёжность пароля: ${STRENGTH_CONFIG[getPasswordStrength(values.password)].label}`,
+                                                        }}
+                                                        accessibilityLabel="Надёжность пароля"
+                                                    >
                                                         <View style={styles.strengthBarBg}>
                                                             <View
                                                                 style={[
@@ -441,8 +451,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     eyeButton: {
         padding: 4,
-        minWidth: 32,
-        minHeight: 32,
+        minWidth: 44,
+        minHeight: 44,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -510,7 +520,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     loginLink: {
         fontSize: 14,
-        color: colors.primary,
+        color: colors.primaryText,
         fontWeight: '600',
         textDecorationLine: 'underline',
     },

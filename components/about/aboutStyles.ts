@@ -210,7 +210,7 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   emailText: {
     fontSize: 16,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '600',
   },
   helperText: {
@@ -229,8 +229,8 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: 12,
   },
   iconLink: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -464,6 +464,7 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: 12,
     marginVertical: 12,
     padding: 12,
+    minHeight: 48,
     backgroundColor: colors.backgroundSecondary,
     borderRadius: 12,
   },
@@ -535,7 +536,7 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   socialText: {
     fontSize: 16,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '600',
   },
   submitButton: {

@@ -368,12 +368,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     eyeButton: {
         position: 'absolute' as const,
-        right: 12,
+        right: 4,
         top: 0,
         bottom: 0,
         justifyContent: 'center' as const,
         alignItems: 'center' as const,
-        width: 32,
+        width: 44,
+        minHeight: 44,
         ...Platform.select({
             web: {
                 cursor: 'pointer' as any,
@@ -383,9 +384,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     forgotButton: {
         alignSelf: 'center' as const,
         marginTop: 16,
-        paddingVertical: 4,
-        paddingHorizontal: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
         borderRadius: 6,
+        minHeight: 44,
+        justifyContent: 'center' as const,
         ...Platform.select({
             web: {
                 cursor: 'pointer' as any,
@@ -394,7 +397,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         }),
     },
     forgot: {
-        color: colors.primary,
+        color: colors.primaryText,
         fontSize: 14,
         fontWeight: '500' as const,
     },
@@ -413,7 +416,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     registerLink: {
         fontSize: 14,
-        color: colors.primary,
+        color: colors.primaryText,
         fontWeight: '600',
         textDecorationLine: 'underline',
     },

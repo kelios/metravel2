@@ -100,6 +100,7 @@ html[data-theme="dark"] {
   --color-primary-40: #8fb5a540;
   --color-primary-50: #8fb5a550;
   --color-primaryDark: #7aa595;
+  --color-primaryText: #8fb5a5;
   --color-primaryLight: #2a3530;
   --color-primarySoft: rgba(143, 181, 165, 0.12);
   --color-accent: #a5b5c5;

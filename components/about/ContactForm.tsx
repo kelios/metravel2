@@ -172,6 +172,9 @@ export const ContactForm: React.FC<ContactFormProps> = ({
       <Pressable
         onPress={onToggleAgree}
         style={({ pressed }) => [styles.agreeRow, pressed && styles.agreeRowPressed]}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: agree }}
+        accessibilityLabel="Согласен на обработку персональных данных"
       >
         <View style={[styles.checkbox, agree && styles.checkboxChecked]}>
           {agree ? <Text style={styles.checkboxMark}>✓</Text> : null}

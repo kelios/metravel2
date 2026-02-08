@@ -147,7 +147,7 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
     actionButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.md,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     actionButtonTextMobile: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,

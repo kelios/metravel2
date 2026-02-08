@@ -263,7 +263,7 @@ export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardPr
                       }
                     ]}
                   >
-                    <Text style={[styles.socialChipText, { color: colors.primary }]}>{s.label}</Text>
+                    <Text style={[styles.socialChipText, { color: colors.primaryText }]}>{s.label}</Text>
                   </Pressable>
                 ))}
               </SafeView>
@@ -560,7 +560,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 15,
     }),
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   viewButtonBottomText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,

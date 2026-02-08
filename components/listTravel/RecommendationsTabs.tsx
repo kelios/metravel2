@@ -973,4 +973,4 @@ const createStyles = (
   },
 });
 
-export default RecommendationsTabs;
+export default memo(RecommendationsTabs);

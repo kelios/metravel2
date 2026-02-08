@@ -144,10 +144,10 @@ function FooterDesktop({ testID }: FooterDesktopProps) {
       justifyContent: "center",
       flexGrow: 0,
       flexShrink: 0,
-      paddingHorizontal: 4,
-      paddingVertical: 0,
+      paddingHorizontal: 6,
+      paddingVertical: 4,
       minWidth: 32,
-      minHeight: 20,
+      minHeight: 32,
       borderRadius: 6,
       ...Platform.select({
         web: {

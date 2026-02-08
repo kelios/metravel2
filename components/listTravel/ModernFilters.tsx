@@ -855,4 +855,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
   });
 };
 
-export default ModernFilters;
+export default memo(ModernFilters);

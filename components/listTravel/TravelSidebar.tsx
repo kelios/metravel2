@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View } from 'react-native';
 import ModernFilters from './ModernFilters';
 import type { FilterGroup } from './ModernFilters';
 import type { FilterState } from './ModernFilters';
+
+const SIDEBAR_STYLE = { width: 280, flex: 1 } as const;
 
 interface TravelSidebarProps {
   filterGroups: FilterGroup[];
@@ -26,7 +28,7 @@ const TravelSidebar: React.FC<TravelSidebarProps> = ({
   onToggleModeration,
 }) => {
   return (
-    <View style={{ width: 280, flex: 1 }}>
+    <View style={SIDEBAR_STYLE}>
       <ModernFilters
         filterGroups={filterGroups}
         selectedFilters={filter as any}
@@ -43,4 +45,4 @@ const TravelSidebar: React.FC<TravelSidebarProps> = ({
   );
 };
 
-export default TravelSidebar;
+export default memo(TravelSidebar);
