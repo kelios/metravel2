@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 import { seedNecessaryConsent } from './helpers/storage';
 
-test.describe('Travel details', () => {
+test.describe('@smoke Travel details', () => {
   test('can open a travel details page from list', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
 

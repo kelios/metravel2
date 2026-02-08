@@ -97,7 +97,7 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
   expect(ok, `${label}: expected cards or empty state to render`).toBeTruthy();
 };
 
-test.describe('Integration: core data flows (web)', () => {
+test.describe('@smoke Integration: core data flows (web)', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(hideRecommendationsBanner);
