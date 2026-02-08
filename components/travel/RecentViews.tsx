@@ -44,7 +44,7 @@ function handleHorizontalWheel(e: any) {
   (el as any).scrollLeft += deltaY;
 }
 
-export default function RecentViews({
+function RecentViews({
   maxItems = 6,
   compact = false,
   initialTravels,
@@ -53,6 +53,8 @@ export default function RecentViews({
   const [recentTravels, setRecentTravels] = React.useState<Travel[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const colors = useThemedColors();
+
+  const cardStyle = useMemo(() => ({ height: '100%' as const, backgroundColor: colors.surface }), [colors.surface]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -237,7 +239,7 @@ export default function RecentViews({
                     />
                   }
                   imageHeight={200}
-                  style={{ height: '100%', backgroundColor: colors.surface }}
+                  style={cardStyle}
                 />
               </View>
             );
@@ -272,7 +274,7 @@ export default function RecentViews({
                     />
                   }
                   imageHeight={180}
-                  style={{ height: '100%', backgroundColor: colors.surface }}
+                  style={cardStyle}
                 />
               </View>
             );
@@ -284,3 +286,5 @@ export default function RecentViews({
     </View>
   );
 }
+
+export default React.memo(RecentViews);

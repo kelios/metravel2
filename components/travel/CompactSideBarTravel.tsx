@@ -650,7 +650,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   categoryTag: {
     fontSize: Platform.select({ default: 13, web: 12 }),
-    color: colors.primary,
+    color: colors.primaryText,
     backgroundColor: colors.primarySoft,
     paddingHorizontal: Platform.select({ default: 10, web: 8 }),
     paddingVertical: Platform.select({ default: 4, web: 3 }),
@@ -664,7 +664,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   categoryMore: {
     fontSize: Platform.select({ default: 13, web: 12 }),
-    color: colors.primary,
+    color: colors.primaryText,
     fontFamily: "Georgia",
     fontWeight: "600",
     marginLeft: 4,
@@ -902,7 +902,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     } as any : {}),
   },
   linkTxtActive: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: "700",
   },
   linkMetaPill: {
@@ -939,7 +939,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   allTravels: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     textAlign: "center",
-    color: colors.primary,
+    color: colors.primaryText,
     fontFamily: "Georgia",
     fontWeight: "700",
     paddingHorizontal: 4,

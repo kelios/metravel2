@@ -377,7 +377,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     badgeText: {
         fontSize: 11,
         fontWeight: '600',
-        color: colors.primary,
+        color: colors.primaryText,
         letterSpacing: 0.1,
     },
     subtitle: {
@@ -478,7 +478,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     itemMetaText: {
         fontSize: 12,
-        color: colors.primary,
+        color: colors.primaryText,
         fontWeight: '600',
     },
     historyBadge: {
@@ -571,7 +571,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     loginButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: colors.primary,
+        color: colors.primaryText,
         letterSpacing: -0.2,
     },
     emptyCard: {
@@ -620,7 +620,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     expandButtonText: {
         fontSize: 14,
         fontWeight: '600',
-        color: colors.primary,
+        color: colors.primaryText,
         marginLeft: 6,
     },
 });
