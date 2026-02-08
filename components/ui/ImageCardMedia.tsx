@@ -123,8 +123,16 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
     if (/^(data:|blob:)/i.test(uri)) return uri;
+    // Strip existing query params to avoid double-optimization when the
+    // src URL was already optimized by a parent component (e.g. UnifiedTravelCard).
+    let baseUri = uri;
+    try {
+      const parsed = new URL(uri);
+      parsed.search = '';
+      baseUri = parsed.toString();
+    } catch { /* keep original */ }
     const blurSize = 64;
-    const optimized = optimizeImageUrl(uri, {
+    const optimized = optimizeImageUrl(baseUri, {
       width: blurSize,
       height: blurSize,
       quality: 30,
@@ -140,8 +148,15 @@ function ImageCardMedia({
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return null;
-    const fallback = buildApiPrefixedUrl(uri);
-    if (!fallback || fallback === uri) return null;
+    // Strip query params before building the fallback blur URL (same reason as webBlurUri).
+    let cleanUri = uri;
+    try {
+      const parsed = new URL(uri);
+      parsed.search = '';
+      cleanUri = parsed.toString();
+    } catch { /* keep original */ }
+    const fallback = buildApiPrefixedUrl(cleanUri);
+    if (!fallback || fallback === cleanUri) return null;
     const blurSize = 64;
     return (
       optimizeImageUrl(fallback, {

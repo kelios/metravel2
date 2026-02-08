@@ -100,18 +100,6 @@ const normalizeTravelCoordsItem = (raw: any) => {
     }
   }
 
-  // Debug: log first few items to see coordinate format
-  if (__DEV__ && Math.random() < 0.05) {
-    console.info('[normalizeTravelCoordsItem] Sample:', {
-      rawLat: t.lat,
-      rawLng: t.lng,
-      rawCoord: t.coord,
-      normalizedLat: lat,
-      normalizedLng: lng,
-      finalCoord: coord,
-    });
-  }
-
   const address =
     normalizeString(t.address ?? t.adress ?? t.full_address ?? t.name, '').trim() || undefined;
 
@@ -328,13 +316,6 @@ export const fetchTravelsForMap = async (
     };
     const params = new URLSearchParams(paramsObj).toString();
 
-    if (__DEV__) {
-      console.info('[fetchTravelsForMap] Request params:', {
-        whereObject,
-        url: `${SEARCH_TRAVELS_FOR_MAP}?${params}`,
-      });
-    }
-
     const urlTravel = `${SEARCH_TRAVELS_FOR_MAP}?${params}`;
     const res = await fetchWithTimeout(urlTravel, { signal: options?.signal }, LONG_TIMEOUT);
     if (!res.ok) {
@@ -343,21 +324,6 @@ export const fetchTravelsForMap = async (
       return [] as unknown as TravelsForMap;
     }
     const payload = await safeJsonParse<unknown>(res, [] as unknown as TravelsForMap);
-    
-    // Debug: log sample of raw backend response
-    if (__DEV__ && payload) {
-      const sample = Array.isArray(payload) ? payload[0] : Object.values(payload)[0];
-      if (sample) {
-        console.info('[fetchTravelsForMap] Backend response sample:', {
-          lat: sample.lat,
-          lng: sample.lng,
-          coord: sample.coord,
-          latitude: sample.latitude,
-          longitude: sample.longitude,
-        });
-      }
-    }
-    
     return normalizeTravelsForMapPayload(payload);
   } catch (e: any) {
     if (e?.name === 'AbortError') {

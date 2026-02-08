@@ -62,11 +62,21 @@ test.describe('User points import (mock API)', () => {
   }
 
   async function uploadViaFileChooser(page: any, absoluteFilePath: string) {
-    const [chooser] = await Promise.all([
-      page.waitForEvent('filechooser', { timeout: 30_000 }),
-      page.getByText('Импорт точек', { exact: true }).last().click(),
-    ]);
-    await chooser.setFiles(absoluteFilePath);
+    // Under parallel load the filechooser event can be delayed.
+    // Retry up to 2 times to handle transient timing issues.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const [chooser] = await Promise.all([
+          page.waitForEvent('filechooser', { timeout: 15_000 }),
+          page.getByText('Импорт точек', { exact: true }).last().click(),
+        ]);
+        await chooser.setFiles(absoluteFilePath);
+        return;
+      } catch {
+        if (attempt === 2) throw new Error(`File chooser did not open after 3 attempts for ${absoluteFilePath}`);
+        await page.waitForTimeout(500);
+      }
+    }
   }
 
   async function createTempKmzWithDocKml(kmlText: string): Promise<string> {

@@ -40,12 +40,6 @@ export const useRouting = (
     ORS_API_KEY: string | undefined
 ) => {
     const isTestEnv = typeof process !== 'undefined' && (process.env as any)?.NODE_ENV === 'test'
-    const debugRouting = useMemo(() => {
-        if (isTestEnv) return false
-        if (typeof process === 'undefined') return false
-        const flag = (process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING
-        return flag === '1' || flag === 'true'
-    }, [isTestEnv])
     const [state, setState] = useState<RoutingState>({
         loading: false,
         error: false,
@@ -53,16 +47,6 @@ export const useRouting = (
         duration: 0,
         coords: [],
     })
-
-    // 🔍 ДИАГНОСТИКА: Логируем входные параметры
-    useEffect(() => {
-        console.info('[useRouting] Hook called with:', {
-            routePointsCount: routePoints?.length,
-            routePoints: routePoints?.slice(0, 2),
-            transportMode,
-            hasORS_API_KEY: !!ORS_API_KEY,
-        })
-    }, [routePoints, transportMode, ORS_API_KEY])
 
     const abortRef = useRef<AbortController | null>(null)
     const lastRouteKeyRef = useRef<string | null>(null)
@@ -127,13 +111,6 @@ export const useRouting = (
                     const body: any = { coordinates }
                     if (typeof radius === 'number') {
                         body.radiuses = buildRadiuses(radius, coordinates.length, failingIndex)
-                    }
-
-                    if (debugRouting) {
-                        console.info('[useRouting] ORS request payload (no key):', {
-                            profile: getORSProfile(mode),
-                            body,
-                        })
                     }
 
                     const res = await fetch(
@@ -211,10 +188,6 @@ export const useRouting = (
                 const maybeIndex = extractFailingIndex(String(e?.orsMessage || e?.responseText || e?.message || ''))
                 if (typeof maybeIndex === 'number') failingIndex = maybeIndex
                 if (orsCode === 2010 && radius !== ORS_RADIUSES_TO_TRY[ORS_RADIUSES_TO_TRY.length - 1]) {
-                    const currentRadius = typeof radius === 'number' ? radius : 350
-                    console.info(
-                        `[useRouting] ORS: no routable point within ${currentRadius}m (coord idx ${failingIndex ?? 'unknown'}), retrying with larger radius...`
-                    )
                     continue
                 }
                 throw e
@@ -222,7 +195,7 @@ export const useRouting = (
         }
 
         throw lastError || new Error('Ошибка ORS')
-    }, [ORS_API_KEY, debugRouting])
+    }, [ORS_API_KEY])
 
     const fetchOSRM = useCallback(async (
         points: [number, number][],
@@ -387,7 +360,6 @@ export const useRouting = (
                 abortRef.current.abort()
                 abortRef.current = null
             }
-            console.info('[useRouting] Less than 2 points, resetting state')
             setState({
                 loading: false,
                 error: false,
@@ -560,14 +532,6 @@ export const useRouting = (
                 routeCache.set(currentPoints, transportMode, result.coords, result.distance, duration)
                 resolvedRouteKeys.add(routeKey)
 
-                console.info('[useRouting] ✅ Route built successfully:', {
-                    distance: result.distance,
-                    duration,
-                    coordsCount: result.coords?.length,
-                    firstCoords: result.coords?.slice(0, 2),
-                    isOptimal: result.isOptimal,
-                })
-
                 commitIfCurrent(() => {
                     setState({
                         loading: false,
@@ -641,19 +605,6 @@ export const useRouting = (
             }
         }
     }, [])
-
-    // 🔍 ДИАГНОСТИКА: Логируем текущее состояние при каждом изменении
-    useEffect(() => {
-        console.info('[useRouting] State updated:', {
-            loading: state.loading,
-            hasError: !!state.error,
-            error: state.error,
-            distance: state.distance,
-            duration: state.duration,
-            coordsCount: state.coords?.length,
-            firstCoords: state.coords?.slice(0, 2),
-        })
-    }, [state])
 
     return state
 }

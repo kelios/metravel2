@@ -79,7 +79,6 @@ export function useRouteStoreAdapter() {
       });
       
       if (allMatch) {
-        console.info('[setRoutePoints] Points unchanged, skipping update');
         return;
       }
     }
@@ -104,11 +103,9 @@ export function useRouteStoreAdapter() {
 
       const coords: LatLng = { lat, lng };
       const address = CoordinateConverter.formatCoordinates(coords);
-      console.info('[setRoutePoints] Adding point', index, coords, address);
       useRouteStore.getState().addPoint(coords, address);
     });
 
-    console.info('[setRoutePoints] Points added. Total:', useRouteStore.getState().points.length);
   }, []);
 
   const setRouteDistance = useCallback((distance: number) => {
@@ -157,27 +154,7 @@ export function useRouteStoreAdapter() {
   }, []);
 
   const setFullRouteCoords = useCallback((coords: [number, number][]) => {
-    const debugRouting =
-      typeof process !== 'undefined' &&
-      ((process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING === '1' ||
-        (process.env as any)?.EXPO_PUBLIC_DEBUG_ROUTING === 'true');
-
     const state = useRouteStore.getState();
-
-    if (debugRouting) {
-      try {
-        const first = Array.isArray(coords) && coords.length > 0 ? coords[0] : null;
-        const last =
-          Array.isArray(coords) && coords.length > 0 ? coords[coords.length - 1] : null;
-        console.info('[useRouteStoreAdapter] setFullRouteCoords called:', {
-          len: Array.isArray(coords) ? coords.length : null,
-          first,
-          last,
-        });
-      } catch {
-        // noop
-      }
-    }
 
     const latLngCoords: LatLng[] = coords.map(([lng, lat]) => ({ lat, lng }));
     const distance = state.route?.distance ?? 0;
@@ -204,18 +181,6 @@ export function useRouteStoreAdapter() {
       elevationGain: prevElevationGain,
       elevationLoss: prevElevationLoss,
     });
-
-    if (debugRouting) {
-      try {
-        console.info('[useRouteStoreAdapter] route updated:', {
-          coordsLen: latLngCoords.length,
-          distance,
-          duration,
-        });
-      } catch {
-        // noop
-      }
-    }
   }, []);
 
   const setRouteElevationStats = useCallback((elevationGainMeters: number | null, elevationLossMeters: number | null) => {

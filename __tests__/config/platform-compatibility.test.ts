@@ -59,7 +59,8 @@ describe('Platform Compatibility Tests', () => {
     });
 
     it('should have web maps alternative', () => {
-      expect(packageJson.dependencies['@teovilla/react-native-web-maps']).toBeDefined();
+      expect(packageJson.dependencies['leaflet']).toBeDefined();
+      expect(packageJson.dependencies['react-leaflet']).toBeDefined();
     });
 
     it('should have expo-router for navigation', () => {

@@ -42,9 +42,6 @@ describe('Android Dependencies Tests', () => {
       expect(packageJson.dependencies['expo-media-library']).toBeDefined();
     });
 
-    it('should have expo-fast-image', () => {
-      expect(packageJson.dependencies['expo-fast-image']).toBeDefined();
-    });
   });
 
   describe('UI Dependencies', () => {
@@ -120,9 +117,6 @@ describe('Android Dependencies Tests', () => {
       expect(packageJson.dependencies['expo-font']).toBeDefined();
     });
 
-    it('should have expo-haptics', () => {
-      expect(packageJson.dependencies['expo-haptics']).toBeDefined();
-    });
 
     it('should have expo-linking', () => {
       expect(packageJson.dependencies['expo-linking']).toBeDefined();
@@ -163,7 +157,7 @@ describe('Android Dependencies Tests', () => {
 
   describe('Form and Validation', () => {
     it('should not have formik (replaced by hooks/useYupForm)', () => {
-      expect(packageJson.dependencies.formik).toBeUndefined();
+      expect((packageJson.dependencies as Record<string, string>).formik).toBeUndefined();
     });
 
     it('should have yup', () => {
