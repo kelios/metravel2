@@ -252,7 +252,8 @@ describe('DescriptionSection.redesign', () => {
         <DescriptionSection {...mockProps} onBackToTop={onBackToTop} />
       );
 
-      const icons = UNSAFE_getAllByType(Icon);
+      const IconType = (Icon as any).type ?? Icon;
+      const icons = UNSAFE_getAllByType(IconType);
 
       // Проверяем, что декоративные иконки имеют accessibilityElementsHidden
       const decorativeIcons = icons.filter(

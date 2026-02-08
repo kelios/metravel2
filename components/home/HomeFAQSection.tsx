@@ -100,6 +100,7 @@ function HomeFAQSection() {
       justifyContent: 'space-between',
       paddingVertical: 16,
       paddingHorizontal: 16,
+      minHeight: 48,
       gap: 16,
       ...Platform.select({
         web: {
@@ -145,6 +146,8 @@ function HomeFAQSection() {
                   onPress={() => toggleItem(idx)}
                   accessibilityRole="button"
                   accessibilityLabel={item.q}
+                  accessibilityState={{ expanded: isOpen }}
+                  accessibilityHint={isOpen ? 'Свернуть ответ' : 'Развернуть ответ'}
                   style={({ pressed, hovered }) => [
                     styles.itemHeader,
                     (pressed || hovered) && Platform.OS === 'web' ? styles.itemHeaderHover : null,

@@ -249,79 +249,39 @@ const getFontFaceSwapScript = () => String.raw`
         }
       }).observe(document.head || document.documentElement, { childList: true, subtree: true });
     }
-  } catch (_e) {}
-})();
-`;
+  }
 
-const getIconFontPreloadScript = () => String.raw`
-(function(){
-  try {
-    if (typeof document === 'undefined') return;
-    // Find the Feather icon font injected by @expo/vector-icons and preload it.
-    // Deferred to idle time to avoid blocking the main thread during initial render.
-    function findAndPreload() {
-      try {
-        var sheets = document.styleSheets;
-        for (var i = 0; i < sheets.length; i++) {
-          try {
-            var rules = sheets[i].cssRules || sheets[i].rules;
-            if (!rules) continue;
-            for (var j = 0; j < rules.length; j++) {
-              var rule = rules[j];
-              if (rule.type === CSSRule.FONT_FACE_RULE) {
-                var src = rule.style.getPropertyValue('src') || '';
-                if (src.indexOf('Feather') !== -1 || src.indexOf('feather') !== -1) {
-                  var match = src.match(/url\(["']?([^"')]+)["']?\)/);
-                  if (match && match[1]) {
-                    var link = document.createElement('link');
-                    link.rel = 'preload';
-                    link.as = 'font';
-                    link.type = 'font/ttf';
-                    link.href = match[1];
-                    link.crossOrigin = 'anonymous';
-                    document.head.appendChild(link);
-                    return;
-                  }
-                }
-              }
-            }
-          } catch (_e) { /* cross-origin sheets */ }
-        }
-
-        var styles = document.querySelectorAll('style');
-        for (var k = 0; k < styles.length; k++) {
-          var text = styles[k].textContent || '';
-          if (text.indexOf('@font-face') === -1) continue;
-          if (text.indexOf('feather') === -1 && text.indexOf('Feather') === -1) continue;
-          var m = text.match(/url\(["']?([^"')]+(?:Feather|feather)[^"')]*)["']?\)/);
-          if (!m) m = text.match(/url\(["']?([^"')]+\.ttf[^"')]*)["']?\)/);
-          if (m && m[1]) {
-            var l = document.createElement('link');
-            l.rel = 'preload';
-            l.as = 'font';
-            l.type = 'font/ttf';
-            l.href = m[1];
-            l.crossOrigin = 'anonymous';
-            document.head.appendChild(l);
-            return;
+  // 2. MutationObserver to catch <style> elements injected via textContent/innerHTML
+  //    (e.g. @expo/vector-icons injects icon font-face this way)
+  function patchFontDisplay(css) {
+    return css.replace(/@font-face\s*\{([^}]*)\}/g, function(match, body) {
+      if (body.indexOf('font-display') !== -1) return match;
+      return match.replace(/\}\s*$/, ';font-display:swap;}');
+    });
+  }
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(function(mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var nodes = mutations[i].addedNodes;
+        for (var j = 0; j < nodes.length; j++) {
+          var node = nodes[j];
+          if (node.tagName === 'STYLE' && node.textContent && node.textContent.indexOf('@font-face') !== -1) {
+            var patched = patchFontDisplay(node.textContent);
+            if (patched !== node.textContent) node.textContent = patched;
           }
         }
-      } catch (_e) {}
-    }
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(findAndPreload, { timeout: 1500 });
-    } else {
-      setTimeout(findAndPreload, 100);
-    }
-  } catch (_e) {}
+      }
+    }).observe(document.head || document.documentElement, { childList: true, subtree: true });
+  }
+} catch (_e) {}
 })();
-`;
 
 const getHomeHeroPreloadScript = () => String.raw`
 (function(){
-  try {
-    var path = window.location && window.location.pathname;
-    // Only run on the home page
+try {
+  var path = window.location && window.location.pathname;
+  // Only run on the home page
+  if (path && path !== '/' && path !== '/index') return;
     if (path && path !== '/' && path !== '/index') return;
 
     // Preload the home hero image (pdf.webp) for faster LCP.
@@ -668,11 +628,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
       {/* Early travel hero preload to improve LCP on /travels/* */}
       <script
         dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
-      />
-
-      {/* Preload icon font once injected by @expo/vector-icons */}
-      <script
-        dangerouslySetInnerHTML={{ __html: getIconFontPreloadScript() }}
       />
 
       <ScrollViewStyleReset />

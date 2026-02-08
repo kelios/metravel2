@@ -204,6 +204,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
             testID="footer-more-backdrop"
             style={styles.moreBackdrop}
             onPress={() => setShowMore(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Закрыть меню"
           />
           <View testID="footer-more-sheet" style={styles.moreSheet}>
             <View testID="footer-more-list" style={styles.moreList}>
@@ -213,6 +215,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   router.push("/travelsby" as any);
                 }}
                 style={styles.moreItem}
+                accessibilityRole="link"
+                accessibilityLabel="Беларусь"
               >
                 <Feather name="flag" size={18} color={colors.primary} style={styles.moreItemIcon} />
                 <Text style={styles.moreItemText}>Беларусь</Text>
@@ -223,6 +227,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   router.push("/travel/new" as any);
                 }}
                 style={styles.moreItem}
+                accessibilityRole="link"
+                accessibilityLabel="Создать маршрут"
               >
                 <Feather name="plus-circle" size={18} color={colors.primary} style={styles.moreItemIcon} />
                 <Text style={styles.moreItemText}>Создать маршрут</Text>
@@ -233,6 +239,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   router.push("/profile" as any);
                 }}
                 style={styles.moreItem}
+                accessibilityRole="link"
+                accessibilityLabel="Профиль"
               >
                 <Feather name="user" size={18} color={colors.primary} style={styles.moreItemIcon} />
                 <Text style={styles.moreItemText}>Профиль</Text>
@@ -244,6 +252,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   router.push("/privacy" as any);
                 }}
                 style={styles.moreItem}
+                accessibilityRole="link"
+                accessibilityLabel="Политика конфиденциальности"
               >
                 <Feather name="shield" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
                 <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Политика конфиденциальности</Text>
@@ -254,6 +264,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   router.push("/cookies" as any);
                 }}
                 style={styles.moreItem}
+                accessibilityRole="link"
+                accessibilityLabel="Настройки cookies"
               >
                 <Feather name="settings" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
                 <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Настройки cookies</Text>
@@ -264,6 +276,8 @@ function BottomDock({ onDockHeight }: BottomDockProps) {
                   router.push("/about" as any);
                 }}
                 style={styles.moreItem}
+                accessibilityRole="link"
+                accessibilityLabel="Связаться с нами"
               >
                 <Feather name="mail" size={18} color={colors.textMuted} style={styles.moreItemIcon} />
                 <Text style={[styles.moreItemText, { color: colors.textMuted }]}>Связаться с нами</Text>
@@ -340,8 +354,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   itemText: {
     color: colors.textMuted,
-    fontSize: 10,
-    lineHeight: 12,
+    fontSize: 11,
+    lineHeight: 14,
     marginTop: 2,
     textAlign: "center",
   },
@@ -375,9 +389,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   } as any,
   moreItem: {
     paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 44,
+    borderRadius: 8,
   },
   moreItemIcon: {
     marginRight: 12,

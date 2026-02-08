@@ -16,6 +16,28 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 
+const FilterCheckbox = memo(({ checked, checkboxStyle, checkboxCheckedStyle, checkColor }: {
+  checked: boolean;
+  checkboxStyle: any;
+  checkboxCheckedStyle: any;
+  checkColor: string;
+}) => (
+  <View style={[checkboxStyle, checked && checkboxCheckedStyle]}>
+    {checked && <Feather name="check" size={12} color={checkColor} />}
+  </View>
+));
+
+const FilterRadio = memo(({ checked, radioStyle, radioCheckedStyle, radioDotStyle }: {
+  checked: boolean;
+  radioStyle: any;
+  radioCheckedStyle: any;
+  radioDotStyle: any;
+}) => (
+  <View style={[radioStyle, checked && radioCheckedStyle]}>
+    {checked && <View style={radioDotStyle} />}
+  </View>
+));
+
 export interface FilterOption {
   id: string;
   name: string;
@@ -149,18 +171,6 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     return `Найдено ${count} ${noun}`;
   }, [resultsCount]);
 
-  const FilterCheckbox = ({ checked }: { checked: boolean }) => (
-    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-      {checked && <Feather name="check" size={12} color={colors.textOnPrimary} />}
-    </View>
-  );
-
-  const FilterRadio = ({ checked }: { checked: boolean }) => (
-    <View style={[styles.radio, checked && styles.radioChecked]}>
-      {checked && <View style={styles.radioDot} />}
-    </View>
-  );
-
   const showResultsBadge =
     resultsCount !== undefined && (Platform.OS !== 'web' || isNarrowWeb);
 
@@ -277,7 +287,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 } as any)
               : null)}
           >
-            <FilterCheckbox checked={moderationValue === 0} />
+            <FilterCheckbox checked={moderationValue === 0} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
             <Text
               style={[
                 styles.moderationLabel,
@@ -379,9 +389,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                         ]}
                       >
                         {group.multiSelect !== false ? (
-                          <FilterCheckbox checked={isSelected} />
+                          <FilterCheckbox checked={isSelected} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />
                         ) : (
-                          <FilterRadio checked={isSelected} />
+                          <FilterRadio checked={isSelected} radioStyle={styles.radio} radioCheckedStyle={styles.radioChecked} radioDotStyle={styles.radioDot} />
                         )}
                         <Text 
                           style={[

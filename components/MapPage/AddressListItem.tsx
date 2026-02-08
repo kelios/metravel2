@@ -113,6 +113,35 @@ const stripCountryFromCategoryString = (raw: string | null | undefined, address?
   return filtered.join(', ');
 };
 
+const PRESSED_OPACITY = { opacity: 0.85 };
+const PLACE_CARD_STYLE = { margin: 8 };
+
+const ActionIconButton = React.memo(function ActionIconButton({
+    name,
+    size,
+    color,
+    onPress,
+    style,
+    accessibilityLabel,
+}: {
+    name: keyof typeof Feather.glyphMap;
+    size: number;
+    color: string;
+    onPress?: () => void;
+    style?: any;
+    accessibilityLabel: string;
+}) {
+    return (
+        <CardActionPressable
+            onPress={onPress}
+            style={({ pressed }) => [style, pressed && PRESSED_OPACITY]}
+            accessibilityLabel={accessibilityLabel}
+        >
+            <Feather name={name} size={size} color={color} />
+        </CardActionPressable>
+    );
+});
+
 const AddressListItem: React.FC<Props> = ({
                                               travel,
                                               isMobile: isMobileProp,
@@ -428,35 +457,11 @@ const AddressListItem: React.FC<Props> = ({
             isAdding={isAddingPoint}
             imageHeight={180}
             width={300}
-            style={{ margin: 8 }}
+            style={PLACE_CARD_STYLE}
             testID="map-travel-card"
           />
         );
     }
-
-    const ActionIconButton = ({
-        name,
-        size,
-        color,
-        onPress,
-        style,
-        accessibilityLabel,
-    }: {
-        name: keyof typeof Feather.glyphMap;
-        size: number;
-        color: string;
-        onPress?: () => void;
-        style?: any;
-        accessibilityLabel: string;
-    }) => (
-        <CardActionPressable
-            onPress={onPress}
-            style={({ pressed }) => [style, pressed && { opacity: 0.85 }]}
-            accessibilityLabel={accessibilityLabel}
-        >
-            <Feather name={name} size={size} color={color} />
-        </CardActionPressable>
-    );
 
     return (
       <Pressable

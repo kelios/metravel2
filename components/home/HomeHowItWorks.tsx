@@ -157,7 +157,7 @@ function HomeHowItWorks() {
       justifyContent: 'center',
       alignItems: 'center',
       paddingHorizontal: 8,
-      opacity: 0.3,
+      opacity: 0.5,
     },
   }), [colors]);
 
@@ -184,7 +184,8 @@ function HomeHowItWorks() {
                   (pressed || hovered) && styles.stepHover,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={step.title}
+                accessibilityLabel={`${step.number}. ${step.title}`}
+                accessibilityHint={step.description}
                 {...pressableProps}
               >
                 <View style={styles.stepHeader}>

@@ -41,6 +41,7 @@ export const MODERN_MATTE_PALETTE = {
   // ==========================================
   primary: '#7a9d8f', // Матовый серо-зеленый акцент
   primaryDark: '#6a8d7f', // Темнее для hover/active
+  primaryText: '#547769', // Для текста/ссылок на светлом фоне (WCAG AA ≥4.5:1)
   primaryLight: '#f0f5f3', // Очень светлый оттенок для фонов
   primarySoft: 'rgba(122, 157, 143, 0.06)', // Едва заметная подсветка
   
@@ -212,6 +213,7 @@ export const MODERN_MATTE_PALETTE_DARK = {
   // ==========================================
   primary: '#8fb5a5', // Светлый серо-зеленый акцент
   primaryDark: '#7aa595', // Темнее для hover/active
+  primaryText: '#8fb5a5', // В темной теме primary уже контрастный на темном фоне
   primaryLight: '#2a3530', // Темный оттенок для фонов
   primarySoft: 'rgba(143, 181, 165, 0.12)', // Мягкая подсветка
 

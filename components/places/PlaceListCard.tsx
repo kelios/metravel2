@@ -430,4 +430,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
   });
 
-export default PlaceListCard;
+export default React.memo(PlaceListCard);

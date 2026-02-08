@@ -120,6 +120,7 @@ export const DESIGN_TOKENS = {
     // Акцентные цвета (мягкие, матовые)
     primary: colorVar('primary', MODERN_MATTE_PALETTE.primary),
     primaryDark: colorVar('primaryDark', MODERN_MATTE_PALETTE.primaryDark),
+    primaryText: colorVar('primaryText', MODERN_MATTE_PALETTE.primaryText),
     primaryLight: colorVar('primaryLight', MODERN_MATTE_PALETTE.primaryLight),
     primarySoft: colorVar('primarySoft', MODERN_MATTE_PALETTE.primarySoft),
     primaryAlpha30: colorVarAlphaHex('primary', MODERN_MATTE_PALETTE.primary, '30'),
@@ -272,6 +273,7 @@ export function getThemedColors(isDark: boolean) {
     primaryAlpha40: themedColorAlphaHex('primary', MODERN_MATTE_PALETTE.primary, MODERN_MATTE_PALETTE_DARK.primary, '40', isDark),
     primaryAlpha50: themedColorAlphaHex('primary', MODERN_MATTE_PALETTE.primary, MODERN_MATTE_PALETTE_DARK.primary, '50', isDark),
     primaryDark: themedColor('primaryDark', MODERN_MATTE_PALETTE.primaryDark, MODERN_MATTE_PALETTE_DARK.primaryDark, isDark),
+    primaryText: themedColor('primaryText', MODERN_MATTE_PALETTE.primaryText, MODERN_MATTE_PALETTE_DARK.primaryText, isDark),
     primaryLight: themedColor('primaryLight', MODERN_MATTE_PALETTE.primaryLight, MODERN_MATTE_PALETTE_DARK.primaryLight, isDark),
     primarySoft: themedColor('primarySoft', MODERN_MATTE_PALETTE.primarySoft, MODERN_MATTE_PALETTE_DARK.primarySoft, isDark),
 

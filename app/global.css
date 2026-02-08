@@ -17,7 +17,7 @@
   --color-dockBorder: rgba(58, 58, 58, 0.06);
   --color-text: #3a3a3a;
   --color-textMuted: #6a6a6a;
-  --color-textSubtle: #8a8a8a;
+  --color-textSubtle: #767676;
   --color-textInverse: #ffffff;
   --color-textOnPrimary: #111827;
   --color-textOnDark: #ffffff;
@@ -26,6 +26,7 @@
   --color-primary-40: #7a9d8f40;
   --color-primary-50: #7a9d8f50;
   --color-primaryDark: #6a8d7f;
+  --color-primaryText: #547769;
   --color-primaryLight: #f0f5f3;
   --color-primarySoft: rgba(122, 157, 143, 0.06);
   --color-accent: #8a9aa8;
@@ -171,6 +172,7 @@ html[data-theme="dark"] {
 	    --color-primary-40: #8fb5a540;
 	    --color-primary-50: #8fb5a550;
 	    --color-primaryDark: #7aa595;
+	    --color-primaryText: #8fb5a5;
 	    --color-primaryLight: #2a3530;
 	    --color-primarySoft: rgba(143, 181, 165, 0.12);
     --color-accent: #a5b5c5;

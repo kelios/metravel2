@@ -66,7 +66,7 @@ const mapIconName = (name: string): string => {
 
 export const Icon: React.FC<
   { name: string; size?: number; color?: string } & Record<string, any>
-> = ({
+> = React.memo(({
   name,
   size = 22,
   color,
@@ -81,4 +81,4 @@ export const Icon: React.FC<
       {...(rest as any)}
     />
   </Suspense>
-)
+))

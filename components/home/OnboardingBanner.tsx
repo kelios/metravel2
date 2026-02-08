@@ -266,7 +266,12 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
             </Text>
 
             {/* Прогресс-бар */}
-            <View style={styles.progressContainer}>
+            <View
+              style={styles.progressContainer}
+              accessibilityRole="progressbar"
+              accessibilityValue={{ min: 0, max: 100, now: 0 }}
+              accessibilityLabel="Прогресс создания первой истории"
+            >
               <View style={styles.progressBar}>
                 <View style={styles.progressFill} />
               </View>

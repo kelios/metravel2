@@ -39,7 +39,7 @@ function HomeTrustBlock() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingVertical: 20,
+      paddingVertical: 40,
       backgroundColor: colors.background,
     },
     card: {
