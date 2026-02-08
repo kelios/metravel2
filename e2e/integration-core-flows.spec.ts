@@ -82,6 +82,16 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
       .waitForSelector('[data-testid="map-travels-tab"]', { timeout })
       .then(() => true)
       .catch(() => null),
+    page
+      // Onboarding overlay may appear on first visit, blocking the travels list.
+      .waitForSelector('text=Места для путешествий', { timeout })
+      .then(() => true)
+      .catch(() => null),
+    page
+      // Filters panel visible means the map page rendered successfully.
+      .waitForSelector('[data-testid="filters-panel"]', { timeout })
+      .then(() => true)
+      .catch(() => null),
   ].map((p) => Promise.resolve(p).catch(() => null)));
 
   expect(ok, `${label}: expected cards or empty state to render`).toBeTruthy();

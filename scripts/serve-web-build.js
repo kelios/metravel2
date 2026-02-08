@@ -4,6 +4,7 @@ const http = require('http')
 const https = require('https')
 const fs = require('fs')
 const path = require('path')
+const zlib = require('zlib')
 const { URL } = require('url')
 
 const buildDir = process.env.E2E_BUILD_DIR
@@ -35,6 +36,29 @@ const contentTypes = {
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
   '.map': 'application/json; charset=utf-8',
+}
+
+const compressibleExts = new Set(['.html', '.js', '.css', '.json', '.svg', '.map'])
+
+function sendCompressed(req, res, contentType, data, fileExt) {
+  res.setHeader('Content-Type', contentType)
+  const ext = fileExt || ''
+  const acceptEncoding = (req.headers['accept-encoding'] || '')
+  if (compressibleExts.has(ext) && acceptEncoding.includes('gzip')) {
+    zlib.gzip(data, (err, compressed) => {
+      if (err) {
+        res.setHeader('Content-Length', data.length)
+        res.end(data)
+        return
+      }
+      res.setHeader('Content-Encoding', 'gzip')
+      res.setHeader('Content-Length', compressed.length)
+      res.end(compressed)
+    })
+    return
+  }
+  res.setHeader('Content-Length', data.length)
+  res.end(data)
 }
 
 const defaultProxyTarget = (process.env.E2E_API_URL || process.env.EXPO_PUBLIC_API_URL || '').trim()
@@ -271,8 +295,7 @@ const server = http.createServer((req, res) => {
         if (htmlCandidate) {
           fs.readFile(htmlCandidate, (htmlErr, htmlData) => {
             if (!htmlErr) {
-              res.setHeader('Content-Type', 'text/html; charset=utf-8')
-              res.end(htmlData)
+              sendCompressed(req, res, 'text/html; charset=utf-8', htmlData, '.html')
               return
             }
 
@@ -283,8 +306,7 @@ const server = http.createServer((req, res) => {
                 res.end('Not found')
                 return
               }
-              res.setHeader('Content-Type', 'text/html; charset=utf-8')
-              res.end(fallbackData)
+              sendCompressed(req, res, 'text/html; charset=utf-8', fallbackData, '.html')
             })
           })
           return
@@ -297,16 +319,14 @@ const server = http.createServer((req, res) => {
             res.end('Not found')
             return
           }
-          res.setHeader('Content-Type', 'text/html; charset=utf-8')
-          res.end(fallbackData)
+          sendCompressed(req, res, 'text/html; charset=utf-8', fallbackData, '.html')
         })
         return
       }
 
       const ext = path.extname(resolvedPath).toLowerCase()
       const contentType = contentTypes[ext] || 'application/octet-stream'
-      res.setHeader('Content-Type', contentType)
-      res.end(data)
+      sendCompressed(req, res, contentType, data, ext)
     })
   } catch {
     res.statusCode = 500
