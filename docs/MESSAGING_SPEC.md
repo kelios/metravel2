@@ -21,7 +21,7 @@
 | **Хуки** | `hooks/useMessages.ts` | 8 хуков: `useThreads`, `useThreadMessages`, `useSendMessage`, `useDeleteMessage`, `useAvailableUsers`, `useThreadByUser`, `useMarkThreadRead`, `useUnreadCount` |
 | **Экран** | `app/(tabs)/messages.tsx` | Главный экран с адаптивным layout (desktop: two-panel, mobile: stacked) |
 | **Компоненты** | `components/messages/` | 4 компонента: `ThreadList`, `ChatView`, `MessageBubble`, `NewConversationPicker` |
-| **Тесты (unit)** | `__tests__/api/messages.test.ts`, `__tests__/hooks/useMessages.test.ts`, `__tests__/components/messages/` | 89 unit-тестов: API (25), хуки (30), MessageBubble (7), ThreadList (9), ChatView (10), NewConversationPicker (8) |
+| **Тесты (unit)** | `__tests__/api/messages.test.ts`, `__tests__/hooks/useMessages.test.ts`, `__tests__/components/messages/` | 92 unit-тестов: API (25), хуки (32), MessageBubble (8), ThreadList (9), ChatView (10), NewConversationPicker (8) |
 | **Тесты (E2E)** | `e2e/messages.spec.ts` | 5 E2E-сценариев: auth gate, список, поиск, SEO, deep-link |
 
 ### 2.2 Модель данных (фронтенд)
@@ -79,7 +79,8 @@ MessagingUser {
 - **Адаптивный layout** — desktop (sidebar + chat panel) / mobile (stacked screens)
 - **SEO** — `noindex,nofollow` для приватной страницы
 - **Accessibility** — aria-labels на кнопках, полях ввода, элементах списка
-- **Удаление сообщений** — long-press (mobile) / контекстное меню (web) на собственных сообщениях
+- **Удаление сообщений** — long-press (mobile) / контекстное меню (web) на собственных сообщениях, оптимистичное удаление с rollback
+- **Копирование текста** — long-press (mobile Alert) / контекстное меню (web) на любом сообщении
 - **Polling** — автообновление сообщений (10с) и тредов (30с) при фокусе экрана
 - **Непрочитанные** — badge с количеством непрочитанных в списке тредов, mark-read при открытии чата
 - **Превью последнего сообщения** — текст последнего сообщения под именем собеседника в `ThreadList`
@@ -103,7 +104,7 @@ MessagingUser {
 | **P5** | ~~**Нет превью последнего сообщения**~~ | ✅ **РЕШЕНО (фронтенд).** `ThreadList` отображает `last_message_text` (1 строка). *Требуется поле от бэкенда.* |
 | **P6** | **Нет статусов доставки/прочтения** | Отправитель не знает, доставлено ли сообщение и прочитано ли оно. |
 | **P7** | **Нет редактирования сообщений** | API не поддерживает PATCH/PUT для сообщений. |
-| **P8** | ~~**Нет тестов**~~ | ✅ **РЕШЕНО.** 89 unit-тестов + 5 E2E-сценариев. |
+| **P8** | ~~**Нет тестов**~~ | ✅ **РЕШЕНО.** 92 unit-тестов + 5 E2E-сценариев. |
 | **P9** | ~~**Нет ограничения на спам**~~ | ✅ **ЧАСТИЧНО РЕШЕНО (фронтенд).** Debounce кнопки отправки (300ms cooldown) в `ChatView`. *Бэкенд rate-limiting (30 msg/min) ожидает реализации.* |
 
 #### Минорные
@@ -246,8 +247,8 @@ MessagingUser {
 
 | Файл | Покрытие |
 |------|----------|
-| `api/messages.ts` | Все 6 API-функций: успех, ошибка сети, 401/403 |
-| `hooks/useMessages.ts` | Все 6 хуков: загрузка, ошибка, refresh, пагинация |
+| `api/messages.ts` | Все 8 API-функций: успех, ошибка сети, 401/404 graceful |
+| `hooks/useMessages.ts` | Все 8 хуков: загрузка, ошибка, refresh, пагинация, optimisticRemove |
 | `components/messages/MessageBubble.tsx` | Рендер own/other/system, форматирование даты |
 | `components/messages/ThreadList.tsx` | Рендер списка, поиск, пустое состояние, ошибка |
 | `components/messages/ChatView.tsx` | Отправка, Enter-submit, пустой чат, загрузка |
@@ -306,7 +307,7 @@ MessagingUser {
 | Лайки | ✅ like/unlike | ❌ Нет |
 | Серверная фильтрация | ✅ По thread_id, travel_id | ✅ По thread_id |
 | Обработка ошибок | ✅ Graceful (404→null, 401→[]) | ✅ Graceful (404→[], 401→[]) |
-| Тесты | ✅ Есть (CommentItem, CommentsSection) | ✅ 89 unit + 5 E2E |
+| Тесты | ✅ Есть (CommentItem, CommentsSection) | ✅ 92 unit + 5 E2E |
 | Polling | ❌ Нет | ✅ 10с (сообщения) / 30с (треды) |
 | Непрочитанные | ❌ Нет | ✅ Badge + mark-read |
 
@@ -356,8 +357,9 @@ app/(tabs)/messages.tsx (MessagesScreen)
 | 2026-02-08 | **Фаза 2.2:** Превью последнего сообщения в `ThreadList` (1 строка, `last_message_text`). |
 | 2026-02-08 | **Фаза 2.3:** Группировка по датам в `ChatView` — разделители «Сегодня», «Вчера», полная дата. |
 | 2026-02-08 | **Фаза 2.4:** Поиск на мобильном — `showSearch` всегда включён. |
-| 2026-02-08 | **Тесты:** 89 unit-тестов (API: 25, хуки: 30, MessageBubble: 7, ThreadList: 9, ChatView: 10, NewConversationPicker: 8). 5 E2E-сценариев (Playwright). |
+| 2026-02-08 | **Тесты:** 92 unit-тестов (API: 25, хуки: 32, MessageBubble: 8, ThreadList: 9, ChatView: 10, NewConversationPicker: 8). 5 E2E-сценариев (Playwright). |
 | 2026-02-08 | **Graceful errors:** API функции обрабатывают 401/404 как пустые результаты (как в модуле комментариев). Debounce 300ms на кнопке отправки. Badge непрочитанных в AccountMenu. |
+| 2026-02-08 | **Фаза 2.1 (доп.):** «Копировать текст» в контекстном меню (web) / Alert (mobile) на любом сообщении. Оптимистичное удаление с rollback при ошибке API. |
 
 ### Зависимости от бэкенда (ожидают реализации)
 

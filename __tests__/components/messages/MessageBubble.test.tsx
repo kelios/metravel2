@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, act } from '@testing-library/react-native';
-import { Platform, Alert } from 'react-native';
+import { render } from '@testing-library/react-native';
+import { Alert } from 'react-native';
 import MessageBubble from '@/components/messages/MessageBubble';
 import type { Message } from '@/api/messages';
 

@@ -64,6 +64,13 @@ describe('Messages API', () => {
             const result = await fetchMessageThreads();
             expect(result).toEqual([]);
         });
+
+        it('should treat ApiError 401 (status on error) as empty list', async () => {
+            mockedApiClient.get.mockRejectedValueOnce({ status: 401, message: 'Требуется авторизация' });
+
+            const result = await fetchMessageThreads();
+            expect(result).toEqual([]);
+        });
     });
 
     describe('fetchMessages', () => {
@@ -113,6 +120,13 @@ describe('Messages API', () => {
             const result = await fetchMessages(1);
             expect(result).toEqual({ count: 0, next: null, previous: null, results: [] });
         });
+
+        it('should treat ApiError 401 (status on error) as empty paginated result', async () => {
+            mockedApiClient.get.mockRejectedValueOnce({ status: 401, message: 'Требуется авторизация' });
+
+            const result = await fetchMessages(1);
+            expect(result).toEqual({ count: 0, next: null, previous: null, results: [] });
+        });
     });
 
     describe('fetchAvailableUsers', () => {
@@ -131,6 +145,13 @@ describe('Messages API', () => {
 
         it('should treat 401 as empty list', async () => {
             mockedApiClient.get.mockRejectedValueOnce({ response: { status: 401 } });
+
+            const result = await fetchAvailableUsers();
+            expect(result).toEqual([]);
+        });
+
+        it('should treat ApiError 401 (status on error) as empty list', async () => {
+            mockedApiClient.get.mockRejectedValueOnce({ status: 401, message: 'Требуется авторизация' });
 
             const result = await fetchAvailableUsers();
             expect(result).toEqual([]);

@@ -20,11 +20,14 @@ const MESSAGES_POLL_INTERVAL = 10_000;
 
 // ---- useThreads ----
 
+const MAX_CONSECUTIVE_FAILURES = 3;
+
 export function useThreads(enabled: boolean = true, pollEnabled: boolean = true) {
     const [threads, setThreads] = useState<MessageThread[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const mountedRef = useRef(true);
+    const consecutiveFailuresRef = useRef(0);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -34,6 +37,7 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
     const load = useCallback(async () => {
         setLoading(true);
         setError(null);
+        consecutiveFailuresRef.current = 0;
         try {
             const data = await fetchMessageThreads();
             if (mountedRef.current) {
@@ -50,13 +54,15 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
     }, []);
 
     const silentRefresh = useCallback(async () => {
+        if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
         try {
             const data = await fetchMessageThreads();
             if (mountedRef.current) {
+                consecutiveFailuresRef.current = 0;
                 setThreads(Array.isArray(data) ? data : []);
             }
         } catch {
-            // silent — polling errors should not disrupt UI
+            consecutiveFailuresRef.current += 1;
         }
     }, []);
 
@@ -122,11 +128,15 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
         }
     }, [threadId]);
 
+    const consecutiveFailuresRef = useRef(0);
+
     const silentRefresh = useCallback(async () => {
         if (threadId == null || threadId < 0) return;
+        if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
         try {
             const data: PaginatedMessages = await fetchMessages(threadId, 1, 50);
             if (!mountedRef.current) return;
+            consecutiveFailuresRef.current = 0;
             const results = data.results || [];
             setMessages((prev) => {
                 const ids = new Set(prev.map((m) => m.id));
@@ -135,7 +145,7 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
                 return [...newOnes, ...prev];
             });
         } catch {
-            // silent — polling errors should not disrupt UI
+            consecutiveFailuresRef.current += 1;
         }
     }, [threadId]);
 
@@ -298,6 +308,7 @@ export function useMarkThreadRead() {
 export function useUnreadCount(enabled: boolean = true, pollEnabled: boolean = true) {
     const [count, setCount] = useState(0);
     const mountedRef = useRef(true);
+    const consecutiveFailuresRef = useRef(0);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -305,13 +316,15 @@ export function useUnreadCount(enabled: boolean = true, pollEnabled: boolean = t
     }, []);
 
     const load = useCallback(async () => {
+        if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
         try {
             const data = await fetchUnreadCount();
             if (mountedRef.current) {
+                consecutiveFailuresRef.current = 0;
                 setCount(data?.count ?? 0);
             }
         } catch {
-            // silent
+            consecutiveFailuresRef.current += 1;
         }
     }, []);
 

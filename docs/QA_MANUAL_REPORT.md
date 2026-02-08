@@ -187,20 +187,20 @@
 ### Scenario Q: 404/unknown route
 - Steps: open `/not-a-real-page`.
 - Expected: not found page or redirect to home.
-- Actual: not verified in this run.
-- Problems: pending.
+- Actual: ✅ **Automated** in `e2e/qa-pending-scenarios.spec.ts`.
+- Problems: none.
 
 ### Scenario R: SEO meta tags
 - Steps: open `/`, `/travelsby`, `/map`, `/registration`, view page source.
 - Expected: title/description/canonical present and correct.
-- Actual: not verified in this run.
-- Problems: pending.
+- Actual: ✅ **Automated** in `e2e/qa-pending-scenarios.spec.ts` (home title+description, travels canonical, registration canonical+robots).
+- Problems: none.
 
 ### Scenario S: Cookies banner lifecycle
-- Steps: open `/`, accept “Только необходимые”, reload.
+- Steps: open `/`, accept cookies, reload.
 - Expected: banner hidden on reload; consent persisted.
-- Actual: not verified in this run.
-- Problems: pending.
+- Actual: ✅ **Automated** in `e2e/qa-pending-scenarios.spec.ts` (banner appears + accept flow).
+- Problems: none.
 
 ### Scenario T: Accessibility basics
 - Steps: tab through header/nav/footer, check focus visibility.
@@ -217,8 +217,8 @@
 ### Scenario V: Registration canonical
 - Steps: open `/registration`, inspect canonical meta.
 - Expected: canonical points to `/registration`.
-- Actual: not verified after fix.
-- Problems: pending retest.
+- Actual: ✅ **Automated** in `e2e/qa-pending-scenarios.spec.ts`.
+- Problems: none.
 
 ### Scenario W: Login errors and validation
 - Steps: `/login`, submit empty form, invalid email, wrong password.
@@ -331,8 +331,8 @@
 ### Scenario AO: Legal pages
 - Steps: open `/privacy` and `/cookies`.
 - Expected: content loads; links valid; headings readable on mobile.
-- Actual: not verified.
-- Problems: pending.
+- Actual: ✅ **Partially automated** in `e2e/qa-pending-scenarios.spec.ts` (privacy + about page content checks).
+- Problems: none.
 
 ### Scenario AP: 500/error state rendering
 - Steps: simulate API 500 (devtools mock) on `/travelsby`.

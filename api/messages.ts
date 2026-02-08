@@ -62,7 +62,7 @@ export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
     try {
         return await apiClient.get<MessageThread[]>('/message-threads/');
     } catch (e: any) {
-        const status = e?.response?.status;
+        const status = e?.status ?? e?.response?.status;
         if (status === 401 || status === 404) return [];
         throw e;
     }
@@ -72,16 +72,22 @@ export const fetchAvailableUsers = async (): Promise<MessagingUser[]> => {
     try {
         return await apiClient.get<MessagingUser[]>('/message-threads/available-users/');
     } catch (e: any) {
-        const status = e?.response?.status;
+        const status = e?.status ?? e?.response?.status;
         if (status === 401 || status === 404) return [];
         throw e;
     }
 };
 
 export const fetchThreadByUser = async (userId: number): Promise<ThreadByUserResponse> => {
-    return apiClient.get<ThreadByUserResponse>(
-        `/message-threads/thread-by-user/?user_id=${userId}`
-    );
+    try {
+        return await apiClient.get<ThreadByUserResponse>(
+            `/message-threads/thread-by-user/?user_id=${userId}`
+        );
+    } catch (e: any) {
+        const status = e?.status ?? e?.response?.status;
+        if (status === 401 || status === 404) return { thread_id: null };
+        throw e;
+    }
 };
 
 export const fetchMessages = async (
@@ -94,7 +100,7 @@ export const fetchMessages = async (
             `/messages/?thread_id=${threadId}&page=${page}&perPage=${perPage}`
         );
     } catch (e: any) {
-        const status = e?.response?.status;
+        const status = e?.status ?? e?.response?.status;
         if (status === 401 || status === 404) {
             return { count: 0, next: null, previous: null, results: [] };
         }
@@ -103,7 +109,13 @@ export const fetchMessages = async (
 };
 
 export const markThreadRead = async (threadId: number): Promise<null> => {
-    return apiClient.post<null>(`/message-threads/${threadId}/mark-read/`, {});
+    try {
+        return await apiClient.post<null>(`/message-threads/${threadId}/mark-read/`, {});
+    } catch (e: any) {
+        const status = e?.status ?? e?.response?.status;
+        if (status === 401 || status === 404) return null;
+        throw e;
+    }
 };
 
 export interface UnreadCountResponse {
@@ -121,9 +133,23 @@ export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
 export const sendMessage = async (
     payload: MessageCreatePayload
 ): Promise<MessageCreatePayload> => {
-    return apiClient.post<MessageCreatePayload>('/messages/', payload);
+    try {
+        return await apiClient.post<MessageCreatePayload>('/messages/', payload);
+    } catch (e: any) {
+        const status = e?.status ?? e?.response?.status;
+        if (status === 401) {
+            throw new Error('Для отправки сообщений необходимо авторизоваться');
+        }
+        throw e;
+    }
 };
 
 export const deleteMessage = async (id: number | string): Promise<null> => {
-    return apiClient.delete<null>(`/messages/${id}/`);
+    try {
+        return await apiClient.delete<null>(`/messages/${id}/`);
+    } catch (e: any) {
+        const status = e?.status ?? e?.response?.status;
+        if (status === 401 || status === 404) return null;
+        throw e;
+    }
 };
