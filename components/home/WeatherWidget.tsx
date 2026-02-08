@@ -2,7 +2,7 @@
  * Компонент виджета погоды
  * ✅ РЕДИЗАЙН: Поддержка темной темы + компактный дизайн
  */
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -24,7 +24,7 @@ type DailyForecast = {
     icon: string;
 };
 
-export default function WeatherWidget({ points, countryName }: Props) {
+function WeatherWidget({ points, countryName }: Props) {
     const [forecast, setForecast] = useState<DailyForecast[]>([]);
     const [locationLabel, setLocationLabel] = useState<string>('');
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
@@ -260,3 +260,5 @@ function iconFromCode(code: number): string {
     if (code >= 80) return '⛈️';
     return '🌦️';
 }
+
+export default memo(WeatherWidget);

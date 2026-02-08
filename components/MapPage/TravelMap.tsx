@@ -440,6 +440,62 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     };
   }, [mapReady]);
 
+  // Fit bounds to show ALL travel points when map is ready
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !L) return;
+    if (!travelData || travelData.length === 0) return;
+
+    const map = mapRef.current;
+
+    const points: [number, number][] = [];
+    for (const point of travelData) {
+      const coordStr = String(point?.coord || '').trim();
+      if (!coordStr) continue;
+
+      try {
+        const cleaned = coordStr.replace(/;/g, ',').replace(/\s+/g, '');
+        const parts = cleaned.split(',');
+
+        if (parts.length === 2) {
+          const lat = parseFloat(parts[0]);
+          const lng = parseFloat(parts[1]);
+
+          if (
+            Number.isFinite(lat) && Number.isFinite(lng) &&
+            lat >= -90 && lat <= 90 &&
+            lng >= -180 && lng <= 180
+          ) {
+            points.push([lat, lng]);
+          }
+        }
+      } catch {
+        // Skip invalid coordinates
+      }
+    }
+
+    if (points.length === 0) return;
+
+    // Use fitBounds to show all points
+    const fitMap = () => {
+      try {
+        if (!map || typeof map.fitBounds !== 'function') return;
+        const leafletPoints = points.map(([lat, lng]) => L.latLng(lat, lng));
+        const bounds = L.latLngBounds(leafletPoints);
+        map.fitBounds(bounds.pad(0.15), { animate: false, maxZoom: 15 });
+        if (__DEV__) console.info('[TravelMap] fitBounds applied for', points.length, 'points');
+      } catch (e) {
+        if (__DEV__) console.warn('[TravelMap] fitBounds failed:', e);
+      }
+    };
+
+    // Delay slightly to ensure map container is fully laid out
+    const timer = setTimeout(fitMap, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [mapReady, L, travelData]);
+
   // Initialize overlay layers when map is ready and overlays are enabled
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -562,9 +618,9 @@ export const TravelMap: React.FC<TravelMapProps> = ({
         center={center as [number, number]}
         zoom={initialZoom}
         style={{ width: '100%', height: '100%', minHeight: mapHeight }}
-        zoomControl={!compact}
-        scrollWheelZoom={!compact}
-        dragging={!compact}
+        zoomControl={true}
+        scrollWheelZoom={true}
+        dragging={true}
         ref={(map: any) => {
           if (!mountedRef.current) return;
           if (map && !mapRef.current) {

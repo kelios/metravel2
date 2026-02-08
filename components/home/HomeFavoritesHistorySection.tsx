@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -182,7 +182,7 @@ function HorizontalCards({
   );
 }
 
-export default function HomeFavoritesHistorySection() {
+function HomeFavoritesHistorySection() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { favorites, viewHistory, ensureServerData } = useFavorites() as any;
@@ -375,3 +375,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       }),
     },
   });
+
+export default memo(HomeFavoritesHistorySection);

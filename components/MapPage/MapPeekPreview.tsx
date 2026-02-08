@@ -21,7 +21,7 @@ interface MapPeekPreviewProps {
   onExpandPress: () => void;
 }
 
-export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
+export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
   places,
   userLocation,
   transportMode = 'car',
@@ -169,7 +169,7 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = ({
       )}
     </View>
   );
-};
+});
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({

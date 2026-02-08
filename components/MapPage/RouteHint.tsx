@@ -10,7 +10,7 @@ interface RouteHintProps {
   routePointsCount: number;
 }
 
-export default function RouteHint({ onDismiss, routePointsCount }: RouteHintProps) {
+function RouteHint({ onDismiss, routePointsCount }: RouteHintProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const colors = useThemedColors();
@@ -89,3 +89,5 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
   },
 });
+
+export default React.memo(RouteHint);

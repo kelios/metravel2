@@ -223,4 +223,4 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   },
 });
 
-export default RouteBuilder;
+export default React.memo(RouteBuilder);

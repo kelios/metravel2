@@ -313,4 +313,4 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
 });
 
-export default AddressSearch;
+export default React.memo(AddressSearch);

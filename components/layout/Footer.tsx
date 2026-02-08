@@ -47,4 +47,4 @@ const Footer: React.FC<FooterProps> = ({ onDockHeight }) => {
   );
 };
 
-export default Footer;
+export default React.memo(Footer);

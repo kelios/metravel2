@@ -246,12 +246,18 @@ body {
   box-sizing: border-box !important;
 }
 
-/* Убираем синий outline у всех полей ввода на web */
+/* Убираем дефолтный outline у полей ввода, но сохраняем focus-visible для a11y */
 input,
 textarea,
 select {
-  outline: none !important;
-  box-shadow: none !important;
+  outline: 2px solid transparent !important;
+  outline-offset: 2px !important;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-color: var(--color-primary) !important;
 }
 
 /* Ensure cards don't overflow */

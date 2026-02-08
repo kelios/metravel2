@@ -1,3 +1,4 @@
+import React from 'react';
 import { type TextStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -81,6 +82,8 @@ const mapIconName = (name: string): keyof typeof Feather.glyphMap => {
   }
 };
 
-export default function MapIcon({ name, size, color, style }: MapIconProps) {
+function MapIcon({ name, size, color, style }: MapIconProps) {
   return <Feather name={mapIconName(name)} size={size} color={color} style={style} />;
 }
+
+export default React.memo(MapIcon);

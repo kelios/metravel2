@@ -57,7 +57,7 @@ const estimateTime = (meters: number, mode: 'car' | 'bike' | 'foot') => {
   return `${h} ч ${m} мин`;
 };
 
-export default function RoutingStatus({
+function RoutingStatus({
   isLoading,
   error,
   distance,
@@ -187,6 +187,8 @@ export default function RoutingStatus({
 
   return null;
 }
+
+export default React.memo(RoutingStatus);
 
 const getStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {

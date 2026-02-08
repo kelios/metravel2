@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
@@ -25,6 +25,83 @@ type Props = {
   width?: number;
   imageHeight?: number;
 };
+
+const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: boolean; onClose: () => void }> = ({ imageUrl, alt, visible, onClose }) => {
+  const { width, height } = useWindowDimensions();
+  const colors = useThemedColors();
+
+  const content = (
+    <View style={[fullscreenStyles.container, { width, height }]}>
+      <ImageCardMedia
+        src={imageUrl}
+        fit="contain"
+        blurBackground={false}
+        priority="high"
+        loading="eager"
+        transition={0}
+        style={StyleSheet.absoluteFillObject}
+        alt={alt}
+      />
+      <Pressable
+        onPress={onClose}
+        style={fullscreenStyles.closeBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Закрыть фото"
+      >
+        <Feather name="x" size={24} color={colors.textOnDark} />
+      </Pressable>
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    if (!visible) return null;
+    return (
+      <View
+        style={[fullscreenStyles.webOverlay, { width, height }]}
+        {...({ onClick: (e: any) => { if (e.target === e.currentTarget) onClose(); } } as any)}
+      >
+        {content}
+      </View>
+    );
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      {content}
+    </Modal>
+  );
+};
+
+const fullscreenStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+  },
+  webOverlay: {
+    ...Platform.select({
+      web: {
+        position: 'fixed' as any,
+        top: 0,
+        left: 0,
+        zIndex: 99999,
+      },
+      default: {},
+    }),
+    backgroundColor: 'rgba(0,0,0,0.95)',
+  },
+  closeBtn: {
+    position: 'absolute',
+    top: Platform.select({ ios: 54, default: 16 }),
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+});
 
 type BreakpointKey = 'narrow' | 'compact' | 'default';
 
@@ -67,6 +144,7 @@ const PlacePopupCard: React.FC<Props> = ({
   imageHeight = 72,
 }) => {
   const colors = useThemedColors();
+  const [fullscreenVisible, setFullscreenVisible] = useState(false);
   const hasCoord = !!coord;
   const hasArticle = typeof onOpenArticle === 'function';
   const hasDrivingInfo =
@@ -90,7 +168,6 @@ const PlacePopupCard: React.FC<Props> = ({
   const _fs = FONT_SIZES[bp];
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
   const maxPopupWidth = Math.min(width, Math.max(260, viewportWidth - (isNarrow ? 28 : 56)));
-  const thumbSize = sp.thumbSize === 72 ? imageHeight : sp.thumbSize;
 
   const styles = useMemo(() => getStyles(colors, bp), [colors, bp]);
 
@@ -100,11 +177,25 @@ const PlacePopupCard: React.FC<Props> = ({
     [styles],
   );
 
+  const handleOpenFullscreen = useCallback(() => {
+    if (imageUrl) setFullscreenVisible(true);
+  }, [imageUrl]);
+
+  const handleCloseFullscreen = useCallback(() => {
+    setFullscreenVisible(false);
+  }, []);
+
   return (
     <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
-      <View style={styles.headerRow}>
-        <View style={[styles.thumbWrap, { width: thumbSize, minWidth: thumbSize }]}>
-          {imageUrl ? (
+      {/* Hero image — full width on top */}
+      <View style={styles.heroWrap}>
+        {imageUrl ? (
+          <CardActionPressable
+            accessibilityLabel="Открыть фото на полный экран"
+            onPress={handleOpenFullscreen}
+            title="Открыть фото на полный экран"
+            style={styles.heroTouchable as any}
+          >
             <ImageCardMedia
               src={imageUrl}
               alt={title || 'Point image'}
@@ -115,26 +206,22 @@ const PlacePopupCard: React.FC<Props> = ({
               priority="low"
               style={StyleSheet.absoluteFillObject}
             />
-          ) : (
-            <View style={styles.thumbFallback} />
-          )}
-          {hasArticle && (
-            <CardActionPressable
-              accessibilityLabel="Открыть статью"
-              onPress={onOpenArticle}
-              title="Открыть статью"
-              style={styles.thumbOverlay as any}
-            >
-              {null}
-            </CardActionPressable>
-          )}
-        </View>
+            <View style={styles.expandIcon}>
+              <Feather name="maximize-2" size={14} color="#fff" />
+            </View>
+          </CardActionPressable>
+        ) : (
+          <View style={styles.heroFallback} />
+        )}
+      </View>
 
-        <View style={styles.infoCol}>
-          <Text style={styles.titleText} numberOfLines={2}>
-            {title}
-          </Text>
+      {/* Info section */}
+      <View style={styles.infoSection}>
+        <Text style={styles.titleText} numberOfLines={2}>
+          {title}
+        </Text>
 
+        <View style={styles.metaRow}>
           {!!categoryLabel && (
             <View style={styles.categoryChip}>
               <Feather name="tag" size={12} color={colors.textMuted} />
@@ -156,23 +243,23 @@ const PlacePopupCard: React.FC<Props> = ({
               )}
             </View>
           )}
-
-          {hasCoord && (
-            <View style={styles.coordRow}>
-              <Text style={styles.coordText}>{coord}</Text>
-              {onCopyCoord && (
-                <CardActionPressable
-                  accessibilityLabel="Скопировать координаты"
-                  onPress={() => void onCopyCoord()}
-                  title="Скопировать координаты"
-                  style={actionBtnStyle}
-                >
-                  <Feather name="clipboard" size={13} color={colors.textMuted} />
-                </CardActionPressable>
-              )}
-            </View>
-          )}
         </View>
+
+        {hasCoord && (
+          <View style={styles.coordRow}>
+            <Text style={styles.coordText}>{coord}</Text>
+            {onCopyCoord && (
+              <CardActionPressable
+                accessibilityLabel="Скопировать координаты"
+                onPress={() => void onCopyCoord()}
+                title="Скопировать координаты"
+                style={actionBtnStyle}
+              >
+                <Feather name="clipboard" size={13} color={colors.textMuted} />
+              </CardActionPressable>
+            )}
+          </View>
+        )}
       </View>
 
       <View style={styles.actionsRow}>
@@ -245,8 +332,23 @@ const PlacePopupCard: React.FC<Props> = ({
           <Text style={styles.addBtnText}>{compactLabel}</Text>
         </CardActionPressable>
       )}
+
+      {imageUrl && (
+        <FullscreenImageViewer
+          imageUrl={imageUrl}
+          alt={title || 'Point image'}
+          visible={fullscreenVisible}
+          onClose={handleCloseFullscreen}
+        />
+      )}
     </View>
   );
+};
+
+const IMAGE_ASPECT: Record<BreakpointKey, number> = {
+  narrow: 16 / 10,
+  compact: 16 / 9,
+  default: 16 / 9,
 };
 
 const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
@@ -258,32 +360,42 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
       width: '100%',
       gap: sp.gap,
     },
-    headerRow: {
-      flexDirection: 'row',
-      gap: bp === 'narrow' ? 6 : bp === 'compact' ? 6 : 10,
-    },
-    thumbWrap: {
-      flexShrink: 0,
-      aspectRatio: 1,
+    heroWrap: {
+      width: '100%',
+      aspectRatio: IMAGE_ASPECT[bp],
       borderRadius: sp.radius + 2,
       overflow: 'hidden',
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
     },
-    thumbFallback: {
+    heroTouchable: {
+      width: '100%',
+      height: '100%',
+      ...(Platform.OS === 'web' ? ({ cursor: 'zoom-in' } as any) : null),
+    },
+    heroFallback: {
       width: '100%',
       height: '100%',
       backgroundColor: colors.backgroundSecondary,
     },
-    thumbOverlay: {
+    expandIcon: {
       position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
+      bottom: 6,
+      right: 6,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 2,
     },
-    infoCol: {
-      flex: 1,
-      minWidth: 0,
+    infoSection: {
+      gap: 4,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
       gap: 6,
     },
     titleText: {

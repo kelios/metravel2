@@ -103,4 +103,4 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
 });
 
-export default QuickActions;
+export default React.memo(QuickActions);

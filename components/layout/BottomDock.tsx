@@ -29,7 +29,7 @@ type DockItem = {
 
 const MOBILE_DOCK_HEIGHT_WEB = 56;
 
-export default function BottomDock({ onDockHeight }: BottomDockProps) {
+function BottomDock({ onDockHeight }: BottomDockProps) {
   const { isPhone, isLargePhone, isTablet } = useResponsive();
   const isMobile = Platform.OS !== "web" ? true : (isPhone || isLargePhone || isTablet);
   const [showMore, setShowMore] = useState(false);
@@ -392,3 +392,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginVertical: 8,
   },
 });
+
+export default memo(BottomDock);

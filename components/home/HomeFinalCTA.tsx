@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +14,7 @@ interface HomeFinalCTAProps {
   travelsCount?: number;
 }
 
-export default function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
+function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const { isPhone, isLargePhone } = useResponsive();
@@ -143,3 +143,5 @@ export default function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     </View>
   );
 }
+
+export default memo(HomeFinalCTA);

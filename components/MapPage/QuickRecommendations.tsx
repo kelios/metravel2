@@ -19,7 +19,7 @@ interface Props {
   maxItems?: number;
 }
 
-export const QuickRecommendations: React.FC<Props> = ({
+export const QuickRecommendations: React.FC<Props> = React.memo(({
   places,
   userLocation,
   transportMode = 'car',
@@ -144,7 +144,7 @@ export const QuickRecommendations: React.FC<Props> = ({
       </ScrollView>
     </View>
   );
-};
+});
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({

@@ -27,7 +27,7 @@ const openURL = (url: string) => Linking.openURL(url).catch((error) => {
   }
 });
 
-export default function FooterDesktop({ testID }: FooterDesktopProps) {
+function FooterDesktop({ testID }: FooterDesktopProps) {
   const colors = useThemedColors();
   const iconColor = colors.primary;
 
@@ -362,3 +362,5 @@ export default function FooterDesktop({ testID }: FooterDesktopProps) {
     </View>
   );
 }
+
+export default memo(FooterDesktop);

@@ -820,15 +820,15 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           border-radius: ${DESIGN_TOKENS.radii.lg}px !important;
           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08) !important;
           border: 1px solid ${(colors as any).border} !important;
-          max-height: 280px !important;
+          max-height: 480px !important;
           overflow: hidden !important;
         }
         .metravel-travel-map .leaflet-popup-content {
           margin: ${DESIGN_TOKENS.spacing.md}px !important;
           color: ${(colors as any).text} !important;
-          max-height: 260px !important;
+          max-height: 460px !important;
           overflow-y: auto !important;
-          width: 320px !important;
+          width: 360px !important;
         }
         .metravel-travel-map .leaflet-popup-close-button {
           display: block !important;
@@ -857,20 +857,20 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
             max-width: 92vw !important;
           }
           .metravel-travel-map .leaflet-popup-content-wrapper {
-            max-height: 40vh !important;
+            max-height: 60vh !important;
           }
           .metravel-travel-map .leaflet-popup-content {
-            width: min(92vw, 320px) !important;
-            max-height: calc(40vh - 16px) !important;
+            width: min(92vw, 360px) !important;
+            max-height: calc(60vh - 16px) !important;
             margin: ${DESIGN_TOKENS.spacing.xs}px !important;
           }
         }
         @media (max-width: 420px) {
           .metravel-travel-map .leaflet-popup-content-wrapper {
-            max-height: 36vh !important;
+            max-height: 55vh !important;
           }
           .metravel-travel-map .leaflet-popup-content {
-            max-height: calc(36vh - 12px) !important;
+            max-height: calc(55vh - 12px) !important;
           }
         }
         `}
