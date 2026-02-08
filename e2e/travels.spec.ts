@@ -22,7 +22,10 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       await setupPage.addInitScript(seedNecessaryConsent);
       await setupPage.addInitScript(hideRecommendationsBanner);
       await setupPage.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      await setupPage.waitForTimeout(500);
+      await Promise.race([
+        setupPage.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }),
+        setupPage.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+      ]).catch(() => null);
 
       const cards = setupPage.locator('[data-testid="travel-card-link"]');
       const hasCard = await cards.first().isVisible().catch(() => false);
@@ -182,11 +185,9 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       if (await mapLink.isVisible()) {
         await mapLink.click();
 
-        // Wait for scroll animation
-        await page.waitForTimeout(500);
-
-        // Verify map section is in view
+        // Wait for map section to scroll into view
         const mapSection = await page.locator('[data-testid="travel-details-map"]');
+        await mapSection.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => null);
         const box = await mapSection.boundingBox();
         expect(box?.y).toBeLessThan(500); // Should be near top of viewport
       }
@@ -206,7 +207,7 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
 
       // Click to toggle
       await header.click();
-      await page.waitForTimeout(300); // Animation
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
 
       // Verify state changed
       const newState = await header.getAttribute('aria-expanded');
@@ -221,11 +222,9 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       // Navigate directly to map section
       await page.goto(`${travelBasePath}#map`);
 
-      // Wait for content
-      await page.waitForTimeout(500);
-
-      // Verify map section is highlighted/active
+      // Wait for map section to render
       const mapSection = await page.locator('[data-testid="travel-details-map"]');
+      await mapSection.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
       await expect(mapSection).toBeVisible();
     });
 
@@ -241,8 +240,8 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       // Scroll to description
       await description.scrollIntoViewIfNeeded();
 
-      // Wait for scroll to complete
-      await page.waitForTimeout(500);
+      // Wait for scroll to settle
+      await expect(description).toBeInViewport({ timeout: 5_000 }).catch(() => null);
 
       // Verify sidebar updated (if visible)
       const sideMenu = await page.locator('[data-testid="travel-details-side-menu"]');
@@ -297,11 +296,8 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       const mapSection = await page.locator('[data-testid="travel-details-map"]');
       await mapSection.scrollIntoViewIfNeeded();
 
-      // Wait for map to load
-      await page.waitForTimeout(1000);
-
       // Verify map is visible
-      await expect(mapSection).toBeVisible();
+      await expect(mapSection).toBeVisible({ timeout: 10_000 });
     });
 
     test('should display coordinates list', async () => {

@@ -36,7 +36,7 @@ const waitForApiResponse = async (
   expect(status, `${label}: expected successful API response, got ${status}`).toBeLessThan(400);
 };
 
-test.describe('Manual QA automation: core pages data', () => {
+test.describe('@smoke Manual QA automation: core pages data', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent);
     await page.addInitScript(hideRecommendationsBanner);

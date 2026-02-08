@@ -8,7 +8,11 @@ test.describe('@smoke Travel details', () => {
 
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
 
-    await page.waitForTimeout(500);
+    // Wait for cards or empty state instead of arbitrary timeout
+    await Promise.race([
+      page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }),
+      page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+    ]).catch(() => null);
 
     const cards = page.locator('[data-testid="travel-card-link"]');
     const count = await cards.count();

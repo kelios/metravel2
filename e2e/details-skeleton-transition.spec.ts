@@ -24,7 +24,7 @@ async function assertNoHorizontalScroll(page: any) {
   expect(res.bodyScrollWidth).toBeLessThanOrEqual(res.bodyClientWidth);
 }
 
-test.describe('Travel details skeleton transition (no layout shift)', () => {
+test.describe('@perf Travel details skeleton transition (no layout shift)', () => {
   test('details shows loading skeleton, then renders key blocks without big size jump', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await preacceptCookies(page);

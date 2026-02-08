@@ -62,24 +62,50 @@ it means some code path is building API URLs from `window.location.origin` inste
 
 ## E2E tests (Playwright)
 
-Command:
+### Test strategy
+
+Tests are split into three tiers using tags in `test.describe()`:
+
+| Tier | Tag | Purpose | ~Time |
+|------|-----|---------|-------|
+| **Smoke** | `@smoke` | Critical path — pages load, API works | 2 min |
+| **Perf** | `@perf` | CLS, Web Vitals, performance budgets | 5 min |
+| **Regression** | _(all)_ | Full suite | 15 min |
+
+### Commands
 
 ```bash
-yarn e2e
+yarn e2e                          # full regression (default)
+E2E_SUITE=smoke yarn e2e          # smoke only (pre-deploy gate)
+E2E_SUITE=perf  yarn e2e          # perf audits only
+yarn e2e:headed                   # with visible browser
+yarn e2e:ui                       # Playwright UI mode
 ```
 
-Additional:
+### Parallelization
 
-```bash
-yarn e2e:headed
-yarn e2e:ui
-```
+- `fullyParallel: true` — tests within a file run independently.
+- **Local:** 50% of CPU cores.
+- **CI:** 2 workers (stability over speed).
+- Tests that share state use `test.describe.serial()`.
 
-How it works:
+### How it works
 
 - Config: `playwright.config.ts`
 - By default it builds a static web export and serves `dist/` via `scripts/e2e-webserver.js` (then Playwright runs against it).
 - Default port is `8085` (override via `E2E_WEB_PORT`).
+
+### Shared helpers (`e2e/helpers/`)
+
+| File | Purpose |
+|------|---------|
+| `navigation.ts` | `gotoWithRetry`, `preacceptCookies`, `assertNoHorizontalScroll`, `navigateToFirstTravel`, `waitForMainListRender`, `tid` |
+| `auth.ts` | `isAuthenticated`, `getCurrentUser`, `waitForAuth` |
+| `e2eApi.ts` | Direct API calls, test data creation/cleanup |
+| `consoleGuards.ts` | Console error detection |
+| `layoutAsserts.ts` | `expectNoOverlap`, `expectFullyInViewport`, `expectNoHorizontalScroll` |
+| `storage.ts` | `seedNecessaryConsent`, `hideRecommendationsBanner` |
+| `routes.ts` | `getTravelsListPath` |
 
 First-time setup:
 
