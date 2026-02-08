@@ -10,6 +10,10 @@ import HomeHero from './HomeHero';
 import { queueAnalyticsEvent } from '@/utils/analytics';
 
 const isWeb = Platform.OS === 'web';
+const TRUST_PLACEHOLDER_STYLE = { minHeight: 220 } as const;
+const HOW_IT_WORKS_PLACEHOLDER_STYLE = { minHeight: 320 } as const;
+const FAQ_PLACEHOLDER_STYLE = { minHeight: 260 } as const;
+const FINAL_CTA_PLACEHOLDER_STYLE = { height: 300 } as const;
 
 const HomeTrustBlock = lazy(() => import('./HomeTrustBlock'));
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));
@@ -140,11 +144,11 @@ function Home() {
         </Suspense>
       )}
 
-      <Suspense fallback={<View style={{ minHeight: 220 }} />}>
+      <Suspense fallback={<View style={TRUST_PLACEHOLDER_STYLE} />}>
         <HomeTrustBlock />
       </Suspense>
 
-      <Suspense fallback={<View style={{ minHeight: 320 }} />}>
+      <Suspense fallback={<View style={HOW_IT_WORKS_PLACEHOLDER_STYLE} />}>
         <HomeHowItWorks />
       </Suspense>
 
@@ -158,18 +162,18 @@ function Home() {
         <SectionSkeleton hydrated={false} />
       )}
 
-      <Suspense fallback={<View style={{ minHeight: 260 }} />}>
+      <Suspense fallback={<View style={FAQ_PLACEHOLDER_STYLE} />}>
         <HomeFAQSection />
       </Suspense>
 
       {showHeavyContent ? (
         <View style={heavyFadeStyle}>
-          <Suspense fallback={<View style={{ height: 300 }} />}>
+          <Suspense fallback={<View style={FINAL_CTA_PLACEHOLDER_STYLE} />}>
             <HomeFinalCTA travelsCount={travelsCount} />
           </Suspense>
         </View>
       ) : (
-        <View style={{ height: 300 }} />
+        <View style={FINAL_CTA_PLACEHOLDER_STYLE} />
       )}
     </ScrollView>
   );
