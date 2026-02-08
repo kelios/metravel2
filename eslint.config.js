@@ -20,7 +20,8 @@ const baseIgnores = [
   "**/playwright-report/**",
   "test-results/",
   "jest-results.json",
-  "jest-full.log"
+  "jest-full.log",
+  "app/+html.tsx"
 ];
 
 module.exports = [

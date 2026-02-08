@@ -2,7 +2,7 @@
 // ✅ РЕДИЗАЙН: Блок недавних просмотров
 // ✅ РЕДИЗАЙН: Поддержка темной темы с useThemedColors
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -172,6 +172,35 @@ function RecentViews({
     }
   };
 
+  const flashListKeyExtractor = useCallback((item: Travel) => String(item.id), []);
+  const flashListRenderItem = useCallback(({ item }: { item: Travel }) => {
+    const countries = item.countryName?.split(',').map((c: string) => c.trim()).filter(Boolean) || [];
+    return (
+      <View style={styles.cardWrapper}>
+        <UnifiedTravelCard
+          testID={`travel-card-${item.id}`}
+          title={item.name}
+          imageUrl={item.travel_image_thumb_url}
+          metaText={countries.length > 0 ? countries.join(', ') : null}
+          onPress={() => router.push(`/travels/${item.slug || item.id}`)}
+          rightTopSlot={
+            <FavoriteButton
+              id={item.id}
+              type="travel"
+              title={item.name || ''}
+              imageUrl={item.travel_image_thumb_url}
+              url={`/travels/${item.slug || item.id}`}
+              country={countries[0]}
+              size={18}
+            />
+          }
+          imageHeight={180}
+          style={cardStyle}
+        />
+      </View>
+    );
+  }, [cardStyle, router, styles.cardWrapper]);
+
   if (isLoading || recentTravels.length === 0) {
     return null;
   }
@@ -251,34 +280,8 @@ function RecentViews({
           data={recentTravels}
           horizontal
           showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => {
-            const countries = item.countryName?.split(',').map((c: string) => c.trim()).filter(Boolean) || [];
-            return (
-              <View style={styles.cardWrapper}>
-                <UnifiedTravelCard
-                  testID={`travel-card-${item.id}`}
-                  title={item.name}
-                  imageUrl={item.travel_image_thumb_url}
-                  metaText={countries.length > 0 ? countries.join(', ') : null}
-                  onPress={() => router.push(`/travels/${item.slug || item.id}`)}
-                  rightTopSlot={
-                    <FavoriteButton
-                      id={item.id}
-                      type="travel"
-                      title={item.name || ''}
-                      imageUrl={item.travel_image_thumb_url}
-                      url={`/travels/${item.slug || item.id}`}
-                      country={countries[0]}
-                      size={18}
-                    />
-                  }
-                  imageHeight={180}
-                  style={cardStyle}
-                />
-              </View>
-            );
-          }}
+          keyExtractor={flashListKeyExtractor}
+          renderItem={flashListRenderItem}
           contentContainerStyle={styles.listContent}
           drawDistance={800}
         />

@@ -208,6 +208,15 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       paddingBottom: 28,
     }), [contentPadding])
 
+    const paddingHorizontalStyle = useMemo(() => ({ paddingHorizontal: contentPadding }), [contentPadding])
+    const skeletonPaddingStyle = useMemo(() => ({ paddingHorizontal: contentPadding, paddingTop: 8 }), [contentPadding])
+    const recommendationsSkeletonStyle = useMemo(() => ({
+      height: RECOMMENDATIONS_TOTAL_HEIGHT,
+      marginBottom: 24,
+      overflow: 'hidden' as const,
+      paddingHorizontal: contentPadding,
+    }), [contentPadding])
+
     // Web: infinite scroll via onScroll instead of FlashList's onEndReached
     const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
       if (!onEndReached) return
@@ -422,19 +431,14 @@ const RightColumn: React.FC<RightColumnProps> = memo(
         </View>
 
         {topContentNodes ? (
-          <View style={{ paddingHorizontal: contentPadding }}>{topContentNodes}</View>
+          <View style={paddingHorizontalStyle}>{topContentNodes}</View>
         ) : null}
 
         {/* Cards + Recommendations */}
         <View testID="cards-scroll-container" style={cardsWrapperStyle}>
           {shouldShowSkeleton && isRecommendationsVisible && (
             <View
-              style={{
-                height: RECOMMENDATIONS_TOTAL_HEIGHT,
-                marginBottom: 24,
-                overflow: 'hidden',
-                paddingHorizontal: contentPadding,
-              }}
+              style={recommendationsSkeletonStyle}
             >
               <RecommendationsPlaceholder />
             </View>
@@ -442,7 +446,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
           {/* Initial Loading - Only show skeleton when actually loading initial data */}
           {shouldShowSkeleton && isWebMobile && (
-            <View style={{ paddingHorizontal: contentPadding, paddingTop: 8 }}>
+            <View style={skeletonPaddingStyle}>
               {Array.from({ length: 4 }).map((_, idx) => (
                 <TravelCardSkeleton key={`travel-skeleton-${idx}`} />
               ))}
@@ -451,7 +455,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
           {/* Error */}
           {isError && !showInitialLoading && (
-            <View style={{ paddingHorizontal: contentPadding }}>
+            <View style={paddingHorizontalStyle}>
               <EmptyState
                 icon="alert-circle"
                 title="Ошибка загрузки"
@@ -470,7 +474,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
             !isError &&
             showEmptyState &&
             getEmptyStateMessage && (
-              <View style={{ paddingHorizontal: contentPadding }}>
+              <View style={paddingHorizontalStyle}>
                 <EmptyState
                   icon={getEmptyStateMessage.icon}
                   title={getEmptyStateMessage.title}

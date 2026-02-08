@@ -141,7 +141,7 @@ const PlacePopupCard: React.FC<Props> = ({
   isAdding = false,
   addLabel = 'Мои точки',
   width = 320,
-  imageHeight = 72,
+  imageHeight: _imageHeight = 72,
 }) => {
   const colors = useThemedColors();
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
@@ -164,7 +164,6 @@ const PlacePopupCard: React.FC<Props> = ({
   const { width: viewportWidth } = useWindowDimensions();
   const bp = getBreakpoint(viewportWidth);
   const isNarrow = bp === 'narrow';
-  const sp = SPACING[bp];
   const _fs = FONT_SIZES[bp];
   const compactLabel = isNarrow ? 'В мои точки' : addLabel;
   const maxPopupWidth = Math.min(width, Math.max(260, viewportWidth - (isNarrow ? 28 : 56)));

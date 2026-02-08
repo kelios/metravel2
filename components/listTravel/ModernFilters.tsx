@@ -280,10 +280,12 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
               styles.moderationRow,
               moderationValue === 0 && styles.moderationRowSelected,
             ]}
+            accessibilityRole="checkbox"
+            accessibilityLabel="Только на модерации"
+            accessibilityState={{ checked: moderationValue === 0 }}
             {...(Platform.OS === 'web'
               ? ({
                   title: 'Показывать только путешествия, ожидающие модерации',
-                  'aria-label': 'Показывать только путешествия, ожидающие модерации',
                 } as any)
               : null)}
           >
@@ -387,6 +389,9 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                           styles.filterOption,
                           isSelected && styles.filterOptionSelected
                         ]}
+                        accessibilityRole={group.multiSelect !== false ? 'checkbox' : 'radio'}
+                        accessibilityLabel={option.name}
+                        accessibilityState={{ checked: isSelected }}
                       >
                         {group.multiSelect !== false ? (
                           <FilterCheckbox checked={isSelected} checkboxStyle={styles.checkbox} checkboxCheckedStyle={styles.checkboxChecked} checkColor={colors.textOnPrimary} />

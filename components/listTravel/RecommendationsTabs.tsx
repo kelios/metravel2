@@ -530,6 +530,9 @@ const RecommendationsTabs = memo(
                 onPress={() => setActiveTab(tab.id)}
                 onLayout={(e) => handleTabLayout(tab.id, e)}
                 style={[styles.tab, activeTab === tab.id && styles.activeTab]}
+                accessibilityRole="tab"
+                accessibilityLabel={tab.label}
+                accessibilityState={{ selected: activeTab === tab.id }}
               >
                 <Feather
                   name={tab.icon as any}

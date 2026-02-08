@@ -10,6 +10,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 
+const MAP_PIN_ICON_STYLE = { marginRight: 4 } as const;
+
 export type UnifiedTravelCardBadge = {
   icon: keyof typeof Feather.glyphMap;
   backgroundColor: string;
@@ -372,7 +374,7 @@ function UnifiedTravelCard({
               </Text>
             )}
             <View style={styles.metaRow}>
-              <Feather name="map-pin" size={12} color={colors.textMuted} style={{ marginRight: 4 } as any} />
+              <Feather name="map-pin" size={12} color={colors.textMuted} style={MAP_PIN_ICON_STYLE as any} />
               <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">
                 {metaText || ' '}
               </Text>

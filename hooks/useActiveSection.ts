@@ -295,6 +295,7 @@ export function useActiveSection(
 
     const registeredSections = registeredSectionsRef.current;
     const observerInstance = observerRef.current;
+    const elCache = elCacheRef.current;
 
     return () => {
       cancelled = true;
@@ -313,7 +314,7 @@ export function useActiveSection(
         observerRef.current = null;
       }
       registeredSections.clear();
-      elCacheRef.current.clear();
+      elCache.clear();
     };
   }, [anchors, headerOffset, scrollRoot]);
 
