@@ -269,36 +269,3 @@ export function optimizeFontLoading(fonts: Array<{
   return;
 }
 
-// Measure and optimize Core Web Vitals
-export function measureWebVitals() {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') {
-    return;
-  }
-
-  // Largest Contentful Paint (LCP)
-  new PerformanceObserver((entryList) => {
-    const entries = entryList.getEntries();
-    const lastEntry = entries[entries.length - 1];
-    console.info(`[Web Vitals] LCP: ${lastEntry.startTime}ms`);
-  }).observe({ entryTypes: ['largest-contentful-paint'] });
-
-  // First Input Delay (FID)
-  new PerformanceObserver((entryList) => {
-    const entries = entryList.getEntries();
-    entries.forEach((entry: any) => {
-      console.info(`[Web Vitals] FID: ${entry.processingStart - entry.startTime}ms`);
-    });
-  }).observe({ entryTypes: ['first-input'] });
-
-  // Cumulative Layout Shift (CLS)
-  let clsValue = 0;
-  new PerformanceObserver((entryList) => {
-    const entries = entryList.getEntries();
-    entries.forEach((entry: any) => {
-      if (!entry.hadRecentInput) {
-        clsValue += entry.value;
-        console.info(`[Web Vitals] CLS: ${clsValue}`);
-      }
-    });
-  }).observe({ entryTypes: ['layout-shift'] });
-}

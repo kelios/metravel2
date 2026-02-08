@@ -35,7 +35,6 @@ const reverseGeocode = async (latlng: any) => {
         );
         if (nominatim.ok) {
             const data = await nominatim.json();
-            console.info('Nominatim geocode response (zoom=18):', data);
             // Если есть конкретное название места, используем Nominatim
             if (data?.name || data?.address?.name || data?.display_name) {
                 return data;
@@ -52,7 +51,6 @@ const reverseGeocode = async (latlng: any) => {
         );
         if (bigdata.ok) {
             const data = await bigdata.json();
-            console.info('BigDataCloud geocode response:', data);
             return data;
         }
     } catch (error) {
@@ -127,8 +125,6 @@ export const buildAddressFromGeocode = (
     latlng: any,
     matchedCountry?: any,
 ) => {
-    console.info('buildAddressFromGeocode called with:', { geocodeData, latlng, matchedCountry });
-    
     const parts: string[] = [];
 
     // Извлекаем POI (точка интереса) - важное название места

@@ -276,17 +276,3 @@ export function useDebouncedCallback<T extends (...args: any[]) => any>(
   return debouncedCallback;
 }
 
-/**
- * Hook for logging component lifecycle (dev only)
- */
-export function useComponentLifecycle(componentName: string) {
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "development") return;
-
-    console.info(`[${componentName}] mounted`);
-
-    return () => {
-      console.info(`[${componentName}] unmounted`);
-    };
-  }, [componentName]);
-}

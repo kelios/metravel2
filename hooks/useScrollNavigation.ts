@@ -43,16 +43,6 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
 
   const scrollTo = useCallback(
     (key: string) => {
-      const dbg =
-        Platform.OS === 'web' &&
-        typeof window !== 'undefined' &&
-        (window as any).__NAV_DEBUG__;
-
-      if (dbg) {
-        // eslint-disable-next-line no-console
-        console.debug('[nav] scrollTo called', { key });
-      }
-
       const clearPending = (k: string) => {
         const timers = pendingRetriesRef.current[k];
         if (timers && timers.length) {
@@ -91,10 +81,6 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         };
 
         const el = resolveElement();
-        if (dbg) {
-          // eslint-disable-next-line no-console
-          console.debug('[nav] scrollTo lookup', { key: k, found: !!el });
-        }
         if (!el) return false;
 
         const getHeaderOffset = (): number => {
@@ -219,16 +205,6 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
           const bestScrollContainer =
             (canScrollNode(scrollNode) ? scrollNode : null) || findScrollableAncestor(el.parentElement);
 
-          if (dbg) {
-            // eslint-disable-next-line no-console
-            console.debug('[nav] scrollTo container', {
-              hasScrollNode: !!scrollNode,
-              best: !!bestScrollContainer,
-              bestTag: (bestScrollContainer as any)?.tagName,
-              bestId: (bestScrollContainer as any)?.id,
-            });
-          }
-
           // Если у нас есть реальный scroll container (а не window) — скроллим его напрямую
           if (bestScrollContainer && typeof bestScrollContainer.getBoundingClientRect === 'function') {
             const containerRect = bestScrollContainer.getBoundingClientRect();
@@ -238,11 +214,6 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
             const adjustment = shouldApplyHeaderOffset(bestScrollContainer) ? HEADER_OFFSET : 0;
             const targetTopRaw = currentTop + (elRect.top - containerRect.top) - adjustment;
             const targetTop = Math.max(0, Math.round(targetTopRaw));
-
-            if (dbg) {
-              // eslint-disable-next-line no-console
-              console.debug('[nav] scrollTo computed', { currentTop, targetTop, adjustment });
-            }
 
             if (safeScrollTo(bestScrollContainer as any, targetTop)) {
               return true;
@@ -289,10 +260,6 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
               clearPending(key);
             } else if (i === MAX_ATTEMPTS) {
               clearPending(key);
-              if (dbg) {
-                // eslint-disable-next-line no-console
-                console.debug('[nav] scrollTo gave up (section not found)', { key });
-              }
             }
           }, i * INTERVAL_MS);
           pendingRetriesRef.current[key]!.push(t);

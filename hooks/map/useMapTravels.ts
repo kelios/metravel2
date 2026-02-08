@@ -149,15 +149,6 @@ export function useMapTravels({
         filtersKey: JSON.stringify(backendFilters),
       };
       
-      if (__DEV__ && isEnabled) {
-        console.info('[useMapTravels] Query params:', {
-          lat: params.lat,
-          lng: params.lng,
-          radius: params.radius,
-          mode: params.mode,
-        });
-      }
-      
       return params;
     },
     [

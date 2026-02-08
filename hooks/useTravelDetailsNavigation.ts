@@ -164,15 +164,6 @@ export function useTravelDetailsNavigation({
 
   const handleSectionOpen = useCallback(
     (key: string) => {
-      try {
-        const dbg = Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).__NAV_DEBUG__
-        if (dbg) {
-          // eslint-disable-next-line no-console
-          console.debug('[nav] open-section received', { key })
-        }
-      } catch {
-        // noop
-      }
       startTransition(() => setForceOpenKey(key))
     },
     [startTransition]
@@ -180,16 +171,6 @@ export function useTravelDetailsNavigation({
 
   useEffect(() => {
     if (!forceOpenKey) return
-
-    try {
-      const dbg = Platform.OS === 'web' && typeof window !== 'undefined' && (window as any).__NAV_DEBUG__
-      if (dbg) {
-        // eslint-disable-next-line no-console
-        console.debug('[nav] forceOpenKey effect', { forceOpenKey })
-      }
-    } catch {
-      // noop
-    }
 
     // When sections mount lazily, the first scrollTo can miss.
     // Retry with small intervals until DOM/layout is ready.
