@@ -1,5 +1,5 @@
-import React, { memo, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Image } from 'react-native';
+import React, { memo, useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, FlatList, ActivityIndicator, Image, TextInput, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -14,6 +14,9 @@ interface ThreadListProps {
     participantAvatars: Map<number, string | null>;
     onSelectThread: (thread: MessageThread) => void;
     onRefresh: () => void;
+    onNewConversation?: () => void;
+    selectedThreadId?: number | null;
+    showSearch?: boolean;
 }
 
 function ThreadList({
@@ -25,10 +28,14 @@ function ThreadList({
     participantAvatars,
     onSelectThread,
     onRefresh,
+    onNewConversation,
+    selectedThreadId,
+    showSearch,
 }: ThreadListProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const currentUserIdNum = currentUserId ? Number(currentUserId) : null;
+    const [search, setSearch] = useState('');
 
     const getOtherParticipantId = useCallback(
         (thread: MessageThread): number | null => {
@@ -77,16 +84,26 @@ function ThreadList({
         }
     }, []);
 
+    const filteredThreads = useMemo(() => {
+        if (!search.trim()) return threads;
+        const q = search.trim().toLowerCase();
+        return threads.filter((t) => {
+            const name = getOtherParticipantName(t).toLowerCase();
+            return name.includes(q);
+        });
+    }, [threads, search, getOtherParticipantName]);
+
     const renderItem = useCallback(
         ({ item }: { item: MessageThread }) => {
             const name = getOtherParticipantName(item);
             const avatarUrl = getOtherParticipantAvatar(item);
             const time = formatDate(item.last_message_created_at);
+            const isSelected = selectedThreadId != null && item.id === selectedThreadId;
             return (
                 <Pressable
                     style={({ pressed }) => [
                         styles.threadItem,
-                        { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                        { backgroundColor: isSelected ? colors.primarySoft : colors.surface, borderColor: isSelected ? colors.primary : colors.borderLight },
                         pressed && { opacity: 0.85 },
                     ]}
                     onPress={() => onSelectThread(item)}
@@ -117,8 +134,48 @@ function ThreadList({
                 </Pressable>
             );
         },
-        [colors, styles, getOtherParticipantName, getOtherParticipantAvatar, formatDate, onSelectThread]
+        [colors, styles, getOtherParticipantName, getOtherParticipantAvatar, formatDate, onSelectThread, selectedThreadId]
     );
+
+    const listHeader = useMemo(() => {
+        if (!onNewConversation) return null;
+        return (
+            <Pressable
+                style={({ pressed }) => [
+                    styles.newConversationRow,
+                    { backgroundColor: colors.surface, borderColor: colors.borderLight },
+                    pressed && { opacity: 0.85 },
+                ]}
+                onPress={onNewConversation}
+                accessibilityRole="button"
+                accessibilityLabel="Новый диалог"
+            >
+                <View style={[styles.newConversationIcon, { backgroundColor: colors.primary }]}>
+                    <Feather name="edit" size={18} color="#ffffff" />
+                </View>
+                <Text style={[styles.newConversationText, { color: colors.primary }]}>Новый диалог</Text>
+            </Pressable>
+        );
+    }, [onNewConversation, colors, styles]);
+
+    const searchBar = showSearch ? (
+        <View style={[styles.searchContainer, { borderColor: colors.borderLight, backgroundColor: colors.backgroundSecondary }]}>
+            <Feather name="search" size={16} color={colors.textMuted} />
+            <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Поиск..."
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Поиск диалогов"
+            />
+            {search.length > 0 && (
+                <Pressable onPress={() => setSearch('')} accessibilityLabel="Очистить поиск">
+                    <Feather name="x" size={16} color={colors.textMuted} />
+                </Pressable>
+            )}
+        </View>
+    ) : null;
 
     if (loading && threads.length === 0) {
         return (
@@ -147,24 +204,46 @@ function ThreadList({
 
     if (threads.length === 0) {
         return (
-            <View style={styles.center}>
-                <Feather name="message-circle" size={48} color={colors.textMuted} />
-                <Text style={[styles.emptyTitle, { color: colors.text }]}>Нет сообщений</Text>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                    Напишите автору путешествия, чтобы начать диалог
-                </Text>
+            <View style={{ flex: 1 }}>
+                {searchBar}
+                <View style={styles.center}>
+                    <Feather name="message-circle" size={48} color={colors.textMuted} />
+                    <Text style={[styles.emptyTitle, { color: colors.text }]}>Нет сообщений</Text>
+                    <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                        Напишите автору путешествия, чтобы начать диалог
+                    </Text>
+                    {onNewConversation && (
+                        <Pressable
+                            style={[styles.newConversationButton, { backgroundColor: colors.primary }]}
+                            onPress={onNewConversation}
+                            accessibilityRole="button"
+                            accessibilityLabel="Новый диалог"
+                        >
+                            <Feather name="edit" size={16} color="#ffffff" />
+                            <Text style={styles.newConversationButtonText}>Новый диалог</Text>
+                        </Pressable>
+                    )}
+                </View>
             </View>
         );
     }
 
+    const header = (
+        <>
+            {searchBar}
+            {listHeader}
+        </>
+    );
+
     return (
         <FlatList
-            data={threads}
+            data={filteredThreads}
             keyExtractor={(item) => String(item.id)}
             renderItem={renderItem}
             contentContainerStyle={styles.list}
             refreshing={loading}
             onRefresh={onRefresh}
+            ListHeaderComponent={header}
         />
     );
 }
@@ -239,6 +318,60 @@ const createStyles = (_colors: ThemedColors) =>
             color: '#ffffff',
             fontSize: DESIGN_TOKENS.typography.sizes.sm,
             fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        },
+        newConversationButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: DESIGN_TOKENS.spacing.xs,
+            marginTop: DESIGN_TOKENS.spacing.lg,
+            paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+            paddingVertical: DESIGN_TOKENS.spacing.sm,
+            borderRadius: DESIGN_TOKENS.radii.md,
+        },
+        newConversationButtonText: {
+            color: '#ffffff',
+            fontSize: DESIGN_TOKENS.typography.sizes.sm,
+            fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        },
+        newConversationRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: DESIGN_TOKENS.spacing.md,
+            paddingVertical: DESIGN_TOKENS.spacing.md,
+            marginHorizontal: DESIGN_TOKENS.spacing.md,
+            marginBottom: DESIGN_TOKENS.spacing.sm,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            borderWidth: 1,
+        },
+        newConversationIcon: {
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: DESIGN_TOKENS.spacing.sm,
+        },
+        newConversationText: {
+            fontSize: DESIGN_TOKENS.typography.sizes.md,
+            fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+        },
+        searchContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginHorizontal: DESIGN_TOKENS.spacing.md,
+            marginTop: DESIGN_TOKENS.spacing.sm,
+            marginBottom: DESIGN_TOKENS.spacing.xs,
+            paddingHorizontal: DESIGN_TOKENS.spacing.md,
+            paddingVertical: DESIGN_TOKENS.spacing.xs,
+            borderWidth: 1,
+            borderRadius: DESIGN_TOKENS.radii.lg,
+            gap: DESIGN_TOKENS.spacing.xs,
+        },
+        searchInput: {
+            flex: 1,
+            fontSize: DESIGN_TOKENS.typography.sizes.sm,
+            paddingVertical: DESIGN_TOKENS.spacing.xs,
+            ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
         },
     });
 

@@ -11,7 +11,6 @@ import { fetchTravelsPopular, fetchTravelsOfMonth, fetchTravelsRandom } from '@/
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { ResponsiveContainer } from '@/components/layout';
-import { TRAVEL_CARD_MAX_WIDTH } from '@/components/listTravel/utils/listTravelConstants';
 import Button from '@/components/ui/Button';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 
@@ -164,6 +163,7 @@ function HomeInspirationSection({
     row: {
       gap: 20,
       justifyContent: 'flex-start',
+      alignItems: 'stretch',
       width: '100%',
       ...Platform.select({
         web: {
@@ -182,10 +182,10 @@ function HomeInspirationSection({
       minHeight: 360,
       ...Platform.select({
         web: {
-          width: TRAVEL_CARD_MAX_WIDTH,
-          flexGrow: 0,
-          flexShrink: 0,
-          flexBasis: 'auto',
+          flexGrow: 1,
+          flexShrink: 1,
+          flexBasis: 0,
+          alignSelf: 'stretch',
         } as any,
       }),
     },

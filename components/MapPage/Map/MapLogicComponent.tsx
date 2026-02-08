@@ -571,7 +571,11 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
     if (mode === 'route') {
       if (!hasInitializedRef.current && hasValidCoords) {
-        map.setView([coordinates.lat, coordinates.lng], 13, { animate: false });
+        try {
+          map.setView([coordinates.lat, coordinates.lng], 13, { animate: false });
+        } catch {
+          // Pane may not be ready yet
+        }
         // ensure clusters get correct zoom after programmatic set
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
@@ -629,15 +633,27 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       const radiusZoom = getInitialRadiusZoom(radiusInMeters);
 
       if (hasValidCircleCenter) {
-        map.setView([circleCenter!.lat, circleCenter!.lng], radiusZoom, { animate: false });
+        try {
+          map.setView([circleCenter!.lat, circleCenter!.lng], radiusZoom, { animate: false });
+        } catch {
+          // Pane may not be ready yet
+        }
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       } else if (hasValidUserLocation) {
-        map.setView([userLocation.lat, userLocation.lng], radiusZoom, { animate: false });
+        try {
+          map.setView([userLocation.lat, userLocation.lng], radiusZoom, { animate: false });
+        } catch {
+          // Pane may not be ready yet
+        }
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       } else if (hasValidCoords) {
-        map.setView([coordinates.lat, coordinates.lng], radiusZoom, { animate: false });
+        try {
+          map.setView([coordinates.lat, coordinates.lng], radiusZoom, { animate: false });
+        } catch {
+          // Pane may not be ready yet
+        }
         requestAnimationFrame(() => syncZoomFromMap());
         hasInitializedRef.current = true;
       }
@@ -789,6 +805,17 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           // noop
         }
 
+        // Guard: if the map container was removed from the DOM (route change, unmount),
+        // fitBounds will crash with "Cannot set properties of undefined ('_leaflet_pos')".
+        if (!isTestEnv) {
+          try {
+            const container: HTMLElement | undefined = map.getContainer?.();
+            if (!container || !container.isConnected) return;
+          } catch {
+            return;
+          }
+        }
+
         if (
           mode === 'radius' &&
           circleCenter &&
@@ -810,7 +837,13 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
 
         const maxZoom = mode === 'radius' ? 16 : undefined;
         const padFactor = mode === 'radius' ? 0.0 : 0.12;
-        map.fitBounds(bounds.pad(padFactor), { animate: false, maxZoom, ...padding } as any);
+        try {
+          map.fitBounds(bounds.pad(padFactor), { animate: false, maxZoom, ...padding } as any);
+        } catch {
+          // Pane element may not be ready yet (e.g. _mapPane is undefined).
+          // Swallow to prevent "Cannot set properties of undefined" crashes.
+          return;
+        }
 
         // Sync zoom immediately after fitBounds so clustering doesn't run on stale mapZoom.
         requestAnimationFrame(() => syncZoomFromMap());

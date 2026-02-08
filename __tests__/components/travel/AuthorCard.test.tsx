@@ -98,6 +98,43 @@ describe('AuthorCard', () => {
     expect(mockPush).toHaveBeenCalledWith('/search?user_id=42')
   })
 
+  it('extracts userId from userIds string and shows subscribe/message buttons', () => {
+    mockProfile = null
+    const travelWithStringUserIds: any = {
+      id: 10,
+      userName: 'String ID User',
+      countryName: 'Польша',
+      userIds: '55',
+      userTravelsCount: 2,
+      travel_image_thumb_small_url: null,
+    }
+    const { getByText, getByLabelText } = renderWithClient(
+      <AuthorCard travel={travelWithStringUserIds} />,
+    )
+    expect(getByText('String ID User')).toBeTruthy()
+    const button = getByLabelText('Все путешествия автора')
+    fireEvent.press(button)
+    expect(mockPush).toHaveBeenCalledWith('/search?user_id=55')
+  })
+
+  it('extracts userId from comma-separated userIds string', () => {
+    mockProfile = null
+    const travelWithCommaUserIds: any = {
+      id: 11,
+      userName: 'Comma User',
+      countryName: 'Чехия',
+      userIds: '77,88',
+      travel_image_thumb_small_url: null,
+    }
+    const { getByText, getByLabelText } = renderWithClient(
+      <AuthorCard travel={travelWithCommaUserIds} />,
+    )
+    expect(getByText('Comma User')).toBeTruthy()
+    const button = getByLabelText('Все путешествия автора')
+    fireEvent.press(button)
+    expect(mockPush).toHaveBeenCalledWith('/search?user_id=77')
+  })
+
   it('does not show travel countries when profile is absent', () => {
     mockProfile = null
     const { queryByText } = renderWithClient(

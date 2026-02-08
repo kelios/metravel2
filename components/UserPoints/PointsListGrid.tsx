@@ -247,15 +247,17 @@ export const PointsListGrid: React.FC<{
             onPress={() => setPanelTab('filters')}
             size="sm"
             testID="userpoints-list-open-filters"
+            showLabel
           />
 
           <IconButton
             icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
-            label="Сбросить фильтры"
+            label="Сбросить"
             onPress={onResetFilters}
             disabled={!hasFilters}
             size="sm"
             testID="userpoints-list-reset-filters"
+            showLabel
           />
         </View>
 
@@ -265,16 +267,18 @@ export const PointsListGrid: React.FC<{
             <View style={localStyles.recommendationsActions}>
               <IconButton
                 icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}
-                label="3 случайные точки"
+                label="Обновить"
                 onPress={onRefreshRecommendations}
                 size="sm"
+                showLabel
               />
               <IconButton
                 icon={<Feather name="x" size={16} color={themedColors.textOnPrimary} />}
-                label="Показать все"
+                label="Все точки"
                 onPress={onCloseRecommendations}
                 size="sm"
                 active
+                showLabel
               />
             </View>
           </View>

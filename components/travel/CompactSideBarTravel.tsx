@@ -21,6 +21,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, useTheme } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Button from '@/components/ui/Button';
+import SubscribeButton from '@/components/ui/SubscribeButton';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { globalFocusStyles } from '@/styles/globalFocus';
 
@@ -380,6 +381,23 @@ function CompactSideBarTravel({
                   ? ({ testID: 'open-author-travels', } as any)
                   : {})}
               />
+              {!canEdit && authorUserId && (
+                <View style={styles.sidebarActionsRow}>
+                  <SubscribeButton targetUserId={authorUserId} size="sm" style={{ flex: 1 }} />
+                  <Button
+                    label="Написать"
+                    onPress={() => openUrl(`/messages?userId=${encodeURIComponent(authorUserId)}`)}
+                    variant="secondary"
+                    size="sm"
+                    icon={<Feather name="mail" size={14} color={themedColors.primary} />}
+                    accessibilityLabel={`Написать автору ${userName || 'Пользователь'}`}
+                    style={{ flex: 1 }}
+                  />
+                </View>
+              )}
+              {canEdit && authorUserId && (
+                <SubscribeButton targetUserId={authorUserId} size="sm" style={{ marginTop: 6 }} />
+              )}
             </View>
           ) : null}
         </View>
@@ -946,6 +964,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   allTravelsWrap: {
     marginTop: DESIGN_TOKENS.spacing.xs,
+    width: '100%',
+  },
+  sidebarActionsRow: {
+    flexDirection: 'row' as const,
+    gap: 6,
+    marginTop: 6,
     width: '100%',
   },
   allTravelsButton: {

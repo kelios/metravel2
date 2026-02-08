@@ -496,6 +496,13 @@ function AccountMenu() {
                 titleStyle={styles.menuItemTitle}
               />
               <Menu.Item
+                onPress={() => handleNavigate('/subscriptions')}
+                title="Подписки"
+                leadingIcon={({ size }) => <Feather name="users" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
                 onPress={() => handleNavigate('/export')}
                 title="Экспорт в PDF"
                 leadingIcon={({ size }) => <Feather name="file-text" size={size} color={styles.iconMuted.color} />}

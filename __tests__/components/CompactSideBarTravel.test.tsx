@@ -36,6 +36,16 @@ jest.mock('@/components/home/WeatherWidget', () => {
     );
 });
 
+// Mock SubscribeButton to avoid useAuth/useQuery dependency
+jest.mock('@/components/ui/SubscribeButton', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  return {
+    __esModule: true,
+    default: () => React.createElement(View, { testID: 'subscribe-button-mock' }),
+  };
+});
+
 // Mock image optimization utils
 jest.mock('@/utils/imageOptimization', () => ({
   optimizeImageUrl: (url: string) => url,

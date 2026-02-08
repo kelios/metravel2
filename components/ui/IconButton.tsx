@@ -13,6 +13,7 @@ interface IconButtonProps {
   size?: 'sm' | 'md';
   testID?: string;
   style?: StyleProp<ViewStyle>;
+  showLabel?: boolean;
 }
 
 const spacing = DESIGN_TOKENS.spacing;
@@ -32,11 +33,49 @@ function IconButton({
   size = 'md',
   testID,
   style,
+  showLabel = false,
 }: IconButtonProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const dimension = size === 'sm' ? 36 : 42;
   const handlePress = disabled ? undefined : onPress
+
+  if (showLabel) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled, selected: active }}
+        disabled={disabled}
+        onPress={handlePress}
+        testID={testID}
+        style={({ pressed, hovered }) => [
+          styles.labeledBase,
+          globalFocusStyles.focusable,
+          {
+            minHeight: dimension,
+            borderRadius: radii.lg,
+            backgroundColor: active ? colors.primary : colors.surface,
+          },
+          style,
+          disabled && styles.disabled,
+          pressed && !disabled && styles.pressed,
+          !disabled && hovered && Platform.OS === 'web' && styles.hovered,
+        ]}
+      >
+        <View style={styles.icon}>{icon}</View>
+        <Text
+          style={[
+            styles.labelText,
+            { color: active ? colors.textOnPrimary : colors.text },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
@@ -83,6 +122,30 @@ const getStyles = (colors: ThemedColors) => {
   const boxShadows = getBoxShadows(colors);
 
   return StyleSheet.create({
+    labeledBase: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingHorizontal: spacing.sm,
+      marginHorizontal: spacing.xs / 2,
+      shadowColor: colors.text,
+      shadowOpacity: 0.08,
+      shadowOffset: { width: 0, height: 2 },
+      shadowRadius: 6,
+      elevation: 2,
+      ...Platform.select({
+        web: {
+          transition: 'all 0.2s ease',
+          cursor: 'pointer',
+          boxShadow: boxShadows.light,
+        },
+      }),
+    },
+    labelText: {
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontWeight: '600' as any,
+    },
     base: {
       // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
       alignItems: 'center',

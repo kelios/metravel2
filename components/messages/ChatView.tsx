@@ -28,6 +28,7 @@ interface ChatViewProps {
     onBack: () => void;
     onLoadMore?: () => void;
     hasMore?: boolean;
+    hideBackButton?: boolean;
 }
 
 function ChatView({
@@ -41,6 +42,7 @@ function ChatView({
     onBack,
     onLoadMore,
     hasMore,
+    hideBackButton,
 }: ChatViewProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -91,14 +93,16 @@ function ChatView({
         >
             {/* Header */}
             <View style={[styles.header, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-                <Pressable
-                    onPress={onBack}
-                    style={styles.backButton}
-                    accessibilityRole="button"
-                    accessibilityLabel="Назад к списку диалогов"
-                >
-                    <Feather name="arrow-left" size={22} color={colors.text} />
-                </Pressable>
+                {!hideBackButton && (
+                    <Pressable
+                        onPress={onBack}
+                        style={styles.backButton}
+                        accessibilityRole="button"
+                        accessibilityLabel="Назад к списку диалогов"
+                    >
+                        <Feather name="arrow-left" size={22} color={colors.text} />
+                    </Pressable>
+                )}
                 <View style={[styles.headerAvatar, { backgroundColor: colors.primarySoft }]}>
                     {otherUserAvatar ? (
                         <Image

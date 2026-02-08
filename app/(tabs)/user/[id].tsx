@@ -7,6 +7,8 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useAuth } from '@/context/AuthContext';
+import SubscribeButton from '@/components/ui/SubscribeButton';
 
 export default function PublicUserProfileScreen() {
   const router = useRouter();
@@ -39,9 +41,17 @@ export default function PublicUserProfileScreen() {
     [profile]
   );
 
+  const { userId: currentUserId } = useAuth();
+  const isOwnProfile = currentUserId != null && userId != null && String(currentUserId) === String(userId);
+
   const handleViewTravels = useCallback(() => {
     if (!userId) return;
     router.push(`/search?user_id=${encodeURIComponent(userId)}` as any);
+  }, [router, userId]);
+
+  const handleWriteMessage = useCallback(() => {
+    if (!userId) return;
+    router.push(`/messages?userId=${encodeURIComponent(userId)}` as any);
   }, [router, userId]);
 
   if (isLoading) {
@@ -115,6 +125,19 @@ export default function PublicUserProfileScreen() {
           )}
 
           <View style={styles.actionsRow}>
+            <SubscribeButton targetUserId={userId} size="sm" />
+            {!isOwnProfile && (
+              <Pressable
+                style={[styles.secondaryButton, globalFocusStyles.focusable]}
+                onPress={handleWriteMessage}
+                accessibilityRole="button"
+                accessibilityLabel={`Написать ${fullName || 'пользователю'}`}
+                {...Platform.select({ web: { cursor: 'pointer' } })}
+              >
+                <Feather name="mail" size={16} color={colors.primary} />
+                <Text style={styles.secondaryButtonText}>Написать</Text>
+              </Pressable>
+            )}
             <Pressable
               style={[styles.primaryButton, globalFocusStyles.focusable]}
               onPress={handleViewTravels}

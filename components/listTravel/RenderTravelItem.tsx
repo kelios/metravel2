@@ -63,6 +63,7 @@ function RenderTravelItem({
             flexShrink: 0,
             // Не обрезаем тени внутренней карточки
             overflow: Platform.OS === 'android' ? 'visible' : 'visible',
+            ...(Platform.OS === 'web' ? { height: '100%' } : {}),
         };
     }, []);
 

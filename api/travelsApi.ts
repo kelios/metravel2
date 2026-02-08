@@ -161,6 +161,22 @@ export const normalizeTravelItem = (input: any): Travel => {
         out.travel_image_thumb_small_url = out.travel_image_thumb_url;
     }
 
+    // Normalize user object: ensure travel.user.id is populated from userIds when missing
+    if (!out.user?.id) {
+        const raw = t.userIds ?? t.user_ids;
+        if (raw != null) {
+            const first = typeof raw === 'string'
+                ? raw.split(',')[0].trim()
+                : Array.isArray(raw) && raw.length > 0
+                    ? String(raw[0])
+                    : typeof raw === 'number' ? String(raw) : '';
+            const uid = Number(first);
+            if (Number.isFinite(uid) && uid > 0) {
+                out.user = { ...out.user, id: uid, name: out.userName || '' };
+            }
+        }
+    }
+
     if (Array.isArray((out as any).gallery)) {
         out.gallery = (out as any).gallery
             .map((item: any) => {

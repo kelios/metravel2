@@ -25,6 +25,11 @@ jest.mock('@/components/home/WeatherWidget', () => ({
   default: () => <div data-testid="weather-widget" />,
 }));
 
+jest.mock('@/components/ui/SubscribeButton', () => ({
+  __esModule: true,
+  default: () => <div data-testid="subscribe-button-mock" />,
+}));
+
 // Mock данные
 const mockTravel = {
   id: 'test-123',

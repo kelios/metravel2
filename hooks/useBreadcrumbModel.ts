@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
 import { fetchQuestByQuestId } from '@/api/quests';
+import { fetchUserProfile } from '@/api/user';
 import { queryKeys } from '@/queryKeys';
 
 const useGlobalSearchParamsSafe: typeof useGlobalSearchParams =
@@ -172,6 +173,33 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   });
   const questApiTitle = questApiData?.title || '';
 
+  // User profile name (for breadcrumbs on /user/[id] pages)
+  const userIdForBreadcrumb = useMemo(() => {
+    const p = resolvedPathname;
+    if (!p || !p.startsWith('/user/')) return null;
+    const parts = p.split('/').filter(Boolean);
+    if (parts.length < 2 || parts[0] !== 'user') return null;
+    const raw = parts[1];
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? raw : null;
+  }, [resolvedPathname]);
+
+  const { data: userProfileData } = useQuery({
+    queryKey: ['user-profile', userIdForBreadcrumb],
+    queryFn: () => userIdForBreadcrumb ? fetchUserProfile(userIdForBreadcrumb) : null,
+    enabled: !!userIdForBreadcrumb,
+    staleTime: 600_000,
+    gcTime: 10 * 60 * 1000,
+  });
+  const userProfileName = useMemo(() => {
+    if (!userProfileData) return '';
+    const clean = (v: unknown) => {
+      const s = String(v ?? '').trim();
+      return s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined' ? '' : s;
+    };
+    return `${clean(userProfileData.first_name)} ${clean(userProfileData.last_name)}`.trim();
+  }, [userProfileData]);
+
   return useMemo(() => {
     const p = resolvedPathname;
     const isHome = p === '/';
@@ -235,6 +263,25 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         pageContextTitle,
         backToPath: '/',
         showBreadcrumbs: false,
+      };
+    }
+
+    const isUserProfile = p.startsWith('/user/') && parts.length >= 2 && parts[0] === 'user';
+    if (isUserProfile) {
+      const userName = userProfileName || 'Профиль';
+      const userTitle = truncateLabel(userName);
+
+      const items: BreadcrumbModelItem[] = [
+        { label: userTitle, path: p },
+      ];
+
+      return {
+        items,
+        depth: items.length + 1,
+        currentTitle: userTitle,
+        pageContextTitle: 'Главная',
+        backToPath: '/',
+        showBreadcrumbs: true,
       };
     }
 
@@ -305,5 +352,5 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       backToPath,
       showBreadcrumbs: computed.length >= 1,
     };
-  }, [resolvedPathname, normalizedReturnToParam, travelData?.name, travelSlug, questApiTitle]);
+  }, [resolvedPathname, normalizedReturnToParam, travelData?.name, travelSlug, questApiTitle, userProfileName]);
 }

@@ -113,6 +113,8 @@ function UnifiedTravelCard({
             web: {
               boxShadow: (colors.boxShadows as any)?.medium ?? DESIGN_TOKENS.shadows.card,
               transition: 'all 0.2s ease',
+              display: 'flex',
+              flexDirection: 'column',
             } as any,
             default: DESIGN_TOKENS.shadowsNative.light,
           }),
@@ -208,6 +210,7 @@ function UnifiedTravelCard({
           paddingVertical: 10,
           backgroundColor: colors.surface,
           gap: 8,
+          ...(isWeb ? { flex: 1 } : {}),
         },
         title: {
           fontSize: 14,

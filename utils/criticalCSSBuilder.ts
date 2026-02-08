@@ -22,7 +22,7 @@ export function buildCriticalCSS(): string {
 
   return [
     '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}',
-    'html{scroll-behavior:smooth;height:100%;scrollbar-gutter:stable;-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%}',
+    'html{scroll-behavior:smooth;height:100%;scrollbar-gutter:stable;-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%;background-color:var(--color-background,' + BL + ')}',
     'body{',
     '  margin:0;',
     '  min-height:100vh;',

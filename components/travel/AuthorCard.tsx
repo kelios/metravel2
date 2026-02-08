@@ -16,6 +16,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import SubscribeButton from '@/components/ui/SubscribeButton';
 
 interface AuthorCardProps {
   travel: Travel;
@@ -101,9 +102,17 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
 
     if (direct != null) return direct;
 
-    const arr = (travel as any)?.userIds;
-    if (Array.isArray(arr) && arr.length > 0) {
-      return arr[0];
+    const raw = (travel as any)?.userIds;
+    if (Array.isArray(raw) && raw.length > 0) {
+      return raw[0];
+    }
+    if (typeof raw === 'string' && raw.trim()) {
+      const first = raw.split(',')[0].trim();
+      const n = Number(first);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+      return raw;
     }
     return null;
   }, [travel]);
@@ -288,38 +297,43 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
             )}
 
             {userId && !isOwnTravel && (
-              <Pressable
-                onPress={handleWriteToAuthor}
-                accessibilityRole="button"
-                accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
-                style={({ pressed }) => [
-                  styles.messageButton,
-                  { backgroundColor: colors.primarySoft, borderColor: colors.borderLight },
-                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
-                ]}
-              >
-                <Feather name="mail" size={14} color={colors.primary} />
-                <Text style={[styles.messageButtonText, { color: colors.primary }]}>Написать</Text>
-              </Pressable>
+              <SafeView style={styles.authorActionsRow}>
+                <SubscribeButton targetUserId={userId} size="sm" />
+                <Pressable
+                  onPress={handleWriteToAuthor}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
+                  style={({ pressed }) => [
+                    styles.messageButton,
+                    { backgroundColor: colors.primarySoft, borderColor: colors.borderLight },
+                    pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                  ]}
+                >
+                  <Feather name="mail" size={14} color={colors.primary} />
+                  <Text style={[styles.messageButtonText, { color: colors.primary }]}>Написать</Text>
+                </Pressable>
+              </SafeView>
             )}
           </SafeView>
         </SafeView>
 
         {/* CTA: desktop/web in one line, mobile stays bottom */}
         {!isMobile && userId && (
-          <Pressable
-            style={({ pressed }) => [styles.viewButtonInline, pressed && styles.viewButtonPressed]}
-            onPress={handleViewAuthorTravels}
-            accessibilityRole="button"
-            accessibilityLabel="Все путешествия автора"
-          >
-            <Text
-              style={[styles.viewButtonInlineText, { color: colors.textSecondary }]}
-              numberOfLines={1}
+          <SafeView style={styles.ctaInlineRow}>
+            <Pressable
+              style={({ pressed }) => [styles.viewButtonInline, pressed && styles.viewButtonPressed]}
+              onPress={handleViewAuthorTravels}
+              accessibilityRole="button"
+              accessibilityLabel="Все путешествия автора"
             >
-              Все путешествия автора
-            </Text>
-          </Pressable>
+              <Text
+                style={[styles.viewButtonInlineText, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
+                Все путешествия автора
+              </Text>
+            </Pressable>
+          </SafeView>
         )}
       </SafeView>
 
@@ -328,21 +342,43 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
       )}
 
       {isMobile && userId && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.viewButtonBottom,
-            pressed && styles.viewButtonPressed,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.surface,
-            }
-          ]}
-          onPress={handleViewAuthorTravels}
-          accessibilityRole="button"
-          accessibilityLabel="Все путешествия автора"
-        >
-          <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Все путешествия автора</Text>
-        </Pressable>
+        <SafeView style={styles.ctaBottomRow}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.viewButtonBottom,
+              pressed && styles.viewButtonPressed,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.surface,
+              }
+            ]}
+            onPress={handleViewAuthorTravels}
+            accessibilityRole="button"
+            accessibilityLabel="Все путешествия автора"
+          >
+            <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Все путешествия автора</Text>
+          </Pressable>
+          {!isOwnTravel && (
+            <Pressable
+              onPress={handleWriteToAuthor}
+              accessibilityRole="button"
+              accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
+              style={({ pressed }) => [
+                styles.viewButtonBottom,
+                pressed && styles.viewButtonPressed,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.surface,
+                }
+              ]}
+            >
+              <SafeView style={styles.ctaBottomButtonContent}>
+                <Feather name="mail" size={14} color={colors.textSecondary} />
+                <Text style={[styles.viewButtonBottomText, { color: colors.textSecondary }]}>Написать</Text>
+              </SafeView>
+            </Pressable>
+          )}
+        </SafeView>
       )}
   </SafeView>
   );
@@ -382,6 +418,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         cursor: 'pointer' as any,
       },
     }),
+  },
+  ctaInlineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+    marginLeft: 'auto',
+    flexShrink: 0,
+  },
+  ctaBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.md,
+  },
+  ctaBottomButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   viewButtonInlineText: {
     fontSize: Platform.select({ default: 14, web: 14 }),
@@ -594,6 +649,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   viewButtonTextMobile: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
+  },
+  authorActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
   },
   messageButton: {
     flexDirection: 'row',

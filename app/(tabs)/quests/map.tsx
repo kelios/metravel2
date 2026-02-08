@@ -1,5 +1,5 @@
 // app/quests/map.tsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
     Platform,
@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
+
+const LazyMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
 type Point = {
     id?: number;
@@ -32,27 +34,7 @@ export default function QuestsMapScreen() {
 
     const { quests, loading: questsLoading } = useQuestsList();
 
-    const [MapPageComponent, setMapPageComponent] = useState<React.ComponentType<any> | null>(null);
     const isWeb = Platform.OS === 'web' && typeof window !== 'undefined';
-
-    useEffect(() => {
-        let mounted = true;
-        if (!isWeb) return;
-
-        (async () => {
-            try {
-                const mod = await import('@/components/MapPage/Map');
-                const Comp = (mod as any).default ?? (mod as any);
-                if (mounted) setMapPageComponent(() => Comp);
-            } catch {
-                if (mounted) setMapPageComponent(null);
-            }
-        })();
-
-        return () => {
-            mounted = false;
-        };
-    }, [isWeb]);
 
     const travel = useMemo(() => {
         const data: Point[] = quests.map((m) => {
@@ -77,7 +59,7 @@ export default function QuestsMapScreen() {
         router.replace('/quests'); // всегда уходим на страницу квестов
     };
 
-    if (!isWeb || !MapPageComponent) {
+    if (!isWeb) {
         return (
             <View style={styles.fallback}>
                 <Text style={styles.fallbackText}>Карта доступна в веб-версии</Text>
@@ -99,17 +81,23 @@ export default function QuestsMapScreen() {
 
     return (
         <View style={{ flex: 1 }}>
-            <MapPageComponent
-                travel={travel}
-                coordinates={{ latitude: 53.9, longitude: 27.56 }}
-                mode="radius"
-                transportMode="foot"
-                routePoints={routePoints}
-                setRoutePoints={setRoutePoints}
-                onMapClick={() => {}}
-                setRouteDistance={() => {}}
-                setFullRouteCoords={() => {}}
-            />
+            <Suspense fallback={
+                <View style={styles.fallback}>
+                    <ActivityIndicator color={colors.primary} />
+                </View>
+            }>
+                <LazyMap
+                    travel={travel}
+                    coordinates={{ latitude: 53.9, longitude: 27.56 }}
+                    mode="radius"
+                    transportMode="foot"
+                    routePoints={routePoints}
+                    setRoutePoints={setRoutePoints}
+                    onMapClick={() => {}}
+                    setRouteDistance={() => {}}
+                    setFullRouteCoords={() => {}}
+                />
+            </Suspense>
 
             {/* Плавающая кнопка Назад поверх карты */}
             <Pressable

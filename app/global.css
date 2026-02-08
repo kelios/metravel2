@@ -222,12 +222,17 @@ html[data-theme="dark"] {
   }
 }
 
-html,
+html {
+  height: 100%;
+  min-height: 100%;
+  scrollbar-gutter: stable;
+  background-color: var(--color-background);
+}
+
 body {
   height: 100%;
   min-height: 100%;
   margin: 0;
-  scrollbar-gutter: stable;
   overflow-x: hidden;
   overflow-y: scroll;
   background-color: var(--color-background);

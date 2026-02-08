@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -10,8 +11,11 @@ import { fetchThreadByUser, getMessagingUserDisplayName, getMessagingUserId } fr
 import type { MessageThread } from '@/api/messages';
 import ThreadList from '@/components/messages/ThreadList';
 import ChatView from '@/components/messages/ChatView';
+import NewConversationPicker from '@/components/messages/NewConversationPicker';
 import EmptyState from '@/components/ui/EmptyState';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { devError } from '@/utils/logger';
 
@@ -22,10 +26,14 @@ export default function MessagesScreen() {
     const isFocused = useIsFocused();
     const { isAuthenticated, authReady, userId } = useAuth();
     const colors = useThemedColors();
+    const { isPhone, isLargePhone } = useResponsive();
+    const isMobile = isPhone || isLargePhone;
+    const isDesktop = Platform.OS === 'web' && !isMobile;
     const params = useLocalSearchParams<{ userId?: string; threadId?: string }>();
 
     const [selectedThread, setSelectedThread] = useState<MessageThread | null>(null);
     const [initialLoading, setInitialLoading] = useState(false);
+    const [showPicker, setShowPicker] = useState(false);
 
     const { threads, loading: threadsLoading, error: threadsError, refresh: refreshThreads } = useThreads();
     const { messages, loading: messagesLoading, refresh: refreshMessages, hasMore, loadMore } = useThreadMessages(
@@ -142,6 +150,54 @@ export default function MessagesScreen() {
         refreshThreads();
     }, [refreshThreads]);
 
+    const handleNewConversation = useCallback(() => {
+        setShowPicker(true);
+    }, []);
+
+    const handlePickerClose = useCallback(() => {
+        setShowPicker(false);
+    }, []);
+
+    const handlePickUser = useCallback(
+        async (targetUserId: number) => {
+            setShowPicker(false);
+            if (!userId) return;
+
+            try {
+                const res = await fetchThreadByUser(targetUserId);
+                if (res.thread_id != null) {
+                    const existing = threads.find((t) => t.id === res.thread_id);
+                    if (existing) {
+                        setSelectedThread(existing);
+                    } else {
+                        setSelectedThread({
+                            id: res.thread_id,
+                            participants: [Number(userId), targetUserId],
+                            created_at: null,
+                            last_message_created_at: null,
+                        });
+                    }
+                } else {
+                    setSelectedThread({
+                        id: -1,
+                        participants: [Number(userId), targetUserId],
+                        created_at: null,
+                        last_message_created_at: null,
+                    });
+                }
+            } catch (e) {
+                devError('handlePickUser error:', e);
+                setSelectedThread({
+                    id: -1,
+                    participants: [Number(userId), targetUserId],
+                    created_at: null,
+                    last_message_created_at: null,
+                });
+            }
+        },
+        [userId, threads]
+    );
+
     const handleSend = useCallback(
         async (text: string) => {
             if (!selectedThread || !userId) return;
@@ -164,7 +220,7 @@ export default function MessagesScreen() {
     // Not authenticated
     if (authReady && !isAuthenticated) {
         return (
-            <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <View style={[styles.mobileContainer, { backgroundColor: colors.background }]}>
                 {isFocused && (
                     <React.Suspense fallback={null}>
                         <InstantSEO
@@ -189,32 +245,29 @@ export default function MessagesScreen() {
         );
     }
 
-    return (
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
-            {isFocused && (
-                <React.Suspense fallback={null}>
-                    <InstantSEO
-                        headKey="messages"
-                        title="Сообщения | Metravel"
-                        description="Личные сообщения"
-                        canonical={buildCanonicalUrl('/messages')}
-                        robots="noindex,nofollow"
-                    />
-                </React.Suspense>
-            )}
+    const seoBlock = isFocused ? (
+        <React.Suspense fallback={null}>
+            <InstantSEO
+                headKey="messages"
+                title="Сообщения | Metravel"
+                description="Личные сообщения"
+                canonical={buildCanonicalUrl('/messages')}
+                robots="noindex,nofollow"
+            />
+        </React.Suspense>
+    ) : null;
 
-            {selectedThread ? (
-                <ChatView
-                    messages={messages}
-                    loading={messagesLoading || initialLoading}
-                    sending={sending}
-                    currentUserId={userId}
-                    otherUserName={otherUserName}
-                    otherUserAvatar={otherUserAvatar}
-                    onSend={handleSend}
-                    onBack={handleBack}
-                    onLoadMore={loadMore}
-                    hasMore={hasMore}
+    const sidebar = (
+        <View style={[
+            isDesktop ? styles.sidebar : styles.fullPanel,
+            { backgroundColor: colors.surface, borderColor: colors.borderLight },
+        ]}>
+            {showPicker && !isDesktop ? (
+                <NewConversationPicker
+                    users={users}
+                    loading={false}
+                    onSelectUser={handlePickUser}
+                    onClose={handlePickerClose}
                 />
             ) : (
                 <ThreadList
@@ -226,17 +279,116 @@ export default function MessagesScreen() {
                     participantAvatars={participantAvatars}
                     onSelectThread={handleSelectThread}
                     onRefresh={refreshThreads}
+                    onNewConversation={handleNewConversation}
+                    selectedThreadId={selectedThread?.id}
+                    showSearch={isDesktop}
                 />
+            )}
+        </View>
+    );
+
+    const chatPanel = selectedThread ? (
+        <ChatView
+            messages={messages}
+            loading={messagesLoading || initialLoading}
+            sending={sending}
+            currentUserId={userId}
+            otherUserName={otherUserName}
+            otherUserAvatar={otherUserAvatar}
+            onSend={handleSend}
+            onBack={handleBack}
+            onLoadMore={loadMore}
+            hasMore={hasMore}
+            hideBackButton={isDesktop}
+        />
+    ) : null;
+
+    const emptyChat = (
+        <View style={[styles.emptyChat, { backgroundColor: colors.background }]}>
+            <Feather name="message-circle" size={48} color={colors.textMuted} />
+            <Text style={[styles.emptyChatText, { color: colors.textSecondary }]}>
+                Выберите диалог или начните новый
+            </Text>
+        </View>
+    );
+
+    // Desktop: two-panel layout
+    if (isDesktop) {
+        return (
+            <View style={[styles.desktopContainer, { backgroundColor: colors.background }]}>
+                {seoBlock}
+                <View style={[styles.desktopInner, { borderColor: colors.borderLight }]}>
+                    {sidebar}
+                    <View style={[styles.chatArea, { borderColor: colors.borderLight }]}>
+                        {showPicker ? (
+                            <NewConversationPicker
+                                users={users}
+                                loading={false}
+                                onSelectUser={handlePickUser}
+                                onClose={handlePickerClose}
+                            />
+                        ) : chatPanel ?? emptyChat}
+                    </View>
+                </View>
+            </View>
+        );
+    }
+
+    // Mobile: stacked layout
+    return (
+        <View style={[styles.mobileContainer, { backgroundColor: colors.background }]}>
+            {seoBlock}
+            {showPicker ? (
+                <NewConversationPicker
+                    users={users}
+                    loading={false}
+                    onSelectUser={handlePickUser}
+                    onClose={handlePickerClose}
+                />
+            ) : selectedThread ? (
+                chatPanel
+            ) : (
+                sidebar
             )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
+    mobileContainer: {
+        flex: 1,
+    },
+    desktopContainer: {
         flex: 1,
         ...(Platform.OS === 'web'
-            ? { minHeight: '60vh' as any, maxWidth: 800, width: '100%', alignSelf: 'center' as any }
+            ? { minHeight: '70vh' as any, maxWidth: 1000, width: '100%', alignSelf: 'center' as any, paddingVertical: DESIGN_TOKENS.spacing.md }
             : {}),
+    },
+    desktopInner: {
+        flex: 1,
+        flexDirection: 'row',
+        borderWidth: 1,
+        borderRadius: DESIGN_TOKENS.radii.lg,
+        overflow: 'hidden',
+    },
+    sidebar: {
+        width: 320,
+        borderRightWidth: 1,
+    },
+    fullPanel: {
+        flex: 1,
+    },
+    chatArea: {
+        flex: 1,
+    },
+    emptyChat: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: DESIGN_TOKENS.spacing.md,
+    },
+    emptyChatText: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        textAlign: 'center',
     },
 });

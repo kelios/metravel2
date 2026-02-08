@@ -441,6 +441,13 @@ export default function ProfileScreen() {
       bg: colors.primarySoft,
     },
     {
+      icon: 'users',
+      label: 'Подписки',
+      onPress: () => router.push('/subscriptions'),
+      color: colors.primary,
+      bg: colors.primarySoft,
+    },
+    {
       icon: 'settings',
       label: 'Настройки',
       onPress: () => router.push('/settings'),

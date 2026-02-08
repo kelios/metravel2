@@ -30,7 +30,12 @@ if (typeof window !== 'undefined') {
         const originalSetPosition = instance.DomUtil.setPosition
         instance.DomUtil.setPosition = (el: any, point: any) => {
           if (!el) return
-          return originalSetPosition(el, point)
+          try {
+            return originalSetPosition(el, point)
+          } catch {
+            // Pane element may have been removed from the DOM during unmount / re-mount.
+            // Swallow the error to prevent "Cannot set properties of undefined" crashes.
+          }
         }
         instance.DomUtil.__metravelPatchedSetPosition = true
       }
