@@ -64,7 +64,7 @@ async function gotoWithRetry(page: any, url: string) {
   if (lastError) throw lastError;
 }
 
-test.describe('Skeleton transition (no layout shift)', () => {
+test.describe('@perf Skeleton transition (no layout shift)', () => {
   test('main list shows skeleton, then replaces it with cards without big size jump', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await preacceptCookies(page);
