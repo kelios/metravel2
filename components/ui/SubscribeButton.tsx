@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useMemo, useRef } from 'react';
-import { Animated, type StyleProp, type ViewStyle } from 'react-native';
+import { Animated, Pressable, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import Button from '@/components/ui/Button';
@@ -12,9 +12,10 @@ interface SubscribeButtonProps {
     targetUserId: string | number | null | undefined;
     size?: 'sm' | 'md';
     style?: StyleProp<ViewStyle>;
+    iconOnly?: boolean;
 }
 
-function SubscribeButtonComponent({ targetUserId, size = 'sm', style }: SubscribeButtonProps) {
+function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }: SubscribeButtonProps) {
     const { isAuthenticated } = useAuth();
     const router = useRouter();
     const colors = useThemedColors();
@@ -60,6 +61,39 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style }: Subscrib
 
     if (!canSubscribe && isAuthenticated) return null;
 
+    const a11yLabel = isLoading
+        ? 'Загрузка состояния подписки'
+        : isSubscribed
+            ? 'Отписаться от пользователя'
+            : 'Подписаться на пользователя';
+
+    if (iconOnly) {
+        return (
+            <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
+                <Pressable
+                    onPress={animatedHandlePress}
+                    disabled={isLoading}
+                    accessibilityRole="button"
+                    accessibilityLabel={a11yLabel}
+                    style={style}
+                    {...(Platform.OS === 'web'
+                        ? {
+                              role: 'button',
+                              'aria-label': a11yLabel,
+                              title: isSubscribed ? 'Отписаться' : 'Подписаться',
+                          } as any
+                        : {})}
+                >
+                    <Feather
+                        name={isSubscribed ? 'user-check' : 'user-plus'}
+                        size={18}
+                        color={isSubscribed ? colors.primary : colors.text}
+                    />
+                </Pressable>
+            </Animated.View>
+        );
+    }
+
     const label = isLoading
         ? '...'
         : isSubscribed
@@ -76,13 +110,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style }: Subscrib
                 icon={icon}
                 loading={isLoading || isMutating}
                 disabled={isLoading}
-                accessibilityLabel={
-                    isLoading
-                        ? 'Загрузка состояния подписки'
-                        : isSubscribed
-                            ? 'Отписаться от пользователя'
-                            : 'Подписаться на пользователя'
-                }
+                accessibilityLabel={a11yLabel}
                 style={style}
             />
         </Animated.View>

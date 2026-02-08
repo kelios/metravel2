@@ -341,6 +341,14 @@ function CompactSideBarTravel({
               )}
 
               {!isOwnTravel && authorUserId && (
+                <SubscribeButton
+                  targetUserId={authorUserId}
+                  iconOnly
+                  style={[styles.actionBtn, globalFocusStyles.focusable]}
+                />
+              )}
+
+              {!isOwnTravel && authorUserId && (
                 <Pressable
                   onPress={() => openUrl(`/messages?userId=${encodeURIComponent(authorUserId)}`)}
                   accessibilityRole="button"
@@ -411,23 +419,6 @@ function CompactSideBarTravel({
                   ? ({ testID: 'open-author-travels', } as any)
                   : {})}
               />
-              {!isOwnTravel && authorUserId && (
-                <View style={styles.sidebarActionsRow}>
-                  <SubscribeButton targetUserId={authorUserId} size="sm" />
-                  <Button
-                    label="Написать"
-                    onPress={() => openUrl(`/messages?userId=${encodeURIComponent(authorUserId)}`)}
-                    variant="secondary"
-                    size="sm"
-                    fullWidth
-                    icon={<Feather name="mail" size={14} color={themedColors.primary} />}
-                    accessibilityLabel={`Написать автору ${userName || 'Пользователь'}`}
-                  />
-                </View>
-              )}
-              {isOwnTravel && authorUserId && (
-                <SubscribeButton targetUserId={authorUserId} size="sm" style={{ marginTop: 6 }} />
-              )}
             </View>
           ) : null}
         </View>
