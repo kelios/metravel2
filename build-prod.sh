@@ -73,6 +73,10 @@ echo "🔁 Старт полной сборки..."
 clean_all
 
 build_env prod
+
+echo "🔍 Генерация SEO-страниц..."
+node scripts/generate-seo-pages.js --dist dist/prod --api https://metravel.by
+
 echo "🔁 Старт деплоя ..."
 deploy_prod
 

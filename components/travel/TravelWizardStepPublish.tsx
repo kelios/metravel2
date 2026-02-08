@@ -5,6 +5,7 @@ import {
     ScrollView,
     View,
     Text,
+    TextInput,
     StyleSheet,
     findNodeHandle,
     UIManager,
@@ -15,6 +16,8 @@ import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
+import { sendMessage } from '@/api/messages';
+import { devError } from '@/utils/logger';
 import { QualityIndicator } from '@/components/travel/ValidationFeedback';
 import { TravelFormData } from '@/types/types';
 import Button from '@/components/ui/Button';
@@ -122,6 +125,7 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
     } = useTravelPublishChecklist(formData);
 
     const [missingForModeration, setMissingForModeration] = useState<ModerationIssue[]>([]);
+    const [rejectionComment, setRejectionComment] = useState('');
     const isNew = !formData.id;
 
     const scrollRef = useRef<ScrollView | null>(null);
@@ -369,16 +373,40 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                 return;
             }
 
+            // Send rejection comment as a message to the travel author
+            const authorId =
+                (formData as any)?.user?.id ??
+                (formData as any)?.userId ??
+                (formData as any)?.user_id ??
+                null;
+            const commentText = rejectionComment.trim();
+            if (authorId && commentText) {
+                try {
+                    const travelName = formData.name || 'Без названия';
+                    const messageText = `Модерация отклонена для "${travelName}": ${commentText}`;
+                    await sendMessage({
+                        participants: [Number(authorId)],
+                        text: messageText,
+                    });
+                } catch (msgError) {
+                    devError('Failed to send rejection message:', msgError);
+                }
+            }
+
             await trackWizardEvent('admin_moderation_rejected', {
                 travel_id: resolvedId,
+                has_comment: !!commentText,
             });
 
             void showToastMessage({
                 type: 'info',
                 text1: 'Модерация отклонена',
-                text2: 'Маршрут возвращен в черновики.',
+                text2: commentText
+                    ? 'Маршрут возвращен в черновики. Комментарий отправлен автору.'
+                    : 'Маршрут возвращен в черновики.',
             });
 
+            setRejectionComment('');
             router.replace('/metravel');
         } finally {
             finishAction();
@@ -583,6 +611,26 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                             <Text style={styles.adminHint}>
                                 Маршрут находится на модерации. Вы можете одобрить или отклонить его.
                             </Text>
+                            <View style={styles.rejectionCommentContainer}>
+                                <Text style={styles.rejectionCommentLabel}>Комментарий при отклонении (будет отправлен автору):</Text>
+                                <TextInput
+                                    style={[
+                                        styles.rejectionCommentInput,
+                                        {
+                                            backgroundColor: colors.backgroundSecondary,
+                                            color: colors.text,
+                                            borderColor: colors.borderLight,
+                                        },
+                                    ]}
+                                    value={rejectionComment}
+                                    onChangeText={setRejectionComment}
+                                    placeholder="Укажите причину отклонения..."
+                                    placeholderTextColor={colors.textMuted}
+                                    multiline
+                                    maxLength={1000}
+                                    accessibilityLabel="Комментарий при отклонении"
+                                />
+                            </View>
                             <View style={styles.adminButtons}>
                                 <Button
                                     label="Одобрить модерацию"
@@ -906,6 +954,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.textMuted,
         marginTop: DESIGN_TOKENS.spacing.xs,
         lineHeight: 20,
+    },
+    rejectionCommentContainer: {
+        marginTop: DESIGN_TOKENS.spacing.md,
+    },
+    rejectionCommentLabel: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        fontWeight: '600',
+        color: colors.text,
+        marginBottom: DESIGN_TOKENS.spacing.xs,
+    },
+    rejectionCommentInput: {
+        borderWidth: 1,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        minHeight: 80,
+        textAlignVertical: 'top' as const,
+        ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
     },
     adminButtons: {
         marginTop: DESIGN_TOKENS.spacing.md,

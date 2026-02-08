@@ -9,6 +9,10 @@ jest.mock('@/hooks/useUserProfileCached', () => ({
   useUserProfileCached: () => ({ profile: mockProfile }),
 }))
 
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ userId: '99', isAuthenticated: true }),
+}))
+
 // Мокаем expo-router useRouter
 const mockPush = jest.fn()
 jest.mock('expo-router', () => ({

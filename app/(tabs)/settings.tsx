@@ -571,6 +571,27 @@ export default function SettingsScreen() {
                         </View>
                     </View>
 
+                    <Text style={styles.sectionTitle}>Сообщения</Text>
+
+                    <Pressable
+                        style={[styles.card, globalFocusStyles.focusable]}
+                        onPress={() => router.push('/messages' as any)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Перейти к сообщениям"
+                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                        <View style={styles.cardRow}>
+                            <View style={styles.cardIcon}>
+                                <Feather name="mail" size={18} color={colors.primary} />
+                            </View>
+                            <View style={styles.cardText}>
+                                <Text style={styles.cardTitle}>Личные сообщения</Text>
+                                <Text style={styles.cardMeta}>Переписка с авторами путешествий</Text>
+                            </View>
+                            <Feather name="chevron-right" size={18} color={colors.textMuted} />
+                        </View>
+                    </Pressable>
+
                     <Text style={styles.sectionTitle}>Аккаунт</Text>
 
                     <View style={styles.card}>

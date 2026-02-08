@@ -489,6 +489,13 @@ function AccountMenu() {
           {expandedSections.account && (
             <>
               <Menu.Item
+                onPress={() => handleNavigate('/messages')}
+                title="Сообщения"
+                leadingIcon={({ size }) => <Feather name="mail" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
                 onPress={() => handleNavigate('/export')}
                 title="Экспорт в PDF"
                 leadingIcon={({ size }) => <Feather name="file-text" size={size} color={styles.iconMuted.color} />}

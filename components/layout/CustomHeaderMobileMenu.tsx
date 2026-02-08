@@ -186,6 +186,18 @@ export default function CustomHeaderMobileMenu({
                 </Pressable>
 
                 <Pressable
+                  onPress={() => onUserAction('/messages')}
+                  style={styles.modalNavItem}
+                  accessibilityRole="button"
+                  accessibilityLabel="Сообщения"
+                >
+                  <View style={styles.iconSlot20}>
+                    <Feather name="mail" size={20} color={colors.textMuted} />
+                  </View>
+                  <Text style={styles.modalNavLabel}>Сообщения</Text>
+                </Pressable>
+
+                <Pressable
                   onPress={() => onUserAction('/export')}
                   style={styles.modalNavItem}
                   accessibilityRole="button"

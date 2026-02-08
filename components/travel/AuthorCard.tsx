@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/types/types';
 import { openExternalUrl } from '@/utils/externalLinks';
+import { useAuth } from '@/context/AuthContext';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -158,6 +159,14 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
     }
   }, [userId, onViewAuthorTravels, router]);
 
+  const { userId: currentUserId } = useAuth();
+  const isOwnTravel = currentUserId != null && userId != null && String(currentUserId) === String(userId);
+
+  const handleWriteToAuthor = useCallback(() => {
+    if (!userId) return;
+    router.push(`/messages?userId=${encodeURIComponent(userId)}` as any);
+  }, [userId, router]);
+
   // Оптимизация аватара
   const travelUserAvatar = (travel as any)?.user?.avatar;
 
@@ -276,6 +285,22 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                   {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
                 </Text>
               </SafeView>
+            )}
+
+            {userId && !isOwnTravel && (
+              <Pressable
+                onPress={handleWriteToAuthor}
+                accessibilityRole="button"
+                accessibilityLabel={`Написать автору${userName ? ` ${userName}` : ''}`}
+                style={({ pressed }) => [
+                  styles.messageButton,
+                  { backgroundColor: colors.primarySoft, borderColor: colors.borderLight },
+                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                ]}
+              >
+                <Feather name="mail" size={14} color={colors.primary} />
+                <Text style={[styles.messageButtonText, { color: colors.primary }]}>Написать</Text>
+              </Pressable>
             )}
           </SafeView>
         </SafeView>
@@ -569,6 +594,25 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   viewButtonTextMobile: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
+  },
+  messageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer' as any,
+      },
+    }),
+  },
+  messageButtonText: {
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '600',
   },
 });
 
