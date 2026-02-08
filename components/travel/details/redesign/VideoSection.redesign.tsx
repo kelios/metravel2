@@ -379,4 +379,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
 });
 
-export default VideoSection;
+export default memo(VideoSection);

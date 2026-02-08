@@ -3,7 +3,7 @@
  * Показывается один раз при первом визите на /map
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -44,7 +44,7 @@ interface MapOnboardingProps {
 
 export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
   const colors = useThemedColors();
-  const styles = getStyles(colors);
+  const styles = useMemo(() => getStyles(colors), [colors]);
   const [currentStep, setCurrentStep] = useState(0);
   const [visible, setVisible] = useState(false);
 

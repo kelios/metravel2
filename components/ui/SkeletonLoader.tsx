@@ -176,4 +176,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SkeletonLoader;
+export default React.memo(SkeletonLoader);

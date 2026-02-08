@@ -770,7 +770,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     progressRingText: {
         fontSize: 14,
         fontWeight: '700',
-        color: colors.primary,
+        color: colors.primaryText,
     },
     checklistRow: {
         flexDirection: 'row',
@@ -874,7 +874,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     benefitText: {
         flex: 1,
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: colors.primary,
+        color: colors.primaryText,
         fontWeight: '600',
         lineHeight: 16,
     },

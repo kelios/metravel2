@@ -113,7 +113,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     linkButton: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.primary,
+      color: colors.primaryText,
       textDecorationLine: 'underline',
     },
     exportBarButtons: {
@@ -183,7 +183,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       color: colors.text,
     },
     filtersToggleTextActive: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     },
     filtersOverlay: {
@@ -271,7 +271,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       borderColor: colors.primary,
     },
     listHeaderActionActiveText: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     },
     listHeaderRight: {
@@ -473,7 +473,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     recommendationsTabsFooterButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.primary,
+      color: colors.primaryText,
       textDecorationLine: 'underline',
     },
     emptyState: {
@@ -509,7 +509,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     headerBadgeText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     },
     searchBar: {
@@ -531,7 +531,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     loadMoreButtonText: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.primary,
+      color: colors.primaryText,
       textAlign: 'center',
     },
     listFooterSpacing: {

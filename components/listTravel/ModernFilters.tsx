@@ -89,7 +89,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 }) => {
   // ✅ УЛУЧШЕНИЕ: Поддержка тем через useThemedColors
   const colors = useThemedColors();
-  const styles = createStyles(colors);
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const isNarrowWeb = Platform.OS === 'web' && Dimensions.get('window').width <= METRICS.breakpoints.tablet;
   const hasOptions = filterGroups.some((group) => (group.options || []).length > 0);
@@ -585,7 +585,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
     clearButtonText: {
       fontSize: typography.sizes.xs,
       fontWeight: typography.weights.medium as any,
-      color: colors.primary,
+      color: colors.primaryText,
     },
     clearAllMobileButton: {
       flexDirection: 'row',

@@ -272,7 +272,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     );
 };
 
-export default ConfirmDialog;
+export default React.memo(ConfirmDialog);
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     webPortalRoot: {

@@ -237,7 +237,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   expandButtonText: {
     fontSize: 12,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-    color: colors.primary,
+    color: colors.primaryText,
   },
 }), [colors]);
 

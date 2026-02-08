@@ -142,4 +142,4 @@ const YoutubeLinkComponent: React.FC<YoutubeLinkComponentProps> = ({
 };
 
 
-export default YoutubeLinkComponent;
+export default React.memo(YoutubeLinkComponent);

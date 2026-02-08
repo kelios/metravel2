@@ -66,7 +66,7 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
       fontWeight: '600',
     },
     labelSelected: {
-      color: colors.primary,
+      color: colors.primaryText,
     },
     count: {
       color: colors.textMuted,
@@ -74,7 +74,7 @@ function Chip({ label, selected = false, count, icon, onPress, testID, disabled 
       fontWeight: '500',
     },
     countSelected: {
-      color: colors.primary,
+      color: colors.primaryText,
     },
     icon: {
       marginRight: spacing.xs / 2,

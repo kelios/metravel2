@@ -25,7 +25,7 @@ export function ExternalLink(
       href={props.href}
       style={[
         {
-          color: colors.primary,
+          color: colors.primaryText,
           textDecorationLine: 'underline',
         },
         props.style,

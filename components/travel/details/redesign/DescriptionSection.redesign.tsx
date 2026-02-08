@@ -272,4 +272,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
 });
 
-export default DescriptionSection;
+export default memo(DescriptionSection);

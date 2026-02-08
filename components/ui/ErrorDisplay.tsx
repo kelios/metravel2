@@ -125,7 +125,7 @@ export default function ErrorDisplay({
       color: colors.textOnPrimary,
     },
     secondaryButtonText: {
-      color: colors.primary,
+      color: colors.primaryText,
     },
     dismissButton: {
       padding: 8,

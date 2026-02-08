@@ -1,4 +1,4 @@
-import React, { memo } from 'react'
+import React, { memo, useCallback } from 'react'
 import { Platform, StyleProp, View, ViewStyle } from 'react-native'
 import ModernFilters from './ModernFilters'
 
@@ -32,6 +32,29 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
     onClose,
     containerStyle,
   }) => {
+    const handleFilterChange = useCallback((groupKey: string, optionId: string) => {
+      const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v))
+      const normalizedId = String(optionId)
+      const newValues = currentValues.includes(normalizedId)
+        ? currentValues.filter((id) => id !== normalizedId)
+        : [...currentValues, normalizedId]
+      onSelect(groupKey, newValues)
+    }, [filter, onSelect])
+
+    const handleClearAll = useCallback(() => {
+      setSearch('')
+      resetFilters()
+    }, [setSearch, resetFilters])
+
+    const handleYearChange = useCallback((value?: string) => {
+      onSelect('year', value)
+    }, [onSelect])
+
+    const handleToggleModeration = useCallback(() => {
+      const next = filter.moderation === 0 ? undefined : 0
+      onSelect('moderation', next)
+    }, [filter.moderation, onSelect])
+
     // На native скрываем фильтры на мобильных, на web скрываем только если явно выключены
     if (Platform.OS !== 'web' && isMobile) {
       return null
@@ -47,28 +70,15 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
         <ModernFilters
           filterGroups={filterGroups}
           selectedFilters={filter as any}
-          onFilterChange={(groupKey, optionId) => {
-            const currentValues: string[] = ((filter as any)[groupKey] || []).map((v: any) => String(v))
-            const normalizedId = String(optionId)
-            const newValues = currentValues.includes(normalizedId)
-              ? currentValues.filter((id) => id !== normalizedId)
-              : [...currentValues, normalizedId]
-            onSelect(groupKey, newValues)
-          }}
-          onClearAll={() => {
-            setSearch('')
-            resetFilters()
-          }}
+          onFilterChange={handleFilterChange}
+          onClearAll={handleClearAll}
           resultsCount={total}
           isLoading={isLoading}
           year={filter.year}
-          onYearChange={(value) => onSelect('year', value)}
+          onYearChange={handleYearChange}
           showModeration={isSuper}
           moderationValue={filter.moderation}
-          onToggleModeration={() => {
-            const next = filter.moderation === 0 ? undefined : 0
-            onSelect('moderation', next)
-          }}
+          onToggleModeration={handleToggleModeration}
           onClose={onClose}
         />
       </View>

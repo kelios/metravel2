@@ -242,7 +242,7 @@ export default function CollapsibleBlock({
     },
     showHiddenText: {
       fontSize: 12,
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: '500',
     },
   }), [colors]);

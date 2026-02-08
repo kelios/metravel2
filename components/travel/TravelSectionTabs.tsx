@@ -320,4 +320,4 @@ const TravelSectionTabs: React.FC<TravelSectionTabsProps> = ({
   )
 }
 
-export default TravelSectionTabs
+export default React.memo(TravelSectionTabs)

@@ -143,4 +143,4 @@ const DescriptionComponent: React.FC<Props> = ({
     );
 };
 
-export default DescriptionComponent;
+export default React.memo(DescriptionComponent);

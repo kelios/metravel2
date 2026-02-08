@@ -609,7 +609,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     previewButtonText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '700',
-        color: colors.primary,
+        color: colors.primaryText,
     },
     mobileMetaRow: {
         marginTop: 0,
@@ -620,7 +620,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     autosaveBadgeText: {
         fontSize: 11,
-        color: colors.primary,
+        color: colors.primaryText,
         fontWeight: '600',
     },
     tipToggleButton: {
@@ -645,7 +645,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.textMuted,
     },
     tipToggleTextActive: {
-        color: colors.primary,
+        color: colors.primaryText,
     },
     progressBarTrack: {
         marginTop: DESIGN_TOKENS.spacing.xs,
@@ -753,7 +753,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.textMuted,
     },
     milestoneInlineNumberActive: {
-        color: colors.primary,
+        color: colors.primaryText,
     },
     milestone: {
         alignItems: 'center',
@@ -784,7 +784,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.textMuted,
     },
     milestoneNumberActive: {
-        color: colors.primary,
+        color: colors.primaryText,
     },
 });
 

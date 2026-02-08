@@ -21,6 +21,8 @@ import { createTravelListItemStyles } from './travelListItemStyles';
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
 const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
+const AUTHOR_ICON_STYLE = { marginRight: 4 } as const;
+const EMPTY_STYLE = {} as const;
 
 // Простая эвристика для отбрасывания изображений с водяными знаками / стоковых доменов
 const WATERMARK_DOMAINS = [
@@ -508,7 +510,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
                 name="user"
                 size={Platform.select({ default: 10, web: 11 })}
                 color={colors.textMuted}
-                style={{ marginRight: 4 }}
+                style={AUTHOR_ICON_STYLE}
               />
               {Platform.OS === 'web' ? (
                 <View
@@ -639,7 +641,7 @@ return (
             <View
               testID="travel-card-link"
               ref={anchorRef}
-              style={{}}
+              style={EMPTY_STYLE}
               {...(isWeb
                 ? ({
                     'data-testid': 'travel-card-link',

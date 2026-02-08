@@ -142,7 +142,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   linkButton: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.primary,
+    color: colors.primaryText,
     textDecorationLine: 'underline',
   },
   exportBarButtons: {

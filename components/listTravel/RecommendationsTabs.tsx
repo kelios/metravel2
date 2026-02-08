@@ -673,7 +673,7 @@ const createStyles = (
     fontWeight: '600',
   },
   activeTabLabel: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '600',
   },
   badge: {
@@ -794,7 +794,7 @@ const createStyles = (
     backgroundColor: colors.surface,
   },
   gateButtonText: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -814,7 +814,7 @@ const createStyles = (
   expandText: {
     marginLeft: 8,
     fontSize: 15,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '500',
   },
 
@@ -947,7 +947,7 @@ const createStyles = (
   seeAllButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   favoritesHeaderTitle: {
     fontSize: 16,

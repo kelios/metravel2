@@ -178,7 +178,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         color: colors.textMuted,
     },
     stepBadgeTextActive: {
-        color: colors.primary,
+        color: colors.primaryText,
     },
     stepBadgeTextInactive: {},
 });

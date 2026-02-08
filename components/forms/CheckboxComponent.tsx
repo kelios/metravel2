@@ -38,4 +38,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default CheckboxComponent;
+export default React.memo(CheckboxComponent);

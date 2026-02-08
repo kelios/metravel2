@@ -103,7 +103,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     counterValue: {
       fontSize: 14,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     modeHelper: {
       flexDirection: 'row',
@@ -230,7 +230,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     categoryChipText: {
       fontSize: 12,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
       flexShrink: 1,
       marginRight: 4,
     },
@@ -255,7 +255,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     moreChipText: {
       fontSize: 12,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     radiusQuickOptions: {
       flexDirection: 'row',
@@ -338,7 +338,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     routeDistance: {
       fontSize: 13,
       fontWeight: '800',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     compactButton: {
       flexDirection: 'row',
@@ -395,7 +395,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     infoBold: {
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     routeHintContainer: {
       marginTop: 12,
@@ -469,7 +469,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     routeBuiltTitle: {
       fontSize: 14,
       fontWeight: '800',
-      color: colors.primary,
+      color: colors.primaryText,
       marginBottom: 4,
     },
     routeBuiltMeta: {
@@ -522,7 +522,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     stepInlineHint: {
       fontSize: 12,
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: '700',
     },
     addressToggle: {
@@ -536,7 +536,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginTop: 4,
     },
     addressToggleText: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: '700',
       fontSize: 13,
     },
@@ -585,7 +585,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       backgroundColor: colors.primarySoft,
     },
     swapButtonText: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: '700',
       fontSize: 13,
     },

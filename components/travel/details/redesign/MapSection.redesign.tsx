@@ -368,4 +368,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
 });
 
-export default MapSection;
+export default memo(MapSection);

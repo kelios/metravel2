@@ -8,6 +8,8 @@ import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 
 import { createTabCardTemplate, MOBILE_CARD_WIDTH } from './recommendationsCardTemplate';
 
+const ICON_MARGIN_STYLE = { marginRight: 4 } as const;
+
 export type TabTravelCardBadge = {
   icon: keyof typeof Feather.glyphMap;
   backgroundColor: string;
@@ -61,7 +63,7 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
         </Text>
 
         <View style={styles.locationRow}>
-          <Feather name="map-pin" size={12} color={colors.textMuted} style={{ marginRight: 4 } as any} />
+          <Feather name="map-pin" size={12} color={colors.textMuted} style={ICON_MARGIN_STYLE} />
           <Text style={[styles.locationText, { color: colors.textMuted }]} numberOfLines={1}>
             {location || ' '}
           </Text>

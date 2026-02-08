@@ -62,7 +62,7 @@ export default function ProgressIndicator({
     percentage: {
       fontSize: 18,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     progressBarContainer: {
       width: '100%',

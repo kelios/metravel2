@@ -349,4 +349,4 @@ const TravelSectionsSheet: React.FC<Props> = ({ links, activeSection, onNavigate
   )
 }
 
-export default TravelSectionsSheet
+export default React.memo(TravelSectionsSheet)

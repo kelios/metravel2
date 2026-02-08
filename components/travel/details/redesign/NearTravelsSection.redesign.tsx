@@ -283,4 +283,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
 });
 
-export default NearTravelsSection;
+export default memo(NearTravelsSection);

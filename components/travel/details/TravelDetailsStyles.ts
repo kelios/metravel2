@@ -617,7 +617,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     color: colors.textMuted,
   },
   mobileInsightChipTextActive: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: "700",
   },
   mobileInsightChipBadge: {
@@ -631,7 +631,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     overflow: "hidden" as const,
   },
   mobileInsightChipBadgeActive: {
-    color: colors.primary,
+    color: colors.primaryText,
     backgroundColor: colors.primarySoft,
   },
 

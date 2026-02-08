@@ -442,4 +442,4 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
   },
 });
 
-export default SimpleMultiSelect;
+export default React.memo(SimpleMultiSelect);

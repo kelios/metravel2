@@ -557,7 +557,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   retryButtonText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
   errorText: {
@@ -589,7 +589,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   threadControlText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   commentThread: {
@@ -615,7 +615,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   toggleThreadText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   repliesContainer: {

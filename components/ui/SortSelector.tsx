@@ -107,7 +107,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     fontWeight: '500',
   },
   optionTextActive: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '600',
   },
 });
