@@ -132,3 +132,23 @@ export const fetchUserRecommendedTravels = async (userId: string | number): Prom
     const res = await apiClient.get<MaybePaginated<CardViewTravelDto>>(`/user/${userId}/recommended-travels/`);
     return unwrapList(res);
 };
+
+// ---- Subscriptions ----
+
+export const subscribeToUser = async (userId: string | number): Promise<null> => {
+    return apiClient.post<null>(`/user/${userId}/subscribe/`);
+};
+
+export const unsubscribeFromUser = async (userId: string | number): Promise<null> => {
+    return apiClient.delete<null>(`/user/${userId}/unsubscribe/`);
+};
+
+export const fetchMySubscriptions = async (): Promise<UserProfileDto[]> => {
+    const res = await apiClient.get<MaybePaginated<UserProfileDto>>('/user/subscriptions/');
+    return unwrapList(res);
+};
+
+export const fetchMySubscribers = async (): Promise<UserProfileDto[]> => {
+    const res = await apiClient.get<MaybePaginated<UserProfileDto>>('/user/subscribers/');
+    return unwrapList(res);
+};

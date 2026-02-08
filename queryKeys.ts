@@ -6,4 +6,6 @@ export const queryKeys = {
   articles: (params: { page: number; itemsPerPage: number; user_id?: string }) =>
     ['articles', params] as const,
   addressSearch: (query: string) => ['address-search', query] as const,
+  mySubscriptions: () => ['my-subscriptions'] as const,
+  mySubscribers: () => ['my-subscribers'] as const,
 } as const;
