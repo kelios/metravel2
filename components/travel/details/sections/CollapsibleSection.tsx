@@ -11,6 +11,8 @@ import { useTravelDetailsStyles } from '../TravelDetailsStyles';
 import { Icon } from '../TravelDetailsIcons';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 
+const CONTENT_MARGIN_STYLE = { marginTop: 12 } as const;
+
 export type HighlightType = 'default' | 'positive' | 'negative' | 'info';
 
 export interface CollapsibleSectionProps {
@@ -89,7 +91,7 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
             <Icon name={open ? 'chevron-up' : 'chevron-down'} size={22} />
           </View>
         </CardActionPressable>
-        {open ? <View style={{ marginTop: 12 }}>{children}</View> : null}
+        {open ? <View style={CONTENT_MARGIN_STYLE}>{children}</View> : null}
       </View>
     );
   }

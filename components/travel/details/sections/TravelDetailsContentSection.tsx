@@ -12,6 +12,8 @@ import { withLazy } from '../TravelDetailsLazy'
 import { CollapsibleSection } from './CollapsibleSection'
 import { LazyYouTube } from './LazyYouTubeSection'
 
+const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
+
 const TravelDescription = withLazy(() => import('@/components/travel/TravelDescription'))
 
 const DescriptionFallback = () => {
@@ -224,7 +226,7 @@ export const TravelDetailsContentSection: React.FC<{
         >
           <Text style={styles.sectionHeaderText}>Видео</Text>
           <Text style={styles.sectionSubtitle}>Одно нажатие — и ролик начнёт проигрываться</Text>
-          <View style={{ marginTop: 12 }}>
+          <View style={SECTION_CONTENT_MARGIN_STYLE}>
             <LazyYouTube url={travel.youtube_link} />
           </View>
         </View>

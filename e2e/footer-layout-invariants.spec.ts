@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
+import { expectNoOverlap } from './helpers/layoutAsserts';
 import { getTravelsListPath } from './helpers/routes';
 import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
@@ -278,5 +279,60 @@ test.describe('Footer layout invariants (web)', () => {
 
       guard.assertNoErrorsContaining('6000ms timeout exceeded');
     }
+  });
+
+  // Merged from footer-overlap.spec.ts — gutter height must match dock height.
+  test('mobile: bottom-gutter height matches dock height', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await preacceptCookiesAndStabilize(page);
+
+    await gotoWithRetry(page, getTravelsListPath());
+
+    const dock = page.getByTestId('footer-dock-measure');
+    await expect(dock).toBeVisible({ timeout: 30_000 });
+
+    const gutter = page.getByTestId('bottom-gutter');
+    await expect(gutter).toHaveCount(1, { timeout: 30_000 });
+    await gutter.scrollIntoViewIfNeeded().catch(() => null);
+
+    const { dockHeight, gutterHeight } = await page.evaluate(() => {
+      const dockEl = document.querySelector('[data-testid="footer-dock-measure"]') as HTMLElement | null;
+      const gutterEl = document.querySelector('[data-testid="bottom-gutter"]') as HTMLElement | null;
+      return {
+        dockHeight: dockEl ? dockEl.offsetHeight : 0,
+        gutterHeight: gutterEl ? gutterEl.offsetHeight : 0,
+      };
+    });
+
+    expect(dockHeight, 'footer dock height should be measurable').toBeGreaterThan(0);
+    expect(gutterHeight).toBeGreaterThan(0);
+    expect(gutterHeight).toBeGreaterThanOrEqual(dockHeight - 1);
+    expect(gutterHeight, `bottom gutter should not be excessively large`).toBeLessThanOrEqual(dockHeight + 20);
+  });
+
+  // Merged from footer-last-card-overlap.spec.ts — last card must not overlap dock.
+  test('mobile: last travel card does not overlap footer dock', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await preacceptCookiesAndStabilize(page);
+
+    await gotoWithRetry(page, getTravelsListPath());
+
+    const dock = page.getByTestId('footer-dock-wrapper');
+    await expect(dock).toBeVisible({ timeout: 30_000 });
+
+    const cards = page.locator('[data-testid="travel-card-link"]');
+    await expect(cards.first()).toBeVisible({ timeout: 45_000 });
+
+    const count = await cards.count();
+    if (count === 0) {
+      test.info().annotations.push({ type: 'note', description: 'No cards rendered; cannot verify overlap' });
+      return;
+    }
+
+    const last = cards.nth(count - 1);
+    await last.scrollIntoViewIfNeeded();
+    await expect(last).toBeVisible();
+
+    await expectNoOverlap(dock, last, { labelA: 'footer dock', labelB: 'last travel card' });
   });
 });

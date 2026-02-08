@@ -30,7 +30,7 @@ async function gotoWithRetry(page: any, url: string) {
   if (lastError) throw lastError;
 }
 
-test.describe('Auth smoke', () => {
+test.describe('@smoke Auth smoke', () => {
   test('travels page loads (with storageState if available)', async ({ page }) => {
     // Pre-accept cookies to avoid overlay affecting interactions.
     await page.addInitScript(seedNecessaryConsent);

@@ -319,4 +319,67 @@ test.describe('@perf CLS audit', () => {
       expect(failing, `CLS audit failed (routes above limits).\n\n${details}`).toHaveLength(0);
     }
   });
+
+  // Merged from cls-guard-travelsby.spec.ts — mobile-specific CLS guard for the main list.
+  test('mobile CLS guard: /travelsby should not exceed thresholds', async ({ page }) => {
+    test.setTimeout(2 * 60_000);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.addInitScript(seedNecessaryConsent);
+    await page.addInitScript(() => {
+      (window as any).__e2eCls = {
+        clsTotal: 0,
+        clsAfterRender: 0,
+        phase: 'total',
+        finalized: false,
+        entries: [] as any[],
+      };
+      try {
+        const obs = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries() as any[]) {
+            const state = (window as any).__e2eCls;
+            if (!state || state.finalized) return;
+            if (!entry || entry.hadRecentInput || typeof entry.value !== 'number') continue;
+            state.clsTotal += entry.value;
+            if (state.phase === 'afterRender') state.clsAfterRender += entry.value;
+          }
+        });
+        obs.observe({ type: 'layout-shift', buffered: true } as any);
+      } catch { /* ignore */ }
+    });
+
+    let lastError: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 60_000 });
+        await Promise.race([
+          page.waitForSelector('#search-input', { timeout: 30_000 }),
+          page.waitForSelector('[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"]', { timeout: 30_000 }),
+          page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
+        ]);
+        lastError = null;
+        break;
+      } catch (e) {
+        lastError = e;
+        if (typeof (page as any)?.isClosed === 'function' && (page as any).isClosed()) break;
+        try { await page.waitForTimeout(700 + attempt * 400); } catch { break; }
+      }
+    }
+    if (lastError) throw lastError;
+
+    await page.waitForTimeout(3000);
+    await page.evaluate(() => { const s = (window as any).__e2eCls; if (s) { s.phase = 'afterRender'; s.clsAfterRender = 0; } });
+    await page.waitForTimeout(2000);
+
+    const data = await page.evaluate(() => {
+      const s = (window as any).__e2eCls;
+      if (!s) return { clsTotal: 0, clsAfterRender: 0 };
+      s.finalized = true;
+      return { clsTotal: s.clsTotal ?? 0, clsAfterRender: s.clsAfterRender ?? 0 };
+    });
+
+    expect(data.clsTotal, `Mobile CLS total too high: ${data.clsTotal.toFixed(4)}`).toBeLessThanOrEqual(CLS_TOTAL_MAX);
+    expect(data.clsAfterRender, `Mobile CLS afterRender too high: ${data.clsAfterRender.toFixed(4)}`).toBeLessThanOrEqual(CLS_AFTER_RENDER_MAX);
+  });
 });

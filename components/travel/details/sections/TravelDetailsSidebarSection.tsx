@@ -9,6 +9,8 @@ import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
 
+const SIDEBAR_CONTENT_MARGIN_STYLE = { marginTop: 8 } as const
+
 const NavigationArrows = withLazy(() => import('@/components/travel/NavigationArrows'))
 const NearTravelList = withLazy(() => import('@/components/travel/NearTravelList'))
 const PopularTravelList = withLazy(() => import('@/components/travel/PopularTravelList'))
@@ -90,7 +92,7 @@ export const TravelDetailsSidebarSection: React.FC<{
       >
         <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
         <Text style={styles.sectionSubtitle}>Маршруты в радиусе ~60 км</Text>
-        <View style={{ marginTop: 8 }}>
+        <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           {travel.travelAddress &&
             (shouldRenderNear ? (
               <View testID="travel-details-near-loaded">
@@ -136,7 +138,7 @@ export const TravelDetailsSidebarSection: React.FC<{
       >
         <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
         <Text style={styles.sectionSubtitle}>Самые просматриваемые направления за неделю</Text>
-        <View style={{ marginTop: 8 }}>
+        <View style={SIDEBAR_CONTENT_MARGIN_STYLE}>
           {shouldRenderPopular ? (
             <View testID="travel-details-popular-loaded">
               <Suspense fallback={<TravelListFallback />}>

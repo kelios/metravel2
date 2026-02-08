@@ -13,6 +13,10 @@ import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
 
+const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
+const EXCURSION_CONTAINER_STYLE = { marginTop: 12, minHeight: 600 } as const
+const WEATHER_PLACEHOLDER_STYLE = { minHeight: 120 } as const
+
 const PointList = withLazy(() => import('@/components/travel/PointList'))
 const ToggleableMap = withLazy(() => import('@/components/travel/ToggleableMapSection'))
 const TravelMap = withLazy(() =>
@@ -176,7 +180,7 @@ export const TravelDetailsMapSection: React.FC<{
               <Text style={styles.sectionHeaderText}>Экскурсии</Text>
               <Text style={styles.sectionSubtitle}>Покажем экскурсии рядом с точками маршрута</Text>
 
-              <View style={{ marginTop: 12, minHeight: 600 }}>
+              <View style={EXCURSION_CONTAINER_STYLE}>
                 <BelkrajWidgetComponent
                   countryCode={travel.countryCode}
                   points={travel.travelAddress as any}
@@ -213,7 +217,7 @@ export const TravelDetailsMapSection: React.FC<{
           : {})}
       >
         <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
-        <View style={{ marginTop: 12 }}>
+        <View style={SECTION_CONTENT_MARGIN_STYLE}>
           {hasMapData ? (
             <ToggleableMap
               initiallyOpen={!isMobileWeb}
@@ -282,7 +286,7 @@ export const TravelDetailsMapSection: React.FC<{
             </Pressable>
           ) : (
             <View style={{ marginTop: DESIGN_TOKENS.spacing.sm }}>
-              <Suspense fallback={<View style={{ minHeight: 120 }} />}>
+              <Suspense fallback={<View style={WEATHER_PLACEHOLDER_STYLE} />}>
                 <WeatherWidget points={travel.travelAddress as any} />
               </Suspense>
             </View>
@@ -302,7 +306,7 @@ export const TravelDetailsMapSection: React.FC<{
             : {})}
         >
           <Text style={styles.sectionHeaderText}>Координаты мест</Text>
-          <View style={{ marginTop: 12 }}>
+          <View style={SECTION_CONTENT_MARGIN_STYLE}>
             <Suspense fallback={<PointListFallback />}>
               <PointList
                 points={travel.travelAddress as any}

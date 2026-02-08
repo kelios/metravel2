@@ -42,11 +42,25 @@ const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.en
  const E2E_API_URL =
    process.env.E2E_API_URL || (process.env.E2E_USE_REAL_API === '1' ? '' : 'http://192.168.50.36');
 
+// ---------------------------------------------------------------------------
+// Test strategy (controlled via E2E_SUITE env var or --grep):
+//   smoke      – critical-path tests only (~2 min)
+//   perf       – performance / CLS / budget audits
+//   regression – full suite (default)
+// ---------------------------------------------------------------------------
+const E2E_SUITE = (process.env.E2E_SUITE || '').toLowerCase();
+const grepForSuite: Record<string, RegExp | undefined> = {
+  smoke: /@smoke/,
+  perf: /@perf/,
+};
+
 export default defineConfig({
-  globalTimeout: 7_200_000,
+  globalTimeout: 3_600_000,
   testDir: './e2e',
-  timeout: 360_000,
-  workers: 1,
+  fullyParallel: true,
+  timeout: 120_000,
+  workers: process.env.CI ? 2 : '50%',
+  ...(grepForSuite[E2E_SUITE] ? { grep: grepForSuite[E2E_SUITE] } : {}),
   globalSetup: './e2e/global-setup.ts',
   webServer: USE_EXISTING_SERVER
     ? undefined
@@ -76,15 +90,17 @@ export default defineConfig({
   expect: {
     timeout: 15_000,
   },
-  retries: process.env.CI ? 1 : 0,
-  reporter: [['list'], ['html', { open: 'never' }]],
+  retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI
+    ? [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'e2e-results.json' }]]
+    : [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL,
     storageState: 'e2e/.auth/storageState.json',
-    navigationTimeout: 120_000,
-    actionTimeout: 60_000,
+    navigationTimeout: 60_000,
+    actionTimeout: 30_000,
     trace: 'retain-on-failure',
-    video: 'retain-on-failure',
+    video: process.env.CI ? 'retain-on-failure' : 'off',
   },
   projects: [
     {
