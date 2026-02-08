@@ -75,7 +75,9 @@ clean_all
 build_env prod
 
 echo "🔍 Генерация SEO-страниц..."
-node scripts/generate-seo-pages.js --dist dist/prod --api https://metravel.by
+node scripts/generate-seo-pages.js --dist dist/prod --api https://metravel.by || {
+  echo "⚠️  SEO-генерация не удалась, продолжаю деплой без неё..."
+}
 
 echo "🔁 Старт деплоя ..."
 deploy_prod
