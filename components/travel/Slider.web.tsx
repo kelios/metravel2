@@ -578,9 +578,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     scrollView: {
       flex: 1,
-      ...(Platform.OS === 'web'
-        ? ({ scrollSnapType: 'x mandatory' } as any)
-        : null),
     },
     scrollContent: {
       flexDirection: 'row',
@@ -589,9 +586,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexShrink: 0,
       position: 'relative',
       backgroundColor: colors.mutedBackground,
-      ...(Platform.OS === 'web'
-        ? ({ scrollSnapAlign: 'start', scrollSnapStop: 'always' } as any)
-        : null),
+      overflow: 'hidden',
     },
     imageCardWrapper: {
       position: 'absolute',
