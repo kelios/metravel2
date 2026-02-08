@@ -1,7 +1,6 @@
 import { test, expect } from './fixtures';
-import { gotoWithRetry, assertNoHorizontalScroll } from './helpers/navigation';
+import { gotoWithRetry, assertNoHorizontalScroll, preacceptCookies as sharedPreacceptCookies } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
 // Skeleton-specific: also clears sessionStorage to ensure skeleton is visible.
 async function preacceptCookies(page: any) {
@@ -12,8 +11,7 @@ async function preacceptCookies(page: any) {
       // ignore
     }
   });
-  await page.addInitScript(seedNecessaryConsent);
-  await page.addInitScript(hideRecommendationsBanner);
+  await sharedPreacceptCookies(page);
 }
 
 test.describe('@perf Skeleton transition (no layout shift)', () => {

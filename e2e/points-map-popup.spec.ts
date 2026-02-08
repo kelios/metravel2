@@ -1,11 +1,9 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
-
-const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
+import { preacceptCookies, tid } from './helpers/navigation';
 
 test.describe('Travel points -> map popup', () => {
   test('clicking point card opens map popup without navigation', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     const slug = 'e2e-points-map-popup';
     const image =

@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 test.describe('Roulette', () => {
   test('can spin and get results (or empty) on /roulette', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     await page.goto('/roulette', { waitUntil: 'domcontentloaded' });
 

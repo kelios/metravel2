@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 type ApiMatch = string | RegExp;
 
@@ -38,8 +38,7 @@ const waitForApiResponse = async (
 
 test.describe('@smoke Manual QA automation: core pages data', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
+    await preacceptCookies(page);
 
     // Force guest context: these checks validate public pages + API proxy responses.
     await page.addInitScript(() => {

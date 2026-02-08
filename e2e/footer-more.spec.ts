@@ -1,13 +1,12 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 test.describe('Footer dock (web mobile) - More modal', () => {
   test('shows More (Ещё), opens modal with legal + support links, and aligns dock item', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
 
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
+    await preacceptCookies(page);
 
     // Expo dev server can occasionally return transient ERR_EMPTY_RESPONSE while hot reloading.
     // Retry navigation to reduce flakiness.

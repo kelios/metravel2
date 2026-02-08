@@ -2,7 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import os from 'node:os';
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 import JSZip from 'jszip';
 
 type MockPoint = {
@@ -138,7 +138,7 @@ test.describe('User points import (mock API)', () => {
         return route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ detail: 'Unhandled mock route' }) });
       });
 
-      await page.addInitScript(seedNecessaryConsent);
+      await preacceptCookies(page);
       await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
       await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
 

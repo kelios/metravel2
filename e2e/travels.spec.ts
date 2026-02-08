@@ -9,7 +9,7 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation';
 
-test.describe('TravelDetailsContainer - E2E Tests', () => {
+test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
   /**
    * Navigate to a travel details page. Returns false if no travel is available.
    * Each test calls this independently so tests can run in parallel.

@@ -100,8 +100,34 @@ export async function getCurrentUser(page: Page): Promise<{
 }
 
 /**
- * Ожидает загрузки авторизации (если используется storageState)
+ * Simple XOR encrypt used for seeding fake auth tokens in localStorage.
  */
+export function simpleEncrypt(text: string, key: string): string {
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return Buffer.from(result, 'binary').toString('base64');
+}
+
+/**
+ * Seeds fake auth tokens into localStorage via addInitScript.
+ * Useful when E2E_EMAIL/E2E_PASSWORD are not available.
+ */
+export async function ensureAuthedStorageFallback(page: Page): Promise<void> {
+  const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
+  await page.addInitScript((payload: { encrypted: string }) => {
+    try {
+      window.localStorage.setItem('secure_userToken', payload.encrypted);
+      window.localStorage.setItem('userId', '1');
+      window.localStorage.setItem('userName', 'E2E User');
+      window.localStorage.setItem('isSuperuser', 'false');
+    } catch {
+      // ignore
+    }
+  }, { encrypted });
+}
+
 export async function waitForAuth(page: Page, timeoutMs = 5000): Promise<boolean> {
   try {
     await page.waitForFunction(

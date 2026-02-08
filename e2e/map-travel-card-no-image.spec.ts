@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 const maybeRecoverFromWorkletError = async (page: any) => {
   const errorTitle = page.getByText('Что-то пошло не так', { exact: true });
@@ -72,7 +72,7 @@ const gotoMapWithRecovery = async (page: any) => {
 
 test.describe('Map Travel Card - UnifiedTravelCard', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     await gotoMapWithRecovery(page);
   });

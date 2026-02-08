@@ -129,7 +129,7 @@ function HomeInspirationSection({
       paddingVertical: 12,
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.surface,
-      borderWidth: 2,
+      borderWidth: 1,
       borderColor: colors.border,
       ...Platform.select({
         web: {

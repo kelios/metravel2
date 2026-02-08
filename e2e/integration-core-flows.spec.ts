@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 type ApiMatch = string | RegExp;
 
@@ -99,8 +99,7 @@ const expectListNonEmptyOrEmptyState = async (page: any, cardsLocator: any, labe
 
 test.describe('@smoke Integration: core data flows (web)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
+    await preacceptCookies(page);
     // These checks validate public pages + API proxy. Force a guest context to avoid
     // auth-dependent API responses (401) that would make waits hang.
     await page.addInitScript(() => {

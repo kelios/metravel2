@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 type ClsEntry = {
   value: number;
@@ -78,7 +78,7 @@ test.describe('@perf CLS audit', () => {
       // inflating clsTotal with breakpoint-related relayout.
       await routePage.setViewportSize({ width: 1440, height: 900 });
 
-      await routePage.addInitScript(seedNecessaryConsent);
+      await preacceptCookies(routePage);
       await routePage.addInitScript(() => {
         const describeNode = (node: any) => {
           try {
@@ -326,7 +326,7 @@ test.describe('@perf CLS audit', () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
 
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
     await page.addInitScript(() => {
       (window as any).__e2eCls = {
         clsTotal: 0,

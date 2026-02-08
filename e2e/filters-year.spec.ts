@@ -1,10 +1,10 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 test.describe('Filters', () => {
   test('year filter can be set', async ({ page }) => {
     await page.goto('/travelsby', { waitUntil: 'domcontentloaded' });
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     // На главной странице нет сайдбара, поэтому проверяем рабочую страницу поиска,
     // где фильтры (и поле "Год") доступны на десктопе.

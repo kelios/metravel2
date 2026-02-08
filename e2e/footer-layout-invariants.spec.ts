@@ -27,7 +27,7 @@ async function waitForNonNullBoundingBoxes(
   return last;
 }
 
-test.describe('Footer layout invariants (web)', () => {
+test.describe('@perf Footer layout invariants (web)', () => {
   test('initial load: footer height does not jump during the first second', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await preacceptCookiesAndStabilize(page);

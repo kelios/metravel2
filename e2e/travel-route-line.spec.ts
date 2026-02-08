@@ -4,12 +4,11 @@
  */
 
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent, hideRecommendationsBanner } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 test.describe('Map Page Route Line Visibility - Visual Test', () => {
   test('линия маршрута должна быть ВИДИМА на карте (с детальной проверкой)', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
+    await preacceptCookies(page);
 
     // Слушаем все логи консоли
     const consoleLogs: { type: string; text: string }[] = [];

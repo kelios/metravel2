@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 import { loginAsUser, loginAsAdmin } from './helpers/e2eApi';
 
 test.describe('Travel Comments', () => {
@@ -67,7 +67,7 @@ test.describe('Travel Comments', () => {
   let _adminUserId: string;
 
   test.beforeEach(async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     // Mock comments API so comment UI is deterministic even without a real backend.
     const travelId = Number(mockedTravel.id);

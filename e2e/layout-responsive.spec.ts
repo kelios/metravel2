@@ -63,7 +63,7 @@ async function countCardsInFirstRow(page: any): Promise<number> {
   return xs.size;
 }
 
-test.describe('Responsive layout invariants', () => {
+test.describe('@perf Responsive layout invariants', () => {
   test('no horizontal scroll + grid breaks correctly (mobile/tablet/desktop)', async ({ page }) => {
     // Thresholds derived from app constants:
     // - mobile layout breakpoint is effectively 768 (METRICS.breakpoints.tablet)

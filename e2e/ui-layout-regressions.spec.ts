@@ -23,7 +23,7 @@ function getSearchLocator(page: any) {
     .or(page.locator('#search-input'));
 }
 
-test.describe('UI layout regression guards (overlap/cutoff/viewport)', () => {
+test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () => {
   const VIEWPORTS = [
     { name: 'mobile', width: 375, height: 667 },
     { name: 'tablet', width: 768, height: 1024 },

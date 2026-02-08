@@ -1,29 +1,8 @@
 import { test, expect } from './fixtures';
+import { ensureAuthedStorageFallback } from './helpers/auth';
 
 const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
-
-function simpleEncrypt(text: string, key: string): string {
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return Buffer.from(result, 'binary').toString('base64');
-}
-
-async function ensureAuthedStorageFallback(page: any) {
-  const encrypted = simpleEncrypt('e2e-fake-token', 'metravel_encryption_key_v1');
-  await page.addInitScript((payload: { encrypted: string }) => {
-    try {
-      window.localStorage.setItem('secure_userToken', payload.encrypted);
-      window.localStorage.setItem('userId', '1');
-      window.localStorage.setItem('userName', 'E2E User');
-      window.localStorage.setItem('isSuperuser', 'false');
-    } catch {
-      // ignore
-    }
-  }, { encrypted });
-}
 
 async function maybeMockNominatimSearch(page: any) {
   await page.route('https://nominatim.openstreetmap.org/search**', async (route: any) => {

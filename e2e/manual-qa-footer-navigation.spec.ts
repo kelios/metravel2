@@ -21,7 +21,7 @@ const navigateWithRetry = async (page: any, path: string) => {
   if (lastError) throw lastError;
 };
 
-test.describe('Manual QA automation: footer navigation', () => {
+test.describe('@smoke Manual QA automation: footer navigation', () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test('desktop footer navigation works with banner visible', async ({ page }) => {

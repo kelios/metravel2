@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 type MockPoint = {
   id: number;
@@ -116,7 +116,7 @@ test.describe('User points', () => {
   }
 
   test('renders map tiles on /userpoints and shows search + recommendations in list panel', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
     await page.addInitScript(() => {
       try {
         const coords = {
@@ -200,7 +200,7 @@ test.describe('User points', () => {
   });
 
   test('auto-zooms to show all points when geolocation is present', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
     await page.addInitScript(() => {
       try {
         const coords = {
@@ -286,7 +286,7 @@ test.describe('User points', () => {
   });
 
   test('clicking a list card opens the corresponding map popup', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
     await page.addInitScript(() => {
       try {
         const coords = {
@@ -346,7 +346,7 @@ test.describe('User points', () => {
   });
 
   test('search falls back to map geocoding when no points match', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
     await page.addInitScript(() => {
       try {
         const coords = {
@@ -574,7 +574,7 @@ test.describe('User points', () => {
 	
 	    try {
 	      await test.step('Open /userpoints', async () => {
-	        await page.addInitScript(seedNecessaryConsent);
+	        await preacceptCookies(page);
 	        await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
         await expect(page).not.toHaveURL(/\/login/);
         await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
@@ -683,7 +683,7 @@ test.describe('User points', () => {
       categoryIds: ['other'],
     });
 
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
     await page.goto('/userpoints', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('userpoints-screen')).toBeVisible({ timeout: 30_000 });
     await openListPanelTab(page);

@@ -162,7 +162,7 @@ const gotoMapWithRecovery = async (page: any) => {
   return waitForMapUi(page, 60_000, { throwOnFailure: false });
 };
 
-test.describe('Map Page (/map) - smoke e2e', () => {
+test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   test.beforeEach(async ({ page }) => {
     installNoConsoleErrorsGuard(page);
     await preacceptCookies(page);

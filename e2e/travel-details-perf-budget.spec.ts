@@ -26,7 +26,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -63,7 +63,7 @@ function travelUrl(slug: string): string {
 
 /** Inject PerformanceObserver collectors before page load. */
 async function injectPerfObservers(page: any) {
-  await page.addInitScript(seedNecessaryConsent);
+  await preacceptCookies(page);
   await page.addInitScript(() => {
     const w = window as any;
     w.__perfBudget = {
@@ -334,7 +334,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
 
   test('Network transfer budget (JS ≤ 600KB, images ≤ 1.5MB, total ≤ 4MB)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     const tracker = createNetworkTracker(page);
 
@@ -391,7 +391,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
 
   test('Images have width and height attributes (prevents CLS)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     await page.goto(travelUrl(TRAVEL_SLUG), {
       waitUntil: 'load',
@@ -466,7 +466,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
 
   test('No render-blocking resources delay FCP', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     const renderBlockingResources: Array<{ url: string; type: string }> = [];
 
@@ -593,7 +593,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, mobile)'
 
   test('Hero image preload works on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     await page.goto(travelUrl(TRAVEL_SLUG), {
       waitUntil: 'load',

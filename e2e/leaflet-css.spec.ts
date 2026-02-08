@@ -1,10 +1,9 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent, hideRecommendationsBanner } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 test.describe('Leaflet CSS', () => {
   test('Leaflet core CSS is applied on /map (pane z-index + attribution)', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
+    await preacceptCookies(page);
 
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
 

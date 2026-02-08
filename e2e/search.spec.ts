@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
 const SEARCH_TIMEOUT_MS = 30_000;
@@ -29,9 +29,9 @@ const clearSearch = async (page: Page, searchInput: Locator) => {
   await page.keyboard.press('Backspace');
 };
 
-test.describe('Search', () => {
+test.describe('@smoke Search', () => {
   test('search box filters list and can be cleared', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
 

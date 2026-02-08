@@ -1,11 +1,10 @@
 import { test, expect } from './fixtures';
-import { gotoWithRetry } from './helpers/navigation';
+import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
-import { seedNecessaryConsent } from './helpers/storage';
 
 test.describe('@smoke Auth smoke', () => {
   test('travels page loads (with storageState if available)', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     await gotoWithRetry(page, getTravelsListPath());
 
