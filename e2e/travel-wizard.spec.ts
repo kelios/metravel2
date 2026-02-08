@@ -2,20 +2,13 @@ import { test, expect } from './fixtures';
 import { request } from '@playwright/test';
 import type { Page } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
+import { simpleEncrypt } from './helpers/auth';
 
 const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
 const travelId = process.env.E2E_TRAVEL_ID;
 
 const USE_REAL_API = process.env.E2E_USE_REAL_API === '1';
-
-const simpleEncrypt = (text: string, key: string): string => {
-  let result = '';
-  for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-  }
-  return Buffer.from(result, 'binary').toString('base64');
-};
 
 const maybeMockTravelFilters = async (page: Page) => {
   if (USE_REAL_API) return;

@@ -46,6 +46,8 @@ export interface SliderProps {
   blurBackground?: boolean
   onFirstImageLoad?: () => void
   mobileHeightPercent?: number
+  onImagePress?: (index: number) => void
+  firstImagePreloaded?: boolean
 }
 
 export interface SliderRef {
@@ -120,6 +122,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     blurBackground = true,
     onFirstImageLoad,
     mobileHeightPercent = 0.6,
+    onImagePress,
   } = props
 
   const insets = useSafeAreaInsets()
@@ -315,10 +318,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
       const mainPriority = isFirstSlide ? 'high' : (distance <= 1 ? 'normal' : 'low')
-      // Disable blur for non-first slides to eliminate the gray→blur→photo flicker.
-      // The blur background fetches a separate 64px image from the server which adds
-      // visible latency on every slide transition.
-      const shouldBlur = blurBackground && isFirstSlide
+      const shouldBlur = blurBackground
 
       if (!shouldRender) {
         return (
@@ -572,12 +572,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         : null),
     },
     scrollContent: {
-      ...(Platform.OS === 'web'
-        ? ({ scrollSnapType: 'x mandatory' } as any)
-        : null),
+      flexDirection: 'row',
     },
     slide: {
-      flex: 1,
+      flexShrink: 0,
       position: 'relative',
       backgroundColor: colors.mutedBackground,
       ...(Platform.OS === 'web'
