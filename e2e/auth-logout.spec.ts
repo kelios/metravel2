@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 function hasCreds(): boolean {
   return !!process.env.E2E_EMAIL && !!process.env.E2E_PASSWORD;
@@ -69,7 +69,7 @@ async function fillLoginForm(page: any, email: string, password: string) {
 
 test.describe('Auth logout', () => {
   test('logout from profile', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     let authSeed: { token: string; userId: string; userName: string; isSuperuser: string } | null = null;
     const email = process.env.E2E_EMAIL as string | undefined;
