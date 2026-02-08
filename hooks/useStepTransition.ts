@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Animated, Platform } from 'react-native';
 
 /**
@@ -61,7 +61,7 @@ export function useStepTransition(config: StepTransitionConfig = {}) {
     };
   }, [fadeAnim, slideAnim, mergedConfig.duration, mergedConfig.fadeIn, mergedConfig.slideIn, mergedConfig.useNativeDriver]);
 
-  return {
+  return useMemo(() => ({
     fadeAnim,
     slideAnim,
     animatedStyle: {
@@ -70,7 +70,7 @@ export function useStepTransition(config: StepTransitionConfig = {}) {
         ? [{ translateY: slideAnim }]
         : undefined,
     },
-  };
+  }), [fadeAnim, slideAnim, mergedConfig.fadeIn, mergedConfig.slideIn]);
 }
 
 /**
@@ -103,12 +103,12 @@ export function useStepChangeTransition(currentStep: number, config: StepTransit
     }
   }, [currentStep, fadeAnim, mergedConfig]);
 
-  return {
+  return useMemo(() => ({
     fadeAnim,
     animatedStyle: {
       opacity: fadeAnim,
     },
-  };
+  }), [fadeAnim]);
 }
 
 /**
@@ -127,9 +127,9 @@ export function useProgressBarAnimation(progress: number, config: StepTransition
     }).start();
   }, [progress, progressAnim, mergedConfig]);
 
-  return {
+  return useMemo(() => ({
     progressAnim,
-  };
+  }), [progressAnim]);
 }
 
 /**
@@ -165,14 +165,14 @@ export function useMilestoneAnimation(isActive: boolean, isPassed: boolean, conf
     }).start();
   }, [isActive, isPassed, scaleAnim, opacityAnim, mergedConfig]);
 
-  return {
+  return useMemo(() => ({
     scaleAnim,
     opacityAnim,
     animatedStyle: {
       transform: [{ scale: scaleAnim }],
       opacity: opacityAnim,
     },
-  };
+  }), [scaleAnim, opacityAnim]);
 }
 
 /**
@@ -206,14 +206,14 @@ export function useTipAnimation(visible: boolean, delay: number = 0, config: Ste
     }
   }, [visible, delay, fadeAnim, slideAnim, mergedConfig.duration, mergedConfig.useNativeDriver]);
 
-  return {
+  return useMemo(() => ({
     fadeAnim,
     slideAnim,
     animatedStyle: {
       opacity: fadeAnim,
       transform: [{ translateY: slideAnim }],
     },
-  };
+  }), [fadeAnim, slideAnim]);
 }
 
 /**
@@ -224,32 +224,32 @@ export function useButtonHoverAnimation() {
 
   const shouldUseNativeDriver = Platform.OS !== 'web';
 
-  const handlePressIn = () => {
+  const handlePressIn = useCallback(() => {
     Animated.spring(scaleAnim, {
       toValue: 0.95,
       friction: 3,
       tension: 100,
       useNativeDriver: shouldUseNativeDriver,
     }).start();
-  };
+  }, [scaleAnim, shouldUseNativeDriver]);
 
-  const handlePressOut = () => {
+  const handlePressOut = useCallback(() => {
     Animated.spring(scaleAnim, {
       toValue: 1,
       friction: 3,
       tension: 100,
       useNativeDriver: shouldUseNativeDriver,
     }).start();
-  };
+  }, [scaleAnim, shouldUseNativeDriver]);
 
-  return {
+  return useMemo(() => ({
     scaleAnim,
     animatedStyle: {
       transform: [{ scale: scaleAnim }],
     },
     handlePressIn,
     handlePressOut,
-  };
+  }), [scaleAnim, handlePressIn, handlePressOut]);
 }
 
 /**

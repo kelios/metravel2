@@ -5,7 +5,7 @@
  * Поддерживает focus trap для модалей и сохранение последней позиции фокуса
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { handleKeyboardEvent, handleTabNavigation } from '@/utils/a11y';
 
@@ -61,13 +61,13 @@ export const useKeyboardNavigation = (options: KeyboardNavigationOptions) => {
   }, []);
 
   // Возвращаемые значения
-  return {
+  return useMemo(() => ({
     containerRef: setContainerRef,
     onKeyDown: handleKeyDown,
     focusedIndex,
     setFocusedIndex,
     getFocusableElements,
-  };
+  }), [setContainerRef, handleKeyDown, focusedIndex, setFocusedIndex, getFocusableElements]);
 };
 
 /**
@@ -125,13 +125,13 @@ export const useFocusManager = (_isActive = true) => {
     focusable?.focus();
   }, []);
 
-  return {
+  return useMemo(() => ({
     containerRef,
     saveFocus,
     restoreFocus,
     focusElement,
     focusFirstInteractive,
-  };
+  }), [containerRef, saveFocus, restoreFocus, focusElement, focusFirstInteractive]);
 };
 
 /**
@@ -159,11 +159,11 @@ export const useAccessibilityAnnounce = () => {
     []
   );
 
-  return {
+  return useMemo(() => ({
     announcement,
     priority,
     announce,
-  };
+  }), [announcement, priority, announce]);
 };
 
 /**
@@ -190,11 +190,11 @@ export const useReducedMotion = () => {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  return {
+  return useMemo(() => ({
     prefersReduced,
     duration: prefersReduced ? 0 : 250,
     easing: prefersReduced ? 'linear' : 'ease-in-out',
-  };
+  }), [prefersReduced]);
 };
 
 /**
@@ -229,7 +229,7 @@ export const useFocusVisible = () => {
     };
   }, []);
 
-  return { isFocusVisible };
+  return useMemo(() => ({ isFocusVisible }), [isFocusVisible]);
 };
 
 /**

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import type { LatLng } from '@/types/coordinates';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 
@@ -135,7 +135,7 @@ export function useMapLogic({
     );
   }, [map, userLocation]);
 
-  return {
+  return useMemo(() => ({
     centerOnUserLocation,
-  };
+  }), [centerOnUserLocation]);
 }

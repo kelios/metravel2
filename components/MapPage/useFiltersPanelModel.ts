@@ -121,7 +121,7 @@ const useFiltersPanelModel = ({
     }
   }, [routeDistance, routeHintDismissed, onRouteHintDismiss]);
 
-  return {
+  return useMemo(() => ({
     colors,
     styles,
     safeRemoveRoutePoint,
@@ -132,7 +132,18 @@ const useFiltersPanelModel = ({
     canBuildRoute,
     ctaLabel,
     totalPoints,
-  };
+  }), [
+    colors,
+    styles,
+    safeRemoveRoutePoint,
+    safeResetFilters,
+    safeCloseMenu,
+    handleSetMode,
+    hasActiveFilters,
+    canBuildRoute,
+    ctaLabel,
+    totalPoints,
+  ]);
 };
 
 export default useFiltersPanelModel;

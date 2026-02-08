@@ -1,7 +1,7 @@
 // src/hooks/usePdfExport.ts
 // ✅ АРХИТЕКТУРА: React hook для экспорта в PDF
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Platform, Alert } from 'react-native';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
@@ -234,7 +234,7 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
       }
     }, [loadDetailedTravels, updateProgress]);
 
-  return {
+  return useMemo(() => ({
     openPrintBook,
     isGenerating,
     progress,
@@ -243,5 +243,5 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
     message,
     substeps,
     estimatedTimeRemaining,
-  };
+  }), [openPrintBook, isGenerating, progress, error, currentStage, message, substeps, estimatedTimeRemaining]);
 }

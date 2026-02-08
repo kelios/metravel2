@@ -32,7 +32,7 @@ const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Feather>['name'
   'Архитектура': 'layers',
 };
 
-export const MapQuickFilters: React.FC<MapQuickFiltersProps> = ({
+export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
   categories,
   selectedCategories,
   onToggleCategory,
@@ -90,7 +90,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = ({
       </ScrollView>
     </View>
   );
-};
+});
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({

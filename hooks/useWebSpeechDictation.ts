@@ -124,7 +124,7 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     }
   }, []);
 
-  return {
+  return useMemo(() => ({
     isSupported,
     isListening,
     interimText,
@@ -132,5 +132,5 @@ export function useWebSpeechDictation(options?: { lang?: string; continuous?: bo
     start,
     stop,
     bindFinalTextHandler,
-  };
+  }), [isSupported, isListening, interimText, error, start, stop, bindFinalTextHandler]);
 }

@@ -122,11 +122,14 @@ export function useMapMarkers(options: UseMapMarkersOptions): UseMapMarkersResul
     return Array.isArray(travelData) ? travelData.length : 0;
   }, [travelData]);
 
-  return {
+  const stableClusters = useMemo(() => clusters || [], [clusters]);
+  const stableMarkers = useMemo(() => travelData || [], [travelData]);
+
+  return useMemo(() => ({
     shouldRenderClusters,
-    clusters: clusters || [],
-    markers: travelData || [],
+    clusters: stableClusters,
+    markers: stableMarkers,
     markerOpacity,
     totalMarkers,
-  };
+  }), [shouldRenderClusters, stableClusters, stableMarkers, markerOpacity, totalMarkers]);
 }

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useOptimizedFormState } from './useOptimizedFormState'
 import { useOptimizedValidation } from './useOptimizedValidation'
 
@@ -22,8 +23,8 @@ export function useFormState<T extends object>(
     validateOnChange: options?.validateOnChange,
   })
 
-  return {
+  return useMemo(() => ({
     ...form,
     validation,
-  }
+  }), [form, validation])
 }

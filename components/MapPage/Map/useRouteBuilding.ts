@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouteStore } from '@/stores/routeStore';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { RouteValidator } from '@/utils/routeValidator';
@@ -412,7 +412,7 @@ export function useRouteBuilding(ORS_API_KEY?: string) {
     };
   }, [points, transportMode, buildRoute, setRoute, setError]);
 
-  return {
+  return useMemo(() => ({
     buildRoute,
-  };
+  }), [buildRoute]);
 }

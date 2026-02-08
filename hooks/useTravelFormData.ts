@@ -546,7 +546,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     [formState]
   );
 
-  return {
+  return useMemo(() => ({
     formData: formState.data,
     setFormData,
     markers,
@@ -562,5 +562,20 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
     hasUserInteracted,
     formState,
     retryLoad,
-  };
+  }), [
+    formState,
+    setFormData,
+    markers,
+    handleMarkersUpdate,
+    travelDataOld,
+    isInitialLoading,
+    hasAccess,
+    loadError,
+    autosave,
+    handleManualSave,
+    handleCountrySelect,
+    handleCountryDeselect,
+    hasUserInteracted,
+    retryLoad,
+  ]);
 }

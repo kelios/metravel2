@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import isEqual from 'fast-deep-equal';
@@ -207,7 +207,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     };
   }, []);
 
-  return {
+  return useMemo(() => ({
     hasPendingDraft: state.hasPendingDraft,
     draftTimestamp: state.draftTimestamp,
     recoverDraft,
@@ -215,7 +215,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
     saveDraft,
     clearDraft,
     isRecovering: state.isRecovering,
-  };
+  }), [state.hasPendingDraft, state.draftTimestamp, recoverDraft, dismissDraft, saveDraft, clearDraft, state.isRecovering]);
 }
 
 // Storage abstraction for cross-platform support

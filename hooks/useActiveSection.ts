@@ -3,7 +3,7 @@
  * Использует Intersection Observer для web и scroll events для native
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Platform, View } from 'react-native';
 import type { RefObject } from 'react';
 
@@ -323,9 +323,9 @@ export function useActiveSection(
     registeredSectionsRef.current.add(key);
   }, []);
 
-  return {
+  return useMemo(() => ({
     activeSection,
     setActiveSection,
     registerSection,
-  };
+  }), [activeSection, setActiveSection, registerSection]);
 }

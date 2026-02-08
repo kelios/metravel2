@@ -4,7 +4,7 @@
  * @module hooks/useLeafletLoader
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 
@@ -359,11 +359,11 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
 
   const ready = !!(L && RL && !loading && !error);
 
-  return {
+  return useMemo(() => ({
     L,
     RL,
     loading,
     error,
     ready,
-  };
+  }), [L, RL, loading, error, ready]);
 }

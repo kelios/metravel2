@@ -55,12 +55,12 @@ export function useUserProfileCached(userId: string | number | null | undefined,
     return `${clean(p.first_name)} ${clean(p.last_name)}`.trim();
   }, [query.data]);
 
-  return {
+  return useMemo(() => ({
     profile: query.data ?? null,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     error: query.error,
     fullName,
     refetch: query.refetch,
-  };
+  }), [query.data, query.isLoading, query.isFetching, query.error, fullName, query.refetch]);
 }

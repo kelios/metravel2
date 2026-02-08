@@ -13,7 +13,7 @@ interface MapShowListButtonProps {
   visible?: boolean;
 }
 
-export const MapShowListButton: React.FC<MapShowListButtonProps> = ({
+export const MapShowListButton: React.FC<MapShowListButtonProps> = React.memo(({
   count,
   onPress,
   visible = true,
@@ -40,7 +40,7 @@ export const MapShowListButton: React.FC<MapShowListButtonProps> = ({
       <Text style={styles.text}>{label}</Text>
     </CardActionPressable>
   );
-};
+});
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({

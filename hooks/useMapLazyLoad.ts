@@ -4,7 +4,7 @@
  * @module hooks/useMapLazyLoad
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 
 interface UseMapLazyLoadOptions {
@@ -185,10 +185,12 @@ export function useMapLazyLoad(options: UseMapLazyLoadOptions = {}): UseMapLazyL
 
   const isLoading = enabled && hasData && !isVisible;
 
-  return {
-    shouldRender: hasData && (hasMounted || shouldRender),
+  const shouldMount = hasData && (hasMounted || shouldRender);
+
+  return useMemo(() => ({
+    shouldRender: shouldMount,
     elementRef: setElementRef,
     hasMounted,
     isLoading,
-  };
+  }), [shouldMount, setElementRef, hasMounted, isLoading]);
 }

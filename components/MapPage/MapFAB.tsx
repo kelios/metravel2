@@ -2,7 +2,7 @@
  * MapFAB - Floating Action Button для быстрых действий на карте
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, Animated, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MapIcon from './MapIcon';
@@ -30,7 +30,7 @@ interface MapFABProps {
   containerStyle?: StyleProp<ViewStyle>;
 }
 
-export const MapFAB: React.FC<MapFABProps> = ({
+export const MapFAB: React.FC<MapFABProps> = React.memo(({
   mainAction,
   actions = [],
   position = 'bottom-right',
@@ -44,31 +44,31 @@ export const MapFAB: React.FC<MapFABProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const animation = useState(new Animated.Value(0))[0];
 
-  const toggleExpand = () => {
-    const toValue = isExpanded ? 0 : 1;
+  const toggleExpand = useCallback(() => {
+    setIsExpanded(prev => {
+      const toValue = prev ? 0 : 1;
+      Animated.spring(animation, {
+        toValue,
+        useNativeDriver: Platform.OS !== 'web',
+        friction: 5,
+        tension: 40,
+      }).start();
+      return !prev;
+    });
+  }, [animation]);
 
-    Animated.spring(animation, {
-      toValue,
-      useNativeDriver: Platform.OS !== 'web',
-      friction: 5,
-      tension: 40,
-    }).start();
-
-    setIsExpanded(!isExpanded);
-  };
-
-  const handleMainPress = () => {
+  const handleMainPress = useCallback(() => {
     if (actions.length > 0 && expandOnMainPress) {
       toggleExpand();
     } else {
       mainAction.onPress();
     }
-  };
+  }, [actions.length, expandOnMainPress, toggleExpand, mainAction]);
 
-  const handleActionPress = (action: FABAction) => {
+  const handleActionPress = useCallback((action: FABAction) => {
     action.onPress();
     toggleExpand();
-  };
+  }, [toggleExpand]);
 
   return (
     <View style={[styles.container, containerStyle]}>
@@ -164,7 +164,7 @@ export const MapFAB: React.FC<MapFABProps> = ({
       </CardActionPressable>
     </View>
   );
-};
+});
 
 const getStyles = (
   colors: ThemedColors,

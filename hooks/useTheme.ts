@@ -207,10 +207,10 @@ export function useAccessibilityPreferences() {
     };
   }, []);
 
-  return {
+  return useMemo(() => ({
     prefersReducedMotion,
     prefersHighContrast,
-  };
+  }), [prefersReducedMotion, prefersHighContrast]);
 }
 
 /**
@@ -219,9 +219,9 @@ export function useAccessibilityPreferences() {
 export function useAnimationTiming() {
   const { prefersReducedMotion } = useAccessibilityPreferences();
 
-  return {
+  return useMemo(() => ({
     fast: prefersReducedMotion ? 0 : 150,
     normal: prefersReducedMotion ? 0 : 300,
     slow: prefersReducedMotion ? 0 : 500,
-  };
+  }), [prefersReducedMotion]);
 }

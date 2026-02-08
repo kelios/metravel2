@@ -87,7 +87,7 @@ export function useFocusManagement() {
     }
   }, []);
 
-  return { focusRef, focus, blur };
+  return useMemo(() => ({ focusRef, focus, blur }), [focusRef, focus, blur]);
 }
 
 /**

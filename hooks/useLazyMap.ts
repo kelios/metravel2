@@ -1,7 +1,7 @@
 // hooks/useLazyMap.ts
 // ✅ ПРОИЗВОДИТЕЛЬНОСТЬ: Ленивая загрузка карт с Intersection Observer
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 
 interface UseLazyMapOptions {
@@ -67,11 +67,11 @@ export function useLazyMap(options: UseLazyMapOptions = {}) {
         elementRef.current = node;
     }, []);
 
-    return {
+    return useMemo(() => ({
         shouldLoad,
         isLoading,
         setElementRef,
-    };
+    }), [shouldLoad, isLoading, setElementRef]);
 }
 
 /**

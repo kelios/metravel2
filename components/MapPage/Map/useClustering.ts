@@ -133,12 +133,18 @@ export function useClustering(
     return out;
   }, [points, shouldRenderClusters, clusterRadiusMeters, hintCenter]);
 
-  return {
+  return useMemo(() => ({
     shouldCluster,
     shouldRenderClusters,
     expandClusters,
     clusters,
     clusterRadiusMeters,
     CLUSTER_THRESHOLD,
-  };
+  }), [
+    shouldCluster,
+    shouldRenderClusters,
+    expandClusters,
+    clusters,
+    clusterRadiusMeters,
+  ]);
 }

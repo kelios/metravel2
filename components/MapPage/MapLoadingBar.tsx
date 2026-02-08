@@ -11,7 +11,7 @@ interface MapLoadingBarProps {
 
 const BAR_HEIGHT = 3;
 
-export const MapLoadingBar: React.FC<MapLoadingBarProps> = ({ visible }) => {
+export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible }) => {
   const colors = useThemedColors();
   const progress = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -73,7 +73,7 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = ({ visible }) => {
       />
     </Animated.View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

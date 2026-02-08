@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform, Alert, BackHandler } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useNavigation } from 'expo-router';
@@ -406,7 +406,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     }
   }, [onSave, clearPersistedStep]);
 
-  return {
+  return useMemo(() => ({
     currentStep,
     totalSteps,
     stepConfig: STEP_CONFIG,
@@ -421,5 +421,19 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     handleFinishWizard,
     confirmLeaveWizard,
     clearPersistedStep,
-  };
+  }), [
+    currentStep,
+    totalSteps,
+    step1SubmitErrors,
+    setStep1SubmitErrors,
+    focusAnchorId,
+    handleStepSelect,
+    handleNext,
+    handleBack,
+    handleNavigateToIssue,
+    handleAnchorHandled,
+    handleFinishWizard,
+    confirmLeaveWizard,
+    clearPersistedStep,
+  ]);
 }

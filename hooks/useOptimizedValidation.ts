@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { validateTravelForm, ValidationError, ValidationResult } from '@/utils/formValidation';
 
 interface UseOptimizedValidationOptions {
@@ -192,7 +192,13 @@ export function useOptimizedValidation<T extends object>(
     return validate(true);
   }, [validate]);
 
-  return {
+  const hasErrors = state.errors.length > 0;
+  const errorCount = state.errors.length;
+  const getErrorSummary = useCallback((): string => {
+    return state.errors.map(err => `${err.field}: ${err.message}`).join('; ');
+  }, [state.errors]);
+
+  return useMemo(() => ({
     // State
     errors: state.errors,
     isValid: state.isValid,
@@ -211,12 +217,27 @@ export function useOptimizedValidation<T extends object>(
     forceValidate,
 
     // Utilities
-    hasErrors: state.errors.length > 0,
-    errorCount: state.errors.length,
-    getErrorSummary: (): string => {
-      return state.errors.map(err => `${err.field}: ${err.message}`).join('; ');
-    },
-  };
+    hasErrors,
+    errorCount,
+    getErrorSummary,
+  }), [
+    state.errors,
+    state.isValid,
+    state.isValidating,
+    state.lastValidated,
+    validate,
+    validateField,
+    validateFields,
+    getFieldError,
+    hasFieldError,
+    clearFieldErrors,
+    clearAllErrors,
+    setFieldError,
+    forceValidate,
+    hasErrors,
+    errorCount,
+    getErrorSummary,
+  ]);
 }
 
 // Helper function for deep equality check

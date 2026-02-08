@@ -18,7 +18,7 @@ interface ActiveFiltersBarProps {
   onClearAll?: () => void;
 }
 
-export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
+export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = React.memo(({
   filters,
   onRemoveFilter,
   onClearAll,
@@ -60,7 +60,7 @@ export const ActiveFiltersBar: React.FC<ActiveFiltersBarProps> = ({
       </ScrollView>
     </View>
   );
-};
+});
 
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({

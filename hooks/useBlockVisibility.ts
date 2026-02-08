@@ -1,7 +1,7 @@
 // hooks/useBlockVisibility.ts
 // ✅ РЕДИЗАЙН: Хук для управления видимостью и состоянием блоков
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface BlockState {
@@ -146,7 +146,7 @@ export function useBlockVisibility() {
     [blocksState]
   );
 
-  return {
+  return useMemo(() => ({
     blocksState,
     isLoaded,
     toggleExpanded,
@@ -155,6 +155,6 @@ export function useBlockVisibility() {
     resetAll,
     setMode,
     getBlockState,
-  };
+  }), [blocksState, isLoaded, toggleExpanded, toggleHidden, updateBlock, resetAll, setMode, getBlockState]);
 }
 

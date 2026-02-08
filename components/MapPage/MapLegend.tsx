@@ -8,7 +8,7 @@ interface MapLegendProps {
   showRouteMode?: boolean;
 }
 
-export default function MapLegend({ showRouteMode = false }: MapLegendProps) {
+function MapLegend({ showRouteMode = false }: MapLegendProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const colors = useThemedColors();
@@ -140,3 +140,5 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     marginTop: 2,
   },
 });
+
+export default React.memo(MapLegend);

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import isEqual from 'fast-deep-equal';
 
 interface UseOptimizedFormStateOptions<T> {
@@ -227,7 +227,11 @@ export function useOptimizedFormState<T extends object>(
     }));
   }, []);
 
-  return {
+  const getFieldError = useCallback((field: string) => state.errors[field] || '', [state.errors]);
+  const isTouched = useCallback((field: string) => state.touched.has(field), [state.touched]);
+  const hasError = useCallback((field: string) => !!state.errors[field], [state.errors]);
+
+  return useMemo(() => ({
     // State
     data: state.data,
     errors: state.errors,
@@ -247,8 +251,26 @@ export function useOptimizedFormState<T extends object>(
     setFieldError,
     
     // Utilities
-    getFieldError: (field: string) => state.errors[field] || '',
-    isTouched: (field: string) => state.touched.has(field),
-    hasError: (field: string) => !!state.errors[field],
-  };
+    getFieldError,
+    isTouched,
+    hasError,
+  }), [
+    state.data,
+    state.errors,
+    state.touched,
+    state.isDirty,
+    state.isValid,
+    state.isSubmitting,
+    updateField,
+    updateFields,
+    validateField,
+    validateAll,
+    save,
+    reset,
+    clearErrors,
+    setFieldError,
+    getFieldError,
+    isTouched,
+    hasError,
+  ]);
 }

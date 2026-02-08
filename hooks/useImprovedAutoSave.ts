@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import isEqual from 'fast-deep-equal';
 
 interface UseImprovedAutoSaveOptions<T> {
@@ -337,14 +337,22 @@ export function useImprovedAutoSave<T>(
     latestDataRef.current = newBaseline;
   }, []);
 
-  return {
+  const hasUnsavedChanges = hasDataChanged();
+  const canSave = state.isOnline && state.status !== 'saving';
+  const isSaving = state.status === 'saving';
+  const hasError = state.status === 'error';
+  const timeSinceLastSave = state.lastSaved 
+    ? Date.now() - state.lastSaved.getTime() 
+    : null;
+
+  return useMemo(() => ({
     // State
     status: state.status,
     lastSaved: state.lastSaved,
     error: state.error,
     retryCount: state.retryCount,
     isOnline: state.isOnline,
-    hasUnsavedChanges: hasDataChanged(),
+    hasUnsavedChanges,
 
     // Actions
     saveNow,
@@ -354,12 +362,27 @@ export function useImprovedAutoSave<T>(
     updateBaseline,
 
     // Utilities
-    canSave: state.isOnline && state.status !== 'saving',
-    isSaving: state.status === 'saving',
-    hasError: state.status === 'error',
-    timeSinceLastSave: state.lastSaved 
-      ? Date.now() - state.lastSaved.getTime() 
-      : null,
+    canSave,
+    isSaving,
+    hasError,
+    timeSinceLastSave,
     cancelPending: cleanup,
-  };
+  }), [
+    state.status,
+    state.lastSaved,
+    state.error,
+    state.retryCount,
+    state.isOnline,
+    hasUnsavedChanges,
+    saveNow,
+    resetToOriginal,
+    clearError,
+    retrySave,
+    updateBaseline,
+    canSave,
+    isSaving,
+    hasError,
+    timeSinceLastSave,
+    cleanup,
+  ]);
 }

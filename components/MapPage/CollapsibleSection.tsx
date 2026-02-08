@@ -133,4 +133,4 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
 });
 
-export default CollapsibleSection;
+export default React.memo(CollapsibleSection);

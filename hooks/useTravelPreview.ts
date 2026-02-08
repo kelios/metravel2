@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 /**
  * ✅ ФАЗА 2: Hook для управления превью карточки путешествия
@@ -15,11 +15,11 @@ export function useTravelPreview() {
     setIsPreviewVisible(false);
   }, []);
 
-  return {
+  return useMemo(() => ({
     isPreviewVisible,
     showPreview,
     hidePreview,
-  };
+  }), [isPreviewVisible, showPreview, hidePreview]);
 }
 
 export default useTravelPreview;

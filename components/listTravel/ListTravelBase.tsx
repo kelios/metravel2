@@ -677,6 +677,36 @@ function ListTravelBase({
 
     /* Loading helpers */
     const hasAnyItems = travels.length > 0;
+
+    const handleClearAll = useCallback(() => {
+      setSearch('');
+      resetFilters();
+    }, [resetFilters]);
+
+    const handleCloseFilters = useCallback(() => setShowFilters(false), []);
+    const handleOpenFilters = useCallback(() => setShowFilters(true), []);
+
+    const sidebarContainerStyle = useMemo(
+      () => isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar,
+      [isMobileDevice, styles.sidebar, styles.sidebarMobile]
+    );
+
+    const rightColumnContainerStyle = useMemo(
+      () => isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn,
+      [isMobileDevice, styles.rightColumn, styles.rightColumnMobile]
+    );
+
+    const searchHeaderStyle = useMemo(
+      () => isMobileDevice
+        ? [{ minHeight: 0, paddingHorizontal: contentPadding }]
+        : [styles.searchHeader, { paddingHorizontal: contentPadding }],
+      [isMobileDevice, contentPadding, styles.searchHeader]
+    );
+
+    const cardsContainerStyle = useMemo(
+      () => isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer,
+      [isMobileDevice, styles.cardsContainer, styles.cardsContainerMobile]
+    );
     
     const showInitialLoading = isInitialLoading || isUserIdLoading;
     const showNextPageLoading = isNextPageLoading;
@@ -948,17 +978,14 @@ function ListTravelBase({
         resetFilters={resetFilters}
         isVisible={!isMobileDevice || showFilters}
         isLoading={filterOptionsLoading}
-        onClose={isMobileDevice ? () => setShowFilters(false) : undefined}
-        containerStyle={isMobileDevice ? [styles.sidebar, styles.sidebarMobile] : styles.sidebar}
+        onClose={isMobileDevice ? handleCloseFilters : undefined}
+        containerStyle={sidebarContainerStyle}
       />
 
       <RightColumn
         search={search}
         setSearch={setSearch}
-        onClearAll={() => {
-          setSearch('')
-          resetFilters()
-        }}
+        onClearAll={handleClearAll}
         topContent={null}
         isRecommendationsVisible={isRecommendationsVisible}
         handleRecommendationsVisibilityChange={handleRecommendationsVisibilityChange}
@@ -976,16 +1003,10 @@ function ListTravelBase({
         refetch={refetch}
         onEndReached={handleListEndReached}
         onEndReachedThreshold={0.5}
-        onFiltersPress={isMobileDevice ? () => setShowFilters(true) : undefined}
-        containerStyle={isMobileDevice ? [styles.rightColumn, styles.rightColumnMobile] : styles.rightColumn}
-        searchHeaderStyle={
-          isMobileDevice
-            ? [{ minHeight: 0, paddingHorizontal: contentPadding }]
-            : [styles.searchHeader, { paddingHorizontal: contentPadding }]
-        }
-        cardsContainerStyle={
-          isMobileDevice ? [styles.cardsContainer, styles.cardsContainerMobile] : styles.cardsContainer
-        }
+        onFiltersPress={isMobileDevice ? handleOpenFilters : undefined}
+        containerStyle={rightColumnContainerStyle}
+        searchHeaderStyle={searchHeaderStyle}
+        cardsContainerStyle={cardsContainerStyle}
         cardsGridStyle={cardsGridDynamicStyle}
         cardSpacing={gapSize}
         footerLoaderStyle={styles.footerLoader}
