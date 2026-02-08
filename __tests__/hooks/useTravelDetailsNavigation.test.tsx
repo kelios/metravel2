@@ -104,7 +104,7 @@ describe('useTravelDetailsNavigation', () => {
     anchors.map.current = el
 
     act(() => {
-      jest.advanceTimersByTime(300)
+      jest.advanceTimersByTime(600)
     })
 
     expect(el.getAttribute('data-section-key')).toBe('map')

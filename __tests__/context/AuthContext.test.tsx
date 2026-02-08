@@ -215,13 +215,16 @@ describe('AuthContext', () => {
     expect(contextValue.userAvatar).toBe('https://example.com/avatar.webp?X-Amz-Expires=3600');
   });
 
-  it('does not request profile on provider mount (only on login)', async () => {
+  it('fetches profile on provider mount to keep avatar fresh', async () => {
     (getSecureItem as jest.Mock).mockResolvedValueOnce('token-123');
     (getStorageBatch as jest.Mock).mockResolvedValueOnce({
       userId: '7',
       userName: 'Юлия',
       isSuperuser: 'false',
       userAvatar: 'https://example.com/avatar.webp?X-Amz-Expires=3600',
+    });
+    (fetchUserProfile as jest.Mock).mockResolvedValueOnce({
+      avatar: 'https://example.com/avatar.webp?X-Amz-Expires=3600',
     });
 
     let contextValue: any;
@@ -237,7 +240,7 @@ describe('AuthContext', () => {
       expect(contextValue.username).toBe('Юлия');
     });
 
-    expect(fetchUserProfile).not.toHaveBeenCalled();
+    expect(fetchUserProfile).toHaveBeenCalledWith('7');
   });
 
   it('login failure keeps unauthenticated', async () => {

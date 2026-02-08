@@ -14,6 +14,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/map', label: 'Карта', icon: 'map-pin', priority: 'primary' },
   { path: '/roulette', label: 'Рулетка', icon: 'shuffle', priority: 'primary' },
   { path: '/quests', label: 'Квесты', icon: 'target', priority: 'primary' },
+  { path: '/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi', label: 'Instagram', icon: 'instagram', priority: 'primary' },
 ];
 
 export const DOCUMENT_NAV_ITEMS: HeaderNavItem[] = [

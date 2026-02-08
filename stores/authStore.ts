@@ -112,15 +112,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
                 userAvatar: restoredAvatar,
             });
 
-            // If avatar is missing from storage, fetch profile from API in background
-            if (!restoredAvatar && storageData.userId) {
+            // Always fetch profile in background to ensure avatar is up-to-date
+            if (storageData.userId) {
                 fetchUserProfile(storageData.userId)
                     .then((profile) => {
                         if (epochAtStart !== authEpoch) return;
                         const avatar = normalizeAvatar(profile?.avatar);
                         if (avatar) {
-                            set({ userAvatar: avatar });
+                            set((s) => ({
+                                userAvatar: avatar,
+                                profileRefreshToken: s.profileRefreshToken + 1,
+                            }));
                             setStorageBatch([['userAvatar', avatar]]).catch(() => undefined);
+                        } else if (restoredAvatar) {
+                            // Avatar was removed on server — clear local copy
+                            set({ userAvatar: null });
+                            removeStorageBatch(['userAvatar']).catch(() => undefined);
                         }
                     })
                     .catch(() => undefined);
@@ -184,14 +191,15 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
             if (epochAtStart !== authEpoch) return false;
 
-            set({
+            set((s) => ({
                 isAuthenticated: true,
                 userId: String(userData.id),
                 username: displayName,
                 isSuperuser: userData.is_superuser,
                 userAvatar: avatar,
                 authReady: true,
-            });
+                profileRefreshToken: s.profileRefreshToken + 1,
+            }));
 
             return true;
         } catch (error) {

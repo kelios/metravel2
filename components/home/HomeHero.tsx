@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, memo } from 'react';
+import { useMemo, memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
@@ -25,12 +25,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     'https://metravel.by/travels/tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
 
   const isWeb = Platform.OS === 'web';
-  const [hydrated, setHydrated] = useState(!isWeb);
-
-  useEffect(() => {
-    if (!isWeb) return;
-    setHydrated(true);
-  }, [isWeb]);
 
   const handleCreateBook = () => {
     queueAnalyticsEvent('HomeClick_CreateBook');
@@ -60,7 +54,6 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
-  const showImage = hydrated;
   const shouldRenderImageSlot = isWeb;
 
   // Preload removed: the <img loading="eager"> already fetches the image.
@@ -249,31 +242,25 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
           </View>
 
           {shouldRenderImageSlot && (
-            showImage ? (
-              <Pressable
-                testID="home-hero-image-slot"
-                onPress={handleOpenArticle}
-                accessibilityRole="link"
-                accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
-                style={styles.imageContainer}
-              >
-                <ImageCardMedia
-                  source={require('../../assets/images/pdf.webp')}
-                  width={320}
-                  height={400}
-                  borderRadius={DESIGN_TOKENS.radii.lg}
-                  fit="cover"
-                  alt="Пример книги путешествий"
-                  loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
-                  transition={300}
-                  style={styles.bookImage}
-                />
-              </Pressable>
-            ) : (
-              <View testID="home-hero-image-slot" style={styles.imageContainer}>
-                <View style={styles.imagePlaceholder} />
-              </View>
-            )
+            <Pressable
+              testID="home-hero-image-slot"
+              onPress={handleOpenArticle}
+              accessibilityRole="link"
+              accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
+              style={styles.imageContainer}
+            >
+              <ImageCardMedia
+                source={require('../../assets/images/pdf.webp')}
+                width={320}
+                height={400}
+                borderRadius={DESIGN_TOKENS.radii.lg}
+                fit="cover"
+                alt="Пример книги путешествий"
+                loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
+                transition={300}
+                style={styles.bookImage}
+              />
+            </Pressable>
           )}
         </ResponsiveStack>
       </ResponsiveContainer>

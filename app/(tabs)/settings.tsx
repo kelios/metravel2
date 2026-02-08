@@ -114,13 +114,27 @@ export default function SettingsScreen() {
             setVk(data.vk || '');
             setAvatarPreviewUrl(data.avatar || '');
             setAvatarFile(null);
+
+            // Sync avatar to auth store & storage so header always shows it
+            const rawAvatar = String(data.avatar ?? '').trim();
+            const lowerAvatar = rawAvatar.toLowerCase();
+            const normalizedAvatar =
+                rawAvatar && lowerAvatar !== 'null' && lowerAvatar !== 'undefined'
+                    ? rawAvatar
+                    : null;
+            setUserAvatar(normalizedAvatar);
+            if (normalizedAvatar) {
+                setStorageBatch([['userAvatar', normalizedAvatar]]).catch(() => undefined);
+            } else {
+                removeStorageBatch(['userAvatar']).catch(() => undefined);
+            }
         } catch (error) {
             const message = error instanceof ApiError ? error.message : 'Не удалось загрузить профиль';
             showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
         } finally {
             setProfileLoading(false);
         }
-    }, [cleanText, userId]);
+    }, [cleanText, setUserAvatar, userId]);
 
     useEffect(() => {
         if (!isAuthenticated) return;

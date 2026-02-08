@@ -46,12 +46,6 @@ function Home() {
   const isMobile = isSmallPhone || isPhone;
 
   const [showHeavyContent, setShowHeavyContent] = useState(false);
-  const [hydrated, setHydrated] = useState(!isWeb);
-
-  useEffect(() => {
-    if (!isWeb) return;
-    setHydrated(true);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,8 +56,8 @@ function Home() {
     };
 
     const fallbackMs = Platform.OS === 'web'
-      ? (isMobile ? 600 : 300)
-      : (isMobile ? 700 : 150);
+      ? (isMobile ? 150 : 50)
+      : (isMobile ? 300 : 100);
     const timer = setTimeout(show, fallbackMs);
 
     let idleId: any = null;
@@ -73,7 +67,7 @@ function Home() {
           clearTimeout(timer);
           show();
         },
-        { timeout: Math.max(600, fallbackMs) }
+        { timeout: Math.max(200, fallbackMs) }
       );
     }
 
@@ -146,39 +140,27 @@ function Home() {
         </Suspense>
       )}
 
-      {hydrated ? (
-        <Suspense fallback={<View style={{ minHeight: 220 }} />}>
-          <HomeTrustBlock />
-        </Suspense>
-      ) : (
-        <View style={{ minHeight: 220 }} />
-      )}
+      <Suspense fallback={<View style={{ minHeight: 220 }} />}>
+        <HomeTrustBlock />
+      </Suspense>
 
-      {hydrated ? (
-        <Suspense fallback={<View style={{ minHeight: 320 }} />}>
-          <HomeHowItWorks />
-        </Suspense>
-      ) : (
-        <View style={{ minHeight: 320 }} />
-      )}
+      <Suspense fallback={<View style={{ minHeight: 320 }} />}>
+        <HomeHowItWorks />
+      </Suspense>
 
       {showHeavyContent ? (
         <View style={heavyFadeStyle}>
-          <Suspense fallback={<SectionSkeleton hydrated={hydrated} />}>
+          <Suspense fallback={<SectionSkeleton hydrated />}>
             <HomeInspirationSections />
           </Suspense>
         </View>
       ) : (
-        <SectionSkeleton hydrated={hydrated} />
+        <SectionSkeleton hydrated={false} />
       )}
 
-      {hydrated ? (
-        <Suspense fallback={<View style={{ minHeight: 260 }} />}>
-          <HomeFAQSection />
-        </Suspense>
-      ) : (
-        <View style={{ minHeight: 260 }} />
-      )}
+      <Suspense fallback={<View style={{ minHeight: 260 }} />}>
+        <HomeFAQSection />
+      </Suspense>
 
       {showHeavyContent ? (
         <View style={heavyFadeStyle}>

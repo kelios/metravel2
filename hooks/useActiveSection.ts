@@ -43,6 +43,7 @@ export function useActiveSection(
   const activeSectionRef = useRef<string>('');
   const observerRef = useRef<IntersectionObserver | null>(null);
   const registeredSectionsRef = useRef<Set<string>>(new Set());
+  const elCacheRef = useRef<Map<string, HTMLElement>>(new Map());
 
   useEffect(() => {
     activeSectionRef.current = activeSection;
@@ -104,10 +105,15 @@ export function useActiveSection(
 
       const keys = Object.keys(anchors);
       const measured: Array<{ key: string; top: number; bottom: number }> = [];
+      const cache = elCacheRef.current;
 
       keys.forEach((key) => {
-        const el = doc.querySelector(`[data-section-key="${key}"]`) as HTMLElement | null;
-        if (!el || typeof el.getBoundingClientRect !== 'function') return;
+        let el = cache.get(key) ?? null;
+        if (!el || !doc.contains(el)) {
+          el = doc.querySelector(`[data-section-key="${key}"]`) as HTMLElement | null;
+          if (el) cache.set(key, el); else { cache.delete(key); return; }
+        }
+        if (typeof el.getBoundingClientRect !== 'function') return;
         if (!registeredSectionsRef.current.has(key)) {
           try {
             observerRef.current?.observe?.(el);
@@ -128,7 +134,10 @@ export function useActiveSection(
       const headerLine = viewportTop + TOP_BUFFER_PX;
 
       try {
-        const descEl = doc.querySelector('[data-section-key="description"]') as HTMLElement | null;
+        const descEl = (cache.get('description') && doc.contains(cache.get('description')!))
+          ? cache.get('description')!
+          : doc.querySelector('[data-section-key="description"]') as HTMLElement | null;
+        if (descEl) cache.set('description', descEl);
         if (descEl && typeof descEl.getBoundingClientRect === 'function') {
           const rect = descEl.getBoundingClientRect();
           const relTop = rootRect ? rect.top - rootRect.top : rect.top;
@@ -268,11 +277,11 @@ export function useActiveSection(
     }
 
     // Дальше несколько секунд пере-сканируем DOM, чтобы подхватить ленивые секции.
-    intervalId = setInterval(tryRegister, 250);
+    intervalId = setInterval(tryRegister, 500);
     timeoutId = setTimeout(() => {
       if (intervalId) clearInterval(intervalId);
       intervalId = null;
-    }, 8000);
+    }, 4000);
 
     const registeredSections = registeredSectionsRef.current;
     const observerInstance = observerRef.current;
@@ -293,6 +302,7 @@ export function useActiveSection(
         observerRef.current = null;
       }
       registeredSections.clear();
+      elCacheRef.current.clear();
     };
   }, [anchors, headerOffset, scrollRoot]);
 

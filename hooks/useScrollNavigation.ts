@@ -250,7 +250,7 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
         if (tryScrollWeb(key)) return;
 
         // Не спамим бесконечными попытками: максимум ~6с ожидания.
-        const MAX_ATTEMPTS = 60;
+        const MAX_ATTEMPTS = 20;
         const INTERVAL_MS = 100;
         pendingRetriesRef.current[key] = [];
 

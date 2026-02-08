@@ -4,6 +4,7 @@ import { Platform } from 'react-native'
 
 import type { Travel } from '@/types/types'
 import { useLCPPreload } from '@/components/travel/details/TravelDetailsSections'
+import { rIC } from '@/utils/rIC'
 
 export interface UseTravelDetailsPerformanceArgs {
   travel?: Travel
@@ -16,14 +17,6 @@ export interface UseTravelDetailsPerformanceReturn {
   setLcpLoaded: Dispatch<SetStateAction<boolean>>
   sliderReady: boolean
   deferAllowed: boolean
-}
-
-const rIC = (cb: () => void, timeout = 300) => {
-  if (typeof (window as any)?.requestIdleCallback === 'function') {
-    ;(window as any).requestIdleCallback(cb, { timeout })
-  } else {
-    setTimeout(cb, timeout)
-  }
 }
 
 export function useTravelDetailsPerformance({
@@ -61,41 +54,27 @@ export function useTravelDetailsPerformance({
       return
     }
 
-    // On web, keep heavy/deferred sections unmounted until the LCP hero finishes loading.
-    // This avoids network contention and main-thread work that can push LCP out dramatically.
-    if (lcpLoaded) {
+    // Deferred sections (description, map, points, comments) should render as soon
+    // as travel data is available — they don't need to wait for the hero image.
+    // Only the Slider swap (sliderReady) is gated on LCP image load.
+    if (travel) {
       setDeferAllowed(true)
       return
     }
 
     if (typeof window === 'undefined') return
 
+    // Safety net: do not block forever if data never arrives.
     let cancelled = false
-    const enable = () => {
-      if (cancelled) return
-      rIC(() => {
-        if (!cancelled) setDeferAllowed(true)
-      }, 400)
-    }
-
-    // After window load, allow heavy content in idle time.
-    if (document.readyState === 'complete') {
-      enable()
-    } else {
-      window.addEventListener('load', enable, { once: true })
-    }
-
-    // Safety net: do not block forever if image never loads.
     const t = setTimeout(() => {
       if (!cancelled) setDeferAllowed(true)
-    }, 2000)
+    }, 1200)
 
     return () => {
       cancelled = true
       clearTimeout(t)
-      window.removeEventListener('load', enable as any)
     }
-  }, [isLoading, lcpLoaded, travel])
+  }, [isLoading, travel])
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -140,7 +119,7 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    if (!lcpLoaded) return
+    if (!travel) return
     const connection = (window as any)?.navigator?.connection
     const effectiveType = String(connection?.effectiveType || '')
     const saveData = Boolean(connection?.saveData)
@@ -149,6 +128,12 @@ export function useTravelDetailsPerformance({
 
     if (isConstrained) return
 
+    // Prefetch the Slider chunk immediately so it's ready when LCP finishes
+    // and sliderReady becomes true — eliminates chunk download during swap.
+    import('@/components/travel/Slider').catch(() => {})
+
+    // Prefetch deferred section chunks so they are ready when
+    // TravelDeferredSections mounts.
     rIC(() => {
       Promise.allSettled([
         import('@/components/travel/TravelDescription'),
@@ -158,8 +143,8 @@ export function useTravelDetailsPerformance({
         // Removed ToggleableMapSection from eager prefetch to keep map bundles lazy
         // import('@/components/travel/ToggleableMapSection'),
       ])
-    }, 3200)
-  }, [lcpLoaded])
+    }, 1600)
+  }, [travel])
 
   return {
     lcpLoaded,

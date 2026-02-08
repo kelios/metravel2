@@ -129,7 +129,7 @@ export function useTravelDetailsNavigation({
         }
       }
 
-      if (attempts >= 60) return
+      if (attempts >= 20) return
 
       // If we can't find a dedicated scroll container yet, fall back to document scroll for now.
       setScrollRootEl((prev) => (prev === null ? prev : null))
@@ -175,8 +175,8 @@ export function useTravelDetailsNavigation({
     // When sections mount lazily, the first scrollTo can miss.
     // Retry with small intervals until DOM/layout is ready.
     const timeouts: Array<ReturnType<typeof setTimeout>> = []
-    const MAX_ATTEMPTS = 10
-    const INTERVAL_MS = 120
+    const MAX_ATTEMPTS = 6
+    const INTERVAL_MS = 150
 
     for (let i = 0; i < MAX_ATTEMPTS; i += 1) {
       timeouts.push(
@@ -249,11 +249,11 @@ export function useTravelDetailsNavigation({
     tick()
 
     // Retry for a while to catch lazy-mounted sections.
-    intervalId = setInterval(tick, 250)
+    intervalId = setInterval(tick, 500)
     timeoutId = setTimeout(() => {
       if (intervalId) clearInterval(intervalId)
       intervalId = null
-    }, 8000)
+    }, 4000)
 
     return () => {
       cancelled = true

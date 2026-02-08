@@ -332,7 +332,7 @@ function ThemedContent({
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const mapBackground = require("../assets/travel/roulette-map-bg.jpg");
+  const mapBackground = showMapBackground ? require("../assets/travel/roulette-map-bg.jpg") : null;
   const WEB_FOOTER_RESERVE_HEIGHT = 56;
 
   const bottomGutter = useMemo(() => {

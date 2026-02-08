@@ -5,6 +5,7 @@ import type { Travel } from '@/types/types'
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
+import { rIC } from '@/utils/rIC'
 
 const TravelDetailsContentSection = withLazy(() =>
   import('./sections/TravelDetailsContentSection').then((m) => ({
@@ -36,14 +37,6 @@ const CommentsSection = withLazy(() =>
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
 
-const rIC = (cb: () => void, timeout = 300) => {
-  if (typeof (window as any)?.requestIdleCallback === 'function') {
-    ;(window as any).requestIdleCallback(cb, { timeout })
-  } else {
-    setTimeout(cb, timeout)
-  }
-}
-
 export const TravelDeferredSections: React.FC<{
   travel: Travel
   isMobile: boolean
@@ -74,9 +67,8 @@ export const TravelDeferredSections: React.FC<{
 
   useEffect(() => {
     if (Platform.OS === 'web') {
-      rIC(() => {
-        setCanRenderHeavy(true)
-      }, 100)
+      // Parent Defer wrapper already gates mounting — no extra delay needed.
+      setCanRenderHeavy(true)
     }
   }, [])
 

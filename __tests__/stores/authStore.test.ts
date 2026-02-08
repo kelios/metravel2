@@ -41,6 +41,8 @@ const { fetchUserProfile } = require('@/api/user') as { fetchUserProfile: jest.M
 
 import { useAuthStore } from '@/stores/authStore';
 
+const flushPromises = () => new Promise((r) => setTimeout(r, 0));
+
 beforeEach(() => {
   jest.clearAllMocks();
   // Reset store to initial state
@@ -122,8 +124,12 @@ describe('authStore', () => {
         isSuperuser: 'false',
         userAvatar: 'https://img/avatar.jpg',
       });
+      fetchUserProfile.mockResolvedValue({ avatar: 'https://img/avatar.jpg' });
 
-      await act(() => useAuthStore.getState().checkAuthentication());
+      await act(async () => {
+        await useAuthStore.getState().checkAuthentication();
+        await flushPromises();
+      });
 
       const s = useAuthStore.getState();
       expect(s.isAuthenticated).toBe(true);
@@ -152,8 +158,12 @@ describe('authStore', () => {
         isSuperuser: 'false',
         userAvatar: 'null',
       });
+      fetchUserProfile.mockResolvedValue(null);
 
-      await act(() => useAuthStore.getState().checkAuthentication());
+      await act(async () => {
+        await useAuthStore.getState().checkAuthentication();
+        await flushPromises();
+      });
       expect(useAuthStore.getState().userAvatar).toBeNull();
     });
 

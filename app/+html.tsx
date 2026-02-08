@@ -258,53 +258,60 @@ const getIconFontPreloadScript = () => String.raw`
   try {
     if (typeof document === 'undefined') return;
     // Find the Feather icon font injected by @expo/vector-icons and preload it.
-    // The font is typically loaded via a dynamically inserted @font-face rule;
-    // preloading it avoids FOIT and reduces the font-loading penalty.
-    var sheets = document.styleSheets;
-    for (var i = 0; i < sheets.length; i++) {
+    // Deferred to idle time to avoid blocking the main thread during initial render.
+    function findAndPreload() {
       try {
-        var rules = sheets[i].cssRules || sheets[i].rules;
-        if (!rules) continue;
-        for (var j = 0; j < rules.length; j++) {
-          var rule = rules[j];
-          if (rule.type === CSSRule.FONT_FACE_RULE) {
-            var src = rule.style.getPropertyValue('src') || '';
-            if (src.indexOf('Feather') !== -1 || src.indexOf('feather') !== -1) {
-              var match = src.match(/url\(["']?([^"')]+)["']?\)/);
-              if (match && match[1]) {
-                var link = document.createElement('link');
-                link.rel = 'preload';
-                link.as = 'font';
-                link.type = 'font/ttf';
-                link.href = match[1];
-                link.crossOrigin = 'anonymous';
-                document.head.appendChild(link);
-                return;
+        var sheets = document.styleSheets;
+        for (var i = 0; i < sheets.length; i++) {
+          try {
+            var rules = sheets[i].cssRules || sheets[i].rules;
+            if (!rules) continue;
+            for (var j = 0; j < rules.length; j++) {
+              var rule = rules[j];
+              if (rule.type === CSSRule.FONT_FACE_RULE) {
+                var src = rule.style.getPropertyValue('src') || '';
+                if (src.indexOf('Feather') !== -1 || src.indexOf('feather') !== -1) {
+                  var match = src.match(/url\(["']?([^"')]+)["']?\)/);
+                  if (match && match[1]) {
+                    var link = document.createElement('link');
+                    link.rel = 'preload';
+                    link.as = 'font';
+                    link.type = 'font/ttf';
+                    link.href = match[1];
+                    link.crossOrigin = 'anonymous';
+                    document.head.appendChild(link);
+                    return;
+                  }
+                }
               }
             }
+          } catch (_e) { /* cross-origin sheets */ }
+        }
+
+        var styles = document.querySelectorAll('style');
+        for (var k = 0; k < styles.length; k++) {
+          var text = styles[k].textContent || '';
+          if (text.indexOf('@font-face') === -1) continue;
+          if (text.indexOf('feather') === -1 && text.indexOf('Feather') === -1) continue;
+          var m = text.match(/url\(["']?([^"')]+(?:Feather|feather)[^"')]*)["']?\)/);
+          if (!m) m = text.match(/url\(["']?([^"')]+\.ttf[^"')]*)["']?\)/);
+          if (m && m[1]) {
+            var l = document.createElement('link');
+            l.rel = 'preload';
+            l.as = 'font';
+            l.type = 'font/ttf';
+            l.href = m[1];
+            l.crossOrigin = 'anonymous';
+            document.head.appendChild(l);
+            return;
           }
         }
-      } catch (_e) { /* cross-origin sheets */ }
+      } catch (_e) {}
     }
-
-    // Fallback: scan <style> elements for @font-face with feather in the src
-    var styles = document.querySelectorAll('style');
-    for (var k = 0; k < styles.length; k++) {
-      var text = styles[k].textContent || '';
-      if (text.indexOf('@font-face') === -1) continue;
-      if (text.indexOf('feather') === -1 && text.indexOf('Feather') === -1) continue;
-      var m = text.match(/url\(["']?([^"')]+(?:Feather|feather)[^"')]*)["']?\)/);
-      if (!m) m = text.match(/url\(["']?([^"')]+\.ttf[^"')]*)["']?\)/);
-      if (m && m[1]) {
-        var l = document.createElement('link');
-        l.rel = 'preload';
-        l.as = 'font';
-        l.type = 'font/ttf';
-        l.href = m[1];
-        l.crossOrigin = 'anonymous';
-        document.head.appendChild(l);
-        return;
-      }
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(findAndPreload, { timeout: 1500 });
+    } else {
+      setTimeout(findAndPreload, 100);
     }
   } catch (_e) {}
 })();
@@ -780,6 +787,8 @@ img[loading="lazy"]{content-visibility:auto}
 [data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:cover}
 [data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}
 [data-testid="home-hero"]{contain:layout style}
+[data-testid="home-trust-block"]{content-visibility:auto;contain-intrinsic-size:auto 220px}
+[data-testid="home-how-it-works"]{content-visibility:auto;contain-intrinsic-size:auto 420px}
 [data-testid="home-hero-stack"]{min-height:400px;contain:layout style paint;display:flex;flex-direction:column !important;width:100%}
 @media (min-width:768px){[data-testid="home-hero-stack"]{flex-direction:row !important;align-items:center}}
 [data-testid="home-hero-image-slot"]{display:none}

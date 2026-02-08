@@ -38,6 +38,7 @@ import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
 import { useAccessibilityAnnounce, useReducedMotion } from "@/hooks/useKeyboardNavigation";
 import { useThemedColors } from "@/hooks/useTheme";
+import { rIC } from '@/utils/rIC';
 
 /* -------------------- helpers -------------------- */
 
@@ -75,15 +76,6 @@ const SList: React.FC<{
 // Переадресация для обратной совместимости внутри компонента
 const stripToDescription = (html?: string) => stripHtml(html).slice(0, 160);
 const getOrigin = getSafeOrigin;
-
-/* -------------------- idle helper -------------------- */
-const rIC = (cb: () => void, timeout = 300) => {
-  if (typeof (window as any)?.requestIdleCallback === "function") {
-    (window as any).requestIdleCallback(cb, { timeout });
-  } else {
-    setTimeout(cb, timeout);
-  }
-};
 
 /* -------------------- Defer wrapper -------------------- */
 const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, children }) => {
@@ -212,6 +204,14 @@ export default function TravelDetailsContainer() {
 
   const scrollToMapSection = useCallback(() => {
     scrollToWithMenuClose('map');
+  }, [scrollToWithMenuClose]);
+
+  const handleFirstImageLoad = useCallback(() => {
+    setLcpLoaded(true);
+  }, [setLcpLoaded]);
+
+  const scrollToComments = useCallback(() => {
+    scrollToWithMenuClose('comments');
   }, [scrollToWithMenuClose]);
 
   /* ---- prefetch near travels ---- */
@@ -414,7 +414,7 @@ export default function TravelDetailsContainer() {
               [{ nativeEvent: { contentOffset: { y: scrollY } } }],
               { useNativeDriver: false }
             )}
-            scrollEventThrottle={Platform.OS === 'web' ? 32 : 16}
+            scrollEventThrottle={Platform.OS === 'web' ? 32 : 48}
             style={[styles.scrollView, isMobile && { width: '100%' }]}
             nestedScrollEnabled
             onContentSizeChange={handleContentSizeChange}
@@ -435,7 +435,7 @@ export default function TravelDetailsContainer() {
                     anchors={anchors}
                     isMobile={isMobile}
                     renderSlider={Platform.OS !== "web" ? true : sliderReady && lcpLoaded}
-                    onFirstImageLoad={() => setLcpLoaded(true)}
+                    onFirstImageLoad={handleFirstImageLoad}
                     sectionLinks={sectionLinks}
                     onQuickJump={scrollToWithMenuClose}
                     deferExtras={!deferAllowed}
@@ -488,7 +488,7 @@ export default function TravelDetailsContainer() {
               <TravelStickyActions
                 travel={travel}
                 scrollY={scrollY}
-                scrollToComments={() => scrollToWithMenuClose('comments')}
+                scrollToComments={scrollToComments}
               />
             </Suspense>
           )}

@@ -664,6 +664,11 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
       };
     }, [numColumns, width]);
 
+    const displayedTravels = useMemo(
+      () => travelsNear.slice(0, visibleCount),
+      [travelsNear, visibleCount]
+    );
+
     if (isError) {
       return (
         <View style={styles.errorContainer} onLayout={onLayout}>
@@ -682,8 +687,6 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         </View>
       );
     }
-
-    const displayedTravels = travelsNear.slice(0, visibleCount);
 
     return (
       <View style={embedded ? styles.embeddedSection : styles.section} onLayout={onLayout}>
@@ -735,7 +738,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
                             index % 2 !== 0 && styles.travelItemOdd,
                           ]}
                         >
-                          {renderTravelItem({ item, index })}
+                          <TravelTmlRound travel={item} />
                         </View>
                       ))}
                     </View>
