@@ -150,14 +150,14 @@ test.describe('Gallery: delete broken image (404)', () => {
       const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
       if (await milestone3.isVisible().catch(() => false)) {
         await milestone3.click({ force: true }).catch(() => null);
-        await page.waitForTimeout(700);
+        await page.waitForLoadState('domcontentloaded').catch(() => null);
         continue;
       }
 
       const step3TextButton = page.getByRole('button', { name: /^3$/ }).first();
       if (await step3TextButton.isVisible().catch(() => false)) {
         await step3TextButton.click({ force: true }).catch(() => null);
-        await page.waitForTimeout(700);
+        await page.waitForLoadState('domcontentloaded').catch(() => null);
       }
     }
 
@@ -203,8 +203,8 @@ test.describe('Gallery: delete broken image (404)', () => {
       }
     });
     
-    // Wait a bit for the delete to process
-    await page.waitForTimeout(2000);
+    // Wait for the delete to process
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Check if image was removed
     const emptyText = page.getByText('Нет загруженных изображений', { exact: true }).first();

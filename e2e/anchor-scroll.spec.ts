@@ -1,11 +1,9 @@
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent } from './helpers/storage';
-
-const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
+import { preacceptCookies, tid } from './helpers/navigation';
 
 test.describe('Article anchors (TOC -> section)', () => {
   test('clicking TOC anchor scrolls to the target paragraph', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     const slug = 'e2e-anchor-scroll';
     const targetId = 'desc';
@@ -99,7 +97,10 @@ test.describe('Article anchors (TOC -> section)', () => {
         const el = node as HTMLElement;
         el.scrollTop = el.scrollHeight;
       });
-      await page.waitForTimeout(500);
+      await page.waitForFunction(() => {
+        const el = document.scrollingElement || document.documentElement;
+        return el.scrollTop > 0;
+      }, null, { timeout: 3_000 }).catch(() => null);
     }
 
     const descriptionSection = page.locator('.travel-rich-text');
@@ -130,7 +131,7 @@ test.describe('Article anchors (TOC -> section)', () => {
         });
 
     await tocLink.click();
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => window.scrollY > 0, null, { timeout: 3_000 }).catch(() => null);
 
     const target = page.locator(`#${targetId}`).first();
     await expect(target).toBeVisible({ timeout: 10_000 });

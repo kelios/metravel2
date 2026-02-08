@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 async function installTileMock(page: any) {
   const pngBase64 =
@@ -165,7 +165,7 @@ const gotoMapWithRecovery = async (page: any) => {
 test.describe('Map Page (/map) - smoke e2e', () => {
   test.beforeEach(async ({ page }) => {
     installNoConsoleErrorsGuard(page);
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
   });
 
   test('desktop: map tiles are visible (screenshot)', async ({ page }) => {
@@ -816,7 +816,7 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     for (let attempt = 0; attempt < 3; attempt++) {
       await tab.click({ force: attempt > 0, timeout: 60_000 }).catch(() => null);
       if (await page.getByTestId('map-travels-tab').isVisible().catch(() => false)) break;
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
     }
     await expect(page.getByTestId('map-travels-tab')).toBeVisible({ timeout: 30_000 });
   });
@@ -948,7 +948,7 @@ test.describe('Map Page (/map) - smoke e2e', () => {
     }
 
     // Give the UI a moment: if there is flicker, it would have collapsed by now.
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => true, null, { timeout: 500 }).catch(() => null);
     if (opened) {
       await expect(panel).toBeVisible();
     } else {

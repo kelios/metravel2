@@ -172,7 +172,6 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
     // Wait for some travel cards or skeletons to render.
     // The list can be empty in local/dev environments.
     // So we treat either (cards/skeleton) OR (empty state) as a successful "page rendered" signal.
-    await page.waitForTimeout(500);
     await Promise.race([
       page.waitForSelector('[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"]', {
         timeout: 30_000,
@@ -182,7 +181,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
     ]);
 
     // Give LCP observer some time to settle.
-    await page.waitForTimeout(2500);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Reset CLS after initial render so we can assert on "post-render" stability separately.
     await page.evaluate(() => {
@@ -193,7 +192,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
     });
 
     // Let the page settle a bit more in the "afterRender" phase
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Freeze CLS before interaction so the CLS assertion is about load/layout stability,
     // not about post-input reflows.
@@ -211,7 +210,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
     // A single "fill" produces fewer event entries and is more stable.
     await searchBox.fill('тест');
 
-  await page.waitForTimeout(500);
+  await page.waitForLoadState('domcontentloaded').catch(() => null);
 
   const vitals = await page.evaluate(() => {
     const v = (window as any).__e2eVitals;

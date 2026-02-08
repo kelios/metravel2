@@ -470,7 +470,7 @@ test.describe('Travel Comments', () => {
       await likeButton.click();
       
       // Wait for optimistic update
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
       
       // Verify like was registered (best-effort; UI may vary by platform/theme)
       await expect(firstComment).toBeVisible();
@@ -490,11 +490,11 @@ test.describe('Travel Comments', () => {
       // Like the comment first
       const likeButton = firstComment.locator('[data-testid="comment-like"]');
       await likeButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
       
       // Unlike
       await likeButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
       
       // Best-effort verification; ensure comment is still rendered.
       await expect(firstComment).toBeVisible();
@@ -718,7 +718,7 @@ test.describe('Travel Comments', () => {
         await commentsNavButton.click();
         
         // Should scroll to comments section
-        await page.waitForTimeout(1000);
+        await page.waitForFunction(() => window.scrollY > 100, null, { timeout: 5_000 }).catch(() => null);
         const commentsSection = page.getByText('Комментарии').first();
         await expect(commentsSection).toBeInViewport();
       }

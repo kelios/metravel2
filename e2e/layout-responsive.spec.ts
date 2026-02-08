@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
+import { preacceptCookies as sharedPreacceptCookies, assertNoHorizontalScroll, waitForMainListRender } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
-import { seedNecessaryConsent } from './helpers/storage';
 
 function getNumberEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -11,9 +11,9 @@ function getNumberEnv(name: string, fallback: number): number {
 
 const SHOULD_CAPTURE_VISUAL = process.env.E2E_VISUAL === '1';
 
+// Layout-specific: also clears auth tokens to force guest context.
 async function preacceptCookies(page: any) {
-  await page.addInitScript(seedNecessaryConsent);
-  // Force guest context: layout checks focus on public list rendering.
+  await sharedPreacceptCookies(page);
   await page.addInitScript(() => {
     try {
       window.localStorage?.removeItem('secure_userToken');
@@ -26,48 +26,8 @@ async function preacceptCookies(page: any) {
   });
 }
 
-async function waitForTravelsListToRender(page: any) {
-  await page.waitForTimeout(500);
-  await Promise.race([
-    page.waitForSelector('[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"]', {
-      timeout: 30_000,
-    }),
-    page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
-    page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
-    page.waitForSelector('#search-input', { timeout: 30_000 }),
-    page.waitForSelector('text=Пиши о своих путешествиях', { timeout: 30_000 }),
-  ]);
-}
-
-async function assertNoHorizontalScroll(page: any) {
-  const res = await page.evaluate(() => {
-    const docEl = document.documentElement;
-    const body = document.body;
-    const docScrollWidth = docEl?.scrollWidth ?? 0;
-    const docClientWidth = docEl?.clientWidth ?? 0;
-    const bodyScrollWidth = body?.scrollWidth ?? 0;
-    const bodyClientWidth = body?.clientWidth ?? 0;
-
-    return {
-      docScrollWidth,
-      docClientWidth,
-      bodyScrollWidth,
-      bodyClientWidth,
-      docOverflowX: getComputedStyle(docEl).overflowX,
-      bodyOverflowX: getComputedStyle(body).overflowX,
-    };
-  });
-
-  expect(
-    res.docScrollWidth,
-    `documentElement has horizontal overflow: scrollWidth=${res.docScrollWidth} clientWidth=${res.docClientWidth} overflowX=${res.docOverflowX}`
-  ).toBeLessThanOrEqual(res.docClientWidth);
-
-  expect(
-    res.bodyScrollWidth,
-    `body has horizontal overflow: scrollWidth=${res.bodyScrollWidth} clientWidth=${res.bodyClientWidth} overflowX=${res.bodyOverflowX}`
-  ).toBeLessThanOrEqual(res.bodyClientWidth);
-}
+// Alias to shared helper
+const waitForTravelsListToRender = waitForMainListRender;
 
 async function countCardsInFirstRow(page: any): Promise<number> {
   const cards = page.locator('[data-testid="travel-card"]');
@@ -159,11 +119,11 @@ test.describe('Responsive layout invariants', () => {
 
     // Resize down to tablet, then mobile.
     await page.setViewportSize({ width: 820, height: 1180 });
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => true, null, { timeout: 500 }).catch(() => null);
     await assertNoHorizontalScroll(page);
 
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => true, null, { timeout: 500 }).catch(() => null);
     await assertNoHorizontalScroll(page);
   });
 
@@ -180,7 +140,7 @@ test.describe('Responsive layout invariants', () => {
     // It focuses on just '/', with a tunable threshold.
     const CLS_AFTER_RENDER_MAX = getNumberEnv('E2E_CLS_AFTER_RENDER_MAX_TRAVELS', 0.02);
 
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
     await page.addInitScript(() => {
       (window as any).__e2eClsTravel = {
         clsTotal: 0,
@@ -208,7 +168,7 @@ test.describe('Responsive layout invariants', () => {
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
     await waitForTravelsListToRender(page);
 
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Reset and measure only after initial render.
     await page.evaluate(() => {
@@ -218,7 +178,7 @@ test.describe('Responsive layout invariants', () => {
       s.clsAfterRender = 0;
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     const clsAfterRender = await page.evaluate(() => {
       const s = (window as any).__e2eClsTravel;

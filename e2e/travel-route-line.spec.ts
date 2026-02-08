@@ -21,7 +21,7 @@ test.describe('Map Page Route Line Visibility - Visual Test', () => {
     console.log('🗺️  Открываем страницу карты /map...');
 
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Проверяем что мы все еще на /map
     const currentUrl = page.url();
@@ -50,13 +50,13 @@ test.describe('Map Page Route Line Visibility - Visual Test', () => {
 
     if (hasSegmentedRoute) {
       await segmentedRoute.click({ force: true });
-      await page.waitForTimeout(800);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
     } else {
       const routeModeButton = page.locator('button').filter({ hasText: /Маршрут|маршрут/i }).first();
       const routeButtonExists = await routeModeButton.isVisible().catch(() => false);
       if (routeButtonExists) {
         await routeModeButton.click({ force: true });
-        await page.waitForTimeout(800);
+        await page.waitForLoadState('domcontentloaded').catch(() => null);
       }
     }
 
@@ -89,14 +89,14 @@ test.describe('Map Page Route Line Visibility - Visual Test', () => {
       
       for (let i = 0; i < points.length; i++) {
         await page.mouse.click(points[i].x, points[i].y);
-        await page.waitForTimeout(500);
+        await page.waitForSelector('.leaflet-marker-icon', { timeout: 5_000 }).catch(() => null);
         console.log(`  ✓ Точка ${i + 1} добавлена`);
       }
     }
 
     // Дополнительное время для построения маршрута
     console.log('⏳ Ждем построения маршрута...');
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Ищем логи о создании линии маршрута
     const routeLogs = consoleLogs.filter(log => 

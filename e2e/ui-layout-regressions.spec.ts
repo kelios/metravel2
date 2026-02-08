@@ -12,20 +12,8 @@ import { getTravelsListPath } from './helpers/routes';
 // Alias for backward compat within this file
 const preacceptCookiesAndStabilize = preacceptCookies;
 
-async function waitForMainToRender(page: any) {
-  // IMPORTANT: Promise.race is flaky here — if one selector never appears it can "win" the race
-  // by timing out slightly earlier than the others. We want "any of these signals".
-  await Promise.any([
-    page.waitForSelector('#search-input', { timeout: 30_000 }),
-    page.waitForSelector(
-      '[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"], [data-testid="list-travel-skeleton"]',
-      { timeout: 30_000 }
-    ),
-    page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
-    page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
-    page.waitForSelector('text=Пиши о своих путешествиях', { timeout: 30_000 }),
-  ]);
-}
+// Use shared helper
+const waitForMainToRender = waitForMainListRender;
 
 function getSearchLocator(page: any) {
   // Prefer accessibility label (stable across layouts). Fallback to web id.

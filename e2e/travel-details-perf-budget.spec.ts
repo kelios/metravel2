@@ -127,7 +127,7 @@ async function injectPerfObservers(page: any) {
 
 async function collectMetrics(page: any) {
   // Wait for page to stabilize
-  await page.waitForTimeout(4000);
+  await page.waitForLoadState('networkidle').catch(() => null);
 
   return page.evaluate(() => {
     const w = window as any;
@@ -344,7 +344,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
     });
 
     // Wait for content and deferred sections
-    await page.waitForTimeout(5000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     const stats = tracker.getStats();
 
@@ -398,7 +398,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
       timeout: 60_000,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     const imageAudit = await page.evaluate(() => {
       const imgs = Array.from(document.querySelectorAll('img'));
@@ -600,7 +600,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, mobile)'
       timeout: 60_000,
     });
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     const heroImageAudit = await page.evaluate(() => {
       // Check for LCP image

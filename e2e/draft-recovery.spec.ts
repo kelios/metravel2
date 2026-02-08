@@ -146,7 +146,7 @@ test.describe('Draft recovery popup', () => {
       await expect(page).not.toHaveURL(/\/$/, { timeout: 30_000 });
 
       // Give the editor a moment to mount; different builds can render different testIDs.
-      await page.waitForTimeout(800);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
 
       // Confirm our seeded draft is present after navigation.
       const hasDraftKey = await page

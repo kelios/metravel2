@@ -259,7 +259,7 @@ const fillMinimumValidBasics = async (page: any, name: string) => {
     const nameInputTry = page.getByPlaceholder('Например: Неделя в Грузии');
     if (await nameInputTry.isVisible({ timeout: 5_000 }).catch(() => false)) break;
     await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
-    await page.waitForTimeout(500 + attempt * 400).catch(() => null);
+    await page.waitForLoadState('domcontentloaded').catch(() => null);
   }
 
   const nameInput = page.getByPlaceholder('Например: Неделя в Грузии');
@@ -279,7 +279,7 @@ const gotoStep6 = async (page: any) => {
   }
   for (let i = 0; i < 6; i++) {
     await clickNext(page);
-    await page.waitForTimeout(400);
+    await page.waitForLoadState('domcontentloaded').catch(() => null);
     if (await page.locator('text=/Публикация/i').first().isVisible().catch(() => false)) return;
   }
 };
@@ -549,11 +549,8 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     // Вводим название места
     await searchInput.fill('Эйфелева башня');
 
-    // Ждем результаты (debounce 500ms + время запроса)
-    await page.waitForTimeout(1000);
-
-    // Проверяем dropdown с результатами
-    await expect(page.locator('text=Париж').first()).toBeVisible({ timeout: 5000 });
+    // Проверяем dropdown с результатами (debounce 500ms + время запроса)
+    await expect(page.locator('text=Париж').first()).toBeVisible({ timeout: 10_000 });
 
     // Кликаем по результату
     await page.click('text=Париж >> nth=0');
@@ -575,10 +572,8 @@ test.describe('Поиск мест на карте (Location Search)', () => {
     // Ищем несуществующее место
     await page.fill('[placeholder*="Поиск места"]', 'asdfghjkl123456789');
 
-    await page.waitForTimeout(1000);
-
-    // Проверяем empty state
-    await expect(page.locator('text=/Ничего не найдено|No results/i')).toBeVisible({ timeout: 5000 });
+    // Проверяем empty state (debounce 500ms + время запроса)
+    await expect(page.locator('text=/Ничего не найдено|No results/i')).toBeVisible({ timeout: 10_000 });
   });
 
   test('должен показать loading indicator при поиске', async ({ page }) => {
@@ -659,7 +654,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await fillRichDescription(page, 'Описание путешествия для проверки превью карточки');
 
     // Ждем автосохранение
-    await page.waitForTimeout(6000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Кликаем по кнопке превью
     if (!(await openPreviewModal(page))) return;
@@ -680,7 +675,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест превью');
-    await page.waitForTimeout(6000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     if (!(await openPreviewModal(page))) return;
 
@@ -700,7 +695,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
     await page.goto('/travel/new');
     if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Без обложки');
-    await page.waitForTimeout(6000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     if (!(await openPreviewModal(page))) return;
 
@@ -719,7 +714,7 @@ test.describe('Превью карточки (Travel Preview)', () => {
       'Дополнительный текст для увеличения длины.';
 
     await fillRichDescription(page, longDescription);
-    await page.waitForTimeout(6000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     if (!(await openPreviewModal(page))) return;
 
@@ -740,9 +735,9 @@ test.describe('Превью карточки (Travel Preview)', () => {
 
     // Добавляем точку
     await page.fill('[placeholder*="Поиск места"]', 'Париж');
-    await page.waitForTimeout(1000);
+    await expect(page.locator('text=Париж').first()).toBeVisible({ timeout: 10_000 });
     await page.click('text=Париж >> nth=0');
-    await page.waitForTimeout(6000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Превью доступно на шаге 1, возвращаемся туда через милестон
     const step1Milestone = page.locator('[aria-label="Перейти к шагу 1"]').first();

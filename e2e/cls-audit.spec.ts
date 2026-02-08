@@ -176,7 +176,7 @@ test.describe('@perf CLS audit', () => {
         await routePage.goto(route, { waitUntil: 'domcontentloaded', timeout: 45_000 });
 
         // Allow initial render/hydration/async blocks to complete.
-        await routePage.waitForTimeout(3000);
+        await routePage.waitForLoadState('networkidle').catch(() => null);
 
         try {
           const beforePath = testInfo.outputPath(`cls-${route.replace(/\W+/g, '_')}-before.png`);
@@ -195,7 +195,7 @@ test.describe('@perf CLS audit', () => {
         });
 
         // Let the route settle (lazy components / images).
-        await routePage.waitForTimeout(2000);
+        await routePage.waitForLoadState('networkidle').catch(() => null);
 
         try {
           const afterPath = testInfo.outputPath(`cls-${route.replace(/\W+/g, '_')}-after.png`);
@@ -368,9 +368,9 @@ test.describe('@perf CLS audit', () => {
     }
     if (lastError) throw lastError;
 
-    await page.waitForTimeout(3000);
+    await page.waitForLoadState('networkidle').catch(() => null);
     await page.evaluate(() => { const s = (window as any).__e2eCls; if (s) { s.phase = 'afterRender'; s.clsAfterRender = 0; } });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     const data = await page.evaluate(() => {
       const s = (window as any).__e2eCls;

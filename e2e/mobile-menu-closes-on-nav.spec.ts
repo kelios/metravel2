@@ -2,26 +2,13 @@ import { test, expect } from './fixtures';
 import { preacceptCookies, gotoWithRetry, waitForMainListRender } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
-async function waitForMainToRender(page: any) {
-  await Promise.race([
-    page.waitForSelector('#search-input', { timeout: 30_000 }),
-    page.waitForSelector(
-      '[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"], [data-testid="list-travel-skeleton"]',
-      { timeout: 30_000 }
-    ),
-    page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
-    page.waitForSelector('text=Найдено:', { timeout: 30_000 }),
-    page.waitForSelector('text=Пиши о своих путешествиях', { timeout: 30_000 }),
-  ]);
-}
-
 test.describe('Mobile menu navigation', () => {
   test('closes menu overlay after selecting a nav item (mobile)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await preacceptCookies(page);
 
     await gotoWithRetry(page, getTravelsListPath());
-    await waitForMainToRender(page);
+    await waitForMainListRender(page);
 
     const burger = page.getByTestId('mobile-menu-open');
     await expect(burger).toBeVisible({ timeout: 30_000 });

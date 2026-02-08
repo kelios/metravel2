@@ -480,7 +480,7 @@ const ensureOnStep3 = async (page: Page) => {
     if (await toMediaPrimary.isVisible().catch(() => false)) {
       await toMediaPrimary.scrollIntoViewIfNeeded().catch(() => null);
       await toMediaPrimary.click({ force: true }).catch(() => null);
-      await page.waitForTimeout(800);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
       if (await isStep3Visible()) break;
     }
 
@@ -488,7 +488,7 @@ const ensureOnStep3 = async (page: Page) => {
     const milestone3 = page.locator('[aria-label="Перейти к шагу 3"]').first();
     if (await milestone3.isVisible().catch(() => false)) {
       await milestone3.click({ force: true }).catch(() => null);
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
       if (await isStep3Visible()) break;
     }
 
@@ -497,7 +497,7 @@ const ensureOnStep3 = async (page: Page) => {
     if (await milestoneText3.isVisible().catch(() => false)) {
       await milestoneText3.scrollIntoViewIfNeeded().catch(() => null);
       await milestoneText3.click({ force: true }).catch(() => null);
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
     }
   }
 
@@ -1187,7 +1187,7 @@ test.describe('Валидация и ошибки', () => {
         );
         if (await next.first().isVisible().catch(() => false)) {
           await next.first().click();
-          await page.waitForTimeout(800);
+          await page.waitForLoadState('domcontentloaded').catch(() => null);
         }
       }
     }

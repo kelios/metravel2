@@ -123,15 +123,15 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       await assertNoHorizontalScroll(page);
 
       // CLS after initial render
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle').catch(() => null);
       await startClsAfterRenderPhase(page);
-      await page.waitForTimeout(1000);
+      await page.waitForLoadState('networkidle').catch(() => null);
       const cls = await finalizeClsAfterRender(page);
       expect(cls, `CLS after render too high on main (${vp.name})`).toBeLessThanOrEqual(0.05);
 
       // Basic interaction: type and clear search.
       await search.fill('тест');
-      await page.waitForTimeout(350);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
       const clear = page.getByLabel('Очистить поиск');
       if (await clear.isVisible().catch(() => false)) {
         await clear.click({ force: true });
@@ -220,9 +220,9 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
         `Expected share or CTA block to render (share=${shareCount}, cta=${ctaCount})`
       ).toBeGreaterThanOrEqual(1);
 
-      await page.waitForTimeout(1200);
+      await page.waitForLoadState('networkidle').catch(() => null);
       await startClsAfterRenderPhase(page);
-      await page.waitForTimeout(1200);
+      await page.waitForLoadState('networkidle').catch(() => null);
       const cls = await finalizeClsAfterRender(page);
       expect(cls, `CLS after render too high on travel details (${vp.name})`).toBeLessThanOrEqual(0.05);
 
