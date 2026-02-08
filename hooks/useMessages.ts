@@ -15,7 +15,7 @@ import { devError } from '@/utils/logger';
 
 // ---- useThreads ----
 
-export function useThreads() {
+export function useThreads(enabled: boolean = true) {
     const [threads, setThreads] = useState<MessageThread[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function useThreads() {
         }
     }, []);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => { if (enabled) load(); }, [enabled, load]);
 
     return { threads, loading, error, refresh: load };
 }
@@ -160,7 +160,7 @@ export function useDeleteMessage() {
 
 // ---- useAvailableUsers ----
 
-export function useAvailableUsers() {
+export function useAvailableUsers(enabled: boolean = true) {
     const [users, setUsers] = useState<MessagingUser[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -176,7 +176,7 @@ export function useAvailableUsers() {
         }
     }, []);
 
-    useEffect(() => { load(); }, [load]);
+    useEffect(() => { if (enabled) load(); }, [enabled, load]);
 
     return { users, loading, refresh: load };
 }

@@ -252,7 +252,7 @@ export const PointsListGrid: React.FC<{
 
           <IconButton
             icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
-            label="Сбросить"
+            label="Сбросить фильтры"
             onPress={onResetFilters}
             disabled={!hasFilters}
             size="sm"

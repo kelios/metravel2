@@ -35,12 +35,13 @@ export default function MessagesScreen() {
     const [initialLoading, setInitialLoading] = useState(false);
     const [showPicker, setShowPicker] = useState(false);
 
-    const { threads, loading: threadsLoading, error: threadsError, refresh: refreshThreads } = useThreads();
+    const canFetch = authReady && isAuthenticated;
+    const { threads, loading: threadsLoading, error: threadsError, refresh: refreshThreads } = useThreads(canFetch);
     const { messages, loading: messagesLoading, refresh: refreshMessages, hasMore, loadMore } = useThreadMessages(
         selectedThread?.id ?? null
     );
     const { send, sending } = useSendMessage();
-    const { users } = useAvailableUsers();
+    const { users } = useAvailableUsers(canFetch);
 
     const participantNames = useMemo(() => {
         const map = new Map<number, string>();
