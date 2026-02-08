@@ -265,7 +265,7 @@ const getStyles = (colors: ThemedColors) =>
     distanceText: {
       fontSize: 11,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     timeBadge: {
       flexDirection: 'row',

@@ -46,7 +46,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         height: 26,
     },
     logoTextMe: { 
-        color: colors.primary,
+        color: colors.primaryText,
         fontSize: 18,
         fontWeight: '600',
     },

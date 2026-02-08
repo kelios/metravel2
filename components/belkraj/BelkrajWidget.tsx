@@ -17,7 +17,7 @@ type Props = {
     className?: string;
 };
 
-export default function BelkrajWidget({
+function BelkrajWidget({
                                           points,
                                           countryCode = 'BY',
                                           collapsedHeight = 520,
@@ -100,3 +100,5 @@ export default function BelkrajWidget({
         </div>
     );
 }
+
+export default React.memo(BelkrajWidget);

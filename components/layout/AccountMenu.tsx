@@ -168,14 +168,14 @@ function AccountMenu() {
         },
         menuItemTitlePrimary: {
           fontSize: 15,
-          color: colors.primary,
+          color: colors.primaryText,
           fontWeight: '700',
         },
         iconMuted: {
           color: colors.textMuted,
         },
         iconPrimary: {
-          color: colors.primary,
+          color: colors.primaryText,
         },
       }),
     [colors],

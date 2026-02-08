@@ -95,7 +95,7 @@ const getStyles = (colors: ThemedColors) =>
     chipText: {
       fontSize: 12,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
       maxWidth: 120,
     },
     clearBtn: {

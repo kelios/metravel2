@@ -27,7 +27,7 @@ interface FiltersPanelCollapsibleProps {
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
-export default function FiltersPanelCollapsible({
+function FiltersPanelCollapsible({
   filters,
   filterValue,
   onSelectedItemsChange,
@@ -89,7 +89,7 @@ export default function FiltersPanelCollapsible({
     clearButtonText: {
       fontSize: 12,
       fontWeight: '500',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     content: {
       maxHeight: Platform.select({
@@ -164,3 +164,5 @@ export default function FiltersPanelCollapsible({
     </View>
   );
 }
+
+export default React.memo(FiltersPanelCollapsible);

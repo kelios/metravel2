@@ -1,4 +1,4 @@
-import { getAnalyticsInlineScript } from '@/app/+html'
+import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript'
 
 describe('getAnalyticsInlineScript', () => {
   it('bootstraps GA even without saved consent (opt-out model)', () => {

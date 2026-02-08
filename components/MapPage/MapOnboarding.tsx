@@ -242,5 +242,4 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
 });
 
-export default MapOnboarding;
-
+export default React.memo(MapOnboarding);

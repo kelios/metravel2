@@ -148,7 +148,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
           style={[
             styles.listItemText,
             { color: colors.text },
-            isSelected && { color: colors.primary, fontWeight: '600' },
+            isSelected && { color: colors.primaryText, fontWeight: '600' },
           ]}
         >
           {getItemLabel(item)}
@@ -414,7 +414,7 @@ const getStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.cre
     fontWeight: '500',
   },
   listItemTextSelected: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '600',
   },
   emptyText: {

@@ -251,7 +251,7 @@ const getStyles = (colors: ThemedColors) =>
     categoryText: {
       fontSize: 11,
       fontWeight: '700',
-      color: colors.primary,
+      color: colors.primaryText,
       letterSpacing: 0.2,
     },
   });

@@ -83,8 +83,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textSecondary, // ✅ МИГРАЦИЯ: Заменен hardcoded #444
   },
   textOrange: {
-    color: colors.primary, // ✅ МИГРАЦИЯ: Заменен hardcoded #ff9f5a
+    color: colors.primaryText, // ✅ МИГРАЦИЯ: Заменен hardcoded #ff9f5a
   },
 });
 
-export default ArticleListItem;
+export default React.memo(ArticleListItem);

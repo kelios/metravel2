@@ -280,7 +280,7 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   activityUserName: {
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   activityTime: {
     fontSize: 12,

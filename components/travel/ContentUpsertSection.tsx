@@ -636,7 +636,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     modalHeaderAction: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         fontWeight: '600',
-        color: colors.primary, // ✅ ДИЗАЙН: Динамический цвет текста
+        color: colors.primaryText, // ✅ ДИЗАЙН: Динамический цвет текста
     },
     modalBody: {
         flex: 1,
@@ -693,7 +693,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     descriptionEditChipText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
-        color: colors.primary,
+        color: colors.primaryText,
     },
     progressSection: {
         marginBottom: DESIGN_TOKENS.spacing.xs,
@@ -717,7 +717,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     progressPercent: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '700',
-        color: colors.primary,
+        color: colors.primaryText,
     },
     progressBarContainer: {
         height: 8,

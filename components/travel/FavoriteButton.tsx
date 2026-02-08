@@ -10,6 +10,8 @@ import { globalFocusStyles } from '@/styles/globalFocus'; // ИСПРАВЛЕН�
 import { showToast } from '@/utils/toast';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 
+const UNFAVORITED_ICON_STYLE = { opacity: 0.55 } as const;
+
 type FavoriteButtonProps = {
     id: string | number;
     type: 'travel' | 'article';
@@ -208,7 +210,7 @@ function FavoriteButton({
                     name={isFav ? 'heart' : 'heart'}
                     size={size}
                     color={color || (isFav ? colors.danger : colors.textMuted)}
-                    {...(!isFav ? ({ style: { opacity: 0.55 } } as any) : null)}
+                    {...(!isFav ? ({ style: UNFAVORITED_ICON_STYLE } as any) : null)}
                 />
             </Animated.View>
         </ButtonComponent>

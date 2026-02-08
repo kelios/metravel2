@@ -247,7 +247,7 @@ const ImageGalleryComponentIOS: React.FC<ImageGalleryComponentProps> = ({
           <Text style={[styles.galleryTitle, { color: colors.text }]}>Галерея</Text>
         </View>
         <Text style={[styles.imageCount, { color: colors.textMuted }]}>
-          Загружено <Text style={[styles.highlight, { color: colors.primary }]}>{images.length}</Text> из {maxImages}
+          Загружено <Text style={[styles.highlight, { color: colors.primaryText }]}>{images.length}</Text> из {maxImages}
         </Text>
       </View>
 

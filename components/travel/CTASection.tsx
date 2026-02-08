@@ -21,7 +21,7 @@ interface CTASectionProps {
   onFavoriteToggle?: () => void;
 }
 
-export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
+function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
   const router = useRouter();
   const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
@@ -268,3 +268,5 @@ export default function CTASection({ travel, onFavoriteToggle }: CTASectionProps
     </View>
   );
 }
+
+export default React.memo(CTASection);

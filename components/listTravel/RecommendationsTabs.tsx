@@ -64,6 +64,7 @@ interface RecommendationsTabsProps {
   onVisibilityChange?: (visible: boolean) => void;
 }
 
+const ARROW_ICON_STYLE = { marginLeft: 6 } as const;
 const TAB_CONTENT_HEIGHT = 320;
 const TAB_HEADER_HEIGHT = 56;
 const TAB_TOTAL_HEIGHT = TAB_HEADER_HEIGHT + TAB_CONTENT_HEIGHT;
@@ -89,7 +90,7 @@ const AuthGate = ({
       </View>
       <Pressable style={styles.gateButton} onPress={onLogin} accessibilityRole="button">
         <Text style={styles.gateButtonText}>Войти</Text>
-        <Feather name="arrow-right" size={18} color={colors.primary} style={{ marginLeft: 6 } as any} />
+        <Feather name="arrow-right" size={18} color={colors.primary} style={ARROW_ICON_STYLE as any} />
       </Pressable>
     </View>
   </View>

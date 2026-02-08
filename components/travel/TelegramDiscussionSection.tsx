@@ -10,7 +10,7 @@ interface TelegramDiscussionSectionProps {
   travel: Travel;
 }
 
-export default function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
+function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
   const colors = useThemedColors();
   const baseUrl = process.env.EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL || '';
   const travelName = travel?.name;
@@ -131,3 +131,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     color: colors.textMuted,
   },
 });
+
+export default React.memo(TelegramDiscussionSection);

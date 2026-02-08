@@ -17,7 +17,7 @@ interface FormFieldWithValidationProps {
   showError?: boolean;
 }
 
-export default function FormFieldWithValidation({
+function FormFieldWithValidation({
   label,
   error,
   hint,
@@ -178,3 +178,5 @@ export default function FormFieldWithValidation({
     </View>
   );
 }
+
+export default React.memo(FormFieldWithValidation);

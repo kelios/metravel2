@@ -160,6 +160,7 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
           ]}
           accessibilityRole="button"
           accessibilityLabel="Полезно"
+          accessibilityState={{ selected: userReaction === 'like' }}
         >
           <Feather
             name="thumbs-up"
@@ -184,6 +185,7 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
           ]}
           accessibilityRole="button"
           accessibilityLabel="Вдохновляет"
+          accessibilityState={{ selected: userReaction === 'love' }}
         >
           <Feather
             name="heart"
@@ -208,6 +210,7 @@ const ReactionButtons = ({ travelId, compact = false, showViews = true }: Reacti
           ]}
           accessibilityRole="button"
           accessibilityLabel="Круто"
+          accessibilityState={{ selected: userReaction === 'fire' }}
         >
           <Feather
             name="zap"

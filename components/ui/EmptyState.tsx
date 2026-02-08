@@ -27,7 +27,7 @@ interface EmptyStateProps {
   examples?: Array<{ title: string; author?: string; image?: string }>; // ✅ UX: Примеры для вдохновения
 }
 
-export default function EmptyState({
+function EmptyState({
   icon,
   title,
   description,
@@ -283,3 +283,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontStyle: 'italic',
   },
 });
+
+export default React.memo(EmptyState);

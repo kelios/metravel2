@@ -127,6 +127,7 @@ const buildOsmUrl = (coordStr: string) => {
   return `https://www.openstreetmap.org/?mlat=${encodeURIComponent(String(lat))}&mlon=${encodeURIComponent(String(lon))}#map=16/${encodeURIComponent(String(lat))}/${encodeURIComponent(String(lon))}`;
 };
 
+const POINT_CARD_MARGIN_STYLE = { margin: DESIGN_TOKENS.spacing.sm } as const;
 const DEFAULT_TRAVEL_POINT_COLOR = DESIGN_COLORS.travelPoint;
 const DEFAULT_TRAVEL_POINT_STATUS = PointStatus.PLANNING;
 
@@ -836,7 +837,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
               isAdding={isAdding}
               imageHeight={180}
               width={300}
-              style={{ margin: DESIGN_TOKENS.spacing.sm }}
+              style={POINT_CARD_MARGIN_STYLE}
               testID={`travel-point-card-${item.id}`}
             />
           ) : (
@@ -1055,7 +1056,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   previewBulletText: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   previewTextWrap: {
     flex: 1,
@@ -1073,7 +1074,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   previewMore: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
     textAlign: 'center',
     paddingTop: DESIGN_TOKENS.spacing.xs,
   },

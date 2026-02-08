@@ -567,7 +567,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
         }),
       },
       loadMoreButtonText: {
-        color: colors.primary,
+        color: colors.primaryText,
         fontSize: DESIGN_TOKENS.typography.sizes.md,
         fontWeight: '600',
       },

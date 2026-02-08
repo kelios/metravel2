@@ -664,7 +664,7 @@ export const getAboutStyles = (colors: ThemedColors) => StyleSheet.create({
   },
   featureComing: {
     fontSize: 20,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: 'bold',
     marginTop: 2,
     minWidth: 24,

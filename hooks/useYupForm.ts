@@ -3,7 +3,7 @@
 // Предоставляет тот же API (values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting)
 // без тяжёлой зависимости formik (~45KB gzipped).
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import type { ObjectSchema } from 'yup';
 
 interface UseYupFormOptions<T extends Record<string, any>> {
@@ -83,7 +83,7 @@ export function useYupForm<T extends Record<string, any>>({ initialValues, valid
         }
     }, [isSubmitting, validate, values, onSubmit, resetForm]);
 
-    return {
+    return useMemo(() => ({
         values,
         errors,
         touched,
@@ -92,5 +92,5 @@ export function useYupForm<T extends Record<string, any>>({ initialValues, valid
         handleBlur,
         handleSubmit,
         resetForm,
-    };
+    }), [values, errors, touched, isSubmitting, handleChange, handleBlur, handleSubmit, resetForm]);
 }

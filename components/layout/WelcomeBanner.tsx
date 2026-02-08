@@ -1,7 +1,7 @@
 // components/WelcomeBanner.tsx
 // ✅ РЕДИЗАЙН: Блок приветствия для главной страницы
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -16,7 +16,7 @@ interface WelcomeBannerProps {
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
-export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
+function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
   const router = useRouter();
   const colors = useThemedColors();
   const isWeb = Platform.OS === 'web';
@@ -77,7 +77,7 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
     primaryButtonText: {
       fontSize: 15,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     secondaryButton: {
       flexDirection: 'row',
@@ -113,7 +113,7 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
     compactTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
   }), [colors, isWeb]);
 
@@ -165,3 +165,5 @@ export default function WelcomeBanner({ compact = false }: WelcomeBannerProps) {
     </View>
   );
 }
+
+export default React.memo(WelcomeBanner);

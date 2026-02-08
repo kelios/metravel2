@@ -206,4 +206,4 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
   },
 });
 
-export default SegmentedControl;
+export default React.memo(SegmentedControl);

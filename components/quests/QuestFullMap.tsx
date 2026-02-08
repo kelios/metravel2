@@ -126,7 +126,7 @@ async function ensureDomToImage(): Promise<any> {
     return w.domtoimage;
 }
 
-export default function QuestFullMap({
+function QuestFullMap({
                                          steps,
                                          height = 520,
                                          title = 'Карта квеста',
@@ -616,3 +616,5 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
         textAlign: 'center',
     },
 });
+
+export default React.memo(QuestFullMap);

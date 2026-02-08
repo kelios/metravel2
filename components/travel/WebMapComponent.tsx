@@ -1257,4 +1257,4 @@ const WebMapComponent = ({
 };
 
 
-export default WebMapComponent;
+export default React.memo(WebMapComponent);

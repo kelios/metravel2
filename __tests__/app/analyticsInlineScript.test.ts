@@ -1,4 +1,4 @@
-import { getAnalyticsInlineScript } from '@/app/+html'
+import { getAnalyticsInlineScript } from '@/utils/analyticsInlineScript'
 
 type Consent = { necessary: boolean; analytics: boolean }
 

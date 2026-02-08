@@ -497,4 +497,4 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
   });
 };
 
-export default PlacePopupCard;
+export default React.memo(PlacePopupCard);

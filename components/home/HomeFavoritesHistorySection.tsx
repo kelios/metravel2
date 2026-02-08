@@ -90,19 +90,36 @@ function HorizontalCards({
 }) {
   const { isDark } = useTheme();
   const scrollRef = useRef<any>(null);
-  const historyBadge =
+  const historyBadge = useMemo(() =>
     badge?.icon === 'clock'
       ? {
           icon: 'clock' as const,
           backgroundColor: colors.overlay,
           iconColor: isDark ? colors.text : colors.textOnDark,
         }
-      : undefined;
+      : undefined,
+    [badge?.icon, colors.overlay, colors.text, colors.textOnDark, isDark]);
 
   const resolveScrollElement = useCallback(() => {
     const target = scrollRef.current as any;
     return target?._nativeNode || target?._domNode || target;
   }, []);
+
+  const renderItem = useCallback(({ item }: { item: TravelLikeItem }) => (
+    <TabTravelCard
+      item={{
+        id: item.id,
+        title: item.title,
+        imageUrl: item.imageUrl,
+        city: item.city ?? null,
+        country: item.country ?? (item as any).countryName ?? null,
+      }}
+      badge={historyBadge}
+      onPress={() => onPressItem(item.url)}
+    />
+  ), [historyBadge, onPressItem]);
+
+  const keyExtractor = useCallback((item: TravelLikeItem) => `${String(item.id)}-${item.url}`, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -153,20 +170,8 @@ function HorizontalCards({
       testID={testID}
       horizontal
       data={data}
-      renderItem={({ item }) => (
-        <TabTravelCard
-          item={{
-            id: item.id,
-            title: item.title,
-            imageUrl: item.imageUrl,
-            city: item.city ?? null,
-            country: item.country ?? (item as any).countryName ?? null,
-          }}
-          badge={historyBadge}
-          onPress={() => onPressItem(item.url)}
-        />
-      )}
-      keyExtractor={(item) => `${String(item.id)}-${item.url}`}
+      renderItem={renderItem}
+      keyExtractor={keyExtractor}
       showsHorizontalScrollIndicator={false}
       style={styles.horizontalList}
       contentContainerStyle={styles.horizontalListContent}

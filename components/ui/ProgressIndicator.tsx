@@ -15,7 +15,7 @@ interface ProgressIndicatorProps {
   size?: 'small' | 'medium' | 'large';
 }
 
-export default function ProgressIndicator({
+function ProgressIndicator({
   progress,
   stage,
   message,
@@ -157,4 +157,4 @@ export default function ProgressIndicator({
   );
 }
 
-
+export default React.memo(ProgressIndicator);

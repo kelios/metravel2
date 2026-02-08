@@ -72,7 +72,7 @@ function generateSuggestions(query: string): Suggestion[] {
   return suggestions.slice(0, 7);
 }
 
-export default function SearchAutocomplete({
+function SearchAutocomplete({
   query,
   onSelect,
   onClose,
@@ -146,7 +146,7 @@ export default function SearchAutocomplete({
       fontWeight: '500',
     },
     suggestionTextSelected: {
-      color: colors.primary,
+      color: colors.primaryText,
       fontWeight: '600',
     },
     suggestionType: {
@@ -272,3 +272,5 @@ export default function SearchAutocomplete({
     </View>
   );
 }
+
+export default React.memo(SearchAutocomplete);

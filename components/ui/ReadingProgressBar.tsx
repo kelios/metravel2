@@ -10,7 +10,7 @@ interface ReadingProgressBarProps {
   viewportHeight: number;
 }
 
-export default function ReadingProgressBar({
+function ReadingProgressBar({
   scrollY,
   contentHeight,
   viewportHeight,
@@ -104,3 +104,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
   },
 });
+
+export default React.memo(ReadingProgressBar);

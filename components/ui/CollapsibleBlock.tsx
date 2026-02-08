@@ -29,7 +29,7 @@ interface CollapsibleBlockProps {
 const spacing = DESIGN_TOKENS.spacing;
 const radii = DESIGN_TOKENS.radii;
 
-export default function CollapsibleBlock({
+function CollapsibleBlock({
   id,
   title,
   description,
@@ -383,3 +383,4 @@ export default function CollapsibleBlock({
   );
 }
 
+export default React.memo(CollapsibleBlock);

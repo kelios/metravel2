@@ -621,7 +621,7 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         lineHeight: Math.round(BASE_FONT_SIZE * 1.6), // Межстрочный интервал 1.6
       },
       a: {
-        color: colors.primary,
+        color: colors.primaryText,
         textDecorationLine: 'underline',
       },
       strong: { fontWeight: "700" }, // ✅ Более жирный для выделения

@@ -18,7 +18,7 @@ const SORT_OPTIONS: { value: SortOption; label: string; icon: string }[] = [
   { value: 'name', label: 'По названию', icon: 'type' },
 ];
 
-export default function SortSelector({ value, onChange, showDistance = false }: SortSelectorProps) {
+function SortSelector({ value, onChange, showDistance = false }: SortSelectorProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const colors = useThemedColors();
@@ -111,3 +111,5 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default React.memo(SortSelector);

@@ -32,7 +32,7 @@ interface TravelStickyActionsProps {
 
 const THRESHOLD = 300;
 
-export default function TravelStickyActions({
+function TravelStickyActions({
   travel,
   scrollY,
   scrollToComments,
@@ -244,3 +244,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: colors.borderLight,
     },
   });
+
+export default React.memo(TravelStickyActions);

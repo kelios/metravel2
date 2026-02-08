@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, Pressable } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -16,7 +16,7 @@ type Props = {
   actionBtnDisabledStyle: any
 }
 
-export default function TravelPdfExportControl({
+function TravelPdfExportControl({
   travel,
   mutedText,
   actionBtnStyle,
@@ -99,3 +99,5 @@ export default function TravelPdfExportControl({
     </>
   )
 }
+
+export default React.memo(TravelPdfExportControl);

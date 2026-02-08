@@ -159,7 +159,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     progressText: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '700',
-        color: colors.primary,
+        color: colors.primaryText,
     },
     headerDescription: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,

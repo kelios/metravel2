@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,7 +45,7 @@ function writeConsent(consent: ConsentState) {
   }
 }
 
-export default function ConsentBanner() {
+function ConsentBanner() {
   const colors = useThemedColors();
   const [visible, setVisible] = useState(false);
   const [suspendForOverlay, setSuspendForOverlay] = useState(false);
@@ -157,8 +157,8 @@ export default function ConsentBanner() {
       >
         <View style={[styles.textBlock, !isMobile && styles.textBlockDesktop]}>
           <Text style={[styles.text, { color: colors.textMuted }]}>
-            🍪 Используем аналитику для улучшения сервиса.{' '}
-            <Link href="/cookies" style={{ color: colors.primary, textDecorationLine: 'underline', fontSize: 12 }}>
+            Используем аналитику для улучшения сервиса.{' '}
+            <Link href="/cookies" style={{ color: colors.primaryText, textDecorationLine: 'underline', fontSize: 12 }}>
               Подробнее
             </Link>
           </Text>
@@ -250,3 +250,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
 });
+
+export default React.memo(ConsentBanner);

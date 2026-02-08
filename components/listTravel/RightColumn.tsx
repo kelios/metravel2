@@ -191,9 +191,22 @@ const RightColumn: React.FC<RightColumnProps> = memo(
       return result
     }, [travels, gridColumns, isMobile])
 
+    const rowSeparatorStyle = useMemo(() => ({ height: cardSpacing }), [cardSpacing])
     const RowSeparator = useCallback(() => {
-      return <View style={{ height: cardSpacing }} />
-    }, [cardSpacing])
+      return <View style={rowSeparatorStyle} />
+    }, [rowSeparatorStyle])
+
+    const webContentContainerStyle = useMemo(() => ({
+      paddingHorizontal: contentPadding,
+      paddingTop: 8,
+      paddingBottom: isMobile ? 32 + 8 : 28,
+    }), [contentPadding, isMobile])
+
+    const nativeContentContainerStyle = useMemo(() => ({
+      paddingHorizontal: contentPadding,
+      paddingTop: 8,
+      paddingBottom: 28,
+    }), [contentPadding])
 
     // Web: infinite scroll via onScroll instead of FlashList's onEndReached
     const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -482,11 +495,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 ref={listRef as any}
                 onScroll={webScrollHandler}
                 scrollEventThrottle={32}
-                contentContainerStyle={{
-                  paddingHorizontal: contentPadding,
-                  paddingTop: 8,
-                  paddingBottom: isMobile ? 32 + 8 : 28,
-                }}
+                contentContainerStyle={webContentContainerStyle}
               >
                 {ListHeader}
                 {rows.map((rowItems, rowIndex) => (
@@ -512,11 +521,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 onEndReached={onEndReached}
                 onEndReachedThreshold={onEndReachedThreshold}
                 drawDistance={600}
-                contentContainerStyle={{
-                  paddingHorizontal: contentPadding,
-                  paddingTop: 8,
-                  paddingBottom: 28,
-                }}
+                contentContainerStyle={nativeContentContainerStyle}
                 scrollEventThrottle={16}
               />
             )

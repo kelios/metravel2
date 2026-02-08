@@ -956,7 +956,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     mapCount: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
         fontWeight: '600',
-        color: colors.primary,
+        color: colors.primaryText,
     },
     mapContainer: {
         marginTop: 4,

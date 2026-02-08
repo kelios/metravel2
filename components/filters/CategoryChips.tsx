@@ -35,7 +35,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   'Архитектура': 'layers',
 };
 
-export default function CategoryChips({
+function CategoryChips({
   categories,
   selectedCategories,
   onToggleCategory,
@@ -88,6 +88,8 @@ export default function CategoryChips({
     </ScrollView>
   );
 }
+
+export default React.memo(CategoryChips);
 
 const getStyles = (colors: ThemedColors) => StyleSheet.create({
   scrollView: {

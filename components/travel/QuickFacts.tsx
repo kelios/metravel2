@@ -182,7 +182,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
                   accessibilityLabel={categoryLabel}
                   {...(webA11yProps as any)}
                 >
-                <Text style={[styles.categoryText, { color: colors.primary }]}>{cat}</Text>
+                <Text style={[styles.categoryText, { color: colors.primaryText }]}>{cat}</Text>
                 </Pressable>
               );
             })}
@@ -284,7 +284,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   categoryText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
     letterSpacing: 0,
   },
 });

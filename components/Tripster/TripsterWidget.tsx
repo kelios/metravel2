@@ -3,6 +3,9 @@ import { Platform, View } from 'react-native';
 import { normalize, transliterate, CITY_ALIASES, TRIPSTER_CITY_NAMES } from "@/utils/CityUtils";
 import { useInView } from 'react-intersection-observer';
 
+const OUTER_STYLE = { width: '100%', marginBottom: 32 } as const;
+const INNER_STYLE = { width: '100%', minHeight: 300 } as const;
+
 type Props = {
     points: {
         id: string;
@@ -33,7 +36,7 @@ function findCityName(term: string): string | null {
     return null;
 }
 
-export default function TripsterWidget({ points }: Props) {
+function TripsterWidget({ points }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
 
     const firstAddress = points?.[0]?.address || '';
@@ -83,10 +86,12 @@ export default function TripsterWidget({ points }: Props) {
     if (Platform.OS !== 'web' || !validCity) return null;
 
     return (
-        <View ref={setViewRef} style={{ width: '100%', marginBottom: 32 }}>
-            <View style={{ width: '100%', minHeight: 300 }}>
+        <View ref={setViewRef} style={OUTER_STYLE}>
+            <View style={INNER_STYLE}>
                 {inView && <div ref={containerRef} />}
             </View>
         </View>
     );
 }
+
+export default React.memo(TripsterWidget);

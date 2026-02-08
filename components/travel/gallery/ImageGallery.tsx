@@ -437,4 +437,4 @@ const ImageGallery: React.FC<ImageGalleryComponentProps> = ({
   )
 }
 
-export default ImageGallery
+export default React.memo(ImageGallery)

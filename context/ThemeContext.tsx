@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 interface ThemeContextType {
@@ -63,7 +63,7 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // Default theme values matching DESIGN_TOKENS
-  const theme: ThemeContextType = {
+  const theme: ThemeContextType = useMemo(() => ({
     colors: {
       primary: DESIGN_TOKENS.colors.primary,
       secondary: DESIGN_TOKENS.colors.accent,
@@ -106,7 +106,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       medium: DESIGN_TOKENS.shadows.medium,
       heavy: DESIGN_TOKENS.shadows.heavy,
     },
-  };
+  }), []);
 
   return (
     <ThemeContext.Provider value={theme}>

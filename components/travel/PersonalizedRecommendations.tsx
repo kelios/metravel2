@@ -13,6 +13,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 
 const COLLAPSED_KEY = 'personalization_collapsed';
+const ARROW_ICON_STYLE = { marginLeft: 6 } as const;
 
 interface PersonalizedRecommendationsProps {
     forceVisible?: boolean;
@@ -195,7 +196,7 @@ function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHea
                             android_ripple={{ color: colors.primarySoft }}
                         >
                             <Text style={styles.loginButtonText}>Войти или зарегистрироваться</Text>
-                            <Feather name="arrow-right" size={18} color={colors.primary} style={{ marginLeft: 6 } as any} />
+                            <Feather name="arrow-right" size={18} color={colors.primary} style={ARROW_ICON_STYLE as any} />
                         </Pressable>
                     </View>
                 </View>

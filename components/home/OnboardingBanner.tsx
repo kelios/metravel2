@@ -161,7 +161,7 @@ const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
     },
     badge: {
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.primaryText,
     },
     progressContainer: {
       marginTop: 8,

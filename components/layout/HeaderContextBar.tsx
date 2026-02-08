@@ -20,7 +20,7 @@ type HeaderContextBarProps = {
   testID?: string;
 };
 
-export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
+function HeaderContextBar({ testID }: HeaderContextBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const colors = useThemedColors();
@@ -158,6 +158,8 @@ export default function HeaderContextBar({ testID }: HeaderContextBarProps) {
     </>
   );
 }
+
+export default React.memo(HeaderContextBar);
 
 const createStyles = (colors: ThemedColors) => StyleSheet.create({
   container: {

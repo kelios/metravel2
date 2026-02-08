@@ -37,6 +37,9 @@ const Slider: React.FC<any> = withLazy(() => import('@/components/travel/Slider'
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const HERO_QUICK_JUMP_KEYS = ['description', 'map', 'points', 'comments', 'video'] as const
+const QUICK_FACTS_PLACEHOLDER_STYLE = { minHeight: 72 } as const
+const AUTHOR_PLACEHOLDER_STYLE = { minHeight: 160 } as const
+const AUTHOR_WRAPPER_STYLE = { marginTop: 12 } as const
 
 const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
   createSafeImageUrl(url, updated_at, id)
@@ -555,11 +558,11 @@ function TravelHeroSectionInner({
         style={[styles.sectionContainer, styles.contentStable, styles.quickFactsContainer]}
       >
         {extrasReady ? (
-          <Suspense fallback={<View style={{ minHeight: 72 }} />}>
+          <Suspense fallback={<View style={QUICK_FACTS_PLACEHOLDER_STYLE} />}>
             <QuickFacts travel={travel} />
           </Suspense>
         ) : (
-          <View style={{ minHeight: 72 }} />
+          <View style={QUICK_FACTS_PLACEHOLDER_STYLE} />
         )}
       </View>
 
@@ -615,8 +618,8 @@ function TravelHeroSectionInner({
         >
           <Text style={styles.sectionHeaderText}>Автор</Text>
           <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
-          <View style={{ marginTop: 12 }}>
-            <Suspense fallback={<View style={{ minHeight: 160 }} />}>
+          <View style={AUTHOR_WRAPPER_STYLE}>
+            <Suspense fallback={<View style={AUTHOR_PLACEHOLDER_STYLE} />}>
               <AuthorCard travel={travel} />
             </Suspense>
           </View>

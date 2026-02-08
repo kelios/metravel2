@@ -486,7 +486,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     tipStats: {
         fontSize: DESIGN_TOKENS.typography.sizes.xs,
-        color: colors.primary,
+        color: colors.primaryText,
         fontWeight: '600',
     },
 });

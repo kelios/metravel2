@@ -384,7 +384,7 @@ const getWebStyles = (
   compactButtonActive: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.primary,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: 600,
   },
   compactLabel: {

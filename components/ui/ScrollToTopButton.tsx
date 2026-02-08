@@ -13,7 +13,7 @@ interface ScrollToTopButtonProps {
   forceVisible?: boolean;
 }
 
-export default function ScrollToTopButton({
+function ScrollToTopButton({
   scrollViewRef,
   flatListRef,
   scrollY,
@@ -148,3 +148,5 @@ export default function ScrollToTopButton({
     </Animated.View>
   );
 }
+
+export default React.memo(ScrollToTopButton);

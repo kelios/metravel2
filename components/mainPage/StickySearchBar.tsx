@@ -206,7 +206,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
   primaryActionText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   primaryActionRowMobile: {
     paddingTop: spacing.xs,

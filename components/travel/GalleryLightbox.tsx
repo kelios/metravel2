@@ -28,7 +28,7 @@ interface GalleryLightboxProps {
   onClose: () => void;
 }
 
-export default function GalleryLightbox({
+function GalleryLightbox({
   images,
   initialIndex,
   visible,
@@ -203,3 +203,5 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+export default React.memo(GalleryLightbox);

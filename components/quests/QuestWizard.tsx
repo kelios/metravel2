@@ -815,7 +815,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     stepPillActive: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepPillDone: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepPillLocked: { opacity: 0.5 },
-    stepPillIndex: { fontSize: 12, fontWeight: '700', color: colors.primary, marginRight: 6 },
+    stepPillIndex: { fontSize: 12, fontWeight: '700', color: colors.primaryText, marginRight: 6 },
     stepPillTitle: { fontSize: 12, fontWeight: '600', color: colors.text },
 
     stepDotMini: {
@@ -833,7 +833,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     stepDotMiniActive: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepDotMiniDone: { backgroundColor: colors.primary }, // ✅ УЛУЧШЕНИЕ: Убрана граница
     stepDotMiniLocked: { opacity: 0.45 },
-    stepDotMiniText: { fontSize: 12, fontWeight: '700', color: colors.primary },
+    stepDotMiniText: { fontSize: 12, fontWeight: '700', color: colors.primaryText },
 
     navActiveTitle: { marginTop: 6, fontSize: 12, fontWeight: '600', color: colors.text, opacity: 0.9 },
     navHint: { fontSize: 11, color: colors.textSecondary, marginTop: 6 },
@@ -856,10 +856,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         marginRight: SPACING.md
     },
     stepNumberCompleted: { backgroundColor: colors.successSoft },
-    stepNumberText: { fontSize: 16, fontWeight: '700', color: colors.primary },
+    stepNumberText: { fontSize: 16, fontWeight: '700', color: colors.primaryText },
     headerContent: { flex: 1 },
     stepTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 2 },
-    location: { fontSize: 14, color: colors.primary, fontWeight: '500' },
+    location: { fontSize: 14, color: colors.primaryText, fontWeight: '500' },
     completedBadge: { backgroundColor: colors.success, borderRadius: 12, padding: 4, width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
     completedText: { color: colors.textOnPrimary, fontWeight: 'bold', fontSize: 12 },
 

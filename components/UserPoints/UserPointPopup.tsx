@@ -252,7 +252,7 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
       {/* Share */}
       <Pressable onPress={handleShareTelegram} style={styles.shareButton}>
         <Feather name="send" size={14} color={colors.primary} />
-        <Text style={[styles.actionText, { color: colors.primary }]}>
+        <Text style={[styles.actionText, { color: colors.primaryText }]}>
           Поделиться в Telegram
         </Text>
       </Pressable>
@@ -372,7 +372,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   mapLinkText: {
     fontSize: 11,
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: '500' as any,
   },
   shareButton: {

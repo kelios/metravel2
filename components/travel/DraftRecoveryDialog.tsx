@@ -192,4 +192,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
   });
 
-export default DraftRecoveryDialog;
+export default React.memo(DraftRecoveryDialog);

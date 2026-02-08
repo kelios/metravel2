@@ -275,7 +275,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     },
     progressValue: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
-        color: colors.primary,
+        color: colors.primaryText,
         fontWeight: '700',
     },
     card: {

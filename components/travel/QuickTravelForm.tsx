@@ -171,7 +171,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   uploadText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
-    color: colors.primary,
+    color: colors.primaryText,
   },
   uploadHint: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
