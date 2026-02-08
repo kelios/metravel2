@@ -11,27 +11,23 @@
  */
 
 import { test, expect } from './fixtures';
-import { getTravelsListPath } from './helpers/routes';
-import { seedNecessaryConsent } from './helpers/storage';
+import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation';
+
+async function goToDetails(page: import('@playwright/test').Page): Promise<boolean> {
+  await preacceptCookies(page);
+  return navigateToFirstTravel(page);
+}
 
 /**
  * TC-TRAVEL-DETAIL-011: Ссылка на YouTube видео (P3)
  */
 test.describe('Travel Details - Media Content', () => {
   test('TC-011: YouTube видео отображается если доступно', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Прокручиваем страницу для загрузки всех секций
     await page.evaluate(() => window.scrollBy(0, 2000));
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('domcontentloaded').catch(() => null);
 
     // Проверяем наличие YouTube iframe или ссылки
     const youtubeIframe = page.locator('iframe[src*="youtube.com"], iframe[src*="youtu.be"]');
@@ -63,18 +59,7 @@ test.describe('Travel Details - Media Content', () => {
    * TC-TRAVEL-DETAIL-012: Счетчик просмотров (P3)
    */
   test('TC-012: счетчик просмотров отображается', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки страницы
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // If the page doesn't have a scrollable body (e.g., very short content or scroll locked),
     // this test is not meaningful.
@@ -127,21 +112,7 @@ test.describe('Travel Details - Author Actions', () => {
   test('TC-013: кнопка редактирования видна для авторизованного пользователя', async ({
     page,
   }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
-    // Примечание: Для полного тестирования нужна авторизация
-    // Здесь проверяем базовую структуру
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Даем время на загрузку
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Ищем кнопку редактирования
     const editButton = page.locator('button:has-text("Редактировать"), a:has-text("Редактировать")');
@@ -166,18 +137,7 @@ test.describe('Travel Details - Author Actions', () => {
  */
 test.describe('Travel Details - Export Features', () => {
   test('TC-028: экспорт в PDF если доступен', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки страницы
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Ищем кнопку экспорта в PDF
     const exportButton = page.locator(
@@ -211,31 +171,11 @@ test.describe('Travel Details - Export Features', () => {
  */
 test.describe('Travel Details - Navigation Between Travels', () => {
   test('TC-029: навигация к соседним путешествиям работает', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    const cardsCount = await cards.count();
-
-    if (cardsCount < 2) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Not enough travels to test navigation between them',
-      });
-      return;
-    }
-
-    // Открываем первое путешествие
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки страницы
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Прокручиваем вниз для поиска навигационных кнопок
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Ищем кнопки "Следующее" / "Предыдущее"
     const nextButton = page.locator(
@@ -258,7 +198,7 @@ test.describe('Travel Details - Navigation Between Travels', () => {
       if (hasNextButton) {
         const currentUrl = page.url();
         await nextButton.first().click();
-        await page.waitForTimeout(2000);
+        await page.waitForURL((url) => url.href !== currentUrl, { timeout: 10_000 }).catch(() => null);
 
         const newUrl = page.url();
         // URL должен измениться
@@ -285,18 +225,7 @@ test.describe('Travel Details - Navigation Between Travels', () => {
  */
 test.describe('Travel Details - Moderation Status', () => {
   test('TC-030: статус модерации отображается корректно', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки страницы
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие индикаторов статуса
     const bodyText = await page.locator('body').textContent();
@@ -343,19 +272,11 @@ test.describe('Travel Details - Moderation Status', () => {
  */
 test.describe('Travel Details - Engagement Elements', () => {
   test('элементы вовлечения (Telegram, CTA) отображаются', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Прокручиваем вниз для загрузки футера
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(1500);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Проверяем наличие Telegram элемента
     const telegramElement = page.locator('[testid="travel-details-telegram"]');
@@ -389,18 +310,7 @@ test.describe('Travel Details - Engagement Elements', () => {
  */
 test.describe('Travel Details - Scroll Behavior', () => {
   test('плавная прокрутка работает корректно', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки страницы
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Проверяем начальную позицию прокрутки
     const initialScrollY = await page.evaluate(() => window.scrollY);
@@ -426,7 +336,7 @@ test.describe('Travel Details - Scroll Behavior', () => {
           // ignore
         }
       });
-      await page.waitForTimeout(250);
+      await page.waitForFunction(() => window.scrollY > 0, null, { timeout: 2_000 }).catch(() => null);
     }
 
     // Проверяем, что прокрутка произошла
@@ -451,7 +361,7 @@ test.describe('Travel Details - Scroll Behavior', () => {
 
     // Прокручиваем обратно наверх
     await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => window.scrollY < 100, null, { timeout: 5_000 }).catch(() => null);
 
     // Проверяем, что вернулись наверх (с погрешностью)
     const finalScrollY = await page.evaluate(() => window.scrollY);
@@ -459,19 +369,11 @@ test.describe('Travel Details - Scroll Behavior', () => {
   });
 
   test('кнопка "Наверх" работает', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Прокручиваем вниз, чтобы активировать кнопку "Наверх"
     await page.evaluate(() => window.scrollBy(0, 1000));
-    await page.waitForTimeout(1000);
+    await page.waitForFunction(() => window.scrollY > 500, null, { timeout: 5_000 }).catch(() => null);
 
     // Ищем кнопку "Наверх"
     const scrollToTopButton = page.locator(
@@ -488,7 +390,7 @@ test.describe('Travel Details - Scroll Behavior', () => {
 
       // Кликаем на кнопку
       await scrollToTopButton.click();
-      await page.waitForTimeout(1000);
+      await page.waitForFunction(() => window.scrollY < 200, null, { timeout: 5_000 }).catch(() => null);
 
       // Проверяем, что прокрутились наверх
       const scrollY = await page.evaluate(() => window.scrollY);

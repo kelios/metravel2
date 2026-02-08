@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
+import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
-import { seedNecessaryConsent } from './helpers/storage';
 
 type WebVitalsResult = {
   clsTotal: number;
@@ -21,34 +21,6 @@ function getNumberEnv(name: string, fallback: number): number {
   return Number.isFinite(v) ? v : fallback;
 }
 
-async function gotoWithRetry(page: any, url: string) {
-  let lastError: any = null;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      lastError = null;
-      break;
-    } catch (error) {
-      lastError = error;
-      const msg = String((error as any)?.message ?? error ?? '');
-      const isTransient =
-        msg.includes('ERR_CONNECTION_REFUSED') ||
-        msg.includes('ERR_EMPTY_RESPONSE') ||
-        msg.includes('NS_ERROR_NET_RESET') ||
-        msg.includes('net::');
-
-      if (typeof page?.isClosed === 'function' && page.isClosed()) break;
-
-      try {
-        await page.waitForTimeout(isTransient ? Math.min(1200 + attempt * 600, 8000) : 500);
-      } catch {
-        break;
-      }
-    }
-  }
-  if (lastError) throw lastError;
-}
-
 const CLS_MAX = getNumberEnv('E2E_CLS_MAX', 0.02);
 const LCP_MAX_MS = process.env.CI
   ? getNumberEnv('E2E_LCP_MAX_MS', 3500)
@@ -58,7 +30,7 @@ const INP_MAX_MS = process.env.CI
   : getNumberEnv('E2E_INP_MAX_MS', 500);
 
 async function setupVitalsCollection(page: any) {
-  await page.addInitScript(seedNecessaryConsent);
+  await preacceptCookies(page);
   await page.addInitScript(() => {
     (window as any).__e2eVitals = {
       clsTotal: 0,

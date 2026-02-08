@@ -1,28 +1,5 @@
 import { test, expect } from './fixtures';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
-
-const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
-
-async function preacceptCookies(page: any) {
-  await page.addInitScript(seedNecessaryConsent);
-  await page.addInitScript(hideRecommendationsBanner);
-}
-
-async function assertNoHorizontalScroll(page: any) {
-  const res = await page.evaluate(() => {
-    const docEl = document.documentElement;
-    const body = document.body;
-    return {
-      docScrollWidth: docEl?.scrollWidth ?? 0,
-      docClientWidth: docEl?.clientWidth ?? 0,
-      bodyScrollWidth: body?.scrollWidth ?? 0,
-      bodyClientWidth: body?.clientWidth ?? 0,
-    };
-  });
-
-  expect(res.docScrollWidth).toBeLessThanOrEqual(res.docClientWidth);
-  expect(res.bodyScrollWidth).toBeLessThanOrEqual(res.bodyClientWidth);
-}
+import { preacceptCookies, assertNoHorizontalScroll, tid } from './helpers/navigation';
 
 test.describe('@perf Travel details skeleton transition (no layout shift)', () => {
   test('details shows loading skeleton, then renders key blocks without big size jump', async ({ page }) => {

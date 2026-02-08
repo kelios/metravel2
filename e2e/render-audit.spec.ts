@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures';
+import { preacceptCookies, assertNoHorizontalScroll, tid } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
-const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
+// Alias for backward compat within this file
+const preacceptCookiesAndStabilize = preacceptCookies;
 
 const VIEWPORTS = [
   { name: 'mobile', width: 375, height: 812 },
@@ -10,54 +11,16 @@ const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 900 },
 ];
 
-async function preacceptCookiesAndStabilize(page: any) {
-  await page.addInitScript(seedNecessaryConsent);
-  // Reduce perf noise in audits: recommendations can be heavy and not critical for base layout.
-  await page.addInitScript(hideRecommendationsBanner);
-}
-
 async function waitForAppShell(page: any) {
   await page.waitForLoadState('domcontentloaded');
   await expect(page.locator('body')).toBeVisible();
 }
 
 async function scrollDownToTriggerDeferredSections(page: any) {
-  // Travel details uses deferred/progressive rendering; scroll to ensure below-the-fold
-  // sections mount (Share/CTA/etc).
   await page.mouse.wheel(0, 1200);
-  await page.waitForTimeout(250);
+  await page.waitForFunction(() => window.scrollY > 0, null, { timeout: 3_000 }).catch(() => null);
   await page.mouse.wheel(0, 1600);
-  await page.waitForTimeout(250);
-}
-
-async function assertNoHorizontalScroll(page: any) {
-  const res = await page.evaluate(() => {
-    const docEl = document.documentElement;
-    const body = document.body;
-    const docScrollWidth = docEl?.scrollWidth ?? 0;
-    const docClientWidth = docEl?.clientWidth ?? 0;
-    const bodyScrollWidth = body?.scrollWidth ?? 0;
-    const bodyClientWidth = body?.clientWidth ?? 0;
-
-    return {
-      docScrollWidth,
-      docClientWidth,
-      bodyScrollWidth,
-      bodyClientWidth,
-      docOverflowX: getComputedStyle(docEl).overflowX,
-      bodyOverflowX: getComputedStyle(body).overflowX,
-    };
-  });
-
-  expect(
-    res.docScrollWidth,
-    `documentElement has horizontal overflow: scrollWidth=${res.docScrollWidth} clientWidth=${res.docClientWidth} overflowX=${res.docOverflowX}`
-  ).toBeLessThanOrEqual(res.docClientWidth);
-
-  expect(
-    res.bodyScrollWidth,
-    `body has horizontal overflow: scrollWidth=${res.bodyScrollWidth} clientWidth=${res.bodyClientWidth} overflowX=${res.bodyOverflowX}`
-  ).toBeLessThanOrEqual(res.bodyClientWidth);
+  await page.waitForFunction(() => window.scrollY > 1000, null, { timeout: 3_000 }).catch(() => null);
 }
 
 async function installClsAfterRenderMeter(page: any) {

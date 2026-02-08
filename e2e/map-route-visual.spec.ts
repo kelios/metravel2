@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from './fixtures';
-import { seedNecessaryConsent, hideRecommendationsBanner } from './helpers/storage';
+import { preacceptCookies } from './helpers/navigation';
 
 const MAP_SHOT_SIZE = { width: 826, height: 554 };
 
@@ -38,13 +38,13 @@ async function normalizeMapScreenshotBox(page: any) {
     `,
   });
   await page.evaluate(() => window.dispatchEvent(new Event('resize')));
-  await page.waitForTimeout(250);
+  // Allow layout to settle after resize
+  await page.waitForFunction(() => true, null, { timeout: 500 }).catch(() => null);
 }
 
 test.describe('Map Route Line - Visual Regression', () => {
   test('снапшот карты с линией маршрута', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
+    await preacceptCookies(page);
 
     // Normalize viewport to keep locator screenshot dimensions stable across environments.
     // Snapshot baselines were captured with a slightly narrower effective content width.
@@ -54,7 +54,7 @@ test.describe('Map Route Line - Visual Regression', () => {
 
     console.log('🗺️  Открываем /map...');
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     await normalizeMapScreenshotBox(page);
 
@@ -92,13 +92,13 @@ test.describe('Map Route Line - Visual Regression', () => {
     const segmentedRoute = page.getByTestId('segmented-route');
     if (await segmentedRoute.isVisible().catch(() => false)) {
       await segmentedRoute.click({ force: true });
-      await page.waitForTimeout(800);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
       console.log('✅ Режим маршрута (segmented-route)');
     } else {
       const routeButton = page.locator('button').filter({ hasText: /Маршрут/i }).first();
       if (await routeButton.isVisible().catch(() => false)) {
         await routeButton.click({ force: true });
-        await page.waitForTimeout(800);
+        await page.waitForLoadState('domcontentloaded').catch(() => null);
         console.log('✅ Режим маршрута (button fallback)');
       }
     }
@@ -113,24 +113,20 @@ test.describe('Map Route Line - Visual Regression', () => {
         mapBox.x + mapBox.width * 0.35, 
         mapBox.y + mapBox.height * 0.35
       );
-      await page.waitForTimeout(500);
+      // Wait for marker to appear
+      await page.waitForSelector('.leaflet-marker-icon', { timeout: 5_000 }).catch(() => null);
       
       // Клик 2 - финиш (правый нижний квадрант)
       await page.mouse.click(
         mapBox.x + mapBox.width * 0.65, 
         mapBox.y + mapBox.height * 0.65
       );
-      await page.waitForTimeout(1000);
       
       console.log('✅ Точки добавлены');
     }
 
-    // Ждем построения маршрута
+    // Wait for route line to be rendered by OSRM service
     console.log('⏳ Ждем маршрут...');
-    await page.waitForTimeout(5000);
-    
-    // Дополнительно ждем отрисовки
-    await page.waitForTimeout(2000);
 
     // Дожидаемся появления SVG path маршрута (иначе снимок может быть сделан до отрисовки)
     const routePathLocator = page.locator('.leaflet-container path.metravel-route-line');
@@ -216,8 +212,7 @@ test.describe('Map Route Line - Visual Regression', () => {
   });
 
   test('снапшот: сравнение карты ДО и ПОСЛЕ добавления маршрута', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
+    await preacceptCookies(page);
 
     // Normalize viewport to keep locator screenshot dimensions stable across environments.
     await page.setViewportSize({ width: 1265, height: 720 });
@@ -225,7 +220,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     await installTileMock(page);
 
     await page.goto('/map', { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     await normalizeMapScreenshotBox(page);
 
@@ -260,12 +255,12 @@ test.describe('Map Route Line - Visual Regression', () => {
     const segmentedRoute = page.getByTestId('segmented-route');
     if (await segmentedRoute.isVisible().catch(() => false)) {
       await segmentedRoute.click({ force: true });
-      await page.waitForTimeout(800);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
     } else {
       const routeButton = page.locator('button').filter({ hasText: /Маршрут/i }).first();
       if (await routeButton.isVisible().catch(() => false)) {
         await routeButton.click({ force: true });
-        await page.waitForTimeout(800);
+        await page.waitForLoadState('domcontentloaded').catch(() => null);
       }
     }
 
@@ -275,13 +270,12 @@ test.describe('Map Route Line - Visual Regression', () => {
         mapBox.x + mapBox.width * 0.35, 
         mapBox.y + mapBox.height * 0.35
       );
-      await page.waitForTimeout(500);
+      await page.waitForSelector('.leaflet-marker-icon', { timeout: 5_000 }).catch(() => null);
       
       await page.mouse.click(
         mapBox.x + mapBox.width * 0.65, 
         mapBox.y + mapBox.height * 0.65
       );
-      await page.waitForTimeout(3000);
     }
 
     // Снапшот ПОСЛЕ добавления маршрута

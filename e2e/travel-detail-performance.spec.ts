@@ -7,52 +7,26 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
-import { seedNecessaryConsent } from './helpers/storage';
+
+async function goToDetails(page: import('@playwright/test').Page): Promise<boolean> {
+  await preacceptCookies(page);
+  return navigateToFirstTravel(page);
+}
 
 /**
  * TC-TRAVEL-DETAIL-024: Производительность загрузки (P2)
  */
 test.describe('@perf Travel Details - Performance Metrics', () => {
   test('TC-024: метрики производительности в пределах нормы', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
-
-    // Отслеживаем Web Vitals через Performance API
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'No travel cards available; skipping performance test',
-      });
-      return;
-    }
-
     // Запоминаем время начала навигации
     const navigationStart = Date.now();
 
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Ждем загрузки основного контента
     const mainContent = page.locator('[data-testid="travel-details-page"], [testID="travel-details-page"]').first();
-    const loaded = await mainContent
-      .isVisible()
-      .then((v) => v)
-      .catch(() => false);
-	    if (!loaded) {
-	      const errorState = page.getByText('Не удалось загрузить путешествие').first();
-	      if (await errorState.isVisible().catch(() => false)) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Travel details page entered error state; skipping performance metrics in this environment.',
-	        });
-	        throw new Error('Travel details not available (error state is visible).');
-	      }
-	    }
     await mainContent.waitFor({ state: 'visible', timeout: 30_000 });
 
     const navigationEnd = Date.now();
@@ -99,8 +73,6 @@ test.describe('@perf Travel Details - Performance Metrics', () => {
   });
 
   test('проверка размера загружаемых ресурсов', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
     const resourceSizes: { [key: string]: number } = {
       images: 0,
       scripts: 0,
@@ -137,17 +109,10 @@ test.describe('@perf Travel Details - Performance Metrics', () => {
       }
     });
 
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    if (!(await goToDetails(page))) return;
 
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Даем время на загрузку ресурсов
-    await page.waitForTimeout(3000);
+    // Wait for resources to finish loading
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     const totalSize = Object.values(resourceSizes).reduce((a, b) => a + b, 0);
 
@@ -168,8 +133,6 @@ test.describe('@perf Travel Details - Performance Metrics', () => {
   });
 
   test('проверка количества HTTP запросов', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
     let requestCount = 0;
     const requestTypes: { [key: string]: number } = {};
 
@@ -179,23 +142,10 @@ test.describe('@perf Travel Details - Performance Metrics', () => {
       requestTypes[type] = (requestTypes[type] || 0) + 1;
     });
 
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    if (!(await goToDetails(page))) return;
 
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    // Сбрасываем счетчик перед переходом на детальную страницу
-    requestCount = 0;
-    for (const key in requestTypes) {
-      requestTypes[key] = 0;
-    }
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Даем время на загрузку
-    await page.waitForTimeout(3000);
+    // Wait for all requests to settle
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     test.info().annotations.push({
       type: 'request-count',
@@ -216,18 +166,10 @@ test.describe('@perf Travel Details - Performance Metrics', () => {
  */
 test.describe('@perf Travel Details - Rendering Quality', () => {
   test('отсутствие визуальных артефактов', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    if (!(await goToDetails(page))) return;
 
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем стабилизации рендеринга
-    await page.waitForTimeout(2000);
+    // Wait for rendering to stabilize
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Проверяем, что нет элементов с нулевыми размерами (потенциальные ошибки layout)
     const elementsWithZeroSize = await page.evaluate(() => {
@@ -261,9 +203,8 @@ test.describe('@perf Travel Details - Rendering Quality', () => {
   });
 
   test('проверка CLS (Cumulative Layout Shift)', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
-    // Отслеживаем Layout Shifts
+    // Install CLS observer before navigation
+    await preacceptCookies(page);
     await page.addInitScript(() => {
       (window as any).__layoutShifts = [];
       new PerformanceObserver((list) => {
@@ -275,28 +216,17 @@ test.describe('@perf Travel Details - Rendering Quality', () => {
       }).observe({ type: 'layout-shift', buffered: true });
     });
 
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    if (!(await navigateToFirstTravel(page))) return;
 
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Даем время на загрузку и стабилизацию
-    await page.waitForTimeout(4000);
+    // Wait for page to stabilize
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Прокручиваем для загрузки всего контента
-    await page.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight / 2);
-    });
-    await page.waitForTimeout(1000);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight / 2));
+    await page.waitForLoadState('domcontentloaded').catch(() => null);
 
-    await page.evaluate(() => {
-      window.scrollTo(0, document.body.scrollHeight);
-    });
-    await page.waitForTimeout(2000);
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Получаем CLS
     const cls = await page.evaluate(() => {
@@ -315,28 +245,20 @@ test.describe('@perf Travel Details - Rendering Quality', () => {
   });
 
   test('проверка стабильности после взаимодействия', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    if (!(await goToDetails(page))) return;
 
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки
-    await page.waitForTimeout(2000);
+    // Wait for initial load to stabilize
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Получаем высоту до взаимодействия
     const heightBefore = await page.evaluate(() => document.body.scrollHeight);
 
     // Взаимодействуем с элементами (прокрутка, клики)
     await page.evaluate(() => window.scrollBy(0, 500));
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => window.scrollY > 0, null, { timeout: 3_000 }).catch(() => null);
 
     await page.evaluate(() => window.scrollBy(0, 500));
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => window.scrollY > 400, null, { timeout: 3_000 }).catch(() => null);
 
     // Получаем высоту после
     const heightAfter = await page.evaluate(() => document.body.scrollHeight);
@@ -359,18 +281,10 @@ test.describe('@perf Travel Details - Rendering Quality', () => {
  */
 test.describe('@perf Travel Details - Image Optimization', () => {
   test('изображения имеют корректные размеры', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    if (!(await goToDetails(page))) return;
 
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки изображений
-    await page.waitForTimeout(3000);
+    // Wait for images to load
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Проверяем изображения
     const imageStats = await page.evaluate(() => {
@@ -429,8 +343,6 @@ test.describe('@perf Travel Details - Image Optimization', () => {
   });
 
   test('изображения используют современные форматы', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
     const imageFormats: { [key: string]: number } = {};
 
     page.on('response', async (response) => {
@@ -444,17 +356,10 @@ test.describe('@perf Travel Details - Image Optimization', () => {
       }
     });
 
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    if (!(await goToDetails(page))) return;
 
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Даем время на загрузку изображений
-    await page.waitForTimeout(3000);
+    // Wait for images to load
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     test.info().annotations.push({
       type: 'image-formats',
@@ -471,13 +376,10 @@ test.describe('@perf Travel Details - Image Optimization', () => {
  */
 test.describe('@perf Travel Details - Memory Management', () => {
   test('отсутствие значительных утечек памяти при навигации', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
-    // Эта проверка требует специальных флагов браузера
-    // Здесь делаем базовую проверку через многократную навигацию
+    await preacceptCookies(page);
 
     await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    await page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }).catch(() => null);
 
     const cards = page.locator('[data-testid="travel-card-link"]');
     const cardsCount = await cards.count();
@@ -487,14 +389,14 @@ test.describe('@perf Travel Details - Memory Management', () => {
     // Открываем несколько путешествий подряд
     for (let i = 0; i < Math.min(3, cardsCount); i++) {
       await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-      await page.waitForTimeout(300);
+      await page.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }).catch(() => null);
 
       const currentCards = page.locator('[data-testid="travel-card-link"]');
       if ((await currentCards.count()) === 0) break;
 
       await currentCards.nth(i).click();
       await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-      await page.waitForTimeout(1500);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
 
       // Проверяем, что страница все еще отзывчива
       const isResponsive = await page

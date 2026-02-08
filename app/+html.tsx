@@ -443,7 +443,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       {/* Выключаем Expo Router Inspector */}
       <script
-        dangerouslySetInnerHTML={{ __html: `window.__EXPO_ROUTER_INSPECTOR=false;` }}
+        dangerouslySetInnerHTML={{ __html: 'window.__EXPO_ROUTER_INSPECTOR=false;' }}
       />
 
       {/* Suppress known RN/SVG/navigation console noise */}

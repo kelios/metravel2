@@ -1,12 +1,5 @@
 import { test, expect } from './fixtures';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
-
-const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
-
-async function preacceptCookies(page: any) {
-  await page.addInitScript(seedNecessaryConsent);
-  await page.addInitScript(hideRecommendationsBanner);
-}
+import { preacceptCookies, tid } from './helpers/navigation';
 
 test.describe('Travel details should not flash Home', () => {
   test('opening /travels/:slug does not show Home hero text during initial load', async ({ page }) => {

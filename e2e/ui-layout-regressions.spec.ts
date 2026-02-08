@@ -6,41 +6,11 @@ import {
   expectTopmostAtCenter,
 } from './helpers/layoutAsserts';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
+import { preacceptCookies, gotoWithRetry, waitForMainListRender } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
-async function preacceptCookiesAndStabilize(page: any) {
-  await page.addInitScript(seedNecessaryConsent);
-  // Reduce perf/layout noise: keep recommendations collapsed.
-  await page.addInitScript(hideRecommendationsBanner);
-}
-
-async function gotoWithRetry(page: any, url: string) {
-  let lastError: any = null;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    try {
-       
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      lastError = null;
-      break;
-    } catch (e) {
-      lastError = e;
-      const msg = String((e as any)?.message ?? e ?? '');
-      const isConn = msg.includes('ERR_CONNECTION_REFUSED') || msg.includes('ERR_EMPTY_RESPONSE') || msg.includes('NS_ERROR_NET_RESET');
-
-      // If the page was closed (e.g. by Playwright after a timeout), don't keep waiting.
-      if (typeof page?.isClosed === 'function' && page.isClosed()) break;
-
-       
-      try {
-        await page.waitForTimeout(isConn ? 800 + attempt * 250 : 500);
-      } catch {
-        break;
-      }
-    }
-  }
-  if (lastError) throw lastError;
-}
+// Alias for backward compat within this file
+const preacceptCookiesAndStabilize = preacceptCookies;
 
 async function waitForMainToRender(page: any) {
   // IMPORTANT: Promise.race is flaky here — if one selector never appears it can "win" the race
