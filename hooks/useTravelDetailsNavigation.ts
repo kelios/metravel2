@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DeviceEventEmitter, Platform } from 'react-native'
 import type { RefObject, TransitionStartFunction } from 'react'
 
@@ -268,12 +268,12 @@ export function useTravelDetailsNavigation({
     setActiveSection('gallery')
   }, [slug, setActiveSection, scrollRef])
 
-  return {
+  return useMemo(() => ({
     anchors,
     scrollTo,
     scrollRef,
     activeSection,
     setActiveSection,
     forceOpenKey,
-  }
+  }), [anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey])
 }

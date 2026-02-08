@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { useMenuState } from '@/hooks/useMenuState'
 
@@ -21,7 +21,7 @@ export function useTravelDetailsMenu(isMobile: boolean, deferAllowed: boolean): 
     }
   }, [deferAllowed, isMobile, openMenuOnDesktop])
 
-  return {
+  return useMemo(() => ({
     closeMenu,
     openMenu,
     toggleMenu,
@@ -29,5 +29,5 @@ export function useTravelDetailsMenu(isMobile: boolean, deferAllowed: boolean): 
     animatedX,
     menuWidth,
     menuWidthNum,
-  }
+  }), [closeMenu, openMenu, toggleMenu, isMenuOpen, animatedX, menuWidth, menuWidthNum])
 }

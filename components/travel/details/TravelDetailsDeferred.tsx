@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from 'react'
+import React, { Suspense, memo, useEffect, useState } from 'react'
 import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
 
@@ -46,7 +46,7 @@ export const TravelDeferredSections: React.FC<{
   viewportHeight: number
   scrollRef: any
   scrollToMapSection: () => void
-}> = ({
+}> = memo(({
   travel,
   isMobile,
   forceOpenKey,
@@ -134,9 +134,9 @@ export const TravelDeferredSections: React.FC<{
       <TravelEngagementSection travel={travel} isMobile={isMobile} />
     </>
   )
-}
+})
 
-const MobileAuthorShareSection: React.FC<{ travel: Travel }> = ({ travel }) => {
+const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel }) => {
   const styles = useTravelDetailsStyles()
   return (
     <>
@@ -167,7 +167,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = ({ travel }) => {
       </View>
     </>
   )
-}
+})
 
 export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = (props) => {
   return <TravelDetailsFooterSection {...props} />

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { Animated } from 'react-native'
 
 export interface UseTravelDetailsScrollStateReturn {
@@ -22,11 +22,11 @@ export function useTravelDetailsScrollState(): UseTravelDetailsScrollStateReturn
     setViewportHeight(e.nativeEvent.layout.height)
   }, [])
 
-  return {
+  return useMemo(() => ({
     scrollY,
     contentHeight,
     viewportHeight,
     handleContentSizeChange,
     handleLayout,
-  }
+  }), [scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout])
 }

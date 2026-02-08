@@ -202,6 +202,58 @@ const openExternal = async (url: string) => {
 
 // ✅ РЕДИЗАЙН: Компонент удален - заменен на встроенные кнопки в карточке
 
+/* ---------------- action sub-components (extracted to avoid unmount/remount) ---------------- */
+
+const PointActionIcon = React.memo(function PointActionIcon({
+  accessibilityLabel,
+  title,
+  onPress,
+  icon,
+  style,
+}: {
+  accessibilityLabel: string;
+  title?: string;
+  onPress: () => void;
+  icon: React.ReactNode;
+  style: any;
+}) {
+  return (
+    <CardActionPressable
+      style={style}
+      onPress={onPress}
+      accessibilityLabel={accessibilityLabel}
+      title={title ?? accessibilityLabel}
+    >
+      {icon}
+    </CardActionPressable>
+  );
+});
+
+const PointActionChip = React.memo(function PointActionChip({
+  label,
+  title,
+  onPress,
+  chipStyle,
+  textStyle,
+}: {
+  label: string;
+  title?: string;
+  onPress: () => void;
+  chipStyle: any;
+  textStyle: any;
+}) {
+  return (
+    <CardActionPressable
+      style={chipStyle}
+      onPress={onPress}
+      accessibilityLabel={label}
+      title={title ?? label}
+    >
+      <Text style={textStyle}>{label}</Text>
+    </CardActionPressable>
+  );
+});
+
 /* ---------------- card ---------------- */
 
 const PointCard = React.memo(function PointCard({
@@ -241,56 +293,6 @@ const PointCard = React.memo(function PointCard({
   const handleImageError = useCallback(() => {
     setImageError(true);
   }, []);
-
-  const ActionIcon = useCallback(
-    ({
-      accessibilityLabel,
-      title,
-      onPress,
-      icon,
-    }: {
-      accessibilityLabel: string;
-      title?: string;
-      onPress: () => void;
-      icon: React.ReactNode;
-    }) => {
-      return (
-        <CardActionPressable
-          style={styles.actionBtn}
-          onPress={onPress}
-          accessibilityLabel={accessibilityLabel}
-          title={title ?? accessibilityLabel}
-        >
-          {icon}
-        </CardActionPressable>
-      );
-    },
-    [styles.actionBtn]
-  );
-
-  const ActionChip = useCallback(
-    ({
-      label,
-      title,
-      onPress,
-    }: {
-      label: string;
-      title?: string;
-      onPress: () => void;
-    }) => {
-      return (
-        <CardActionPressable
-          style={styles.mapChip}
-          onPress={onPress}
-          accessibilityLabel={label}
-          title={title ?? label}
-        >
-          <Text style={styles.mapChipText}>{label}</Text>
-        </CardActionPressable>
-      );
-    },
-    [styles.mapChip, styles.mapChipText]
-  );
 
   return (
     <View
@@ -341,17 +343,19 @@ const PointCard = React.memo(function PointCard({
               ]}
             >
               <View style={styles.actionsRow}>
-                <ActionIcon
+                <PointActionIcon
                   accessibilityLabel="Скопировать координаты"
                   title="Скопировать координаты"
                   onPress={() => onCopy(point.coord)}
                   icon={<Feather name="clipboard" size={18} color={colors.textOnDark} />}
+                  style={styles.actionBtn}
                 />
-                <ActionIcon
+                <PointActionIcon
                   accessibilityLabel="Поделиться"
                   title="Поделиться в Telegram"
                   onPress={() => onShare(point.coord)}
                   icon={<Feather name="send" size={18} color={colors.textOnDark} />}
+                  style={styles.actionBtn}
                 />
               </View>
             </View>
@@ -382,10 +386,10 @@ const PointCard = React.memo(function PointCard({
             </CardActionPressable>
 
             <View style={styles.overlayMapChipsRow}>
-              <ActionChip label="Google" title="Открыть в Google Maps" onPress={() => void openExternal(buildMapUrl(point.coord))} />
-              <ActionChip label="Apple" title="Открыть в Apple Maps" onPress={() => void openExternal(buildAppleMapsUrl(point.coord))} />
-              <ActionChip label="Яндекс" title="Открыть в Яндекс Картах" onPress={() => void openExternal(buildYandexMapsUrl(point.coord))} />
-              <ActionChip label="OSM" title="Открыть в OpenStreetMap" onPress={() => void openExternal(buildOsmUrl(point.coord))} />
+              <PointActionChip label="Google" title="Открыть в Google Maps" onPress={() => void openExternal(buildMapUrl(point.coord))} chipStyle={styles.mapChip} textStyle={styles.mapChipText} />
+              <PointActionChip label="Apple" title="Открыть в Apple Maps" onPress={() => void openExternal(buildAppleMapsUrl(point.coord))} chipStyle={styles.mapChip} textStyle={styles.mapChipText} />
+              <PointActionChip label="Яндекс" title="Открыть в Яндекс Картах" onPress={() => void openExternal(buildYandexMapsUrl(point.coord))} chipStyle={styles.mapChip} textStyle={styles.mapChipText} />
+              <PointActionChip label="OSM" title="Открыть в OpenStreetMap" onPress={() => void openExternal(buildOsmUrl(point.coord))} chipStyle={styles.mapChip} textStyle={styles.mapChipText} />
             </View>
 
             {!!point.categoryName && (

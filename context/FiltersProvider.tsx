@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 import { Filters, FiltersContextType } from '@/types/types';
 
 const FiltersContext = createContext<FiltersContextType | undefined>(undefined);
@@ -29,15 +29,17 @@ export const FiltersProvider: React.FC<FiltersProviderProps> = ({ children }) =>
         year: ''
     });
 
-    const updateFilters = (newFilters: Partial<Filters>) => {
+    const updateFilters = useCallback((newFilters: Partial<Filters>) => {
         setFilters((prevFilters) => ({
             ...prevFilters,
             ...newFilters,
         }));
-    };
+    }, []);
+
+    const value = useMemo(() => ({ filters, updateFilters }), [filters, updateFilters]);
 
     return (
-        <FiltersContext.Provider value={{ filters, updateFilters }}>
+        <FiltersContext.Provider value={value}>
             {children}
         </FiltersContext.Provider>
     );

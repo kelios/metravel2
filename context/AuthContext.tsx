@@ -3,9 +3,10 @@
 // Сохраняет обратную совместимость: AuthProvider + useAuth() работают как раньше.
 // Вся логика (login, logout, checkAuthentication, epoch guard) живёт в authStore.
 
-import { createContext, FC, ReactNode, useContext, useEffect } from 'react';
+import { createContext, FC, ReactNode, useContext, useEffect, useMemo } from 'react';
 import { setAuthInvalidationHandler } from '@/api/client';
 import { useAuthStore, type AuthStore } from '@/stores/authStore';
+import { useShallow } from 'zustand/react/shallow';
 
 type AuthContextType = AuthStore;
 
@@ -19,34 +20,44 @@ const AuthContext: ReturnType<typeof createContext<AuthContextType | undefined>>
 globalForAuthContext.__metravelAuthContext = AuthContext;
 
 export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
-    const store = useAuthStore();
+    // Select only the stable action references needed for initialization.
+    // State is NOT subscribed here — consumers pick their own slices via useAuth().
+    const checkAuthentication = useAuthStore((s) => s.checkAuthentication);
+    const invalidateAuthState = useAuthStore((s) => s.invalidateAuthState);
 
     // При первой загрузке проверяем данные аутентификации
     useEffect(() => {
-        store.checkAuthentication();
+        checkAuthentication();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Регистрируем invalidation handler для api client (вызывается при 401)
     useEffect(() => {
-        setAuthInvalidationHandler(store.invalidateAuthState);
+        setAuthInvalidationHandler(invalidateAuthState);
         return () => {
             setAuthInvalidationHandler(null);
         };
-    }, [store.invalidateAuthState]);
+    }, [invalidateAuthState]);
+
+    // Provider value is a stable sentinel — useAuth reads directly from Zustand.
+    const value = useMemo(() => ({} as AuthStore), []);
 
     return (
-        <AuthContext.Provider value={store}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
 };
 
-// Кастомный хук для удобного доступа к контексту
+// Кастомный хук для удобного доступа к контексту.
+// Reads directly from Zustand with useShallow — only re-renders when
+// the selected slice actually changes (shallow equality).
 export const useAuth = (): AuthContextType => {
     const context = useContext(AuthContext);
     if (!context) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
-    return context;
+    return useAuthStore(
+        useShallow((s) => s)
+    );
 };

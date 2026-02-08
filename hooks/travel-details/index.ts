@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTravelDetailsData } from '@/hooks/useTravelDetailsData'
 import { useTravelDetailsLayout } from '@/hooks/useTravelDetailsLayout'
 import { useTravelDetailsMenu } from '@/hooks/useTravelDetailsMenu'
@@ -33,12 +34,12 @@ export function useTravelDetails(args: {
 
   const scroll = useTravelDetailsScrollState()
 
-  return {
+  return useMemo(() => ({
     data,
     layout,
     navigation,
     performance,
     menu,
     scroll,
-  }
+  }), [data, layout, navigation, performance, menu, scroll])
 }

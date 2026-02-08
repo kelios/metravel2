@@ -266,7 +266,17 @@ export function useActiveSection(
     tryRegister();
 
     const scrollTarget: any = scrollRoot && !isDocumentRoot(scrollRoot) ? scrollRoot : window;
-    const onScroll = () => scheduleObserverCallback(computeAndSetActive);
+    // Throttle scroll handler to reduce expensive DOM queries (getBoundingClientRect + sort)
+    // from 60fps to ~10fps — sufficient for scrollspy accuracy.
+    let scrollThrottleTimer: ReturnType<typeof setTimeout> | null = null;
+    const SCROLL_THROTTLE_MS = 100;
+    const onScroll = () => {
+      if (scrollThrottleTimer) return;
+      scrollThrottleTimer = setTimeout(() => {
+        scrollThrottleTimer = null;
+        scheduleObserverCallback(computeAndSetActive);
+      }, SCROLL_THROTTLE_MS);
+    };
     try {
       scrollTarget?.addEventListener?.('scroll', onScroll, { passive: true } as any);
       window.addEventListener?.('resize', onScroll, { passive: true } as any);
@@ -290,6 +300,7 @@ export function useActiveSection(
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
       if (timeoutId) clearTimeout(timeoutId);
+      if (scrollThrottleTimer) clearTimeout(scrollThrottleTimer);
       try {
         scrollTarget?.removeEventListener?.('scroll', onScroll as any);
         window.removeEventListener?.('resize', onScroll as any);

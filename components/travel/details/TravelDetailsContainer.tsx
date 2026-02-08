@@ -214,6 +214,54 @@ export default function TravelDetailsContainer() {
     scrollToWithMenuClose('comments');
   }, [scrollToWithMenuClose]);
 
+  // Memoize Animated.event handler to prevent ScrollView re-renders
+  const scrollEventHandler = useMemo(
+    () =>
+      Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { useNativeDriver: false }
+      ),
+    [scrollY]
+  );
+
+  // Memoize inline styles to prevent new object allocations each render
+  const wrapperStyle = useMemo(
+    () => [
+      styles.wrapper,
+      { backgroundColor: themedColors.background },
+      Platform.OS === 'web' &&
+        ({
+          backgroundImage: `linear-gradient(180deg, ${themedColors.background} 0%, ${themedColors.backgroundSecondary} 100%)`,
+        } as any),
+    ],
+    [styles.wrapper, themedColors.background, themedColors.backgroundSecondary]
+  );
+
+  const sideMenuContainerStyle = useMemo(
+    () => ({ width: menuWidthNum }),
+    [menuWidthNum]
+  );
+
+  const sideMenuAnimatedStyle = useMemo(
+    () => [
+      styles.sideMenuBase,
+      sideMenuPlatformStyles,
+      {
+        transform: [{ translateX: animatedX }],
+        width: '100%' as any,
+        zIndex: 1000,
+        backgroundColor: themedColors.surface,
+        borderRightColor: themedColors.border,
+      },
+    ],
+    [styles.sideMenuBase, sideMenuPlatformStyles, animatedX, themedColors.surface, themedColors.border]
+  );
+
+  const scrollViewStyle = useMemo(
+    () => [styles.scrollView, isMobile && { width: '100%' as any }],
+    [styles.scrollView, isMobile]
+  );
+
   /* ---- prefetch near travels ---- */
   // ✅ ИСПРАВЛЕНИЕ: Убираем prefetch, чтобы избежать дублирующихся запросов
   // Компонент NearTravelList сам загружает данные при монтировании
@@ -345,34 +393,16 @@ export default function TravelDetailsContainer() {
       id="travel-main-content"
       role="main"
       aria-label={`Travel details for ${travel?.name || 'travel'}`}
-      style={[
-        styles.wrapper,
-        { backgroundColor: themedColors.background },
-        Platform.OS === "web" &&
-          ({
-            // @ts-ignore - web-specific CSS property
-            backgroundImage: `linear-gradient(180deg, ${themedColors.background} 0%, ${themedColors.backgroundSecondary} 100%)`,
-          } as any),
-      ]}
+      style={wrapperStyle}
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
           {!isMobile && responsiveWidth >= METRICS.breakpoints.largeTablet && (
-            <View style={{ width: menuWidthNum }}>
+            <View style={sideMenuContainerStyle}>
               <Defer when={deferAllowed}>
                 <Animated.View
                   testID="travel-details-side-menu"
-                  style={[
-                    styles.sideMenuBase,
-                    sideMenuPlatformStyles,
-                    {
-                      transform: [{ translateX: animatedX }],
-                      width: '100%' as any,
-                      zIndex: 1000,
-                      backgroundColor: themedColors.surface,
-                      borderRightColor: themedColors.border,
-                    },
-                  ]}
+                  style={sideMenuAnimatedStyle}
                 >
                   <Suspense fallback={<SectionSkeleton lines={8} />}>
                     <CompactSideBarTravel
@@ -410,12 +440,9 @@ export default function TravelDetailsContainer() {
               styles.scrollContent,
             ]}
             keyboardShouldPersistTaps="handled"
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-              { useNativeDriver: false }
-            )}
+            onScroll={scrollEventHandler}
             scrollEventThrottle={Platform.OS === 'web' ? 32 : 48}
-            style={[styles.scrollView, isMobile && { width: '100%' }]}
+            style={scrollViewStyle}
             nestedScrollEnabled
             onContentSizeChange={handleContentSizeChange}
             onLayout={handleLayout}

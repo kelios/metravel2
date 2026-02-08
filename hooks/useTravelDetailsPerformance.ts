@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { Platform } from 'react-native'
 
@@ -146,10 +146,10 @@ export function useTravelDetailsPerformance({
     }, 1600)
   }, [travel])
 
-  return {
+  return useMemo(() => ({
     lcpLoaded,
     setLcpLoaded,
     sliderReady,
     deferAllowed,
-  }
+  }), [lcpLoaded, setLcpLoaded, sliderReady, deferAllowed])
 }

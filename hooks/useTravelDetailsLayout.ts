@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Platform } from 'react-native'
 
+
 import {
   useTravelDetailsStyles,
   HEADER_OFFSET_DESKTOP,
@@ -46,9 +47,9 @@ export function useTravelDetailsLayout({
     return styles.sideMenuNative
   }, [isMobile, styles])
 
-  return {
+  return useMemo(() => ({
     headerOffset,
     contentHorizontalPadding,
     sideMenuPlatformStyles,
-  }
+  }), [headerOffset, contentHorizontalPadding, sideMenuPlatformStyles])
 }
