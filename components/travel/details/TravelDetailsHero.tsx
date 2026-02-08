@@ -134,7 +134,7 @@ const OptimizedLCPHeroInner: React.FC<{
     typeof window !== 'undefined'
       ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
       : lcpMaxWidth
-  const lcpQuality = isMobile ? 60 : 65
+  const lcpQuality = isMobile ? 50 : 55
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
@@ -258,7 +258,7 @@ const OptimizedLCPHeroInner: React.FC<{
               objectFit: 'contain',
             }}
             loading="eager"
-            decoding="async"
+            decoding="auto"
             // @ts-ignore
             fetchPriority="high"
             // @ts-ignore

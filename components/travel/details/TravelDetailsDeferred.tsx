@@ -82,7 +82,7 @@ export const TravelDeferredSections: React.FC<{
     }
     rIC(() => {
       setCanRenderComments(true)
-    }, 400)
+    }, 1500)
   }, [canRenderHeavy])
 
   return (

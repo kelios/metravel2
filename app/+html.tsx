@@ -288,7 +288,7 @@ const getTravelHeroPreloadScript = () => String.raw`
         if (existingLcp && existingLcp.complete && existingLcp.naturalWidth > 0) return;
 
         var isMobile = (window.innerWidth || 0) <= 540;
-        var quality = isMobile ? 60 : 65;
+        var quality = isMobile ? 50 : 55;
 
         // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [640, 860]
         var widths = isMobile ? [320, 400] : [640, 860];

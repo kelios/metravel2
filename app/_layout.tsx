@@ -245,6 +245,43 @@ export default function RootLayout() {
       }
     }, [fontError]);
 
+    // FIX: Browser back button doesn't work with Tabs navigator.
+    // Expo Router's useLinking calls replaceState (instead of pushState) when switching
+    // between already-visited tabs because the tab history length doesn't change.
+    // This patch converts replaceState → pushState when the URL path actually changes.
+    useEffect(() => {
+      if (!isWeb) return;
+      if (typeof window === 'undefined') return;
+
+      const original = window.history.replaceState.bind(window.history);
+
+      window.history.replaceState = function patchedReplaceState(
+        data: any,
+        unused: string,
+        url?: string | URL | null,
+      ) {
+        if (url != null) {
+          const currentPath = window.location.pathname + window.location.search;
+          let newPath: string;
+          try {
+            const resolved = new URL(String(url), window.location.href);
+            newPath = resolved.pathname + resolved.search;
+          } catch {
+            newPath = String(url);
+          }
+          if (newPath !== currentPath) {
+            // Path changed — push instead of replace so browser back button works
+            return window.history.pushState(data, unused, url);
+          }
+        }
+        return original(data, unused, url);
+      };
+
+      return () => {
+        window.history.replaceState = original;
+      };
+    }, []);
+
     useEffect(() => {
       if (!isWeb) return;
       if (typeof window === 'undefined') return;

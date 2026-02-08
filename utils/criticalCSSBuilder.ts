@@ -97,6 +97,12 @@ export function buildCriticalCSS(): string {
     '[data-testid="map-container"],[data-testid="map-leaflet-wrapper"],.leaflet-container,.leaflet-control-container{contain:none !important}',
     '[data-testid="search-container"]{min-height:600px;contain:layout style paint}',
     '[data-testid="travel-card"]{contain:layout style paint;will-change:auto}',
+    '[data-testid="travel-details-description"]{content-visibility:auto;contain-intrinsic-size:auto 400px}',
+    '[data-testid="travel-details-map"]{content-visibility:auto;contain-intrinsic-size:auto 500px}',
+    '[data-testid="travel-details-points"]{content-visibility:auto;contain-intrinsic-size:auto 300px}',
+    '[data-testid="travel-details-author"]{content-visibility:auto;contain-intrinsic-size:auto 200px}',
+    '[data-testid="travel-details-author-mobile"]{content-visibility:auto;contain-intrinsic-size:auto 200px}',
+    '[data-testid="travel-details-quick-facts"]{content-visibility:auto;contain-intrinsic-size:auto 80px}',
     '[data-testid="map-skeleton"],[data-testid="search-skeleton"]{animation:pulse 1.5s ease-in-out infinite}',
     '@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.7}}',
   ].join('\n');

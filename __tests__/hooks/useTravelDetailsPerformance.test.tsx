@@ -76,17 +76,19 @@ describe('useTravelDetailsPerformance', () => {
 
     // rIC schedules via requestIdleCallback (mocked as setTimeout(cb, 0)).
     // The callback is now async (dynamic imports), so we need to flush both
-    // timers and microtask queue.
+    // timers and microtask queue. Delay is 3000ms.
     await act(async () => {
-      jest.advanceTimersByTime(800)
+      jest.advanceTimersByTime(3000)
     })
 
     // useLCPPreload is now a no-op (preloading handled by inline script in +html.tsx)
     // but it's still called to maintain the hook signature
     expect(useLCPPreload).toHaveBeenCalled()
-    expect(injectCriticalStyles).toHaveBeenCalled()
+    // criticalCSS and advancedPerformanceOptimization are no longer imported at runtime —
+    // critical CSS is inlined in +html.tsx at build time.
+    expect(injectCriticalStyles).not.toHaveBeenCalled()
     expect(initPerformanceMonitoring).toHaveBeenCalled()
-    expect(optimizeCriticalPath).toHaveBeenCalled()
+    expect(optimizeCriticalPath).not.toHaveBeenCalled()
   })
 
   it('enables deferred loading once loading is complete', () => {

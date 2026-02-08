@@ -78,17 +78,15 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (Platform.OS === 'web') {
+      // Defer non-critical performance utilities well past LCP/TBT window.
+      // Critical CSS is already inlined in +html.tsx — no need to inject again.
       rIC(async () => {
-        const [{ injectCriticalStyles }, { initPerformanceMonitoring }, { optimizeCriticalPath }] =
+        const [{ initPerformanceMonitoring }] =
           await Promise.all([
-            import('@/styles/criticalCSS'),
             import('@/utils/performance'),
-            import('@/utils/advancedPerformanceOptimization'),
           ])
-        injectCriticalStyles()
         initPerformanceMonitoring()
-        optimizeCriticalPath()
-      }, 800)
+      }, 3000)
     }
   }, [])
 

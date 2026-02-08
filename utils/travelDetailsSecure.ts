@@ -7,7 +7,25 @@
  */
 
 import type { Travel } from "@/types/types";
-import DOMPurify from 'dompurify';
+
+// DOMPurify is ~60KB — lazy-loaded to keep it out of the critical JS bundle.
+// stripHtml uses a fast regex path first; DOMPurify is only loaded on demand.
+let _DOMPurify: typeof import('dompurify').default | null = null;
+const getDOMPurify = (): typeof import('dompurify').default | null => {
+  if (_DOMPurify) return _DOMPurify;
+  try {
+    // Synchronous require works in Metro/webpack bundles (already bundled, no network fetch).
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    _DOMPurify = require('dompurify') as typeof import('dompurify').default;
+    // Handle default export wrapper
+    if (_DOMPurify && typeof (_DOMPurify as any).default?.sanitize === 'function') {
+      _DOMPurify = (_DOMPurify as any).default;
+    }
+    return _DOMPurify;
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Validate YouTube ID format to prevent injection attacks
@@ -166,34 +184,47 @@ export function stripHtml(html?: string | null): string {
     return fallback;
   }
 
+  // Fast regex path — works for the vast majority of cases (SEO descriptions, titles).
+  // DOMPurify is only needed for untrusted rich HTML; for stripping tags regex is sufficient.
+  const regexStripped = html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (regexStripped) return regexStripped;
+
+  // If regex produced empty result, try DOMPurify as a more robust fallback
   try {
-    // Use dompurify to sanitize and then strip tags
-    const sanitized = DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: [], // Strip all tags
-      ALLOWED_ATTR: [] // Strip all attributes
-    });
-
-    // Clean up whitespace and return
-    const cleaned = sanitized
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#x27;/g, "'")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return cleaned || fallback;
+    const purify = getDOMPurify();
+    if (purify) {
+      const sanitized = purify.sanitize(html, {
+        ALLOWED_TAGS: [],
+        ALLOWED_ATTR: []
+      });
+      const cleaned = sanitized
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned || fallback;
+    }
   } catch {
-    // Fallback: basic regex sanitization if dompurify fails
-    return html
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<[^>]+>/g, "")
-      .replace(/\s+/g, " ")
-      .trim() || fallback;
+    // noop
   }
+
+  return fallback;
 }
 
 /**

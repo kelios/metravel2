@@ -164,6 +164,13 @@ function CompactSideBarTravel({
     return !!(isSuperuser || (a && b && a === b));
   }, [isSuperuser, storedUserId, travelOwnerId]);
 
+  // Проверка: это моё собственное путешествие (без учёта isSuperuser)
+  const isOwnTravel = useMemo(() => {
+    const a = String(storedUserId ?? "");
+    const b = travelOwnerId != null ? String(travelOwnerId) : "";
+    return !!(a && b && a === b);
+  }, [storedUserId, travelOwnerId]);
+
   // ── Безопасные текстовые поля (ничего "null"/"undefined" не рендерим) ──
   const userName = (travel as any).userName || "";
   const monthName = (travel as any).monthName || ""; // напр. "Май"
@@ -333,7 +340,7 @@ function CompactSideBarTravel({
                 </Suspense>
               )}
 
-              {!canEdit && authorUserId && (
+              {!isOwnTravel && authorUserId && (
                 <Pressable
                   onPress={() => openUrl(`/messages?userId=${encodeURIComponent(authorUserId)}`)}
                   accessibilityRole="button"
@@ -404,7 +411,7 @@ function CompactSideBarTravel({
                   ? ({ testID: 'open-author-travels', } as any)
                   : {})}
               />
-              {!canEdit && authorUserId && (
+              {!isOwnTravel && authorUserId && (
                 <View style={styles.sidebarActionsRow}>
                   <SubscribeButton targetUserId={authorUserId} size="sm" />
                   <Button
@@ -418,7 +425,7 @@ function CompactSideBarTravel({
                   />
                 </View>
               )}
-              {canEdit && authorUserId && (
+              {isOwnTravel && authorUserId && (
                 <SubscribeButton targetUserId={authorUserId} size="sm" style={{ marginTop: 6 }} />
               )}
             </View>

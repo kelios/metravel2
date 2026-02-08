@@ -1,13 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { Suspense, lazy, useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
-import Home from '@/components/home/Home';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+
+const Home = lazy(() => import('@/components/home/Home'));
 
 function HomeScreen() {
     const pathname = usePathname();
@@ -35,7 +36,11 @@ function HomeScreen() {
 
     const shouldRenderHomeContent = useMemo(() => {
         if (Platform.OS !== 'web') return true;
-        return true;
+        if (typeof window === 'undefined') return true;
+        // On web, skip rendering Home content when the URL is NOT the home page.
+        // This prevents the flash of home page when directly navigating to /travels/* etc.
+        const p = String(window.location?.pathname ?? '').trim();
+        return p === '' || p === '/' || p === '/index';
     }, []);
 
     const title = 'Твоя книга путешествий | Metravel';
@@ -73,7 +78,9 @@ function HomeScreen() {
                         </View>
                     }
                 >
-                    <Home />
+                    <Suspense fallback={<View style={styles.container} />}>
+                        <Home />
+                    </Suspense>
                 </ErrorBoundary>
             </View>
         </>

@@ -84,8 +84,15 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
     if (!when) return;
 
     if (Platform.OS === 'web') {
-      setReady(true);
-      return;
+      // Double-rAF: the first rAF fires before the browser paints, the second fires
+      // after the paint. This guarantees the LCP hero image has actually been painted
+      // before we mount heavy deferred sections, keeping them off the critical path.
+      let raf1 = 0;
+      let raf2 = 0;
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setReady(true));
+      });
+      return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); };
     }
     let done = false;
     const kick = () => {
