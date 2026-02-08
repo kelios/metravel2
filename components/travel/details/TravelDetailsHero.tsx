@@ -507,6 +507,7 @@ function TravelHeroSectionInner({
               mobileHeightPercent={0.6}
               onFirstImageLoad={onFirstImageLoad}
               onImagePress={handleOpenLightbox}
+              firstImagePreloaded={renderSlider && Platform.OS === 'web'}
             />
           )}
 

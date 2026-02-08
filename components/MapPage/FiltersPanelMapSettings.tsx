@@ -241,7 +241,6 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                     disabled={!mapUiApi}
                     onPress={() => {
                       const next = !enabled;
-                      console.info('[FiltersPanel] Toggle overlay:', o.id, 'to', next);
                       setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
                       safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(o.id, next));
                     }}

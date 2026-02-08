@@ -178,8 +178,6 @@ export const buildAddressFromGeocode = (
     if (adminArea && adminArea !== adminRegion && adminArea !== countryLabel && adminArea !== city) parts.push(adminArea);
     if (countryLabel) parts.push(countryLabel);
 
-    console.info('Address parts:', parts);
-
     const separator = ' · ';
     const combined = parts.filter(Boolean).join(separator);
     if (combined) return combined;

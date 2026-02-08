@@ -68,7 +68,7 @@ export const sendAnalyticsEvent = async (
         if (!res.ok) {
             console.error(`GA4 Error [${res.status}]:`, await res.text());
         } else {
-            console.info(`📊 GA Event: ${eventName}`, eventParams);
+            // GA event sent successfully
         }
     } catch (error) {
         console.error('GA4 Fetch Error:', error);

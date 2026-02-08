@@ -41,19 +41,10 @@ export function useTravelDetailsPerformance({
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
 
-    // LCP metric is already captured. Enable the slider after a short idle
-    // delay so the browser can finish painting the static hero first.
-    if (typeof window === 'undefined') {
-      setSliderReady(true)
-      return
-    }
-
-    let cancelled = false
-    rIC(() => {
-      if (!cancelled) setSliderReady(true)
-    }, 200)
-
-    return () => { cancelled = true }
+    // LCP metric is already captured. Enable the slider immediately —
+    // the Slider now receives firstImagePreloaded=true so the first slide
+    // skips the shimmer overlay, making the swap visually seamless.
+    setSliderReady(true)
   }, [lcpLoaded])
 
   useEffect(() => {

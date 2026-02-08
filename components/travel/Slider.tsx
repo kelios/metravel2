@@ -67,6 +67,8 @@ export interface SliderProps {
   onFirstImageLoad?: () => void;
   mobileHeightPercent?: number;
   onImagePress?: (index: number) => void;
+  /** When true, the first slide skips the loading shimmer (image already in browser cache). */
+  firstImagePreloaded?: boolean;
 }
 
 export interface SliderRef {
@@ -282,6 +284,8 @@ type SlideProps = {
   imageProps?: any;
   onFirstImageLoad?: () => void;
   onImagePress?: (index: number) => void;
+  /** When true, skip the loading shimmer (image already in browser cache). */
+  firstImagePreloaded?: boolean;
 };
 
 const Slide = memo(function Slide({
@@ -297,8 +301,11 @@ const Slide = memo(function Slide({
   imageProps,
   onFirstImageLoad,
   onImagePress,
+  firstImagePreloaded,
 }: SlideProps) {
-  const [status, setStatus] = useState<LoadStatus>('loading');
+  const [status, setStatus] = useState<LoadStatus>(
+    index === 0 && firstImagePreloaded ? 'loaded' : 'loading'
+  );
 
   const isFirstSlide = index === 0;
   const mainPriority = isFirstSlide ? 'high' : 'low';
@@ -419,6 +426,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     onFirstImageLoad,
     mobileHeightPercent = MOBILE_HEIGHT_PERCENT,
     onImagePress,
+    firstImagePreloaded,
   } = props;
 
   const insets = useSafeAreaInsets();
@@ -759,6 +767,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           imageProps={imageProps}
           onFirstImageLoad={onFirstImageLoad}
           onImagePress={onImagePress}
+          firstImagePreloaded={firstImagePreloaded}
         />
       );
     },
@@ -777,6 +786,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       aspectRatio,
       styles,
       isMobile,
+      firstImagePreloaded,
     ]
   );
 

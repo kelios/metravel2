@@ -195,7 +195,7 @@ export const fetchWithRetry = async <T,>(
 
             // Exponential backoff: 1s, 2s, 4s
             const delay = initialDelay * Math.pow(2, attempt)
-            console.info(`[useRouting] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`)
+            // Retry with exponential backoff
 
             await new Promise(resolve => setTimeout(resolve, delay))
         }

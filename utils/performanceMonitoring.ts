@@ -308,17 +308,6 @@ export function analyzeResourceTiming() {
     }
   });
 
-  console.info('[Performance] Resource analysis', analysis);
-  
-  // Log specific issues
-  if (analysis.slowResources.length > 0) {
-    console.warn('[Performance] Slow resources found:', analysis.slowResources.map(r => r.name));
-  }
-  
-  if (analysis.largeResources.length > 0) {
-    console.warn('[Performance] Large resources found:', analysis.largeResources.map(r => r.name));
-  }
-
   return analysis;
 }
 

@@ -16,7 +16,7 @@ export const registerServiceWorker = async (): Promise<boolean> => {
 
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          console.info('New service worker available, page will refresh on next visit');
+          // New service worker installed, will activate on next visit
         }
       });
     });

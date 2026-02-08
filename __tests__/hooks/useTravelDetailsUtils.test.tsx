@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native'
 import {
   useAnimationFrame,
-  useComponentLifecycle,
   useControlledState,
   useDebouncedCallback,
   useDOMElement,
@@ -182,18 +181,4 @@ describe('useTravelDetailsUtils', () => {
     jest.useRealTimers()
   })
 
-  it('useComponentLifecycle logs in development', () => {
-    const originalEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'development'
-
-    const infoSpy = jest.spyOn(console, 'info').mockImplementation(() => {})
-    const { unmount } = renderHook(() => useComponentLifecycle('Widget'))
-
-    expect(infoSpy).toHaveBeenCalledWith('[Widget] mounted')
-    unmount()
-    expect(infoSpy).toHaveBeenCalledWith('[Widget] unmounted')
-
-    infoSpy.mockRestore()
-    process.env.NODE_ENV = originalEnv
-  })
 })

@@ -3,7 +3,7 @@
  */
 
 import React, { useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { parseCoordinateString } from '@/utils/coordinates';
@@ -172,6 +172,17 @@ const getStyles = (colors: ThemedColors) =>
       flexWrap: 'nowrap',
     },
     scroll: {
+      ...Platform.select({
+        web: {
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          touchAction: 'pan-x',
+        } as any,
+        default: {},
+      }),
     },
     card: {
       width: 220,

@@ -243,8 +243,6 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         const prevOldImage = prevOldImageRef.current;
         prevOldImageRef.current = oldImage;
         
-        if (__DEV__) console.info('PhotoUploadWithPreview: oldImage changed', { oldImage, isManuallySelected, isFirstRender, prevOldImage });
-        
         if (isManuallySelected) {
             return;
         }
@@ -265,15 +263,12 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         if (!oldImage || !oldImage.trim()) {
             // Только если это не первый рендер и раньше было значение - не сбрасываем
             if (!isFirstRender && prevOldImage && prevOldImage.trim()) {
-                if (__DEV__) console.info('PhotoUploadWithPreview: oldImage became empty, keeping current state');
                 return;
             }
             // Первый рендер с пустым oldImage - ничего не делаем
             if (isFirstRender) {
-                if (__DEV__) console.info('PhotoUploadWithPreview: first render with empty oldImage, skipping');
                 return;
             }
-            if (__DEV__) console.info('PhotoUploadWithPreview: oldImage is empty, clearing image');
             setImageUri(null);
             setPreviewUrl(null);
             setFallbackImageUrl(null);
@@ -282,7 +277,6 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
         }
         
         const normalized = normalizeImageUrl(oldImage);
-        if (__DEV__) console.info('PhotoUploadWithPreview: normalized URL', normalized);
         if (normalized && normalized.length > 0) {
             setImageUri(normalized);
             setFallbackImageUrl(oldImage);
@@ -344,10 +338,8 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             if (Platform.OS === 'web' && file instanceof File) {
                 previewCandidate = URL.createObjectURL(file);
                 blobUrlsRef.current.add(previewCandidate);
-                if (__DEV__) console.info('Created blob URL:', previewCandidate);
             } else {
                 previewCandidate = (file as { uri: string }).uri;
-                if (__DEV__) console.info('Using file URI:', previewCandidate);
             }
             
             // Устанавливаем превью сразу
@@ -410,8 +402,6 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
             const uploadedUrlRaw = response?.url || response?.data?.url || response?.path || response?.file_url;
             const uploadedUrl = uploadedUrlRaw ? normalizeImageUrl(uploadedUrlRaw) : null;
             
-            if (__DEV__) console.info('Upload response:', { uploadedUrlRaw, uploadedUrl });
-
             if (uploadedUrl) {
                 // Успешная загрузка - показываем URL с сервера
                 setImageUri(uploadedUrl);
@@ -486,7 +476,6 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
 
             const file = acceptedFiles[0];
             if (file) {
-                if (__DEV__) console.info('File selected:', file.name, file.type, file.size);
                 const validationError = validateFile(file);
                 if (validationError) {
                     setError(validationError);
@@ -548,12 +537,6 @@ const PhotoUploadWithPreview: React.FC<PhotoUploadWithPreviewProps> = ({
                                 onLoad={(e) => {
                                     const imgEl = e.currentTarget as HTMLImageElement;
                                     const isDecoded = (imgEl?.naturalWidth ?? 0) > 0 && (imgEl?.naturalHeight ?? 0) > 0;
-                                    if (__DEV__) console.info('Image loaded successfully:', currentDisplayUrl, {
-                                        naturalWidth: imgEl?.naturalWidth,
-                                        naturalHeight: imgEl?.naturalHeight,
-                                        isDecoded,
-                                    });
-
                                     if (isDecoded) return;
 
                                     const candidateFallback = chooseFallbackUrl(

@@ -158,7 +158,6 @@ export function useMapTravels({
       mode,
       routeSignature,
       backendFilters,
-      isEnabled,
     ]
   );
 

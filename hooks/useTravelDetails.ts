@@ -3,7 +3,7 @@
  * Изолирует логику загрузки данных от UI-компонентов
  */
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { fetchTravel, fetchTravelBySlug, normalizeTravelItem } from '@/api/travelsApi';
 import type { Travel } from '@/types/types';
@@ -78,9 +78,10 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     // Не дергаем лишние перезапросы при маунте/фокусе окна, чтобы страница не мигала
     refetchOnMount: isWebAutomation ? true : false,
     refetchOnWindowFocus: isWebAutomation ? true : false,
-    // In Playwright runs we want deterministic error rendering when network is blocked.
-    // keepPreviousData can mask errors by keeping cached content visible.
-    placeholderData: isWebAutomation ? undefined : keepPreviousData,
+    // keepPreviousData removed: it caused showing the PREVIOUS travel's gallery/content
+    // when navigating between different travels, producing a visible flicker
+    // (old gallery flash → skeleton → new content).
+    placeholderData: undefined,
   });
 
   return {

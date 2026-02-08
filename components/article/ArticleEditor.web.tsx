@@ -443,21 +443,11 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                     const clean = prevSanitized?.raw === next ? prevSanitized.clean : sanitizeHtml(next);
                     lastSanitizedForceSyncRef.current = { raw: next, clean };
 
-                    if (__DEV__) {
-                        console.info('[ArticleEditor] Forcing Quill content sync', {
-                            contentLen: clean.length,
-                            htmlLen: typeof html === 'string' ? html.length : 0,
-                            attempt: forceSyncAttemptRef.current,
-                        });
-                    }
-
                     editor.clipboard?.dangerouslyPasteHTML?.(0, clean, 'silent');
                     editor.setSelection?.(0, 0, 'silent');
                     lastForceSyncedContentRef.current = next;
-                } catch (e) {
-                    if (__DEV__) {
-                        console.info('[ArticleEditor] Failed to force Quill content sync', e);
-                    }
+                } catch (_e) {
+                    // noop
                 }
             });
         };
