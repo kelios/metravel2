@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -17,6 +17,40 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import MessageBubble from '@/components/messages/MessageBubble';
 import type { Message } from '@/api/messages';
 
+type ChatListItem =
+    | { type: 'message'; data: Message }
+    | { type: 'dateSeparator'; label: string; key: string };
+
+function formatDateLabel(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const isToday =
+        date.getDate() === now.getDate() &&
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear();
+    if (isToday) return 'Сегодня';
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday =
+        date.getDate() === yesterday.getDate() &&
+        date.getMonth() === yesterday.getMonth() &&
+        date.getFullYear() === yesterday.getFullYear();
+    if (isYesterday) return 'Вчера';
+
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function getDateKey(dateStr: string | null): string {
+    if (!dateStr) return 'unknown';
+    try {
+        const d = new Date(dateStr);
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    } catch {
+        return 'unknown';
+    }
+}
+
 interface ChatViewProps {
     messages: Message[];
     loading: boolean;
@@ -29,6 +63,7 @@ interface ChatViewProps {
     onLoadMore?: () => void;
     hasMore?: boolean;
     hideBackButton?: boolean;
+    onDeleteMessage?: (messageId: number) => void;
 }
 
 function ChatView({
@@ -43,19 +78,29 @@ function ChatView({
     onLoadMore,
     hasMore,
     hideBackButton,
+    onDeleteMessage,
 }: ChatViewProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [text, setText] = useState('');
     const inputRef = useRef<TextInput>(null);
     const currentUserIdNum = currentUserId ? Number(currentUserId) : null;
+    const SEND_COOLDOWN_MS = 300;
+    const [sendCooldown, setSendCooldown] = useState(false);
+
+    useEffect(() => {
+        if (!sendCooldown) return;
+        const timer = setTimeout(() => setSendCooldown(false), SEND_COOLDOWN_MS);
+        return () => clearTimeout(timer);
+    }, [sendCooldown]);
 
     const handleSend = useCallback(() => {
         const trimmed = text.trim();
-        if (!trimmed) return;
+        if (!trimmed || sendCooldown) return;
+        setSendCooldown(true);
         onSend(trimmed);
         setText('');
-    }, [text, onSend]);
+    }, [text, onSend, sendCooldown]);
 
     const handleKeyPress = useCallback(
         (e: any) => {
@@ -67,23 +112,63 @@ function ChatView({
         [handleSend]
     );
 
-    const sortedMessages = useMemo(() => {
-        return [...messages].sort((a, b) => {
+    const listItems = useMemo((): ChatListItem[] => {
+        const sorted = [...messages].sort((a, b) => {
             const da = a.created_at ? new Date(a.created_at).getTime() : 0;
             const db = b.created_at ? new Date(b.created_at).getTime() : 0;
             return db - da;
         });
+
+        const items: ChatListItem[] = [];
+        let prevDateKey: string | null = null;
+
+        for (const msg of sorted) {
+            const dk = getDateKey(msg.created_at);
+            if (dk !== prevDateKey) {
+                items.push({
+                    type: 'dateSeparator',
+                    label: formatDateLabel(msg.created_at || ''),
+                    key: `sep-${dk}`,
+                });
+                prevDateKey = dk;
+            }
+            items.push({ type: 'message', data: msg });
+        }
+
+        return items;
     }, [messages]);
 
     const renderItem = useCallback(
-        ({ item }: { item: Message }) => {
-            const isOwn = item.sender === currentUserIdNum;
-            return <MessageBubble message={item} isOwn={isOwn} />;
+        ({ item }: { item: ChatListItem }) => {
+            if (item.type === 'dateSeparator') {
+                return (
+                    <View style={styles.dateSeparator}>
+                        <View style={[styles.dateSeparatorLine, { backgroundColor: colors.borderLight }]} />
+                        <Text style={[styles.dateSeparatorText, { color: colors.textMuted }]}>
+                            {item.label}
+                        </Text>
+                        <View style={[styles.dateSeparatorLine, { backgroundColor: colors.borderLight }]} />
+                    </View>
+                );
+            }
+            const msg = item.data;
+            const isOwn = msg.sender === currentUserIdNum;
+            return (
+                <MessageBubble
+                    message={msg}
+                    isOwn={isOwn}
+                    onDelete={isOwn && onDeleteMessage ? () => onDeleteMessage(msg.id) : undefined}
+                />
+            );
         },
-        [currentUserIdNum]
+        [currentUserIdNum, onDeleteMessage, styles, colors]
     );
 
-    const canSend = text.trim().length > 0 && !sending;
+    const keyExtractor = useCallback((item: ChatListItem) => {
+        return item.type === 'dateSeparator' ? item.key : String(item.data.id);
+    }, []);
+
+    const canSend = text.trim().length > 0 && !sending && !sendCooldown;
 
     return (
         <KeyboardAvoidingView
@@ -125,8 +210,8 @@ function ChatView({
                 </View>
             ) : (
                 <FlatList
-                    data={sortedMessages}
-                    keyExtractor={(item) => String(item.id)}
+                    data={listItems}
+                    keyExtractor={keyExtractor}
                     renderItem={renderItem}
                     inverted
                     contentContainerStyle={styles.messagesList}
@@ -264,6 +349,22 @@ const createStyles = (_colors: ThemedColors) =>
             borderRadius: 21,
             alignItems: 'center',
             justifyContent: 'center',
+        },
+        dateSeparator: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: DESIGN_TOKENS.spacing.lg,
+            paddingVertical: DESIGN_TOKENS.spacing.sm,
+            gap: DESIGN_TOKENS.spacing.sm,
+            transform: [{ scaleY: -1 }],
+        },
+        dateSeparatorLine: {
+            flex: 1,
+            height: 1,
+        },
+        dateSeparatorText: {
+            fontSize: DESIGN_TOKENS.typography.sizes.xs,
+            fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
         },
     });
 

@@ -9,6 +9,7 @@ import {
 } from '@/api/user';
 import { ApiError } from '@/api/client';
 import { queryKeys } from '@/queryKeys';
+import { showToast } from '@/utils/toast';
 
 /**
  * Hook to manage subscription state for a target user.
@@ -87,6 +88,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
             if (context?.previous) {
                 queryClient.setQueryData(queryKeys.mySubscriptions(), context.previous);
             }
+            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось подписаться. Попробуйте позже.' });
         },
         onSettled: () => invalidate(),
     });
@@ -112,6 +114,7 @@ export function useSubscription(targetUserId: string | number | null | undefined
             if (context?.previous) {
                 queryClient.setQueryData(queryKeys.mySubscriptions(), context.previous);
             }
+            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось отписаться. Попробуйте позже.' });
         },
         onSettled: () => invalidate(),
     });

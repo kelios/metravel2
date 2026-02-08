@@ -7,6 +7,8 @@ export interface MessageThread {
     participants: number[];
     created_at: string | null;
     last_message_created_at: string | null;
+    unread_count?: number;
+    last_message_text?: string | null;
 }
 
 export interface Message {
@@ -57,11 +59,23 @@ export interface ThreadByUserResponse {
 // ---- API functions ----
 
 export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
-    return apiClient.get<MessageThread[]>('/message-threads/');
+    try {
+        return await apiClient.get<MessageThread[]>('/message-threads/');
+    } catch (e: any) {
+        const status = e?.response?.status;
+        if (status === 401 || status === 404) return [];
+        throw e;
+    }
 };
 
 export const fetchAvailableUsers = async (): Promise<MessagingUser[]> => {
-    return apiClient.get<MessagingUser[]>('/message-threads/available-users/');
+    try {
+        return await apiClient.get<MessagingUser[]>('/message-threads/available-users/');
+    } catch (e: any) {
+        const status = e?.response?.status;
+        if (status === 401 || status === 404) return [];
+        throw e;
+    }
 };
 
 export const fetchThreadByUser = async (userId: number): Promise<ThreadByUserResponse> => {
@@ -71,12 +85,37 @@ export const fetchThreadByUser = async (userId: number): Promise<ThreadByUserRes
 };
 
 export const fetchMessages = async (
+    threadId: number,
     page: number = 1,
     perPage: number = 50
 ): Promise<PaginatedMessages> => {
-    return apiClient.get<PaginatedMessages>(
-        `/messages/?page=${page}&perPage=${perPage}`
-    );
+    try {
+        return await apiClient.get<PaginatedMessages>(
+            `/messages/?thread_id=${threadId}&page=${page}&perPage=${perPage}`
+        );
+    } catch (e: any) {
+        const status = e?.response?.status;
+        if (status === 401 || status === 404) {
+            return { count: 0, next: null, previous: null, results: [] };
+        }
+        throw e;
+    }
+};
+
+export const markThreadRead = async (threadId: number): Promise<null> => {
+    return apiClient.post<null>(`/message-threads/${threadId}/mark-read/`, {});
+};
+
+export interface UnreadCountResponse {
+    count: number;
+}
+
+export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
+    try {
+        return await apiClient.get<UnreadCountResponse>('/messages/unread-count/');
+    } catch {
+        return { count: 0 };
+    }
 };
 
 export const sendMessage = async (

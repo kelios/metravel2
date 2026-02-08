@@ -9,16 +9,18 @@ import {
     ScrollView,
     ActivityIndicator,
     Image,
+    TextInput,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/context/AuthContext';
-import { fetchMySubscriptions, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
+import { fetchMySubscriptions, fetchMySubscribers, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
 import { fetchMyTravels } from '@/api/travelsApi';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
+import SubscribeButton from '@/components/ui/SubscribeButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
@@ -29,11 +31,76 @@ import { queryKeys } from '@/queryKeys';
 import { confirmAction } from '@/utils/confirmAction';
 import { ApiError } from '@/api/client';
 
+type SubscriptionTab = 'subscriptions' | 'subscribers';
+
 type AuthorWithTravels = {
     profile: UserProfileDto;
     travels: any[];
     isLoadingTravels: boolean;
 };
+
+function SubscriberSection({
+    profile,
+    onMessage,
+    onOpenProfile,
+}: {
+    profile: UserProfileDto;
+    onMessage: (userId: number) => void;
+    onOpenProfile: (userId: number) => void;
+}) {
+    const colors = useThemedColors();
+    const styles = useMemo(() => createSubscriberStyles(colors), [colors]);
+    const [avatarError, setAvatarError] = useState(false);
+
+    const fullName = useMemo(() => {
+        const first = String(profile.first_name ?? '').trim();
+        const last = String(profile.last_name ?? '').trim();
+        const name = `${first} ${last}`.trim();
+        return name || 'Пользователь';
+    }, [profile.first_name, profile.last_name]);
+
+    const subscriberUserId = profile.user ?? profile.id;
+
+    return (
+        <View style={styles.section}>
+            <View style={styles.row}>
+                <Pressable
+                    style={styles.info}
+                    onPress={() => onOpenProfile(subscriberUserId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Открыть профиль ${fullName}`}
+                    {...Platform.select({ web: { cursor: 'pointer' } })}
+                >
+                    <View style={styles.avatar}>
+                        {profile.avatar && !avatarError ? (
+                            <Image
+                                source={{ uri: profile.avatar }}
+                                style={styles.avatarImage}
+                                onError={() => setAvatarError(true)}
+                            />
+                        ) : (
+                            <Feather name="user" size={20} color={colors.primary} />
+                        )}
+                    </View>
+                    <Text style={styles.name} numberOfLines={1}>{fullName}</Text>
+                </Pressable>
+
+                <View style={styles.actions}>
+                    <SubscribeButton targetUserId={subscriberUserId} size="sm" />
+                    <Pressable
+                        style={[styles.actionButton, globalFocusStyles.focusable]}
+                        onPress={() => onMessage(subscriberUserId)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Написать ${fullName}`}
+                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                        <Feather name="mail" size={16} color={colors.primary} />
+                    </Pressable>
+                </View>
+            </View>
+        </View>
+    );
+}
 
 function AuthorSection({
     author,
@@ -187,21 +254,49 @@ export default function SubscriptionsScreen() {
     const colors = useThemedColors();
     const queryClient = useQueryClient();
     const styles = useMemo(() => createPageStyles(colors), [colors]);
+    const [activeTab, setActiveTab] = useState<SubscriptionTab>('subscriptions');
+    const [search, setSearch] = useState('');
+
+    const retryFn = useCallback(
+        (failureCount: number, error: Error) => {
+            if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+                return false;
+            }
+            return failureCount < 2;
+        },
+        []
+    );
 
     const subscriptionsQuery = useQuery<UserProfileDto[]>({
         queryKey: queryKeys.mySubscriptions(),
         queryFn: fetchMySubscriptions,
         enabled: isAuthenticated,
         staleTime: 5 * 60 * 1000,
-        retry: (failureCount, error) => {
-            if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-                return false;
-            }
-            return failureCount < 2;
-        },
+        retry: retryFn,
+    });
+
+    const subscribersQuery = useQuery<UserProfileDto[]>({
+        queryKey: queryKeys.mySubscribers(),
+        queryFn: fetchMySubscribers,
+        enabled: isAuthenticated,
+        staleTime: 5 * 60 * 1000,
+        retry: retryFn,
     });
 
     const subscriptions = useMemo(() => subscriptionsQuery.data ?? [], [subscriptionsQuery.data]);
+    const subscribers = useMemo(() => subscribersQuery.data ?? [], [subscribersQuery.data]);
+
+    const getFullName = useCallback((p: UserProfileDto) => {
+        const first = String(p.first_name ?? '').trim();
+        const last = String(p.last_name ?? '').trim();
+        return `${first} ${last}`.trim().toLowerCase();
+    }, []);
+
+    const filteredSubscribers = useMemo(() => {
+        if (!search.trim()) return subscribers;
+        const q = search.trim().toLowerCase();
+        return subscribers.filter((p) => getFullName(p).includes(q));
+    }, [subscribers, search, getFullName]);
 
     const [authorTravels, setAuthorTravels] = useState<Record<number, { travels: any[]; loading: boolean }>>({});
 
@@ -298,6 +393,15 @@ export default function SubscriptionsScreen() {
         [router]
     );
 
+    const filteredAuthors = useMemo(
+        () => {
+            if (!search.trim()) return authors;
+            const q = search.trim().toLowerCase();
+            return authors.filter((a) => getFullName(a.profile).includes(q));
+        },
+        [authors, search, getFullName]
+    );
+
     if (!authReady) {
         return (
             <SafeAreaView style={styles.container}>
@@ -332,7 +436,11 @@ export default function SubscriptionsScreen() {
         );
     }
 
-    if (subscriptionsQuery.isLoading) {
+    const isActiveLoading = activeTab === 'subscriptions'
+        ? subscriptionsQuery.isLoading
+        : subscribersQuery.isLoading;
+
+    if (isActiveLoading) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
@@ -345,9 +453,71 @@ export default function SubscriptionsScreen() {
         );
     }
 
-    if (subscriptions.length === 0) {
-        return (
-            <SafeAreaView style={styles.container}>
+    const renderTabBar = () => (
+        <View style={styles.tabBar}>
+            <Pressable
+                style={[
+                    styles.tab,
+                    activeTab === 'subscriptions' && styles.tabActive,
+                    globalFocusStyles.focusable,
+                ]}
+                onPress={() => setActiveTab('subscriptions')}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === 'subscriptions' }}
+                accessibilityLabel="Подписки"
+                {...Platform.select({ web: { cursor: 'pointer' } })}
+            >
+                <Text style={[
+                    styles.tabText,
+                    activeTab === 'subscriptions' && styles.tabTextActive,
+                ]}>
+                    Подписки{subscriptions.length > 0 ? ` (${subscriptions.length})` : ''}
+                </Text>
+            </Pressable>
+            <Pressable
+                style={[
+                    styles.tab,
+                    activeTab === 'subscribers' && styles.tabActive,
+                    globalFocusStyles.focusable,
+                ]}
+                onPress={() => setActiveTab('subscribers')}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === 'subscribers' }}
+                accessibilityLabel="Подписчики"
+                {...Platform.select({ web: { cursor: 'pointer' } })}
+            >
+                <Text style={[
+                    styles.tabText,
+                    activeTab === 'subscribers' && styles.tabTextActive,
+                ]}>
+                    Подписчики{subscribers.length > 0 ? ` (${subscribers.length})` : ''}
+                </Text>
+            </Pressable>
+        </View>
+    );
+
+    const renderSearchBar = () => (
+        <View style={[styles.searchContainer, { backgroundColor: colors.backgroundSecondary, borderColor: colors.borderLight }]}>
+            <Feather name="search" size={16} color={colors.textMuted} />
+            <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                value={search}
+                onChangeText={setSearch}
+                placeholder="Поиск по имени..."
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Поиск по подпискам"
+            />
+            {search.length > 0 && (
+                <Pressable onPress={() => setSearch('')} accessibilityLabel="Очистить поиск">
+                    <Feather name="x" size={16} color={colors.textMuted} />
+                </Pressable>
+            )}
+        </View>
+    );
+
+    const renderSubscriptionsTab = () => {
+        if (subscriptions.length === 0) {
+            return (
                 <EmptyState
                     icon="users"
                     title="Вы ещё ни на кого не подписаны"
@@ -358,30 +528,23 @@ export default function SubscriptionsScreen() {
                         onPress: () => router.push('/search'),
                     }}
                 />
-            </SafeAreaView>
-        );
-    }
+            );
+        }
 
-    return (
-        <SafeAreaView style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+        return (
+            <>
+                {renderSearchBar()}
                 <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <View style={styles.headerTitleBlock}>
-                            <Text style={styles.title}>Подписки</Text>
-                            <Text style={styles.subtitle}>
-                                {subscriptions.length}{' '}
-                                {subscriptions.length === 1
-                                    ? 'автор'
-                                    : subscriptions.length < 5
-                                        ? 'автора'
-                                        : 'авторов'}
-                            </Text>
-                        </View>
-                    </View>
+                    <Text style={styles.subtitle}>
+                        {subscriptions.length}{' '}
+                        {subscriptions.length === 1
+                            ? 'автор'
+                            : subscriptions.length < 5
+                                ? 'автора'
+                                : 'авторов'}
+                    </Text>
                 </View>
-
-                {authors.map((author) => (
+                {filteredAuthors.map((author) => (
                     <AuthorSection
                         key={author.profile.user ?? author.profile.id}
                         author={author}
@@ -391,6 +554,65 @@ export default function SubscriptionsScreen() {
                         onOpenProfile={handleOpenProfile}
                     />
                 ))}
+                {filteredAuthors.length === 0 && search.trim() && (
+                    <View style={styles.noResults}>
+                        <Text style={[styles.noResultsText, { color: colors.textMuted }]}>Ничего не найдено</Text>
+                    </View>
+                )}
+            </>
+        );
+    };
+
+    const renderSubscribersTab = () => {
+        if (subscribers.length === 0) {
+            return (
+                <EmptyState
+                    icon="users"
+                    title="У вас пока нет подписчиков"
+                    description="Публикуйте путешествия, чтобы привлечь подписчиков."
+                    variant="empty"
+                />
+            );
+        }
+
+        return (
+            <>
+                {renderSearchBar()}
+                <View style={styles.header}>
+                    <Text style={styles.subtitle}>
+                        {subscribers.length}{' '}
+                        {subscribers.length === 1
+                            ? 'подписчик'
+                            : subscribers.length < 5
+                                ? 'подписчика'
+                                : 'подписчиков'}
+                    </Text>
+                </View>
+                {filteredSubscribers.map((profile) => (
+                    <SubscriberSection
+                        key={profile.user ?? profile.id}
+                        profile={profile}
+                        onMessage={handleMessage}
+                        onOpenProfile={handleOpenProfile}
+                    />
+                ))}
+                {filteredSubscribers.length === 0 && search.trim() && (
+                    <View style={styles.noResults}>
+                        <Text style={[styles.noResultsText, { color: colors.textMuted }]}>Ничего не найдено</Text>
+                    </View>
+                )}
+            </>
+        );
+    };
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                <View style={styles.header}>
+                    <Text style={styles.title}>Подписки</Text>
+                </View>
+                {renderTabBar()}
+                {activeTab === 'subscriptions' ? renderSubscriptionsTab() : renderSubscribersTab()}
             </ScrollView>
         </SafeAreaView>
     );
@@ -434,6 +656,128 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
             alignItems: 'center',
             justifyContent: 'center',
             flex: 1,
+        },
+        tabBar: {
+            flexDirection: 'row',
+            marginHorizontal: 16,
+            marginBottom: 12,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            backgroundColor: colors.mutedBackground,
+            padding: 4,
+        },
+        tab: {
+            flex: 1,
+            paddingVertical: 10,
+            alignItems: 'center',
+            borderRadius: DESIGN_TOKENS.radii.sm,
+        },
+        tabActive: {
+            backgroundColor: colors.surface,
+            ...(Platform.OS === 'web'
+                ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+                : Platform.OS === 'android'
+                    ? { elevation: 1 }
+                    : {}),
+        },
+        tabText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.textMuted,
+        },
+        tabTextActive: {
+            color: colors.primary,
+        },
+        searchContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginHorizontal: 16,
+            marginBottom: 8,
+            paddingHorizontal: DESIGN_TOKENS.spacing.md,
+            paddingVertical: DESIGN_TOKENS.spacing.xs,
+            borderWidth: 1,
+            borderRadius: DESIGN_TOKENS.radii.lg,
+            gap: DESIGN_TOKENS.spacing.xs,
+        },
+        searchInput: {
+            flex: 1,
+            fontSize: 14,
+            paddingVertical: DESIGN_TOKENS.spacing.xs,
+            ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
+        },
+        noResults: {
+            paddingVertical: DESIGN_TOKENS.spacing.xl,
+            alignItems: 'center',
+        },
+        noResultsText: {
+            fontSize: 14,
+            fontStyle: 'italic',
+        },
+    });
+
+const createSubscriberStyles = (colors: ReturnType<typeof useThemedColors>) =>
+    StyleSheet.create({
+        section: {
+            marginHorizontal: 16,
+            marginBottom: 10,
+            backgroundColor: colors.surface,
+            borderRadius: DESIGN_TOKENS.radii.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+            ...(Platform.OS === 'web'
+                ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+                : Platform.OS === 'android'
+                    ? { elevation: 2 }
+                    : {}),
+        },
+        row: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 12,
+            gap: 10,
+        },
+        info: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            flex: 1,
+            minWidth: 0,
+        },
+        avatar: {
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            backgroundColor: colors.primarySoft,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderWidth: 2,
+            borderColor: colors.primary,
+            overflow: 'hidden',
+        },
+        avatarImage: {
+            width: '100%',
+            height: '100%',
+            resizeMode: 'cover',
+        },
+        name: {
+            fontSize: 15,
+            fontWeight: '700',
+            color: colors.text,
+            flex: 1,
+        },
+        actions: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+        },
+        actionButton: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            backgroundColor: colors.primarySoft,
+            alignItems: 'center',
+            justifyContent: 'center',
+            ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
         },
     });
 

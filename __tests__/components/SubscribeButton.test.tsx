@@ -16,6 +16,10 @@ jest.mock('@/utils/authNavigation', () => ({
     buildLoginHref: jest.fn(() => '/login'),
 }));
 
+jest.mock('@/utils/toast', () => ({
+    showToast: jest.fn(),
+}));
+
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -149,5 +153,59 @@ describe('SubscribeButton', () => {
         );
 
         expect(toJSON()).toBeNull();
+    });
+
+    it('shows loading state while subscriptions are being fetched', () => {
+        mockedFetchMySubscriptions.mockReturnValue(new Promise(() => {}));
+
+        const { getByLabelText } = render(
+            <SubscribeButton targetUserId="99" />,
+            { wrapper: createWrapper() }
+        );
+
+        const button = getByLabelText('Загрузка состояния подписки');
+        expect(button).toBeTruthy();
+    });
+
+    it('shows toast on subscribe error', async () => {
+        const { showToast } = require('@/utils/toast');
+        mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedSubscribeToUser.mockRejectedValue(new Error('Network error'));
+
+        const { findByText } = render(
+            <SubscribeButton targetUserId="99" />,
+            { wrapper: createWrapper() }
+        );
+
+        const button = await findByText('Подписаться');
+        fireEvent.press(button);
+
+        await waitFor(() => {
+            expect(showToast).toHaveBeenCalledWith(
+                expect.objectContaining({ type: 'error', text2: expect.stringContaining('подписаться') })
+            );
+        });
+    });
+
+    it('shows toast on unsubscribe error', async () => {
+        const { showToast } = require('@/utils/toast');
+        mockedFetchMySubscriptions.mockResolvedValue([
+            { id: 5, first_name: 'Test', last_name: 'User', user: 99 },
+        ]);
+        mockedUnsubscribeFromUser.mockRejectedValue(new Error('Network error'));
+
+        const { findByText } = render(
+            <SubscribeButton targetUserId="99" />,
+            { wrapper: createWrapper() }
+        );
+
+        const button = await findByText('Вы подписаны');
+        fireEvent.press(button);
+
+        await waitFor(() => {
+            expect(showToast).toHaveBeenCalledWith(
+                expect.objectContaining({ type: 'error', text2: expect.stringContaining('отписаться') })
+            );
+        });
     });
 });

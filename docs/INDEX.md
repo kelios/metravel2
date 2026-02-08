@@ -30,6 +30,14 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/QUESTS_BACKEND.md` — quest backend migration, API, architecture, data migration
 
+## Messaging
+
+- `docs/MESSAGING_SPEC.md` — ТЗ по модулю обмена личными сообщениями (анализ AS-IS + требования TO-BE)
+
+## Subscriptions
+
+- `docs/SUBSCRIPTIONS_SPEC.md` — ТЗ по подписке/отписке (анализ AS-IS + требования к фронтенд-доработке)
+
 ## Design system
 
 - `docs/DESIGN_SYSTEM_CONSOLIDATION.md` — how to migrate to `DESIGN_TOKENS`

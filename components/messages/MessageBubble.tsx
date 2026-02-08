@@ -1,5 +1,7 @@
-import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { memo, useCallback, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Platform, Pressable, Alert } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
+import * as Clipboard from 'expo-clipboard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import type { Message } from '@/api/messages';
@@ -8,9 +10,10 @@ interface MessageBubbleProps {
     message: Message;
     isOwn: boolean;
     isSystem?: boolean;
+    onDelete?: () => void;
 }
 
-function MessageBubble({ message, isOwn, isSystem }: MessageBubbleProps) {
+function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProps) {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -34,6 +37,40 @@ function MessageBubble({ message, isOwn, isSystem }: MessageBubbleProps) {
         }
     }, [message.created_at]);
 
+    const [showActions, setShowActions] = useState(false);
+
+    const copyText = useCallback(async () => {
+        try {
+            if (Platform.OS === 'web' && (navigator as any)?.clipboard) {
+                await (navigator as any).clipboard.writeText(message.text);
+            } else {
+                await Clipboard.setStringAsync(message.text);
+            }
+        } catch {
+            // ignore clipboard failures
+        }
+    }, [message.text]);
+
+    const handleLongPress = useCallback(() => {
+        if (Platform.OS === 'web') {
+            setShowActions((prev) => !prev);
+        } else {
+            const buttons: any[] = [
+                { text: 'Копировать', onPress: copyText },
+            ];
+            if (onDelete) {
+                buttons.push({ text: 'Удалить', style: 'destructive', onPress: onDelete });
+            }
+            buttons.push({ text: 'Отмена', style: 'cancel' });
+            Alert.alert('Сообщение', undefined, buttons);
+        }
+    }, [onDelete, copyText]);
+
+    const handleDeletePress = useCallback(() => {
+        setShowActions(false);
+        onDelete?.();
+    }, [onDelete]);
+
     if (isSystem) {
         return (
             <View style={styles.systemContainer}>
@@ -51,9 +88,36 @@ function MessageBubble({ message, isOwn, isSystem }: MessageBubbleProps) {
         );
     }
 
+    const bubbleContent = (
+        <>
+            <Text
+                style={[
+                    styles.messageText,
+                    { color: isOwn ? '#ffffff' : colors.text },
+                ]}
+                selectable
+            >
+                {message.text}
+            </Text>
+            {!!formattedTime && (
+                <Text
+                    style={[
+                        styles.timeText,
+                        { color: isOwn ? 'rgba(255,255,255,0.7)' : colors.textMuted },
+                    ]}
+                >
+                    {formattedTime}
+                </Text>
+            )}
+        </>
+    );
+
     return (
         <View style={[styles.container, isOwn ? styles.containerOwn : styles.containerOther]}>
-            <View
+            <Pressable
+                testID="message-bubble-pressable"
+                onLongPress={handleLongPress}
+                delayLongPress={400}
                 style={[
                     styles.bubble,
                     isOwn
@@ -61,26 +125,32 @@ function MessageBubble({ message, isOwn, isSystem }: MessageBubbleProps) {
                         : [styles.bubbleOther, { backgroundColor: colors.surface, borderColor: colors.borderLight }],
                 ]}
             >
-                <Text
-                    style={[
-                        styles.messageText,
-                        { color: isOwn ? '#ffffff' : colors.text },
-                    ]}
-                    selectable
-                >
-                    {message.text}
-                </Text>
-                {!!formattedTime && (
-                    <Text
-                        style={[
-                            styles.timeText,
-                            { color: isOwn ? 'rgba(255,255,255,0.7)' : colors.textMuted },
-                        ]}
+                {bubbleContent}
+            </Pressable>
+            {showActions && (
+                <View style={styles.actionsRow}>
+                    <Pressable
+                        onPress={() => { setShowActions(false); copyText(); }}
+                        style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Копировать текст"
                     >
-                        {formattedTime}
-                    </Text>
-                )}
-            </View>
+                        <Feather name="copy" size={14} color={colors.textSecondary} />
+                        <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>Копировать</Text>
+                    </Pressable>
+                    {onDelete && (
+                        <Pressable
+                            onPress={handleDeletePress}
+                            style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Удалить сообщение"
+                        >
+                            <Feather name="trash-2" size={14} color={colors.textSecondary} />
+                            <Text style={[styles.deleteActionText, { color: colors.textSecondary }]}>Удалить</Text>
+                        </Pressable>
+                    )}
+                </View>
+            )}
         </View>
     );
 }
@@ -139,6 +209,24 @@ const createStyles = (_colors: ThemedColors) =>
         },
         systemTimeText: {
             textAlign: 'center',
+        },
+        actionsRow: {
+            flexDirection: 'row',
+            gap: DESIGN_TOKENS.spacing.xs,
+            marginTop: 4,
+            alignSelf: 'flex-end',
+        },
+        actionButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+            paddingVertical: DESIGN_TOKENS.spacing.xs,
+            borderRadius: DESIGN_TOKENS.radii.sm,
+            borderWidth: 1,
+        },
+        deleteActionText: {
+            fontSize: 12,
         },
     });
 

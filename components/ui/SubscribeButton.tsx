@@ -1,5 +1,5 @@
-import React, { memo, useCallback, useMemo } from 'react';
-import { type StyleProp, type ViewStyle } from 'react-native';
+import React, { memo, useCallback, useMemo, useRef } from 'react';
+import { Animated, type StyleProp, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
 import Button from '@/components/ui/Button';
@@ -36,31 +36,56 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style }: Subscrib
     }, [isAuthenticated, toggleSubscription, router]);
 
     const icon = useMemo(
-        () => (
-            <Feather
-                name={isSubscribed ? 'user-check' : 'user-plus'}
-                size={size === 'sm' ? 14 : 16}
-                color={isSubscribed ? colors.primary : colors.textOnPrimary}
-            />
-        ),
-        [isSubscribed, size, colors.primary, colors.textOnPrimary]
+        () =>
+            isLoading ? null : (
+                <Feather
+                    name={isSubscribed ? 'user-check' : 'user-plus'}
+                    size={size === 'sm' ? 14 : 16}
+                    color={isSubscribed ? colors.primary : colors.textOnPrimary}
+                />
+            ),
+        [isSubscribed, isLoading, size, colors.primary, colors.textOnPrimary]
     );
+
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+
+    const originalHandlePress = handlePress;
+    const animatedHandlePress = useCallback(() => {
+        Animated.sequence([
+            Animated.timing(scaleAnim, { toValue: 0.95, duration: 75, useNativeDriver: true }),
+            Animated.timing(scaleAnim, { toValue: 1, duration: 75, useNativeDriver: true }),
+        ]).start();
+        originalHandlePress();
+    }, [scaleAnim, originalHandlePress]);
 
     if (!canSubscribe && isAuthenticated) return null;
 
+    const label = isLoading
+        ? '...'
+        : isSubscribed
+            ? 'Вы подписаны'
+            : 'Подписаться';
+
     return (
-        <Button
-            label={isSubscribed ? 'Вы подписаны' : 'Подписаться'}
-            onPress={handlePress}
-            variant={isSubscribed ? 'outline' : 'primary'}
-            size={size}
-            icon={icon}
-            loading={isLoading || isMutating}
-            accessibilityLabel={
-                isSubscribed ? 'Отписаться от пользователя' : 'Подписаться на пользователя'
-            }
-            style={style}
-        />
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+            <Button
+                label={label}
+                onPress={animatedHandlePress}
+                variant={isSubscribed ? 'outline' : 'primary'}
+                size={size}
+                icon={icon}
+                loading={isLoading || isMutating}
+                disabled={isLoading}
+                accessibilityLabel={
+                    isLoading
+                        ? 'Загрузка состояния подписки'
+                        : isSubscribed
+                            ? 'Отписаться от пользователя'
+                            : 'Подписаться на пользователя'
+                }
+                style={style}
+            />
+        </Animated.View>
     );
 }
 

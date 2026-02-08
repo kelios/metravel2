@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Pressable, Platform, Image, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -8,6 +9,9 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
+import { fetchMySubscriptions, fetchMySubscribers, type UserProfileDto } from '@/api/user';
+import { ApiError } from '@/api/client';
+import { queryKeys } from '@/queryKeys';
 import SubscribeButton from '@/components/ui/SubscribeButton';
 
 export default function PublicUserProfileScreen() {
@@ -41,8 +45,27 @@ export default function PublicUserProfileScreen() {
     [profile]
   );
 
-  const { userId: currentUserId } = useAuth();
+  const { isAuthenticated, userId: currentUserId } = useAuth();
   const isOwnProfile = currentUserId != null && userId != null && String(currentUserId) === String(userId);
+
+  const subscriptionsQuery = useQuery<UserProfileDto[]>({
+    queryKey: queryKeys.mySubscriptions(),
+    queryFn: fetchMySubscriptions,
+    enabled: isAuthenticated && isOwnProfile,
+    staleTime: 5 * 60 * 1000,
+    retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
+  });
+
+  const subscribersQuery = useQuery<UserProfileDto[]>({
+    queryKey: queryKeys.mySubscribers(),
+    queryFn: fetchMySubscribers,
+    enabled: isAuthenticated && isOwnProfile,
+    staleTime: 5 * 60 * 1000,
+    retry: (fc, err) => !(err instanceof ApiError && (err.status === 401 || err.status === 403)) && fc < 2,
+  });
+
+  const subscriptionsCount = subscriptionsQuery.data?.length ?? null;
+  const subscribersCount = subscribersQuery.data?.length ?? null;
 
   const handleViewTravels = useCallback(() => {
     if (!userId) return;
@@ -103,7 +126,33 @@ export default function PublicUserProfileScreen() {
             </View>
             <View style={styles.headerTextBlock}>
               <Text style={styles.userName}>{fullName || 'Пользователь'}</Text>
-              <Text style={styles.userSub}>Автор путешествий</Text>
+              {isOwnProfile && (subscribersCount !== null || subscriptionsCount !== null) ? (
+                <Pressable
+                  style={styles.countsRow}
+                  onPress={() => router.push('/subscriptions' as any)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Открыть подписки"
+                  {...Platform.select({ web: { cursor: 'pointer' } })}
+                >
+                  {subscribersCount !== null && (
+                    <Text style={styles.countText}>
+                      <Text style={styles.countNumber}>{subscribersCount}</Text>
+                      {' '}{subscribersCount === 1 ? 'подписчик' : subscribersCount < 5 ? 'подписчика' : 'подписчиков'}
+                    </Text>
+                  )}
+                  {subscribersCount !== null && subscriptionsCount !== null && (
+                    <Text style={styles.countSeparator}> · </Text>
+                  )}
+                  {subscriptionsCount !== null && (
+                    <Text style={styles.countText}>
+                      <Text style={styles.countNumber}>{subscriptionsCount}</Text>
+                      {' '}{subscriptionsCount === 1 ? 'подписка' : subscriptionsCount < 5 ? 'подписки' : 'подписок'}
+                    </Text>
+                  )}
+                </Pressable>
+              ) : (
+                <Text style={styles.userSub}>Автор путешествий</Text>
+              )}
             </View>
           </View>
 
@@ -227,6 +276,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginBottom: 4,
   },
   userSub: {
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  countsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 2,
+  },
+  countText: {
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  countNumber: {
+    fontWeight: '700',
+    color: colors.text,
+  },
+  countSeparator: {
     fontSize: 13,
     color: colors.textMuted,
   },

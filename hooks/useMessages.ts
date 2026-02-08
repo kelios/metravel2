@@ -6,6 +6,8 @@ import {
     fetchAvailableUsers,
     sendMessage,
     deleteMessage,
+    markThreadRead,
+    fetchUnreadCount,
     type MessageThread,
     type Message,
     type MessagingUser,
@@ -13,9 +15,12 @@ import {
 } from '@/api/messages';
 import { devError } from '@/utils/logger';
 
+const THREADS_POLL_INTERVAL = 30_000;
+const MESSAGES_POLL_INTERVAL = 10_000;
+
 // ---- useThreads ----
 
-export function useThreads(enabled: boolean = true) {
+export function useThreads(enabled: boolean = true, pollEnabled: boolean = true) {
     const [threads, setThreads] = useState<MessageThread[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -44,14 +49,31 @@ export function useThreads(enabled: boolean = true) {
         }
     }, []);
 
+    const silentRefresh = useCallback(async () => {
+        try {
+            const data = await fetchMessageThreads();
+            if (mountedRef.current) {
+                setThreads(Array.isArray(data) ? data : []);
+            }
+        } catch {
+            // silent — polling errors should not disrupt UI
+        }
+    }, []);
+
     useEffect(() => { if (enabled) load(); }, [enabled, load]);
+
+    useEffect(() => {
+        if (!enabled || !pollEnabled) return;
+        const id = setInterval(silentRefresh, THREADS_POLL_INTERVAL);
+        return () => clearInterval(id);
+    }, [enabled, pollEnabled, silentRefresh]);
 
     return { threads, loading, error, refresh: load };
 }
 
 // ---- useThreadMessages ----
 
-export function useThreadMessages(threadId: number | null) {
+export function useThreadMessages(threadId: number | null, pollEnabled: boolean = true) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -65,7 +87,7 @@ export function useThreadMessages(threadId: number | null) {
     }, []);
 
     const load = useCallback(async (reset = false) => {
-        if (threadId == null) return;
+        if (threadId == null || threadId < 0) return;
         if (reset) {
             pageRef.current = 1;
             setHasMore(true);
@@ -73,19 +95,17 @@ export function useThreadMessages(threadId: number | null) {
         setLoading(true);
         setError(null);
         try {
-            const data: PaginatedMessages = await fetchMessages(pageRef.current, 50);
+            const data: PaginatedMessages = await fetchMessages(threadId, pageRef.current, 50);
             if (!mountedRef.current) return;
 
-            const threadMessages = (data.results || []).filter(
-                (m) => m.thread === threadId
-            );
+            const results = data.results || [];
 
             if (reset) {
-                setMessages(threadMessages);
+                setMessages(results);
             } else {
                 setMessages((prev) => {
                     const ids = new Set(prev.map((m) => m.id));
-                    const newOnes = threadMessages.filter((m) => !ids.has(m.id));
+                    const newOnes = results.filter((m) => !ids.has(m.id));
                     return [...prev, ...newOnes];
                 });
             }
@@ -102,15 +122,62 @@ export function useThreadMessages(threadId: number | null) {
         }
     }, [threadId]);
 
+    const silentRefresh = useCallback(async () => {
+        if (threadId == null || threadId < 0) return;
+        try {
+            const data: PaginatedMessages = await fetchMessages(threadId, 1, 50);
+            if (!mountedRef.current) return;
+            const results = data.results || [];
+            setMessages((prev) => {
+                const ids = new Set(prev.map((m) => m.id));
+                const newOnes = results.filter((m) => !ids.has(m.id));
+                if (newOnes.length === 0) return prev;
+                return [...newOnes, ...prev];
+            });
+        } catch {
+            // silent — polling errors should not disrupt UI
+        }
+    }, [threadId]);
+
     useEffect(() => {
-        if (threadId != null) {
+        if (threadId != null && threadId >= 0) {
             load(true);
         } else {
             setMessages([]);
         }
     }, [threadId, load]);
 
-    return { messages, loading, error, hasMore, loadMore: () => load(false), refresh: () => load(true) };
+    useEffect(() => {
+        if (threadId == null || threadId < 0 || !pollEnabled) return;
+        const id = setInterval(silentRefresh, MESSAGES_POLL_INTERVAL);
+        return () => clearInterval(id);
+    }, [threadId, pollEnabled, silentRefresh]);
+
+    const optimisticRemove = useCallback((messageId: number) => {
+        let removed: Message | null = null;
+        let index = -1;
+        setMessages((prev) => {
+            index = prev.findIndex((m) => m.id === messageId);
+            if (index === -1) return prev;
+            removed = prev[index];
+            return prev.filter((m) => m.id !== messageId);
+        });
+        // Return rollback function
+        return () => {
+            if (removed) {
+                const msg = removed;
+                const idx = index;
+                setMessages((prev) => {
+                    if (prev.some((m) => m.id === msg.id)) return prev;
+                    const copy = [...prev];
+                    copy.splice(Math.min(idx, copy.length), 0, msg);
+                    return copy;
+                });
+            }
+        };
+    }, []);
+
+    return { messages, loading, error, hasMore, loadMore: () => load(false), refresh: () => load(true), optimisticRemove };
 }
 
 // ---- useSendMessage ----
@@ -209,4 +276,52 @@ export function useThreadByUser(userId: number | null) {
     }, [userId]);
 
     return { threadId, loading };
+}
+
+// ---- useMarkThreadRead ----
+
+export function useMarkThreadRead() {
+    const mark = useCallback(async (threadId: number) => {
+        if (threadId < 0) return;
+        try {
+            await markThreadRead(threadId);
+        } catch (e: any) {
+            devError('useMarkThreadRead error:', e);
+        }
+    }, []);
+
+    return { mark };
+}
+
+// ---- useUnreadCount ----
+
+export function useUnreadCount(enabled: boolean = true, pollEnabled: boolean = true) {
+    const [count, setCount] = useState(0);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
+
+    const load = useCallback(async () => {
+        try {
+            const data = await fetchUnreadCount();
+            if (mountedRef.current) {
+                setCount(data?.count ?? 0);
+            }
+        } catch {
+            // silent
+        }
+    }, []);
+
+    useEffect(() => { if (enabled) load(); }, [enabled, load]);
+
+    useEffect(() => {
+        if (!enabled || !pollEnabled) return;
+        const id = setInterval(load, THREADS_POLL_INTERVAL);
+        return () => clearInterval(id);
+    }, [enabled, pollEnabled, load]);
+
+    return { count, refresh: load };
 }

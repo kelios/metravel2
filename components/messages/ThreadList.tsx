@@ -99,6 +99,8 @@ function ThreadList({
             const avatarUrl = getOtherParticipantAvatar(item);
             const time = formatDate(item.last_message_created_at);
             const isSelected = selectedThreadId != null && item.id === selectedThreadId;
+            const unread = item.unread_count ?? 0;
+            const lastText = item.last_message_text ?? null;
             return (
                 <Pressable
                     style={({ pressed }) => [
@@ -108,7 +110,7 @@ function ThreadList({
                     ]}
                     onPress={() => onSelectThread(item)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Диалог с ${name}`}
+                    accessibilityLabel={`Диалог с ${name}${unread > 0 ? `, ${unread} непрочитанных` : ''}`}
                 >
                     <View style={[styles.avatar, { backgroundColor: colors.primarySoft }]}>
                         {avatarUrl ? (
@@ -121,16 +123,29 @@ function ThreadList({
                         )}
                     </View>
                     <View style={styles.threadInfo}>
-                        <Text style={[styles.threadName, { color: colors.text }]} numberOfLines={1}>
-                            {name}
-                        </Text>
-                        {!!time && (
-                            <Text style={[styles.threadTime, { color: colors.textMuted }]}>
-                                {time}
+                        <View style={styles.threadNameRow}>
+                            <Text style={[styles.threadName, { color: colors.text }, unread > 0 && styles.threadNameBold]} numberOfLines={1}>
+                                {name}
+                            </Text>
+                            {!!time && (
+                                <Text style={[styles.threadTime, { color: colors.textMuted }]}>
+                                    {time}
+                                </Text>
+                            )}
+                        </View>
+                        {lastText != null && (
+                            <Text style={[styles.threadPreview, { color: unread > 0 ? colors.text : colors.textMuted }]} numberOfLines={1}>
+                                {lastText}
                             </Text>
                         )}
                     </View>
-                    <Feather name="chevron-right" size={18} color={colors.textMuted} />
+                    {unread > 0 ? (
+                        <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
+                            <Text style={styles.unreadBadgeText}>{unread > 99 ? '99+' : unread}</Text>
+                        </View>
+                    ) : (
+                        <Feather name="chevron-right" size={18} color={colors.textMuted} />
+                    )}
                 </Pressable>
             );
         },
@@ -281,13 +296,39 @@ const createStyles = (_colors: ThemedColors) =>
             flex: 1,
             marginRight: DESIGN_TOKENS.spacing.xs,
         },
+        threadNameRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+        },
         threadName: {
             fontSize: DESIGN_TOKENS.typography.sizes.md,
-            fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+            fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+            flex: 1,
+        },
+        threadNameBold: {
+            fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         },
         threadTime: {
             fontSize: DESIGN_TOKENS.typography.sizes.xs,
+            marginLeft: DESIGN_TOKENS.spacing.xs,
+        },
+        threadPreview: {
+            fontSize: DESIGN_TOKENS.typography.sizes.sm,
             marginTop: 2,
+        },
+        unreadBadge: {
+            minWidth: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingHorizontal: 6,
+        },
+        unreadBadgeText: {
+            color: '#ffffff',
+            fontSize: 11,
+            fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         },
         center: {
             flex: 1,

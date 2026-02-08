@@ -6,7 +6,7 @@ import { useIsFocused } from '@react-navigation/native';
 
 import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
-import { useThreads, useThreadMessages, useSendMessage, useAvailableUsers } from '@/hooks/useMessages';
+import { useThreads, useThreadMessages, useSendMessage, useDeleteMessage, useAvailableUsers, useMarkThreadRead } from '@/hooks/useMessages';
 import { fetchThreadByUser, getMessagingUserDisplayName, getMessagingUserId } from '@/api/messages';
 import type { MessageThread } from '@/api/messages';
 import ThreadList from '@/components/messages/ThreadList';
@@ -36,11 +36,13 @@ export default function MessagesScreen() {
     const [showPicker, setShowPicker] = useState(false);
 
     const canFetch = authReady && isAuthenticated;
-    const { threads, loading: threadsLoading, error: threadsError, refresh: refreshThreads } = useThreads(canFetch);
-    const { messages, loading: messagesLoading, refresh: refreshMessages, hasMore, loadMore } = useThreadMessages(
-        selectedThread?.id ?? null
+    const { threads, loading: threadsLoading, error: threadsError, refresh: refreshThreads } = useThreads(canFetch, isFocused);
+    const { messages, loading: messagesLoading, refresh: refreshMessages, hasMore, loadMore, optimisticRemove } = useThreadMessages(
+        selectedThread?.id ?? null, isFocused
     );
     const { send, sending } = useSendMessage();
+    const { remove: removeMessage } = useDeleteMessage();
+    const { mark: markRead } = useMarkThreadRead();
     const { users } = useAvailableUsers(canFetch);
 
     const participantNames = useMemo(() => {
@@ -144,7 +146,10 @@ export default function MessagesScreen() {
 
     const handleSelectThread = useCallback((thread: MessageThread) => {
         setSelectedThread(thread);
-    }, []);
+        if (thread.id >= 0) {
+            markRead(thread.id);
+        }
+    }, [markRead]);
 
     const handleBack = useCallback(() => {
         setSelectedThread(null);
@@ -218,6 +223,17 @@ export default function MessagesScreen() {
         [selectedThread, userId, send, refreshMessages, refreshThreads]
     );
 
+    const handleDeleteMessage = useCallback(
+        async (messageId: number) => {
+            const rollback = optimisticRemove(messageId);
+            const ok = await removeMessage(messageId);
+            if (!ok) {
+                rollback();
+            }
+        },
+        [removeMessage, optimisticRemove]
+    );
+
     // Not authenticated
     if (authReady && !isAuthenticated) {
         return (
@@ -282,7 +298,7 @@ export default function MessagesScreen() {
                     onRefresh={refreshThreads}
                     onNewConversation={handleNewConversation}
                     selectedThreadId={selectedThread?.id}
-                    showSearch={isDesktop}
+                    showSearch
                 />
             )}
         </View>
@@ -301,6 +317,7 @@ export default function MessagesScreen() {
             onLoadMore={loadMore}
             hasMore={hasMore}
             hideBackButton={isDesktop}
+            onDeleteMessage={handleDeleteMessage}
         />
     ) : null;
 

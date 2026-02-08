@@ -1,9 +1,10 @@
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 jest.mock('@/api/user', () => ({
     fetchMySubscriptions: jest.fn(),
+    fetchMySubscribers: jest.fn(),
     unsubscribeFromUser: jest.fn(),
 }));
 
@@ -23,13 +24,18 @@ jest.mock('@/utils/confirmAction', () => ({
     confirmAction: jest.fn(() => Promise.resolve(true)),
 }));
 
+jest.mock('@/utils/toast', () => ({
+    showToast: jest.fn(),
+}));
+
 import SubscriptionsScreen from '@/app/(tabs)/subscriptions';
 import { useAuth } from '@/context/AuthContext';
-import { fetchMySubscriptions } from '@/api/user';
+import { fetchMySubscriptions, fetchMySubscribers } from '@/api/user';
 import { fetchMyTravels } from '@/api/travelsApi';
 
 const mockedUseAuth = useAuth as jest.Mock;
 const mockedFetchMySubscriptions = fetchMySubscriptions as jest.Mock;
+const mockedFetchMySubscribers = fetchMySubscribers as jest.Mock;
 const mockedFetchMyTravels = fetchMyTravels as jest.Mock;
 
 function createWrapper() {
@@ -53,6 +59,7 @@ describe('SubscriptionsScreen', () => {
             userId: '1',
         });
         mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedFetchMySubscribers.mockResolvedValue([]);
         mockedFetchMyTravels.mockResolvedValue([]);
     });
 
@@ -141,5 +148,77 @@ describe('SubscriptionsScreen', () => {
         });
 
         expect(getByText('Подписки')).toBeTruthy();
+    });
+
+    it('shows tab bar with Подписки and Подписчики tabs', async () => {
+        mockedFetchMySubscriptions.mockResolvedValue([
+            {
+                id: 10,
+                first_name: 'Иван',
+                last_name: 'Петров',
+                youtube: '',
+                instagram: '',
+                twitter: '',
+                vk: '',
+                avatar: '',
+                user: 42,
+            },
+        ]);
+        mockedFetchMySubscribers.mockResolvedValue([]);
+        mockedFetchMyTravels.mockResolvedValue([]);
+
+        const { findByText } = render(<SubscriptionsScreen />, {
+            wrapper: createWrapper(),
+        });
+
+        const subscriptionsTab = await findByText('Подписки (1)');
+        expect(subscriptionsTab).toBeTruthy();
+
+        const subscribersTab = await findByText('Подписчики');
+        expect(subscribersTab).toBeTruthy();
+    });
+
+    it('shows subscribers list when Подписчики tab is pressed', async () => {
+        mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedFetchMySubscribers.mockResolvedValue([
+            {
+                id: 20,
+                first_name: 'Мария',
+                last_name: 'Сидорова',
+                youtube: '',
+                instagram: '',
+                twitter: '',
+                vk: '',
+                avatar: '',
+                user: 55,
+            },
+        ]);
+        mockedFetchMyTravels.mockResolvedValue([]);
+
+        const { findByText, findByLabelText } = render(<SubscriptionsScreen />, {
+            wrapper: createWrapper(),
+        });
+
+        const subscribersTab = await findByLabelText('Подписчики');
+        fireEvent.press(subscribersTab);
+
+        const subscriberName = await findByText('Мария Сидорова');
+        expect(subscriberName).toBeTruthy();
+    });
+
+    it('shows empty state for subscribers tab when no subscribers', async () => {
+        mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedFetchMySubscribers.mockResolvedValue([]);
+        mockedFetchMyTravels.mockResolvedValue([]);
+
+        const { findByText, findByLabelText } = render(<SubscriptionsScreen />, {
+            wrapper: createWrapper(),
+        });
+
+        const subscribersTab = await findByLabelText('Подписчики');
+        fireEvent.press(subscribersTab);
+
+        const emptyText = await findByText('У вас пока нет подписчиков');
+        expect(emptyText).toBeTruthy();
     });
 });

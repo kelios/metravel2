@@ -159,7 +159,7 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
             (window as any).__e2eVitals.inp = prev == null ? duration : Math.max(prev, duration);
           }
         });
-        inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 40 } as any);
+        inpObserver.observe({ type: 'event', buffered: true, durationThreshold: 16 } as any);
       } catch {
         // ignore
       }
@@ -210,6 +210,8 @@ test.describe('@perf Web Vitals (CLS/LCP/INP)', () => {
     // A single "fill" produces fewer event entries and is more stable.
     await searchBox.fill('тест');
 
+  // Give the browser time to emit event timing entries after the interaction.
+  await page.waitForTimeout(500);
   await page.waitForLoadState('domcontentloaded').catch(() => null);
 
   const vitals = await page.evaluate(() => {
