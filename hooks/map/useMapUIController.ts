@@ -156,7 +156,7 @@ export function useMapUIController(): UseMapUIControllerResult {
     [isMobile, insets.top, headerOffset, width, themedColors]
   );
 
-  return {
+  return useMemo(() => ({
     isFocused,
     isMobile,
     width,
@@ -174,5 +174,23 @@ export function useMapUIController(): UseMapUIControllerResult {
     themedColors,
     styles,
     canonical,
-  };
+  }), [
+    isFocused,
+    isMobile,
+    width,
+    mapReady,
+    rightPanelTab,
+    rightPanelVisible,
+    selectFiltersTab,
+    selectTravelsTab,
+    openRightPanel,
+    closeRightPanel,
+    panelStyle,
+    overlayStyle,
+    filtersTabRef,
+    panelRef,
+    themedColors,
+    styles,
+    canonical,
+  ]);
 }

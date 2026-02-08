@@ -276,7 +276,7 @@ export function useRouteStoreAdapter() {
     }
   }, [store]);
 
-  return {
+  return useMemo(() => ({
     // State
     mode: store.mode,
     transportMode: store.transportMode,
@@ -318,5 +318,38 @@ export function useRouteStoreAdapter() {
     updatePoint: store.updatePoint,
     clearRoute: store.clearRoute,
     swapStartEnd: store.swapStartEnd,
-  };
+  }), [
+    store.mode,
+    store.transportMode,
+    routePoints,
+    startAddress,
+    endAddress,
+    routeDistance,
+    routeDuration,
+    routeElevationGain,
+    routeElevationLoss,
+    fullRouteCoords,
+    store.isBuilding,
+    store.error,
+    store.setBuilding,
+    store.setError,
+    store.points,
+    store.route,
+    store.setMode,
+    store.setTransportMode,
+    setRoutePoints,
+    setRouteDistance,
+    setRouteDuration,
+    setFullRouteCoords,
+    setRouteElevationStats,
+    handleRemoveRoutePoint,
+    handleClearRoute,
+    handleAddressSelect,
+    handleAddressClear,
+    store.addPoint,
+    store.removePoint,
+    store.updatePoint,
+    store.clearRoute,
+    store.swapStartEnd,
+  ]);
 }

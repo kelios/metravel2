@@ -135,7 +135,7 @@ export function useProgressiveLoad(config: ProgressiveLoadConfig) {
         clearTimeout(fallbackTimer);
       }
     };
-  }, [enabled, fallbackDelay, priority, rootMargin, shouldLoad, threshold]);
+  }, [enabled, fallbackDelay, priority, rootMargin, threshold]);
 
   return { shouldLoad, elementRef, setElementRef };
 }

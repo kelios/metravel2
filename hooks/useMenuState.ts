@@ -93,7 +93,7 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
     }
   }, [isMobile, animatedX]);
 
-  return {
+  return useMemo(() => ({
     menuOpen,
     isMenuOpen: menuOpen,
     toggleMenu,
@@ -104,6 +104,16 @@ export function useMenuState(isMobile: boolean): UseMenuStateReturn {
     menuWidth,
     menuWidthNum,
     openMenuOnDesktop,
-  };
+  }), [
+    menuOpen,
+    toggleMenu,
+    openMenu,
+    closeMenu,
+    animatedX,
+    animateMenu,
+    menuWidth,
+    menuWidthNum,
+    openMenuOnDesktop,
+  ]);
 }
 

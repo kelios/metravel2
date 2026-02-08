@@ -298,7 +298,7 @@ export function useMapScreenController() {
     selectTravelsTab,
   ]);
 
-  return {
+  return useMemo(() => ({
     // SEO
     canonical,
 
@@ -346,5 +346,36 @@ export function useMapScreenController() {
     // Additional data for mobile layout
     coordinates,
     transportMode,
-  };
+  }), [
+    canonical,
+    isFocused,
+    isMobile,
+    themedColors,
+    styles,
+    mapReady,
+    mapPanelProps,
+    rightPanelTab,
+    rightPanelVisible,
+    selectFiltersTab,
+    selectTravelsTab,
+    openRightPanel,
+    closeRightPanel,
+    panelStyle,
+    overlayStyle,
+    filtersPanelProps,
+    travelsData,
+    allTravelsData,
+    loading,
+    isFetching,
+    isPlaceholderData,
+    mapError,
+    mapErrorDetails,
+    refetchMapData,
+    invalidateTravelsQuery,
+    buildRouteToStable,
+    centerOnUser,
+    panelRef,
+    coordinates,
+    transportMode,
+  ]);
 }

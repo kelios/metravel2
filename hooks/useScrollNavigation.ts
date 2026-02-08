@@ -284,9 +284,9 @@ export function useScrollNavigation(): UseScrollNavigationReturn {
     [anchors]
   );
 
-  return {
+  return useMemo(() => ({
     anchors,
     scrollTo,
     scrollRef,
-  };
+  }), [anchors, scrollTo, scrollRef]);
 }

@@ -52,11 +52,11 @@ export function usePanelController(isMobile: boolean = false) {
         opacity: panelAnimation,
     }), [panelAnimation]);
 
-    return {
+    return useMemo(() => ({
         isPanelVisible,
         openPanel,
         closePanel,
         panelStyle,
         overlayStyle,
-    };
+    }), [isPanelVisible, openPanel, closePanel, panelStyle, overlayStyle]);
 }

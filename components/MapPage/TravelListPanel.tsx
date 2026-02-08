@@ -35,6 +35,8 @@ type Props = {
   favorites?: Set<string | number>;
 };
 
+const EMPTY_FAVORITES = new Set<string | number>();
+
 const TravelListPanel: React.FC<Props> = ({
                                             travelsData,
                                             buildRouteTo,
@@ -50,7 +52,7 @@ const TravelListPanel: React.FC<Props> = ({
                                           userLocation,
                                           transportMode = 'car',
                                           onToggleFavorite,
-                                          favorites = new Set(),
+                                          favorites = EMPTY_FAVORITES,
                                           onResetFilters,
                                           onExpandRadius,
                                           }) => {
@@ -201,9 +203,7 @@ const TravelListPanel: React.FC<Props> = ({
       contentContainerStyle={styles.list}
       {...({ estimatedItemSize: isMobile ? 100 : 120 } as any)}
       onEndReachedThreshold={0.5}
-      onEndReached={() => {
-        if (hasMore && onLoadMore) onLoadMore();
-      }}
+      onEndReached={onLoadMore && hasMore ? onLoadMore : undefined}
       ListFooterComponent={footer}
       drawDistance={isMobile ? 500 : 800}
       refreshControl={

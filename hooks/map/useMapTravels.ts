@@ -229,7 +229,7 @@ export function useMapTravels({
     return filterTravelsByCategories(allTravelsData, filterValues.categories);
   }, [allTravelsData, filterValues.categories]);
 
-  return {
+  return useMemo(() => ({
     allTravelsData,
     filteredTravelsData,
     isLoading,
@@ -238,5 +238,14 @@ export function useMapTravels({
     isError,
     error,
     refetch,
-  };
+  }), [
+    allTravelsData,
+    filteredTravelsData,
+    isLoading,
+    isFetching,
+    isPlaceholderData,
+    isError,
+    error,
+    refetch,
+  ]);
 }

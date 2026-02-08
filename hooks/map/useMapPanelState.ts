@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -106,7 +106,7 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     closePanel();
   }, [closePanel]);
 
-  return {
+  return useMemo(() => ({
     // State
     isFocused,
     mapReady,
@@ -126,7 +126,20 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     // Refs
     filtersTabRef,
     panelRef,
-  };
+  }), [
+    isFocused,
+    mapReady,
+    rightPanelTab,
+    isPanelVisible,
+    selectFiltersTab,
+    selectTravelsTab,
+    openPanel,
+    closeRightPanel,
+    panelStyle,
+    overlayStyle,
+    filtersTabRef,
+    panelRef,
+  ]);
 }
 
 /**
@@ -136,9 +149,9 @@ export function useMapResponsive() {
   const { isPhone, isLargePhone, width } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
-  return {
+  return useMemo(() => ({
     isMobile,
     width,
-  };
+  }), [isMobile, width]);
 }
 

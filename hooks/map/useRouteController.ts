@@ -3,7 +3,7 @@
  * @module hooks/map/useRouteController
  */
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter';
 import { useRouteStore } from '@/stores/routeStore';
@@ -341,7 +341,7 @@ export function useRouteController(
     [mapUiApi]
   );
 
-  return {
+  return useMemo(() => ({
     mode,
     setMode,
     transportMode,
@@ -371,5 +371,35 @@ export function useRouteController(
     setRoutingError: setError,
     handleMapClick,
     buildRouteTo,
-  };
+  }), [
+    mode,
+    setMode,
+    transportMode,
+    setTransportMode,
+    routePoints,
+    routeStorePoints,
+    startAddress,
+    endAddress,
+    routeDistance,
+    routeDuration,
+    routeElevationGain,
+    routeElevationLoss,
+    fullRouteCoords,
+    setRoutePoints,
+    setRouteDistance,
+    setRouteDuration,
+    setFullRouteCoords,
+    setRouteElevationStats,
+    handleClearRoute,
+    handleAddressSelect,
+    handleAddressClear,
+    routeStore.removePoint,
+    routeStore.swapStartEnd,
+    routingLoading,
+    routingError,
+    setBuilding,
+    setError,
+    handleMapClick,
+    buildRouteTo,
+  ]);
 }

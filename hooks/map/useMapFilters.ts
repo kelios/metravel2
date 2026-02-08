@@ -147,7 +147,7 @@ export function useMapFilters() {
     setFilterValues(DEFAULT_FILTER_VALUES);
   }, []);
 
-  return {
+  return useMemo(() => ({
     filters,
     filterValues,
     isLoading,
@@ -155,6 +155,14 @@ export function useMapFilters() {
     handleFilterChange,
     handleFilterChangeForPanel,
     resetFilters,
-  };
+  }), [
+    filters,
+    filterValues,
+    isLoading,
+    error,
+    handleFilterChange,
+    handleFilterChangeForPanel,
+    resetFilters,
+  ]);
 }
 

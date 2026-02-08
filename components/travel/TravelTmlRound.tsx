@@ -1,5 +1,5 @@
 // components/travel/TravelTmlRound.tsx
-import React, { memo, useMemo } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import {
     Platform,
     StyleSheet,
@@ -12,7 +12,6 @@ import type { Travel } from "@/types/types";
 import { buildVersionedImageUrl, getOptimalImageSize, optimizeImageUrl } from "@/utils/imageOptimization";
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { useResponsive } from '@/hooks/useResponsive';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import { useThemedColors } from '@/hooks/useTheme';
 
@@ -22,7 +21,6 @@ const CARD_HEIGHT = 250;
 const CARD_IMAGE_HEIGHT = 170;
 
 const TravelTmlRound: React.FC<Props> = ({ travel }) => {
-    useResponsive();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -90,10 +88,10 @@ const TravelTmlRound: React.FC<Props> = ({ travel }) => {
 
     const canOpen = Boolean(slug || travel?.id);
 
-    const onPress = () => {
+    const onPress = useCallback(() => {
         if (!canOpen) return;
         router.push(`/travels/${slug || travel.id}`);
-    };
+    }, [canOpen, slug, travel.id]);
 
     const overlay = (
         <View style={styles.overlayBottom}>

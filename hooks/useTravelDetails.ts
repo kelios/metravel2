@@ -3,6 +3,7 @@
  * Изолирует логику загрузки данных от UI-компонентов
  */
 
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
 import { fetchTravel, fetchTravelBySlug, normalizeTravelItem } from '@/api/travelsApi';
@@ -84,16 +85,27 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     placeholderData: undefined,
   });
 
-  return {
+  const stableRefetch = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  return useMemo(() => ({
     travel,
     isLoading,
     isError,
     error: error as Error | null,
-    refetch: () => {
-      refetch();
-    },
+    refetch: stableRefetch,
     slug: normalizedSlug,
     isId,
     isMissingParam,
-  };
+  }), [
+    travel,
+    isLoading,
+    isError,
+    error,
+    stableRefetch,
+    normalizedSlug,
+    isId,
+    isMissingParam,
+  ]);
 }

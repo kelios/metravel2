@@ -3,7 +3,7 @@
  * @module context/MapFiltersContext
  */
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, ReactNode } from 'react';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import type { MapUiApi } from '@/types/mapUi';
@@ -114,8 +114,48 @@ export interface FiltersProviderProps extends FiltersContextValue {
  * ```
  */
 export function FiltersProvider({ children, ...contextValue }: FiltersProviderProps) {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const value = useMemo(() => contextValue, [
+    contextValue.filters,
+    contextValue.filterValue,
+    contextValue.onFilterChange,
+    contextValue.resetFilters,
+    contextValue.travelsData,
+    contextValue.filteredTravelsData,
+    contextValue.isMobile,
+    contextValue.closeMenu,
+    contextValue.mode,
+    contextValue.setMode,
+    contextValue.transportMode,
+    contextValue.setTransportMode,
+    contextValue.startAddress,
+    contextValue.endAddress,
+    contextValue.routeDistance,
+    contextValue.routeDuration,
+    contextValue.routeElevationGain,
+    contextValue.routeElevationLoss,
+    contextValue.routePoints,
+    contextValue.onRemoveRoutePoint,
+    contextValue.onClearRoute,
+    contextValue.swapStartEnd,
+    contextValue.routeHintDismissed,
+    contextValue.onRouteHintDismiss,
+    contextValue.onAddressSelect,
+    contextValue.onAddressClear,
+    contextValue.routingLoading,
+    contextValue.routingError,
+    contextValue.onBuildRoute,
+    contextValue.mapUiApi,
+    contextValue.userLocation,
+    contextValue.onPlaceSelect,
+    contextValue.onOpenList,
+    contextValue.hideTopControls,
+    contextValue.hideFooterCta,
+    contextValue.hideFooterReset,
+  ]);
+
   return (
-    <FiltersContext.Provider value={contextValue}>
+    <FiltersContext.Provider value={value}>
       {children}
     </FiltersContext.Provider>
   );

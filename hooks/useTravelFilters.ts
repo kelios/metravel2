@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchFilters, fetchAllCountries } from '@/api/misc';
 
 export interface TravelFilters {
@@ -359,12 +359,12 @@ export function useTravelFilters(options: UseTravelFiltersOptions = {}) {
     }
   }, [currentStep, filters?.countries, refetchCountries]);
 
-  return {
+  return useMemo(() => ({
     filters,
     isLoading,
     error,
     loadFilters,
     refetchPointCategories,
     refetchCountries,
-  };
+  }), [filters, isLoading, error, loadFilters, refetchPointCategories, refetchCountries]);
 }

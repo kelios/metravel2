@@ -3,6 +3,7 @@
  * @module hooks/map/useMapDataController
  */
 
+import { useMemo } from 'react';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useMapTravels } from './useMapTravels';
 
@@ -157,7 +158,7 @@ export function useMapDataController(
   // Invalidate query callback (same as refetch for now)
   const invalidateTravelsQuery = refetchMapData;
 
-  return {
+  return useMemo(() => ({
     allTravelsData,
     travelsData,
     loading,
@@ -167,5 +168,15 @@ export function useMapDataController(
     mapErrorDetails,
     refetchMapData,
     invalidateTravelsQuery,
-  };
+  }), [
+    allTravelsData,
+    travelsData,
+    loading,
+    isFetching,
+    isPlaceholderData,
+    mapError,
+    mapErrorDetails,
+    refetchMapData,
+    invalidateTravelsQuery,
+  ]);
 }

@@ -3,7 +3,7 @@
  * Handles light/dark mode switching with persistence
  */
 
-import { useEffect, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
+import { useEffect, useMemo, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 import { getThemedColors } from '@/constants/designSystem';
 
@@ -144,12 +144,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(isDark ? 'light' : 'dark');
   }, [isDark, setTheme]);
 
-  const value: ThemeContextType = {
+  const value = useMemo<ThemeContextType>(() => ({
     theme: savedTheme,
     isDark,
     setTheme,
     toggleTheme,
-  };
+  }), [savedTheme, isDark, setTheme, toggleTheme]);
 
   return createElement(ThemeContext.Provider, { value }, children);
 }
@@ -160,7 +160,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  */
 export function useThemedColors() {
   const { isDark } = useTheme();
-  return getThemedColors(isDark);
+  return useMemo(() => getThemedColors(isDark), [isDark]);
 }
 
 // Экспорт типа возвращаемого значения useThemedColors для использования в компонентах

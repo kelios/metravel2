@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import * as Location from 'expo-location';
 import { logError, logMessage } from '@/utils/logger';
 
@@ -101,12 +101,12 @@ export function useMapCoordinates() {
     }
   }, []);
 
-  return {
+  return useMemo(() => ({
     coordinates,
     isLoading,
     error,
     updateCoordinates,
     refreshLocation: requestLocation,
-  };
+  }), [coordinates, isLoading, error, updateCoordinates, requestLocation]);
 }
 
