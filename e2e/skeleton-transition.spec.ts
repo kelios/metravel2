@@ -1,67 +1,19 @@
 import { test, expect } from './fixtures';
+import { gotoWithRetry, assertNoHorizontalScroll } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
+// Skeleton-specific: also clears sessionStorage to ensure skeleton is visible.
 async function preacceptCookies(page: any) {
   await page.addInitScript(() => {
     try {
-      // Ensure no cached UI/state prevents skeleton from showing.
       window.sessionStorage.clear();
-      // Keep localStorage mostly intact, but clear likely non-critical caches.
-      // Do not clear consent key we set below.
     } catch {
       // ignore
     }
   });
   await page.addInitScript(seedNecessaryConsent);
-  // Keep base UI stable for the skeleton test.
   await page.addInitScript(hideRecommendationsBanner);
-}
-
-async function assertNoHorizontalScroll(page: any) {
-  const res = await page.evaluate(() => {
-    const docEl = document.documentElement;
-    const body = document.body;
-    return {
-      docScrollWidth: docEl?.scrollWidth ?? 0,
-      docClientWidth: docEl?.clientWidth ?? 0,
-      bodyScrollWidth: body?.scrollWidth ?? 0,
-      bodyClientWidth: body?.clientWidth ?? 0,
-    };
-  });
-
-  expect(res.docScrollWidth).toBeLessThanOrEqual(res.docClientWidth);
-  expect(res.bodyScrollWidth).toBeLessThanOrEqual(res.bodyClientWidth);
-}
-
-async function gotoWithRetry(page: any, url: string) {
-  let lastError: any = null;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    try {
-       
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      lastError = null;
-      break;
-    } catch (e) {
-      lastError = e;
-      const msg = String((e as any)?.message ?? e ?? '');
-      const isTransient =
-        msg.includes('ERR_CONNECTION_REFUSED') ||
-        msg.includes('ERR_EMPTY_RESPONSE') ||
-        msg.includes('NS_ERROR_NET_RESET') ||
-        msg.includes('net::');
-
-      if (typeof page?.isClosed === 'function' && page.isClosed()) break;
-
-       
-      try {
-        await page.waitForTimeout(isTransient ? Math.min(1200 + attempt * 600, 8000) : 500);
-      } catch {
-        break;
-      }
-    }
-  }
-  if (lastError) throw lastError;
 }
 
 test.describe('@perf Skeleton transition (no layout shift)', () => {

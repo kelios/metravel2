@@ -1,103 +1,45 @@
 /**
  * E2E Tests for TravelDetailsContainer using Playwright
  * Tests real user workflows across all platforms
+ *
+ * Each test is self-contained and parallel-safe: it navigates to a travel
+ * details page on its own using the shared `navigateToFirstTravel` helper.
  */
 
 import { test, expect } from './fixtures';
-import type { Page } from '@playwright/test';
-import { getTravelsListPath } from './helpers/routes';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
-
-let travelBasePath: string | null = null;
+import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation';
 
 test.describe('TravelDetailsContainer - E2E Tests', () => {
-  let page: Page;
-  const assertTravelsListVisible = async () => {
-    await expect(page.getByText('Путешествия').first()).toBeVisible({ timeout: 15_000 });
-  };
-
-  test.beforeAll(async ({ browser }) => {
-    const setupPage = await browser.newPage();
-    try {
-      await setupPage.addInitScript(seedNecessaryConsent);
-      await setupPage.addInitScript(hideRecommendationsBanner);
-      await setupPage.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      await Promise.race([
-        setupPage.waitForSelector('[data-testid="travel-card-link"]', { timeout: 30_000 }),
-        setupPage.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
-      ]).catch(() => null);
-
-      const cards = setupPage.locator('[data-testid="travel-card-link"]');
-      const hasCard = await cards.first().isVisible().catch(() => false);
-      if (!hasCard) {
-        travelBasePath = null;
-        return;
-      }
-
-      await cards.first().click({ timeout: 30_000 });
-      await setupPage.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-      const url = new URL(setupPage.url());
-      travelBasePath = `${url.pathname}${url.search}`;
-    } catch {
-      travelBasePath = null;
-    } finally {
-      await setupPage.close().catch(() => undefined);
-    }
-  });
-
-  test.beforeEach(async ({ page: testPage }) => {
-    page = testPage;
-
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
-
-    // Set viewport for mobile testing
+  /**
+   * Navigate to a travel details page. Returns false if no travel is available.
+   * Each test calls this independently so tests can run in parallel.
+   */
+  async function goToTravelDetails(page: import('@playwright/test').Page): Promise<boolean> {
+    await preacceptCookies(page);
     await page.setViewportSize({ width: 1280, height: 720 });
-
-    if (!travelBasePath) {
-      await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-      await assertTravelsListVisible();
-      return;
-    }
-
-    // Go to travel details page
-    await page.goto(travelBasePath, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-
-    // Wait for main content to load
-    await page.waitForSelector('[data-testid="travel-details-page"]', { timeout: 45_000 });
-  });
+    return navigateToFirstTravel(page);
+  }
 
   test.describe('Page Loading', () => {
-    test('should load page with complete content', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Check hero section
-      const hero = await page.locator('[data-testid="travel-details-hero"]');
+    test('should load page with complete content', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
+
+      const hero = page.locator('[data-testid="travel-details-hero"]');
       await expect(hero).toBeVisible();
 
-      // Check quick facts
-      const facts = await page.locator('[data-testid="travel-details-quick-facts"]');
+      const facts = page.locator('[data-testid="travel-details-quick-facts"]');
       await expect(facts).toBeVisible();
 
-      // Check main content
-      const content = await page.locator('[data-testid="travel-details-section-gallery"]');
-      // This is an anchor View (used for scrolling) and may have zero size on web.
+      const content = page.locator('[data-testid="travel-details-section-gallery"]');
       await expect(content).toBeAttached();
     });
 
-    test('should display hero image', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      const hero = await page.locator('[data-testid="travel-details-hero"]');
+    test('should display hero image', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
+
+      const hero = page.locator('[data-testid="travel-details-hero"]');
       await expect(hero).toBeVisible();
 
-      // Web hero media can be rendered by expo-image (not always a direct <img> we can target via testIDs).
-      // We accept any visible image-like element inside the hero container.
       const candidates = [
         hero.locator('img').first(),
         hero.locator('[role="img"]').first(),
@@ -124,32 +66,22 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
         });
       };
 
-      const start = Date.now();
-      const timeoutMs = 20_000;
-      let found = false;
-      while (!found && Date.now() - start < timeoutMs) {
-        if (await hasBackgroundImage().catch(() => false)) {
-          found = true;
-          break;
-        }
-        for (const c of candidates) {
-          if ((await c.count()) === 0) continue;
-          if (await c.isVisible().catch(() => false)) {
-            found = true;
-            break;
+      await expect.poll(
+        async () => {
+          if (await hasBackgroundImage().catch(() => false)) return true;
+          for (const c of candidates) {
+            if ((await c.count()) === 0) continue;
+            if (await c.isVisible().catch(() => false)) return true;
           }
-        }
-        if (!found) await page.waitForTimeout(200);
-      }
-
-      expect(found).toBeTruthy();
+          return false;
+        },
+        { timeout: 20_000, message: 'Expected hero image to be visible' }
+      ).toBeTruthy();
     });
 
-    test('should load all sections', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
+    test('should load all sections', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
+
       const sections = [
         'travel-details-section-gallery',
         'travel-details-quick-facts',
@@ -158,7 +90,7 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       ];
 
       for (const section of sections) {
-        const element = await page.locator(`[data-testid="${section}"]`);
+        const element = page.locator(`[data-testid="${section}"]`);
         if (section === 'travel-details-section-gallery') {
           await expect(element).toBeAttached();
         } else {
@@ -167,86 +99,62 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
       }
     });
 
-    test('should have correct page title', async () => {
+    test('should have correct page title', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
       const title = await page.title();
       expect(title).toMatch(/Me\s*Travel/i);
     });
   });
 
   test.describe('Navigation', () => {
-    test('should scroll to section when sidebar link clicked', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Find and click map section link in sidebar
-      const mapLink = await page.locator('[data-testid="travel-details-side-menu"] a[href*="map"]').first();
+    test('should scroll to section when sidebar link clicked', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      if (await mapLink.isVisible()) {
-        await mapLink.click();
+      const mapLink = page.locator('[data-testid="travel-details-side-menu"] a[href*="map"]').first();
+      if (!(await mapLink.isVisible().catch(() => false))) return;
 
-        // Wait for map section to scroll into view
-        const mapSection = await page.locator('[data-testid="travel-details-map"]');
-        await mapSection.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => null);
-        const box = await mapSection.boundingBox();
-        expect(box?.y).toBeLessThan(500); // Should be near top of viewport
-      }
+      await mapLink.click();
+      const mapSection = page.locator('[data-testid="travel-details-map"]');
+      await mapSection.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => null);
+      const box = await mapSection.boundingBox();
+      expect(box?.y).toBeLessThan(500);
     });
 
-    test('should expand/collapse collapsible sections', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Find first collapsible section
-      const header = await page.locator('[data-testid="travel-details-page"] button').first();
+    test('should expand/collapse collapsible sections', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      // Check initial state
+      const header = page.locator('[data-testid="travel-details-page"] button').first();
       const ariaExpanded = await header.getAttribute('aria-expanded');
       if (ariaExpanded == null) return;
 
-      // Click to toggle
       await header.click();
       await page.waitForLoadState('domcontentloaded').catch(() => null);
 
-      // Verify state changed
       const newState = await header.getAttribute('aria-expanded');
       expect(newState).not.toBe(ariaExpanded);
     });
 
-    test('should support deep linking to sections', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Navigate directly to map section
-      await page.goto(`${travelBasePath}#map`);
+    test('should support deep linking to sections', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      // Wait for map section to render
-      const mapSection = await page.locator('[data-testid="travel-details-map"]');
+      const currentUrl = new URL(page.url());
+      await page.goto(`${currentUrl.pathname}#map`);
+
+      const mapSection = page.locator('[data-testid="travel-details-map"]');
       await mapSection.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null);
       await expect(mapSection).toBeVisible();
     });
 
-    test('should update active section on scroll', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Get section positions
-      await page.locator('[data-testid="travel-details-section-gallery"]');
-      const description = await page.locator('[data-testid="travel-details-description"]');
+    test('should update active section on scroll', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      // Scroll to description
+      const description = page.locator('[data-testid="travel-details-description"]');
       await description.scrollIntoViewIfNeeded();
-
-      // Wait for scroll to settle
       await expect(description).toBeInViewport({ timeout: 5_000 }).catch(() => null);
 
-      // Verify sidebar updated (if visible)
-      const sideMenu = await page.locator('[data-testid="travel-details-side-menu"]');
+      const sideMenu = page.locator('[data-testid="travel-details-side-menu"]');
       if (await sideMenu.isVisible()) {
-        const activeLink = await sideMenu.locator('[aria-current="page"]');
+        const activeLink = sideMenu.locator('[aria-current="page"]');
         const text = await activeLink.textContent();
         expect(text).toMatch(/(Описание|Галерея)/);
       }
@@ -254,180 +162,128 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
   });
 
   test.describe('Content Display', () => {
-    test('should display description without scripts', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      const description = await page.locator('[data-testid="travel-details-description"]');
-      const html = await description.innerHTML();
+    test('should display description without scripts', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      // Verify no script tags
+      const description = page.locator('[data-testid="travel-details-description"]');
+      const html = await description.innerHTML();
       expect(html).not.toContain('<script');
       expect(html).not.toContain('javascript:');
     });
 
-    test('should display YouTube video with play button', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Look for video preview
-      const videoButton = await page.locator('[data-testid="travel-details-video"] button').first();
+    test('should display YouTube video with play button', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      if (await videoButton.isVisible()) {
-        expect(await videoButton.textContent()).toContain('Видео');
+      const videoButton = page.locator('[data-testid="travel-details-video"] button').first();
+      if (!(await videoButton.isVisible().catch(() => false))) return;
 
-        // Click to play
-        await videoButton.click();
+      expect(await videoButton.textContent()).toContain('Видео');
+      await videoButton.click();
 
-        // Verify iframe appears
-        const iframe = await page.locator('iframe[src*="youtube"]');
-        await expect(iframe).toBeVisible({ timeout: 5000 });
-      }
+      const iframe = page.locator('iframe[src*="youtube"]');
+      await expect(iframe).toBeVisible({ timeout: 5000 });
     });
 
-    test('should display map when scrolled into view', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Scroll to map section
-      const mapSection = await page.locator('[data-testid="travel-details-map"]');
-      await mapSection.scrollIntoViewIfNeeded();
+    test('should display map when scrolled into view', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      // Verify map is visible
+      const mapSection = page.locator('[data-testid="travel-details-map"]');
+      await mapSection.scrollIntoViewIfNeeded();
       await expect(mapSection).toBeVisible({ timeout: 10_000 });
     });
 
-    test('should display coordinates list', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Scroll to points section
-      const pointsSection = await page.locator('[data-testid="travel-details-points"]');
+    test('should display coordinates list', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
+
+      const pointsSection = page.locator('[data-testid="travel-details-points"]');
       await pointsSection.scrollIntoViewIfNeeded();
 
-      // Verify point cards exist (FlashList renders View components, not li elements)
       const pointCards = await page.locator('[data-testid^="travel-point-card-"]').count();
       expect(pointCards).toBeGreaterThanOrEqual(0);
     });
   });
 
   test.describe('User Interactions', () => {
-    test('should open share buttons menu', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Check if share section exists (only visible on desktop)
-      const shareSection = await page.locator('[data-testid="travel-details-share"]');
-      const shareCount = await shareSection.count();
-      
-      if (shareCount > 0) {
+    test('should open share buttons menu', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
+
+      const shareSection = page.locator('[data-testid="travel-details-share"]');
+      if ((await shareSection.count()) > 0) {
         await shareSection.scrollIntoViewIfNeeded();
         await expect(shareSection).toBeVisible({ timeout: 5000 });
       }
     });
 
-    test('should share to Facebook', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      const shareButton = await page.locator('button:has-text("Facebook")').first();
+    test('should share to Facebook', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      if (await shareButton.isVisible()) {
-        // Mock window.open
-        const [popup] = await Promise.all([
-          page.waitForEvent('popup'),
-          shareButton.click(),
-        ]);
+      const shareButton = page.locator('button:has-text("Facebook")').first();
+      if (!(await shareButton.isVisible().catch(() => false))) return;
 
-        expect(popup.url()).toContain('facebook.com');
-        await popup.close();
-      }
+      const [popup] = await Promise.all([
+        page.waitForEvent('popup'),
+        shareButton.click(),
+      ]);
+      expect(popup.url()).toContain('facebook.com');
+      await popup.close();
     });
 
-    test('should copy link to clipboard', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Find copy button
-      const copyButton = await page.locator('button:has-text("Копировать")').first();
+    test('should copy link to clipboard', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      if (await copyButton.isVisible()) {
-        // Mock clipboard
-        await page.evaluate(() => {
-          navigator.clipboard.writeText = async (text: string) => {
-            (window as any).__copiedText = text;
-            return Promise.resolve();
-          };
-        });
+      const copyButton = page.locator('button:has-text("Копировать")').first();
+      if (!(await copyButton.isVisible().catch(() => false))) return;
 
-        await copyButton.click();
+      await page.evaluate(() => {
+        navigator.clipboard.writeText = async (text: string) => {
+          (window as any).__copiedText = text;
+          return Promise.resolve();
+        };
+      });
+      await copyButton.click();
 
-        // Verify link was copied
-        const copiedText = await page.evaluate(() => (window as any).__copiedText);
-        expect(copiedText).toContain('/travels/');
-      }
+      const copiedText = await page.evaluate(() => (window as any).__copiedText);
+      expect(copiedText).toContain('/travels/');
     });
   });
 
   test.describe('Accessibility', () => {
-    test('should be keyboard navigable', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Tab through page
-      let focusedElement = await page.evaluate(() => document.activeElement?.tagName);
+    test('should be keyboard navigable', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-      // First tab should reach interactive element
       await page.keyboard.press('Tab');
-      focusedElement = await page.evaluate(() => document.activeElement?.tagName);
+      const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
       expect(['A', 'BUTTON', 'INPUT']).toContain(focusedElement);
     });
 
-	    test('should have proper heading structure', async () => {
-	      if (!travelBasePath) {
-	        await assertTravelsListVisible();
-	        return;
-	      }
-	      // React Native Web can render headings as non-semantic elements (or omit them entirely).
-	      // When headings exist, ensure we don't create multiple page-level headings.
-	      // Otherwise fall back to checking that the main landmark exists.
-	      const travelDetails = page.locator('[data-testid="travel-details-page"]');
-	      await expect(travelDetails).toBeVisible();
-	
-	      const semanticHeadings = page.locator('h1,h2,h3,[role="heading"]');
-	      const count = await semanticHeadings.count();
-	      if (count === 0) return;
-	
-	      const h1Count = await page.locator('h1').count();
-	      expect(h1Count).toBeLessThanOrEqual(2);
-	    });
+    test('should have proper heading structure', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
 
-	    test('should preload LCP image', async () => {
-	      if (!travelBasePath) {
-	        await assertTravelsListVisible();
-	        return;
-	      }
-	      const preloadLinks = await page.locator('link[rel="preload"][as="image"]');
-	      const count = await preloadLinks.count();
-	      if (count === 0) {
-	        // Some deployments do not emit <link rel="preload">, and some travels can have no cover image.
-	        // Fallback to verifying the hero container exists, and (if present) the hero <img> is visible.
-	        const hero = page.locator('[data-testid="travel-details-hero"]').first();
-	        await expect(hero).toBeVisible();
-	        const image = hero.locator('img').first();
-	        if ((await image.count()) > 0) {
-	          await expect(image).toBeVisible();
-	        }
-	        return;
-	      }
+      const travelDetails = page.locator('[data-testid="travel-details-page"]');
+      await expect(travelDetails).toBeVisible();
+
+      const semanticHeadings = page.locator('h1,h2,h3,[role="heading"]');
+      const count = await semanticHeadings.count();
+      if (count === 0) return;
+
+      const h1Count = await page.locator('h1').count();
+      expect(h1Count).toBeLessThanOrEqual(2);
+    });
+
+    test('should preload LCP image', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
+
+      const preloadLinks = page.locator('link[rel="preload"][as="image"]');
+      const count = await preloadLinks.count();
+      if (count === 0) {
+        const hero = page.locator('[data-testid="travel-details-hero"]').first();
+        await expect(hero).toBeVisible();
+        const image = hero.locator('img').first();
+        if ((await image.count()) > 0) {
+          await expect(image).toBeVisible();
+        }
+        return;
+      }
 
       const href = await preloadLinks.first().getAttribute('href');
       expect(href || '').toContain('http');
@@ -435,40 +291,30 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
   });
 
   test.describe('Mobile Responsiveness', () => {
-    test.beforeEach(async () => {
-      // Set mobile viewport
-      await page.setViewportSize({ width: 390, height: 844 }); // iPhone 12
+    async function goToTravelDetailsMobile(page: import('@playwright/test').Page): Promise<boolean> {
+      await preacceptCookies(page);
+      await page.setViewportSize({ width: 390, height: 844 });
+      return navigateToFirstTravel(page);
+    }
+
+    test('should display mobile layout', async ({ page }) => {
+      if (!(await goToTravelDetailsMobile(page))) return;
+
+      const sidebar = page.locator('[data-testid="travel-details-side-menu"]');
+      if ((await sidebar.count()) > 0) {
+        const sidebarFirst = sidebar.first();
+        const box = await sidebarFirst.boundingBox().catch(() => null);
+        if (!box) return;
+
+        const style = await sidebarFirst.evaluate((el: HTMLElement) => window.getComputedStyle(el).display).catch(() => null);
+        if (!style) return;
+        expect(style).not.toBe('flex');
+      }
     });
 
-	    test('should display mobile layout', async () => {
-	      if (!travelBasePath) {
-	        await assertTravelsListVisible();
-	        return;
-	      }
-	      // Check sidebar is hidden or collapsed
-	      const sidebar = page.locator('[data-testid="travel-details-side-menu"]');
-	      const sidebarCount = await sidebar.count();
-	
-	      // On mobile, sidebar should not be visible in desktop layout
-	      // (might be shown as bottom sheet or not at all)
-	      if (sidebarCount > 0) {
-	        const sidebarFirst = sidebar.first();
-	        const box = await sidebarFirst.boundingBox().catch(() => null);
-	        if (!box) return;
-	
-	        // Element can detach during responsive reflow; if so, treat as "not visible".
-	        const style = await sidebarFirst.evaluate((el: HTMLElement) => window.getComputedStyle(el).display).catch(() => null);
-	        if (!style) return;
-	        expect(style).not.toBe('flex'); // Should be hidden or positioned differently
-	      }
-	    });
+    test('should stack content vertically on mobile', async ({ page }) => {
+      if (!(await goToTravelDetailsMobile(page))) return;
 
-    test('should stack content vertically on mobile', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Get hero and main content positions
       const heroLoc = page.locator('[data-testid="travel-details-hero"]');
       const contentLoc = page.locator('[data-testid="travel-details-scroll"]');
       await expect(heroLoc).toBeVisible();
@@ -476,23 +322,15 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
 
       const hero = await heroLoc.boundingBox();
       const content = await contentLoc.boundingBox();
-
       expect(hero).toBeTruthy();
       expect(content).toBeTruthy();
-
-      // Hero should be above content
       expect(hero?.y).toBeLessThan((content?.y || 0) + 100);
     });
 
-    test('should have touch-friendly buttons on mobile', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Check button sizes
-      const buttons = await page.locator('button').all();
+    test('should have touch-friendly buttons on mobile', async ({ page }) => {
+      if (!(await goToTravelDetailsMobile(page))) return;
 
-      // UI contains icon-only controls; require that at least one visible button is reasonably touch-friendly.
+      const buttons = await page.locator('button').all();
       let hasTouchFriendly = false;
       for (const button of buttons.slice(0, 12)) {
         const box = await button.boundingBox();
@@ -507,45 +345,36 @@ test.describe('TravelDetailsContainer - E2E Tests', () => {
   });
 
   test.describe('Error Handling', () => {
-    test('should show error message for 404', async () => {
+    test('should show error message for 404', async ({ page }) => {
+      await preacceptCookies(page);
       await page.goto('/travels/non-existent-travel');
 
-      // Should show error message
       await expect(
         page.locator('text=/Не удалось загрузить путешествие|не найдено/i').first()
       ).toBeVisible({ timeout: 10_000 });
       await expect(page.getByRole('button', { name: 'Повторить' }).first()).toBeVisible({ timeout: 10_000 });
     });
 
-    test('should show retry button on error', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Mock API to fail
+    test('should show retry button on error', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
+
+      const currentUrl = page.url();
       await page.route('**/api/travels/**', (route: any) => route.abort());
+      await page.goto(currentUrl);
 
-      // Navigate to details page with failing API
-      await page.goto(travelBasePath);
-
-      // Should show retry button
       await expect(page.getByRole('button', { name: 'Повторить' }).first()).toBeVisible({ timeout: 10_000 });
     });
 
-    test('should handle slow network gracefully', async () => {
-      if (!travelBasePath) {
-        await assertTravelsListVisible();
-        return;
-      }
-      // Simulate slow 3G
+    test('should handle slow network gracefully', async ({ page }) => {
+      if (!(await goToTravelDetails(page))) return;
+
+      const currentUrl = page.url();
       await page.route('**/*', (route: any) => {
         setTimeout(() => route.continue(), 500);
       });
+      await page.goto(currentUrl);
 
-      await page.goto(travelBasePath);
-
-      // Should still display content
-      const hero = await page.locator('[data-testid="travel-details-hero"]');
+      const hero = page.locator('[data-testid="travel-details-hero"]');
       await expect(hero).toBeVisible({ timeout: 10000 });
     });
   });

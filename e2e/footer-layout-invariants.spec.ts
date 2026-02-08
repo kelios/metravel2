@@ -1,60 +1,11 @@
 import { test, expect } from './fixtures';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { expectNoOverlap } from './helpers/layoutAsserts';
+import { preacceptCookies, gotoWithRetry, assertNoHorizontalScroll } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
-import { hideRecommendationsBanner, seedNecessaryConsent } from './helpers/storage';
 
-async function preacceptCookiesAndStabilize(page: any) {
-  await page.addInitScript(seedNecessaryConsent);
-  await page.addInitScript(hideRecommendationsBanner);
-}
-
-async function gotoWithRetry(page: any, url: string) {
-  let lastError: any = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-       
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      lastError = null;
-      break;
-    } catch (e) {
-      lastError = e;
-       
-      await page.waitForTimeout(500);
-    }
-  }
-  if (lastError) throw lastError;
-}
-
-async function assertNoHorizontalScroll(page: any) {
-  const res = await page.evaluate(() => {
-    const docEl = document.documentElement;
-    const body = document.body;
-    const docScrollWidth = docEl?.scrollWidth ?? 0;
-    const docClientWidth = docEl?.clientWidth ?? 0;
-    const bodyScrollWidth = body?.scrollWidth ?? 0;
-    const bodyClientWidth = body?.clientWidth ?? 0;
-
-    return {
-      docScrollWidth,
-      docClientWidth,
-      bodyScrollWidth,
-      bodyClientWidth,
-      docOverflowX: getComputedStyle(docEl).overflowX,
-      bodyOverflowX: getComputedStyle(body).overflowX,
-    };
-  });
-
-  expect(
-    res.docScrollWidth,
-    `documentElement has horizontal overflow: scrollWidth=${res.docScrollWidth} clientWidth=${res.docClientWidth} overflowX=${res.docOverflowX}`
-  ).toBeLessThanOrEqual(res.docClientWidth);
-
-  expect(
-    res.bodyScrollWidth,
-    `body has horizontal overflow: scrollWidth=${res.bodyScrollWidth} clientWidth=${res.bodyClientWidth} overflowX=${res.bodyOverflowX}`
-  ).toBeLessThanOrEqual(res.bodyClientWidth);
-}
+// Alias for backward compat within this file
+const preacceptCookiesAndStabilize = preacceptCookies;
 
 async function waitForNonNullBoundingBoxes(
   page: any,

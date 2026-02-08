@@ -9,60 +9,26 @@
  */
 
 import { test, expect } from './fixtures';
-import { getTravelsListPath } from './helpers/routes';
-import { seedNecessaryConsent, hideRecommendationsBanner } from './helpers/storage';
+import { preacceptCookies, navigateToFirstTravel } from './helpers/navigation';
+
+/**
+ * Navigate to a travel details page. Returns false if no travel is available.
+ * Parallel-safe: each test calls this independently.
+ */
+async function goToDetails(page: import('@playwright/test').Page): Promise<boolean> {
+  await preacceptCookies(page);
+  return navigateToFirstTravel(page);
+}
 
 /**
  * TC-TRAVEL-DETAIL-001: Загрузка детальной страницы (P1)
  */
 test.describe('Travel Details Page - Loading and Display', () => {
   test('TC-001: успешная загрузка детальной страницы', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.addInitScript(hideRecommendationsBanner);
-
-    // Открываем список путешествий
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    // Находим первую карточку путешествия
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    const count = await cards.count();
-
-    if (count === 0) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'No travel cards available; skipping test',
-      });
-      return;
-    }
-
-    // Получаем данные о путешествии перед переходом
-    const firstCard = cards.first();
-    await firstCard.click();
-
-    // Ждем загрузки детальной страницы
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие основного контейнера
     const mainContent = page.locator('[data-testid="travel-details-page"], [testID="travel-details-page"]');
-
-    const loaded = await mainContent
-      .first()
-      .isVisible()
-      .then((v) => v)
-      .catch(() => false);
-
-	    if (!loaded) {
-	      const errorState = page.getByText('Не удалось загрузить путешествие').first();
-	      if (await errorState.isVisible().catch(() => false)) {
-	        test.info().annotations.push({
-	          type: 'note',
-	          description: 'Travel details page entered error state; skipping TC-001 in this environment.',
-	        });
-	        throw new Error('Travel details not available (error state is visible).');
-	      }
-	    }
-
     await expect(mainContent.first()).toBeVisible({ timeout: 30_000 });
 
     // Проверяем, что страница содержит контент
@@ -76,8 +42,8 @@ test.describe('Travel Details Page - Loading and Display', () => {
       }
     });
 
-    // Даем время на загрузку
-    await page.waitForTimeout(1000);
+    // Wait for async errors to surface
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Не должно быть критичных ошибок
     const hasCriticalErrors = consoleErrors.some((err) =>
