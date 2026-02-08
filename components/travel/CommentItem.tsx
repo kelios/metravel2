@@ -5,8 +5,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
 import { useLikeComment, useUnlikeComment, useDeleteComment } from '../../hooks/useComments';
-import { formatDistanceToNow } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
+import { ru } from 'date-fns/locale/ru';
 
 interface CommentItemProps {
   comment: TravelComment;

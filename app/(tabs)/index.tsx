@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useMemo } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
@@ -12,6 +13,7 @@ const Home = lazy(() => import('@/components/home/Home'));
 
 function HomeScreen() {
     const pathname = usePathname();
+    const isFocused = useIsFocused();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -30,9 +32,10 @@ function HomeScreen() {
 
     const shouldRenderSeo = useMemo(() => {
         if (Platform.OS !== 'web') return false;
+        if (!isFocused) return false;
         const p = String(effectivePathname ?? '').trim();
         return p === '' || p === '/' || p === '/index';
-    }, [effectivePathname]);
+    }, [effectivePathname, isFocused]);
 
     const shouldRenderHomeContent = useMemo(() => {
         if (Platform.OS !== 'web') return true;

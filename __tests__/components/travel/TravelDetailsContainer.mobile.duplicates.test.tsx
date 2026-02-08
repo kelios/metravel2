@@ -8,6 +8,7 @@ import { render } from '@testing-library/react-native';
 
 jest.mock('@react-navigation/native', () => ({
   useIsFocused: () => true,
+  useNavigation: () => ({ setOptions: jest.fn() }),
 }));
 
 jest.mock('@/context/AuthContext', () => ({

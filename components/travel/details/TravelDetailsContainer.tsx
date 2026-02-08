@@ -18,7 +18,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -116,6 +116,7 @@ export default function TravelDetailsContainer() {
   // Fallback to true if hook is unavailable (e.g., static render) while preserving hook order
   const useIsFocusedSafe = useIsFocused ?? (() => true);
   const isFocused = useIsFocusedSafe();
+  const navigation = useNavigation();
   const [, startTransition] = useTransition();
 
   const isWebAutomation =
@@ -194,6 +195,15 @@ export default function TravelDetailsContainer() {
       jsonLd: structuredData,
     };
   }, [travel, slug]);
+  // ✅ FIX: Синхронизируем title экрана с navigation options,
+  // чтобы useDocumentTitle из expo-router устанавливал правильный document.title
+  // вместо пустой строки из HIDDEN = { title: '' }
+  useEffect(() => {
+    if (readyTitle) {
+      navigation.setOptions({ title: readyTitle });
+    }
+  }, [navigation, readyTitle]);
+
   const forceDeferMount = !!forceOpenKey;
 
   // ✅ АРХИТЕКТУРА: scrollTo теперь приходит из useScrollNavigation

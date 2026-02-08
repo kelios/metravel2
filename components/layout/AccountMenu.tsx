@@ -27,7 +27,7 @@ function AccountMenu() {
   const [expandedSections, setExpandedSections] = useState({
     navigation: true,
     travels: true,
-    account: false,
+    account: true,
     theme: false,
     documents: false,
   });
@@ -402,6 +402,56 @@ function AccountMenu() {
           />
 
           <View style={styles.sectionDivider} />
+          <Pressable onPress={() => toggleSection('account')} style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderText}>Аккаунт</Text>
+            <Feather 
+              name={expandedSections.account ? 'chevron-up' : 'chevron-down'} 
+              size={14} 
+              color={colors.textMuted} 
+            />
+          </Pressable>
+
+          {expandedSections.account && (
+            <>
+              <Menu.Item
+                onPress={() => handleNavigate('/messages')}
+                title="Сообщения"
+                leadingIcon={({ size }) => <Feather name="mail" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
+                onPress={() => handleNavigate('/subscriptions')}
+                title="Подписки"
+                leadingIcon={({ size }) => <Feather name="users" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
+                onPress={() => handleNavigate('/export')}
+                title="Экспорт в PDF"
+                leadingIcon={({ size }) => <Feather name="file-text" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
+                onPress={handleOpenPublicProfile}
+                title="Публичный профиль"
+                leadingIcon={({ size }) => <Feather name="users" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
+                onPress={handleLogout}
+                title="Выход"
+                leadingIcon={({ size }) => <Feather name="log-out" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+            </>
+          )}
+
+          <View style={styles.sectionDivider} />
           <Pressable onPress={() => toggleSection('navigation')} style={styles.sectionHeader}>
             <Text style={styles.sectionHeaderText}>Навигация</Text>
             <Feather 
@@ -457,56 +507,6 @@ function AccountMenu() {
                 onPress={() => handleNavigate('/userpoints')}
                 title="Мои точки"
                 leadingIcon={({ size }) => <Feather name="map-pin" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
-              />
-            </>
-          )}
-
-          <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('account')} style={styles.sectionHeader}>
-            <Text style={styles.sectionHeaderText}>Аккаунт</Text>
-            <Feather 
-              name={expandedSections.account ? 'chevron-up' : 'chevron-down'} 
-              size={14} 
-              color={colors.textMuted} 
-            />
-          </Pressable>
-
-          {expandedSections.account && (
-            <>
-              <Menu.Item
-                onPress={() => handleNavigate('/messages')}
-                title="Сообщения"
-                leadingIcon={({ size }) => <Feather name="mail" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() => handleNavigate('/subscriptions')}
-                title="Подписки"
-                leadingIcon={({ size }) => <Feather name="users" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() => handleNavigate('/export')}
-                title="Экспорт в PDF"
-                leadingIcon={({ size }) => <Feather name="file-text" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={handleOpenPublicProfile}
-                title="Публичный профиль"
-                leadingIcon={({ size }) => <Feather name="users" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={handleLogout}
-                title="Выход"
-                leadingIcon={({ size }) => <Feather name="log-out" size={size} color={styles.iconMuted.color} />}
                 style={styles.menuItem}
                 titleStyle={styles.menuItemTitle}
               />

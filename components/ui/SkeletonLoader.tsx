@@ -1,16 +1,21 @@
 // SkeletonLoader.tsx - компонент для skeleton loading состояний
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing as ReanimatedEasing,
-} from 'react-native-reanimated';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { TRAVEL_CARD_IMAGE_HEIGHT } from '@/components/listTravel/utils/listTravelConstants';
+
+// Lazy-require reanimated only on native to avoid pulling ~200KB into the web bundle.
+// On web the skeleton uses pure CSS animations (slider-shimmer keyframes).
+const Reanimated = Platform.OS !== 'web'
+  ? require('react-native-reanimated')
+  : null;
+const Animated = Reanimated?.default;
+const useSharedValue = Reanimated?.useSharedValue;
+const useAnimatedStyle = Reanimated?.useAnimatedStyle;
+const withRepeat = Reanimated?.withRepeat;
+const withTiming = Reanimated?.withTiming;
+const ReanimatedEasing = Reanimated?.Easing;
 
 interface SkeletonLoaderProps {
   testID?: string;
@@ -28,19 +33,6 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   style,
 }) => {
   const colors = useThemedColors();
-  const opacity = useSharedValue(0.3);
-
-  React.useEffect(() => {
-    opacity.value = withRepeat(
-      withTiming(0.7, { duration: 1200, easing: ReanimatedEasing.inOut(ReanimatedEasing.ease) }),
-      -1,
-      true,
-    );
-  }, [opacity]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
 
   const baseStyle = [
     styles.skeleton,
@@ -70,6 +62,27 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       />
     );
   }
+
+  return (
+    <NativeSkeletonPulse testID={testID} baseStyle={baseStyle} />
+  );
+};
+
+// Separate native-only component to keep reanimated hooks out of the web render path.
+const NativeSkeletonPulse: React.FC<{ testID?: string; baseStyle: any[] }> = ({ testID, baseStyle }) => {
+  const opacity = useSharedValue!(0.3);
+
+  React.useEffect(() => {
+    opacity.value = withRepeat!(
+      withTiming!(0.7, { duration: 1200, easing: ReanimatedEasing!.inOut(ReanimatedEasing!.ease) }),
+      -1,
+      true,
+    );
+  }, [opacity]);
+
+  const pulseStyle = useAnimatedStyle!(() => ({
+    opacity: opacity.value,
+  }));
 
   return (
     <Animated.View

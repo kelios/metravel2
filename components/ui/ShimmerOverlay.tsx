@@ -1,13 +1,17 @@
-import { memo, useEffect } from 'react';
+import React, { memo, useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 import { useThemedColors } from '@/hooks/useTheme';
+
+// Lazy-require reanimated only on native to avoid pulling ~200KB into the web bundle.
+const Reanimated = Platform.OS !== 'web'
+  ? require('react-native-reanimated')
+  : null;
+const Animated = Reanimated?.default;
+const useSharedValue = Reanimated?.useSharedValue;
+const useAnimatedStyle = Reanimated?.useAnimatedStyle;
+const withRepeat = Reanimated?.withRepeat;
+const withTiming = Reanimated?.withTiming;
+const Easing = Reanimated?.Easing;
 
 interface ShimmerOverlayProps {
   style?: any;
@@ -24,19 +28,6 @@ interface ShimmerOverlayProps {
  */
 function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
   const colors = useThemedColors();
-  const opacity = useSharedValue(0.35);
-
-  useEffect(() => {
-    opacity.value = withRepeat(
-      withTiming(0.75, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-  }, [opacity]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
-  }));
 
   const baseStyle = [
     shimmerStyles.fill,
@@ -64,6 +55,25 @@ function ShimmerOverlayInner({ style, testID }: ShimmerOverlayProps) {
       </View>
     );
   }
+
+  return <NativeShimmerPulse baseStyle={baseStyle} testID={testID} />;
+}
+
+// Separate native-only component to keep reanimated hooks out of the web render path.
+const NativeShimmerPulse: React.FC<{ baseStyle: any[]; testID?: string }> = ({ baseStyle, testID }) => {
+  const opacity = useSharedValue!(0.35);
+
+  useEffect(() => {
+    opacity.value = withRepeat!(
+      withTiming!(0.75, { duration: 1200, easing: Easing!.inOut(Easing!.ease) }),
+      -1,
+      true,
+    );
+  }, [opacity]);
+
+  const pulseStyle = useAnimatedStyle!(() => ({
+    opacity: opacity.value,
+  }));
 
   return <Animated.View style={[...baseStyle, pulseStyle]} testID={testID} />;
 }

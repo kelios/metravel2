@@ -172,7 +172,6 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         },
         inner: {
             width: '100%',
-            maxWidth: 1280,
             paddingHorizontal: 12,
             paddingVertical: 8,
             flexDirection: 'row',

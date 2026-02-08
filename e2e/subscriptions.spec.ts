@@ -146,26 +146,34 @@ test.describe('Subscriptions @smoke', () => {
     if (menuVisible) {
       await accountMenuAnchor.first().click();
 
-      // "Подписки" is inside the collapsed "Аккаунт" section — expand it first
-      const accountSection = page.getByText('Аккаунт', { exact: true });
-      const sectionVisible = await accountSection
-        .first()
-        .waitFor({ state: 'visible', timeout: 5_000 })
-        .then(() => true)
-        .catch(() => false);
-
-      if (sectionVisible) {
-        await accountSection.first().click();
-        await page.waitForTimeout(300);
-      }
-
-      // Look for "Подписки" menu item
+      // "Подписки" is inside the "Аккаунт" section which may already be expanded.
+      // Check if "Подписки" is already visible; if not, toggle the section.
       const subscriptionsLink = page.getByText('Подписки', { exact: true });
-      const linkVisible = await subscriptionsLink
+      let linkVisible = await subscriptionsLink
         .first()
-        .waitFor({ state: 'visible', timeout: 5_000 })
+        .waitFor({ state: 'visible', timeout: 3_000 })
         .then(() => true)
         .catch(() => false);
+
+      if (!linkVisible) {
+        const accountSection = page.getByText('Аккаунт', { exact: true });
+        const sectionVisible = await accountSection
+          .first()
+          .waitFor({ state: 'visible', timeout: 5_000 })
+          .then(() => true)
+          .catch(() => false);
+
+        if (sectionVisible) {
+          await accountSection.first().click();
+          await page.waitForTimeout(300);
+        }
+
+        linkVisible = await subscriptionsLink
+          .first()
+          .waitFor({ state: 'visible', timeout: 5_000 })
+          .then(() => true)
+          .catch(() => false);
+      }
 
       expect(linkVisible).toBeTruthy();
     }
