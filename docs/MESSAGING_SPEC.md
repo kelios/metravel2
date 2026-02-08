@@ -22,7 +22,7 @@
 | **Экран** | `app/(tabs)/messages.tsx` | Главный экран с адаптивным layout (desktop: two-panel, mobile: stacked) |
 | **Компоненты** | `components/messages/` | 4 компонента: `ThreadList`, `ChatView`, `MessageBubble`, `NewConversationPicker` |
 | **Тесты (unit)** | `__tests__/api/messages.test.ts`, `__tests__/hooks/useMessages.test.ts`, `__tests__/components/messages/` | 92 unit-тестов: API (25), хуки (32), MessageBubble (8), ThreadList (9), ChatView (10), NewConversationPicker (8) |
-| **Тесты (E2E)** | `e2e/messages.spec.ts` | 5 E2E-сценариев: auth gate, список, поиск, SEO, deep-link |
+| **Тесты (E2E)** | `e2e/messages.spec.ts` | 37 E2E-сценариев: smoke (5), thread list (6), chat view (7), deep links (3), new conversation (4), desktop layout (3), mobile layout (4), accessibility (5) |
 
 ### 2.2 Модель данных (фронтенд)
 
@@ -104,7 +104,7 @@ MessagingUser {
 | **P5** | ~~**Нет превью последнего сообщения**~~ | ✅ **РЕШЕНО (фронтенд).** `ThreadList` отображает `last_message_text` (1 строка). *Требуется поле от бэкенда.* |
 | **P6** | **Нет статусов доставки/прочтения** | Отправитель не знает, доставлено ли сообщение и прочитано ли оно. |
 | **P7** | **Нет редактирования сообщений** | API не поддерживает PATCH/PUT для сообщений. |
-| **P8** | ~~**Нет тестов**~~ | ✅ **РЕШЕНО.** 92 unit-тестов + 5 E2E-сценариев. |
+| **P8** | ~~**Нет тестов**~~ | ✅ **РЕШЕНО.** 92 unit-тестов + 37 E2E-сценариев (с мокированным API). |
 | **P9** | ~~**Нет ограничения на спам**~~ | ✅ **ЧАСТИЧНО РЕШЕНО (фронтенд).** Debounce кнопки отправки (300ms cooldown) в `ChatView`. *Бэкенд rate-limiting (30 msg/min) ожидает реализации.* |
 
 #### Минорные
@@ -256,14 +256,18 @@ MessagingUser {
 
 ### 4.2 E2E-тесты (Playwright)
 
-| Сценарий | Шаги |
-|----------|------|
-| Неавторизованный доступ | Открыть `/messages` → редирект на логин |
-| Просмотр списка диалогов | Логин → `/messages` → список тредов отображается |
-| Отправка сообщения | Выбрать тред → ввести текст → отправить → сообщение появляется |
-| Новый диалог | Нажать «Новый диалог» → выбрать пользователя → отправить сообщение |
-| Deep-link по userId | Открыть `/messages?userId=X` → открывается чат с пользователем X |
-| Адаптивный layout | Desktop: two-panel; Mobile: stacked |
+Все тесты используют `page.route()` для мокирования API (бэкенд-эндпоинты ещё не развёрнуты).
+
+| Группа | Сценарии | Кол-во |
+|--------|----------|--------|
+| **Smoke** (`@smoke`) | Auth gate, authenticated page, noindex meta, deep-link userId, no horizontal scroll | 5 |
+| **Thread List** | Participant names, last message preview, unread badge, search filter, empty state, «Новый диалог» button | 6 |
+| **Chat View** | Click thread → chat, messages from both participants, empty chat placeholder, send button disabled/enabled, send clears input, date separators | 7 |
+| **Deep Links** | userId=2 → existing thread, unknown userId → virtual thread, unauthenticated deep-link → login | 3 |
+| **New Conversation** | Open picker, show users, search filter, select user → chat | 4 |
+| **Desktop Layout** | Two-panel layout, click thread → right panel, back button hidden | 3 |
+| **Mobile Layout** | Stacked layout, click thread → replaces list, back button visible, back → thread list | 4 |
+| **Accessibility** | Thread labels, chat input label, send button label, search label, picker labels | 5 |
 
 ---
 
@@ -357,7 +361,7 @@ app/(tabs)/messages.tsx (MessagesScreen)
 | 2026-02-08 | **Фаза 2.2:** Превью последнего сообщения в `ThreadList` (1 строка, `last_message_text`). |
 | 2026-02-08 | **Фаза 2.3:** Группировка по датам в `ChatView` — разделители «Сегодня», «Вчера», полная дата. |
 | 2026-02-08 | **Фаза 2.4:** Поиск на мобильном — `showSearch` всегда включён. |
-| 2026-02-08 | **Тесты:** 92 unit-тестов (API: 25, хуки: 32, MessageBubble: 8, ThreadList: 9, ChatView: 10, NewConversationPicker: 8). 5 E2E-сценариев (Playwright). |
+| 2026-02-08 | **Тесты:** 92 unit-тестов (API: 25, хуки: 32, MessageBubble: 8, ThreadList: 9, ChatView: 10, NewConversationPicker: 8). 37 E2E-сценариев (Playwright): smoke (5), thread list (6), chat view (7), deep links (3), new conversation (4), desktop layout (3), mobile layout (4), accessibility (5). |
 | 2026-02-08 | **Graceful errors:** API функции обрабатывают 401/404 как пустые результаты (как в модуле комментариев). Debounce 300ms на кнопке отправки. Badge непрочитанных в AccountMenu. |
 | 2026-02-08 | **Фаза 2.1 (доп.):** «Копировать текст» в контекстном меню (web) / Alert (mobile) на любом сообщении. Оптимистичное удаление с rollback при ошибке API. |
 

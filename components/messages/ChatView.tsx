@@ -260,9 +260,9 @@ function ChatView({
                     accessibilityLabel="Отправить сообщение"
                 >
                     {sending ? (
-                        <ActivityIndicator size="small" color="#ffffff" />
+                        <ActivityIndicator size="small" color={colors.textInverse} />
                     ) : (
-                        <Feather name="send" size={18} color={canSend ? '#ffffff' : colors.textMuted} />
+                        <Feather name="send" size={18} color={canSend ? colors.textInverse : colors.textMuted} />
                     )}
                 </Pressable>
             </View>

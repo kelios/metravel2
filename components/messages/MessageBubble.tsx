@@ -93,7 +93,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
             <Text
                 style={[
                     styles.messageText,
-                    { color: isOwn ? '#ffffff' : colors.text },
+                    { color: isOwn ? colors.textInverse : colors.text },
                 ]}
                 selectable
             >
@@ -103,7 +103,7 @@ function MessageBubble({ message, isOwn, isSystem, onDelete }: MessageBubbleProp
                 <Text
                     style={[
                         styles.timeText,
-                        { color: isOwn ? 'rgba(255,255,255,0.7)' : colors.textMuted },
+                        { color: isOwn ? colors.textInverse : colors.textMuted, opacity: isOwn ? 0.7 : 1 },
                     ]}
                 >
                     {formattedTime}

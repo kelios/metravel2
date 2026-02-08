@@ -166,7 +166,7 @@ function ThreadList({
                 accessibilityLabel="Новый диалог"
             >
                 <View style={[styles.newConversationIcon, { backgroundColor: colors.primary }]}>
-                    <Feather name="edit" size={18} color="#ffffff" />
+                    <Feather name="edit" size={18} color={colors.textInverse} />
                 </View>
                 <Text style={[styles.newConversationText, { color: colors.primary }]}>Новый диалог</Text>
             </Pressable>
@@ -234,7 +234,7 @@ function ThreadList({
                             accessibilityRole="button"
                             accessibilityLabel="Новый диалог"
                         >
-                            <Feather name="edit" size={16} color="#ffffff" />
+                            <Feather name="edit" size={16} color={colors.textInverse} />
                             <Text style={styles.newConversationButtonText}>Новый диалог</Text>
                         </Pressable>
                     )}
@@ -263,7 +263,7 @@ function ThreadList({
     );
 }
 
-const createStyles = (_colors: ThemedColors) =>
+const createStyles = (colors: ThemedColors) =>
     StyleSheet.create({
         list: {
             paddingVertical: DESIGN_TOKENS.spacing.sm,
@@ -326,7 +326,7 @@ const createStyles = (_colors: ThemedColors) =>
             paddingHorizontal: 6,
         },
         unreadBadgeText: {
-            color: '#ffffff',
+            color: colors.textInverse,
             fontSize: 11,
             fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
         },
@@ -356,7 +356,7 @@ const createStyles = (_colors: ThemedColors) =>
             borderRadius: DESIGN_TOKENS.radii.md,
         },
         retryButtonText: {
-            color: '#ffffff',
+            color: colors.textInverse,
             fontSize: DESIGN_TOKENS.typography.sizes.sm,
             fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         },
@@ -370,7 +370,7 @@ const createStyles = (_colors: ThemedColors) =>
             borderRadius: DESIGN_TOKENS.radii.md,
         },
         newConversationButtonText: {
-            color: '#ffffff',
+            color: colors.textInverse,
             fontSize: DESIGN_TOKENS.typography.sizes.sm,
             fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
         },
