@@ -56,15 +56,7 @@ test.describe('Travel Details Page - Loading and Display', () => {
    * TC-TRAVEL-DETAIL-002: Отображение галереи изображений (P1)
    */
   test('TC-002: галерея изображений отображается и работает', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие секции с галереей
     const gallerySection = page.locator('[testid="travel-details-section-gallery"]');
@@ -92,13 +84,11 @@ test.describe('Travel Details Page - Loading and Display', () => {
    * TC-TRAVEL-DETAIL-020: 404 для несуществующего путешествия (P1)
    */
   test('TC-020: обработка 404 для несуществующего путешествия', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
-    // Открываем несуществующее путешествие
+    await preacceptCookies(page);
     await page.goto('/travels/non-existent-travel-99999', { waitUntil: 'domcontentloaded' });
 
-    // Ждем обработки ошибки
-    await page.waitForTimeout(2000);
+    // Wait for error state to render
+    await page.waitForSelector('text=/не найдено|не удалось|ошибка/i', { timeout: 15_000 }).catch(() => null);
 
     // Проверяем наличие сообщения об ошибке
     const errorMessages = [
@@ -126,19 +116,11 @@ test.describe('Travel Details Page - Loading and Display', () => {
  */
 test.describe('Travel Details - Map and Routes', () => {
   test('TC-003: карта и точки маршрута отображаются', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Прокручиваем вниз, чтобы загрузить отложенные секции
     await page.evaluate(() => window.scrollBy(0, 1000));
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded').catch(() => null);
 
     // Проверяем наличие секции с картой
     const mapSection = page.locator('[testid="travel-details-map"]');
@@ -162,19 +144,11 @@ test.describe('Travel Details - Map and Routes', () => {
    * TC-TRAVEL-DETAIL-004: Список точек маршрута (P2)
    */
   test('TC-004: список точек маршрута корректен', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Прокручиваем до секции с точками
     await page.evaluate(() => window.scrollBy(0, 1500));
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded').catch(() => null);
 
     const pointsSection = page.locator('[testid="travel-details-points"]');
     const hasPoints = await pointsSection.isVisible().catch(() => false);
@@ -198,15 +172,7 @@ test.describe('Travel Details - Map and Routes', () => {
  */
 test.describe('Travel Details - Content and Info', () => {
   test('TC-005: информационные блоки (Quick Facts) отображаются', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие Quick Facts секции
     const quickFactsSection = page.locator('[testid="travel-details-quick-facts"]');
@@ -223,15 +189,7 @@ test.describe('Travel Details - Content and Info', () => {
   });
 
   test('TC-006: секции контента отображаются корректно', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие секции описания
     const descriptionSection = page.locator('[testid="travel-details-description"]');
@@ -247,22 +205,14 @@ test.describe('Travel Details - Content and Info', () => {
 
     // Прокручиваем для загрузки дополнительных секций
     await page.evaluate(() => window.scrollBy(0, 2000));
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('domcontentloaded').catch(() => null);
   });
 
   /**
    * TC-TRAVEL-DETAIL-010: Информация об авторе (P2)
    */
   test('TC-010: информация об авторе отображается', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие информации об авторе
     const authorSection = page.locator('[testid="travel-details-author"]');
@@ -285,15 +235,7 @@ test.describe('Travel Details - Content and Info', () => {
  */
 test.describe('Travel Details - Favorites', () => {
   test('TC-007 & TC-009: кнопка избранного корректно обрабатывает неавторизованных', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Ищем кнопку избранного
     const favoriteButton = page.locator('[data-testid="favorite-button"]');
@@ -319,21 +261,8 @@ test.describe('Travel Details - Favorites', () => {
  */
 test.describe('Travel Details - Navigation', () => {
   test('TC-014: боковое меню навигации работает на Desktop', async ({ page }) => {
-    // Устанавливаем размер экрана для Desktop
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.addInitScript(seedNecessaryConsent);
-
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки страницы
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие бокового меню на больших экранах
     const sideMenu = page.locator('[testid="travel-details-side-menu"]');
@@ -352,21 +281,8 @@ test.describe('Travel Details - Navigation', () => {
    * TC-TRAVEL-DETAIL-015: Компактное меню секций (Mobile) (P2)
    */
   test('TC-015: компактное меню работает на Mobile', async ({ page }) => {
-    // Устанавливаем размер экрана для Mobile
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.addInitScript(seedNecessaryConsent);
-
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки страницы
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие компактного меню на мобильных
     const sectionsSheet = page.locator('[testid="travel-sections-sheet-wrapper"]');
@@ -381,15 +297,7 @@ test.describe('Travel Details - Navigation', () => {
    * TC-TRAVEL-DETAIL-019: Breadcrumbs (хлебные крошки) (P3)
    */
   test('TC-019: breadcrumbs отображаются и работают', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие breadcrumbs
     const breadcrumbs = page.locator('[aria-label*="Breadcrumb"], [role="navigation"] nav');
@@ -412,15 +320,7 @@ test.describe('Travel Details - Navigation', () => {
  */
 test.describe('Travel Details - Sharing', () => {
   test('TC-016: кнопка "Поделиться" работает', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Ищем кнопку "Поделиться"
     const shareButton = page.locator('[testid="travel-details-share"]');
@@ -432,7 +332,7 @@ test.describe('Travel Details - Sharing', () => {
 
       // Клик по кнопке должен открыть модальное окно или меню
       await shareButton.click();
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('domcontentloaded').catch(() => null);
 
       // После клика должно появиться модальное окно или меню шаринга
       const body = await page.locator('body').textContent();
@@ -447,19 +347,11 @@ test.describe('Travel Details - Sharing', () => {
  */
 test.describe('Travel Details - Related Content', () => {
   test('TC-017: похожие путешествия загружаются', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Прокручиваем до конца страницы для загрузки похожих путешествий
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     // Проверяем наличие секции с похожими путешествиями
     const bodyText = await page.locator('body').textContent();
@@ -483,21 +375,8 @@ test.describe('Travel Details - Related Content', () => {
  */
 test.describe('Travel Details - Mobile Responsiveness', () => {
   test('TC-021: мобильная версия корректно адаптирована', async ({ page }) => {
-    // Устанавливаем мобильный viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.addInitScript(seedNecessaryConsent);
-
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки страницы
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Проверяем, что основной контент загружен
     const mainContent = page.locator('[testid="travel-details-page"]');
@@ -534,18 +413,7 @@ test.describe('Travel Details - Mobile Responsiveness', () => {
  */
 test.describe('Travel Details - SEO', () => {
   test('TC-022: SEO метатеги присутствуют и корректны', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Даем время на загрузку метатегов
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие title
     const title = await page.title();
@@ -584,18 +452,7 @@ test.describe('Travel Details - SEO', () => {
    * TC-TRAVEL-DETAIL-023: Schema.org разметка (P2)
    */
   test('TC-023: Schema.org разметка присутствует', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Даем время на загрузку разметки
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие JSON-LD разметки
     const jsonLdScript = page.locator('script[type="application/ld+json"]');
@@ -618,7 +475,7 @@ test.describe('Travel Details - SEO', () => {
  */
 test.describe('Travel Details - Error Handling', () => {
   test('TC-025: graceful degradation при ошибке загрузки', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
+    await preacceptCookies(page);
 
     // Блокируем API запросы для имитации ошибки
     await page.route('**/api/travels/**', (route) => {
@@ -629,8 +486,8 @@ test.describe('Travel Details - Error Handling', () => {
       // Игнорируем ошибки навигации
     });
 
-    // Даем время на обработку ошибки
-    await page.waitForTimeout(3000);
+    // Wait for error state to render
+    await page.waitForSelector('text=/ошибк|не удалось|не найдено/i', { timeout: 15_000 }).catch(() => null);
 
     // Приложение не должно упасть - проверяем, что body существует
     const body = page.locator('body');
@@ -665,19 +522,10 @@ test.describe('Travel Details - Error Handling', () => {
  */
 test.describe('Travel Details - Accessibility', () => {
   test('TC-027: keyboard navigation работает', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
+    if (!(await goToDetails(page))) return;
 
     // Проверяем, что можно использовать Tab для навигации
     await page.keyboard.press('Tab');
-    await page.waitForTimeout(100);
 
     // Проверяем наличие фокуса на интерактивном элементе
     const focusedElement = await page.evaluate(() => {
@@ -699,18 +547,7 @@ test.describe('Travel Details - Accessibility', () => {
   });
 
   test('TC-027: семантический HTML и ARIA атрибуты', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
-
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем загрузки основного контента
-    await page.waitForTimeout(2000);
+    if (!(await goToDetails(page))) return;
 
     // Проверяем наличие role="main"
     const mainContent = page.locator('[role="main"]');
@@ -746,8 +583,6 @@ test.describe('Travel Details - Accessibility', () => {
  */
 test.describe('Travel Details - Performance', () => {
   test('TC-026: изображения загружаются лениво', async ({ page }) => {
-    await page.addInitScript(seedNecessaryConsent);
-
     // Отслеживаем загрузку изображений
     const loadedImages: string[] = [];
     page.on('response', (response) => {
@@ -756,23 +591,16 @@ test.describe('Travel Details - Performance', () => {
       }
     });
 
-    await page.goto(getTravelsListPath(), { waitUntil: 'domcontentloaded' });
-    await page.waitForTimeout(500);
+    if (!(await goToDetails(page))) return;
 
-    const cards = page.locator('[data-testid="travel-card-link"]');
-    if ((await cards.count()) === 0) return;
-
-    await cards.first().click();
-    await page.waitForURL((url) => url.pathname.startsWith('/travels/'), { timeout: 30_000 });
-
-    // Ждем начальной загрузки
-    await page.waitForTimeout(2000);
+    // Wait for initial images to load
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     const imagesBeforeScroll = loadedImages.length;
 
     // Прокручиваем страницу вниз
     await page.evaluate(() => window.scrollBy(0, 2000));
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle').catch(() => null);
 
     const imagesAfterScroll = loadedImages.length;
 
