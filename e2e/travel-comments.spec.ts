@@ -1,10 +1,9 @@
 import { test, expect } from './fixtures';
-import { preacceptCookies } from './helpers/navigation';
+import { preacceptCookies, tid } from './helpers/navigation';
 import { loginAsUser, loginAsAdmin } from './helpers/e2eApi';
 
 test.describe('Travel Comments', () => {
   const slug = 'e2e-travel-comments';
-  const tid = (id: string) => `[data-testid="${id}"], [testID="${id}"]`;
 
   const THREAD_ID = 910001;
   const nowIso = () => new Date().toISOString();

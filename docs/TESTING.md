@@ -100,11 +100,11 @@ yarn e2e:ui                       # Playwright UI mode
 | File | Purpose |
 |------|---------|
 | `navigation.ts` | `gotoWithRetry`, `preacceptCookies`, `assertNoHorizontalScroll`, `navigateToFirstTravel`, `waitForMainListRender`, `tid` |
-| `auth.ts` | `isAuthenticated`, `getCurrentUser`, `waitForAuth` |
+| `auth.ts` | `isAuthenticated`, `getCurrentUser`, `waitForAuth`, `simpleEncrypt`, `ensureAuthedStorageFallback` |
 | `e2eApi.ts` | Direct API calls, test data creation/cleanup |
 | `consoleGuards.ts` | Console error detection |
 | `layoutAsserts.ts` | `expectNoOverlap`, `expectFullyInViewport`, `expectNoHorizontalScroll` |
-| `storage.ts` | `seedNecessaryConsent`, `hideRecommendationsBanner` |
+| `storage.ts` | `seedNecessaryConsent`, `hideRecommendationsBanner` (used internally by `navigation.ts`; specs should use `preacceptCookies` instead) |
 | `routes.ts` | `getTravelsListPath` |
 
 First-time setup:

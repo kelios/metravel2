@@ -330,7 +330,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         )
       }
 
-      return (
+      const slideContent = (
         <View style={[styles.slide, { width: containerW, height: containerH }]}>
           <View style={styles.imageCardWrapper}>
             <View style={styles.imageCardSurface}>
@@ -357,8 +357,18 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           </View>
         </View>
       )
+
+      if (onImagePress) {
+        return (
+          <TouchableOpacity activeOpacity={0.9} onPress={() => onImagePress(index)} accessibilityRole="button" accessibilityLabel={`Открыть фото ${index + 1} на весь экран`}>
+            {slideContent}
+          </TouchableOpacity>
+        )
+      }
+
+      return slideContent
     },
-    [blurBackground, containerH, containerW, fit, handleFirstImageLoad, imageProps, images.length, renderIndex, renderWindow, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
+    [blurBackground, containerH, containerW, fit, handleFirstImageLoad, imageProps, images.length, onImagePress, renderIndex, renderWindow, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
   )
 
   const handleScroll = useCallback(
@@ -435,6 +445,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           <ScrollView
             ref={scrollRef}
             horizontal
+            pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={16}
             style={styles.scrollView}
