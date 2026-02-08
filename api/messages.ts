@@ -1,4 +1,47 @@
-import { apiClient } from '@/api/client';
+import { ApiError } from '@/api/client';
+import { API_BASE_URL, DEFAULT_TIMEOUT, TOKEN_KEY } from '@/api/apiConfig';
+import { getSecureItem } from '@/utils/secureStorage';
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+
+// ---------------------------------------------------------------------------
+// Lightweight fetch helper for messaging endpoints.
+// Unlike apiClient, this does NOT trigger the 401→refresh→clearTokens cascade,
+// so messaging 401s (from undeployed backend) won't log the user out.
+// ---------------------------------------------------------------------------
+
+async function messagingFetch<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    timeout: number = DEFAULT_TIMEOUT,
+): Promise<T> {
+    const token = await getSecureItem(TOKEN_KEY).catch(() => null);
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Token ${token}` } : {}),
+        ...options.headers,
+    };
+
+    const response = await fetchWithTimeout(
+        `${API_BASE_URL}${endpoint}`,
+        { ...options, headers },
+        timeout,
+    );
+
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        let errorData: any;
+        try { errorData = JSON.parse(errorText); } catch { errorData = errorText; }
+        throw new ApiError(
+            response.status,
+            errorData?.message || errorData?.detail || `Ошибка запроса: ${response.statusText}`,
+            errorData,
+        );
+    }
+
+    const text = await response.text();
+    if (!text || text === 'null') return null as unknown as T;
+    return JSON.parse(text) as T;
+}
 
 // ---- Types ----
 
@@ -60,7 +103,7 @@ export interface ThreadByUserResponse {
 
 export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
     try {
-        return await apiClient.get<MessageThread[]>('/message-threads/');
+        return await messagingFetch<MessageThread[]>('/message-threads/');
     } catch (e: any) {
         const status = e?.status ?? e?.response?.status;
         if (status === 401 || status === 404) return [];
@@ -70,7 +113,7 @@ export const fetchMessageThreads = async (): Promise<MessageThread[]> => {
 
 export const fetchAvailableUsers = async (): Promise<MessagingUser[]> => {
     try {
-        return await apiClient.get<MessagingUser[]>('/message-threads/available-users/');
+        return await messagingFetch<MessagingUser[]>('/message-threads/available-users/');
     } catch (e: any) {
         const status = e?.status ?? e?.response?.status;
         if (status === 401 || status === 404) return [];
@@ -80,8 +123,8 @@ export const fetchAvailableUsers = async (): Promise<MessagingUser[]> => {
 
 export const fetchThreadByUser = async (userId: number): Promise<ThreadByUserResponse> => {
     try {
-        return await apiClient.get<ThreadByUserResponse>(
-            `/message-threads/thread-by-user/?user_id=${userId}`
+        return await messagingFetch<ThreadByUserResponse>(
+            `/message-threads/thread-by-user/?user_id=${userId}`,
         );
     } catch (e: any) {
         const status = e?.status ?? e?.response?.status;
@@ -96,8 +139,8 @@ export const fetchMessages = async (
     perPage: number = 50
 ): Promise<PaginatedMessages> => {
     try {
-        return await apiClient.get<PaginatedMessages>(
-            `/messages/?thread_id=${threadId}&page=${page}&perPage=${perPage}`
+        return await messagingFetch<PaginatedMessages>(
+            `/messages/?thread_id=${threadId}&page=${page}&perPage=${perPage}`,
         );
     } catch (e: any) {
         const status = e?.status ?? e?.response?.status;
@@ -110,7 +153,10 @@ export const fetchMessages = async (
 
 export const markThreadRead = async (threadId: number): Promise<null> => {
     try {
-        return await apiClient.post<null>(`/message-threads/${threadId}/mark-read/`, {});
+        return await messagingFetch<null>(`/message-threads/${threadId}/mark-read/`, {
+            method: 'POST',
+            body: JSON.stringify({}),
+        });
     } catch (e: any) {
         const status = e?.status ?? e?.response?.status;
         if (status === 401 || status === 404) return null;
@@ -124,8 +170,14 @@ export interface UnreadCountResponse {
 
 export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
     try {
-        return await apiClient.get<UnreadCountResponse>('/messages/unread-count/');
-    } catch {
+        return await messagingFetch<UnreadCountResponse>('/messages/unread-count/');
+    } catch (e: any) {
+        const status = e?.status ?? e?.response?.status;
+        if (status === 401 || status === 403) {
+            // Re-throw so useUnreadCount consecutive failure tracking can detect it
+            throw e;
+        }
+        // Swallow other errors (network, 500, etc.) silently
         return { count: 0 };
     }
 };
@@ -134,7 +186,10 @@ export const sendMessage = async (
     payload: MessageCreatePayload
 ): Promise<MessageCreatePayload> => {
     try {
-        return await apiClient.post<MessageCreatePayload>('/messages/', payload);
+        return await messagingFetch<MessageCreatePayload>('/messages/', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
     } catch (e: any) {
         const status = e?.status ?? e?.response?.status;
         if (status === 401) {
@@ -146,7 +201,9 @@ export const sendMessage = async (
 
 export const deleteMessage = async (id: number | string): Promise<null> => {
     try {
-        return await apiClient.delete<null>(`/messages/${id}/`);
+        return await messagingFetch<null>(`/messages/${id}/`, {
+            method: 'DELETE',
+        });
     } catch (e: any) {
         const status = e?.status ?? e?.response?.status;
         if (status === 401 || status === 404) return null;

@@ -332,6 +332,29 @@ function CompactSideBarTravel({
                   />
                 </Suspense>
               )}
+
+              {!canEdit && authorUserId && (
+                <Pressable
+                  onPress={() => openUrl(`/messages?userId=${encodeURIComponent(authorUserId)}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Написать автору ${userName || 'Пользователь'}`}
+                  style={({ pressed }) => [
+                    styles.actionBtn,
+                    globalFocusStyles.focusable,
+                    pressed && styles.actionBtnPressed,
+                  ]}
+                  {...(Platform.OS === 'web'
+                    ? {
+                        'data-action-btn': true,
+                        role: 'button',
+                        'aria-label': `Написать автору ${userName || 'Пользователь'}`,
+                        title: 'Написать автору',
+                      }
+                    : {})}
+                >
+                  <Feather name="mail" size={18} color={textColor} />
+                </Pressable>
+              )}
             </View>
           </View>
 

@@ -455,6 +455,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'column',
     alignItems: 'flex-start',
     gap: 14, // было 16px (-12.5%)
+    width: '100%',
   },
   avatarSection: {
     alignItems: 'center',
@@ -465,6 +466,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     flex: 1,
     minWidth: 0,
+    width: '100%',
     gap: 18,
   },
   // ✅ РЕДИЗАЙН: Уменьшенный аватар (-15%)
@@ -613,7 +615,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     }),
   },
   viewButtonBottom: {
-    width: '100%',
+    flex: 1,
+    minWidth: 0,
     paddingVertical: DESIGN_TOKENS.spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
