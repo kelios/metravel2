@@ -322,7 +322,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             letterSpacing: -0.1,
         },
         navLabelActive: {
-            color: colors.primary,
+            color: colors.primaryText,
             fontWeight: DESIGN_TOKENS.typography.weights.bold as any,
             letterSpacing: -0.2,
         },
@@ -453,7 +453,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
             flex: 1,
         },
         modalNavLabelActive: {
-            color: colors.primary,
+            color: colors.primaryText,
             fontWeight: '600',
         },
         modalDivider: {

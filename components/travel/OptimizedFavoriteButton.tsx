@@ -124,4 +124,4 @@ const getStyles = (_colors: ThemedColors) => StyleSheet.create({
     },
 });
 
-export default OptimizedFavoriteButton;
+export default memo(OptimizedFavoriteButton);

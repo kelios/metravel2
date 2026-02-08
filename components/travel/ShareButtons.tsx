@@ -26,7 +26,7 @@ interface ShareButtonsProps {
   variant?: 'default' | 'sticky';
 }
 
-export default function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
+function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const isSticky = variant === 'sticky';
@@ -591,3 +591,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     textAlign: 'center',
   },
 });
+
+export default React.memo(ShareButtons);

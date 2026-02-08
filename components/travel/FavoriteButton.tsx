@@ -23,7 +23,7 @@ type FavoriteButtonProps = {
     style?: any;
 };
 
-export default function FavoriteButton({
+function FavoriteButton({
     id,
     type,
     title,
@@ -232,3 +232,5 @@ const styles = StyleSheet.create({
         }),
     },
 });
+
+export default React.memo(FavoriteButton);

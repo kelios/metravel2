@@ -360,7 +360,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     textAlign: "center",
   },
   itemTextActive: {
-    color: colors.primary,
+    color: colors.primaryText,
     fontWeight: "600" as const,
   },
   itemTextOnly: {

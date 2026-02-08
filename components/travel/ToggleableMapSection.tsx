@@ -105,7 +105,7 @@ const ToggleableMapSection = ({
     );
 };
 
-export default ToggleableMapSection;
+export default React.memo(ToggleableMapSection);
 
 // ✅ УЛУЧШЕНИЕ: Функция создания стилей с динамическими цветами для поддержки тем
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({

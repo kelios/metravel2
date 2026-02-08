@@ -52,7 +52,7 @@ interface QuickFactsProps {
   onCategoryPress?: (category: string) => void;
 }
 
-export default function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
+function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
@@ -288,3 +288,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     letterSpacing: 0,
   },
 });
+
+export default React.memo(QuickFacts);

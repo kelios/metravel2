@@ -22,7 +22,7 @@ interface NavigationArrowsProps {
   onNavigate?: (travelId: number | string) => void;
 }
 
-export default function NavigationArrows({
+function NavigationArrows({
   currentTravel,
   relatedTravels,
   onNavigate,
@@ -268,3 +268,4 @@ export default function NavigationArrows({
   );
 }
 
+export default React.memo(NavigationArrows);

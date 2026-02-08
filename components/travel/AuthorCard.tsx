@@ -26,7 +26,7 @@ function SafeView({ children, ...rest }: ViewProps) {
   return <View {...rest}>{safeChildren}</View>;
 }
 
-export default function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
+function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
   const router = useRouter();
   const { isPhone, isLargePhone } = useResponsive();
   const isMobile = isPhone || isLargePhone;
@@ -571,3 +571,5 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
   },
 });
+
+export default React.memo(AuthorCard);
