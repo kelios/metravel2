@@ -52,15 +52,6 @@ const openUrl = (url: string) => {
 // универсальный эмиттер "открой секцию"
 const emitOpenSection = (key: string) => {
   if (Platform.OS === "web") {
-    try {
-      const dbg = typeof window !== 'undefined' && (window as any).__NAV_DEBUG__;
-      if (dbg) {
-        // eslint-disable-next-line no-console
-        console.debug('[nav] emitOpenSection(web)', { key });
-      }
-    } catch {
-      // noop
-    }
     // @ts-ignore
     window.dispatchEvent(new CustomEvent("open-section", { detail: { key } }));
   } else {
@@ -153,15 +144,6 @@ function CompactSideBarTravel({
       }
 
       setActive(k);
-      try {
-        const dbg = typeof window !== 'undefined' && (window as any).__NAV_DEBUG__;
-        if (dbg) {
-          // eslint-disable-next-line no-console
-          console.debug('[nav] sidebar click', { key: k, isMobile, os: Platform.OS });
-        }
-      } catch {
-        // noop
-      }
       emitOpenSection(k); // раскрыть секцию
       try {
         onNavigate(key); // скролл
