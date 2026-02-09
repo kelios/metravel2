@@ -129,7 +129,7 @@ describe('Slider', () => {
     expect(apiMobile.queryByLabelText('Next slide')).toBeNull()
   })
 
-  it('uses blurred background on web while loading and after load', async () => {
+  it('shows flat bg while loading, hides it after load', async () => {
     ;(Platform as any).OS = 'web'
 
     const { getByTestId, queryByTestId } = render(
@@ -144,15 +144,15 @@ describe('Slider', () => {
     )
 
     expect(getByTestId('slider-flat-bg-0')).toBeTruthy()
-    expect(queryByTestId('slider-blur-bg-0')).toBeNull()
+    expect(getByTestId('slider-image-0')).toBeTruthy()
 
     const img = getByTestId('slider-image-0')
     act(() => {
       img.props.onLoad?.()
     })
 
-    expect(getByTestId('slider-blur-bg-0')).toBeTruthy()
     expect(queryByTestId('slider-flat-bg-0')).toBeNull()
+    expect(getByTestId('slider-image-0')).toBeTruthy()
   })
 
   it('updates counter when navigating to the next slide via arrow', async () => {

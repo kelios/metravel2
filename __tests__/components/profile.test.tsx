@@ -248,18 +248,18 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(1, 1);
 
-    const { getAllByText } = renderProfile();
+    const { getAllByText, getAllByLabelText } = renderProfile();
 
     await waitFor(() => {
-      expect(getAllByText('My Travel 1').length).toBeGreaterThan(0);
+      expect(getAllByLabelText(/My Travel 1/).length).toBeGreaterThan(0);
     });
 
     const favCandidates = getAllByText('Избранное');
     fireEvent.press(favCandidates[favCandidates.length - 1]);
-    await waitFor(() => expect(getAllByText('Fav 1').length).toBeGreaterThan(0));
+    await waitFor(() => expect(getAllByLabelText(/Fav 1/).length).toBeGreaterThan(0));
 
     const historyCandidates = getAllByText('История');
     fireEvent.press(historyCandidates[historyCandidates.length - 1]);
-    await waitFor(() => expect(getAllByText('History 1').length).toBeGreaterThan(0));
+    await waitFor(() => expect(getAllByLabelText(/History 1/).length).toBeGreaterThan(0));
   });
 });

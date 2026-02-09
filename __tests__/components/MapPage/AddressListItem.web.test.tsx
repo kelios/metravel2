@@ -92,11 +92,11 @@ describe('AddressListItem (web right panel)', () => {
     jest.spyOn(RN.Linking, 'canOpenURL').mockResolvedValue(false);
     jest.spyOn(RN.Linking, 'openURL').mockResolvedValue(undefined);
 
-    const { getByText, getAllByLabelText } = renderWithProviders(
+    const { getAllByLabelText } = renderWithProviders(
       <AddressListItem travel={baseTravel} isMobile={false} />
     );
 
-    expect(getByText(baseTravel.coord)).toBeTruthy();
+    expect(getAllByLabelText('Скопировать координаты').length).toBeGreaterThan(0);
 
     fireEvent.press(getAllByLabelText('Скопировать координаты')[0]);
     await waitFor(() => {

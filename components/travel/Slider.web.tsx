@@ -76,7 +76,7 @@ const buildUri = (
     const aspectRatio = img.width / img.height
     const cappedWidth = Math.min(containerWidth, 1200)
     const optimalSize = getOptimalImageSize(cappedWidth, containerHeight, aspectRatio)
-    const quality = isFirst ? 55 : 65
+    const quality = isFirst ? 40 : 65
 
     return (
       optimizeImageUrl(versionedUrl, {
@@ -91,7 +91,7 @@ const buildUri = (
 
   if (containerWidth) {
     const cappedWidth = Math.min(containerWidth, 1200)
-    const quality = isFirst ? 55 : 65
+    const quality = isFirst ? 40 : 65
     return (
       optimizeImageUrl(versionedUrl, {
         width: cappedWidth,
@@ -364,8 +364,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     ({ item, index }: { item: SliderImage; index: number }) => {
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
-      // First 3 slides load eagerly, rest use native lazy loading
-      const isEager = index <= 2
+      // On mobile: only first slide is eager to avoid bandwidth competition
+      // On desktop: first 3 slides load eagerly
+      const isEager = isMobile ? index === 0 : index <= 2
 
       return (
         <View style={[styles.slide, slideDimensions, styles.slideSnap]}>
@@ -394,7 +395,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         </View>
       )
     },
-    [blurBackground, fit, handleFirstImageLoad, images.length, mergedImagePropsBase, slideDimensions, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, styles.slideSnap, uriMap]
+    [blurBackground, fit, handleFirstImageLoad, images.length, isMobile, mergedImagePropsBase, slideDimensions, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, styles.slideSnap, uriMap]
   )
 
   // Minimal scroll handler — only update currentIndex when scroll settles.
@@ -468,11 +469,20 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             }}
             onScroll={handleScroll}
           >
-            {images.map((item, index) => (
-              <React.Fragment key={keyExtractor(item)}>
-                {renderItem({ item, index })}
-              </React.Fragment>
-            ))}
+            {images.map((item, index) => {
+              // On mobile: only render slides within ±2 of current index to reduce DOM size
+              // Other slides get an empty placeholder to preserve scroll position
+              if (isMobile && images.length > 5 && Math.abs(index - currentIndex) > 2) {
+                return (
+                  <View key={keyExtractor(item)} style={[styles.slide, slideDimensions, styles.slideSnap]} />
+                )
+              }
+              return (
+                <React.Fragment key={keyExtractor(item)}>
+                  {renderItem({ item, index })}
+                </React.Fragment>
+              )
+            })}
           </ScrollView>
         </View>
 

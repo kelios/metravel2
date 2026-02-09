@@ -458,12 +458,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   errorContainer: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.backgroundSecondary,
-    ...Platform.select({
-      web: {
-        backgroundImage:
-          `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.mutedBackground} 50%, ${colors.backgroundSecondary} 100%)`,
-      },
-    }),
   },
 });
 

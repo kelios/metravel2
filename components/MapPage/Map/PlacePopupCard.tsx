@@ -158,7 +158,7 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   addLabel = 'Мои точки',
-  width = 320,
+  width = 380,
   imageHeight: _imageHeight = 72,
 }) => {
   const colors = useThemedColors();
@@ -204,9 +204,9 @@ const PlacePopupCard: React.FC<Props> = ({
 
   return (
     <View style={[styles.container, { maxWidth: maxPopupWidth }]}>
-      {/* Hero image — full width on top */}
-      <View style={styles.heroWrap}>
-        {imageUrl ? (
+      {/* Hero image — only when photo exists */}
+      {imageUrl ? (
+        <View style={styles.heroWrap}>
           <CardActionPressable
             accessibilityLabel="Открыть фото на полный экран"
             onPress={handleOpenFullscreen}
@@ -217,20 +217,17 @@ const PlacePopupCard: React.FC<Props> = ({
               src={imageUrl}
               alt={title || 'Point image'}
               fit="cover"
-              blurBackground
-              blurRadius={16}
+              blurBackground={false}
               loading="lazy"
               priority="low"
               style={StyleSheet.absoluteFillObject}
             />
             <View style={styles.expandIcon}>
-              <Feather name="maximize-2" size={14} color="#fff" />
+              <Feather name="maximize-2" size={12} color="#fff" />
             </View>
           </CardActionPressable>
-        ) : (
-          <View style={styles.heroFallback} />
-        )}
-      </View>
+        </View>
+      ) : null}
 
       {/* Info section */}
       <View style={styles.infoSection}>
@@ -241,8 +238,7 @@ const PlacePopupCard: React.FC<Props> = ({
         <View style={styles.metaRow}>
           {!!categoryLabel && (
             <View style={styles.categoryChip}>
-              <Feather name="tag" size={12} color={colors.textMuted} />
-              <Text style={styles.smallText} numberOfLines={1}>
+              <Text style={styles.categoryText} numberOfLines={1}>
                 {categoryLabel}
               </Text>
             </View>
@@ -250,7 +246,7 @@ const PlacePopupCard: React.FC<Props> = ({
 
           {(isDrivingLoading || hasDrivingInfo) && (
             <View testID="popup-driving-info" style={styles.drivingRow}>
-              <Feather name="navigation" size={12} color={colors.textMuted} />
+              <Feather name="navigation" size={11} color={colors.textMuted} />
               {isDrivingLoading ? (
                 <ActivityIndicator size="small" color={colors.textMuted} />
               ) : (
@@ -261,34 +257,32 @@ const PlacePopupCard: React.FC<Props> = ({
             </View>
           )}
         </View>
-
-        {hasCoord && (
-          <View style={styles.coordRow}>
-            <Text style={styles.coordText}>{coord}</Text>
-            {onCopyCoord && (
-              <CardActionPressable
-                accessibilityLabel="Скопировать координаты"
-                onPress={() => void onCopyCoord()}
-                title="Скопировать координаты"
-                style={actionBtnStyle}
-              >
-                <Feather name="clipboard" size={13} color={colors.textMuted} />
-              </CardActionPressable>
-            )}
-          </View>
-        )}
       </View>
 
+      {/* Coordinates row */}
+      {hasCoord && (
+        <CardActionPressable
+          accessibilityLabel="Скопировать координаты"
+          onPress={onCopyCoord ? () => void onCopyCoord() : undefined}
+          title="Скопировать координаты"
+          style={styles.coordRow}
+        >
+          <Text style={styles.coordText} numberOfLines={1} selectable>{coord}</Text>
+          {onCopyCoord && <Feather name="copy" size={12} color={colors.textMuted} />}
+        </CardActionPressable>
+      )}
+
+      {/* Compact icon action row */}
       <View style={styles.actionsRow}>
+
         {hasCoord && onOpenGoogleMaps && (
           <CardActionPressable
             accessibilityLabel="Открыть в Google Maps"
             onPress={onOpenGoogleMaps}
-            title="Открыть в Google Maps"
+            title="Google Maps"
             style={actionBtnStyle}
           >
-            <Feather name="external-link" size={13} color={colors.textMuted} />
-            <Text style={styles.actionBtnText}>Google Maps</Text>
+            <Feather name="map" size={14} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -296,11 +290,10 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Открыть в Organic Maps"
             onPress={onOpenOrganicMaps}
-            title="Открыть в Organic Maps"
+            title="Organic Maps"
             style={actionBtnStyle}
           >
-            <Feather name="navigation" size={13} color={colors.textMuted} />
-            <Text style={styles.actionBtnText}>Organic Maps</Text>
+            <Feather name="compass" size={14} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -308,11 +301,10 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Поделиться в Telegram"
             onPress={onShareTelegram}
-            title="Поделиться в Telegram"
+            title="Телеграм"
             style={actionBtnStyle}
           >
-            <Feather name="send" size={13} color={colors.textMuted} />
-            <Text style={styles.actionBtnText}>Телеграм</Text>
+            <Feather name="send" size={14} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -320,11 +312,10 @@ const PlacePopupCard: React.FC<Props> = ({
           <CardActionPressable
             accessibilityLabel="Открыть статью"
             onPress={onOpenArticle}
-            title="Открыть статью"
+            title="Статья"
             style={actionBtnStyle}
           >
-            <Feather name="book-open" size={13} color={colors.textMuted} />
-            <Text style={styles.actionBtnText}>Статья</Text>
+            <Feather name="book-open" size={14} color={colors.textMuted} />
           </CardActionPressable>
         )}
 
@@ -335,13 +326,12 @@ const PlacePopupCard: React.FC<Props> = ({
             title="Маршрут сюда"
             testID="popup-build-route"
             style={({ pressed }) => [
-              styles.actionBtn,
+              styles.iconBtn,
               styles.routeBtn,
               pressed && styles.actionBtnPressed,
             ]}
           >
-            <Feather name="corner-up-right" size={13} color={colors.primary} />
-            <Text style={[styles.actionBtnText, { color: colors.primary }]}>Маршрут</Text>
+            <Feather name="corner-up-right" size={14} color={colors.primary} />
           </CardActionPressable>
         )}
       </View>
@@ -359,9 +349,9 @@ const PlacePopupCard: React.FC<Props> = ({
           ]}
         >
           {isAdding ? (
-            <ActivityIndicator size="small" color={colors.textOnPrimary} />
+            <ActivityIndicator size="small" color={colors.primary} />
           ) : (
-            <Feather name="map-pin" size={14} color={colors.textOnPrimary} />
+            <Feather name="map-pin" size={13} color={colors.primary} />
           )}
           <Text style={styles.addBtnText}>{compactLabel}</Text>
         </CardActionPressable>
@@ -380,9 +370,9 @@ const PlacePopupCard: React.FC<Props> = ({
 };
 
 const IMAGE_ASPECT: Record<BreakpointKey, number> = {
-  narrow: 16 / 10,
-  compact: 16 / 9,
-  default: 16 / 9,
+  narrow: 2.2,
+  compact: 2.4,
+  default: 2.5,
 };
 
 const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
@@ -397,7 +387,7 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     heroWrap: {
       width: '100%',
       aspectRatio: IMAGE_ASPECT[bp],
-      borderRadius: sp.radius + 2,
+      borderRadius: sp.radius,
       overflow: 'hidden',
       backgroundColor: colors.backgroundSecondary ?? colors.surface,
     },
@@ -406,25 +396,21 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
       height: '100%',
       ...(Platform.OS === 'web' ? ({ cursor: 'zoom-in' } as any) : null),
     },
-    heroFallback: {
-      width: '100%',
-      height: '100%',
-      backgroundColor: colors.backgroundSecondary,
-    },
     expandIcon: {
       position: 'absolute',
-      bottom: 6,
-      right: 6,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: 'rgba(0,0,0,0.45)',
+      bottom: 5,
+      right: 5,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: 'rgba(0,0,0,0.4)',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 2,
     },
     infoSection: {
-      gap: 4,
+      gap: 3,
+      paddingHorizontal: 2,
     },
     metaRow: {
       flexDirection: 'row',
@@ -433,9 +419,10 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
       gap: 6,
     },
     titleText: {
-      fontSize: fs.title,
-      fontWeight: '700',
+      fontSize: fs.title + 1,
+      fontWeight: '600',
       color: colors.text,
+      lineHeight: (fs.title + 1) * 1.3,
       ...(Platform.OS === 'web'
         ? ({
             display: '-webkit-box',
@@ -447,15 +434,10 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     },
     categoryChip: {
       alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingVertical: bp === 'narrow' ? 0 : bp === 'compact' ? 1 : 2,
-      paddingHorizontal: bp === 'narrow' ? 4 : bp === 'compact' ? 6 : 7,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.borderLight ?? colors.border,
-      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+    },
+    categoryText: {
+      fontSize: fs.small,
+      color: colors.textMuted,
     },
     smallText: {
       fontSize: fs.small,
@@ -464,18 +446,18 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     drivingRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 4,
       flexWrap: 'wrap',
     },
     coordRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      flexWrap: 'wrap',
+      paddingHorizontal: 2,
     },
     coordText: {
       fontSize: fs.small,
-      color: colors.text,
+      color: colors.textMuted,
       fontFamily:
         Platform.OS === 'web'
           ? ('ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any)
@@ -484,53 +466,57 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     actionsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: sp.gap,
+      gap: 4,
+      paddingHorizontal: 2,
+    },
+    iconBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     actionBtn: {
-      flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      paddingVertical: sp.btnPadV,
-      paddingHorizontal: sp.btnPadH,
-      borderRadius: sp.radius,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     actionBtnPressed: {
-      opacity: 0.9,
-    },
-    actionBtnText: {
-      fontSize: fs.small,
-      color: colors.text,
+      opacity: 0.7,
     },
     routeBtn: {
-      borderColor: colors.primary,
-      backgroundColor: colors.primarySoft ?? colors.surface,
+      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
     },
     addBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
+      gap: 6,
       paddingVertical: sp.btnPadV + 1,
-      paddingHorizontal: sp.btnPadH + 2,
-      borderRadius: sp.radius + 2,
-      backgroundColor: colors.primary,
+      paddingHorizontal: sp.btnPadH + 4,
+      borderRadius: sp.radius,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      backgroundColor: 'transparent',
       ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
     },
     addBtnDisabled: {
-      backgroundColor: 'rgba(0,0,0,0.08)',
+      borderColor: colors.borderLight ?? colors.border,
+      opacity: 0.5,
     },
     addBtnPressed: {
-      opacity: 0.92,
+      opacity: 0.7,
     },
     addBtnText: {
       fontSize: fs.small,
-      fontWeight: '700',
-      color: colors.textOnPrimary,
-      letterSpacing: -0.2,
+      fontWeight: '600',
+      color: colors.primary,
     },
   });
 };

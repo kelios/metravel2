@@ -3,7 +3,7 @@ import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-nativ
 import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
+
 import { useThemedColors } from '@/hooks/useTheme';
 
 type ActionChip = {
@@ -63,7 +63,7 @@ const PlaceListCard: React.FC<Props> = ({
   isAdding = false,
   addLabel = 'Мои точки',
   width = 300,
-  imageHeight = 180,
+  imageHeight = 140,
   testID,
   style,
 }) => {
@@ -74,7 +74,6 @@ const PlaceListCard: React.FC<Props> = ({
   const showBadges = badges.length > 0;
   const hasMapActions = mapActions.length > 0;
   const hasInlineActions = inlineActions.length > 0;
-  const showBottomRow = Boolean(onAddPoint);
 
   return (
     <UnifiedTravelCard
@@ -83,156 +82,104 @@ const PlaceListCard: React.FC<Props> = ({
       metaText={categoryLabel ?? undefined}
       onPress={onCardPress ?? (() => {})}
       onMediaPress={onMediaPress}
-      imageHeight={imageHeight}
+      imageHeight={imageUrl ? imageHeight : 0}
       width={width}
       testID={testID}
       style={style}
       contentSlot={
         <View style={styles.content}>
-          <View style={styles.headerRow}>
-            <Text numberOfLines={2} style={styles.titleText}>
-              {title}
-            </Text>
+          <Text numberOfLines={2} style={styles.titleText}>
+            {title}
+          </Text>
+
+          <View style={styles.metaRow}>
             {!!categoryLabel && (
-              <View style={styles.categoryChip}>
-                <Feather name="tag" size={12} color={colors.textMuted} />
-                <Text style={styles.categoryText} numberOfLines={1}>
-                  {categoryLabel}
-                </Text>
-              </View>
+              <Text style={styles.categoryText} numberOfLines={1}>
+                {categoryLabel}
+              </Text>
             )}
+            {showBadges && badges.map((badge) => (
+              <Text key={badge} style={styles.badgeText}>{badge}</Text>
+            ))}
           </View>
 
-          {showBadges && (
-            <View style={styles.badgesRow}>
-              {badges.map((badge) => (
-                <View key={badge} style={styles.badgeChip}>
-                  <Text style={styles.badgeText}>{badge}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+          {/* Compact icon action row */}
+          <View style={styles.actionsRow}>
+            {hasCoord && onCopyCoord && (
+              <CardActionPressable
+                accessibilityLabel="Скопировать координаты"
+                onPress={() => void onCopyCoord()}
+                title={coord || 'Скопировать координаты'}
+                style={styles.iconBtn}
+              >
+                <Feather name="copy" size={14} color={colors.textMuted} />
+              </CardActionPressable>
+            )}
 
-          {hasCoord && (
-            <View style={styles.section}>
-              <View style={styles.coordRow}>
-                <Text style={styles.coordText}>
-                  {coord}
-                </Text>
-                {onCopyCoord && (
-                  <CardActionPressable
-                    accessibilityLabel="Скопировать координаты"
-                    onPress={() => void onCopyCoord()}
-                    title="Скопировать координаты"
-                    style={styles.inlineAction}
-                  >
-                    <Feather name="copy" size={14} color={colors.textMuted} />
-                  </CardActionPressable>
-                )}
-                {onShare && (
-                  <CardActionPressable
-                    accessibilityLabel="Поделиться в Telegram"
-                    onPress={() => void onShare()}
-                    title="Поделиться в Telegram"
-                    style={styles.inlineAction}
-                  >
-                    <Feather name="send" size={14} color={colors.textMuted} />
-                    <Text style={styles.inlineActionText}>Телеграм</Text>
-                  </CardActionPressable>
-                )}
-              </View>
-            </View>
-          )}
+            {hasCoord && onShare && (
+              <CardActionPressable
+                accessibilityLabel="Поделиться в Telegram"
+                onPress={() => void onShare()}
+                title="Телеграм"
+                style={styles.iconBtn}
+              >
+                <Feather name="send" size={14} color={colors.textMuted} />
+              </CardActionPressable>
+            )}
 
-          {(hasMapActions || hasInlineActions) && (
-            <View style={styles.section}>
-              {hasMapActions && (
-                <View style={styles.mapActionsRow}>
-                  {mapActions.map((action) => (
-                    <CardActionPressable
-                      key={action.key}
-                      accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                      onPress={action.onPress}
-                      title={action.title ?? action.label}
-                      style={styles.mapChip}
-                    >
-                      <Feather name={action.icon} size={14} color={colors.text} />
-                      <Text style={styles.mapChipText}>{action.label}</Text>
-                    </CardActionPressable>
-                  ))}
-                </View>
+            {hasMapActions && mapActions.map((action) => (
+              <CardActionPressable
+                key={action.key}
+                accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+                onPress={action.onPress}
+                title={action.title ?? action.label}
+                style={styles.iconBtn}
+              >
+                <Feather name={action.icon} size={14} color={colors.textMuted} />
+              </CardActionPressable>
+            ))}
+
+            {hasInlineActions && inlineActions.map((action) => (
+              <CardActionPressable
+                key={action.key}
+                accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
+                onPress={action.onPress}
+                title={action.title ?? action.label}
+                style={styles.iconBtn}
+              >
+                <Feather name={action.icon} size={14} color={colors.textMuted} />
+              </CardActionPressable>
+            ))}
+          </View>
+
+          {onAddPoint && (
+            <CardActionPressable
+              onPress={() => void onAddPoint()}
+              disabled={addDisabled || isAdding}
+              accessibilityLabel={addLabel}
+              title={addLabel}
+              style={({ pressed }) => [
+                styles.addButton,
+                pressed && !addDisabled && !isAdding && styles.addButtonPressed,
+                (addDisabled || isAdding) && styles.addButtonDisabled,
+              ]}
+            >
+              {isAdding ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <>
+                  <Feather name="map-pin" size={13} color={colors.primary} />
+                  <Text style={styles.addButtonText} numberOfLines={1}>
+                    {addLabel}
+                  </Text>
+                </>
               )}
-            </View>
-          )}
-
-          {showBottomRow ? (
-            <View style={styles.bottomRow}>
-              {hasInlineActions && (
-                <View style={styles.bottomInlineActions}>
-                  {inlineActions.map((action) => (
-                    <CardActionPressable
-                      key={action.key}
-                      accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                      onPress={action.onPress}
-                      title={action.title ?? action.label}
-                      style={styles.bottomInlineAction}
-                    >
-                      <Feather name={action.icon} size={14} color={colors.textMuted} />
-                      <Text style={styles.inlineActionText}>{action.label}</Text>
-                    </CardActionPressable>
-                  ))}
-                </View>
-              )}
-
-              {onAddPoint && (
-                <View style={styles.addButtonContainerInline}>
-                  <CardActionPressable
-                    onPress={() => void onAddPoint()}
-                    disabled={addDisabled || isAdding}
-                    accessibilityLabel={addLabel}
-                    title={addLabel}
-                    style={({ pressed }) => [
-                      styles.addButton,
-                      pressed && !addDisabled && !isAdding && styles.addButtonPressed,
-                      (addDisabled || isAdding) && styles.addButtonDisabled,
-                    ]}
-                  >
-                    {isAdding ? (
-                      <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                    ) : (
-                      <View style={styles.addButtonRow}>
-                        <Feather name="plus-circle" size={16} color={colors.textOnPrimary} />
-                        <Text style={styles.addButtonText} numberOfLines={1}>
-                          {addLabel}
-                        </Text>
-                      </View>
-                    )}
-                  </CardActionPressable>
-                </View>
-              )}
-            </View>
-          ) : (
-            hasInlineActions && (
-              <View style={[styles.section, styles.inlineActionsRow]}>
-                {inlineActions.map((action) => (
-                  <CardActionPressable
-                    key={action.key}
-                    accessibilityLabel={action.accessibilityLabel ?? action.title ?? action.label}
-                    onPress={action.onPress}
-                    title={action.title ?? action.label}
-                    style={styles.inlineAction}
-                  >
-                    <Feather name={action.icon} size={14} color={colors.textMuted} />
-                    <Text style={styles.inlineActionText}>{action.label}</Text>
-                  </CardActionPressable>
-                ))}
-              </View>
-            )
+            </CardActionPressable>
           )}
         </View>
       }
       mediaProps={{
-        blurBackground: true,
+        blurBackground: !!imageUrl,
         blurRadius: 16,
         loading: 'lazy',
         priority: 'low',
@@ -249,184 +196,74 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       paddingVertical: 10,
     },
     content: {
-      gap: 10,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flexWrap: 'wrap',
+      gap: 6,
     },
     titleText: {
-      fontSize: 15,
-      fontWeight: '700',
+      fontSize: 14,
+      fontWeight: '600',
       color: colors.text,
-      flexShrink: 1,
+      lineHeight: 18,
     },
-    categoryChip: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.borderLight ?? colors.border,
-      backgroundColor: colors.backgroundSecondary ?? colors.surface,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    categoryText: {
-      fontSize: 11,
-      fontWeight: '500',
-      color: colors.textMuted,
-    },
-    badgesRow: {
+    metaRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 6,
+      alignItems: 'center',
+      gap: 8,
     },
-    badgeChip: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 999,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
+    categoryText: {
+      fontSize: 12,
+      color: colors.textMuted,
     },
     badgeText: {
       fontSize: 12,
-      fontWeight: '600',
       color: colors.textMuted,
     },
-    section: {
-      gap: 6,
-    },
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    coordRow: {
+    actionsRow: {
       flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
       flexWrap: 'wrap',
+      gap: 4,
     },
-    coordText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text,
-      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace' as any,
-    },
-    inlineAction: {
-      flexDirection: 'row',
+    iconBtn: {
       alignItems: 'center',
-      gap: 6,
-    },
-    inlineActionText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    mapActionsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    mapChip: {
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 999,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      backgroundColor: colors.surface,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
+      justifyContent: 'center',
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: colors.backgroundSecondary ?? colors.surface,
       ...Platform.select({
         web: {
           cursor: 'pointer' as any,
         },
       }),
-    },
-    mapChipText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.text,
-      letterSpacing: -0.2,
-    },
-    inlineActionsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    bottomRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 10,
-      marginTop: 4,
-    },
-    bottomInlineActions: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      flexShrink: 0,
-    },
-    bottomInlineAction: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      borderRadius: 999,
-      backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-        },
-      }),
-    },
-    addButtonContainer: {
-      marginTop: 4,
-    },
-    addButtonContainerInline: {
-      flex: 1,
-      minWidth: 160,
     },
     addButton: {
-      backgroundColor: colors.primary,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      paddingVertical: DESIGN_TOKENS.spacing.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
+      gap: 6,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      backgroundColor: 'transparent',
       ...Platform.select({
         web: {
           cursor: 'pointer' as any,
-          transition: 'all 0.2s ease',
         },
       }),
     },
     addButtonPressed: {
-      transform: [{ scale: 0.98 }],
+      opacity: 0.7,
     },
     addButtonDisabled: {
-      opacity: 0.65,
-    },
-    addButtonRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
+      borderColor: colors.borderLight ?? colors.border,
+      opacity: 0.5,
     },
     addButtonText: {
+      fontSize: 12,
       fontWeight: '600',
-      letterSpacing: -0.2,
-      color: colors.textOnPrimary,
+      color: colors.primary,
     },
   });
 

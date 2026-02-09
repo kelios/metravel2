@@ -164,17 +164,7 @@ function UnifiedTravelCard({
                 textShadowRadius: 6,
               }),
         },
-        imageVignetteOverlay: {
-          ...StyleSheet.absoluteFillObject,
-          ...(isWeb
-            ? ({
-                backgroundImage:
-                  `radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 45%, ${colors.overlayLight} 100%)`,
-                opacity: 1,
-                borderRadius: 14,
-              } as any)
-            : ({} as any)),
-        },
+        imageVignetteOverlay: {},
         rightTopSlot: {
           position: 'absolute',
           top: 10,
@@ -274,7 +264,7 @@ function UnifiedTravelCard({
       {...Platform.select({ web: { cursor: 'pointer' } as any })}
     >
       {[
-        <View key="media" style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null]}>
+        <View key="media" style={[styles.imageContainer, typeof imageHeight === 'number' ? { height: imageHeight } : null, imageHeight === 0 && { display: 'none' }]}>
           {optimizedImageUrl ? (
             <ImageCardMedia
               src={optimizedImageUrl}
@@ -334,7 +324,7 @@ function UnifiedTravelCard({
             )
           ) : null}
 
-          {heroTitleOverlay ? (
+          {heroTitleOverlay && optimizedImageUrl ? (
             <View style={StyleSheet.absoluteFillObject}>
               <View style={styles.imageVignetteOverlay} />
               <View style={styles.imageTitleOverlay}>

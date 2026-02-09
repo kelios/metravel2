@@ -310,7 +310,6 @@ const Slide = memo(function Slide({
   const isFirstSlide = index === 0;
   const mainPriority = isFirstSlide ? 'high' : 'low';
 
-  const shouldRenderBlurBg = blurBackground && status === 'loaded';
   const mainFit: 'cover' | 'contain' = 'contain';
 
   const handleLoadStart = useCallback(() => {
@@ -334,24 +333,12 @@ const Slide = memo(function Slide({
 
   const slideContent = (
     <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
-      {/* Blur background - only when image is loaded */}
-      {shouldRenderBlurBg ? (
-        <ImageCardMedia
-          testID={`slider-blur-bg-${index}`}
-          src={uri}
-          fit="cover"
-          blurBackground
-          blurRadius={12}
-          blurOnly
-          priority="low"
-          loading="lazy"
-          style={styles.blurBg}
-        />
-      ) : (
+      {/* Flat background while loading */}
+      {status !== 'loaded' && status !== 'error' && (
         <View style={styles.flatBackground} testID={`slider-flat-bg-${index}`} />
       )}
 
-      {/* Main image - no blur, no transition effects */}
+      {/* Main image with integrated blur background */}
       {status === 'error' ? (
         <View
           style={styles.neutralPlaceholder}
@@ -361,7 +348,8 @@ const Slide = memo(function Slide({
         <ImageCardMedia
           src={uri}
           fit={mainFit}
-          blurBackground={false}
+          blurBackground={blurBackground}
+          blurRadius={12}
           priority={mainPriority as any}
           loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
           transition={0}
@@ -961,14 +949,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     height: "100%",
     borderRadius: 0,
     backgroundColor: colors.backgroundSecondary,
-    ...Platform.select({
-      web: {
-        backgroundImage:
-          `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 50%, ${colors.backgroundSecondary} 100%)`,
-        backgroundSize: '100% 100%',
-        boxSizing: "border-box",
-      },
-    }),
   },
   navBtn: {
     position: "absolute",

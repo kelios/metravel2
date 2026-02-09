@@ -26,7 +26,7 @@ describe('ImageCardMedia blur background (web)', () => {
     }
   })
 
-  it('renders a blurred background layer on web when enabled', () => {
+  it('renders blur background hidden initially, main image on web', () => {
     let tree: renderer.ReactTestRenderer
     renderer.act(() => {
       tree = renderer.create(
@@ -40,13 +40,14 @@ describe('ImageCardMedia blur background (web)', () => {
     })
 
     const blurLayers = tree!.root.findAll((node: any) => {
-      if (node?.props?.['aria-hidden'] !== true) return false
+      const ariaHidden = node?.props?.['aria-hidden']
+      if (ariaHidden !== true && ariaHidden !== 'true') return false
       const filter = String(node?.props?.style?.filter || '')
       return filter.includes('blur')
     })
 
     expect(blurLayers.length).toBeGreaterThan(0)
-    expect(String(blurLayers[0].props.style?.filter || '')).toContain('blur')
+    expect(blurLayers[0].props.style?.opacity).toBe(0)
 
     const mainLayers = tree!.root.findAll((node: any) => {
       if (node?.type !== 'img') return false
@@ -55,9 +56,6 @@ describe('ImageCardMedia blur background (web)', () => {
     })
 
     expect(mainLayers.length).toBeGreaterThan(0)
-
-    expect(blurLayers[0].props.style?.maxWidth).toBe('none')
-    expect(blurLayers[0].props.style?.maxHeight).toBe('none')
     expect(mainLayers[0].props.style?.maxWidth).toBe('none')
     expect(mainLayers[0].props.style?.maxHeight).toBe('none')
   })

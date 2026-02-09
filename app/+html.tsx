@@ -251,7 +251,7 @@ const getTravelHeroPreloadScript = () => String.raw`
         if (existingLcp && existingLcp.complete && existingLcp.naturalWidth > 0) return;
 
         var isMobile = (window.innerWidth || 0) <= 540;
-        var quality = isMobile ? 50 : 55;
+        var quality = isMobile ? 40 : 55;
 
         // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [640, 860]
         var widths = isMobile ? [320, 400] : [640, 860];
@@ -263,9 +263,9 @@ const getTravelHeroPreloadScript = () => String.raw`
           if (u) srcSetParts.push(u + ' ' + widths[i] + 'w');
         }
 
-        // The main src uses the widest breakpoint with DEFAULT dpr (matches buildResponsiveImageProps)
+        // The main src uses the widest breakpoint; on mobile use dpr=1 to match buildResponsiveImageProps
         var widest = widths[widths.length - 1];
-        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id);
+        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, isMobile ? 1 : undefined);
         if (!preloadHref) return;
 
         try {

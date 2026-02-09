@@ -78,9 +78,6 @@ const NeutralHeroPlaceholder: React.FC<{ height?: number }> = ({ height }) => {
           height: height ? `${height}px` : '100%',
           borderRadius: 12,
           backgroundColor: colors.backgroundSecondary,
-          // @ts-ignore web-only property
-          backgroundImage: `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 50%, ${colors.backgroundSecondary} 100%)`,
-          boxSizing: 'border-box',
         }}
         aria-hidden="true"
       />
@@ -123,7 +120,7 @@ const OptimizedLCPHeroInner: React.FC<{
     typeof window !== 'undefined'
       ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
       : lcpMaxWidth
-  const lcpQuality = isMobile ? 50 : 55
+  const lcpQuality = isMobile ? 40 : 55
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
@@ -131,6 +128,7 @@ const OptimizedLCPHeroInner: React.FC<{
     quality: lcpQuality,
     format: 'auto',
     fit: 'cover',
+    dpr: isMobile ? 1 : undefined,
     sizes: isMobile
       ? '100vw'
       : '(max-width: 1024px) 92vw, 860px',

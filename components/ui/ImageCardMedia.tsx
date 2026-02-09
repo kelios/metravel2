@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
@@ -9,21 +9,80 @@ import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 type Priority = 'low' | 'normal' | 'high';
 
-const buildApiPrefixedUrl = (value: string): string | null => {
-  try {
-    const baseRaw =
-      process.env.EXPO_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : '');
-    if (!/\/api\/?$/i.test(baseRaw)) return null;
 
-    const apiOrigin = baseRaw.replace(/\/api\/?$/, '');
-    const parsed = new URL(value, apiOrigin);
-    if (parsed.pathname.startsWith('/api/')) return null;
-
-    return `${apiOrigin}/api${parsed.pathname}${parsed.search}`;
-  } catch {
-    return null;
-  }
+type WebMainImageProps = {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  fit: 'contain' | 'cover';
+  borderRadius: number;
+  loading: 'lazy' | 'eager';
+  priority: Priority;
+  hasBlurBehind: boolean;
+  onLoad?: () => void;
+  onError?: () => void;
 };
+
+const WebMainImage = memo(function WebMainImage({
+  src,
+  alt,
+  width,
+  height,
+  fit,
+  borderRadius,
+  loading,
+  priority,
+  hasBlurBehind,
+  blurRef,
+  onLoad,
+  onError,
+}: WebMainImageProps & { blurRef?: React.RefObject<HTMLElement | null> }) {
+  const imgRef = useRef<HTMLImageElement | null>(null);
+
+  const handleLoad = useCallback(() => {
+    const el = imgRef.current;
+    if (el) {
+      el.style.opacity = '1';
+    }
+    const blurEl = blurRef?.current;
+    if (blurEl) {
+      blurEl.style.opacity = '1';
+    }
+    onLoad?.();
+  }, [onLoad, blurRef]);
+
+  return (
+    <img
+      ref={imgRef}
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      style={{
+        position: 'absolute',
+        objectFit: fit === 'cover' ? 'cover' : 'contain',
+        objectPosition: 'center',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        maxWidth: 'none',
+        maxHeight: 'none',
+        zIndex: 1,
+        borderRadius,
+        display: 'block',
+        opacity: hasBlurBehind ? 0 : 1,
+        transition: hasBlurBehind ? 'opacity 0.3s ease' : 'none',
+      }}
+      loading={loading}
+      decoding="async"
+      // @ts-ignore
+      fetchPriority={priority === 'high' ? 'high' : 'auto'}
+      onLoad={handleLoad}
+      onError={onError}
+    />
+  );
+});
 
 type Props = {
   src?: string | null;
@@ -81,6 +140,7 @@ function ImageCardMedia({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
+  const blurImgRef = useRef<HTMLElement | null>(null);
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -117,59 +177,6 @@ function ImageCardMedia({
       }) ?? uri
     );
   }, [resolvedSource, width, height, contentFit]);
-  const webBlurUri = useMemo(() => {
-    if (Platform.OS !== 'web') return null;
-    if (!resolvedSource || typeof resolvedSource === 'number') return null;
-    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
-    if (!uri) return null;
-    if (/^(data:|blob:)/i.test(uri)) return uri;
-    // Strip existing query params to avoid double-optimization when the
-    // src URL was already optimized by a parent component (e.g. UnifiedTravelCard).
-    let baseUri = uri;
-    try {
-      const parsed = new URL(uri);
-      parsed.search = '';
-      baseUri = parsed.toString();
-    } catch { /* keep original */ }
-    const blurSize = 64;
-    const optimized = optimizeImageUrl(baseUri, {
-      width: blurSize,
-      height: blurSize,
-      quality: 30,
-      blur: 30,
-      fit: 'cover',
-      format: 'auto',
-    }) ?? uri;
-    
-    return optimized;
-  }, [resolvedSource]);
-  const webBlurFallbackUri = useMemo(() => {
-    if (Platform.OS !== 'web') return null;
-    if (!resolvedSource || typeof resolvedSource === 'number') return null;
-    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
-    if (!uri) return null;
-    // Strip query params before building the fallback blur URL (same reason as webBlurUri).
-    let cleanUri = uri;
-    try {
-      const parsed = new URL(uri);
-      parsed.search = '';
-      cleanUri = parsed.toString();
-    } catch { /* keep original */ }
-    const fallback = buildApiPrefixedUrl(cleanUri);
-    if (!fallback || fallback === cleanUri) return null;
-    const blurSize = 64;
-    return (
-      optimizeImageUrl(fallback, {
-        width: blurSize,
-        height: blurSize,
-        quality: 30,
-        blur: 30,
-        fit: 'cover',
-        format: 'auto',
-      }) ?? fallback
-    );
-  }, [resolvedSource]);
-
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
@@ -243,66 +250,38 @@ function ImageCardMedia({
         <>
           {Platform.OS === 'web' &&
             blurBackground &&
-            (webBlurUri || webBlurFallbackUri) && (
-              <img
-                aria-hidden
-                src={webBlurUri || webBlurFallbackUri || undefined}
-                alt=""
-                width={64}
-                height={64}
+            webMainSrc && (
+              <div
+                ref={blurImgRef as any}
+                aria-hidden="true"
                 style={{
                   position: 'absolute',
-                  left: '50%',
-                  top: '50%',
+                  inset: '-5%',
                   width: '110%',
                   height: '110%',
-                  maxWidth: 'none',
-                  maxHeight: 'none',
-                  objectFit: 'cover',
-                  objectPosition: 'center',
+                  backgroundImage: `url("${webMainSrc}")`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
                   filter: 'blur(20px)',
-                  transform: 'translate(-50%, -50%)',
                   zIndex: 0,
                   borderRadius: resolvedBorderRadius,
-                  display: 'block',
-                }}
-                loading="eager"
-                decoding="auto"
-                // @ts-ignore
-                fetchPriority="low"
-                onError={(e) => {
-                  if (
-                    webBlurFallbackUri &&
-                    (e.target as HTMLImageElement).src !== webBlurFallbackUri
-                  ) {
-                    (e.target as HTMLImageElement).src = webBlurFallbackUri;
-                  }
+                  opacity: 0,
+                  transition: 'opacity 0.3s ease',
                 }}
               />
             )}
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
-            <img
+            <WebMainImage
               src={webMainSrc}
               alt={alt || ''}
               width={typeof width === 'number' ? width : 400}
               height={typeof height === 'number' ? height : 300}
-              style={{
-                position: 'absolute',
-                objectFit: fit === 'cover' ? 'cover' : 'contain',
-                objectPosition: 'center',
-                inset: 0,
-                width: '100%',
-                height: '100%',
-                maxWidth: 'none',
-                maxHeight: 'none',
-                zIndex: 1,
-                borderRadius: resolvedBorderRadius,
-                display: 'block',
-              }}
+              fit={fit}
+              borderRadius={resolvedBorderRadius}
               loading={loading}
-              decoding="auto"
-              // @ts-ignore
-              fetchPriority={priority === 'high' ? 'high' : 'auto'}
+              priority={priority}
+              hasBlurBehind={blurBackground}
+              blurRef={blurImgRef as any}
               onLoad={onLoad}
               onError={onError}
             />
@@ -362,12 +341,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   placeholder: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.backgroundSecondary,
-    ...Platform.select({
-      web: {
-        backgroundImage:
-          `linear-gradient(135deg, ${colors.backgroundSecondary} 0%, ${colors.backgroundTertiary} 50%, ${colors.backgroundSecondary} 100%)`,
-      },
-    }),
   },
 });
 
