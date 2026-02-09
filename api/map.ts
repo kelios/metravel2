@@ -128,6 +128,13 @@ const normalizeTravelCoordsItem = (raw: any) => {
   };
 };
 
+const tryReadTotal = (payload: any): number | undefined => {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const maybe = (payload as any).count ?? (payload as any).total;
+  const n = typeof maybe === 'string' ? Number(maybe) : maybe;
+  return Number.isFinite(n) ? n : undefined;
+};
+
 const normalizeTravelsForMapPayload = (payload: unknown): TravelsForMap => {
   if (!payload) return {} as TravelsForMap;
   if (Array.isArray(payload)) {
@@ -136,6 +143,32 @@ const normalizeTravelsForMapPayload = (payload: unknown): TravelsForMap => {
     return payload.map((item) => normalizeTravelCoordsItem(item)) as unknown as TravelsForMap;
   }
   if (typeof payload === 'object') {
+    const obj = payload as any;
+    const list = Array.isArray(obj?.results)
+      ? obj.results
+      : Array.isArray(obj?.data)
+        ? obj.data
+        : null;
+
+    if (list) {
+      const out: any = {};
+      list.forEach((item: any, index: number) => {
+        out[index] = normalizeTravelCoordsItem(item);
+      });
+
+      const total = tryReadTotal(obj);
+      if (typeof total === 'number') {
+        Object.defineProperty(out, '__total', {
+          value: total,
+          enumerable: false,
+          configurable: false,
+          writable: false,
+        });
+      }
+
+      return out as TravelsForMap;
+    }
+
     const out: any = {};
     Object.entries(payload as Record<string, any>).forEach(([key, value]) => {
       out[key] = normalizeTravelCoordsItem(value);

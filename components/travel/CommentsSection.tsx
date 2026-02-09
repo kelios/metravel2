@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
+  Platform,
   View,
   Text,
   StyleSheet,
@@ -461,8 +462,17 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<Record<string, any>>({
   container: {
     flex: 1,
-    backgroundColor: colors.backgroundSecondary,
-    padding: DESIGN_TOKENS.spacing.md,
+    backgroundColor: colors.surface,
+    padding: Platform.select({ default: DESIGN_TOKENS.spacing.md, web: DESIGN_TOKENS.spacing.lg }),
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.light,
+      } as any,
+      default: colors.shadows.light,
+    }),
   },
   centerContainer: {
     flex: 1,
@@ -473,29 +483,42 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-    marginBottom: DESIGN_TOKENS.spacing.md,
+    gap: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.lg,
+    paddingBottom: DESIGN_TOKENS.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   title: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontSize: Platform.select({ default: 20, web: 22 }),
     fontWeight: DESIGN_TOKENS.typography.weights.bold,
     color: colors.text,
+    letterSpacing: -0.3,
   },
   loginPrompt: {
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: colors.primarySoft,
+    borderRadius: DESIGN_TOKENS.radii.md,
     padding: DESIGN_TOKENS.spacing.md,
     marginBottom: DESIGN_TOKENS.spacing.md,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primaryAlpha30,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      } as any,
+    }),
   },
   loginPromptRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
+    gap: DESIGN_TOKENS.spacing.sm,
   },
   loginText: {
     fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
-    color: colors.textMuted,
+    color: colors.primaryText,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   errorBanner: {
     flexDirection: 'row',
@@ -534,17 +557,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   emptyState: {
     alignItems: 'center',
     paddingVertical: DESIGN_TOKENS.spacing.xxl,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
   },
   emptyText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg - 2,
+    fontSize: Platform.select({ default: 17, web: 18 }),
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
     color: colors.textMuted,
     marginTop: DESIGN_TOKENS.spacing.md,
+    letterSpacing: -0.2,
   },
   emptySubtext: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     color: colors.textTertiary,
     marginTop: DESIGN_TOKENS.spacing.xs,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   retryButton: {
     marginTop: DESIGN_TOKENS.spacing.md,
@@ -580,12 +607,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.xs,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: 6,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: DESIGN_TOKENS.radii.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+      } as any,
+    }),
   },
   threadControlText: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,

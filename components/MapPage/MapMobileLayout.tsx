@@ -24,6 +24,10 @@ interface MapMobileLayoutProps {
 
   // Data
   travelsData: any[];
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   coordinates: { latitude: number; longitude: number } | null;
   transportMode: 'car' | 'bike' | 'foot';
 
@@ -45,6 +49,10 @@ interface MapMobileLayoutProps {
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   mapComponent,
   travelsData,
+  hasMore,
+  onLoadMore,
+  onRefresh,
+  isRefreshing,
   coordinates,
   transportMode,
   buildRouteTo,
@@ -252,6 +260,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           travelsData={travelsData}
           buildRouteTo={buildRouteTo}
           isMobile={true}
+          hasMore={hasMore}
+          onLoadMore={onLoadMore}
+          onRefresh={onRefresh}
+          isRefreshing={isRefreshing}
           userLocation={coordinates}
           transportMode={transportMode}
           onToggleFavorite={onToggleFavorite}
@@ -324,8 +336,12 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     buildRouteTo,
     coordinates,
     favorites,
+    hasMore,
     filtersMode,
     filtersPanelProps,
+    isRefreshing,
+    onLoadMore,
+    onRefresh,
     onToggleFavorite,
     setTabDeferred,
     setFiltersMode,

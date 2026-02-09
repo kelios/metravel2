@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   TextInput,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelComment } from '../../types/comments';
 
 interface CommentFormProps {
@@ -33,6 +34,8 @@ export function CommentForm({
   onCancelEdit,
   autoFocus = false,
 }: CommentFormProps) {
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [text, setText] = useState('');
 
   useEffect(() => {
@@ -69,6 +72,7 @@ export function CommentForm({
     <View style={styles.container}>
       {replyTo && (
         <View style={styles.replyBanner}>
+          <Feather name="corner-down-right" size={14} color={colors.info} />
           <Text style={styles.replyText}>
             Ответ на комментарий {replyTo.user_name || `пользователя #${replyTo.user}`}
           </Text>
@@ -76,6 +80,7 @@ export function CommentForm({
       )}
       {editComment && (
         <View style={styles.editBanner}>
+          <Feather name="edit-2" size={14} color={colors.warning} />
           <Text style={styles.editText}>Редактирование комментария</Text>
         </View>
       )}
@@ -85,7 +90,7 @@ export function CommentForm({
           value={text}
           onChangeText={setText}
           placeholder={placeholder}
-          placeholderTextColor={DESIGN_TOKENS.colors.textSubtle}
+          placeholderTextColor={colors.textTertiary}
           multiline
           maxLength={2000}
           autoFocus={autoFocus}
@@ -100,7 +105,7 @@ export function CommentForm({
               accessibilityLabel="Отменить"
               accessibilityRole="button"
             >
-              <Feather name="x" size={20} color={DESIGN_TOKENS.colors.textMuted} />
+              <Feather name="x" size={18} color={colors.textMuted} />
             </Pressable>
           )}
           <Pressable
@@ -111,9 +116,9 @@ export function CommentForm({
             accessibilityRole="button"
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color={DESIGN_TOKENS.colors.textOnPrimary} />
+              <ActivityIndicator size="small" color={colors.textOnPrimary} />
             ) : (
-              <Feather name="send" size={20} color={DESIGN_TOKENS.colors.textOnPrimary} />
+              <Feather name="send" size={18} color={colors.textOnPrimary} />
             )}
           </Pressable>
         </View>
@@ -127,36 +132,47 @@ export function CommentForm({
   );
 }
 
-const styles = StyleSheet.create<Record<string, any>>({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<Record<string, any>>({
   container: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.sm,
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
     padding: DESIGN_TOKENS.spacing.sm,
     marginBottom: DESIGN_TOKENS.spacing.md,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: DESIGN_TOKENS.shadows.light,
-    } : DESIGN_TOKENS.shadowsNative.light),
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   replyBanner: {
-    backgroundColor: DESIGN_TOKENS.colors.infoSoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.infoSoft,
     padding: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.sm - 6,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     marginBottom: DESIGN_TOKENS.spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   replyText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm - 1,
-    color: DESIGN_TOKENS.colors.info,
+    fontSize: 12,
+    color: colors.info,
     fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   editBanner: {
-    backgroundColor: DESIGN_TOKENS.colors.warningSoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.warningSoft,
     padding: DESIGN_TOKENS.spacing.xs,
-    borderRadius: DESIGN_TOKENS.radii.sm - 6,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     marginBottom: DESIGN_TOKENS.spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.warningAlpha40,
   },
   editText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm - 1,
-    color: DESIGN_TOKENS.colors.warning,
+    fontSize: 12,
+    color: colors.warning,
     fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   inputContainer: {
@@ -168,42 +184,67 @@ const styles = StyleSheet.create<Record<string, any>>({
     flex: 1,
     minHeight: 40,
     maxHeight: 120,
-    fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
+    fontSize: 14,
     lineHeight: 20,
-    color: DESIGN_TOKENS.colors.text,
+    color: colors.text,
     paddingVertical: Platform.OS === 'ios' ? 10 : 8,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
-    borderRadius: DESIGN_TOKENS.radii.pill,
+    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: DESIGN_TOKENS.colors.border,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        transition: 'border-color 0.2s ease',
+        outline: 'none',
+      } as any,
+    }),
   },
   actions: {
     flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.xs,
+    gap: 6,
   },
   cancelButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+      } as any,
+    }),
   },
   sendButton: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      } as any,
+    }),
   },
   sendButtonDisabled: {
-    backgroundColor: DESIGN_TOKENS.colors.disabled,
+    backgroundColor: colors.disabled,
+    ...Platform.select({
+      web: {
+        cursor: 'not-allowed',
+      } as any,
+    }),
   },
   charCount: {
     fontSize: DESIGN_TOKENS.typography.sizes.xs,
-    color: DESIGN_TOKENS.colors.textSubtle,
+    color: colors.textTertiary,
     textAlign: 'right',
     marginTop: DESIGN_TOKENS.spacing.xxs,
   },

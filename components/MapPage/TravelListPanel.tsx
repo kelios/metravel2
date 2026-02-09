@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Image, View, StyleSheet, RefreshControl, Platform, ScrollView, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { Text } from '@/ui/paper';
@@ -37,6 +37,9 @@ type Props = {
 
 const EMPTY_FAVORITES = new Set<string | number>();
 
+const WEB_LIST_OVERSCAN_ITEMS = 5;
+const WEB_ESTIMATED_ITEM_HEIGHT_PX = 340;
+
 const TravelListPanel: React.FC<Props> = ({
                                             travelsData,
                                             buildRouteTo,
@@ -53,11 +56,15 @@ const TravelListPanel: React.FC<Props> = ({
                                           transportMode = 'car',
                                           onToggleFavorite,
                                           favorites = EMPTY_FAVORITES,
-                                          onResetFilters,
-                                          onExpandRadius,
-                                          }) => {
+                                            onResetFilters,
+                                            onExpandRadius,
+                                            }) => {
   const themeColors = useThemedColors();
   const styles = useMemo(() => getStyles(themeColors), [themeColors]);
+
+  const webScrollRafRef = useRef<number | null>(null);
+  const [webScrollY, setWebScrollY] = useState(0);
+  const [webViewportH, setWebViewportH] = useState(0);
 
   const renderItem = useCallback(({ item }: any) => {
     const itemId = item.id ?? item._id ?? item.slug ?? item.uid;
@@ -112,8 +119,26 @@ const TravelListPanel: React.FC<Props> = ({
   ), [styles]);
 
   const webScrollHandler = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!hasMore || !onLoadMore) return;
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+
+    const raf = (globalThis as any)?.requestAnimationFrame as undefined | ((cb: () => void) => number);
+    const caf = (globalThis as any)?.cancelAnimationFrame as undefined | ((id: number) => void);
+
+    if (typeof raf === 'function') {
+      if (webScrollRafRef.current != null && typeof caf === 'function') {
+        caf(webScrollRafRef.current);
+      }
+
+      webScrollRafRef.current = raf(() => {
+        setWebScrollY(contentOffset.y);
+        setWebViewportH(layoutMeasurement.height);
+      });
+    } else {
+      setWebScrollY(contentOffset.y);
+      setWebViewportH(layoutMeasurement.height);
+    }
+
+    if (!hasMore || !onLoadMore) return;
     const distanceFromEnd = contentSize.height - layoutMeasurement.height - contentOffset.y;
     if (distanceFromEnd < layoutMeasurement.height * 0.5) {
       onLoadMore();
@@ -169,6 +194,16 @@ const TravelListPanel: React.FC<Props> = ({
   }
 
   if (Platform.OS === 'web') {
+    const viewportH = webViewportH || 600;
+    const startIndex = Math.max(0, Math.floor(webScrollY / WEB_ESTIMATED_ITEM_HEIGHT_PX) - WEB_LIST_OVERSCAN_ITEMS);
+    const endIndex = Math.min(
+      travelsData.length,
+      Math.ceil((webScrollY + viewportH) / WEB_ESTIMATED_ITEM_HEIGHT_PX) + WEB_LIST_OVERSCAN_ITEMS,
+    );
+
+    const topSpacerHeight = startIndex * WEB_ESTIMATED_ITEM_HEIGHT_PX;
+    const bottomSpacerHeight = Math.max(0, (travelsData.length - endIndex) * WEB_ESTIMATED_ITEM_HEIGHT_PX);
+
     return (
       <ScrollView
         contentContainerStyle={styles.list}
@@ -185,11 +220,13 @@ const TravelListPanel: React.FC<Props> = ({
           ) : undefined
         }
       >
-        {travelsData.map((item: any, index: number) => (
-          <React.Fragment key={String(item.id ?? item._id ?? item.slug ?? index)}>
+        {topSpacerHeight > 0 && <View style={{ height: topSpacerHeight }} />}
+        {travelsData.slice(startIndex, endIndex).map((item: any, index: number) => (
+          <React.Fragment key={String(item.id ?? item._id ?? item.slug ?? startIndex + index)}>
             {renderItem({ item })}
           </React.Fragment>
         ))}
+        {bottomSpacerHeight > 0 && <View style={{ height: bottomSpacerHeight }} />}
         {footer}
       </ScrollView>
     );

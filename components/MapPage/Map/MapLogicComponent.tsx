@@ -11,6 +11,42 @@ const isTestEnv =
     (process as any).env?.JEST_WORKER_ID != null ||
     (globalThis as any)?.jest != null);
 
+/**
+ * Compute geographic bounding box for a circle without requiring a Leaflet map instance.
+ * L.circle().getBounds() needs the circle added to a map (uses layerPointToLatLng internally),
+ * so we compute the bounds mathematically instead.
+ */
+function computeCircleBounds(
+  center: { lat: number; lng: number },
+  radiusMeters: number,
+  L: any,
+): any | null {
+  if (
+    !Number.isFinite(center.lat) ||
+    !Number.isFinite(center.lng) ||
+    !Number.isFinite(radiusMeters) ||
+    radiusMeters <= 0
+  ) {
+    return null;
+  }
+  const EARTH_RADIUS = 6371000; // meters
+  const latDelta = (radiusMeters / EARTH_RADIUS) * (180 / Math.PI);
+  const lngDelta =
+    (radiusMeters / (EARTH_RADIUS * Math.cos((center.lat * Math.PI) / 180))) *
+    (180 / Math.PI);
+
+  const sw = { lat: center.lat - latDelta, lng: center.lng - lngDelta };
+  const ne = { lat: center.lat + latDelta, lng: center.lng + lngDelta };
+
+  if (L && typeof (L as any).latLngBounds === 'function' && typeof (L as any).latLng === 'function') {
+    return (L as any).latLngBounds(
+      (L as any).latLng(sw.lat, sw.lng),
+      (L as any).latLng(ne.lat, ne.lng),
+    );
+  }
+  return null;
+}
+
 interface Point {
   id?: number;
   coord: string;
@@ -752,14 +788,17 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     // If we ended up with no usable points, fit to the circle bounds as a safe fallback.
     if (!shouldFitToPoints && hasValidCircle) {
       try {
-        const circle = (L as any).circle([circleCenter.lat, circleCenter.lng], {
-          radius: Number(radiusInMeters),
-        });
-        const circleBounds = circle.getBounds();
-        const sw = circleBounds.getSouthWest();
-        const ne = circleBounds.getNorthEast();
-        coords.push([sw.lng, sw.lat]);
-        coords.push([ne.lng, ne.lat]);
+        const circleBounds = computeCircleBounds(
+          { lat: circleCenter.lat, lng: circleCenter.lng },
+          Number(radiusInMeters),
+          L,
+        );
+        if (circleBounds) {
+          const sw = circleBounds.getSouthWest();
+          const ne = circleBounds.getNorthEast();
+          coords.push([sw.lng, sw.lat]);
+          coords.push([ne.lng, ne.lat]);
+        }
       } catch {
         // noop
       }
@@ -825,10 +864,11 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           Number(radiusInMeters) > 0
         ) {
           try {
-            const circle = (L as any).circle([circleCenter.lat, circleCenter.lng], {
-              radius: Number(radiusInMeters),
-            });
-            const circleBounds = circle?.getBounds?.();
+            const circleBounds = computeCircleBounds(
+              { lat: circleCenter.lat, lng: circleCenter.lng },
+              Number(radiusInMeters),
+              L,
+            );
             if (circleBounds) bounds = circleBounds;
           } catch {
             // noop

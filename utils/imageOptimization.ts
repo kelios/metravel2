@@ -176,7 +176,7 @@ export function optimizeImageUrl(
     const resolvedFormat = resolveImageFormat(format);
     if (resolvedFormat) {
       if (isWeserv) {
-        url.searchParams.set('output', resolvedFormat);
+        url.searchParams.set('output', resolvedFormat === 'avif' ? 'webp' : resolvedFormat);
         url.searchParams.delete('f');
       } else {
         url.searchParams.set('f', resolvedFormat);
@@ -200,7 +200,7 @@ export function optimizeImageUrl(
       if (preferred) {
         if (isWeserv) {
           if (!url.searchParams.has('output')) {
-            url.searchParams.set('output', preferred);
+            url.searchParams.set('output', preferred === 'avif' ? 'webp' : preferred);
           }
         } else {
           if (!url.searchParams.has('f')) {

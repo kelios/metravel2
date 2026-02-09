@@ -70,19 +70,21 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
     container: {
       width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: DESIGN_TOKENS.spacing.xl,
-      marginBottom: 32,
-      shadowColor: colors.text,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
-      elevation: 2,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
+      marginBottom: DESIGN_TOKENS.spacing.xl,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          boxShadow: colors.boxShadows.light,
+        } as any,
+        default: colors.shadows.light,
+      }),
     },
     containerMobile: {
       padding: DESIGN_TOKENS.spacing.md,
-      marginBottom: DESIGN_TOKENS.spacing.xl,
-      borderRadius: 12,
+      marginBottom: DESIGN_TOKENS.spacing.lg,
     },
     content: {
       gap: DESIGN_TOKENS.spacing.md,
@@ -91,22 +93,22 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
       marginBottom: 8,
     },
     title: {
-      fontSize: DESIGN_TOKENS.typography.sizes.lg,
+      fontSize: Platform.select({ default: 18, web: 20 }),
       fontWeight: '700',
       color: colors.text,
       marginBottom: DESIGN_TOKENS.spacing.xs,
       letterSpacing: -0.3,
     },
     titleMobile: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontSize: 17,
     },
     subtitle: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontSize: 14,
       color: colors.textSecondary,
       lineHeight: 20,
     },
     subtitleMobile: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontSize: 13,
       lineHeight: 18,
     },
     actionButton: {
@@ -114,79 +116,65 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
       alignItems: 'center',
       justifyContent: 'center',
       gap: DESIGN_TOKENS.spacing.sm,
-      paddingVertical: 14,
+      paddingVertical: 12,
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.primarySoft,
       minHeight: 44,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-        },
-        default: {
-          shadowColor: colors.text,
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 1,
-        },
-      }),
+      borderWidth: 1,
+      borderColor: colors.primaryAlpha30,
+      ...(Platform.OS === 'web' ? {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      } as any : colors.shadows.light),
     },
     actionButtonMobile: {
-      paddingVertical: 12,
+      paddingVertical: 11,
       paddingHorizontal: DESIGN_TOKENS.spacing.lg,
     },
     actionButtonSecondary: {
-      backgroundColor: colors.mutedBackground,
-      borderColor: colors.border,
+      backgroundColor: colors.backgroundSecondary,
+      borderColor: colors.borderLight,
     },
     actionButtonActive: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
     },
     actionButtonText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.primaryText,
     },
     actionButtonTextMobile: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
+      fontSize: 14,
     },
     actionButtonTextActive: {
       color: colors.surface,
     },
     primaryButton: {
-      paddingVertical: 14,
+      paddingVertical: 12,
       paddingHorizontal: DESIGN_TOKENS.spacing.xl,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      borderRadius: DESIGN_TOKENS.radii.pill,
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
       minHeight: 44,
-      ...Platform.select({
-        web: {
-          cursor: 'pointer' as any,
-        },
-        default: {
-          shadowColor: colors.text,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 2,
-        },
-      }),
+      ...(Platform.OS === 'web' ? {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      } as any : colors.shadows.light),
     },
     primaryButtonMobile: {
-      paddingVertical: 12,
+      paddingVertical: 11,
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
     },
     primaryButtonText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontSize: 15,
       fontWeight: '700',
       color: colors.surface,
     },
     primaryButtonTextMobile: {
-      fontSize: DESIGN_TOKENS.typography.sizes.md,
+      fontSize: 14,
     },
   }), [colors]);
 

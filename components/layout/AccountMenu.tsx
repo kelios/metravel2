@@ -1,10 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Menu } from '@/ui/paper';
 import { router } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 
 import { useAuth } from '@/context/AuthContext';
@@ -13,7 +12,6 @@ import { useFilters } from '@/context/FiltersProvider';
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { buildLoginHref } from '@/utils/authNavigation';
 
 function AccountMenu() {
@@ -187,20 +185,11 @@ function AccountMenu() {
     }
 
     if (normalized.includes('X-Amz-') || normalized.includes('x-amz-')) {
-      const separator = normalized.includes('?') ? '&' : '?';
-      return `${normalized}${separator}v=${profileRefreshToken}`;
+      return normalized;
     }
 
     const separator = normalized.includes('?') ? '&' : '?';
-    const withVersion = `${normalized}${separator}v=${profileRefreshToken}`;
-    
-    // Apply image optimization for mobile web
-    return optimizeImageUrl(withVersion, {
-      width: 48,
-      height: 48,
-      quality: 85,
-      fit: 'cover',
-    }) || withVersion;
+    return `${normalized}${separator}v=${profileRefreshToken}`;
   }, [avatarLoadError, userAvatar, profileRefreshToken]);
 
   React.useEffect(() => {
@@ -306,14 +295,9 @@ function AccountMenu() {
         >
           <View style={styles.avatarSlot}>
             {isAuthenticated && avatarUri ? (
-              <ImageCardMedia
-                src={avatarUri}
-                fit="contain"
-                blurBackground
-                borderRadius={12}
+              <Image
+                source={{ uri: avatarUri }}
                 style={styles.avatar}
-                loading="lazy"
-                priority="low"
                 onError={() => setAvatarLoadError(true)}
               />
             ) : (

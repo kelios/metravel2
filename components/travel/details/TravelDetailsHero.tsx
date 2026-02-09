@@ -585,7 +585,7 @@ function TravelHeroSectionInner({
                   accessibilityRole="button"
                   accessibilityLabel={`Перейти к разделу ${link.label}`}
                 >
-                  <Icon name={link.icon} size={18} color={colors.primary} />
+                  <Icon name={link.icon} size={16} color={colors.primary} />
                   <Text style={styles.quickJumpLabel}>{link.label}</Text>
                 </Pressable>
               ))}
@@ -599,7 +599,7 @@ function TravelHeroSectionInner({
                 accessibilityRole="button"
                 accessibilityLabel={`Перейти к разделу ${link.label}`}
               >
-                <Icon name={link.icon} size={18} color={colors.primary} />
+                <Icon name={link.icon} size={16} color={colors.primary} />
                 <Text style={styles.quickJumpLabel}>{link.label}</Text>
               </Pressable>
             ))

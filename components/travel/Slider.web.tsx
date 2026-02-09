@@ -129,7 +129,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const { width: winW, height: winH, isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
 
-  const [containerW, setContainerW] = useState(winW)
+  // On web, start with 0 so we don't render slides at the wrong width.
+  // onLayout will provide the correct width before the first meaningful paint.
+  // On native, use winW immediately since there's no sidebar layout issue.
+  const [containerW, setContainerW] = useState(Platform.OS === 'web' ? 0 : winW)
+  const wrapperRef = useRef<any>(null)
   const scrollRef = useRef<any>(null)
   const indexRef = useRef(0)
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -138,6 +142,57 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const rafRef = useRef<number | null>(null)
   const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web')
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const syncContainerWidthFromDom = useCallback(() => {
+    if (Platform.OS !== 'web') return
+    const raw = wrapperRef.current as any
+    const node = raw?._nativeNode || raw?._domNode || raw
+    const w = node?.getBoundingClientRect?.()?.width
+    if (!Number.isFinite(w) || w <= 0) return
+    setContainerW((prev) => (Math.abs(prev - w) > 2 ? w : prev))
+  }, [])
+
+  // Fallback: if onLayout/ResizeObserver hasn't set containerW yet, use winW.
+  // This runs after mount effects, covering test environments where onLayout doesn't fire.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (containerW > 0) return
+    // Use microtask so it fires within act() in tests
+    let cancelled = false
+    Promise.resolve().then(() => {
+      if (!cancelled) setContainerW((prev) => (prev === 0 ? winW : prev))
+    })
+    return () => { cancelled = true }
+  }, [containerW, winW])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    syncContainerWidthFromDom()
+
+    const raw = wrapperRef.current as any
+    const node = raw?._nativeNode || raw?._domNode || raw
+    if (!node) return
+
+    const canUseResizeObserver =
+      typeof (globalThis as any).ResizeObserver !== 'undefined' &&
+      typeof node === 'object' &&
+      node?.nodeType === 1
+
+    let ro: ResizeObserver | null = null
+    if (canUseResizeObserver) {
+      ro = new ResizeObserver(() => syncContainerWidthFromDom())
+      ro.observe(node as Element)
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('resize', syncContainerWidthFromDom)
+    }
+
+    return () => {
+      ro?.disconnect()
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', syncContainerWidthFromDom)
+      }
+    }
+  }, [syncContainerWidthFromDom])
 
   const firstAR = useMemo(() => {
     const f = images[0]
@@ -177,7 +232,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   )
 
   const canPrefetchOnWeb = useMemo(() => {
-    if (isMobile) return false
     if (typeof navigator === 'undefined') return false
     const connection =
       (navigator as any).connection ||
@@ -186,6 +240,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     if (connection?.saveData) return false
     const effectiveType = String(connection?.effectiveType || '').toLowerCase()
     if (effectiveType.includes('2g') || effectiveType === '3g') return false
+    if (isMobile && effectiveType && !effectiveType.includes('4g')) return false
     return true
   }, [isMobile])
 
@@ -318,7 +373,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
       const mainPriority = isFirstSlide ? 'high' : (distance <= 1 ? 'normal' : 'low')
-      const shouldBlur = blurBackground
+      const shouldBlur = blurBackground && distance <= 1
 
       if (!shouldRender) {
         return (
@@ -429,116 +484,123 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const navInset = isMobile ? 8 : Math.max(insets.left || 0, insets.right || 0)
   const navOffset = Math.max(44, 16 + navInset)
 
+  const ready = containerW > 0
+
   return (
     <View style={styles.sliderStack}>
       <View
+        ref={wrapperRef}
         onLayout={onLayout}
         style={[
           styles.wrapper,
-          { height: containerH },
+          ready ? { height: containerH } : { aspectRatio: firstAR, maxHeight: 640 },
           Platform.OS === 'web' && !fullBleed
             ? ({ maxWidth: 1280, marginHorizontal: 'auto' } as any)
             : null,
         ]}
       >
-        <View style={styles.clip}>
-          <ScrollView
-            ref={scrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            style={styles.scrollView}
-            contentContainerStyle={[styles.scrollContent, { height: containerH }]}
-            onScrollBeginDrag={() => {
-              enablePrefetch()
-            }}
-            onScroll={handleScroll}
-          >
-            {images.map((item, index) => (
-              <React.Fragment key={keyExtractor(item)}>
-                {renderItem({ item, index })}
-              </React.Fragment>
-            ))}
-          </ScrollView>
-        </View>
-
-        {Platform.OS === 'web' && shouldShowSideBlurPanels ? (
+        {ready ? (
           <>
-            <View
-              pointerEvents="none"
-              style={styles.edgeScrimLeft}
-              testID={shouldShowSideBlurPanels ? `slider-side-blur-left-${currentIndex}` : undefined}
-            />
-            <View
-              pointerEvents="none"
-              style={styles.edgeScrimRight}
-              testID={shouldShowSideBlurPanels ? `slider-side-blur-right-${currentIndex}` : undefined}
-            />
-          </>
-        ) : null}
-
-        {showArrows && images.length > 1 && !(isMobile && hideArrowsOnMobile) ? (
-          <>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Previous slide"
-              onPress={prev}
-              activeOpacity={0.8}
-              style={[styles.navBtn, { left: navOffset }]}
-            >
-              <View style={styles.arrowIconContainer}>
-                <Feather
-                  name="chevron-left"
-                  size={isMobile ? 20 : 24}
-                  color={colors.textOnDark}
-                  style={styles.arrowIcon}
-                />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Next slide"
-              onPress={next}
-              activeOpacity={0.8}
-              style={[styles.navBtn, { right: navOffset }]}
-            >
-              <View style={styles.arrowIconContainer}>
-                <Feather
-                  name="chevron-right"
-                  size={isMobile ? 20 : 24}
-                  color={colors.textOnDark}
-                  style={styles.arrowIcon}
-                />
-              </View>
-            </TouchableOpacity>
-          </>
-        ) : null}
-
-        {images.length > 1 ? (
-          <View style={styles.counter} pointerEvents="none">
-            <View style={styles.counterContainer}>
-              <Text style={styles.counterText}>
-                {currentIndex + 1}/{images.length}
-              </Text>
+            <View style={styles.clip}>
+              <ScrollView
+                ref={scrollRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                scrollEventThrottle={16}
+                style={styles.scrollView}
+                contentContainerStyle={[styles.scrollContent, { height: containerH }]}
+                onScrollBeginDrag={() => {
+                  enablePrefetch()
+                }}
+                onScroll={handleScroll}
+              >
+                {images.map((item, index) => (
+                  <React.Fragment key={keyExtractor(item)}>
+                    {renderItem({ item, index })}
+                  </React.Fragment>
+                ))}
+              </ScrollView>
             </View>
-          </View>
-        ) : null}
 
-        {showDots && images.length > 1 ? (
-          <View style={styles.dots}>
-            <View style={styles.dotsContainer}>
-              {images.map((_, i) => (
+            {Platform.OS === 'web' && shouldShowSideBlurPanels ? (
+              <>
                 <View
-                  key={i}
-                  style={[
-                    styles.dot,
-                    i === currentIndex ? styles.dotActive : null,
-                  ]}
+                  pointerEvents="none"
+                  style={styles.edgeScrimLeft}
+                  testID={shouldShowSideBlurPanels ? `slider-side-blur-left-${currentIndex}` : undefined}
                 />
-              ))}
-            </View>
-          </View>
+                <View
+                  pointerEvents="none"
+                  style={styles.edgeScrimRight}
+                  testID={shouldShowSideBlurPanels ? `slider-side-blur-right-${currentIndex}` : undefined}
+                />
+              </>
+            ) : null}
+
+            {showArrows && images.length > 1 && !(isMobile && hideArrowsOnMobile) ? (
+              <>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous slide"
+                  onPress={prev}
+                  activeOpacity={0.8}
+                  style={[styles.navBtn, { left: navOffset }]}
+                >
+                  <View style={styles.arrowIconContainer}>
+                    <Feather
+                      name="chevron-left"
+                      size={isMobile ? 20 : 24}
+                      color={colors.textOnDark}
+                      style={styles.arrowIcon}
+                    />
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Next slide"
+                  onPress={next}
+                  activeOpacity={0.8}
+                  style={[styles.navBtn, { right: navOffset }]}
+                >
+                  <View style={styles.arrowIconContainer}>
+                    <Feather
+                      name="chevron-right"
+                      size={isMobile ? 20 : 24}
+                      color={colors.textOnDark}
+                      style={styles.arrowIcon}
+                    />
+                  </View>
+                </TouchableOpacity>
+              </>
+            ) : null}
+
+            {images.length > 1 ? (
+              <View style={styles.counter} pointerEvents="none">
+                <View style={styles.counterContainer}>
+                  <Text style={styles.counterText}>
+                    {currentIndex + 1}/{images.length}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {showDots && images.length > 1 ? (
+              <View style={styles.dots}>
+                <View style={styles.dotsContainer}>
+                  {images.map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.dot,
+                        i === currentIndex ? styles.dotActive : null,
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </>
         ) : null}
       </View>
     </View>

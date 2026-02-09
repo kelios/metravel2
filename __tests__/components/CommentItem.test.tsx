@@ -498,7 +498,7 @@ describe('CommentItem', () => {
       
       const container = getByTestId('comment-item');
       expect(container.props.style).toContainEqual(expect.objectContaining({
-        marginLeft: 48,
+        marginLeft: 40,
       }));
     });
   });

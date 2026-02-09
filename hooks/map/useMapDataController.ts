@@ -89,6 +89,10 @@ interface UseMapDataControllerResult {
    * Invalidate query
    */
   invalidateTravelsQuery: () => void;
+
+  hasMore: boolean;
+  onLoadMore: () => void;
+  isFetchingNextPage: boolean;
 }
 
 /**
@@ -146,6 +150,9 @@ export function useMapDataController(
     isError: mapError,
     error: mapErrorDetails,
     refetch: refetchMapData,
+    hasMore,
+    loadMore,
+    isFetchingNextPage,
   } = useMapTravels({
     coordinates: debouncedCoordinates,
     filterValues: debouncedFilterValues,
@@ -168,6 +175,9 @@ export function useMapDataController(
     mapErrorDetails,
     refetchMapData,
     invalidateTravelsQuery,
+    hasMore,
+    onLoadMore: loadMore,
+    isFetchingNextPage,
   }), [
     allTravelsData,
     travelsData,
@@ -178,5 +188,8 @@ export function useMapDataController(
     mapErrorDetails,
     refetchMapData,
     invalidateTravelsQuery,
+    hasMore,
+    loadMore,
+    isFetchingNextPage,
   ]);
 }

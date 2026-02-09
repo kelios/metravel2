@@ -263,32 +263,14 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         fixedHeightBlock: {
             borderWidth: 1,
             borderColor: colors.borderLight,
-            borderRadius: Platform.select({ web: 16, default: 12 }),
+            borderRadius: DESIGN_TOKENS.radii.lg,
             backgroundColor: colors.surface,
             overflow: "hidden",
             ...Platform.select({
                 web: {
-                    // @ts-ignore: web-only style
-                    boxShadow: colors.isDark
-                        ? '0 8px 24px rgba(0, 0, 0, 0.3)'
-                        : '0 8px 24px rgba(0, 0, 0, 0.08)',
-                },
-                ios: {
-                    shadowColor: colors.text,
-                    shadowOpacity: 0.08,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 2 },
-                },
-                android: {
-                    elevation: 2,
-                },
-                default: {
-                    shadowColor: colors.text,
-                    shadowOpacity: 0.08,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 2 },
-                    elevation: 2,
-                },
+                    boxShadow: colors.boxShadows.light,
+                } as any,
+                default: colors.shadows.light,
             }),
         },
 

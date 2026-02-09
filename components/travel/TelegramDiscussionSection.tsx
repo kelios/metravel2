@@ -82,25 +82,29 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   container: {
     width: '100%',
     backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: DESIGN_TOKENS.spacing.xl,
-    shadowColor: colors.text,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 2,
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.light,
+      } as any,
+      default: colors.shadows.light,
+    }),
   },
   title: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontSize: Platform.select({ default: 18, web: 20 }),
     fontWeight: '700',
     color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.xs,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontSize: 14,
     color: colors.textMuted,
     lineHeight: 20,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   button: {
     flexDirection: 'row',
@@ -112,16 +116,27 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderRadius: 999,
     backgroundColor: colors.primary,
     minHeight: 44,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      } as any,
+    }),
   },
   buttonPressed: {
     opacity: 0.9,
-    transform: [{ scale: 0.98 }],
+    transform: [{ scale: 0.97 }],
   },
   buttonDisabled: {
     backgroundColor: colors.disabled,
+    ...Platform.select({
+      web: {
+        cursor: 'not-allowed',
+      } as any,
+    }),
   },
   buttonText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.textOnPrimary,
   },

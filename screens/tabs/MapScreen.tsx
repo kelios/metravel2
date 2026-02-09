@@ -57,6 +57,8 @@ export default function MapScreen() {
         loading,
         isFetching,
         isPlaceholderData,
+        hasMore,
+        onLoadMore,
         mapError,
         mapErrorDetails,
         refetchMapData,
@@ -263,6 +265,10 @@ export default function MapScreen() {
                     <LazyMapMobileLayout
                         mapComponent={mapComponent}
                         travelsData={travelsData}
+                        hasMore={hasMore}
+                        onLoadMore={onLoadMore}
+                        onRefresh={refetchMapData}
+                        isRefreshing={isFetching && isPlaceholderData}
                         coordinates={coordinates}
                         transportMode={transportMode}
                         buildRouteTo={buildRouteTo}
@@ -531,7 +537,10 @@ export default function MapScreen() {
                                     buildRouteTo={buildRouteTo}
                                     isMobile={isMobile}
                                     isLoading={loading || isFetching}
+                                    hasMore={hasMore}
+                                    onLoadMore={onLoadMore}
                                     isRefreshing={isFetching && isPlaceholderData}
+                                    onRefresh={refetchMapData}
                                     userLocation={coordinates}
                                     transportMode={transportMode}
                                     onResetFilters={handleClearAllFilters}

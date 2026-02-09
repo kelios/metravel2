@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/api/map';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQuery';
 import type { TravelCoords } from '@/types/types';
@@ -8,6 +8,8 @@ import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
+
+const MAP_TRAVELS_PER_PAGE = 30;
 
 interface UseMapTravelsParams {
   coordinates: Coordinates | null;
@@ -161,53 +163,89 @@ export function useMapTravels({
     ]
   );
 
-  const {
-    data: rawTravelsData = [],
-    isLoading,
-    isFetching,
-    isPlaceholderData,
-    isError,
-    error,
-    refetch,
-  } = useQuery<TravelCoords[]>({
-    queryKey: ['travelsForMap', queryParams],
-    enabled: isEnabled,
-    queryFn: async ({ signal }) => {
-      const parsedFilters = parseBackendFilters(queryParams.filtersKey);
+  const parsedFilters = useMemo(
+    () => parseBackendFilters(queryParams.filtersKey),
+    [queryParams.filtersKey]
+  );
 
-      if (queryParams.mode === 'radius') {
-        const result = await fetchTravelsForMap(0, 100, {
+  const enabledRadius = isEnabled && queryParams.mode === 'radius';
+  const enabledRoute = isEnabled && queryParams.mode === 'route' && !!queryParams.routeKey;
+
+  const radiusQuery = useInfiniteQuery<TravelCoords[]>({
+    queryKey: ['travelsForMap', queryParams, { perPage: MAP_TRAVELS_PER_PAGE }],
+    enabled: enabledRadius,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam, signal }) => {
+      const page = typeof pageParam === 'number' ? pageParam : 0;
+      const result = await fetchTravelsForMap(
+        page,
+        MAP_TRAVELS_PER_PAGE,
+        {
           lat: queryParams.lat!.toString(),
           lng: queryParams.lng!.toString(),
           radius: queryParams.radius,
           categories: parsedFilters.categories,
-        }, { signal });
-        return Object.values(result || {}) as TravelCoords[];
-      }
+        },
+        { signal }
+      );
 
-      if (queryParams.mode === 'route' && queryParams.routeKey) {
-        // Восстанавливаем координаты из ключа
-        const coords = queryParams.routeKey.split('|').map((p) => {
-          const [lng, lat] = p.split(',').map(Number);
-          return [lng, lat] as [number, number];
+      const total = !Array.isArray(result) ? (result as any)?.__total : undefined;
+      const values = Array.isArray(result) ? result : (Object.values(result || {}) as any[]);
+      const items = values as TravelCoords[];
+      if (typeof total === 'number' && Array.isArray(items)) {
+        Object.defineProperty(items, '__total', {
+          value: total,
+          enumerable: false,
+          configurable: false,
+          writable: false,
         });
+      }
+      return items;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (!Array.isArray(lastPage)) return undefined;
 
-        if (coords.length < 2) return [];
-
-        const corridorKmRaw = parseInt(String(queryParams.radius || '10'), 10);
-        // Corridor must be narrow enough to be meaningful, but not too narrow.
-        // Use a conservative clamp to avoid accidental "worldwide" queries.
-        const corridorKm = Number.isFinite(corridorKmRaw)
-          ? Math.min(20, Math.max(5, corridorKmRaw))
-          : 10;
-
-        const result = await fetchTravelsNearRoute(coords, corridorKm, { signal });
-        if (result && typeof result === 'object') {
-          return (Array.isArray(result) ? result : Object.values(result)) as TravelCoords[];
-        }
-        return [];
+      const total = (lastPage as any)?.__total;
+      if (typeof total === 'number' && Number.isFinite(total)) {
+        const loaded = allPages.reduce((acc, page) => acc + (Array.isArray(page) ? page.length : 0), 0);
+        if (loaded < total) return allPages.length;
+        return undefined;
       }
 
+      if (lastPage.length < MAP_TRAVELS_PER_PAGE) return undefined;
+      return allPages.length;
+    },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    placeholderData: (previousData) => previousData,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const routeQuery = useQuery<TravelCoords[]>({
+    queryKey: ['travelsForMapRoute', queryParams],
+    enabled: enabledRoute,
+    queryFn: async ({ signal }) => {
+      // Восстанавливаем координаты из ключа
+      const coords = queryParams.routeKey!.split('|').map((p) => {
+        const [lng, lat] = p.split(',').map(Number);
+        return [lng, lat] as [number, number];
+      });
+
+      if (coords.length < 2) return [];
+
+      const corridorKmRaw = parseInt(String(queryParams.radius || '10'), 10);
+      // Corridor must be narrow enough to be meaningful, but not too narrow.
+      // Use a conservative clamp to avoid accidental "worldwide" queries.
+      const corridorKm = Number.isFinite(corridorKmRaw)
+        ? Math.min(20, Math.max(5, corridorKmRaw))
+        : 10;
+
+      const result = await fetchTravelsNearRoute(coords, corridorKm, { signal });
+      if (result && typeof result === 'object') {
+        return (Array.isArray(result) ? result : Object.values(result)) as TravelCoords[];
+      }
       return [];
     },
     staleTime: 2 * 60 * 1000,
@@ -217,6 +255,35 @@ export function useMapTravels({
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
+
+  const rawTravelsData = useMemo(() => {
+    if (queryParams.mode === 'radius') {
+      const pages = radiusQuery.data?.pages ?? [];
+      return pages.flat();
+    }
+
+    return routeQuery.data ?? [];
+  }, [queryParams.mode, radiusQuery.data?.pages, routeQuery.data]);
+
+  const isLoading = queryParams.mode === 'radius' ? radiusQuery.isLoading : routeQuery.isLoading;
+  const isFetching = queryParams.mode === 'radius' ? radiusQuery.isFetching : routeQuery.isFetching;
+  const isPlaceholderData =
+    queryParams.mode === 'radius'
+      ? Boolean((radiusQuery as any).isPlaceholderData)
+      : Boolean((routeQuery as any).isPlaceholderData);
+  const isError = queryParams.mode === 'radius' ? radiusQuery.isError : routeQuery.isError;
+  const error = queryParams.mode === 'radius' ? radiusQuery.error : routeQuery.error;
+  const refetch = queryParams.mode === 'radius' ? radiusQuery.refetch : routeQuery.refetch;
+
+  const hasMore = queryParams.mode === 'radius' ? Boolean(radiusQuery.hasNextPage) : false;
+  const isFetchingNextPage =
+    queryParams.mode === 'radius' ? Boolean(radiusQuery.isFetchingNextPage) : false;
+  const loadMore = useCallback(() => {
+    if (queryParams.mode !== 'radius') return;
+    if (!radiusQuery.hasNextPage) return;
+    if (radiusQuery.isFetchingNextPage) return;
+    void radiusQuery.fetchNextPage();
+  }, [queryParams.mode, radiusQuery]);
 
   // Нормализуем данные
   const allTravelsData = useMemo(() => {
@@ -238,6 +305,9 @@ export function useMapTravels({
     isError,
     error,
     refetch,
+    hasMore,
+    loadMore,
+    isFetchingNextPage,
   }), [
     allTravelsData,
     filteredTravelsData,
@@ -247,5 +317,8 @@ export function useMapTravels({
     isError,
     error,
     refetch,
+    hasMore,
+    loadMore,
+    isFetchingNextPage,
   ]);
 }

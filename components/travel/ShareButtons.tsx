@@ -13,6 +13,7 @@ import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport';
 import { ExportStage } from '@/types/pdf-export';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
@@ -398,27 +399,24 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-  // ✅ РЕДИЗАЙН: Современная карточка с glassmorphism
   container: {
-    paddingVertical: 20, // ✅ UX: Увеличено для лучшей читаемости
+    paddingVertical: 20,
     paddingHorizontal: 24,
     backgroundColor: colors.surface,
-    ...(Platform.OS === 'web' ? {
-      backdropFilter: 'blur(20px)' as any,
-      WebkitBackdropFilter: 'blur(20px)' as any,
-    } : {}),
-    borderRadius: 20,
+    borderRadius: DESIGN_TOKENS.radii.lg,
     marginBottom: 20,
-    shadowColor: colors.shadows.medium.shadowColor,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        boxShadow: colors.boxShadows.light,
+      } as any,
+      default: colors.shadows.light,
+    }),
   },
   containerMobile: {
     paddingVertical: 16,
     paddingHorizontal: 16,
-    borderRadius: 16,
   },
   containerSticky: {
     paddingVertical: 8,
@@ -438,9 +436,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
   title: {
-    fontSize: 20, // ✅ UX: Увеличено для лучшей иерархии
+    fontSize: Platform.select({ default: 18, web: 20 }),
     fontWeight: '700',
     color: colors.text,
     marginBottom: 0,
@@ -524,22 +525,23 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: 8,
     rowGap: 0,
   },
-  // ✅ РЕДИЗАЙН: Современные кнопки с улучшенными стилями
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     backgroundColor: colors.backgroundSecondary,
     minHeight: 44,
     minWidth: 44,
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'all 0.2s ease' as any,
+        transition: 'all 0.15s ease' as any,
       },
     }),
   },
@@ -558,7 +560,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.successSoft,
   },
   buttonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
     letterSpacing: -0.1,
@@ -574,19 +576,24 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   progressContainer: {
     marginTop: 16,
-    height: 4,
+    height: 3,
     backgroundColor: colors.backgroundSecondary,
-    borderRadius: 2,
+    borderRadius: DESIGN_TOKENS.radii.pill,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 2,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    ...Platform.select({
+      web: {
+        transition: 'width 0.3s ease',
+      } as any,
+    }),
   },
   progressText: {
     marginTop: 8,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textMuted,
     textAlign: 'center',
   },

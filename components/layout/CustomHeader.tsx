@@ -11,7 +11,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive'; 
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
+
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
 
@@ -72,20 +72,11 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
         }
 
         if (normalized.includes('X-Amz-') || normalized.includes('x-amz-')) {
-            const separator = normalized.includes('?') ? '&' : '?';
-            return `${normalized}${separator}v=${profileRefreshToken}`;
+            return normalized;
         }
 
         const separator = normalized.includes('?') ? '&' : '?';
-        const withVersion = `${normalized}${separator}v=${profileRefreshToken}`;
-        
-        // Apply image optimization for mobile web
-        return optimizeImageUrl(withVersion, {
-            width: 96,
-            height: 96,
-            quality: 85,
-            fit: 'cover',
-        }) || withVersion;
+        return `${normalized}${separator}v=${profileRefreshToken}`;
     }, [avatarLoadError, userAvatar, profileRefreshToken]);
 
     React.useEffect(() => {

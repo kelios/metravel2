@@ -119,11 +119,13 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
       {/* Дата */}
       {whenLine && (
         <SafeView style={styles.factItem}>
-          <Feather
-            name="calendar"
-            size={Platform.select({ default: 16, web: 18 })}
-            color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
-          />
+          <SafeView style={[styles.factIconWrap, { backgroundColor: colors.primarySoft }]}>
+            <Feather
+              name="calendar"
+              size={Platform.select({ default: 15, web: 16 })}
+              color={colors.primary}
+            />
+          </SafeView>
           <Text style={[styles.factText, { color: colors.text }]}>{whenLine}</Text>
         </SafeView>
       )}
@@ -131,11 +133,13 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
       {/* Длительность */}
       {daysText && (
         <SafeView style={styles.factItem}>
-          <Feather
-            name="clock"
-            size={Platform.select({ default: 16, web: 18 })}
-            color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
-          />
+          <SafeView style={[styles.factIconWrap, { backgroundColor: colors.accentSoft }]}>
+            <Feather
+              name="clock"
+              size={Platform.select({ default: 15, web: 16 })}
+              color={colors.accent}
+            />
+          </SafeView>
           <Text style={[styles.factText, { color: colors.text }]}>{daysText}</Text>
         </SafeView>
       )}
@@ -143,11 +147,13 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
       {/* Страна */}
       {!!countryName && (
         <SafeView style={styles.factItem}>
-          <Feather
-            name="map-pin"
-            size={Platform.select({ default: 16, web: 18 })}
-            color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
-          />
+          <SafeView style={[styles.factIconWrap, { backgroundColor: colors.successSoft }]}>
+            <Feather
+              name="map-pin"
+              size={Platform.select({ default: 15, web: 16 })}
+              color={colors.successDark}
+            />
+          </SafeView>
           <Text style={[styles.factText, { color: colors.text }]}>{countryName}</Text>
         </SafeView>
       )}
@@ -155,11 +161,13 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
       {/* Категории */}
       {categories.length > 0 && (
         <SafeView style={[styles.factItem, styles.categoriesContainer]}>
-          <Feather
-            name="tag"
-            size={Platform.select({ default: 16, web: 18 })}
-            color={colors.textMuted} // ✅ РЕДИЗАЙН: Темная тема
-          />
+          <SafeView style={[styles.factIconWrap, { backgroundColor: colors.warningSoft }]}>
+            <Feather
+              name="tag"
+              size={Platform.select({ default: 15, web: 16 })}
+              color={colors.warningDark}
+            />
+          </SafeView>
           <SafeView style={styles.categoriesWrap}>
             {categories.map((cat, index) => {
               const categoryRole = onCategoryPress ? 'button' : 'text';
@@ -194,22 +202,21 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
-  // ✅ РЕДИЗАЙН: Компактная карточка с темной темой
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: Platform.select({
-      default: 18, // было lg 24px (-25%)
-      web: 24, // было xl 32px (-25%)
+      default: 16,
+      web: 20,
     }),
     paddingVertical: Platform.select({
-      default: 18, // было xl 32px (-44%)
-      web: 24, // было xxl 48px (-50%)
+      default: 18,
+      web: 20,
     }),
     paddingHorizontal: Platform.select({
-      default: 18, // было xl 32px (-44%)
-      web: 24, // было xxl 48px (-50%)
+      default: 16,
+      web: 20,
     }),
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
@@ -217,28 +224,35 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: colors.boxShadows.card,
+        boxShadow: colors.boxShadows.light,
       } as any,
-      default: colors.shadows.medium,
+      default: colors.shadows.light,
     }),
   },
   containerMobile: {
-    paddingVertical: 18, // было lg 24px (-25%)
-    paddingHorizontal: 18, // было lg 24px (-25%)
-    gap: 14, // было md 16px (-12.5%)
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 12,
   },
   factItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: 4,
+    gap: 10,
+    paddingVertical: 2,
+  },
+  factIconWrap: {
+    width: Platform.select({ default: 32, web: 34 }),
+    height: Platform.select({ default: 32, web: 34 }),
+    borderRadius: Platform.select({ default: 8, web: 10 }),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   factText: {
     fontSize: Platform.select({
-      default: 15,
-      web: 17,
+      default: 14,
+      web: 15,
     }),
-    fontWeight: '500',
+    fontWeight: '600',
     color: colors.text,
     letterSpacing: -0.1,
   },
@@ -255,34 +269,28 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.sm,
     flex: 1,
   },
-  // ✅ РЕДИЗАЙН: Компактные теги категорий
   categoryTag: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.primarySoft,
     paddingHorizontal: Platform.select({
-      default: 12, // было 12
-      web: 14, // было 16px (-12.5%)
+      default: 12,
+      web: 14,
     }),
     paddingVertical: Platform.select({
-      default: 6,
-      web: 7, // было 8px (-12.5%)
+      default: 5,
+      web: 6,
     }),
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.primaryAlpha30,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
         transition: 'all 0.2s ease' as any,
-        ':hover': {
-          backgroundColor: colors.primary,
-          borderColor: colors.primary,
-          boxShadow: colors.boxShadows.hover,
-        } as any,
       },
     }),
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.primaryText,
     letterSpacing: 0,

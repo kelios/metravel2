@@ -39,11 +39,15 @@ function HomeScreen() {
 
     const shouldRenderHomeContent = useMemo(() => {
         if (Platform.OS !== 'web') return true;
-        // On web, skip rendering Home content when the URL is NOT the home page.
-        // This prevents the flash of home page when directly navigating to /travels/* etc.
+        // When the screen is focused, always render — this avoids blank page
+        // after navigating back from travel details (window.location.pathname
+        // can be stale during SPA transitions).
+        if (isFocused) return true;
+        // When NOT focused, use pathname to avoid flash of home content
+        // when directly navigating to /travels/* etc.
         const p = String(effectivePathname ?? '').trim();
         return p === '' || p === '/' || p === '/index';
-    }, [effectivePathname]);
+    }, [effectivePathname, isFocused]);
 
     const title = 'Твоя книга путешествий | Metravel';
     const description = 'Добавляй поездки, фото и заметки — и собирай красивую книгу в PDF для печати.';

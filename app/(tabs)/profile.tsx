@@ -107,6 +107,8 @@ const unwrapTravelsPayload = (payload: any): { items: any[]; count: number } => 
   return { items: [], count: 0 };
 };
 
+const keyExtractor = (item: Travel, index: number) => `${item.id}-${index}`;
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { isAuthenticated, authReady, logout, userId, isSuperuser } = useAuth();
@@ -181,7 +183,7 @@ export default function ProfileScreen() {
   });
   const [travelsLoading, setTravelsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
-  const [myTravels, setMyTravels] = useState<any[]>([]);
+  const [myTravels, setMyTravels] = useState<Travel[]>([]);
 
   const loadTravels = useCallback(async () => {
     const uid = userId;
@@ -190,7 +192,7 @@ export default function ProfileScreen() {
     try {
       const payload = await fetchMyTravels({ user_id: uid });
       const { items, count } = unwrapTravelsPayload(payload);
-      setMyTravels(items);
+      setMyTravels(items.map(normalizeToTravel));
       setStats((prev) => ({
         ...prev,
         travelsCount: count || (typeof (payload as any)?.total === 'number' ? (payload as any).total : 0) || items.length,
@@ -250,43 +252,42 @@ export default function ProfileScreen() {
     }
   }, [logout, router]);
 
-  const isLoading = profileLoading || travelsLoading;
+  const normalizedFavorites = useMemo<Travel[]>(() =>
+    (favorites || [])
+      .filter((f: any) => f?.type === 'travel')
+      .map((f: any) => normalizeToTravel({
+        id: f.id,
+        name: f.title,
+        title: f.title,
+        url: f.url,
+        imageUrl: f.imageUrl,
+        countryName: f.country,
+        cityName: f.city,
+      })),
+    [favorites]
+  );
+
+  const normalizedHistory = useMemo<Travel[]>(() =>
+    (viewHistory || [])
+      .filter((h: any) => h?.type === 'travel')
+      .map((h: any) => normalizeToTravel({
+        id: h.id,
+        name: h.title,
+        title: h.title,
+        url: h.url,
+        imageUrl: h.imageUrl,
+        countryName: h.country,
+        cityName: h.city,
+      })),
+    [viewHistory]
+  );
 
   const currentData = useMemo<Travel[]>(() => {
-    if (activeTab === 'travels') {
-      return (myTravels || []).map(normalizeToTravel);
-    }
-
-    if (activeTab === 'favorites') {
-      return (favorites || [])
-        .filter((f: any) => f?.type === 'travel')
-        .map((f: any) => normalizeToTravel({
-          id: f.id,
-          name: f.title,
-          title: f.title,
-          url: f.url,
-          imageUrl: f.imageUrl,
-          countryName: f.country,
-          cityName: f.city,
-        }));
-    }
-
-    if (activeTab === 'history') {
-      return (viewHistory || [])
-        .filter((h: any) => h?.type === 'travel')
-        .map((h: any) => normalizeToTravel({
-          id: h.id,
-          name: h.title,
-          title: h.title,
-          url: h.url,
-          imageUrl: h.imageUrl,
-          countryName: h.country,
-          cityName: h.city,
-        }));
-    }
-
+    if (activeTab === 'travels') return myTravels;
+    if (activeTab === 'favorites') return normalizedFavorites;
+    if (activeTab === 'history') return normalizedHistory;
     return [];
-  }, [activeTab, favorites, myTravels, viewHistory]);
+  }, [activeTab, myTravels, normalizedFavorites, normalizedHistory]);
 
   const rows = useMemo(() => {
     const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
@@ -443,65 +444,115 @@ export default function ProfileScreen() {
     },
   }), [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth]);
 
+  const tabCounts = useMemo(() => ({
+    travels: stats.travelsCount,
+    favorites: stats.favoritesCount,
+    history: stats.viewsCount,
+  }), [stats.travelsCount, stats.favoritesCount, stats.viewsCount]);
+
+  const userProp = useMemo(() => ({
+    name: displayName,
+    email: userInfo.email,
+    avatar: profile?.avatar,
+  }), [displayName, userInfo.email, profile?.avatar]);
+
+  const showClearButton = (activeTab === 'favorites' || activeTab === 'history') && currentData.length > 0;
+
   const Header = useMemo(
     () => (
       <View style={[styles.headerComponent, styles.fullRow]}>
-        {[
-          <ProfileHeader
-            key="profile-header"
-            user={{
-              name: displayName,
-              email: userInfo.email,
-              avatar: profile?.avatar,
-            }}
-            profile={profile}
-            onEdit={handleEdit}
-            onLogout={handleLogout}
-            onAvatarUpload={pickAndUpload}
-            avatarUploading={avatarUploading}
-          />,
-          <ProfileQuickActions key="profile-quick-actions" onPress={handleQuickAction} />,
-          <ProfileTabs
-            key="profile-tabs"
-            activeTab={activeTab}
-            onChangeTab={setActiveTab}
-            counts={{
-              travels: stats.travelsCount,
-              favorites: stats.favoritesCount,
-              history: stats.viewsCount,
-            }}
-          />,
-          (activeTab === 'favorites' || activeTab === 'history') && currentData.length > 0 ? (
-            <View key="profile-tab-actions" style={styles.tabActions}>
-              <View style={styles.tabActionsRow}>
-                <Button
-                  label="Очистить"
-                  onPress={handleClearActiveTab}
-                  variant="danger"
-                  size="sm"
-                />
+        {profileLoading ? (
+          <View style={styles.skeletonWrap}>
+            <View style={styles.skeletonHeaderRow}>
+              <SkeletonLoader width={80} height={80} borderRadius={40} />
+              <View style={styles.skeletonHeaderText}>
+                <SkeletonLoader width={150} height={24} borderRadius={4} />
+                <SkeletonLoader width={200} height={16} borderRadius={4} />
               </View>
             </View>
-          ) : null,
-        ]}
+            <View style={styles.skeletonStatsRow}>
+              <SkeletonLoader width="30%" height={60} borderRadius={12} />
+              <SkeletonLoader width="30%" height={60} borderRadius={12} />
+              <SkeletonLoader width="30%" height={60} borderRadius={12} />
+            </View>
+          </View>
+        ) : (
+          <>
+            <ProfileHeader
+              user={userProp}
+              profile={profile}
+              onEdit={handleEdit}
+              onLogout={handleLogout}
+              onAvatarUpload={pickAndUpload}
+              avatarUploading={avatarUploading}
+            />
+            <ProfileQuickActions onPress={handleQuickAction} />
+          </>
+        )}
+        <ProfileTabs
+          activeTab={activeTab}
+          onChangeTab={setActiveTab}
+          counts={tabCounts}
+        />
+        {showClearButton ? (
+          <View style={styles.tabActions}>
+            <View style={styles.tabActionsRow}>
+              <Button
+                label="Очистить"
+                onPress={handleClearActiveTab}
+                variant="danger"
+                size="sm"
+              />
+            </View>
+          </View>
+        ) : null}
       </View>
     ),
     [
       styles,
-      displayName,
-      userInfo.email,
+      profileLoading,
+      userProp,
       profile,
       handleEdit,
       handleLogout,
       pickAndUpload,
       avatarUploading,
       handleQuickAction,
-      stats,
+      tabCounts,
       activeTab,
-      currentData.length,
+      showClearButton,
       handleClearActiveTab,
     ]
   );
+
+  const renderItem = useCallback(({ item, index }: { item: Travel; index: number }) => (
+    <RenderTravelItem
+      item={item}
+      index={index}
+      isMobile={isMobileDevice}
+      isFirst={index === 0}
+      currentUserId={userId}
+      isSuperuser={isSuperuser}
+      onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
+    />
+  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel]);
+
+  const scrollViewStyle = useMemo(() => ({ flex: 1 } as const), []);
+
+  const singleColStyle = useMemo(() => ({
+    width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%',
+  } as any), []);
+
+  const placeholderBaseStyle = useMemo(() => ({
+    flexGrow: 0, flexShrink: 0, minWidth: 0, opacity: 0, pointerEvents: 'none' as const,
+  }), []);
+
+  const ListSkeleton = useMemo(() => (
+    <View style={styles.skeletonListWrap}>
+      <SkeletonLoader width="100%" height={200} borderRadius={12} />
+      <SkeletonLoader width="100%" height={200} borderRadius={12} />
+    </View>
+  ), [styles.skeletonListWrap]);
 
   if (!authReady) {
     return (
@@ -509,32 +560,6 @@ export default function ProfileScreen() {
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-         <View style={styles.skeletonWrap}>
-             <View style={styles.skeletonHeaderRow}>
-                 <SkeletonLoader width={80} height={80} borderRadius={40} />
-                 <View style={styles.skeletonHeaderText}>
-                     <SkeletonLoader width={150} height={24} borderRadius={4} />
-                     <SkeletonLoader width={200} height={16} borderRadius={4} />
-                 </View>
-             </View>
-             <View style={styles.skeletonStatsRow}>
-                 <SkeletonLoader width="30%" height={60} borderRadius={12} />
-                 <SkeletonLoader width="30%" height={60} borderRadius={12} />
-                 <SkeletonLoader width="30%" height={60} borderRadius={12} />
-             </View>
-             <SkeletonLoader width="100%" height={40} borderRadius={0} />
-             <View style={styles.skeletonListWrap}>
-                 <SkeletonLoader width="100%" height={200} borderRadius={12} />
-                 <SkeletonLoader width="100%" height={200} borderRadius={12} />
-             </View>
-         </View>
       </SafeAreaView>
     );
   }
@@ -555,25 +580,25 @@ export default function ProfileScreen() {
     );
   }
 
+  const isTravelsTabLoading = activeTab === 'travels' && travelsLoading;
+
   return (
     <SafeAreaView style={styles.container}>
-      {[
-        <InstantSEO
-          key="profile-seo"
-          headKey="profile"
-          title="Профиль | Metravel"
-          description="Профиль пользователя"
-          canonical={buildCanonicalUrl('/profile')}
-          robots="noindex, nofollow"
-        />,
-        Platform.OS === 'web' ? (
-          <ScrollView
-            key="profile-web"
-            style={{ flex: 1 }}
-            contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
-          >
-            {Header}
-            {currentData.length === 0 ? (
+      <InstantSEO
+        headKey="profile"
+        title="Профиль | Metravel"
+        description="Профиль пользователя"
+        canonical={buildCanonicalUrl('/profile')}
+        robots="noindex, nofollow"
+      />
+      {Platform.OS === 'web' ? (
+        <ScrollView
+          style={scrollViewStyle}
+          contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
+        >
+          {Header}
+          {isTravelsTabLoading ? ListSkeleton : (
+            currentData.length === 0 ? (
               <View style={styles.emptyWrap}>
                 <EmptyState icon="layers" {...emptyStateProps} />
               </View>
@@ -594,7 +619,7 @@ export default function ProfileScreen() {
                           key={String(travel.id)}
                           style={
                             isCardsSingleColumn
-                              ? ({ width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%' } as any)
+                              ? singleColStyle
                               : ({
                                   flexGrow: 0,
                                   flexShrink: 0,
@@ -621,18 +646,12 @@ export default function ProfileScreen() {
                         ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => (
                             <View
                               key={`placeholder-${rowIndex}-${placeholderIndex}`}
-                              style={
-                                ({
-                                  flexGrow: 0,
-                                  flexShrink: 0,
-                                  flexBasis: calcWidth,
-                                  width: calcWidth,
-                                  maxWidth: calcWidth,
-                                  minWidth: 0,
-                                  opacity: 0,
-                                  pointerEvents: 'none',
-                                } as any)
-                              }
+                              style={{
+                                ...placeholderBaseStyle,
+                                flexBasis: calcWidth,
+                                width: calcWidth,
+                                maxWidth: calcWidth,
+                              } as any}
                             />
                           ))
                         : null}
@@ -641,39 +660,29 @@ export default function ProfileScreen() {
                   </View>
                 );
               })
-            )}
-          </ScrollView>
-        ) : (
-          <FlashList
-            key={`profile-list-${gridColumns}`}
-            data={currentData}
-            // @ts-expect-error estimatedItemSize required by FlashList but types mismatch
-            estimatedItemSize={280}
-            ListHeaderComponent={Header}
-            contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
-            keyExtractor={(item, index) => `${activeTab}-${item.id}-${index}`}
-            numColumns={Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1)}
-            renderItem={({ item, index }) => {
-              return (
-                <RenderTravelItem
-                  item={item as any}
-                  index={index}
-                  isMobile={isMobileDevice}
-                  isFirst={index === 0}
-                  currentUserId={userId}
-                  isSuperuser={isSuperuser}
-                  onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
-                />
-              );
-            }}
-            ListEmptyComponent={
+            )
+          )}
+        </ScrollView>
+      ) : (
+        <FlashList
+          key={`profile-list-${gridColumns}`}
+          data={isTravelsTabLoading ? [] : currentData}
+          // @ts-expect-error estimatedItemSize required by FlashList but types mismatch
+          estimatedItemSize={280}
+          ListHeaderComponent={Header}
+          contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
+          keyExtractor={keyExtractor}
+          numColumns={Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1)}
+          renderItem={renderItem}
+          ListEmptyComponent={
+            isTravelsTabLoading ? ListSkeleton : (
               <View style={styles.emptyWrap}>
                 <EmptyState icon="layers" {...emptyStateProps} />
               </View>
-            }
-          />
-        ),
-      ]}
+            )
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }

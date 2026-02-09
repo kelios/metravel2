@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Platform, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelComment } from '../../types/comments';
 import { useAuth } from '../../context/AuthContext';
 import { useLikeComment, useUnlikeComment, useDeleteComment } from '../../hooks/useComments';
@@ -17,6 +18,8 @@ interface CommentItemProps {
 
 export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItemProps) {
   const { userId, isSuperuser, isAuthenticated } = useAuth();
+  const colors = useThemedColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [showActions, setShowActions] = useState(false);
 
   const likeComment = useLikeComment();
@@ -97,7 +100,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
             accessibilityLabel="Действия с комментарием"
             testID="comment-actions-trigger"
           >
-            <Feather name="more-vertical" size={20} color={DESIGN_TOKENS.colors.textMuted} />
+            <Feather name="more-vertical" size={20} color={colors.textMuted} />
           </Pressable>
         )}
       </View>
@@ -116,7 +119,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
               accessibilityLabel="Редактировать комментарий"
               testID="comment-actions-edit"
             >
-              <Feather name="edit-2" size={20} color={DESIGN_TOKENS.colors.primary} />
+              <Feather name="edit-2" size={18} color={colors.primary} />
             </Pressable>
           )}
           {canDelete && (
@@ -131,10 +134,10 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
                 <ActivityIndicator
                   testID="activity-indicator"
                   size="small"
-                  color={DESIGN_TOKENS.colors.danger}
+                  color={colors.danger}
                 />
               ) : (
-                <Feather name="trash-2" size={20} color={DESIGN_TOKENS.colors.danger} />
+                <Feather name="trash-2" size={18} color={colors.danger} />
               )}
             </Pressable>
           )}
@@ -152,8 +155,8 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
           >
             <Feather
               name="heart"
-              size={18}
-              color={isLiked ? DESIGN_TOKENS.colors.danger : DESIGN_TOKENS.colors.textMuted}
+              size={16}
+              color={isLiked ? colors.danger : colors.textMuted}
             />
             {comment.likes_count > 0 && (
               <Text style={[styles.footerText, isLiked && styles.likedText]}>
@@ -165,7 +168,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
 
         {!isAuthenticated && comment.likes_count > 0 && (
           <View style={styles.footerButton}>
-            <Feather name="heart" size={18} color={DESIGN_TOKENS.colors.textMuted} />
+            <Feather name="heart" size={16} color={colors.textMuted} />
             <Text style={styles.footerText}>{comment.likes_count}</Text>
           </View>
         )}
@@ -177,7 +180,7 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
             accessibilityLabel="Ответить на комментарий"
             testID="comment-reply"
           >
-            <Feather name="message-circle" size={18} color={DESIGN_TOKENS.colors.textMuted} />
+            <Feather name="message-circle" size={16} color={colors.textMuted} />
             <Text style={styles.footerText}>Ответить</Text>
           </Pressable>
         )}
@@ -188,24 +191,24 @@ export function CommentItem({ comment, onReply, onEdit, level = 0 }: CommentItem
   );
 }
 
-const styles = StyleSheet.create<Record<string, any>>({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create<Record<string, any>>({
   wrapper: {
-    marginBottom: DESIGN_TOKENS.spacing.sm,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   container: {
-    backgroundColor: DESIGN_TOKENS.colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    padding: DESIGN_TOKENS.spacing.md,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: DESIGN_TOKENS.shadows.light,
-    } : DESIGN_TOKENS.shadowsNative.light),
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    padding: Platform.select({ default: DESIGN_TOKENS.spacing.md, web: 18 }),
+    marginBottom: DESIGN_TOKENS.spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
   },
   nested: {
-    marginLeft: 48,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    marginLeft: Platform.select({ default: 40, web: 48 }),
+    backgroundColor: colors.backgroundSecondary,
     borderLeftWidth: 3,
-    borderLeftColor: DESIGN_TOKENS.colors.primary,
+    borderLeftColor: colors.primaryAlpha40,
+    borderColor: colors.borderLight,
   },
   header: {
     flexDirection: 'row',
@@ -219,71 +222,98 @@ const styles = StyleSheet.create<Record<string, any>>({
     flex: 1,
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: DESIGN_TOKENS.radii.pill,
-    backgroundColor: DESIGN_TOKENS.colors.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: DESIGN_TOKENS.spacing.sm,
   },
   avatarText: {
-    color: DESIGN_TOKENS.colors.textOnPrimary,
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: DESIGN_TOKENS.typography.weights.bold,
   },
   userName: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
+    fontSize: 14,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
-    color: DESIGN_TOKENS.colors.text,
-    marginBottom: 2,
+    color: colors.text,
+    marginBottom: 1,
+    letterSpacing: -0.1,
   },
   date: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm - 1,
-    color: DESIGN_TOKENS.colors.textMuted,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   moreButton: {
     padding: DESIGN_TOKENS.spacing.xxs,
+    borderRadius: DESIGN_TOKENS.radii.sm,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'background-color 0.15s ease',
+      } as any,
+    }),
   },
   text: {
-    fontSize: DESIGN_TOKENS.typography.sizes.md - 1,
-    lineHeight: 22,
-    color: DESIGN_TOKENS.colors.text,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   actions: {
     flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
     marginBottom: DESIGN_TOKENS.spacing.sm,
     paddingTop: DESIGN_TOKENS.spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: DESIGN_TOKENS.colors.border,
+    borderTopColor: colors.borderLight,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-    borderRadius: 6,
-    backgroundColor: DESIGN_TOKENS.colors.backgroundSecondary,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: DESIGN_TOKENS.radii.pill,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+      } as any,
+    }),
   },
   footer: {
     flexDirection: 'row',
     gap: DESIGN_TOKENS.spacing.md,
+    paddingTop: DESIGN_TOKENS.spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
   },
   footerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: DESIGN_TOKENS.spacing.xxs,
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        transition: 'opacity 0.15s ease',
+      } as any,
+    }),
   },
   footerText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
-    color: DESIGN_TOKENS.colors.textMuted,
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium,
   },
   likedText: {
-    color: DESIGN_TOKENS.colors.danger,
+    color: colors.danger,
     fontWeight: DESIGN_TOKENS.typography.weights.semibold,
   },
 });

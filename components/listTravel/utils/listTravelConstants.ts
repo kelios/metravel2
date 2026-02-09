@@ -39,7 +39,7 @@ export const BREAKPOINTS = {
 // ✅ ОПТИМИЗАЦИЯ: Оптимизировано для лучшей читаемости и производительности
 export const GRID_COLUMNS = {
   MOBILE: 1,
-  TABLET: 2,
+  TABLET: 3,
   TABLET_LANDSCAPE: 3, // 3 колонки на промежутке 1280-1439px
   DESKTOP: 4,
   DESKTOP_LARGE: 4,

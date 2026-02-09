@@ -392,16 +392,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.lg,
     padding: Platform.select({
-      default: 24, // было 32px (-25%)
-      web: 32, // было 48px (-33%)
+      default: 20,
+      web: 24,
     }),
     borderWidth: 1,
     borderColor: colors.borderLight,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.card,
+        boxShadow: colors.boxShadows.light,
       } as any,
-      default: DESIGN_TOKENS.shadowsNative.medium,
+      default: DESIGN_TOKENS.shadowsNative.light,
     }),
   },
   viewButtonInline: {
@@ -444,7 +444,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     letterSpacing: -0.2,
   },
   containerMobile: {
-    padding: 18, // было 24px (-25%)
+    padding: 16,
   },
   content: {
     flexDirection: 'row',
@@ -469,34 +469,33 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
     gap: 18,
   },
-  // ✅ РЕДИЗАЙН: Уменьшенный аватар (-15%)
   avatar: {
     width: Platform.select({
-      default: 60, // было 72px (-17%)
-      web: 80, // было 96px (-17%)
+      default: 56,
+      web: 72,
     }),
     height: Platform.select({
-      default: 60, // было 72px
-      web: 80, // было 96px
+      default: 56,
+      web: 72,
     }),
     borderRadius: Platform.select({
-      default: 30, // было 36px
-      web: 40, // было 48px
+      default: 28,
+      web: 36,
     }),
-    borderWidth: 2,
-    borderColor: colors.borderLight,
+    borderWidth: 2.5,
+    borderColor: colors.primaryAlpha30,
     ...Platform.select({
       web: {
-        boxShadow: DESIGN_TOKENS.shadows.light,
+        boxShadow: `0 0 0 3px ${colors.primarySoft}`,
       } as any,
       default: DESIGN_TOKENS.shadowsNative.light,
     }),
   },
   avatarMobile: {
-    width: 56, // было 64px (-12.5%)
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 2,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2.5,
   },
   avatarPlaceholder: {
     width: Platform.select({
@@ -527,35 +526,36 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.xs,
   },
   socialChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: colors.backgroundSecondary,
-    borderWidth: 0.5,
-    borderColor: colors.borderLight,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryAlpha30,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
+        transition: 'all 0.15s ease' as any,
       },
     }),
   },
   socialChipPressed: {
-    backgroundColor: colors.backgroundTertiary,
-    transform: [{ scale: 0.98 }],
+    backgroundColor: colors.primaryLight,
+    transform: [{ scale: 0.97 }],
   },
   socialChipText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textMuted,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primaryText,
   },
   authorName: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontSize: Platform.select({ default: 18, web: 20 }),
     fontWeight: '700',
     color: colors.text,
     letterSpacing: -0.3,
   },
   authorNameMobile: {
-    fontSize: DESIGN_TOKENS.typography.sizes.lg,
+    fontSize: 17,
   },
   locationRow: {
     flexDirection: 'row',
@@ -581,9 +581,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   divider: {
     width: '100%',
     height: 1,
-    marginTop: DESIGN_TOKENS.spacing.lg,
-    marginBottom: DESIGN_TOKENS.spacing.md,
-    opacity: 0.5,
+    marginTop: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
+    opacity: 0.4,
   },
   viewButton: {
     flexDirection: 'row',
@@ -662,15 +662,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   messageButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.xs,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.xs,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
     alignSelf: 'flex-start',
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
+        transition: 'all 0.15s ease' as any,
       },
     }),
   },

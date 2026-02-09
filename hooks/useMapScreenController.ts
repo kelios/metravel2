@@ -139,6 +139,9 @@ export function useMapScreenController() {
     mapErrorDetails,
     refetchMapData,
     invalidateTravelsQuery,
+    hasMore,
+    onLoadMore,
+    isFetchingNextPage,
   } = dataController;
 
   // Reset filters and route
@@ -345,6 +348,9 @@ export function useMapScreenController() {
     mapErrorDetails,
     refetchMapData,
     invalidateTravelsQuery,
+    hasMore,
+    onLoadMore,
+    isFetchingNextPage,
 
     // Route actions
     buildRouteTo: buildRouteToStable,
@@ -389,6 +395,9 @@ export function useMapScreenController() {
     mapErrorDetails,
     refetchMapData,
     invalidateTravelsQuery,
+    hasMore,
+    onLoadMore,
+    isFetchingNextPage,
     buildRouteToStable,
     centerOnUser,
     panelRef,
