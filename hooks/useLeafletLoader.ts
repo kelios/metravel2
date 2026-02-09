@@ -313,7 +313,7 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     };
   }, [enabled, shouldLoad, useIdleCallback, idleTimeout, fallbackDelay]);
 
-  // Load Leaflet and React-Leaflet
+  // Load Leaflet and React-Leaflet (with retry for transient failures)
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (!enabled) return;
@@ -324,7 +324,10 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     setLoading(true);
     setError(null);
 
-    (async () => {
+    const MAX_RETRIES = 2;
+    const RETRY_DELAY_MS = 1500;
+
+    const loadModules = async (attempt: number): Promise<void> => {
       try {
         await ensureLeafletCss();
         if (cancelled) return;
@@ -346,14 +349,24 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
       } catch (err) {
         if (cancelled) return;
         const error = err instanceof Error ? err : new Error('Failed to load Leaflet');
+
+        if (attempt < MAX_RETRIES) {
+          console.warn(`[useLeafletLoader] Attempt ${attempt + 1} failed, retrying in ${RETRY_DELAY_MS}ms...`, error.message);
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+          if (cancelled) return;
+          return loadModules(attempt + 1);
+        }
+
         console.error('[useLeafletLoader] Error loading Leaflet:', error);
         setError(error);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
       }
-    })();
+    };
+
+    loadModules(0).finally(() => {
+      if (!cancelled) {
+        setLoading(false);
+      }
+    });
 
     return () => {
       cancelled = true;

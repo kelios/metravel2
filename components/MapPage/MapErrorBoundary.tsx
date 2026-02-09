@@ -54,7 +54,26 @@ class MapErrorBoundary extends Component<Props, State> {
     }
   }
 
+  /** Check if the error is a Metro module resolution failure (unrecoverable without reload). */
+  private isModuleError(error: Error | null): boolean {
+    const msg = String(error?.message ?? '');
+    return /requiring unknown module|cannot find module/i.test(msg);
+  }
+
   handleReset = () => {
+    // Module resolution errors cannot be fixed by resetting React state —
+    // the JS bundle is broken. A full page reload fetches fresh chunks.
+    if (this.isModuleError(this.state.error)) {
+      if (typeof window !== 'undefined') {
+        try {
+          window.location.reload();
+        } catch {
+          // noop
+        }
+      }
+      return;
+    }
+
     // ✅ ИСПРАВЛЕНИЕ: Очищаем все контейнеры Leaflet перед сбросом ошибки
     if (typeof document !== 'undefined' && typeof window !== 'undefined') {
       try {
@@ -95,6 +114,21 @@ class MapErrorBoundary extends Component<Props, State> {
     } as State);
   };
 
+  /** Return a user-friendly description instead of raw Metro/bundler errors. */
+  private getFriendlyMessage(): string {
+    const msg = String(this.state.error?.message ?? '');
+    if (this.isModuleError(this.state.error)) {
+      return 'Модуль карты не загрузился. Попробуйте перезагрузить страницу.';
+    }
+    if (msg.includes('reused by another instance')) {
+      return 'Контейнер карты был переиспользован. Попробуйте снова.';
+    }
+    if (/network|fetch|load/i.test(msg)) {
+      return 'Не удалось загрузить данные карты. Проверьте соединение.';
+    }
+    return msg || 'Произошла непредвиденная ошибка';
+  }
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -111,10 +145,10 @@ class MapErrorBoundary extends Component<Props, State> {
             <Feather name="alert-circle" size={48} color={colors.danger} />
             <Text style={styles.title}>Ошибка загрузки карты</Text>
             <Text style={styles.message}>
-              {this.state.error?.message || 'Произошла непредвиденная ошибка'}
+              {this.getFriendlyMessage()}
             </Text>
             <Button
-              label="Попробовать снова"
+              label={this.isModuleError(this.state.error) ? 'Перезагрузить страницу' : 'Попробовать снова'}
               icon={<Feather name="rotate-cw" size={20} color={colors.textOnPrimary} />}
               onPress={this.handleReset}
               variant="primary"

@@ -40,18 +40,25 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
     }
   }, []);
 
+  const maxW = Math.round(width * 0.92);
+  const maxH = Math.round(height * 0.92);
+
   const content = (
     <View style={[fullscreenStyles.container, { width, height }]}>
-      <ImageCardMedia
-        src={imageUrl}
-        fit="contain"
-        blurBackground={false}
-        priority="high"
-        loading="eager"
-        transition={0}
-        style={StyleSheet.absoluteFillObject}
-        alt={alt}
-      />
+      <View style={fullscreenStyles.centeredWrap}>
+        <View style={{ maxWidth: maxW, maxHeight: maxH, width: '100%', height: '100%' }}>
+          <ImageCardMedia
+            src={imageUrl}
+            fit="contain"
+            blurBackground={false}
+            priority="high"
+            loading="eager"
+            transition={0}
+            style={{ width: '100%', height: '100%' }}
+            alt={alt}
+          />
+        </View>
+      </View>
       <Pressable
         onPress={onClose}
         style={fullscreenStyles.closeBtn}
@@ -93,6 +100,11 @@ const fullscreenStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',
+  },
+  centeredWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   webOverlay: {
     ...Platform.select({
@@ -371,9 +383,9 @@ const PlacePopupCard: React.FC<Props> = ({
 };
 
 const IMAGE_ASPECT: Record<BreakpointKey, number> = {
-  narrow: 1.5,
-  compact: 1.6,
-  default: 1.7,
+  narrow: 1.2,
+  compact: 1.3,
+  default: 1.35,
 };
 
 const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {

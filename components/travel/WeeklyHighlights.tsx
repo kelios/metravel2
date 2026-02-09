@@ -163,12 +163,12 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
             {showHeader && (
                 <>
                     <View style={styles.header}>
-                        <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}> 
+                        <View style={[styles.iconContainer, { backgroundColor: colors.primaryLight }]}>
                             <Feather name="star" size={20} color={colors.primary} />
                         </View>
                         <View style={styles.titleContainer}>
                             <Text style={[styles.title, { color: colors.text }]}>Подборка месяца</Text>
-                            <View style={[styles.badgeContainer, { backgroundColor: colors.primarySoft }]}> 
+                            <View style={[styles.badgeContainer, { backgroundColor: colors.primarySoft }]}>
                                 <Text style={[styles.badgeText, { color: colors.primary }]}>Выбор месяца</Text>
                             </View>
                         </View>
