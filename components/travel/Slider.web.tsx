@@ -136,9 +136,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const scrollRef = useRef<any>(null)
   const indexRef = useRef(0)
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [renderIndex, setRenderIndex] = useState(0)
-  const renderIndexRef = useRef(0)
-  const rafRef = useRef<number | null>(null)
   const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web')
   const prefetchEnabledRef = useRef(Platform.OS !== 'web')
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -205,9 +202,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         const safeMax = Math.max(targetH, viewportH - (insets.top || 0) - (insets.bottom || 0))
         return clamp(targetH, 280, safeMax || targetH)
       }
-      const targetH = winH * 0.8
+      const targetH = winH * 0.7
       const h = w / firstAR
-      return clamp(Math.max(h, targetH), 320, winH * 0.85)
+      return clamp(Math.max(h, targetH), 320, winH * 0.75)
     },
     [firstAR, images.length, insets.bottom, insets.top, isMobile, winH, mobileHeightPercent]
   )
@@ -241,13 +238,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     if (Platform.OS === 'web') return effective > 0 ? effective : 1
     return effective
   }, [prefetchEnabled, preloadCount])
-
-  const renderWindow = useMemo(() => {
-    // Keep a window of mounted slides to avoid triggering requests for the entire gallery.
-    // Wider window reduces "blank" risk and flicker when scrolling.
-    const base = isMobile ? 3 : 4
-    return Math.max(base, effectivePreload)
-  }, [effectivePreload, isMobile])
 
   const warmNeighbors = useCallback(
     (idx: number) => {
@@ -292,8 +282,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (i: number, animated = true) => {
       const wrapped = clamp(i, 0, images.length - 1)
       scrollRef.current?.scrollTo?.({ x: wrapped * containerW, y: 0, animated })
-      renderIndexRef.current = wrapped
-      setRenderIndex(wrapped)
       setActiveIndex(wrapped)
     },
     [containerW, images.length, setActiveIndex]
@@ -341,10 +329,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         clearTimeout(scrollIdleTimerRef.current)
         scrollIdleTimerRef.current = null
       }
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current)
-        rafRef.current = null
-      }
     }
   }, [])
 
@@ -373,35 +357,26 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [imageProps]
   )
 
+  // Render all slides always — no placeholder logic.
+  // Browser's native loading="lazy" handles deferred image fetching.
+  // This eliminates React re-renders during scroll (no renderIndex dependency).
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
-      const distance = Math.abs(index - renderIndex)
-      const shouldRender = distance <= renderWindow
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
-      const mainPriority = isFirstSlide ? 'high' : (distance <= 1 ? 'normal' : 'low')
-      const shouldBlur = blurBackground
-
-      if (!shouldRender) {
-        return (
-          <View style={[styles.slide, slideDimensions]}>
-            <View style={styles.imageCardWrapper}>
-              <View style={styles.imageCardSurface} />
-            </View>
-          </View>
-        )
-      }
+      // First 3 slides load eagerly, rest use native lazy loading
+      const isEager = index <= 2
 
       return (
-        <View style={[styles.slide, slideDimensions]}>
+        <View style={[styles.slide, slideDimensions, styles.slideSnap]}>
           <View style={styles.imageCardWrapper}>
             <View style={styles.imageCardSurface}>
               <ImageCardMedia
                 src={uri}
                 fit={fit}
-                blurBackground={shouldBlur}
-                priority={mainPriority as any}
-                loading={distance <= 2 ? 'eager' : 'lazy'}
+                blurBackground={blurBackground}
+                priority={isFirstSlide ? 'high' : (isEager ? 'normal' : 'low')}
+                loading={isEager ? 'eager' : 'lazy'}
                 prefetch={isFirstSlide}
                 transition={0}
                 style={styles.img}
@@ -419,29 +394,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         </View>
       )
     },
-    [blurBackground, fit, handleFirstImageLoad, images.length, mergedImagePropsBase, renderIndex, renderWindow, slideDimensions, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
+    [blurBackground, fit, handleFirstImageLoad, images.length, mergedImagePropsBase, slideDimensions, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, styles.slideSnap, uriMap]
   )
 
+  // Minimal scroll handler — only update currentIndex when scroll settles.
+  // No React state updates during scroll animation = zero flicker.
   const handleScroll = useCallback(
     (e: any) => {
       enablePrefetch()
       const x = e?.nativeEvent?.contentOffset?.x ?? 0
-
-      // Keep a fast-updating render index so we can mount upcoming slides while the user scrolls.
-      // This prevents loading="lazy" from triggering requests for the entire gallery upfront.
-      const nextRenderIndex = Math.round((x || 0) / (containerW || 1))
-      if (nextRenderIndex !== renderIndexRef.current) {
-        renderIndexRef.current = nextRenderIndex
-        if (typeof requestAnimationFrame === 'function') {
-          if (rafRef.current) cancelAnimationFrame(rafRef.current)
-          rafRef.current = requestAnimationFrame(() => {
-            rafRef.current = null
-            setRenderIndex(renderIndexRef.current)
-          })
-        } else {
-          setRenderIndex(renderIndexRef.current)
-        }
-      }
 
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = setTimeout(() => {
@@ -499,8 +460,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            style={styles.scrollView}
+            scrollEventThrottle={100}
+            style={[styles.scrollView, styles.scrollSnap]}
             contentContainerStyle={[styles.scrollContent, { height: containerH }]}
             onScrollBeginDrag={() => {
               enablePrefetch()
@@ -631,6 +592,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     scrollView: {
       flex: 1,
     },
+    scrollSnap: Platform.OS === 'web'
+      ? ({
+          scrollSnapType: 'x mandatory',
+          WebkitOverflowScrolling: 'touch',
+          willChange: 'scroll-position',
+        } as any)
+      : {},
     scrollContent: {
       flexDirection: 'row',
     },
@@ -640,6 +608,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: '#1a1a1a',
       overflow: 'hidden',
     },
+    slideSnap: Platform.OS === 'web'
+      ? ({ scrollSnapAlign: 'start', scrollSnapStop: 'always' } as any)
+      : {},
     imageCardWrapper: {
       position: 'absolute',
       top: 0,
@@ -767,7 +738,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       zIndex: 50,
     },
     counterContainer: {
-      backgroundColor: colors.overlayLight,
+      backgroundColor: 'rgba(0,0,0,0.45)',
       paddingHorizontal: 12,
       paddingVertical: 4,
       borderRadius: 16,
@@ -778,10 +749,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
         : null),
     },
     counterText: {
-      color: colors.text,
+      color: '#fff',
       fontSize: 13,
-      fontWeight: '600' as any,
+      fontWeight: '700' as any,
       fontFamily: 'system-ui, -apple-system',
       letterSpacing: 0.5,
+      textShadowColor: 'rgba(0,0,0,0.6)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 3,
     },
   })

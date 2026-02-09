@@ -48,6 +48,21 @@ const GET_TRAVELS = `${URLAPI}/travels/`;
 const GET_RANDOM_TRAVELS = `${URLAPI}/travels/random/`;
 
 const travelCache = new Map<number, Travel>();
+
+/**
+ * Defensive filter: strip items that are not published or not moderated.
+ * The backend should already filter these, but some endpoints (e.g. /random/)
+ * occasionally return items still under moderation, causing 403 on detail fetch.
+ */
+const filterPublished = (items: Travel[]): Travel[] =>
+    items.filter((t) => {
+        const pub = (t as any).publish;
+        const mod = (t as any).moderation;
+        // Keep items where publish/moderation are truthy or undefined (not explicitly false/0)
+        const pubOk = pub === undefined || pub === null || pub === true || pub === 1 || pub === '1';
+        const modOk = mod === undefined || mod === null || mod === true || mod === 1 || mod === '1';
+        return pubOk && modOk;
+    });
 const TOKEN_KEY = 'userToken';
 
 export const normalizeTravelItem = (input: any): Travel => {
@@ -450,7 +465,7 @@ export const fetchTravels = async (
         }
 
         return {
-            data: items.map(normalizeTravelItem),
+            data: filterPublished(items.map(normalizeTravelItem)),
             total: coerceTotal(total, 0),
         };
     } catch (e) {
@@ -534,7 +549,7 @@ export const fetchRandomTravels = async (
         }
 
         if (Array.isArray(result)) {
-            const data = result.map(normalizeTravelItem);
+            const data = filterPublished(result.map(normalizeTravelItem));
             return { data, total: data.length };
         }
 
@@ -560,7 +575,7 @@ export const fetchRandomTravels = async (
         }
 
         return {
-            data: items.map(normalizeTravelItem),
+            data: filterPublished(items.map(normalizeTravelItem)),
             total: coerceTotal(total, 0),
         };
     } catch (e) {

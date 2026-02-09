@@ -358,14 +358,14 @@ function TravelHeroSectionInner({
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
-    // 80% высоты экрана для всех платформ
-    const target = winH * 0.8
-    if (Platform.OS === 'web' && !isMobile) return Math.max(320, Math.min(target, winH * 0.85))
+    // 70% высоты экрана для всех платформ
+    const target = winH * 0.7
+    if (Platform.OS === 'web' && !isMobile) return Math.max(320, Math.min(target, winH * 0.75))
     if (!resolvedWidth) return isMobile ? Math.max(280, target) : Math.max(320, target)
     if (isMobile) {
-      return Math.max(280, Math.min(target, winH * 0.85))
+      return Math.max(280, Math.min(target, winH * 0.75))
     }
-    return Math.max(320, Math.min(target, winH * 0.85))
+    return Math.max(320, Math.min(target, winH * 0.75))
   }, [isMobile, winH, resolvedWidth])
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
@@ -491,7 +491,7 @@ function TravelHeroSectionInner({
               preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
               blurBackground
               aspectRatio={aspectRatio as number}
-              mobileHeightPercent={0.8}
+              mobileHeightPercent={0.7}
               onFirstImageLoad={onFirstImageLoad}
               firstImagePreloaded={renderSlider && Platform.OS === 'web'}
             />

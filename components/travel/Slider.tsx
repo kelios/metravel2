@@ -489,9 +489,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         const safeMax = Math.max(targetH, viewportH - (insets.top || 0) - (insets.bottom || 0));
         return clamp(targetH, 280, safeMax || targetH);
       } else {
-        const targetH = winH * 0.8;
+        const targetH = winH * 0.7;
         const h = w / firstAR;
-        return clamp(Math.max(h, targetH), 320, winH * 0.85);
+        return clamp(Math.max(h, targetH), 320, winH * 0.75);
       }
     },
     [firstAR, images.length, insets.bottom, insets.top, isMobile, winH, mobileHeightPercent]
@@ -814,9 +814,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             onScroll={onScroll}
             scrollEventThrottle={isWeb ? 64 : 16}
             renderItem={renderItem}
-            initialNumToRender={isTestEnv ? images.length : 1}
-            windowSize={isTestEnv ? images.length : 2 + Math.max(0, effectivePreload)}
-            maxToRenderPerBatch={isTestEnv ? images.length : 1 + Math.max(0, effectivePreload)}
+            initialNumToRender={isTestEnv ? images.length : 2}
+            windowSize={isTestEnv ? images.length : 5}
+            maxToRenderPerBatch={isTestEnv ? images.length : 3}
             disableVirtualization={isTestEnv}
             maintainVisibleContentPosition={Platform.OS === "ios" ? undefined : { minIndexForVisible: 0 }}
             disableIntervalMomentum
