@@ -62,13 +62,23 @@ class MapErrorBoundary extends Component<Props, State> {
 
   handleReset = () => {
     // Module resolution errors cannot be fixed by resetting React state —
-    // the JS bundle is broken. A full page reload fetches fresh chunks.
+    // the JS bundle is broken. Clear SW caches and reload to fetch fresh chunks.
     if (this.isModuleError(this.state.error)) {
       if (typeof window !== 'undefined') {
-        try {
-          window.location.reload();
-        } catch {
-          // noop
+        const doReload = () => {
+          try { window.location.reload(); } catch { /* noop */ }
+        };
+        // Purge all SW JS caches so the reload fetches fresh bundles
+        if ('caches' in window) {
+          caches.keys()
+            .then((names) => Promise.all(
+              names.filter((n) => n.startsWith('metravel-js') || n.startsWith('metravel-critical'))
+                .map((n) => caches.delete(n))
+            ))
+            .then(doReload)
+            .catch(doReload);
+        } else {
+          doReload();
         }
       }
       return;

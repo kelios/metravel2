@@ -1,5 +1,5 @@
 import React, { useMemo, memo, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import Feather from '@expo/vector-icons/Feather';
@@ -161,6 +161,7 @@ function HomeInspirationSection({
       height: 20,
     },
     row: {
+      flexDirection: 'row',
       gap: 20,
       justifyContent: 'flex-start',
       alignItems: 'stretch',
@@ -247,42 +248,64 @@ function HomeInspirationSection({
         />
       </View>
 
-      <FlatList
-        key={`inspiration-grid-${numColumns}`}
-        data={travelsList}
-        renderItem={({ item, index }) => (
-          <View
-            style={[
-              styles.cardWrapper,
-              isMobile && styles.cardWrapperMobile,
-              numColumns === 1 ? styles.cardWrapperSingleColumn : null,
-            ]}
-          >
-            <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} />
-          </View>
-        )}
-        keyExtractor={(item, index) => {
-          const id = (item as any)?.id;
-          if (id !== undefined && id !== null && String(id).length > 0) return String(id);
-          const url = (item as any)?.url;
-          if (url) return String(url);
-          return `${queryKey}-${index}`;
-        }}
-        scrollEnabled={false}
-        numColumns={numColumns}
-        ItemSeparatorComponent={numColumns === 1 ? Separator : undefined}
-        columnWrapperStyle={
-          numColumns === 1
-            ? undefined
-            : [
-                styles.row,
-                isWebDesktop && centerRowsOnWebDesktop ? styles.rowWebCentered : null,
-              ]
+      <View style={styles.grid}>
+        {numColumns === 1
+          ? travelsList.map((item: any, index: number) => {
+              const key = item?.id != null && String(item.id).length > 0
+                ? String(item.id)
+                : item?.url ? String(item.url) : `${queryKey}-${index}`;
+              return (
+                <React.Fragment key={key}>
+                  {index > 0 && <Separator />}
+                  <View
+                    style={[
+                      styles.cardWrapper,
+                      isMobile && styles.cardWrapperMobile,
+                      styles.cardWrapperSingleColumn,
+                    ]}
+                  >
+                    <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} />
+                  </View>
+                </React.Fragment>
+              );
+            })
+          : chunkArray(travelsList, numColumns).map((row: any[], rowIdx: number) => (
+              <View
+                key={`row-${rowIdx}`}
+                style={[
+                  styles.row,
+                  isWebDesktop && centerRowsOnWebDesktop ? styles.rowWebCentered : null,
+                ]}
+              >
+                {row.map((item: any, colIdx: number) => {
+                  const index = rowIdx * numColumns + colIdx;
+                  const key = item?.id != null && String(item.id).length > 0
+                    ? String(item.id)
+                    : item?.url ? String(item.url) : `${queryKey}-${index}`;
+                  return (
+                    <View
+                      key={key}
+                      style={[
+                        styles.cardWrapper,
+                        isMobile && styles.cardWrapperMobile,
+                      ]}
+                    >
+                      <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} />
+                    </View>
+                  );
+                })}
+              </View>
+            ))
         }
-        contentContainerStyle={styles.grid}
-      />
+      </View>
     </View>
   );
+}
+
+function chunkArray<T>(array: T[], columns: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += columns) result.push(array.slice(i, i + columns));
+  return result;
 }
 
 const separatorStyles = StyleSheet.create({

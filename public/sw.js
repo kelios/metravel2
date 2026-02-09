@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1.1.5';
+const CACHE_VERSION = 'v1.2.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -180,7 +180,10 @@ self.addEventListener('fetch', (event) => {
       return;
     }
 
-    event.respondWith(staleWhileRevalidate(request, JS_CACHE));
+    // Non-hashed scripts (entry bundle) MUST use network-first.
+    // The entry bundle contains module-ID mappings; serving a stale copy
+    // causes "Requiring unknown module" errors after a new deploy.
+    event.respondWith(networkFirstJS(request, JS_CACHE));
     return;
   }
 
@@ -267,6 +270,38 @@ async function networkFirst(request) {
     }
     
     return new Response('Network error', { status: 503 });
+  }
+}
+
+// Network-first for non-hashed JS (entry bundle, common chunks without content hash).
+// The entry bundle maps module IDs to chunk URLs; a stale copy references
+// modules that may no longer exist after a redeploy → "Requiring unknown module" crash.
+async function networkFirstJS(request, cacheName = JS_CACHE) {
+  try {
+    const response = await fetch(request);
+
+    if (response && response.status === 200) {
+      const cache = await caches.open(cacheName);
+      const responseToCache = response.clone();
+      const headers = new Headers(responseToCache.headers);
+      headers.append('sw-cache-date', Date.now().toString());
+
+      const blob = await responseToCache.blob();
+      const cachedResponse = new Response(blob, {
+        status: responseToCache.status,
+        statusText: responseToCache.statusText,
+        headers: headers,
+      });
+
+      cache.put(request, cachedResponse);
+      limitCacheSize(cacheName, MAX_JS_CACHE_SIZE);
+    }
+
+    return response;
+  } catch {
+    // Offline fallback — serve cached version if available
+    const cached = await caches.match(request);
+    return cached || new Response('Network error', { status: 503 });
   }
 }
 
