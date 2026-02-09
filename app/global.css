@@ -238,6 +238,12 @@ body {
   background-color: var(--color-background);
 }
 
+/* Prevent body scroll on map page (mobile) — Leaflet popups can extend beyond the
+   map container and push body height, causing a duplicate map visible when scrolling. */
+body:has([data-testid="map-mobile-layout"]) {
+  overflow: hidden !important;
+}
+
 #root,
 #__next {
   height: 100%;

@@ -320,7 +320,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
 
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={styles.container} testID="map-mobile-layout">
       {/* Map */}
       <View style={styles.mapContainer}>
         {mapComponent}
@@ -365,9 +365,22 @@ const getStyles = (colors: ThemedColors) =>
     container: {
       flex: 1,
       backgroundColor: colors.background,
+      ...(Platform.OS === 'web'
+        ? ({
+            height: '100%',
+            maxHeight: '100vh',
+            overflow: 'hidden',
+          } as any)
+        : null),
     },
     mapContainer: {
       flex: 1,
+      ...(Platform.OS === 'web'
+        ? ({
+            minHeight: 0,
+            overflow: 'hidden',
+          } as any)
+        : null),
     },
     sheetRoot: {
       flex: 1,
