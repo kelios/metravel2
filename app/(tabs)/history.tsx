@@ -15,6 +15,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 export default function HistoryScreen() {
     const router = useRouter();
@@ -226,6 +228,13 @@ export default function HistoryScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <InstantSEO
+                headKey="history"
+                title="История просмотров | Metravel"
+                description="История просмотренных путешествий"
+                canonical={buildCanonicalUrl('/history')}
+                robots="noindex, nofollow"
+            />
             <View style={styles.header}>
                 <View style={styles.headerTitleBlock}>
                     <Text style={styles.title}>История</Text>

@@ -18,6 +18,8 @@ import { removeStorageBatch, setStorageBatch } from '@/utils/storageBatch';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -346,6 +348,13 @@ export default function SettingsScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <InstantSEO
+                headKey="settings"
+                title="Настройки | Metravel"
+                description="Настройки аккаунта"
+                canonical={buildCanonicalUrl('/settings')}
+                robots="noindex, nofollow"
+            />
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.pageContainer}>
                     <View style={styles.header}>

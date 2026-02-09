@@ -5,6 +5,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { confirmAccount } from '@/api/auth';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 const { height } = Dimensions.get('window');
 
@@ -42,6 +44,13 @@ export default function AccountConfirmation() {
 
     return (
         <View style={styles.container}>
+            <InstantSEO
+                headKey="account-confirmation"
+                title="Подтверждение аккаунта | Metravel"
+                description="Подтверждение учётной записи"
+                canonical={buildCanonicalUrl('/accountconfirmation')}
+                robots="noindex, nofollow"
+            />
             <Image
                 source={require('@/assets/images/media/slider/about.jpg')}
                 style={styles.backgroundImage}

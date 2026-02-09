@@ -26,6 +26,8 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 interface UserStats {
   travelsCount: number;
@@ -465,6 +467,13 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <InstantSEO
+        headKey="profile"
+        title="Профиль | Metravel"
+        description="Профиль пользователя"
+        canonical={buildCanonicalUrl('/profile')}
+        robots="noindex, nofollow"
+      />
       <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.content}>
         <View
           style={styles.header}

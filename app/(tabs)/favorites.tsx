@@ -15,9 +15,12 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 export default function FavoritesScreen() {
     const router = useRouter();
+    const canonical = buildCanonicalUrl('/favorites');
     const { width } = useResponsive();
     const { isAuthenticated, authReady } = useAuth();
     const { favorites, removeFavorite, clearFavorites } = useFavorites() as any;
@@ -247,6 +250,13 @@ export default function FavoritesScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <InstantSEO
+                headKey="favorites"
+                title="Избранное | Metravel"
+                description="Ваши избранные путешествия"
+                canonical={canonical}
+                robots="noindex, nofollow"
+            />
             <View style={styles.header}>
                 <View style={styles.headerRow}>
                     <View style={styles.headerTitleBlock}>

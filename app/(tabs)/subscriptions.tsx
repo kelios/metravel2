@@ -28,6 +28,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { queryKeys } from '@/queryKeys';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 import { confirmAction } from '@/utils/confirmAction';
 import { ApiError } from '@/api/client';
 
@@ -607,6 +609,13 @@ export default function SubscriptionsScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <InstantSEO
+                headKey="subscriptions"
+                title="Подписки | Metravel"
+                description="Ваши подписки и подписчики"
+                canonical={buildCanonicalUrl('/subscriptions')}
+                robots="noindex, nofollow"
+            />
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
                     <Text style={styles.title}>Подписки</Text>
