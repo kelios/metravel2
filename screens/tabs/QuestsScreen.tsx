@@ -13,6 +13,7 @@ const Ion = React.lazy(() =>
 );
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 import { haversineKm } from '@/utils/geo';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -321,7 +322,7 @@ export default function QuestsScreen() {
     return (
         <>
             {isFocused && (
-                <InstantSEO headKey="quests-index" title={titleText} description={descText} ogType="website" />
+                <InstantSEO headKey="quests-index" title={titleText} description={descText} canonical={buildCanonicalUrl('/quests')} ogType="website" />
             )}
             <ScrollView style={s.page} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 <View style={sx(s.wrap, isMobile && s.wrapMobile)}>

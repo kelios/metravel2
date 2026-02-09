@@ -13,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuestsList } from '@/hooks/useQuestsApi';
 import { useThemedColors } from '@/hooks/useTheme';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 
 const LazyMap = React.lazy(() => import('@/components/MapPage/Map.web'));
 
@@ -81,6 +83,13 @@ export default function QuestsMapScreen() {
 
     return (
         <View style={{ flex: 1 }}>
+            <InstantSEO
+                headKey="quests-map"
+                title="Карта квестов | Metravel"
+                description="Карта всех квестов Metravel"
+                canonical={buildCanonicalUrl('/quests/map')}
+                robots="noindex, nofollow"
+            />
             <Suspense fallback={
                 <View style={styles.fallback}>
                     <ActivityIndicator color={colors.primary} />

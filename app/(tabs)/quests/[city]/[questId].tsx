@@ -12,6 +12,7 @@ const QuestWizardLazy = React.lazy<React.ComponentType<any>>(() =>
 );
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
+import { buildCanonicalUrl } from '@/utils/seo';
 import { useQuestBundle, useQuestProgressSync } from '@/hooks/useQuestsApi';
 import { useAuth } from '@/context/AuthContext';
 
@@ -19,7 +20,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export default function QuestByIdScreen() {
-    const { questId } = useLocalSearchParams<{ questId: string; city: string }>();
+    const { questId, city } = useLocalSearchParams<{ questId: string; city: string }>();
     const isFocused = useIsFocused();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -83,7 +84,7 @@ export default function QuestByIdScreen() {
         return (
             <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
                 {isFocused && (
-                    <InstantSEO headKey={`quest-auth-${questId}`} title="Войдите, чтобы пройти квест" description="Для прохождения квестов необходима регистрация." ogType="website" />
+                    <InstantSEO headKey={`quest-auth-${questId}`} title="Войдите, чтобы пройти квест" description="Для прохождения квестов необходима регистрация." canonical={buildCanonicalUrl(`/quests/${city}/${questId}`)} ogType="website" robots="noindex, nofollow" />
                 )}
                 <View style={styles.authGate}>
                     <Suspense fallback={null}>
@@ -118,7 +119,7 @@ export default function QuestByIdScreen() {
         return (
             <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
                 {isFocused && (
-                    <InstantSEO headKey={`quest-loading-${questId}`} title="Загружаем квест…" description="Готовим маршрут и задания." ogType="website" />
+                    <InstantSEO headKey={`quest-loading-${questId}`} title="Загружаем квест…" description="Готовим маршрут и задания." canonical={buildCanonicalUrl(`/quests/${city}/${questId}`)} ogType="website" />
                 )}
                 <ActivityIndicator color={colors.primary} />
             </View>
@@ -130,7 +131,7 @@ export default function QuestByIdScreen() {
         return (
             <View style={[styles.page, { alignItems: 'center', justifyContent: 'center' }]}>
                 {isFocused && (
-                    <InstantSEO headKey="quest-not-found" title="Квест не найден" description="Проверь адрес или выбери квест из списка." ogType="website" />
+                    <InstantSEO headKey="quest-not-found" title="Квест не найден" description="Проверь адрес или выбери квест из списка." canonical={buildCanonicalUrl('/quests')} ogType="website" robots="noindex, nofollow" />
                 )}
                 <View style={styles.notFound}>
                     <Suspense fallback={null}>
@@ -157,7 +158,7 @@ export default function QuestByIdScreen() {
     return (
         <View style={styles.page}>
             {isFocused && (
-                <InstantSEO headKey={headKey} title={title} description={description} ogType={ogType} />
+                <InstantSEO headKey={headKey} title={title} description={description} canonical={buildCanonicalUrl(`/quests/${city}/${questId}`)} ogType={ogType} />
             )}
 
             <Suspense fallback={<View style={{ padding: 16 }}><ActivityIndicator color={colors.primary} /></View>}>
