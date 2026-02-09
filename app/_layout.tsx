@@ -4,7 +4,7 @@ import { SplashScreen, Stack, usePathname } from "expo-router";
 import Head from "expo-router/head";
 import AppProviders from "@/components/layout/AppProviders";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import SkipLinks from "@/components/layout/SkipLinks";
+const SkipLinksLazy = React.lazy(() => import('@/components/layout/SkipLinks'));
 const NetworkStatusLazy = React.lazy(() => import('@/components/ui/NetworkStatus').then(m => ({ default: m.NetworkStatus })));
 const ReactQueryDevtoolsLazy: any = React.lazy(() =>
   import('@tanstack/react-query-devtools').then((m: any) => ({ default: m.ReactQueryDevtools }))
@@ -404,7 +404,11 @@ function ThemedContent({
 	                              </Head>
 
                               {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
-                              {Platform.OS === 'web' && <SkipLinks />}
+                              {Platform.OS === 'web' && (
+                                <React.Suspense fallback={null}>
+                                  <SkipLinksLazy />
+                                </React.Suspense>
+                              )}
 
                               {/* ✅ FIX-005: Индикатор статуса сети */}
                               {(!isWeb || isMounted) && (

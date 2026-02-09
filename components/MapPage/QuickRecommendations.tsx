@@ -9,6 +9,7 @@ import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { parseCoordinateString } from '@/utils/coordinates';
 import MapIcon from './MapIcon';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import ImageCardMedia from '@/components/ui/ImageCardMedia';
 
 
 interface Props {
@@ -81,7 +82,9 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
     return null;
   }
 
-  const cards = topPlaces.map((place, index) => (
+  const cards = topPlaces.map((place, index) => {
+    const thumbUrl = place.travelImageThumbUrl || place.travel_image_thumb_url || null;
+    return (
     <CardActionPressable
       key={place.id ?? `place-${index}`}
       style={({ pressed }) => [
@@ -92,6 +95,23 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
       onPress={() => onPlaceSelect(place)}
       accessibilityLabel={`Открыть ${place.address || 'место'}`}
     >
+      {thumbUrl ? (
+        <View style={styles.cardImage}>
+          <ImageCardMedia
+            src={thumbUrl}
+            alt={place.address || 'Место'}
+            fit="contain"
+            blurBackground
+            blurRadius={12}
+            loading="lazy"
+            priority="low"
+            style={StyleSheet.absoluteFillObject}
+          />
+        </View>
+      ) : (
+        <View style={[styles.cardImage, styles.cardImagePlaceholder]} />
+      )}
+      <View style={styles.cardBody}>
       <View style={styles.cardHeader}>
         <Text style={styles.placeName} numberOfLines={2}>{place.address}</Text>
         {place.rating > 0 && (
@@ -127,8 +147,10 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
           <Text style={styles.categoryText} numberOfLines={1}>{place.categoryName.split(',')[0].trim()}</Text>
         </View>
       )}
+      </View>
     </CardActionPressable>
-  ));
+    );
+  });
 
   return (
     <View style={styles.container}>
@@ -202,13 +224,24 @@ const getStyles = (colors: ThemedColors) =>
       width: 220,
       backgroundColor: colors.surface,
       borderRadius: 16,
-      padding: 14,
+      overflow: 'hidden',
       ...colors.shadows.medium,
       borderWidth: 1,
       borderColor: colors.border,
     },
     cardWeb: {
       width: '100%',
+    },
+    cardImage: {
+      width: '100%',
+      height: 100,
+      backgroundColor: colors.backgroundSecondary,
+    },
+    cardImagePlaceholder: {
+      height: 100,
+    },
+    cardBody: {
+      padding: 14,
     },
     cardPressed: {
       opacity: 0.7,

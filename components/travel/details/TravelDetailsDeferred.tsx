@@ -57,6 +57,8 @@ export const TravelDeferredSections: React.FC<{
   scrollToMapSection,
 }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false)
+  const [canRenderMap, setCanRenderMap] = useState(false)
+  const [canRenderSidebar, setCanRenderSidebar] = useState(false)
   const [canRenderComments, setCanRenderComments] = useState(false)
 
   useEffect(() => {
@@ -72,17 +74,22 @@ export const TravelDeferredSections: React.FC<{
     }
   }, [])
 
-  // Defer comments even further to avoid blocking main thread during initial render.
-  // CommentsSection chunk is ~247ms to parse — loading it later reduces TBT.
+  // Stagger heavy sections on web to spread TBT across multiple idle periods
+  // instead of mounting all chunks at once.
   useEffect(() => {
     if (!canRenderHeavy) return
     if (Platform.OS !== 'web') {
+      setCanRenderMap(true)
+      setCanRenderSidebar(true)
       setCanRenderComments(true)
       return
     }
-    rIC(() => {
-      setCanRenderComments(true)
-    }, 1500)
+    // Map section: next idle after content
+    rIC(() => setCanRenderMap(true), 600)
+    // Sidebar (near/popular lists): after map
+    rIC(() => setCanRenderSidebar(true), 1000)
+    // CommentsSection chunk is ~247ms to parse — load it last.
+    rIC(() => setCanRenderComments(true), 1500)
   }, [canRenderHeavy])
 
   return (
@@ -102,24 +109,28 @@ export const TravelDeferredSections: React.FC<{
         <MobileAuthorShareSection travel={travel} />
       )}
 
-      <Suspense fallback={null}>
-        <TravelDetailsMapSection
-          travel={travel}
-          anchors={anchors}
-          canRenderHeavy={canRenderHeavy}
-          scrollToMapSection={scrollToMapSection}
-        />
-      </Suspense>
+      {canRenderMap && (
+        <Suspense fallback={null}>
+          <TravelDetailsMapSection
+            travel={travel}
+            anchors={anchors}
+            canRenderHeavy={canRenderHeavy}
+            scrollToMapSection={scrollToMapSection}
+          />
+        </Suspense>
+      )}
 
-      <Suspense fallback={null}>
-        <TravelDetailsSidebarSection
-          travel={travel}
-          anchors={anchors}
-          scrollY={scrollY}
-          viewportHeight={viewportHeight}
-          canRenderHeavy={canRenderHeavy}
-        />
-      </Suspense>
+      {canRenderSidebar && (
+        <Suspense fallback={null}>
+          <TravelDetailsSidebarSection
+            travel={travel}
+            anchors={anchors}
+            scrollY={scrollY}
+            viewportHeight={viewportHeight}
+            canRenderHeavy={canRenderHeavy}
+          />
+        </Suspense>
+      )}
 
       <View 
         ref={anchors.comments} 

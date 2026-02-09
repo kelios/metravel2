@@ -1318,22 +1318,25 @@ export class EnhancedPdfGenerator {
   ): string {
     const items: Array<{ icon: string; value: string }> = [];
 
+    const iconColor = colors.textMuted;
+    const iconSize = 11;
+
     if (travel.countryName) {
-      items.push({ icon: '🌍', value: travel.countryName });
+      items.push({ icon: this.renderPdfIcon('globe', iconColor, iconSize), value: travel.countryName });
     }
     if (travel.year) {
-      items.push({ icon: '📅', value: String(travel.year) });
+      items.push({ icon: this.renderPdfIcon('calendar', iconColor, iconSize), value: String(travel.year) });
     }
     if (typeof travel.number_days === 'number' && travel.number_days > 0) {
-      items.push({ icon: '⏱', value: this.formatDays(travel.number_days) });
+      items.push({ icon: this.renderPdfIcon('clock', iconColor, iconSize), value: this.formatDays(travel.number_days) });
     }
     const photoCount = (travel.gallery || []).length;
     if (photoCount > 0) {
-      items.push({ icon: '📷', value: `${photoCount} фото` });
+      items.push({ icon: this.renderPdfIcon('camera', iconColor, iconSize), value: `${photoCount} фото` });
     }
     const locationCount = (travel.travelAddress || []).length;
     if (locationCount > 0) {
-      items.push({ icon: '📍', value: `${locationCount} ${locationCount === 1 ? 'место' : locationCount < 5 ? 'места' : 'мест'}` });
+      items.push({ icon: this.renderPdfIcon('map-pin', iconColor, iconSize), value: `${locationCount} ${locationCount === 1 ? 'место' : locationCount < 5 ? 'места' : 'мест'}` });
     }
 
     if (!items.length) return '';
@@ -1354,7 +1357,7 @@ export class EnhancedPdfGenerator {
       ">
         ${items.map((item) => `
           <span style="display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
-            <span style="font-size: 11pt;">${item.icon}</span>
+            ${item.icon}
             <span>${this.escapeHtml(item.value)}</span>
           </span>
         `).join(`<span style="color: ${colors.border};">•</span>`)}
@@ -1828,7 +1831,7 @@ export class EnhancedPdfGenerator {
   }
 
   private renderPdfIcon(
-    name: 'camera' | 'pen' | 'bulb' | 'warning' | 'sparkle',
+    name: 'camera' | 'pen' | 'bulb' | 'warning' | 'sparkle' | 'globe' | 'calendar' | 'clock' | 'map-pin',
     color: string,
     sizePt: number
   ): string {
@@ -1849,6 +1852,10 @@ export class EnhancedPdfGenerator {
       bulb: `<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12c.7.6 1 1.3 1 2v1h6v-1c0-.7.3-1.4 1-2a7 7 0 0 0-4-12z"/>`,
       warning: `<path d="M10.3 3.2 1.7 18a2 2 0 0 0 1.7 3h17.2a2 2 0 0 0 1.7-3L13.7 3.2a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>`,
       sparkle: `<path d="M12 2l1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8z"/>`,
+      globe: `<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>`,
+      calendar: `<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>`,
+      clock: `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
+      'map-pin': `<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>`,
     };
 
     return `

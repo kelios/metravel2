@@ -206,7 +206,6 @@ const OptimizedLCPHeroInner: React.FC<{
         width: '100%',
         height: fixedHeight,
         ...(height ? { minHeight: fixedHeight } : null),
-        contain: 'layout style paint' as any,
       }}
     >
       {loadError ? (
@@ -449,7 +448,7 @@ function TravelHeroSectionInner({
         style={[
           styles.sliderContainer,
           { height: heroHeight },
-          Platform.OS === 'web' && ({ overflow: 'hidden', contain: 'layout style paint' } as any),
+          Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
         ]}
         collapsable={false}
         onLayout={

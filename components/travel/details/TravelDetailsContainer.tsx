@@ -85,15 +85,14 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
     if (!when) return;
 
     if (Platform.OS === 'web') {
-      // Double-rAF: the first rAF fires before the browser paints, the second fires
-      // after the paint. This guarantees the LCP hero image has actually been painted
-      // before we mount heavy deferred sections, keeping them off the critical path.
-      let raf1 = 0;
-      let raf2 = 0;
-      raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => setReady(true));
-      });
-      return () => { cancelAnimationFrame(raf1); cancelAnimationFrame(raf2); };
+      // Use rIC so the browser can finish painting the LCP hero image and run
+      // any pending layout work before we mount heavy deferred sections.
+      // The 300 ms timeout is a safety net — on fast machines rIC fires much
+      // sooner, but we never block the paint for more than one idle period.
+      let cancelled = false;
+      const kick = () => { if (!cancelled) setReady(true); };
+      rIC(kick, 300);
+      return () => { cancelled = true; };
     }
     let done = false;
     const kick = () => {

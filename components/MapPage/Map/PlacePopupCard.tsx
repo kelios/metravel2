@@ -370,9 +370,9 @@ const PlacePopupCard: React.FC<Props> = ({
 };
 
 const IMAGE_ASPECT: Record<BreakpointKey, number> = {
-  narrow: 2.2,
-  compact: 2.4,
-  default: 2.5,
+  narrow: 1.5,
+  compact: 1.6,
+  default: 1.7,
 };
 
 const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {

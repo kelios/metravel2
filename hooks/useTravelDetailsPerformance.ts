@@ -128,9 +128,11 @@ export function useTravelDetailsPerformance({
 
     if (isConstrained) return
 
-    // Prefetch the Slider chunk immediately so it's ready when LCP finishes
-    // and sliderReady becomes true — eliminates chunk download during swap.
-    import('@/components/travel/Slider').catch(() => {})
+    // Prefetch the Slider chunk after idle so it doesn't compete with hero
+    // image paint for main thread time. The 800ms timeout is a safety net.
+    rIC(() => {
+      import('@/components/travel/Slider').catch(() => {})
+    }, 800)
 
     // Prefetch deferred section chunks so they are ready when
     // TravelDeferredSections mounts.
