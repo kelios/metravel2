@@ -425,7 +425,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
                 overflowY: 'hidden',
                 width: '100%',
                 WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-x',
+                touchAction: 'pan-x pan-y',
             } as any,
             default: {},
         }),

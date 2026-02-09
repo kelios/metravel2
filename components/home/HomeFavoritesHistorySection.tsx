@@ -181,7 +181,7 @@ function HorizontalCards({
       keyboardShouldPersistTaps="handled"
       bounces={Platform.OS === 'ios'}
       decelerationRate={Platform.OS === 'ios' ? 'fast' : 0.98}
-      {...Platform.select({ web: { style: [styles.horizontalList, { touchAction: 'pan-x' } as any] } })}
+      {...Platform.select({ web: { style: [styles.horizontalList, { touchAction: 'pan-x pan-y' } as any] } })}
       drawDistance={800}
     />
   );

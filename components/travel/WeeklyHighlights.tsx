@@ -188,7 +188,7 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
                         overflowX: 'auto',
                         overflowY: 'hidden',
                         width: '100%',
-                        touchAction: 'pan-x',
+                        touchAction: 'pan-x pan-y',
                     } as any,
                     default: {},
                 })}

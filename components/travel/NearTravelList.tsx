@@ -455,7 +455,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
             paddingBottom: DESIGN_TOKENS.spacing.xxs,
             scrollSnapType: 'x mandatory' as any,
             scrollBehavior: 'smooth' as any,
-            touchAction: 'pan-x' as any,
+            touchAction: 'pan-x pan-y' as any,
             cursor: 'grab' as any,
             userSelect: 'none' as any,
             msOverflowStyle: 'none' as any,
