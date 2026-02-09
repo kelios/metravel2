@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 
 import FiltersPanel from '@/components/MapPage/FiltersPanel';
 import { FiltersProvider } from '@/context/MapFiltersContext';
+import { useRouteStore } from '@/stores/routeStore';
 import type { MapUiApi } from '@/types/mapUi';
 
 // Модульные хуки для карты
@@ -143,9 +144,10 @@ export function useMapScreenController() {
   // Reset filters and route
   const resetFilters = useCallback(() => {
     resetFiltersBase();
-    handleClearRoute();
-    setMode('radius');
-  }, [resetFiltersBase, handleClearRoute, setMode]);
+    // Atomic: clear route + set mode in one store update to avoid intermediate
+    // render where mode='route' but fullRouteCoords=[] (disables travel query).
+    useRouteStore.getState().clearRouteAndSetMode('radius');
+  }, [resetFiltersBase]);
 
   // Center on user location
   const centerOnUser = useCallback(() => {

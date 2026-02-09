@@ -29,6 +29,7 @@ interface RouteState {
   reorderPoints: (points: RoutePoint[]) => void;
   swapStartEnd: () => void;
   clearRoute: () => void;
+  clearRouteAndSetMode: (mode: 'radius' | 'route') => void;
   
   setRoute: (route: RouteData | null) => void;
   setBuilding: (isBuilding: boolean) => void;
@@ -162,6 +163,16 @@ export const useRouteStore = create<RouteState>()(
 
       clearRoute: () => {
         set({
+          points: [],
+          route: null,
+          error: null,
+          isBuilding: false,
+        });
+      },
+
+      clearRouteAndSetMode: (mode) => {
+        set({
+          mode,
           points: [],
           route: null,
           error: null,

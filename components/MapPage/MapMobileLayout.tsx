@@ -84,7 +84,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     setUiTab('filters');
     setContentTab('filters');
     lastPanelOpenTsRef.current = Date.now();
-    bottomSheetRef.current?.snapToHalf();
+    bottomSheetRef.current?.snapToFull();
   }, [openNonce]);
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       setUiTab('filters');
       setContentTab('filters');
       lastPanelOpenTsRef.current = Date.now();
-      bottomSheetRef.current?.snapToHalf();
+      bottomSheetRef.current?.snapToFull();
       return;
     }
     bottomSheetRef.current?.snapToCollapsed();
@@ -350,9 +350,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         ref={bottomSheetRef}
         peekContent={peekContent}
         onStateChange={handleSheetStateChange}
-        bottomInset={
-          Platform.OS === 'web' ? LAYOUT.tabBarHeight : 0
-        }
+        bottomInset={0}
       >
         {sheetContent}
       </MapBottomSheet>

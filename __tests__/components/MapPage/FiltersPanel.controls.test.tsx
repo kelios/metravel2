@@ -266,13 +266,15 @@ describe('FiltersPanel Controls', () => {
       expect(setMode).toHaveBeenCalledWith('route');
     });
 
-    it('should call setMode when switching to radius mode', () => {
-      const setMode = jest.fn();
+    it('should switch store to radius mode atomically when switching to radius', () => {
+      const { useRouteStore } = require('@/stores/routeStore');
+      // Start in route mode
+      useRouteStore.getState().setMode('route');
+
       const context = makeFiltersContext({
         filters: mockFilters,
         filterValue: mockFilterValue,
         mode: 'route',
-        setMode,
       });
       const { getByTestId } = render(
         <FiltersProvider {...context}>
@@ -283,7 +285,8 @@ describe('FiltersPanel Controls', () => {
       const radiusTab = getByTestId('segmented-radius');
       fireEvent.press(radiusTab);
 
-      expect(setMode).toHaveBeenCalledWith('radius');
+      // clearRouteAndSetMode is called atomically (single store update)
+      expect(useRouteStore.getState().mode).toBe('radius');
     });
   });
 

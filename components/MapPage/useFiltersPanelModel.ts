@@ -3,6 +3,7 @@ import { Dimensions, LayoutAnimation } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getFiltersPanelStyles } from '@/components/MapPage/filtersPanelStyles';
 import { showRouteModeTip, showFiltersResetToast } from '@/utils/mapToasts';
+import { useRouteStore } from '@/stores/routeStore';
 import type { RoutePoint } from '@/types/route';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
@@ -76,11 +77,14 @@ const useFiltersPanelModel = ({
     (nextMode: 'radius' | 'route') => {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
-      if (nextMode === 'radius' && onClearRoute) {
-        onClearRoute();
+      if (nextMode === 'radius') {
+        // Atomic update: clear route data AND set mode in a single store update
+        // to avoid an intermediate render where mode='route' but fullRouteCoords=[]
+        // which disables the travel query and loses markers.
+        useRouteStore.getState().clearRouteAndSetMode('radius');
+      } else {
+        setMode(nextMode);
       }
-
-      setMode(nextMode);
 
       // Показать подсказку при переключении в режим маршрута
       if (nextMode === 'route' && !routeHintDismissed) {
@@ -89,7 +93,7 @@ const useFiltersPanelModel = ({
         }, 300);
       }
     },
-    [setMode, onClearRoute, routeHintDismissed]
+    [setMode, routeHintDismissed]
   );
 
   const hasActiveFilters = useMemo(

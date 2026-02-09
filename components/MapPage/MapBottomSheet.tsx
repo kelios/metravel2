@@ -139,7 +139,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     if (Platform.OS === 'web') {
       const isCollapsed = sheetIndex < 0;
       const hasPeek = isCollapsed && !!peekContent;
-      const sheetMaxHeight = isCollapsed ? (hasPeek ? '40vh' : 0) : sheetIndex === 0 ? '70vh' : '80vh';
+      const sheetMaxHeight = isCollapsed ? (hasPeek ? 'auto' : 0) : sheetIndex === 0 ? '70vh' : '85vh';
 
       return (
         <View
@@ -155,6 +155,21 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           ]}
           accessibilityLabel="Панель карты"
         >
+          {/* Drag handle indicator */}
+          <Pressable
+            style={styles.webHandleArea}
+            onPress={() => {
+              if (isCollapsed) {
+                setSheetIndex(0);
+                onStateChange?.('half');
+              }
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={isCollapsed ? 'Развернуть панель' : undefined}
+          >
+            <View style={styles.indicator} />
+          </Pressable>
+
           {sheetIndex >= 0 && (
             <View style={styles.header}>
               <View style={styles.headerContent}>
@@ -276,6 +291,14 @@ const getStyles = (colors: ThemedColors) =>
       // @ts-ignore: web-only style
       transition: 'max-height 180ms cubic-bezier(0.4, 0, 0.2, 1)',
       overflow: 'hidden',
+    },
+    webHandleArea: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 10,
+      paddingBottom: 6,
+      // @ts-ignore: web-only style
+      ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
     },
     background: {
       backgroundColor: colors.surface,
