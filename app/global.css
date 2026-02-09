@@ -282,6 +282,17 @@ select:focus-visible {
   max-width: 100% !important;
 }
 
+/* Mobile touch: allow vertical scrolling through interactive card elements on home page */
+@media (pointer: coarse) {
+  [data-testid="home-hero"] [role="button"],
+  [data-testid="home-hero"] [role="link"],
+  [data-testid="home-how-it-works"] [role="button"],
+  [data-testid="home-faq"] [role="button"],
+  [data-testid*="travel-card"] {
+    touch-action: pan-y !important;
+  }
+}
+
 /* Home hero layout guard (web): prevent vertical stacking on desktop/tablet due to hydration/breakpoint mismatch */
 [data-testid="home-hero-stack"] {
   display: flex !important;

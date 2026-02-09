@@ -401,6 +401,40 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       <ScrollViewStyleReset />
 
+      {/* Stale chunk recovery: catch module errors before React mounts */}
+      <script
+        dangerouslySetInnerHTML={{ __html: String.raw`(function(){
+  if(typeof window==='undefined')return;
+  var KEY='__metravel_chunk_reload';
+  function isStaleChunkError(msg){
+    return /requiring unknown module|cannot find module|loading chunk|failed to fetch dynamically imported module/i.test(msg);
+  }
+  function doReload(){
+    try{sessionStorage.setItem(KEY,'1')}catch(_){}
+    try{window.location.reload()}catch(_){}
+  }
+  function handler(e){
+    var msg=String((e&&e.message)||(e&&e.reason&&e.reason.message)||'');
+    if(!isStaleChunkError(msg))return;
+    try{if(sessionStorage.getItem(KEY))return}catch(_){}
+    e.preventDefault&&e.preventDefault();
+    if('caches' in window){
+      caches.keys().then(function(ns){
+        return Promise.all(ns.filter(function(n){return n.indexOf('metravel-js')===0||n.indexOf('metravel-critical')===0}).map(function(n){return caches.delete(n)}));
+      }).then(doReload).catch(doReload);
+    }else{doReload()}
+  }
+  window.addEventListener('error',handler);
+  window.addEventListener('unhandledrejection',function(e){
+    var r=e&&e.reason;
+    var msg=String((r&&r.message)||r||'');
+    if(!isStaleChunkError(msg))return;
+    handler({message:msg,preventDefault:function(){e.preventDefault&&e.preventDefault()}});
+  });
+  try{sessionStorage.removeItem(KEY)}catch(_){}
+})();` }}
+      />
+
       {/* Выключаем Expo Router Inspector */}
       <script
         dangerouslySetInnerHTML={{ __html: 'window.__EXPO_ROUTER_INSPECTOR=false;' }}

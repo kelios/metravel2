@@ -335,7 +335,29 @@ export default function RootLayout() {
       const isProd = window.location.hostname === 'metravel.by' || window.location.hostname === 'www.metravel.by';
       if (!isProd) return;
 
+      // --- Service Worker registration + update listener ---
       if ('serviceWorker' in navigator) {
+        // Listen for SW_UPDATED message from the new service worker.
+        const onSWMessage = (event: MessageEvent) => {
+          if (event.data?.type === 'SW_UPDATED') {
+            // New SW activated — reload to pick up fresh HTML + entry bundle.
+            if (!(window as any).__metravelModuleReloadTriggered) {
+              (window as any).__metravelModuleReloadTriggered = true;
+              window.location.reload();
+            }
+          }
+        };
+        navigator.serviceWorker.addEventListener('message', onSWMessage);
+
+        // Also listen for controllerchange (new SW took over).
+        let reloading = false;
+        const onControllerChange = () => {
+          if (reloading) return;
+          reloading = true;
+          window.location.reload();
+        };
+        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
         const registerSW = () => {
           navigator.serviceWorker
             .register('/sw.js', { updateViaCache: 'none' as any })
@@ -357,7 +379,13 @@ export default function RootLayout() {
         } else {
           window.addEventListener('load', onLoad, { once: true });
         }
+
+        return () => {
+          navigator.serviceWorker.removeEventListener('message', onSWMessage);
+          navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+        };
       }
+      return undefined;
     }, []);
 
     if (!fontsLoaded && !isWeb) {

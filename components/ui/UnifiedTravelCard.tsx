@@ -115,6 +115,7 @@ function UnifiedTravelCard({
               transition: 'all 0.2s ease',
               display: 'flex',
               flexDirection: 'column',
+              touchAction: 'pan-y',
             } as any,
             default: DESIGN_TOKENS.shadowsNative.light,
           }),

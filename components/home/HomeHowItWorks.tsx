@@ -95,7 +95,8 @@ function HomeHowItWorks() {
         web: {
           boxShadow: DESIGN_TOKENS.shadows.card,
           transition: 'all 0.3s ease',
-        },
+          touchAction: 'pan-y',
+        } as any,
       }),
     },
     stepHover: {

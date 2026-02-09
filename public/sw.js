@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v2.0.0';
+const CACHE_VERSION = 'v3.0.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -42,14 +42,34 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name.startsWith('metravel-') && 
-                  name !== STATIC_CACHE && 
-                  name !== DYNAMIC_CACHE && 
-                  name !== IMAGE_CACHE && 
-                  name !== JS_CACHE &&
-                  name !== CRITICAL_CACHE)
+          .filter((name) => {
+            // Delete caches from old versions
+            if (name.startsWith('metravel-') && 
+                name !== STATIC_CACHE && 
+                name !== DYNAMIC_CACHE && 
+                name !== IMAGE_CACHE && 
+                name !== JS_CACHE &&
+                name !== CRITICAL_CACHE) {
+              return true;
+            }
+            // Always purge JS cache on activation — stale chunks from
+            // previous deploys cause "Requiring unknown module" errors.
+            // Hashed chunk URLs change between builds, so old entries are
+            // useless and keeping them risks serving mismatched modules.
+            if (name === JS_CACHE || name === CRITICAL_CACHE) {
+              return true;
+            }
+            return false;
+          })
           .map((name) => caches.delete(name))
       );
+    }).then(() => {
+      // Notify all open tabs to reload so they pick up fresh HTML + entry bundle.
+      return self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'SW_UPDATED' });
+        });
+      });
     })
   );
   self.clients.claim();

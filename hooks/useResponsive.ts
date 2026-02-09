@@ -157,10 +157,53 @@ const ensureSubscription = () => {
   return snapshotChanged;
 };
 
+// Fixed snapshot for SSR / hydration. During static export window is undefined
+// so the server renders with {0,0}. The client must return the same value during
+// hydration to avoid React error #418. After hydration, useSyncExternalStore
+// switches to the live getSnapshot automatically.
+const SSR_SNAPSHOT: DimensionsSnapshot = { width: 0, height: 0 };
+const getServerSnapshot = () => SSR_SNAPSHOT;
+
+// Track whether initial hydration is complete on web.
+// During hydration getSnapshot must return the same value the server used ({0,0})
+// to avoid React error #418. After hydration we flip the flag and notify
+// subscribers so every consumer re-renders with real window dimensions.
+let _hydrated = Platform.OS !== 'web';
+let _hydrationScheduled = false;
+
 const subscribe = (onStoreChange: () => void) => {
   subscribers.add(onStoreChange);
   const snapshotChanged = ensureSubscription();
-  if (snapshotChanged) {
+
+  // Schedule the hydration→live switch exactly once.
+  // setTimeout(0) fires after React finishes hydrating the current tree.
+  if (!_hydrated && !_hydrationScheduled && Platform.OS === 'web') {
+    _hydrationScheduled = true;
+    setTimeout(() => {
+      _hydrated = true;
+      // Ensure currentSnapshot reflects real window dimensions
+      const webSnap = getWebWindowSnapshot();
+      if (
+        webSnap &&
+        (currentSnapshot.width !== webSnap.width ||
+          currentSnapshot.height !== webSnap.height)
+      ) {
+        currentSnapshot = webSnap;
+      }
+      // Notify all subscribers to re-render with real dimensions
+      subscribers.forEach((cb) => {
+        try {
+          cb();
+        } catch {
+          // noop
+        }
+      });
+    }, 0);
+  }
+
+  // Do not notify synchronously during hydration — the snapshot hasn't
+  // changed from React's perspective (still SSR_SNAPSHOT).
+  if (snapshotChanged && _hydrated) {
     try {
       onStoreChange();
     } catch {
@@ -179,14 +222,7 @@ const subscribe = (onStoreChange: () => void) => {
   };
 };
 
-const getSnapshot = () => currentSnapshot;
-
-// Fixed snapshot for SSR / hydration. During static export window is undefined
-// so the server renders with {0,0}. The client must return the same value during
-// hydration to avoid React error #418. After hydration, useSyncExternalStore
-// switches to the live getSnapshot automatically.
-const SSR_SNAPSHOT: DimensionsSnapshot = { width: 0, height: 0 };
-const getServerSnapshot = () => SSR_SNAPSHOT;
+const getSnapshot = () => (_hydrated ? currentSnapshot : SSR_SNAPSHOT);
 
 /**
  * Enhanced responsive hook that provides screen size and orientation information

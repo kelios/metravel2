@@ -156,6 +156,11 @@ function HomeInspirationSection({
     grid: {
       width: '100%',
       gap: 20,
+      ...Platform.select({
+        web: {
+          touchAction: 'pan-y',
+        } as any,
+      }),
     },
     separator: {
       height: 20,
@@ -169,7 +174,8 @@ function HomeInspirationSection({
       ...Platform.select({
         web: {
           justifyContent: 'flex-start',
-        },
+          touchAction: 'pan-y',
+        } as any,
       }),
     },
     rowWebCentered: {
@@ -187,6 +193,7 @@ function HomeInspirationSection({
           flexShrink: 1,
           flexBasis: 0,
           alignSelf: 'stretch',
+          touchAction: 'pan-y',
         } as any,
       }),
     },

@@ -101,7 +101,8 @@ function HomeFAQSection() {
         web: {
           transition: 'background-color 0.2s ease',
           cursor: 'pointer',
-        },
+          touchAction: 'pan-y',
+        } as any,
       }),
     },
     itemHeaderHover: {
