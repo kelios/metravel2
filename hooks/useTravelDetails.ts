@@ -63,10 +63,22 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
     queryKey: queryKeys.travel(cacheKey),
     enabled: !isMissingParam,
-    queryFn: ({ signal } = {} as any) => {
-      // Try to consume preloaded data from the inline script (avoids double API fetch)
+    queryFn: async ({ signal } = {} as any) => {
+      // Try to consume preloaded data from the inline script (avoids double API fetch).
+      // The inline script in +html.tsx fires a fetch() before React mounts. If React
+      // hydrates before that fetch completes, the preload won't be available yet.
+      // Wait briefly (up to 150ms in 30ms steps) to give the preload a chance to land.
       const preloaded = consumePreloadedTravel(normalizedSlug, isId, idNum);
       if (preloaded) return preloaded;
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        for (let i = 0; i < 5; i++) {
+          await new Promise((r) => setTimeout(r, 30));
+          const retry = consumePreloadedTravel(normalizedSlug, isId, idNum);
+          if (retry) return retry;
+        }
+      }
+
       return isId
         ? fetchTravel(idNum, { signal })
         : fetchTravelBySlug(normalizedSlug, { signal });

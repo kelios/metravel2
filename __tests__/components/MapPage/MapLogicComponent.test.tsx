@@ -157,7 +157,8 @@ describe('MapLogicComponent radius fitBounds', () => {
 
     // When fallback triggers, latLngBounds should be created from ALL points,
     // not only the 2 near points.
-    expect(mockLeaflet.latLngBounds).toHaveBeenCalledTimes(1);
+    // computeCircleBounds also calls latLngBounds for the circle bounds override.
+    expect(mockLeaflet.latLngBounds.mock.calls.length).toBeGreaterThanOrEqual(1);
     const pointsPassed = mockLeaflet.latLngBounds.mock.calls[0][0];
     expect(Array.isArray(pointsPassed)).toBe(true);
     expect(pointsPassed.length).toBeGreaterThanOrEqual(25);
