@@ -16,7 +16,6 @@ import Button from '@/components/ui/Button';
 import { MapFAB } from './MapFAB';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
-import { LAYOUT } from '@/constants/layout';
 
 interface MapMobileLayoutProps {
   // Map props
@@ -316,6 +315,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     styles.sheetToolbar,
     transportMode,
     travelsData,
+    onExpandRadius,
+    onResetFilters,
   ]);
 
 

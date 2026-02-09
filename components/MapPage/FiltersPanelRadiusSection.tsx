@@ -21,8 +21,6 @@ interface RadiusSliderProps {
 }
 
 const RadiusSlider = React.memo(function RadiusSlider({ options, value, onChange, colors }: RadiusSliderProps) {
-  if (Platform.OS !== 'web') return null;
-
   const sortedIds = useMemo(
     () => options.map((o) => o.id).sort((a, b) => Number(a) - Number(b)),
     [options]
@@ -39,6 +37,8 @@ const RadiusSlider = React.memo(function RadiusSlider({ options, value, onChange
     },
     [sortedIds, onChange]
   );
+
+  if (Platform.OS !== 'web') return null;
 
   // Render native HTML range input via dangerouslySetInnerHTML-free approach
   const sliderStyle: any = {

@@ -13,7 +13,6 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileStats } from '@/components/profile/ProfileStats';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
-import { normalizeAvatar } from '@/api/user';
 import { fetchMyTravels } from '@/api/travelsApi';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';

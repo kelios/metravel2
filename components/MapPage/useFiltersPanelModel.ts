@@ -39,7 +39,7 @@ const useFiltersPanelModel = ({
   routePoints,
   routingLoading,
   routeDistance,
-  onClearRoute,
+  onClearRoute: _onClearRoute,
   setMode,
   onRemoveRoutePoint,
   resetFilters,

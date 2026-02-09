@@ -57,11 +57,10 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
 
   if (!topPlaces.length) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.emptyText}>Мест не найдено</Text>
+      <View style={styles.emptyContainer}>
         <Button
-          label="Изменить фильтры"
-          icon={<MapIcon name="expand-less" size={20} color={colors.primary} />}
+          label="Мест не найдено — изменить фильтры"
+          icon={<MapIcon name="expand-less" size={16} color={colors.textMuted} />}
           onPress={onExpandPress}
           variant="ghost"
           size="sm"
@@ -175,6 +174,10 @@ const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     container: {
       paddingVertical: 8,
+    },
+    emptyContainer: {
+      paddingVertical: 2,
+      alignItems: 'center',
     },
     scrollContent: {
       paddingRight: 16,

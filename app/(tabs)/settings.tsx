@@ -36,7 +36,7 @@ export default function SettingsScreen() {
         viewHistory = [],
     } = favoritesContext ?? {};
 
-    const { profile, setProfile, isLoading: profileLoading, loadProfile, fullName } = useUserProfile();
+    const { profile, setProfile, isLoading: profileLoading, loadProfile, fullName: _fullName } = useUserProfile();
     const {
         avatarFile,
         avatarPreviewUrl,
@@ -135,7 +135,7 @@ export default function SettingsScreen() {
         } finally {
             setProfileSaving(false);
         }
-    }, [firstName, instagram, lastName, twitter, userId, vk, youtube]);
+    }, [firstName, instagram, lastName, setProfile, twitter, userId, vk, youtube]);
 
     const handleLogout = useCallback(async () => {
         try {

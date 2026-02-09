@@ -5,8 +5,8 @@
  * Its module initialization depends on Reanimated/Worklets and can crash the web bundle.
  */
 
-import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
@@ -63,9 +63,34 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       },
     }));
 
+    const { height: windowHeight } = useWindowDimensions();
+    const webDomRef = useRef<HTMLElement | null>(null);
+
     const isCollapsed = sheetIndex < 0;
-    const SNAP_HEIGHTS = ['25vh', '55vh', '80vh'] as const;
-    const sheetMaxHeight = isCollapsed ? 'none' : SNAP_HEIGHTS[sheetIndex] ?? '55vh';
+    // Pixel-based snap heights (vh units don't work reliably in RN Web View styles)
+    const SNAP_RATIOS = [0.25, 0.55, 0.85] as const;
+    const openHeight = !isCollapsed
+      ? Math.round(windowHeight * (SNAP_RATIOS[sheetIndex] ?? 0.55))
+      : 0;
+
+    // Stable ref callback — only captures the DOM node, never changes.
+    const webRefCallback = useCallback((node: View | null) => {
+      webDomRef.current = node as unknown as HTMLElement | null;
+    }, []);
+
+    // Apply height imperatively whenever state changes.
+    // RN Web View ignores pixel height set via style props.
+    useEffect(() => {
+      const node = webDomRef.current;
+      if (!node) return;
+      if (isCollapsed) {
+        node.style.height = peekContent ? 'auto' : '0px';
+        node.style.maxHeight = peekContent ? 'none' : '0px';
+      } else {
+        node.style.height = `${openHeight}px`;
+        node.style.maxHeight = `${openHeight}px`;
+      }
+    }, [isCollapsed, openHeight, peekContent]);
 
     const handleClose = useCallback(() => {
       const dt = Date.now() - lastProgrammaticOpenTsRef.current;
@@ -82,14 +107,11 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
 
     return (
       <View
+        ref={webRefCallback}
         style={[
           styles.webRoot,
           isCollapsed ? styles.webRootCollapsed : null,
-          {
-            // @ts-ignore: web-only style
-            maxHeight: sheetMaxHeight as any,
-            bottom: bottomInset,
-          },
+          { bottom: bottomInset },
         ]}
         accessibilityLabel="Панель карты"
         // Allow map touches to pass through when collapsed and no peek content
@@ -152,7 +174,12 @@ const getStyles = (colors: ThemedColors) =>
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
       overflow: 'hidden',
-      ...(Platform.OS === 'web' ? ({ boxShadow: colors.boxShadows.heavy } as any) : null),
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: colors.boxShadows.heavy,
+            transition: 'height 200ms ease-out',
+          } as any)
+        : null),
     },
     webRootCollapsed: {
       overflow: 'visible' as any,

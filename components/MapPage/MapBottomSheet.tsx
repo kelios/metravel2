@@ -136,74 +136,6 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       []
     );
 
-    if (Platform.OS === 'web') {
-      const isCollapsed = sheetIndex < 0;
-      const hasPeek = isCollapsed && !!peekContent;
-      const sheetMaxHeight = isCollapsed ? (hasPeek ? 'auto' : 0) : sheetIndex === 0 ? '70vh' : '85vh';
-
-      return (
-        <View
-          style={[
-            styles.webRoot,
-            {
-              // @ts-ignore: web-only style
-              height: (isCollapsed && !hasPeek ? 0 : 'auto') as any,
-              // @ts-ignore: web-only style
-              maxHeight: sheetMaxHeight as any,
-              bottom: bottomInset,
-            },
-          ]}
-          accessibilityLabel="Панель карты"
-        >
-          {/* Drag handle indicator */}
-          <Pressable
-            style={styles.webHandleArea}
-            onPress={() => {
-              if (isCollapsed) {
-                setSheetIndex(0);
-                onStateChange?.('half');
-              }
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={isCollapsed ? 'Развернуть панель' : undefined}
-          >
-            <View style={styles.indicator} />
-          </Pressable>
-
-          {sheetIndex >= 0 && (
-            <View style={styles.header}>
-              <View style={styles.headerContent}>
-                {!!title && (
-                  <View style={styles.titleContainer}>
-                    <Text style={styles.title}>{title}</Text>
-                    {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.headerActions}>
-                <IconButton
-                  icon={<Feather name="x" size={20} color={colors.textMuted} />}
-                  label="Закрыть панель"
-                  size="sm"
-                  onPress={() => {
-                    setSheetIndex(-1);
-                    onStateChange?.('collapsed');
-                  }}
-                  testID="map-panel-close"
-                  style={styles.headerButton}
-                />
-              </View>
-            </View>
-          )}
-
-          <View style={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}>
-            {isCollapsed ? peekContent : children}
-          </View>
-        </View>
-      );
-    }
-
     return (
       <BottomSheet
         ref={bottomSheetRef}
@@ -276,30 +208,6 @@ const getStyles = (colors: ThemedColors) =>
         },
       }),
     },
-    webRoot: {
-      // @ts-ignore: web-only style
-      position: 'fixed',
-      left: 0,
-      right: 0,
-      zIndex: 50,
-      flexDirection: 'column',
-      backgroundColor: colors.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      // @ts-ignore: web-only style
-      boxShadow: (colors as any).boxShadows?.heavy ?? undefined,
-      // @ts-ignore: web-only style
-      transition: 'max-height 180ms cubic-bezier(0.4, 0, 0.2, 1)',
-      overflow: 'hidden',
-    },
-    webHandleArea: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingTop: 10,
-      paddingBottom: 6,
-      // @ts-ignore: web-only style
-      ...(Platform.OS === 'web' ? { cursor: 'pointer' } : null),
-    },
     background: {
       backgroundColor: colors.surface,
       borderTopLeftRadius: 24,
@@ -366,7 +274,8 @@ const getStyles = (colors: ThemedColors) =>
       paddingBottom: 40,
       ...Platform.select({
         web: {
-          flexShrink: 1,
+          flex: 1,
+          minHeight: 0,
           // @ts-ignore: web-only style
           overflowY: 'auto',
           // @ts-ignore: web-only style
