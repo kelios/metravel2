@@ -29,7 +29,7 @@ const RecommendationsTabs = lazy(async () => {
     return await import('./RecommendationsTabs')
   } catch {
     return {
-      default: memo(() => (
+      default: memo((_props: { forceVisible?: boolean; onVisibilityChange?: (visible: boolean) => void }) => (
         <View style={{ padding: 16, alignItems: 'center' }}>
           <Text>Не удалось загрузить рекомендации</Text>
         </View>
