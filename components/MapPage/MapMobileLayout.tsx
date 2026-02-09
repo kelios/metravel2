@@ -229,12 +229,20 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             return <View style={styles.sheetRoot} />;
           }
 
+          const mergedProviderProps = {
+            ...providerProps,
+            onOpenList: () => {
+              setTabDeferred('list');
+              bottomSheetRef.current?.snapToHalf();
+            },
+          };
+
           return (
-            <ProviderComponent {...providerProps}>
+            <ProviderComponent {...mergedProviderProps}>
               <PanelComponent
                 hideTopControls={true}
                 hideFooterCta={filtersMode === 'route'}
-                hideFooterReset={true}
+                hideFooterReset={filtersMode !== 'radius'}
               />
             </ProviderComponent>
           );
@@ -296,11 +304,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
               icon={<Feather name="rotate-cw" size={18} color={colors.textMuted} />}
               label="Сбросить"
               size="sm"
-              showLabel={true}
+              showLabel={false}
               onPress={() => {
                 filtersPanelProps?.props?.resetFilters?.();
               }}
-              style={styles.sheetResetButton}
+              style={styles.sheetIconButton}
             />
           )}
         </View>
@@ -321,7 +329,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onToggleFavorite,
     setTabDeferred,
     setFiltersMode,
-    styles.sheetResetButton,
+    styles.sheetIconButton,
     styles.sheetToolbarLeft,
     styles.sheetToolbarRight,
     styles.sheetBody,

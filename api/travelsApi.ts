@@ -680,3 +680,7 @@ export const fetchMyTravels = async (params: {
         return [];
     }
 };
+
+export const deleteTravel = async (travelId: string | number): Promise<null> => {
+    return apiClient.delete<null>(`/travels/${travelId}/`);
+};

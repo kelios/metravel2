@@ -46,6 +46,14 @@ test.describe('Map Route Line - Visual Regression', () => {
   test('снапшот карты с линией маршрута', async ({ page }) => {
     await preacceptCookies(page);
 
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem('metravel_map_onboarding_completed', 'true');
+      } catch {
+        // ignore
+      }
+    });
+
     // Normalize viewport to keep locator screenshot dimensions stable across environments.
     // Snapshot baselines were captured with a slightly narrower effective content width.
     await page.setViewportSize({ width: 1265, height: 720 });
@@ -213,6 +221,14 @@ test.describe('Map Route Line - Visual Regression', () => {
 
   test('снапшот: сравнение карты ДО и ПОСЛЕ добавления маршрута', async ({ page }) => {
     await preacceptCookies(page);
+
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem('metravel_map_onboarding_completed', 'true');
+      } catch {
+        // ignore
+      }
+    });
 
     // Normalize viewport to keep locator screenshot dimensions stable across environments.
     await page.setViewportSize({ width: 1265, height: 720 });

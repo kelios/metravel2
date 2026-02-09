@@ -368,7 +368,6 @@ export default function MapScreen() {
                     accessibilityLabel="Сбросить фильтры"
                 >
                     <Feather name="refresh-cw" size={14} color={themedColors.textMuted} />
-                    <Text style={styles.resetButtonText}>Сбросить</Text>
                 </Pressable>
             ) : (
                 <Pressable

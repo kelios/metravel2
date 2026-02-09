@@ -158,6 +158,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
       {!hideFooterCta && (
         <FiltersPanelFooter
           styles={styles}
+          isMobile={isMobile}
           mode={mode}
           canBuildRoute={canBuildRoute}
           routePointsLength={routePoints.length}
@@ -167,6 +168,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           onReset={safeResetFilters}
           onBuildRoute={onBuildRoute}
           totalPoints={totalPoints}
+          onOpenList={onOpenList}
         />
       )}
     </View>

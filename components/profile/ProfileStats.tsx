@@ -99,27 +99,40 @@ export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
 
   return (
     <View style={styles.container}>
-      {items.map((item) => (
-        <Pressable
-          key={item.key}
-          style={({ pressed }) => [
-            styles.statItem,
-            globalFocusStyles.focusable,
-            pressed && onPressStat && styles.statItemPressed,
-          ]}
-          onPress={() => onPressStat?.(item.key)}
-          disabled={!onPressStat}
-          accessibilityRole="button"
-          accessibilityLabel={`${item.label}: ${item.value}`}
-          accessibilityHint={onPressStat ? item.hint : undefined}
-        >
-          <View style={styles.iconWrap}>
-            <Feather name={item.icon} size={14} color={colors.primary} />
-          </View>
-          <Text style={styles.statValue}>{item.value}</Text>
-          <Text style={styles.statLabel}>{item.label}</Text>
-        </Pressable>
-      ))}
+      {items.map((item) => {
+        if (!onPressStat) {
+          return (
+            <View key={item.key} style={styles.statItem}>
+              <View style={styles.iconWrap}>
+                <Feather name={item.icon} size={14} color={colors.primary} />
+              </View>
+              <Text style={styles.statValue}>{item.value}</Text>
+              <Text style={styles.statLabel}>{item.label}</Text>
+            </View>
+          );
+        }
+
+        return (
+          <Pressable
+            key={item.key}
+            style={({ pressed }) => [
+              styles.statItem,
+              globalFocusStyles.focusable,
+              pressed && styles.statItemPressed,
+            ]}
+            onPress={() => onPressStat(item.key)}
+            accessibilityRole="button"
+            accessibilityLabel={`${item.label}: ${item.value}`}
+            accessibilityHint={item.hint}
+          >
+            <View style={styles.iconWrap}>
+              <Feather name={item.icon} size={14} color={colors.primary} />
+            </View>
+            <Text style={styles.statValue}>{item.value}</Text>
+            <Text style={styles.statLabel}>{item.label}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

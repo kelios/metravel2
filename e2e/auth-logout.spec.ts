@@ -169,6 +169,10 @@ test.describe('Auth logout', () => {
     }
 
     // Profile page should show logout button when authenticated.
+    const profileMenu = page.getByRole('button', { name: 'Меню профиля' }).first();
+    await expect(profileMenu).toBeVisible({ timeout: 20_000 });
+    await profileMenu.click({ timeout: 20_000 });
+
     const logoutButton = page.getByRole('button', { name: /выйти/i }).first();
     await expect(logoutButton).toBeVisible({ timeout: 20_000 });
     await logoutButton.click({ timeout: 20_000 });

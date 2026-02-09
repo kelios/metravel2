@@ -290,11 +290,11 @@ test.describe('Travel Comments', () => {
       const guestGate = page.getByText('Войдите, чтобы оставить комментарий', { exact: true });
       const submitButton = page.getByRole('button', { name: /отправить комментарий/i });
 
-      const inputVisible = await commentInput.isVisible().catch(() => false);
-      if (!inputVisible) {
-        await expect(commentInput).not.toBeVisible();
-        return;
-      }
+      await Promise.race([
+        commentInput.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => null),
+        guestGate.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => null),
+        submitButton.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => null),
+      ]);
 
       const gateVisible = await guestGate.isVisible().catch(() => false);
       const submitEnabled = await submitButton.isEnabled().catch(() => false);

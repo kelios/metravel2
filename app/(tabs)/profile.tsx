@@ -5,17 +5,18 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { ProfileStats } from '@/components/profile/ProfileStats';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
-import { fetchMyTravels } from '@/api/travelsApi';
+import { deleteTravel, fetchMyTravels } from '@/api/travelsApi';
 import EmptyState from '@/components/ui/EmptyState';
+import Button from '@/components/ui/Button';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
 import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
@@ -24,6 +25,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { confirmAction } from '@/utils/confirmAction';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { FlashList } from '@shopify/flash-list';
@@ -107,9 +109,14 @@ const unwrapTravelsPayload = (payload: any): { items: any[]; count: number } => 
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, authReady, logout, userId } = useAuth();
+  const { isAuthenticated, authReady, logout, userId, isSuperuser } = useAuth();
   const favoritesContext = useFavorites();
-  const { favorites = [], viewHistory = [] } = favoritesContext ?? { favorites: [], viewHistory: [] };
+  const {
+    favorites = [],
+    viewHistory = [],
+    clearFavorites,
+    clearHistory,
+  } = favoritesContext ?? { favorites: [], viewHistory: [], clearFavorites: undefined, clearHistory: undefined };
   const colors = useThemedColors();
   const insets = useSafeAreaInsets();
   const { isPhone, isLargePhone, isTablet, isDesktop, isPortrait, width } = useResponsive();
@@ -203,6 +210,23 @@ export default function ProfileScreen() {
       // storage read is non-critical
     }
   }, []);
+
+  const handleDeleteMyTravel = useCallback(async (travelId: number) => {
+    try {
+      const ok = await confirmAction({
+        title: 'Удалить путешествие',
+        message: 'Удалить это путешествие?',
+        confirmText: 'Удалить',
+        cancelText: 'Отмена',
+      });
+      if (!ok) return;
+
+      await deleteTravel(travelId);
+      await loadTravels();
+    } catch (error) {
+      console.error('Error deleting travel:', error);
+    }
+  }, [loadTravels]);
 
   useEffect(() => {
     setStats((prev) => ({
@@ -308,12 +332,36 @@ export default function ProfileScreen() {
     else router.push('/settings');
   }, [router]);
 
-  const handlePressStat = useCallback((key: string) => {
-    if (key === 'views') setActiveTab('history');
-    else setActiveTab(key as ProfileTabKey);
-  }, []);
-
   const handleEdit = useCallback(() => router.push('/settings'), [router]);
+
+  const handleClearActiveTab = useCallback(async () => {
+    try {
+      if (activeTab === 'favorites') {
+        const ok = await confirmAction({
+          title: 'Очистить избранное',
+          message: 'Удалить все путешествия из избранного?',
+          confirmText: 'Очистить',
+          cancelText: 'Отмена',
+        });
+        if (!ok) return;
+        await clearFavorites?.();
+        return;
+      }
+
+      if (activeTab === 'history') {
+        const ok = await confirmAction({
+          title: 'Очистить историю',
+          message: 'Удалить всю историю просмотров?',
+          confirmText: 'Очистить',
+          cancelText: 'Отмена',
+        });
+        if (!ok) return;
+        await clearHistory?.();
+      }
+    } catch (error) {
+      console.error('Error clearing profile tab data:', error);
+    }
+  }, [activeTab, clearFavorites, clearHistory]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -384,6 +432,15 @@ export default function ProfileScreen() {
       marginTop: 16,
       gap: 12,
     },
+    tabActions: {
+      paddingHorizontal: contentPadding,
+      paddingTop: 12,
+      paddingBottom: 8,
+    },
+    tabActionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
   }), [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth]);
 
   const Header = useMemo(
@@ -404,7 +461,6 @@ export default function ProfileScreen() {
             avatarUploading={avatarUploading}
           />,
           <ProfileQuickActions key="profile-quick-actions" onPress={handleQuickAction} />,
-          <ProfileStats key="profile-stats" stats={stats} onPressStat={handlePressStat} />,
           <ProfileTabs
             key="profile-tabs"
             activeTab={activeTab}
@@ -415,6 +471,18 @@ export default function ProfileScreen() {
               history: stats.viewsCount,
             }}
           />,
+          (activeTab === 'favorites' || activeTab === 'history') && currentData.length > 0 ? (
+            <View key="profile-tab-actions" style={styles.tabActions}>
+              <View style={styles.tabActionsRow}>
+                <Button
+                  label="Очистить"
+                  onPress={handleClearActiveTab}
+                  variant="danger"
+                  size="sm"
+                />
+              </View>
+            </View>
+          ) : null,
         ]}
       </View>
     ),
@@ -429,8 +497,9 @@ export default function ProfileScreen() {
       avatarUploading,
       handleQuickAction,
       stats,
-      handlePressStat,
       activeTab,
+      currentData.length,
+      handleClearActiveTab,
     ]
   );
 
@@ -498,12 +567,10 @@ export default function ProfileScreen() {
           robots="noindex, nofollow"
         />,
         Platform.OS === 'web' ? (
-          <View
+          <ScrollView
             key="profile-web"
-            style={[
-              styles.listContent,
-              { paddingBottom: contentPaddingBottom },
-            ]}
+            style={{ flex: 1 }}
+            contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
           >
             {Header}
             {currentData.length === 0 ? (
@@ -543,6 +610,9 @@ export default function ProfileScreen() {
                             index={rowIndex * cols + itemIndex}
                             isMobile={isMobileDevice}
                             isFirst={rowIndex === 0 && itemIndex === 0}
+                            currentUserId={userId}
+                            isSuperuser={isSuperuser}
+                            onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
                           />
                         </View>
                       ))}
@@ -572,7 +642,7 @@ export default function ProfileScreen() {
                 );
               })
             )}
-          </View>
+          </ScrollView>
         ) : (
           <FlashList
             key={`profile-list-${gridColumns}`}
@@ -590,6 +660,9 @@ export default function ProfileScreen() {
                   index={index}
                   isMobile={isMobileDevice}
                   isFirst={index === 0}
+                  currentUserId={userId}
+                  isSuperuser={isSuperuser}
+                  onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
                 />
               );
             }}

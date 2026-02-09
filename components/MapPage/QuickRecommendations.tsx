@@ -81,67 +81,77 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
     return null;
   }
 
+  const cards = topPlaces.map((place, index) => (
+    <CardActionPressable
+      key={place.id ?? `place-${index}`}
+      style={({ pressed }) => [
+        styles.card,
+        Platform.OS === 'web' && styles.cardWeb,
+        pressed && styles.cardPressed,
+      ]}
+      onPress={() => onPlaceSelect(place)}
+      accessibilityLabel={`Открыть ${place.address || 'место'}`}
+    >
+      <View style={styles.cardHeader}>
+        <Text style={styles.placeName} numberOfLines={2}>{place.address}</Text>
+        {place.rating > 0 && (
+          <View style={styles.ratingBadge}>
+            <MapIcon name="star" size={14} color={colors.warning} />
+            <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.infoRow}>
+        <View style={styles.infoBadge}>
+          <MapIcon name="place" size={14} color={colors.primary} />
+          <Text style={styles.infoText}>{place.distanceText}</Text>
+        </View>
+        <View style={styles.infoBadge}>
+          <MapIcon
+            name={
+              transportMode === 'car'
+                ? 'directions-car'
+                : transportMode === 'bike'
+                ? 'directions-bike'
+                : 'directions-walk'
+            }
+            size={14}
+            color={colors.accent}
+          />
+          <Text style={styles.infoText}>{place.travelTimeText}</Text>
+        </View>
+      </View>
+
+      {place.categoryName && (
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryText} numberOfLines={1}>{place.categoryName.split(',')[0].trim()}</Text>
+        </View>
+      )}
+    </CardActionPressable>
+  ));
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <MapIcon name="star" size={20} color={colors.primary} />
         <Text style={styles.title}>Популярное рядом</Text>
       </View>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {topPlaces.map((place, index) => (
-          <CardActionPressable
-            key={place.id ?? `place-${index}`}
-            style={({ pressed }) => [
-              styles.card,
-              pressed && styles.cardPressed,
-            ]}
-            onPress={() => onPlaceSelect(place)}
-            accessibilityLabel={`Открыть ${place.address || 'место'}`}
-          >
-            <View style={styles.cardHeader}>
-              <Text style={styles.placeName} numberOfLines={2}>{place.address}</Text>
-              {place.rating > 0 && (
-                <View style={styles.ratingBadge}>
-                  <MapIcon name="star" size={14} color={colors.warning} />
-                  <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.infoRow}>
-              <View style={styles.infoBadge}>
-                <MapIcon name="place" size={14} color={colors.primary} />
-                <Text style={styles.infoText}>{place.distanceText}</Text>
-              </View>
-              <View style={styles.infoBadge}>
-                <MapIcon
-                  name={
-                    transportMode === 'car'
-                      ? 'directions-car'
-                      : transportMode === 'bike'
-                      ? 'directions-bike'
-                      : 'directions-walk'
-                  }
-                  size={14}
-                  color={colors.accent}
-                />
-                <Text style={styles.infoText}>{place.travelTimeText}</Text>
-              </View>
-            </View>
-
-            {place.categoryName && (
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText} numberOfLines={1}>{place.categoryName.split(',')[0].trim()}</Text>
-              </View>
-            )}
-          </CardActionPressable>
-        ))}
-      </ScrollView>
+      {Platform.OS === 'web' ? (
+        <View style={styles.webCards}>
+          {cards}
+        </View>
+      ) : (
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          nestedScrollEnabled={true}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {cards}
+        </ScrollView>
+      )}
     </View>
   );
 });
@@ -164,6 +174,10 @@ const getStyles = (colors: ThemedColors) =>
       fontWeight: '700',
       color: colors.text,
       letterSpacing: -0.3,
+    },
+    webCards: {
+      paddingHorizontal: 8,
+      gap: 12,
     },
     scrollContent: {
       paddingHorizontal: 8,
@@ -192,6 +206,9 @@ const getStyles = (colors: ThemedColors) =>
       ...colors.shadows.medium,
       borderWidth: 1,
       borderColor: colors.border,
+    },
+    cardWeb: {
+      width: '100%',
     },
     cardPressed: {
       opacity: 0.7,

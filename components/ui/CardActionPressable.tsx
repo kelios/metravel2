@@ -71,7 +71,6 @@ const CardActionPressable = ({
           'data-card-action': 'true',
         } as any)}
         onClick={activate}
-        onPress={activate}
         onKeyDown={(e: any) => {
           if (e?.key !== 'Enter' && e?.key !== ' ') return;
           activate(e);

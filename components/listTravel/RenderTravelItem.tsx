@@ -17,6 +17,7 @@ type RenderTravelItemProps = {
     index?: number;
     isMobile?: boolean;
     isSuperuser?: boolean;
+    currentUserId?: string | null;
     isMetravel?: boolean;
     onDeletePress?: (id: number) => void;
     isFirst?: boolean;
@@ -33,6 +34,7 @@ function RenderTravelItem({
                               index = 0,
                               isMobile = false,
                               isSuperuser,
+                              currentUserId,
                               isMetravel,
                               onDeletePress,
                               isFirst,
@@ -77,6 +79,7 @@ function RenderTravelItem({
         >
             <TravelListItem
                 travel={item}
+                currentUserId={currentUserId}
                 isSuperuser={isSuperuser}
                 isMetravel={isMetravel}
                 onDeletePress={onDeletePress}
@@ -111,6 +114,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     // 4. Редкие изменения (меняются только при resize или смене роли)
     if (prev.isMobile !== next.isMobile) return false;
     if (prev.isSuperuser !== next.isSuperuser) return false;
+    if (prev.currentUserId !== next.currentUserId) return false;
     
     // 5. Очень редкие изменения
     if (prev.isFirst !== next.isFirst) return false;
