@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useCallback, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, Text, ActivityIndicator } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import MapErrorBoundary from './MapErrorBoundary';
@@ -73,14 +73,8 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                onMapUiApiReady,
                                                onUserLocationChange,
 	                                           }) => {
-	    const [hydrated, setHydrated] = useState(false);
-    const isWeb = Platform.OS === 'web' && hydrated;
+	    const isWeb = Platform.OS === 'web';
     const themeColors = useThemedColors();
-
-    useEffect(() => {
-        if (Platform.OS !== 'web') return;
-        setHydrated(true);
-    }, []);
 
 	    // ✅ ИСПРАВЛЕНИЕ: Уникальный ключ для карты без недетерминированного SSR
     const [mapKeyVersion, setMapKeyVersion] = useState(0);

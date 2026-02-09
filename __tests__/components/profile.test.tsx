@@ -25,6 +25,48 @@ jest.mock('@/api/user', () => ({
     avatar: null,
   }),
   uploadUserProfileAvatarFile: jest.fn(),
+  normalizeAvatar: (raw: unknown) => {
+    const str = String(raw ?? '').trim();
+    if (!str) return null;
+    const lower = str.toLowerCase();
+    if (lower === 'null' || lower === 'undefined') return null;
+    return str;
+  },
+}));
+
+jest.mock('@/hooks/useUserProfile', () => ({
+  useUserProfile: () => ({
+    profile: {
+      id: '123',
+      first_name: 'Test',
+      last_name: 'User',
+      avatar: null,
+      youtube: '',
+      instagram: '',
+      twitter: '',
+      vk: '',
+      user: 123,
+    },
+    setProfile: jest.fn(),
+    isLoading: false,
+    loadProfile: jest.fn(),
+    syncAvatar: jest.fn(),
+    fullName: 'Test User',
+  }),
+}));
+
+jest.mock('@/hooks/useAvatarUpload', () => ({
+  useAvatarUpload: () => ({
+    avatarFile: null,
+    avatarPreviewUrl: '',
+    setAvatarPreviewUrl: jest.fn(),
+    isUploading: false,
+    pickAvatar: jest.fn(),
+    uploadAvatar: jest.fn(),
+    pickAndUpload: jest.fn(),
+    handleWebFileSelected: jest.fn(),
+    webFileInputRef: { current: null },
+  }),
 }));
 
 jest.mock('@/api/travelsApi', () => ({

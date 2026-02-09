@@ -115,6 +115,57 @@ export default function ProfileScreen() {
 
   const isLoading = profileLoading || travelsLoading;
 
+  const currentData = useMemo(() => {
+    switch (activeTab) {
+      case 'travels': return myTravels;
+      case 'favorites': return favorites;
+      case 'history': return viewHistory;
+      default: return [];
+    }
+  }, [activeTab, myTravels, favorites, viewHistory]);
+
+  const emptyStateProps = useMemo(() => {
+    switch (activeTab) {
+      case 'travels':
+        return {
+          title: 'Нет путешествий',
+          description: 'Вы еще не создали ни одного путешествия.',
+          action: { label: 'Создать', onPress: () => router.push('/metravel') },
+        };
+      case 'favorites':
+        return {
+          title: 'Нет избранного',
+          description: 'Добавляйте интересные маршруты в избранное.',
+          action: { label: 'Найти', onPress: () => router.push('/travelsby') },
+        };
+      case 'history':
+        return {
+          title: 'История пуста',
+          description: 'История просмотров появится здесь.',
+          action: { label: 'Смотреть', onPress: () => router.push('/travelsby') },
+        };
+      default: return { title: 'Пусто', description: '' };
+    }
+  }, [activeTab, router]);
+
+  const displayName = useMemo(
+    () => (fullName || userInfo.name || 'Пользователь').trim(),
+    [fullName, userInfo.name],
+  );
+
+  const handleQuickAction = useCallback((key: string) => {
+    if (key === 'messages') router.push('/messages');
+    else if (key === 'subscriptions') router.push('/subscriptions');
+    else router.push('/settings');
+  }, [router]);
+
+  const handlePressStat = useCallback((key: string) => {
+    if (key === 'views') setActiveTab('history');
+    else setActiveTab(key as ProfileTabKey);
+  }, []);
+
+  const handleEdit = useCallback(() => router.push('/settings'), [router]);
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
@@ -164,6 +215,42 @@ export default function ProfileScreen() {
       gap: 12,
     },
   }), [colors]);
+
+  const ItemSeparator = useCallback(() => <View style={styles.separator} />, [styles.separator]);
+
+  const Header = useMemo(() => (
+      <View style={styles.headerComponent}>
+        <ProfileHeader
+            user={{
+                name: displayName,
+                email: userInfo.email,
+                avatar: profile?.avatar,
+            }}
+            profile={profile}
+            onEdit={handleEdit}
+            onLogout={handleLogout}
+            onAvatarUpload={pickAndUpload}
+            avatarUploading={avatarUploading}
+        />
+
+        <ProfileQuickActions onPress={handleQuickAction} />
+
+        <ProfileStats
+            stats={stats}
+            onPressStat={handlePressStat}
+        />
+
+        <ProfileTabs
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            counts={{
+              travels: stats.travelsCount,
+              favorites: stats.favoritesCount,
+              history: stats.viewsCount,
+            }}
+        />
+      </View>
+  ), [styles, displayName, userInfo.email, profile, handleEdit, handleLogout, pickAndUpload, avatarUploading, handleQuickAction, stats, handlePressStat, activeTab]);
 
   if (!authReady) {
     return (
@@ -216,93 +303,6 @@ export default function ProfileScreen() {
       </SafeAreaView>
     );
   }
-
-  const currentData = useMemo(() => {
-    switch (activeTab) {
-      case 'travels': return myTravels;
-      case 'favorites': return favorites;
-      case 'history': return viewHistory;
-      default: return [];
-    }
-  }, [activeTab, myTravels, favorites, viewHistory]);
-
-  const emptyStateProps = useMemo(() => {
-    switch (activeTab) {
-      case 'travels':
-        return {
-          title: 'Нет путешествий',
-          description: 'Вы еще не создали ни одного путешествия.',
-          action: { label: 'Создать', onPress: () => router.push('/metravel') },
-        };
-      case 'favorites':
-        return {
-          title: 'Нет избранного',
-          description: 'Добавляйте интересные маршруты в избранное.',
-          action: { label: 'Найти', onPress: () => router.push('/travelsby') },
-        };
-      case 'history':
-        return {
-          title: 'История пуста',
-          description: 'История просмотров появится здесь.',
-          action: { label: 'Смотреть', onPress: () => router.push('/travelsby') },
-        };
-      default: return { title: 'Пусто', description: '' };
-    }
-  }, [activeTab, router]);
-
-  const displayName = useMemo(
-    () => (fullName || userInfo.name || 'Пользователь').trim(),
-    [fullName, userInfo.name],
-  );
-
-  const handleQuickAction = useCallback((key: string) => {
-    if (key === 'messages') router.push('/messages');
-    else if (key === 'subscriptions') router.push('/subscriptions');
-    else router.push('/settings');
-  }, [router]);
-
-  const handlePressStat = useCallback((key: string) => {
-    if (key === 'views') setActiveTab('history');
-    else setActiveTab(key as ProfileTabKey);
-  }, []);
-
-  const handleEdit = useCallback(() => router.push('/settings'), [router]);
-
-  const ItemSeparator = useCallback(() => <View style={styles.separator} />, [styles.separator]);
-
-  const Header = useMemo(() => (
-      <View style={styles.headerComponent}>
-        <ProfileHeader
-            user={{
-                name: displayName,
-                email: userInfo.email,
-                avatar: profile?.avatar,
-            }}
-            profile={profile}
-            onEdit={handleEdit}
-            onLogout={handleLogout}
-            onAvatarUpload={pickAndUpload}
-            avatarUploading={avatarUploading}
-        />
-
-        <ProfileQuickActions onPress={handleQuickAction} />
-
-        <ProfileStats
-            stats={stats}
-            onPressStat={handlePressStat}
-        />
-
-        <ProfileTabs
-            activeTab={activeTab}
-            onChangeTab={setActiveTab}
-            counts={{
-              travels: stats.travelsCount,
-              favorites: stats.favoritesCount,
-              history: stats.viewsCount,
-            }}
-        />
-      </View>
-  ), [styles, displayName, userInfo.email, profile, handleEdit, handleLogout, pickAndUpload, avatarUploading, handleQuickAction, stats, handlePressStat, activeTab]);
 
   return (
     <SafeAreaView style={styles.container}>

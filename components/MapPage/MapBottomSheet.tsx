@@ -137,7 +137,9 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     );
 
     if (Platform.OS === 'web') {
-      const sheetMaxHeight = sheetIndex < 0 ? 0 : sheetIndex === 0 ? '70vh' : '80vh';
+      const isCollapsed = sheetIndex < 0;
+      const hasPeek = isCollapsed && !!peekContent;
+      const sheetMaxHeight = isCollapsed ? (hasPeek ? '40vh' : 0) : sheetIndex === 0 ? '70vh' : '80vh';
 
       return (
         <View
@@ -145,7 +147,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
             styles.webRoot,
             {
               // @ts-ignore: web-only style
-              height: (sheetIndex < 0 ? 0 : 'auto') as any,
+              height: (isCollapsed && !hasPeek ? 0 : 'auto') as any,
               // @ts-ignore: web-only style
               maxHeight: sheetMaxHeight as any,
               bottom: bottomInset,
@@ -181,7 +183,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           )}
 
           <View style={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}>
-            {sheetIndex < 0 ? peekContent : children}
+            {isCollapsed ? peekContent : children}
           </View>
         </View>
       );

@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Pressable, Platform, ScrollView, TextInput, ActivityIndicator, Image } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 
 import { useAuth } from '@/context/AuthContext';
 import { buildLoginHref } from '@/utils/authNavigation';
@@ -12,18 +11,19 @@ import Button from '@/components/ui/Button';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/utils/confirmAction';
-import { fetchUserProfile, updateUserProfile, uploadUserProfileAvatarFile, type UpdateUserProfilePayload, type UploadUserProfileAvatarFile, type UserProfileDto } from '@/api/user';
+import { normalizeAvatar, updateUserProfile, type UpdateUserProfilePayload } from '@/api/user';
 import { ApiError } from '@/api/client';
-import { removeStorageBatch, setStorageBatch } from '@/utils/storageBatch';
 import { Theme, useTheme, useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 
 export default function SettingsScreen() {
     const router = useRouter();
-    const { isAuthenticated, authReady, logout, username, userId, triggerProfileRefresh, setUserAvatar } = useAuth();
+    const { isAuthenticated, authReady, logout, username, userId } = useAuth();
     const isWeb = Platform.OS === 'web';
     const favoritesContext = useFavorites();
     const { theme, setTheme } = useTheme();
@@ -36,10 +36,19 @@ export default function SettingsScreen() {
         viewHistory = [],
     } = favoritesContext ?? {};
 
-    const [profile, setProfile] = useState<UserProfileDto | null>(null);
-    const [profileLoading, setProfileLoading] = useState(false);
+    const { profile, setProfile, isLoading: profileLoading, loadProfile, fullName } = useUserProfile();
+    const {
+        avatarFile,
+        avatarPreviewUrl,
+        setAvatarPreviewUrl,
+        isUploading: avatarSaving,
+        pickAvatar,
+        uploadAvatar,
+        handleWebFileSelected,
+        webFileInputRef,
+    } = useAvatarUpload({ onSuccess: (updated) => setProfile(updated) });
+
     const [profileSaving, setProfileSaving] = useState(false);
-    const [avatarSaving, setAvatarSaving] = useState(false);
 
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -47,23 +56,14 @@ export default function SettingsScreen() {
     const [instagram, setInstagram] = useState('');
     const [twitter, setTwitter] = useState('');
     const [vk, setVk] = useState('');
-    const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string>('');
-    const [avatarFile, setAvatarFile] = useState<UploadUserProfileAvatarFile | null>(null);
     const [settingsAvatarError, setSettingsAvatarError] = useState(false);
-    const webFileInputRef = useRef<any>(null);
-
-    const cleanText = useCallback((value: unknown) => {
-        const v = String(value ?? '').trim();
-        if (!v) return '';
-        const lower = v.toLowerCase();
-        if (lower === 'null' || lower === 'undefined') return '';
-        return v;
-    }, []);
 
     const derivedDisplayName = useMemo(() => {
-        const full = `${cleanText(firstName)} ${cleanText(lastName)}`.trim();
+        const first = normalizeAvatar(firstName) ?? '';
+        const last = normalizeAvatar(lastName) ?? '';
+        const full = `${first} ${last}`.trim();
         return full || username || 'Пользователь';
-    }, [cleanText, firstName, lastName, username]);
+    }, [firstName, lastName, username]);
 
     const themeOptions = useMemo(
         () => [
@@ -91,57 +91,28 @@ export default function SettingsScreen() {
 
     const hasUnsavedChanges = useMemo(() => {
         if (!profile) return false;
-        const normalize = (v: unknown) => String(v ?? '').trim();
+        const norm = (v: unknown) => String(v ?? '').trim();
         return (
-            normalize(firstName) !== normalize(profile.first_name) ||
-            normalize(lastName) !== normalize(profile.last_name) ||
-            normalize(youtube) !== normalize(profile.youtube) ||
-            normalize(instagram) !== normalize(profile.instagram) ||
-            normalize(twitter) !== normalize(profile.twitter) ||
-            normalize(vk) !== normalize(profile.vk)
+            norm(firstName) !== norm(profile.first_name) ||
+            norm(lastName) !== norm(profile.last_name) ||
+            norm(youtube) !== norm(profile.youtube) ||
+            norm(instagram) !== norm(profile.instagram) ||
+            norm(twitter) !== norm(profile.twitter) ||
+            norm(vk) !== norm(profile.vk)
         );
     }, [firstName, instagram, lastName, profile, twitter, vk, youtube]);
 
-    const loadProfile = useCallback(async () => {
-        if (!userId) return;
-        setProfileLoading(true);
-        try {
-            const data = await fetchUserProfile(userId);
-            setProfile(data);
-            setFirstName(cleanText(data.first_name));
-            setLastName(cleanText(data.last_name));
-            setYoutube(data.youtube || '');
-            setInstagram(data.instagram || '');
-            setTwitter(data.twitter || '');
-            setVk(data.vk || '');
-            setAvatarPreviewUrl(data.avatar || '');
-            setAvatarFile(null);
-
-            // Sync avatar to auth store & storage so header always shows it
-            const rawAvatar = String(data.avatar ?? '').trim();
-            const lowerAvatar = rawAvatar.toLowerCase();
-            const normalizedAvatar =
-                rawAvatar && lowerAvatar !== 'null' && lowerAvatar !== 'undefined'
-                    ? rawAvatar
-                    : null;
-            setUserAvatar(normalizedAvatar);
-            if (normalizedAvatar) {
-                setStorageBatch([['userAvatar', normalizedAvatar]]).catch(() => undefined);
-            } else {
-                removeStorageBatch(['userAvatar']).catch(() => undefined);
-            }
-        } catch (error) {
-            const message = error instanceof ApiError ? error.message : 'Не удалось загрузить профиль';
-            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
-        } finally {
-            setProfileLoading(false);
-        }
-    }, [cleanText, setUserAvatar, userId]);
-
-    useEffect(() => {
-        if (!isAuthenticated) return;
-        loadProfile();
-    }, [isAuthenticated, loadProfile]);
+    // Sync form fields when profile loads
+    React.useEffect(() => {
+        if (!profile) return;
+        setFirstName(normalizeAvatar(profile.first_name) ?? '');
+        setLastName(normalizeAvatar(profile.last_name) ?? '');
+        setYoutube(profile.youtube || '');
+        setInstagram(profile.instagram || '');
+        setTwitter(profile.twitter || '');
+        setVk(profile.vk || '');
+        setAvatarPreviewUrl(profile.avatar || '');
+    }, [profile, setAvatarPreviewUrl]);
 
     const handleSaveProfile = useCallback(async () => {
         if (!userId) return;
@@ -165,93 +136,6 @@ export default function SettingsScreen() {
             setProfileSaving(false);
         }
     }, [firstName, instagram, lastName, twitter, userId, vk, youtube]);
-
-    const handlePickAvatar = useCallback(async () => {
-        try {
-            if (Platform.OS === 'web') {
-                if (webFileInputRef.current && typeof webFileInputRef.current.click === 'function') {
-                    webFileInputRef.current.click();
-                }
-                return;
-            }
-
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (status !== 'granted') {
-                showToast({ type: 'warning', text1: 'Разрешение', text2: 'Нужен доступ к галерее', visibilityTime: 3000 });
-                return;
-            }
-
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                quality: 0.85,
-                allowsMultipleSelection: false,
-            });
-
-            if (!result.canceled && result.assets[0]) {
-                const asset = result.assets[0];
-                const file: UploadUserProfileAvatarFile = {
-                    uri: asset.uri,
-                    name: asset.fileName || `avatar_${Date.now()}.jpg`,
-                    type: asset.type === 'image' ? 'image/jpeg' : 'image/jpeg',
-                };
-                setAvatarFile(file);
-                setAvatarPreviewUrl(asset.uri);
-            }
-        } catch {
-            showToast({ type: 'error', text1: 'Ошибка', text2: 'Не удалось выбрать изображение', visibilityTime: 3000 });
-        }
-    }, []);
-
-    const handleWebAvatarSelected = useCallback((e: any) => {
-        const file = e?.target?.files?.[0];
-        if (!file) return;
-        setAvatarFile(file);
-        try {
-            const url = URL.createObjectURL(file);
-            setAvatarPreviewUrl(url);
-        } catch {
-            setAvatarPreviewUrl('');
-        }
-    }, []);
-
-    const handleUploadAvatar = useCallback(async () => {
-        if (!userId) return;
-        if (!avatarFile) {
-            showToast({ type: 'warning', text1: 'Выберите изображение', text2: 'Сначала выберите фото для аватара', visibilityTime: 3000 });
-            return;
-        }
-
-        setAvatarSaving(true);
-        try {
-            const saved = await uploadUserProfileAvatarFile(userId, avatarFile);
-            setProfile(saved);
-            setAvatarPreviewUrl(saved.avatar || avatarPreviewUrl);
-            setAvatarFile(null);
-
-            const rawAvatar = String((saved as any)?.avatar ?? '').trim();
-            const lowerAvatar = rawAvatar.toLowerCase();
-            const normalizedAvatar =
-                rawAvatar && lowerAvatar !== 'null' && lowerAvatar !== 'undefined'
-                    ? rawAvatar
-                    : null;
-
-            setUserAvatar(normalizedAvatar);
-            if (normalizedAvatar) {
-                await setStorageBatch([['userAvatar', normalizedAvatar]]);
-            } else {
-                await removeStorageBatch(['userAvatar']);
-            }
-
-            triggerProfileRefresh();
-            showToast({ type: 'success', text1: 'Аватар обновлён', visibilityTime: 3000 });
-        } catch (error) {
-            const message = error instanceof ApiError ? error.message : 'Не удалось обновить аватар';
-            showToast({ type: 'error', text1: 'Ошибка', text2: message, visibilityTime: 4000 });
-        } finally {
-            setAvatarSaving(false);
-        }
-    }, [avatarFile, avatarPreviewUrl, setUserAvatar, triggerProfileRefresh, userId]);
 
     const handleLogout = useCallback(async () => {
         try {
@@ -518,7 +402,7 @@ export default function SettingsScreen() {
                                     <View style={styles.avatarPickerButtons}>
                                         <Button
                                             label="Выбрать"
-                                            onPress={handlePickAvatar}
+                                            onPress={pickAvatar}
                                             disabled={profileLoading || avatarSaving}
                                             fullWidth={!isWeb}
                                             variant="secondary"
@@ -527,7 +411,7 @@ export default function SettingsScreen() {
                                         />
                                         <Button
                                             label={avatarSaving ? 'Загрузка…' : 'Загрузить'}
-                                            onPress={handleUploadAvatar}
+                                            onPress={() => uploadAvatar()}
                                             disabled={profileLoading || avatarSaving || !avatarFile}
                                             loading={avatarSaving}
                                             fullWidth={!isWeb}
@@ -544,7 +428,7 @@ export default function SettingsScreen() {
                                                 ref: webFileInputRef,
                                                 type: 'file',
                                                 accept: 'image/*',
-                                                onChange: handleWebAvatarSelected,
+                                                onChange: handleWebFileSelected,
                                             }) as any)
                                         }
                                     </View>

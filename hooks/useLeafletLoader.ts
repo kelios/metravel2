@@ -263,7 +263,10 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
   const [RL, setRL] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [shouldLoad, setShouldLoad] = useState(isTestEnv);
+  // When idle callback is disabled and delay is 0, start loading immediately (no extra render cycle).
+  const [shouldLoad, setShouldLoad] = useState(
+    isTestEnv || (enabled && Platform.OS === 'web' && !useIdleCallback && fallbackDelay === 0)
+  );
 
   // Ensure Leaflet CSS is present ASAP (before JS is loaded) to avoid controls/attribution layout glitches.
   useEffect(() => {

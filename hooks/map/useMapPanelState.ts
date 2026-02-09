@@ -61,7 +61,8 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
   const { isPanelVisible, openPanel, closePanel, panelStyle, overlayStyle } = usePanelController(isMobile);
 
   const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
-  const [mapReady, setMapReady] = useState(false);
+  // On web, start map loading immediately — no need for rAF delay.
+  const [mapReady, setMapReady] = useState(Platform.OS === 'web');
 
   // Desktop panel collapse (persisted)
   const [isDesktopCollapsed, setDesktopCollapsed] = useState(() => readPanelCollapsed());

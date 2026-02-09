@@ -29,6 +29,13 @@ jest.mock('@/utils/storageBatch', () => ({
 
 jest.mock('@/api/user', () => ({
   fetchUserProfile: jest.fn(),
+  normalizeAvatar: (raw: unknown) => {
+    const str = String(raw ?? '').trim();
+    if (!str) return null;
+    const lower = str.toLowerCase();
+    if (lower === 'null' || lower === 'undefined') return null;
+    return str;
+  },
 }));
 
 const TestComponent: React.FC<{ onContext?: (ctx: any) => void }> = ({ onContext }) => {

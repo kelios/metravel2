@@ -7,29 +7,15 @@ import { ensureLeafletCss } from '@/utils/ensureLeafletCss'
 const MapScreenImpl = React.lazy(() => import('@/screens/tabs/MapScreen'))
 
 export default function MapScreen() {
-  const [hydrated, setHydrated] = useState(false)
-  const [shouldLoadMap, setShouldLoadMap] = useState(false)
+  const [hydrated, setHydrated] = useState(Platform.OS !== 'web')
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-
     ensureLeafletCss()
-
     setHydrated(true)
-
-    const load = () => setShouldLoadMap(true)
-    try {
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        ;(window as any).requestIdleCallback(load, { timeout: 3000 })
-      } else {
-        setTimeout(load, 1500)
-      }
-    } catch {
-      setTimeout(load, 1500)
-    }
   }, [])
 
-  if (Platform.OS === 'web' && (!hydrated || !shouldLoadMap)) {
+  if (!hydrated) {
     return <MapPageSkeleton />
   }
 
