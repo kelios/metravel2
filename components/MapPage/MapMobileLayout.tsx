@@ -5,6 +5,7 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect, useTransition } from 'react';
 import { View, StyleSheet, Platform, InteractionManager } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { usePathname } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import MapBottomSheet, { type MapBottomSheetRef } from './MapBottomSheet';
 import { MapPeekPreview } from './MapPeekPreview';
@@ -58,6 +59,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
+  const pathname = usePathname();
+  const isActiveWebRoute = Platform.OS === 'web' && (pathname === '/map' || String(pathname).startsWith('/map/'));
 
   const [uiTab, setUiTab] = useState<'list' | 'filters'>('list');
   const [contentTab, setContentTab] = useState<'list' | 'filters'>('list');
@@ -69,6 +72,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   // Синхронизация состояния Bottom Sheet с глобальным store
   const setBottomSheetState = useBottomSheetStore((s) => s.setState);
+  const bottomSheetState = useBottomSheetStore((s) => s.state);
 
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'quarter' | 'half' | 'full') => {
     sheetStateRef.current = state;
@@ -115,6 +119,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     buildRouteTo(place);
     bottomSheetRef.current?.snapToCollapsed();
   }, [buildRouteTo]);
+
+  const handleOpenList = useCallback(() => {
+    setTabDeferred('list');
+    bottomSheetRef.current?.snapToHalf();
+  }, [setTabDeferred]);
 
   const filtersMode: 'radius' | 'route' | undefined = filtersPanelProps?.props?.mode;
   const setFiltersMode: ((m: 'radius' | 'route') => void) | undefined = filtersPanelProps?.props?.setMode;
@@ -163,6 +172,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           value={filtersMode}
           onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
           compact={true}
+          tone="subtle"
           accessibilityLabel="Выбор режима поиска"
         />
 
@@ -198,6 +208,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     routingLoading,
     routeCtaLabel,
   ]);
+
+  const sheetPeekContent = Platform.OS === 'web' ? null : peekContent;
 
   // Content based on active tab
   const sheetContent = useMemo(() => {
@@ -257,6 +269,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                 bottomSheetRef.current?.snapToHalf();
               }}
               compact={true}
+              tone="subtle"
               accessibilityLabel="Переключение между фильтрами и списком"
             />
           </View>
@@ -271,6 +284,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
                 value={filtersMode}
                 onChange={(key) => setFiltersMode(key as 'radius' | 'route')}
                 compact={true}
+                tone="subtle"
                 accessibilityLabel="Выбор режима поиска"
               />
             </View>
@@ -280,12 +294,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             <IconButton
               testID="map-panel-reset"
               icon={<Feather name="rotate-cw" size={18} color={colors.textMuted} />}
-              label="Сбросить фильтры"
+              label="Сбросить"
               size="sm"
+              showLabel={true}
               onPress={() => {
                 filtersPanelProps?.props?.resetFilters?.();
               }}
-              style={styles.sheetIconButton}
+              style={styles.sheetResetButton}
             />
           )}
         </View>
@@ -306,7 +321,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     onToggleFavorite,
     setTabDeferred,
     setFiltersMode,
-    styles.sheetIconButton,
+    styles.sheetResetButton,
     styles.sheetToolbarLeft,
     styles.sheetToolbarRight,
     styles.sheetBody,
@@ -320,25 +335,36 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
 
   return (
-    <GestureHandlerRootView style={styles.container} testID="map-mobile-layout">
+    <GestureHandlerRootView
+      style={styles.container}
+      testID="map-mobile-layout"
+      {...(isActiveWebRoute ? ({ 'data-active': 'true' } as any) : null)}
+    >
       {/* Map */}
       <View style={styles.mapContainer}>
         {mapComponent}
       </View>
 
       {/* FAB for mobile web */}
-      {Platform.OS === 'web' && (
+      {Platform.OS === 'web' && bottomSheetState === 'collapsed' && (
         <MapFAB
           mainAction={{
             icon: 'my-location',
             label: 'Моё местоположение',
             onPress: onCenterOnUser,
           }}
-          actions={[{
-            icon: 'filter-list',
-            label: 'Открыть фильтры',
-            onPress: onOpenFilters,
-          }]}
+          actions={[
+            {
+              icon: 'list',
+              label: 'Открыть список',
+              onPress: handleOpenList,
+            },
+            {
+              icon: 'filter-list',
+              label: 'Открыть фильтры',
+              onPress: onOpenFilters,
+            },
+          ]}
           position="bottom-right"
           containerStyle={styles.fab}
           mainActionTestID="map-mobile-fab"
@@ -348,7 +374,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
       {/* Bottom Sheet */}
       <MapBottomSheet
         ref={bottomSheetRef}
-        peekContent={peekContent}
+        peekContent={sheetPeekContent}
         onStateChange={handleSheetStateChange}
         bottomInset={0}
       >
@@ -386,37 +412,81 @@ const getStyles = (colors: ThemedColors) =>
     sheetToolbar: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
-      maxHeight: 48,
-      paddingVertical: 4,
-      paddingHorizontal: 4,
+      gap: 6,
+      maxHeight: 44,
+      paddingVertical: 2,
+      paddingHorizontal: 2,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomColor: colors.borderLight,
+      ...Platform.select({
+        web: {
+          flexDirection: 'column',
+          alignItems: 'stretch',
+          maxHeight: 112,
+          paddingVertical: 8,
+          paddingHorizontal: 8,
+        },
+      }),
     },
     sheetToolbarLeft: {
       flex: 1,
       minWidth: 0,
+      ...Platform.select({
+        web: {
+          flex: 0,
+          width: '100%',
+        },
+      }),
     },
     sheetToolbarRight: {
       flex: 1,
       minWidth: 0,
+      ...Platform.select({
+        web: {
+          flex: 0,
+          width: '100%',
+        },
+      }),
     },
     sheetIconButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 10,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surface,
+      borderColor: colors.borderLight,
+      backgroundColor: 'transparent',
       flexShrink: 0,
       marginHorizontal: 0,
       shadowColor: 'transparent',
       shadowOpacity: 0,
       shadowRadius: 0,
       elevation: 0,
+      ...Platform.select({
+        web: {
+          alignSelf: 'flex-end',
+        },
+      }),
       ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
+    },
+    sheetResetButton: {
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: 'transparent',
+      marginHorizontal: 0,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...Platform.select({
+        web: {
+          alignSelf: 'flex-end',
+          boxShadow: 'none',
+        } as any,
+      }),
     },
     sheetBody: {
       flex: 1,

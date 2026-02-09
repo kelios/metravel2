@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import MapIcon from './MapIcon';
 import MapLegend from '@/components/MapPage/MapLegend';
-import QuickActions from '@/components/MapPage/QuickActions';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { WEB_MAP_BASE_LAYERS, WEB_MAP_OVERLAY_LAYERS } from '@/config/mapWebLayers';
@@ -11,6 +10,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import IconButton from '@/components/ui/IconButton';
 import Chip from '@/components/ui/Chip';
+import { Toggle } from '@/components/ui/Toggle';
 
 const OSM_POI_CATEGORIES = [
   'Достопримечательности',
@@ -53,12 +53,9 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
   isMobile,
   mode,
   mapUiApi,
-  totalPoints,
-  hasFilters,
+  totalPoints: _totalPoints,
+  hasFilters: _hasFilters,
   canBuildRoute,
-  onReset,
-  hideReset,
-  onOpenList,
   showLegend = true,
   showLayers = true,
   showBaseLayer,
@@ -98,6 +95,8 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
 
   const resolvedShowBaseLayer = showBaseLayer ?? showLayers;
   const resolvedShowOverlays = showOverlays ?? showLayers;
+
+  const shouldShowBaseLayerSelector = resolvedShowBaseLayer && WEB_MAP_BASE_LAYERS.length > 1;
 
   useEffect(() => {
     if (!mapUiApi) return;
@@ -200,10 +199,10 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
         </View>
       ) : null}
 
-      {resolvedShowBaseLayer ? (
+      {shouldShowBaseLayerSelector ? (
         <>
           <View style={styles.mapLayersSection}>
-            <Text style={styles.sectionLabel}>Слой карты</Text>
+            <Text style={styles.mapLayersLabel}>Слой карты</Text>
             <View style={styles.mapLayersRow}>
               {WEB_MAP_BASE_LAYERS.map((l) => {
                 const active = selectedBaseLayerId === l.id;
@@ -212,6 +211,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
                     key={l.id}
                     label={l.title}
                     selected={active}
+                    style={[styles.mapLayerChip, active && styles.mapLayerChipSelected]}
                     disabled={!mapUiApi}
                     onPress={() => {
                       setSelectedBaseLayerId(l.id);
@@ -229,22 +229,43 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       {resolvedShowOverlays ? (
         <>
           <View style={styles.mapLayersSection}>
-            <Text style={styles.sectionLabel}>Оверлеи</Text>
-            <View style={styles.mapLayersRow}>
+            <Text style={styles.mapLayersLabel}>Оверлеи</Text>
+            <View style={styles.mapToggleList}>
               {availableOverlays.map((o) => {
                 const enabled = Boolean(enabledOverlays[o.id]);
                 return (
-                  <Chip
+                  <Pressable
                     key={o.id}
-                    label={o.title}
-                    selected={enabled}
+                    testID={`map-overlay-${o.id}`}
                     disabled={!mapUiApi}
                     onPress={() => {
                       const next = !enabled;
                       setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
                       safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(o.id, next));
                     }}
-                  />
+                    accessibilityRole="switch"
+                    accessibilityLabel={o.title}
+                    accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
+                    style={({ pressed }) => [
+                      styles.mapToggleRow,
+                      pressed && mapUiApi && styles.mapToggleRowPressed,
+                      !mapUiApi && styles.mapToggleRowDisabled,
+                    ]}
+                  >
+                    <Text style={styles.mapToggleText} numberOfLines={2}>
+                      {o.title}
+                    </Text>
+                    <Toggle
+                      value={enabled}
+                      onValueChange={() => {
+                        if (!mapUiApi) return;
+                        const next = !enabled;
+                        setEnabledOverlays((prev) => ({ ...prev, [o.id]: next }));
+                        safeMapUiCall(() => mapUiApi?.setOverlayEnabled?.(o.id, next));
+                      }}
+                      disabled={!mapUiApi}
+                    />
+                  </Pressable>
                 );
               })}
             </View>
@@ -252,24 +273,48 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
 
           {osmPoiEnabled && typeof mapUiApi?.setOsmPoiCategories === 'function' && (
             <View style={styles.mapLayersSection}>
-              <Text style={styles.sectionLabel}>OSM: категории</Text>
-              <View style={styles.mapLayersRow}>
+              <Text style={styles.mapLayersLabel}>OSM: категории</Text>
+              <View style={styles.mapToggleList}>
                 {OSM_POI_CATEGORIES.map((cat) => {
                   const enabled = osmPoiCategories.includes(cat);
                   return (
-                    <Chip
+                    <Pressable
                       key={cat}
-                      label={cat}
-                      selected={enabled}
+                      testID={`map-osm-category-${cat}`}
                       disabled={!mapUiApi}
                       onPress={() => {
+                        if (!mapUiApi) return;
                         setOsmPoiCategories((prev) => {
                           const next = prev.includes(cat) ? prev.filter((x) => x !== cat) : [...prev, cat];
                           safeMapUiCall(() => mapUiApi?.setOsmPoiCategories?.(next));
                           return next;
                         });
                       }}
-                    />
+                      accessibilityRole="switch"
+                      accessibilityLabel={cat}
+                      accessibilityState={{ checked: enabled, disabled: !mapUiApi }}
+                      style={({ pressed }) => [
+                        styles.mapToggleRow,
+                        pressed && mapUiApi && styles.mapToggleRowPressed,
+                        !mapUiApi && styles.mapToggleRowDisabled,
+                      ]}
+                    >
+                      <Text style={styles.mapToggleText} numberOfLines={1}>
+                        {cat}
+                      </Text>
+                      <Toggle
+                        value={enabled}
+                        onValueChange={() => {
+                          if (!mapUiApi) return;
+                          setOsmPoiCategories((prev) => {
+                            const next = prev.includes(cat) ? prev.filter((x) => x !== cat) : [...prev, cat];
+                            safeMapUiCall(() => mapUiApi?.setOsmPoiCategories?.(next));
+                            return next;
+                          });
+                        }}
+                        disabled={!mapUiApi}
+                      />
+                    </Pressable>
                   );
                 })}
               </View>
@@ -278,20 +323,6 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
         </>
       ) : null}
 
-      <QuickActions
-        onReset={mode === 'radius' && hasFilters ? onReset : undefined}
-        hideReset={Boolean(hideReset)}
-        onFitBounds={
-          totalPoints > 0 && mapUiApi
-            ? () => {
-                safeMapUiCall(mapUiApi?.fitToResults);
-                onOpenList?.();
-              }
-            : undefined
-        }
-        totalPoints={totalPoints}
-        hasFilters={hasFilters}
-      />
     </>
   );
 
@@ -305,6 +336,7 @@ const FiltersPanelMapSettings: React.FC<FiltersPanelMapSettingsProps> = ({
       title="Настройки карты"
       icon="sliders"
       defaultOpen={false}
+      tone={isMobile ? 'flat' : 'default'}
     >
       {body}
     </CollapsibleSection>

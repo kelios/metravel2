@@ -84,7 +84,7 @@ const createQueryClient = () =>
     },
   });
 
-const renderWithTheme = (ui: React.ReactNode, contextProps = defaultProps) => {
+const renderWithTheme = (ui: React.ReactNode, contextProps: any = defaultProps) => {
   const queryClient = createQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
@@ -376,7 +376,7 @@ describe('FiltersPanel', () => {
       capabilities: { canCenterOnUser: true, canFitToResults: true, canExportRoute: false },
     };
 
-    const { getByTestId, getByLabelText } = renderWithTheme(
+    const { getByTestId } = renderWithTheme(
       <FiltersPanel />, {...defaultProps, mapUiApi: mapUiApi as any}
     );
 
@@ -387,13 +387,13 @@ describe('FiltersPanel', () => {
     }
 
     await waitFor(() => {
-      expect(getByLabelText('Маршруты (Waymarked Trails: hiking)')).toBeTruthy();
+      expect(getByTestId('map-overlay-waymarked-hiking')).toBeTruthy();
     });
 
-    fireEvent.press(getByLabelText('Маршруты (Waymarked Trails: hiking)'));
+    fireEvent.press(getByTestId('map-overlay-waymarked-hiking'));
     expect(mapUiApi.setOverlayEnabled).toHaveBeenCalledWith('waymarked-hiking', true);
 
-    fireEvent.press(getByLabelText('Маршруты (Waymarked Trails: cycling)'));
+    fireEvent.press(getByTestId('map-overlay-waymarked-cycling'));
     expect(mapUiApi.setOverlayEnabled).toHaveBeenCalledWith('waymarked-cycling', true);
   });
 });

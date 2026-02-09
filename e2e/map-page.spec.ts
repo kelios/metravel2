@@ -232,8 +232,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     }
 
     // Turn on one tile overlay.
-    const overlayChip = page.getByText('Маршруты (Waymarked Trails: hiking)', { exact: true });
-    const overlayVisible = await overlayChip.isVisible({ timeout: 10_000 }).catch(() => false);
+    const overlayRow = page.getByTestId('map-overlay-waymarked-hiking');
+    const overlayFallback = page.getByText('Маршруты (Waymarked Trails: hiking)', { exact: true });
+    const overlayVisible = await overlayRow.isVisible({ timeout: 10_000 }).catch(async () => {
+      return overlayFallback.isVisible({ timeout: 10_000 }).catch(() => false);
+    });
     if (!overlayVisible) return;
 
     const overlayRequest = page
@@ -246,7 +249,11 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       }, { timeout: 30_000 })
       .catch(() => null);
 
-    await overlayChip.click({ force: true });
+    if (await overlayRow.isVisible().catch(() => false)) {
+      await overlayRow.click({ force: true });
+    } else {
+      await overlayFallback.click({ force: true });
+    }
 
     // Assert we attempted to fetch overlay tiles and attribution contains provider.
     await overlayRequest;

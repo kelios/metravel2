@@ -33,23 +33,17 @@ export function ProfileStats({ stats, onPressStat }: ProfileStatsProps) {
       borderRadius: DESIGN_TOKENS.radii.sm,
       backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.borderLight,
       minHeight: 80,
       ...Platform.select({
         web: {
-          boxShadow: colors.boxShadows.light,
           cursor: onPressStat ? 'pointer' : 'default',
-          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
         } as any,
         default: {},
       }),
     },
     statItemPressed: {
-      transform: [{ scale: 0.98 }],
-      ...Platform.select({
-        web: { boxShadow: colors.boxShadows.medium } as any,
-        default: {},
-      }),
+      opacity: 0.9,
     },
     iconWrap: {
       width: 28,

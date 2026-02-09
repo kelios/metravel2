@@ -36,27 +36,21 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
         card: {
           flex: 1,
           borderWidth: 1,
-          borderColor: colors.border,
+          borderColor: colors.borderLight,
           backgroundColor: colors.surface,
           borderRadius: DESIGN_TOKENS.radii.md,
           paddingVertical: DESIGN_TOKENS.spacing.sm,
           paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-          minHeight: 100,
+          minHeight: 88,
           ...Platform.select({
             web: {
-              boxShadow: colors.boxShadows.light,
               cursor: 'pointer',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
             } as any,
             default: {},
           }),
         },
         cardPressed: {
-          transform: [{ scale: 0.98 }],
-          ...Platform.select({
-            web: { boxShadow: colors.boxShadows.medium } as any,
-            default: { opacity: 0.9 },
-          }),
+          opacity: 0.9,
         },
         cardHeader: {
           flexDirection: 'row',
@@ -72,6 +66,8 @@ export function ProfileQuickActions({ onPress, unreadMessagesCount = 0 }: Profil
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: colors.backgroundSecondary,
+          borderWidth: 1,
+          borderColor: colors.borderLight,
         },
         badge: {
           position: 'absolute',

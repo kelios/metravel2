@@ -31,6 +31,15 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
   const { width, height } = useWindowDimensions();
   const colors = useThemedColors();
 
+  const portalCreate = useMemo(() => {
+    if (Platform.OS !== 'web') return null;
+    try {
+      return (require('react-dom') as any)?.createPortal ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const content = (
     <View style={[fullscreenStyles.container, { width, height }]}>
       <ImageCardMedia
@@ -56,7 +65,8 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
 
   if (Platform.OS === 'web') {
     if (!visible) return null;
-    return (
+
+    const overlay = (
       <View
         style={[fullscreenStyles.webOverlay, { width, height }]}
         {...({ onClick: (e: any) => { if (e.target === e.currentTarget) onClose(); } } as any)}
@@ -64,6 +74,12 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
         {content}
       </View>
     );
+
+    if (typeof document !== 'undefined' && portalCreate) {
+      return portalCreate(overlay, document.body);
+    }
+
+    return overlay;
   }
 
   return (

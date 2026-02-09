@@ -99,6 +99,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
         <FiltersPanelRadiusSection
           colors={colors}
           styles={styles}
+          isMobile={isMobile}
           filters={filters}
           filterValue={filterValue}
           travelsData={travelsData}

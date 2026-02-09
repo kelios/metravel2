@@ -58,6 +58,11 @@ export function useMapInstance({ map, L }: UseMapInstanceProps) {
             }
           });
           overlayLayersSnapshot.clear();
+          try {
+            leafletOverlayLayersRef.current.clear();
+          } catch {
+            // noop
+          }
         } catch {
           // noop
         }

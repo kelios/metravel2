@@ -469,9 +469,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         backgroundColor: colors.background,
         ...(Platform.OS === 'web'
           ? ({
-              height: '100vh',
-              maxHeight: '100vh',
-              overflow: 'hidden',
+              minHeight: '100vh',
+              overflow: 'visible',
             } as any)
           : null),
     },
@@ -488,7 +487,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...(Platform.OS === 'web'
           ? ({
               flexGrow: 1,
-              overflow: 'hidden',
               minHeight: 0,
             } as any)
           : null),

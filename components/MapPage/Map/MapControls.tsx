@@ -20,15 +20,15 @@ const getButtonStyle = (colors: ThemedColors): React.CSSProperties => ({
   height: '44px',
   borderRadius: '50%',
   backgroundColor: colors.surface,
-  border: `2px solid ${colors.borderStrong}`,
-  boxShadow: colors.boxShadows.card,
+  border: `1px solid ${colors.border}`,
+  boxShadow: 'none',
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   padding: 0,
-  transition: 'all 0.2s ease',
-  color: colors.info,
+  transition: 'background-color 0.15s ease, border-color 0.15s ease',
+  color: colors.text,
 });
 
 const MapControlButton: React.FC<{
@@ -42,14 +42,14 @@ const MapControlButton: React.FC<{
   const style = useMemo(() => getButtonStyle(colors), [colors]);
 
   const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
-    e.currentTarget.style.backgroundColor = colors.infoLight;
-    e.currentTarget.style.transform = 'scale(1.05)';
-  }, [colors.infoLight]);
+    e.currentTarget.style.backgroundColor = colors.backgroundSecondary;
+    e.currentTarget.style.borderColor = colors.borderStrong;
+  }, [colors.backgroundSecondary, colors.borderStrong]);
 
   const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     e.currentTarget.style.backgroundColor = colors.surface;
-    e.currentTarget.style.transform = 'scale(1)';
-  }, [colors.surface]);
+    e.currentTarget.style.borderColor = colors.border;
+  }, [colors.border, colors.surface]);
 
   return (
     <button
@@ -60,7 +60,7 @@ const MapControlButton: React.FC<{
       title={title}
       aria-label={ariaLabel}
     >
-      <Feather name={icon} size={iconSize} color={colors.info} />
+      <Feather name={icon} size={iconSize} color={colors.text} />
     </button>
   );
 };
@@ -84,7 +84,7 @@ const MapControls: React.FC<MapControlsProps> = ({
     position: 'absolute' as const,
     bottom: Math.max(18, bottomOffset),
     ...(shouldAlignLeft ? { left: 10 } : { right: 10 }),
-    zIndex: 1000,
+    zIndex: 40,
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '8px',
@@ -114,7 +114,7 @@ const MapControls: React.FC<MapControlsProps> = ({
           colors={colors}
         />
       )}
-      {userLocation && (
+      {userLocation && !isMobile && (
         <MapControlButton
           onClick={onCenterUserLocation}
           title="Мое местоположение"

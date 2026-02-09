@@ -33,6 +33,8 @@ const CardActionPressable = ({
   testID,
   children,
 }: CardActionPressableProps) => {
+  const safeChildren = React.Children.toArray(children).filter((child) => typeof child !== 'string');
+
   const activate = (e?: any) => {
     if (disabled) return;
     try {
@@ -76,7 +78,7 @@ const CardActionPressable = ({
         }}
         testID={testID}
       >
-        {children}
+        {safeChildren}
       </View>
     );
   }
@@ -93,7 +95,7 @@ const CardActionPressable = ({
       testID={testID}
       {...({ 'data-card-action': 'true' } as any)}
     >
-      {children}
+      {safeChildren}
     </Pressable>
   );
 };

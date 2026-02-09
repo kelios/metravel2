@@ -26,7 +26,10 @@ export const Toggle: React.FC<ToggleProps> = ({
         disabled && styles.toggleDisabled,
         style
       ]}
-      onPress={() => !disabled && onValueChange(!value)}
+      onPress={(e: any) => {
+        if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (!disabled) onValueChange(!value);
+      }}
       accessibilityRole="switch"
       accessibilityState={{ checked: value, disabled }}
     >
@@ -42,30 +45,33 @@ export const Toggle: React.FC<ToggleProps> = ({
 
 const createStyles = (colors: any) => StyleSheet.create({
   toggle: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.disabled,
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.borderLight ?? colors.border,
     padding: 2,
     justifyContent: 'center',
     transition: Platform.OS === 'web' ? 'background-color 0.2s' : undefined,
   } as any,
   toggleActive: {
     backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   toggleDisabled: {
     opacity: 0.5,
   },
   thumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: colors.surface,
     ...(Platform.OS === 'web'
-      ? ({ boxShadow: colors.boxShadows.light, transition: 'transform 0.2s' } as any)
-      : { ...colors.shadows.light }),
+      ? ({ boxShadow: 'none', transition: 'transform 0.2s' } as any)
+      : { shadowColor: 'transparent', shadowOpacity: 0, shadowRadius: 0, elevation: 0 }),
   },
   thumbActive: {
-    transform: [{ translateX: 22 }],
+    transform: [{ translateX: 20 }],
   },
 });

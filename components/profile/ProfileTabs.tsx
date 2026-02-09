@@ -23,12 +23,12 @@ export function ProfileTabs({ activeTab, onChangeTab, counts }: ProfileTabsProps
     container: {
       flexDirection: 'row',
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomColor: colors.borderLight,
       backgroundColor: colors.background,
       ...Platform.select({
         web: {
           position: 'sticky',
-          top: 0,
+          top: 88,
           zIndex: DESIGN_TOKENS.zIndex.sticky,
         } as any,
         default: {},

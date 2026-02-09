@@ -35,13 +35,19 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     stickyTop: {
       gap: 8,
+      backgroundColor: colors.surface,
+      paddingHorizontal: isMobile ? 16 : 0,
+      paddingTop: isMobile ? 12 : 0,
+      paddingBottom: isMobile ? 8 : 0,
+      borderBottomWidth: isMobile ? 1 : 0,
+      borderBottomColor: isMobile ? colors.borderLight : 'transparent',
       ...(Platform.OS === 'web'
         ? ({
             position: 'sticky',
             top: 0,
             zIndex: 5,
             backgroundColor: colors.surface,
-            paddingTop: 4,
+            paddingTop: isMobile ? 12 : 4,
           } as any)
         : null),
     },
@@ -49,9 +55,9 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: 12,
+      padding: 16,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomColor: colors.borderLight,
     },
     compactTitleRow: {
       flexDirection: 'row',
@@ -123,6 +129,8 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     contentContainer: {
       paddingBottom: 100 + bottomDockReserve,
+      paddingTop: isMobile ? 16 : 0,
+      paddingHorizontal: isMobile ? 16 : 0,
       flexGrow: 1,
     },
     section: {
@@ -260,8 +268,31 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     radiusQuickOptions: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 8,
+      gap: 8,
+      marginTop: 10,
+    },
+    radiusOptionButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    radiusOptionButtonSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+    },
+    radiusOptionText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+    },
+    radiusOptionTextSelected: {
+      color: colors.primaryText,
     },
     transportTabs: {
       flexDirection: 'row',
@@ -610,13 +641,79 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       marginTop: 8,
     },
     mapLayersSection: {
-      marginTop: 12,
+      marginTop: 10,
+    },
+    mapLayersLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginBottom: 4,
     },
     mapLayersRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
       marginTop: 8,
+    },
+    mapToggleList: {
+      gap: 6,
+      marginTop: 6,
+    },
+    mapToggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.sm,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      backgroundColor: colors.surface,
+    },
+    mapToggleRowPressed: {
+      backgroundColor: colors.surfaceMuted ?? colors.backgroundSecondary,
+    },
+    mapToggleRowDisabled: {
+      opacity: 0.5,
+    },
+    mapToggleText: {
+      flex: 1,
+      minWidth: 0,
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    mapLayerChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: 'none',
+            transition: 'background-color 0.15s ease, border-color 0.15s ease',
+          } as any)
+        : null),
+    },
+    mapLayerChipSelected: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+      shadowColor: 'transparent',
+      shadowOpacity: 0,
+      shadowRadius: 0,
+      elevation: 0,
+      ...(Platform.OS === 'web'
+        ? ({
+            boxShadow: 'none',
+          } as any)
+        : null),
     },
     stickyFooter: {
       ...(Platform.OS === 'web'

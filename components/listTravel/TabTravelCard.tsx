@@ -32,9 +32,19 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   layout?: 'horizontal' | 'grid';
   contentMinHeight?: number;
+  mediaFit?: 'contain' | 'cover';
 };
 
-function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizontal', contentMinHeight }: Props) {
+function TabTravelCard({
+  item,
+  onPress,
+  badge,
+  testID,
+  style,
+  layout = 'horizontal',
+  contentMinHeight,
+  mediaFit = 'contain',
+}: Props) {
   // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
   const colors = useThemedColors();
   const { isPhone, isLargePhone } = useResponsive();
@@ -79,7 +89,7 @@ function TabTravelCard({ item, onPress, badge, testID, style, layout = 'horizont
       onPress={onPress}
       metaText={location || ' '}
       badge={badge}
-      mediaFit="contain"
+      mediaFit={mediaFit}
       heroTitleOverlay={false}
       contentSlot={contentSlot}
       width={layout === 'grid' ? undefined : (isMobile ? MOBILE_CARD_WIDTH : (tabCardTemplate.container as any)?.width)}

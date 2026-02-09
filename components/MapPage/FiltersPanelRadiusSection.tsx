@@ -1,11 +1,10 @@
 import React, { useMemo, useCallback } from 'react';
-import { ScrollView, Text, View, Platform } from 'react-native';
+import { ScrollView, Text, View, Platform, Pressable } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import MapIcon from './MapIcon';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
 import type { ThemedColors } from '@/hooks/useTheme';
-import Chip from '@/components/ui/Chip';
 import IconButton from '@/components/ui/IconButton';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { CATEGORY_ICONS } from './MapQuickFilters';
@@ -76,6 +75,7 @@ const RadiusSlider = React.memo(function RadiusSlider({ options, value, onChange
 interface FiltersPanelRadiusSectionProps {
   colors: ThemedColors;
   styles: any;
+  isMobile: boolean;
   filters: {
     categories: CategoryOption[];
     radius: { id: string; name: string }[];
@@ -93,6 +93,7 @@ interface FiltersPanelRadiusSectionProps {
 const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   colors,
   styles,
+  isMobile,
   filters,
   filterValue,
   travelsData,
@@ -182,8 +183,11 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           badge={filterValue.categories.length || undefined}
           defaultOpen={false}
           icon="grid"
+          tone={isMobile ? 'flat' : 'default'}
         >
-          <Text style={styles.sectionHint}>Уточните поиск по категориям мест</Text>
+          {!isMobile ? (
+            <Text style={styles.sectionHint}>Уточните поиск по категориям мест</Text>
+          ) : null}
           <MultiSelectField
             items={categoriesWithCount}
             value={(Array.isArray(filterValue.categories)
@@ -257,25 +261,41 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           badge={`${filterValue.radius || DEFAULT_RADIUS_KM} км`}
           defaultOpen={true}
           icon="radio"
+          tone={isMobile ? 'flat' : 'default'}
         >
           <View style={styles.radiusQuickOptions}>
             {filters.radius.map((opt) => {
               const selected = String(opt.id) === String(filterValue.radius);
               return (
                 <View key={opt.id}>
-                  <Chip
-                    label={opt.name}
-                    selected={selected}
-                    onPress={() => safeOnFilterChange('radius', opt.id)}
+                  <Pressable
                     testID={`radius-option-${String(opt.id)}`}
-                  />
+                    onPress={() => safeOnFilterChange('radius', opt.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${opt.name} км`}
+                    accessibilityState={{ selected }}
+                    style={({ pressed }) => [
+                      styles.radiusOptionButton,
+                      selected && styles.radiusOptionButtonSelected,
+                      pressed && { opacity: 0.8 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.radiusOptionText,
+                        selected && styles.radiusOptionTextSelected,
+                      ]}
+                    >
+                      {opt.name}
+                    </Text>
+                  </Pressable>
                 </View>
               );
             })}
           </View>
 
           {/* Visual radius slider (web only) */}
-          {Platform.OS === 'web' && filters.radius.length > 1 && (
+          {Platform.OS === 'web' && !isMobile && filters.radius.length > 1 && (
             <RadiusSlider
               options={filters.radius}
               value={filterValue.radius || String(DEFAULT_RADIUS_KM)}

@@ -39,6 +39,8 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const lastProgrammaticOpenTsRef = useRef(0);
     const [sheetIndex, setSheetIndex] = useState(-1);
 
+    const hasHeaderText = Boolean(title || subtitle);
+
     const contentBottomPadding = Platform.OS === 'web' ? 12 + bottomInset : 40 + bottomInset;
 
     const snapPoints = useMemo(
@@ -159,7 +161,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         style={styles.sheet}
       >
         {/* Header - always visible */}
-        <View style={styles.header}>
+        <View style={[styles.header, !hasHeaderText && styles.headerNoTitle]}>
           <View style={styles.headerContent}>
             {!!title && (
               <View style={styles.titleContainer}>
@@ -210,33 +212,43 @@ export default MapBottomSheet;
 const getStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     sheet: {
-      ...colors.shadows.heavy,
       ...Platform.select({
         web: {
           zIndex: 50,
+          boxShadow: 'none',
+        } as any,
+        default: {
+          ...(colors.shadows?.light ?? {}),
         },
       }),
     },
     background: {
       backgroundColor: colors.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
     },
     indicator: {
-      backgroundColor: colors.border,
-      width: 40,
-      height: 4,
+      backgroundColor: colors.borderLight,
+      width: 28,
+      height: 2,
       borderRadius: 2,
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingTop: 16,
-      paddingBottom: 12,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      paddingBottom: 10,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomColor: colors.borderLight,
+    },
+    headerNoTitle: {
+      paddingTop: 8,
+      paddingBottom: 8,
+      borderBottomWidth: 0,
     },
     headerContent: {
       flex: 1,
@@ -245,13 +257,13 @@ const getStyles = (colors: ThemedColors) =>
       flexDirection: 'column',
     },
     title: {
-      fontSize: 18,
-      fontWeight: '700',
+      fontSize: 16,
+      fontWeight: '600',
       color: colors.text,
       letterSpacing: -0.3,
     },
     subtitle: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '500',
       color: colors.textMuted,
       marginTop: 2,
@@ -261,10 +273,12 @@ const getStyles = (colors: ThemedColors) =>
       gap: 8,
     },
     headerButton: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: colors.backgroundSecondary,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'transparent',
+      borderWidth: 1,
+      borderColor: colors.borderLight,
       alignItems: 'center',
       justifyContent: 'center',
       marginHorizontal: 0,
@@ -275,11 +289,11 @@ const getStyles = (colors: ThemedColors) =>
       ...(Platform.OS === 'web' ? ({ boxShadow: 'none' } as any) : null),
     },
     peekContent: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       paddingVertical: 12,
     },
     contentContainer: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       paddingBottom: 40,
       ...Platform.select({
         web: {
@@ -290,7 +304,7 @@ const getStyles = (colors: ThemedColors) =>
           // @ts-ignore: web-only style
           WebkitOverflowScrolling: 'touch',
           // @ts-ignore: web-only style
-          touchAction: 'pan-y',
+          touchAction: 'manipulation',
         },
         default: {
           flex: 1,

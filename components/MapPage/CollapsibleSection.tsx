@@ -15,6 +15,7 @@ interface CollapsibleSectionProps {
   children: React.ReactNode;
   accessibilityLabel?: string;
   icon?: string;
+  tone?: 'default' | 'flat';
 }
 
 const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
@@ -24,10 +25,11 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   children,
   accessibilityLabel,
   icon,
+  tone = 'default',
 }) => {
   const [open, setOpen] = useState(defaultOpen);
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors), [colors]);
+  const styles = useMemo(() => getStyles(colors, tone), [colors, tone]);
 
   const safeChildren = useMemo(
     () =>
@@ -80,24 +82,24 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   );
 };
 
-const getStyles = (colors: ThemedColors) => StyleSheet.create({
+const getStyles = (colors: ThemedColors, tone: 'default' | 'flat') => StyleSheet.create({
   collapsibleSection: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   collapsibleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingHorizontal: 12,
+    backgroundColor: tone === 'flat' ? (colors.backgroundSecondary ?? colors.surface) : colors.surface,
+    borderRadius: 12,
+    borderWidth: tone === 'flat' ? 0 : 1,
+    borderColor: tone === 'flat' ? 'transparent' : colors.borderLight,
   },
   collapsibleHeaderPressed: {
     opacity: 0.7,
-    backgroundColor: colors.surface,
+    backgroundColor: tone === 'flat' ? (colors.surfaceMuted ?? colors.backgroundSecondary ?? colors.surface) : colors.surface,
   },
   collapsibleTitle: {
     flexDirection: 'row',
@@ -109,15 +111,15 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     marginRight: 4,
   },
   sectionLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },
   badge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
     minWidth: 24,
     alignItems: 'center',
     justifyContent: 'center',
@@ -125,11 +127,11 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.textOnPrimary,
+    color: colors.primaryText,
   },
   collapsibleContent: {
-    marginTop: 8,
-    paddingHorizontal: 4,
+    marginTop: 12,
+    paddingHorizontal: 12,
   },
 });
 

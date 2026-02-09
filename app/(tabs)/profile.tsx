@@ -4,8 +4,9 @@ import {
   View,
   StyleSheet,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
@@ -15,9 +16,13 @@ import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTab
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
 import { fetchMyTravels } from '@/api/travelsApi';
 import EmptyState from '@/components/ui/EmptyState';
-import TabTravelCard from '@/components/listTravel/TabTravelCard';
+import type { Travel } from '@/types/types';
+import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
+import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
+import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { buildLoginHref } from '@/utils/authNavigation';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
@@ -31,6 +36,66 @@ interface UserStats {
   favoritesCount: number;
   viewsCount: number;
 }
+
+const getSlugFromUrl = (url: string | undefined | null, fallback: string) => {
+  const raw = String(url ?? '').trim();
+  if (!raw) return fallback;
+  const noQuery = raw.split('?')[0]?.replace(/\/+$/, '') ?? raw;
+  const match = noQuery.match(/\/travels\/([^/]+)$/);
+  return match?.[1] ? String(match[1]) : fallback;
+};
+
+const normalizeToTravel = (item: any): Travel => {
+  const idRaw = item?.id ?? item?._id ?? 0;
+  const id = typeof idRaw === 'number' ? idRaw : Number(idRaw) || 0;
+  const url = String(item?.url ?? item?.urlTravel ?? item?.href ?? '').trim();
+  const slug = String(item?.slug ?? getSlugFromUrl(url, String(id || item?.id || ''))).trim();
+  const name = String(item?.name ?? item?.title ?? '').trim() || 'Без названия';
+
+  const travel_image_thumb_url =
+    String(
+      item?.travel_image_thumb_url ??
+        item?.travel_image_thumb_small_url ??
+        item?.travelImageThumbUrl ??
+        item?.travelImageThumbSmallUrl ??
+        item?.imageUrl ??
+        ''
+    ).trim();
+
+  const countryName = String(item?.countryName ?? item?.country ?? '').trim();
+  const cityName = String(item?.cityName ?? item?.city ?? '').trim();
+  const countUnicIpView = String(item?.countUnicIpView ?? item?.views ?? '0');
+
+  return {
+    id,
+    slug,
+    name,
+    travel_image_thumb_url,
+    travel_image_thumb_small_url: travel_image_thumb_url,
+    url: url || `/travels/${slug || id}`,
+    youtube_link: '',
+    userName: String(item?.userName ?? item?.authorName ?? ''),
+    description: String(item?.description ?? ''),
+    recommendation: String(item?.recommendation ?? ''),
+    plus: String(item?.plus ?? ''),
+    minus: String(item?.minus ?? ''),
+    cityName,
+    countryName,
+    countUnicIpView,
+    gallery: Array.isArray(item?.gallery) ? item.gallery : [],
+    travelAddress: Array.isArray(item?.travelAddress) ? item.travelAddress : [],
+    userIds: String(item?.userIds ?? item?.userId ?? item?.user?.id ?? ''),
+    year: String(item?.year ?? ''),
+    monthName: String(item?.monthName ?? ''),
+    number_days: Number(item?.number_days ?? 0) || 0,
+    companions: Array.isArray(item?.companions) ? item.companions : [],
+    coordsMeTravel: Array.isArray(item?.coordsMeTravel) ? item.coordsMeTravel : undefined,
+    countryCode: String(item?.countryCode ?? ''),
+    user: item?.user,
+    created_at: item?.created_at,
+    updated_at: item?.updated_at,
+  };
+};
 
 const unwrapTravelsPayload = (payload: any): { items: any[]; count: number } => {
   if (Array.isArray(payload)) return { items: payload, count: payload.length };
@@ -46,6 +111,55 @@ export default function ProfileScreen() {
   const favoritesContext = useFavorites();
   const { favorites = [], viewHistory = [] } = favoritesContext ?? { favorites: [], viewHistory: [] };
   const colors = useThemedColors();
+  const insets = useSafeAreaInsets();
+  const { isPhone, isLargePhone, isTablet, isDesktop, isPortrait, width } = useResponsive();
+
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
+
+  const maxContentWidth = 1280;
+
+  const effectiveWidth = Math.max(0, width || 0);
+  const contentWidth = Platform.OS === 'web'
+    ? Math.min(effectiveWidth, maxContentWidth)
+    : effectiveWidth;
+
+  const isMobileDevice = isPhone || isLargePhone || (isTablet && isPortrait);
+  const isCardsSingleColumn = contentWidth < BREAKPOINTS.MOBILE;
+
+  const gapSize = useMemo(() => {
+    if (contentWidth < BREAKPOINTS.XS) return 6;
+    if (contentWidth < BREAKPOINTS.SM) return 8;
+    if (contentWidth < BREAKPOINTS.MOBILE) return 10;
+    if (contentWidth < BREAKPOINTS.TABLET) return 12;
+    if (contentWidth < BREAKPOINTS.DESKTOP) return 14;
+    return 16;
+  }, [contentWidth]);
+
+  const contentPadding = useMemo(() => {
+    if (contentWidth < BREAKPOINTS.XS) return 12;
+    if (contentWidth < BREAKPOINTS.SM) return 8;
+    if (contentWidth < BREAKPOINTS.MOBILE) return 10;
+    if (contentWidth < BREAKPOINTS.TABLET) return 12;
+    if (contentWidth < BREAKPOINTS.DESKTOP) return 12;
+    if (contentWidth < BREAKPOINTS.DESKTOP_LARGE) return 16;
+    return 20;
+  }, [contentWidth]);
+
+  const gridColumns = useMemo(() => {
+    if (isCardsSingleColumn) return 1;
+    const orientation = isPortrait ? 'portrait' : 'landscape';
+    if (isMobileDevice) return calculateColumns(contentWidth, orientation);
+    return calculateColumns(contentWidth, 'landscape');
+  }, [contentWidth, isCardsSingleColumn, isMobileDevice, isPortrait]);
+
+  const contentPaddingBottom = useMemo(() => {
+    if (Platform.OS === 'web') {
+      const dockVisible = isPhone || isLargePhone || isTablet;
+      return (dockVisible ? 56 : 0) + 32;
+    }
+
+    return Math.max(32, (insets.bottom || 0) + 16);
+  }, [insets.bottom, isLargePhone, isPhone, isTablet]);
 
   const { profile, setProfile, isLoading: profileLoading, fullName } = useUserProfile();
   const { pickAndUpload, isUploading: avatarUploading } = useAvatarUpload({
@@ -114,14 +228,50 @@ export default function ProfileScreen() {
 
   const isLoading = profileLoading || travelsLoading;
 
-  const currentData = useMemo(() => {
-    switch (activeTab) {
-      case 'travels': return myTravels;
-      case 'favorites': return favorites;
-      case 'history': return viewHistory;
-      default: return [];
+  const currentData = useMemo<Travel[]>(() => {
+    if (activeTab === 'travels') {
+      return (myTravels || []).map(normalizeToTravel);
     }
-  }, [activeTab, myTravels, favorites, viewHistory]);
+
+    if (activeTab === 'favorites') {
+      return (favorites || [])
+        .filter((f: any) => f?.type === 'travel')
+        .map((f: any) => normalizeToTravel({
+          id: f.id,
+          name: f.title,
+          title: f.title,
+          url: f.url,
+          imageUrl: f.imageUrl,
+          countryName: f.country,
+          cityName: f.city,
+        }));
+    }
+
+    if (activeTab === 'history') {
+      return (viewHistory || [])
+        .filter((h: any) => h?.type === 'travel')
+        .map((h: any) => normalizeToTravel({
+          id: h.id,
+          name: h.title,
+          title: h.title,
+          url: h.url,
+          imageUrl: h.imageUrl,
+          countryName: h.country,
+          cityName: h.city,
+        }));
+    }
+
+    return [];
+  }, [activeTab, favorites, myTravels, viewHistory]);
+
+  const rows = useMemo(() => {
+    const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
+    const result: Travel[][] = [];
+    for (let i = 0; i < currentData.length; i += cols) {
+      result.push(currentData.slice(i, i + cols));
+    }
+    return result;
+  }, [currentData, gridColumns, isCardsSingleColumn]);
 
   const emptyStateProps = useMemo(() => {
     switch (activeTab) {
@@ -176,20 +326,41 @@ export default function ProfileScreen() {
       justifyContent: 'center',
     },
     listContent: {
-      paddingBottom: 32,
+      paddingHorizontal: contentPadding,
+      paddingBottom: 0,
+      paddingTop: 12,
+      rowGap: gapSize,
+      maxWidth: Platform.OS === 'web' ? (isDesktopWeb ? maxContentWidth : undefined) : undefined,
+      alignSelf: Platform.OS === 'web' ? 'center' : undefined,
+      width: Platform.OS === 'web' ? '100%' : undefined,
     },
     headerComponent: {
       backgroundColor: colors.background,
     },
-    listItemWrap: {
-      paddingHorizontal: 16,
+    fullRow: {
+      width: '100%',
+    },
+    cardsRow: {
+      width: '100%',
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      maxWidth: '100%',
+      minWidth: 0,
+      alignItems: 'flex-start',
+      ...Platform.select({
+        web: {
+          columnGap: gapSize,
+          rowGap: gapSize,
+        } as any,
+        default: {},
+      }),
+    },
+    rowSeparator: {
+      height: gapSize,
     },
     emptyWrap: {
-      paddingHorizontal: 16,
+      paddingHorizontal: contentPadding,
       paddingTop: 16,
-    },
-    separator: {
-      height: 16,
     },
     skeletonWrap: {
       padding: 16,
@@ -213,33 +384,29 @@ export default function ProfileScreen() {
       marginTop: 16,
       gap: 12,
     },
-  }), [colors]);
+  }), [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth]);
 
-  const ItemSeparator = useCallback(() => <View style={styles.separator} />, [styles.separator]);
-
-  const Header = useMemo(() => (
-      <View style={styles.headerComponent}>
-        <ProfileHeader
+  const Header = useMemo(
+    () => (
+      <View style={[styles.headerComponent, styles.fullRow]}>
+        {[
+          <ProfileHeader
+            key="profile-header"
             user={{
-                name: displayName,
-                email: userInfo.email,
-                avatar: profile?.avatar,
+              name: displayName,
+              email: userInfo.email,
+              avatar: profile?.avatar,
             }}
             profile={profile}
             onEdit={handleEdit}
             onLogout={handleLogout}
             onAvatarUpload={pickAndUpload}
             avatarUploading={avatarUploading}
-        />
-
-        <ProfileQuickActions onPress={handleQuickAction} />
-
-        <ProfileStats
-            stats={stats}
-            onPressStat={handlePressStat}
-        />
-
-        <ProfileTabs
+          />,
+          <ProfileQuickActions key="profile-quick-actions" onPress={handleQuickAction} />,
+          <ProfileStats key="profile-stats" stats={stats} onPressStat={handlePressStat} />,
+          <ProfileTabs
+            key="profile-tabs"
             activeTab={activeTab}
             onChangeTab={setActiveTab}
             counts={{
@@ -247,9 +414,25 @@ export default function ProfileScreen() {
               favorites: stats.favoritesCount,
               history: stats.viewsCount,
             }}
-        />
+          />,
+        ]}
       </View>
-  ), [styles, displayName, userInfo.email, profile, handleEdit, handleLogout, pickAndUpload, avatarUploading, handleQuickAction, stats, handlePressStat, activeTab]);
+    ),
+    [
+      styles,
+      displayName,
+      userInfo.email,
+      profile,
+      handleEdit,
+      handleLogout,
+      pickAndUpload,
+      avatarUploading,
+      handleQuickAction,
+      stats,
+      handlePressStat,
+      activeTab,
+    ]
+  );
 
   if (!authReady) {
     return (
@@ -305,48 +488,119 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <InstantSEO
-        headKey="profile"
-        title="Профиль | Metravel"
-        description="Профиль пользователя"
-        canonical={buildCanonicalUrl('/profile')}
-        robots="noindex, nofollow"
-      />
-
-      <FlashList
-          data={currentData}
-          // @ts-expect-error estimatedItemSize required by FlashList but types mismatch
-          estimatedItemSize={280}
-          ListHeaderComponent={Header}
-          contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={ItemSeparator}
-          keyExtractor={(item, index) => `${activeTab}-${item.id}-${index}`}
-          renderItem={({ item }) => (
-               <View style={styles.listItemWrap}>
-                 <TabTravelCard
-                    item={{
-                      id: item.id,
-                      title: item.title || item.name,
-                      imageUrl: item.imageUrl || item.travel_image_thumb_url || item.url,
-                      city: item.city || item.cityName || null,
-                      country: item.country || item.countryName || null,
-                    }}
-                    onPress={() => {
-                        const url = item.url || `/travels/${item.slug || item.id}`;
-                        router.push(url as any);
-                    }}
-                 />
-               </View>
-          )}
-          ListEmptyComponent={
+      {[
+        <InstantSEO
+          key="profile-seo"
+          headKey="profile"
+          title="Профиль | Metravel"
+          description="Профиль пользователя"
+          canonical={buildCanonicalUrl('/profile')}
+          robots="noindex, nofollow"
+        />,
+        Platform.OS === 'web' ? (
+          <View
+            key="profile-web"
+            style={[
+              styles.listContent,
+              { paddingBottom: contentPaddingBottom },
+            ]}
+          >
+            {Header}
+            {currentData.length === 0 ? (
               <View style={styles.emptyWrap}>
-                 <EmptyState
-                    icon="layers"
-                    {...emptyStateProps}
-                 />
+                <EmptyState icon="layers" {...emptyStateProps} />
               </View>
-          }
-      />
+            ) : (
+              rows.map((rowItems, rowIndex) => {
+                const cols = Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1);
+                const missingSlots = Math.max(0, cols - rowItems.length);
+                const calcWidth =
+                  cols > 1
+                    ? `calc((100% - ${(cols - 1) * gapSize}px) / ${cols})`
+                    : '100%';
+
+                return (
+                  <View key={`row-${rowIndex}`}>
+                    <View style={styles.cardsRow}>
+                      {rowItems.map((travel, itemIndex) => (
+                        <View
+                          key={String(travel.id)}
+                          style={
+                            isCardsSingleColumn
+                              ? ({ width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%' } as any)
+                              : ({
+                                  flexGrow: 0,
+                                  flexShrink: 0,
+                                  flexBasis: calcWidth,
+                                  width: calcWidth,
+                                  maxWidth: calcWidth,
+                                  minWidth: 0,
+                                } as any)
+                          }
+                        >
+                          <RenderTravelItem
+                            item={travel}
+                            index={rowIndex * cols + itemIndex}
+                            isMobile={isMobileDevice}
+                            isFirst={rowIndex === 0 && itemIndex === 0}
+                          />
+                        </View>
+                      ))}
+
+                      {!isCardsSingleColumn && missingSlots > 0
+                        ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => (
+                            <View
+                              key={`placeholder-${rowIndex}-${placeholderIndex}`}
+                              style={
+                                ({
+                                  flexGrow: 0,
+                                  flexShrink: 0,
+                                  flexBasis: calcWidth,
+                                  width: calcWidth,
+                                  maxWidth: calcWidth,
+                                  minWidth: 0,
+                                  opacity: 0,
+                                  pointerEvents: 'none',
+                                } as any)
+                              }
+                            />
+                          ))
+                        : null}
+                    </View>
+                    {rowIndex < rows.length - 1 ? <View style={styles.rowSeparator} /> : null}
+                  </View>
+                );
+              })
+            )}
+          </View>
+        ) : (
+          <FlashList
+            key={`profile-list-${gridColumns}`}
+            data={currentData}
+            // @ts-expect-error estimatedItemSize required by FlashList but types mismatch
+            estimatedItemSize={280}
+            ListHeaderComponent={Header}
+            contentContainerStyle={[styles.listContent, { paddingBottom: contentPaddingBottom }]}
+            keyExtractor={(item, index) => `${activeTab}-${item.id}-${index}`}
+            numColumns={Math.max(1, (isCardsSingleColumn ? 1 : gridColumns) || 1)}
+            renderItem={({ item, index }) => {
+              return (
+                <RenderTravelItem
+                  item={item as any}
+                  index={index}
+                  isMobile={isMobileDevice}
+                  isFirst={index === 0}
+                />
+              );
+            }}
+            ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                <EmptyState icon="layers" {...emptyStateProps} />
+              </View>
+            }
+          />
+        ),
+      ]}
     </SafeAreaView>
   );
 }

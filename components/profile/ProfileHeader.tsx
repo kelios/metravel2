@@ -65,42 +65,33 @@ export function ProfileHeader({
   const styles = useMemo(() => StyleSheet.create({
     container: {
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
-      paddingTop: DESIGN_TOKENS.spacing.xs,
-      paddingBottom: DESIGN_TOKENS.spacing.lg,
+      paddingTop: DESIGN_TOKENS.spacing.sm,
+      paddingBottom: DESIGN_TOKENS.spacing.md,
       backgroundColor: colors.background,
-    },
-    topRow: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      marginBottom: DESIGN_TOKENS.spacing.md,
     },
     mainRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: DESIGN_TOKENS.spacing.md,
-      marginBottom: DESIGN_TOKENS.spacing.lg,
+      marginBottom: DESIGN_TOKENS.spacing.md,
     },
     avatarContainer: {
       position: 'relative',
     },
     avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
+      width: 72,
+      height: 72,
+      borderRadius: 36,
       backgroundColor: colors.primaryLight,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 2,
-      borderColor: colors.surface,
-      ...Platform.select({
-        web: { boxShadow: colors.boxShadows.medium } as any,
-        default: { elevation: 2 },
-      }),
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     avatarImage: {
-      width: 76,
-      height: 76,
-      borderRadius: 38,
+      width: 68,
+      height: 68,
+      borderRadius: 34,
     },
     avatarPlaceholder: {
       fontSize: 32,
@@ -116,13 +107,20 @@ export function ProfileHeader({
       padding: DESIGN_TOKENS.spacing.xxs,
       borderWidth: 1,
       borderColor: colors.border,
-      ...Platform.select({
-        web: { boxShadow: colors.boxShadows.light } as any,
-        default: { elevation: 1 },
-      }),
     },
     userInfo: {
       flex: 1,
+      minWidth: 0,
+    },
+    nameRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: DESIGN_TOKENS.spacing.sm,
+    },
+    nameBlock: {
+      flex: 1,
+      minWidth: 0,
     },
     userName: {
       fontSize: 22,
@@ -135,11 +133,11 @@ export function ProfileHeader({
       color: colors.textMuted,
       marginBottom: DESIGN_TOKENS.spacing.xs,
     },
-    actionsRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: DESIGN_TOKENS.spacing.xs,
-        marginTop: DESIGN_TOKENS.spacing.xxs,
+    actions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      flexShrink: 0,
     },
     editButton: {
       flexDirection: 'row',
@@ -148,13 +146,19 @@ export function ProfileHeader({
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
       borderRadius: DESIGN_TOKENS.radii.sm,
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
       minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      ...Platform.select({
+        web: { cursor: 'pointer' } as any,
+        default: {},
+      }),
     },
     editButtonText: {
       fontSize: 13,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      color: colors.primary,
+      color: colors.text,
     },
     socialsRow: {
       flexDirection: 'row',
@@ -168,10 +172,14 @@ export function ProfileHeader({
       paddingHorizontal: DESIGN_TOKENS.spacing.sm,
       paddingVertical: 6,
       borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.backgroundSecondary,
+      backgroundColor: colors.surface,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: colors.borderLight,
       minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      ...Platform.select({
+        web: { cursor: 'pointer' } as any,
+        default: {},
+      }),
     },
     socialChipText: {
       color: colors.textSecondary,
@@ -187,11 +195,6 @@ export function ProfileHeader({
 
   return (
     <View style={styles.container}>
-      {/* Top Actions (Menu with Logout) */}
-      <View style={styles.topRow}>
-        <ProfileMenu onLogout={onLogout} onSettings={onEdit} />
-      </View>
-
       {/* Main Profile Info */}
       <View style={styles.mainRow}>
         <Pressable
@@ -221,28 +224,33 @@ export function ProfileHeader({
         </Pressable>
 
         <View style={styles.userInfo}>
-          <Text style={styles.userName} numberOfLines={1}>
-            {user.name || 'Пользователь'}
-          </Text>
-          <Text style={styles.userEmail} numberOfLines={1}>
-            {user.email}
-          </Text>
+          <View style={styles.nameRow}>
+            <View style={styles.nameBlock}>
+              <Text style={styles.userName} numberOfLines={1}>
+                {user.name || 'Пользователь'}
+              </Text>
+              <Text style={styles.userEmail} numberOfLines={1}>
+                {user.email}
+              </Text>
+            </View>
 
-          <View style={styles.actionsRow}>
+            <View style={styles.actions}>
               <Pressable
-                  onPress={onEdit}
-                  style={({ pressed }) => [
-                    styles.editButton,
-                    globalFocusStyles.focusable,
-                    { opacity: pressed ? 0.8 : 1 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Редактировать профиль"
-                  accessibilityHint="Перейти к настройкам профиля"
+                onPress={onEdit}
+                style={({ pressed }) => [
+                  styles.editButton,
+                  globalFocusStyles.focusable,
+                  { opacity: pressed ? 0.8 : 1 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Редактировать профиль"
+                accessibilityHint="Перейти к настройкам профиля"
               >
-                  <Feather name="edit-2" size={14} color={colors.primary} />
-                  <Text style={styles.editButtonText}>Редактировать</Text>
+                <Feather name="edit-2" size={14} color={colors.text} />
+                <Text style={styles.editButtonText}>Редактировать</Text>
               </Pressable>
+              <ProfileMenu onLogout={onLogout} onSettings={onEdit} />
+            </View>
           </View>
         </View>
       </View>

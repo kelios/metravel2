@@ -1,6 +1,7 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 jest.mock('@/context/AuthContext');
 
@@ -169,11 +170,26 @@ describe('ProfileScreen', () => {
     jest.clearAllMocks();
   });
 
+  const renderProfile = () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <ProfileScreen />
+      </QueryClientProvider>
+    );
+  };
+
   it('shows EmptyState when user is not authenticated', async () => {
     setupAuth({ isAuthenticated: false });
     setupFavorites(0, 0);
 
-    const { findByText } = render(<ProfileScreen />);
+    const { findByText } = renderProfile();
 
     expect(await findByText('Войдите в аккаунт')).toBeTruthy();
     expect(await findByText('Войдите, чтобы открыть профиль и управлять своими данными.')).toBeTruthy();
@@ -183,7 +199,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByText, getAllByText } = render(<ProfileScreen />);
+    const { findByText, getAllByText } = renderProfile();
 
     expect(await findByText('Test User')).toBeTruthy();
     expect(await findByText('user@example.com')).toBeTruthy();
@@ -212,7 +228,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true, logout: logoutMock });
     setupFavorites(0, 0);
 
-    const { getByLabelText, getByText } = render(<ProfileScreen />);
+    const { getByLabelText, getByText } = renderProfile();
 
     // Открываем меню профиля
     await waitFor(() => getByLabelText('Меню профиля'));
@@ -232,7 +248,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(1, 1);
 
-    const { getAllByText } = render(<ProfileScreen />);
+    const { getAllByText } = renderProfile();
 
     await waitFor(() => {
       expect(getAllByText('My Travel 1').length).toBeGreaterThan(0);

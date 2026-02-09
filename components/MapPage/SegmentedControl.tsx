@@ -22,6 +22,7 @@ interface SegmentedControlProps {
   disabled?: boolean;
   disabledKeys?: string[];
   role?: 'radio' | 'button';
+  tone?: 'default' | 'subtle';
 }
 
 const SegmentedControl: React.FC<SegmentedControlProps> = ({
@@ -33,9 +34,10 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   disabled = false,
   disabledKeys = [],
   role = 'radio',
+  tone = 'default',
 }) => {
   const colors = useThemedColors();
-  const styles = useMemo(() => getStyles(colors, compact), [colors, compact]);
+  const styles = useMemo(() => getStyles(colors, compact, tone), [colors, compact, tone]);
 
   const activeIndex = options.findIndex((o) => o.key === value);
   const pillAnim = useRef(new Animated.Value(activeIndex >= 0 ? activeIndex : 0)).current;
@@ -77,6 +79,11 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
       {options.map(({ key, label, icon, badge }) => {
         const active = value === key;
         const isDisabled = disabled || disabledKeys.includes(key);
+
+        const iconColor = tone === 'subtle'
+          ? (active ? colors.primaryText : colors.textMuted)
+          : (active ? colors.textOnPrimary : colors.text);
+
         return (
           <CardActionPressable
             key={key}
@@ -105,7 +112,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
               <MapIcon
                 name={icon}
                 size={16}
-                color={active ? colors.textOnPrimary : colors.text}
+                color={iconColor}
               />
             )}
             <Text style={[
@@ -134,16 +141,16 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
   );
 };
 
-const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create({
+const getStyles = (colors: ThemedColors, compact: boolean, tone: 'default' | 'subtle') => StyleSheet.create({
   segmentedControl: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: 2,
+    backgroundColor: tone === 'subtle' ? colors.backgroundSecondary : colors.surface,
+    borderRadius: 12,
+    padding: compact ? 1 : 2,
     marginHorizontal: compact ? 0 : 12,
-    marginVertical: compact ? 4 : 8,
+    marginVertical: compact ? 10 : 8,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: tone === 'subtle' ? colors.borderLight : colors.border,
     position: 'relative',
     overflow: 'hidden',
   },
@@ -152,7 +159,13 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     top: 2,
     bottom: 2,
     borderRadius: 6,
-    backgroundColor: colors.primary,
+    backgroundColor: tone === 'subtle' ? colors.primarySoft : colors.primary,
+    ...(tone === 'subtle'
+      ? {
+          borderWidth: 1,
+          borderColor: colors.primary,
+        }
+      : null),
     ...(Platform.OS === 'web' ? ({ transition: 'left 0.2s ease' } as any) : null),
   },
   segment: {
@@ -161,7 +174,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     alignItems: 'center',
     justifyContent: 'center',
     gap: compact ? 6 : 4,
-    paddingVertical: compact ? 10 : 8,
+    paddingVertical: compact ? 8 : 8,
     paddingHorizontal: compact ? 12 : 8,
     borderRadius: 6,
     minWidth: compact ? 80 : 0,
@@ -180,11 +193,11 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     color: colors.textMuted,
   },
   segmentTextActive: {
-    color: colors.textOnPrimary,
+    color: tone === 'subtle' ? colors.primaryText : colors.textOnPrimary,
     fontWeight: '700',
   },
   badge: {
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: tone === 'subtle' ? colors.surface : colors.surfaceLight,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -192,9 +205,15 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 4,
+    ...(tone === 'subtle'
+      ? {
+          borderWidth: 1,
+          borderColor: colors.border,
+        }
+      : null),
   },
   badgeActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: tone === 'subtle' ? colors.primarySoft : 'rgba(255, 255, 255, 0.25)',
   },
   badgeText: {
     fontSize: 11,
@@ -202,7 +221,7 @@ const getStyles = (colors: ThemedColors, compact: boolean) => StyleSheet.create(
     color: colors.text,
   },
   badgeTextActive: {
-    color: colors.textOnPrimary,
+    color: tone === 'subtle' ? colors.primaryText : colors.textOnPrimary,
   },
 });
 

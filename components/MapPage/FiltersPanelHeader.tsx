@@ -65,6 +65,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
         value={mode}
         onChange={(key) => onModeChange(key as 'radius' | 'route')}
         compact={isMobile}
+        tone={isMobile ? 'subtle' : 'default'}
         accessibilityLabel="Выбор режима поиска"
       />
 

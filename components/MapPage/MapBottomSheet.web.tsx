@@ -111,6 +111,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         style={[
           styles.webRoot,
           isCollapsed ? styles.webRootCollapsed : null,
+          isCollapsed && !peekContent ? styles.webRootHidden : null,
           { bottom: bottomInset },
         ]}
         accessibilityLabel="Панель карты"
@@ -127,7 +128,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           <View style={styles.dragHandle} />
         </Pressable>
 
-        {sheetIndex > 0 && (
+        {sheetIndex > 0 && (!!title || !!subtitle) && (
           <View style={styles.header}>
             <View style={styles.headerContent}>
               {!!title && (
@@ -183,6 +184,9 @@ const getStyles = (colors: ThemedColors) =>
     },
     webRootCollapsed: {
       overflow: 'visible' as any,
+    },
+    webRootHidden: {
+      ...(Platform.OS === 'web' ? ({ display: 'none' } as any) : null),
     },
     dragHandleArea: {
       alignItems: 'center',
