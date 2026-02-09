@@ -216,14 +216,15 @@ const PlacePopupCard: React.FC<Props> = ({
             <ImageCardMedia
               src={imageUrl}
               alt={title || 'Point image'}
-              fit="cover"
-              blurBackground={false}
+              fit="contain"
+              blurBackground
+              blurRadius={12}
               loading="lazy"
               priority="low"
               style={StyleSheet.absoluteFillObject}
             />
             <View style={styles.expandIcon}>
-              <Feather name="maximize-2" size={12} color="#fff" />
+              <Feather name="maximize-2" size={12} color={colors.textOnDark} />
             </View>
           </CardActionPressable>
         </View>
