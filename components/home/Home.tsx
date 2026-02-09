@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy, useState, memo, useMemo } from 'react';
+import React, { useEffect, useRef, Suspense, lazy, useState, memo, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
@@ -50,6 +50,7 @@ function Home() {
   const isMobile = isSmallPhone || isPhone;
 
   const [showHeavyContent, setShowHeavyContent] = useState(false);
+  const isMobileRef = useRef(isMobile);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,9 +60,10 @@ function Home() {
       setShowHeavyContent(true);
     };
 
+    const mobile = isMobileRef.current;
     const fallbackMs = Platform.OS === 'web'
-      ? (isMobile ? 150 : 50)
-      : (isMobile ? 300 : 100);
+      ? (mobile ? 150 : 50)
+      : (mobile ? 300 : 100);
     const timer = setTimeout(show, fallbackMs);
 
     let idleId: any = null;
@@ -86,21 +88,14 @@ function Home() {
         }
       }
     };
-  }, [isMobile]);
-
-  // Lightweight: avoid fetching full list of user travels on home screen.
-  // Count can be provided later from a dedicated endpoint if needed.
-  const travelsCount = 0;
+  }, []);
 
   useEffect(() => {
     if (!isFocused) return;
-    const payload = {
+    queueAnalyticsEvent('HomeViewed', {
       authState: isAuthenticated ? 'authenticated' : 'guest',
-      travelsCountBucket: travelsCount === 0 ? '0' : travelsCount <= 3 ? '1-3' : '4+',
-    };
-
-    queueAnalyticsEvent('HomeViewed', payload);
-  }, [isFocused, isAuthenticated, travelsCount]);
+    });
+  }, [isFocused, isAuthenticated]);
 
   const heavyFadeStyle = useMemo(
     () =>
@@ -136,7 +131,7 @@ function Home() {
       scrollEventThrottle={isWeb ? 32 : 16}
       nestedScrollEnabled={Platform.OS === 'android'}
     >
-      <HomeHero travelsCount={travelsCount} />
+      <HomeHero />
 
       {isAuthenticated && (
         <Suspense fallback={null}>
@@ -169,7 +164,7 @@ function Home() {
       {showHeavyContent ? (
         <View style={heavyFadeStyle}>
           <Suspense fallback={<View style={FINAL_CTA_PLACEHOLDER_STYLE} />}>
-            <HomeFinalCTA travelsCount={travelsCount} />
+            <HomeFinalCTA />
           </Suspense>
         </View>
       ) : (

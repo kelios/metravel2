@@ -3,7 +3,8 @@
  * @module hooks/map/useMapDataController
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useMapTravels } from './useMapTravels';
 
@@ -162,8 +163,12 @@ export function useMapDataController(
     isFocused,
   });
 
-  // Invalidate query callback (same as refetch for now)
-  const invalidateTravelsQuery = refetchMapData;
+  // Invalidate query cache and refetch
+  const queryClient = useQueryClient();
+  const invalidateTravelsQuery = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['travelsForMap'] });
+    void queryClient.invalidateQueries({ queryKey: ['travelsForMapRoute'] });
+  }, [queryClient]);
 
   return useMemo(() => ({
     allTravelsData,

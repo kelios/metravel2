@@ -386,7 +386,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
     const skeletonDelayMs = Platform.OS === 'web' ? 200 : 250
 
     const shouldShowSkeleton =
-      showInitialLoading && travels.length === 0 && (Platform.OS === 'web' ? true : showDelayedSkeleton)
+      showInitialLoading && travels.length === 0 && showDelayedSkeleton
 
     useEffect(() => {
       if (!showInitialLoading || travels.length !== 0) {

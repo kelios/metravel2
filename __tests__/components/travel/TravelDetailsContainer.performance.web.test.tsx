@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { render, waitFor } from '@testing-library/react'
+import { render } from '@testing-library/react'
 
 jest.mock('@/hooks/useMenuState', () => ({
   useMenuState: () => ({
@@ -59,32 +59,5 @@ describe('TravelDetailsContainer performance (web)', () => {
     expect(lcpImg?.getAttribute('alt')).toBe('Hero image')
   })
 
-  it('useLCPPreload is now a no-op (preloading handled by inline script)', async () => {
-    const travel: any = {
-      id: 1,
-      gallery: [
-        {
-          url: 'https://cdn.example.com/img.jpg',
-          width: 1200,
-          height: 800,
-          updated_at: '2025-01-01',
-          id: 1,
-        },
-      ],
-    }
-
-    const Harness = () => {
-      __testables.useLCPPreload(travel, false)
-      return null
-    }
-
-    render(<Harness />)
-
-    // useLCPPreload should not create any preload links
-    // Preloading is now handled by the inline script in +html.tsx
-    await waitFor(() => {
-      const links = document.head.querySelectorAll('link[rel="preload"], link[rel="prefetch"]')
-      expect(links.length).toBe(0)
-    })
-  })
+  // useLCPPreload was removed — preloading is handled by the inline script in +html.tsx
 })

@@ -8,9 +8,25 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { SearchPageSkeleton } from '@/components/listTravel/SearchPageSkeleton';
+import { queryClient } from '@/queryClient';
+import { fetchTravels } from '@/api/travelsApi';
+import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 
 const isWeb = Platform.OS === 'web';
 const isClient = typeof window !== 'undefined';
+
+// Prefetch default travels data alongside lazy bundle load to avoid waterfall
+const DEFAULT_QUERY_KEY = ['travels', { perPage: PER_PAGE, search: '', params: JSON.stringify({ moderation: 1, publish: 1 }) }];
+if (isWeb && isClient) {
+  queryClient.prefetchInfiniteQuery({
+    queryKey: DEFAULT_QUERY_KEY,
+    queryFn: ({ pageParam = 0 }) => fetchTravels(pageParam, PER_PAGE, '', { moderation: 1, publish: 1 }),
+    initialPageParam: 0,
+  });
+}
+
 const ListTravel = isWeb && isClient
   ? lazy(() => import('@/components/listTravel/ListTravelBase'))
   : require('@/components/listTravel/ListTravelBase').default;
@@ -19,7 +35,6 @@ function SearchScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
     const colors = useThemedColors();
-    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
 
     const title = 'Поиск путешествий | Metravel';
     const description = 'Найдите путешествия по фильтрам и сохраните лучшие идеи в свою книгу.';
@@ -38,7 +53,6 @@ function SearchScreen() {
     }), [colors]);
 
     if (isWeb && !isClient) {
-        const { SearchPageSkeleton } = require('@/components/listTravel/SearchPageSkeleton');
         return (
             <View style={styles.container}>
                 <SearchPageSkeleton />
@@ -74,14 +88,7 @@ function SearchScreen() {
                         </View>
                     }
                 >
-                    <Suspense
-                        fallback={
-                            (() => {
-                                const { SearchPageSkeleton } = require('@/components/listTravel/SearchPageSkeleton');
-                                return <SearchPageSkeleton />;
-                            })()
-                        }
-                    >
+                    <Suspense fallback={<SearchPageSkeleton />}>
                         <ListTravel />
                     </Suspense>
                 </ErrorBoundary>

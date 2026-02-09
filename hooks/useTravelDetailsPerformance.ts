@@ -3,7 +3,6 @@ import type { Dispatch, SetStateAction } from 'react'
 import { Platform } from 'react-native'
 
 import type { Travel } from '@/types/types'
-import { useLCPPreload } from '@/components/travel/details/TravelDetailsSections'
 import { rIC } from '@/utils/rIC'
 
 export interface UseTravelDetailsPerformanceArgs {
@@ -21,23 +20,26 @@ export interface UseTravelDetailsPerformanceReturn {
 
 export function useTravelDetailsPerformance({
   travel,
-  isMobile,
+  isMobile: _isMobile,
   isLoading,
 }: UseTravelDetailsPerformanceArgs): UseTravelDetailsPerformanceReturn {
   const [lcpLoaded, setLcpLoaded] = useState(false)
   const [sliderReady, setSliderReady] = useState(Platform.OS !== 'web')
   const [deferAllowed, setDeferAllowed] = useState(false)
 
-  useLCPPreload(travel, isMobile)
-
   useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!lcpLoaded) return
 
-    // LCP metric is already captured. Enable the slider immediately —
-    // the Slider now receives firstImagePreloaded=true so the first slide
-    // skips the shimmer overlay, making the swap visually seamless.
-    setSliderReady(true)
+    // LCP metric is already captured. Before swapping to the Slider,
+    // ensure its chunk is downloaded to avoid a withLazy fallback flash.
+    let cancelled = false
+    import('@/components/travel/Slider')
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setSliderReady(true)
+      })
+    return () => { cancelled = true }
   }, [lcpLoaded])
 
   useEffect(() => {

@@ -325,14 +325,14 @@ function HomeInspirationSections() {
             title="Куда отправиться в этом месяце"
             subtitle="Истории путешественников, которые вдохновляют"
             queryKey="home-travels-of-month"
-            fetchFn={(options) => fetchTravelsOfMonth(options)}
+            fetchFn={fetchTravelsOfMonth}
           />
 
           <HomeInspirationSection
             title="Популярные направления"
             subtitle="Маршруты, которые выбирают чаще всего"
             queryKey="home-popular-travels"
-            fetchFn={(options) => fetchTravelsPopular(options)}
+            fetchFn={fetchTravelsPopular}
             hideAuthor
           />
 
@@ -340,7 +340,7 @@ function HomeInspirationSections() {
             title="Случайный маршрут"
             subtitle="Идея для поездки, если не знаешь, куда поехать"
             queryKey="home-random-travels"
-            fetchFn={(options) => fetchTravelsRandom(options)}
+            fetchFn={fetchTravelsRandom}
             hideAuthor
           />
         </View>

@@ -59,16 +59,6 @@ const buildApiPrefixedUrl = (value: string): string | null => {
   }
 }
 
-export const useLCPPreload = (travel?: Travel, isMobile?: boolean) => {
-  // No-op: Preloading is now handled by the inline script in +html.tsx
-  // which runs earlier and avoids the "preload not used" warning.
-  // The inline script preloads images before React hydration, ensuring
-  // they are used immediately when the component renders.
-  useEffect(() => {
-    // Intentionally empty - preload handled by inline script
-  }, [isMobile, travel?.gallery, travel?.travel_image_thumb_url])
-}
-
 /* -------------------- LCP Hero -------------------- */
 type ImgLike = {
   url: string
@@ -459,7 +449,11 @@ function TravelHeroSectionInner({
         ) : null}
 
         <View
-        style={[styles.sliderContainer, Platform.OS === 'web' && { minHeight: heroHeight }]}
+        style={[
+          styles.sliderContainer,
+          { height: heroHeight },
+          Platform.OS === 'web' && ({ overflow: 'hidden', contain: 'layout style paint' } as any),
+        ]}
         collapsable={false}
         onLayout={
           Platform.OS === 'web'
@@ -626,6 +620,5 @@ export const TravelHeroSection = React.memo(TravelHeroSectionInner as React.FC<a
 
 export const __testables = {
   OptimizedLCPHero,
-  useLCPPreload,
   TravelHeroSection,
 }

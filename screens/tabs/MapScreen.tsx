@@ -138,7 +138,7 @@ export default function MapScreen() {
         [filtersPanelProps?.contextValue?.filterValue?.categories],
     );
     const currentRadius = filtersPanelProps?.contextValue?.filterValue?.radius ?? '';
-    const quickFilterToggle = useMemo(() => (name: string) => {
+    const quickFilterToggle = useCallback((name: string) => {
         const onChange = filtersPanelProps?.contextValue?.onFilterChange;
         if (!onChange) return;
         const current: string[] = filtersPanelProps?.contextValue?.filterValue?.categories ?? [];
@@ -167,7 +167,7 @@ export default function MapScreen() {
         return items;
     }, [quickFilterSelected, currentRadius, currentMode, currentTransport]);
 
-    const handleRemoveActiveFilter = useMemo(() => (key: string) => {
+    const handleRemoveActiveFilter = useCallback((key: string) => {
         const onChange = filtersPanelProps?.contextValue?.onFilterChange;
         if (!onChange) return;
         if (key.startsWith('cat:')) {
@@ -185,7 +185,7 @@ export default function MapScreen() {
         }
     }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories, filtersPanelProps?.contextValue?.setTransportMode]);
 
-    const handleClearAllFilters = useMemo(() => () => {
+    const handleClearAllFilters = useCallback(() => {
         const reset = filtersPanelProps?.contextValue?.resetFilters;
         if (typeof reset === 'function') reset();
     }, [filtersPanelProps?.contextValue?.resetFilters]);

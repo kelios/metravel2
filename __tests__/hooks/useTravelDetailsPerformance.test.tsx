@@ -3,8 +3,9 @@ import { Platform } from 'react-native'
 
 import { useTravelDetailsPerformance } from '@/hooks/useTravelDetailsPerformance'
 
-jest.mock('@/components/travel/details/TravelDetailsSections', () => ({
-  useLCPPreload: jest.fn(),
+jest.mock('@/components/travel/Slider', () => ({
+  __esModule: true,
+  default: () => null,
 }))
 jest.mock('@/styles/criticalCSS', () => ({
   injectCriticalStyles: jest.fn(),
@@ -45,9 +46,6 @@ jest.mock('@expo/vector-icons/MaterialIcons', () => ({
   default: {},
 }))
 
-const useLCPPreload = jest.requireMock(
-  '@/components/travel/details/TravelDetailsSections'
-).useLCPPreload as jest.Mock
 const injectCriticalStyles = jest.requireMock('@/styles/criticalCSS')
   .injectCriticalStyles as jest.Mock
 const initPerformanceMonitoring = jest.requireMock('@/utils/performance')
@@ -81,9 +79,6 @@ describe('useTravelDetailsPerformance', () => {
       jest.advanceTimersByTime(3000)
     })
 
-    // useLCPPreload is now a no-op (preloading handled by inline script in +html.tsx)
-    // but it's still called to maintain the hook signature
-    expect(useLCPPreload).toHaveBeenCalled()
     // criticalCSS and advancedPerformanceOptimization are no longer imported at runtime —
     // critical CSS is inlined in +html.tsx at build time.
     expect(injectCriticalStyles).not.toHaveBeenCalled()
@@ -100,32 +95,22 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.deferAllowed).toBe(true)
   })
 
-  it('marks slider ready after LCP is loaded', () => {
+  it('marks slider ready after LCP is loaded and Slider chunk resolves', async () => {
     const { result } = renderHook(() =>
       useTravelDetailsPerformance({ travel: undefined, isMobile: false, isLoading: true })
     )
 
     expect(result.current.sliderReady).toBe(false)
 
-    act(() => {
+    // setLcpLoaded triggers an effect that does import('@/components/travel/Slider')
+    // which is mocked and resolves as a microtask.
+    await act(async () => {
       result.current.setLcpLoaded(true)
     })
 
-    // Slider is enabled after window load + idle time on web.
-    // Ensure we go through the "load" path even in jsdom.
-    try {
-      Object.defineProperty(document, 'readyState', {
-        value: 'loading',
-        configurable: true,
-      })
-    } catch {
-      // noop
-    }
-    act(() => {
-      window.dispatchEvent(new Event('load'))
-    })
-    act(() => {
-      jest.advanceTimersByTime(1200)
+    // Flush any remaining timers
+    await act(async () => {
+      jest.advanceTimersByTime(100)
     })
 
     expect(result.current.sliderReady).toBe(true)

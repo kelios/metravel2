@@ -19,7 +19,7 @@ interface OnboardingBannerProps {
 
 const OnboardingBanner = ({ userId }: OnboardingBannerProps) => {
   const [visible, setVisible] = useState(false);
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const [fadeAnim] = useState(() => new Animated.Value(0));
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const shouldUseNativeDriver = Platform.OS !== 'web';
 

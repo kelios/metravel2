@@ -14,7 +14,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Feather from '@expo/vector-icons/Feather';
+import type { ComponentProps } from 'react';
 import Button from '@/components/ui/Button';
+
+type FeatherIconName = ComponentProps<typeof Feather>['name'];
 
 const ONBOARDING_STORAGE_KEY = 'metravel_map_onboarding_completed';
 
@@ -35,7 +38,7 @@ type TooltipPosition = 'bottom' | 'top' | 'left' | 'right';
 interface OnboardingStep {
   title: string;
   description: string;
-  icon: string;
+  icon: FeatherIconName;
   /** data-testid of the target element (web) */
   targetTestID?: string;
   /** Preferred tooltip placement relative to target */
@@ -214,7 +217,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
 
         <View style={styles.cardHeader}>
           <View style={styles.iconCircle}>
-            <Feather name={step.icon as any} size={20} color={colors.primary} />
+            <Feather name={step.icon} size={20} color={colors.primary} />
           </View>
           <Text style={styles.title}>{step.title}</Text>
         </View>

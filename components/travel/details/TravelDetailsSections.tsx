@@ -1,1 +1,1 @@
-export { OptimizedLCPHero, TravelHeroSection, useLCPPreload, __testables } from './TravelDetailsHero'
+export { OptimizedLCPHero, TravelHeroSection, __testables } from './TravelDetailsHero'

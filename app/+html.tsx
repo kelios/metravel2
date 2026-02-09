@@ -102,58 +102,6 @@ const getFontFaceSwapScript = () => String.raw`
 })();
 `;
 
-const getHomeHeroPreloadScript = () => String.raw`
-(function(){
-try {
-  var path = window.location && window.location.pathname;
-  // Only run on the home page
-  if (path && path !== '/' && path !== '/index') return;
-    if (path && path !== '/' && path !== '/index') return;
-
-    // Preload the home hero image (pdf.webp) for faster LCP.
-    // The image is a static asset bundled by Expo, so we look for it in the
-    // rendered HTML or construct the known asset path.
-    function findAssetUrl() {
-      // In production builds, Expo hashes static assets into /_expo/static/...
-      // We can't know the exact hash at HTML-generation time, but we can
-      // discover it from <script> or <link> tags, or just preconnect to self.
-      // The most reliable approach: create an early <link rel="preload"> once
-      // we find the image in the DOM after first paint.
-      return null;
-    }
-
-    // Instead of preloading the image (which we can't resolve the hashed URL for),
-    // we ensure the entry JS bundle gets high priority so React renders the hero faster.
-    var scripts = document.getElementsByTagName('script');
-    for (var i = 0; i < scripts.length; i++) {
-      var s = scripts[i];
-      var src = s && s.getAttribute ? s.getAttribute('src') : '';
-      if (!src) continue;
-      if (src.indexOf('/_expo/static/js/web/entry-') !== -1) {
-        try {
-          s.setAttribute('fetchPriority', 'high');
-          if (typeof s.fetchPriority !== 'undefined') s.fetchPriority = 'high';
-        } catch (_e) {}
-
-        // Also add a modulepreload/preload link for the entry bundle
-        if (!document.querySelector('link[rel="modulepreload"][href="' + src + '"]') &&
-            !document.querySelector('link[rel="preload"][href="' + src + '"]')) {
-          var link = document.createElement('link');
-          link.rel = s.type === 'module' ? 'modulepreload' : 'preload';
-          if (link.rel === 'preload') link.as = 'script';
-          link.href = src;
-          try {
-            link.fetchPriority = 'high';
-            link.setAttribute('fetchPriority', 'high');
-          } catch (_e) {}
-          document.head.appendChild(link);
-        }
-        break;
-      }
-    }
-  } catch (_e) {}
-})();
-`;
 
 const getTravelHeroPreloadScript = () => String.raw`
 (function(){
@@ -444,11 +392,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       <script
         dangerouslySetInnerHTML={{ __html: getEntryPreloadScript() }}
-      />
-
-      {/* Early home hero optimization: boost entry bundle priority on / */}
-      <script
-        dangerouslySetInnerHTML={{ __html: getHomeHeroPreloadScript() }}
       />
 
       {/* Early travel hero preload to improve LCP on /travels/* */}

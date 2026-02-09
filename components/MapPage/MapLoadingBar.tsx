@@ -51,11 +51,6 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
     outputRange: ['0%', '70%', '100%'],
   });
 
-  const translateX = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0%', '0%'],
-  });
-
   return (
     <Animated.View
       style={[styles.container, { opacity }]}
@@ -67,7 +62,6 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
           {
             backgroundColor: colors.primary,
             width: width as any,
-            transform: [{ translateX: translateX as any }],
           },
         ]}
       />
