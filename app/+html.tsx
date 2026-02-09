@@ -44,6 +44,17 @@ const getEntryPreloadScript = () => String.raw`
 const getFontFaceSwapScript = () => String.raw`
 (function(){
   try {
+    // Replace font-display:auto with font-display:swap in any @font-face rule string.
+    function forceFontSwap(css) {
+      return css.replace(/@font-face\s*\{([^}]*)\}/g, function(match, body) {
+        if (body.indexOf('font-display:swap') !== -1) return match;
+        if (body.indexOf('font-display') !== -1) {
+          return match.replace(/font-display\s*:\s*[^;}"']+/g, 'font-display:swap');
+        }
+        return match.replace(/\}\s*$/, ';font-display:swap;}');
+      });
+    }
+
     // 1. Patch CSSStyleSheet.insertRule (catches dynamically inserted rules)
     if (window.CSSStyleSheet) {
       var proto = window.CSSStyleSheet.prototype;
@@ -51,8 +62,8 @@ const getFontFaceSwapScript = () => String.raw`
         var originalInsertRule = proto.insertRule;
         proto.insertRule = function(rule, index) {
           try {
-            if (typeof rule === 'string' && rule.indexOf('@font-face') !== -1 && rule.indexOf('font-display') === -1) {
-              rule = rule.replace(/\}\s*$/, ';font-display:swap;}');
+            if (typeof rule === 'string' && rule.indexOf('@font-face') !== -1) {
+              rule = forceFontSwap(rule);
             }
           } catch (_e) {}
           return originalInsertRule.call(this, rule, index);
@@ -61,23 +72,27 @@ const getFontFaceSwapScript = () => String.raw`
       }
     }
 
-    // 2. MutationObserver to catch <style> elements injected via textContent/innerHTML
-    //    (e.g. @expo/vector-icons injects icon font-face this way)
-    function patchFontDisplay(css) {
-      return css.replace(/@font-face\s*\{([^}]*)\}/g, function(match, body) {
-        if (body.indexOf('font-display') !== -1) return match;
-        return match.replace(/\}\s*$/, ';font-display:swap;}');
-      });
+    // 2. MutationObserver to catch <style> elements and text nodes injected into them
+    //    (expo-font appends text nodes to an existing <style> element)
+    function patchStyleElement(el) {
+      if (!el || !el.textContent || el.textContent.indexOf('@font-face') === -1) return;
+      var patched = forceFontSwap(el.textContent);
+      if (patched !== el.textContent) el.textContent = patched;
     }
     if (typeof MutationObserver !== 'undefined') {
       new MutationObserver(function(mutations) {
         for (var i = 0; i < mutations.length; i++) {
-          var nodes = mutations[i].addedNodes;
+          var m = mutations[i];
+          var nodes = m.addedNodes;
           for (var j = 0; j < nodes.length; j++) {
             var node = nodes[j];
-            if (node.tagName === 'STYLE' && node.textContent && node.textContent.indexOf('@font-face') !== -1) {
-              var patched = patchFontDisplay(node.textContent);
-              if (patched !== node.textContent) node.textContent = patched;
+            // New <style> element added
+            if (node.tagName === 'STYLE') {
+              patchStyleElement(node);
+            }
+            // Text node appended to an existing <style> (expo-font pattern)
+            if (node.nodeType === 3 && m.target && m.target.tagName === 'STYLE') {
+              patchStyleElement(m.target);
             }
           }
         }

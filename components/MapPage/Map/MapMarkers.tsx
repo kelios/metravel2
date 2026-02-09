@@ -75,10 +75,13 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 
   const handleMarkerClick = useCallback(
     (e: any, point: Point, coords: { lat: number; lng: number }) => {
-      // Prevent marker click from being treated as a map click (important in route mode).
-      // Leaflet passes the DOM event via `originalEvent`.
-      e?.originalEvent?.preventDefault?.();
-      e?.originalEvent?.stopPropagation?.();
+      // Stop propagation on the Leaflet event to prevent map click handler (route mode).
+      // IMPORTANT: Do NOT call preventDefault on originalEvent — it breaks touch-to-click on mobile.
+      try {
+        e?.originalEvent?.stopPropagation?.();
+      } catch {
+        // noop
+      }
 
       onMarkerClick?.(point, coords);
       if (e?.target?.openPopup) {
@@ -100,6 +103,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           // noop
         }
 
+        // Shorter timeout for snappier mobile UX
         setTimeout(() => {
           if (didOpen) return;
           didOpen = true;
@@ -108,7 +112,7 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           } catch {
             // noop
           }
-        }, 420);
+        }, 250);
       }
     },
     [onMarkerClick]

@@ -10,7 +10,7 @@ import { ValidationSummary } from '@/components/travel/ValidationFeedback';
 import { validateStep } from '@/utils/travelWizardValidation';
 import { MarkerData, TravelFormData } from '@/types/types';
 import MultiSelectField from '@/components/forms/MultiSelectField';
-import { matchCountryId, buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
+import { matchCountryId, buildAddressFromGeocode } from '@/utils/geocodeHelpers';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';

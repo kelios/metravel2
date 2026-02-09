@@ -25,7 +25,7 @@ import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'
 import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect';
 import Button from '@/components/ui/Button';
 import ColorChip from '@/components/ui/ColorChip';
-import { buildAddressFromGeocode } from '@/components/travel/WebMapComponent';
+import { buildAddressFromGeocode } from '@/utils/geocodeHelpers';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 import { PointStatus, STATUS_LABELS } from '@/types/userPoints';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';

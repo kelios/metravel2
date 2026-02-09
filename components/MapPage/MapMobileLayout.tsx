@@ -59,7 +59,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const [uiTab, setUiTab] = useState<'list' | 'filters'>('list');
   const [contentTab, setContentTab] = useState<'list' | 'filters'>('list');
   const [, startTransition] = useTransition();
-  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
+  const [_sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
   const sheetStateRef = useRef<'collapsed' | 'half' | 'full'>('collapsed');
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
@@ -325,7 +325,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         peekContent={peekContent}
         onStateChange={handleSheetStateChange}
         bottomInset={
-          Platform.OS === 'web' && sheetState !== 'collapsed' ? LAYOUT.tabBarHeight : 0
+          Platform.OS === 'web' ? LAYOUT.tabBarHeight : 0
         }
       >
         {sheetContent}

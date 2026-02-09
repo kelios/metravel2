@@ -12,7 +12,8 @@ import type {
 } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 
-import JSZip from 'jszip';
+// JSZip is loaded dynamically to avoid pulling ~90 KiB into the initial bundle
+const getJSZip = () => import('jszip').then((m) => m.default ?? m);
 
 type FileInput = File | DocumentPickerAsset;
 
@@ -108,6 +109,7 @@ export const userPointsApi = {
     }
 
     const extractKmlFromKmz = async (buffer: ArrayBuffer) => {
+      const JSZip = await getJSZip();
       const zip = await JSZip.loadAsync(buffer);
 
       const fileNames = Object.keys(zip.files);

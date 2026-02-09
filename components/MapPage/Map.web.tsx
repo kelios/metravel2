@@ -62,6 +62,19 @@ const MapRouteViaUseMap: React.FC<{
   );
 };
 
+/** Wrapper that subscribes to bottom sheet store so controls reposition reactively. */
+const MapControlsReactive: React.FC<Omit<React.ComponentProps<typeof MapControls>, 'bottomOffset'>> = (props) => {
+  const bsState = useBottomSheetStore((s) => s.state);
+  const bsHeightPx = useBottomSheetStore((s) => s.heightPx);
+  const bottomOffset = useMemo(() => {
+    if (bsState === 'collapsed') return 120;
+    if (bsState === 'half') return Math.max(bsHeightPx * 0.5 + 20, 200);
+    if (bsState === 'full') return Math.max(bsHeightPx * 0.9 + 20, 400);
+    return 120;
+  }, [bsState, bsHeightPx]);
+  return <MapControls {...props} bottomOffset={bottomOffset} />;
+};
+
 const MapPageComponent: React.FC<Props> = (props) => {
   const {
     travel = { data: [] },
@@ -641,6 +654,69 @@ const MapPageComponent: React.FC<Props> = (props) => {
     };
   }, [mapContainerIdRef, mapInstance]);
 
+  // Detect tab visibility changes via IntersectionObserver.
+  // When the user switches away from the map tab and comes back, Leaflet doesn't
+  // know the container is visible again — marker pane stops rendering.
+  // IntersectionObserver fires when the container transitions from hidden to visible.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (!mapRef.current) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const map = mapRef.current;
+    const containerId = mapContainerIdRef.current;
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    let wasHidden = false;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting && wasHidden) {
+            // Container just became visible again (tab switch back)
+            requestAnimationFrame(() => {
+              try {
+                map.invalidateSize?.({ animate: false } as any);
+              } catch {
+                // noop
+              }
+              // Force marker pane redraw by toggling a benign CSS property
+              try {
+                const markerPane = map.getPane?.('markerPane') as HTMLElement | undefined;
+                if (markerPane) {
+                  markerPane.style.willChange = 'transform';
+                  requestAnimationFrame(() => {
+                    try {
+                      markerPane.style.willChange = '';
+                    } catch {
+                      // noop
+                    }
+                  });
+                }
+              } catch {
+                // noop
+              }
+            });
+          }
+          wasHidden = !entry.isIntersecting;
+        }
+      },
+      { threshold: 0.01 }
+    );
+
+    observer.observe(el);
+
+    return () => {
+      try {
+        observer.disconnect();
+      } catch {
+        // noop
+      }
+    };
+  }, [mapContainerIdRef, mapInstance]);
+
   // invalidateSize on resize
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -1160,10 +1236,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
       )}
 
       {/* Map controls */}
-      <MapControls
+      <MapControlsReactive
         userLocation={userLocationLatLng}
         onCenterUserLocation={centerOnUserLocation}
-        bottomOffset={useBottomSheetStore.getState().getControlsBottomOffset()}
         alignLeft={true}
       />
     </View>

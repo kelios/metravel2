@@ -402,6 +402,47 @@ function AccountMenu() {
           />
 
           <View style={styles.sectionDivider} />
+          <Pressable onPress={() => toggleSection('travels')} style={styles.sectionHeader}>
+            <Text style={styles.sectionHeaderText}>Путешествия</Text>
+            <Feather 
+              name={expandedSections.travels ? 'chevron-up' : 'chevron-down'} 
+              size={14} 
+              color={colors.textMuted} 
+            />
+          </Pressable>
+
+          {expandedSections.travels && (
+            <>
+              <Menu.Item
+                onPress={() => handleNavigate('/travel/new')}
+                title="Добавить путешествие"
+                leadingIcon={({ size }) => <Feather name="plus-circle" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
+                onPress={() =>
+                  handleNavigate('/metravel', () => {
+                    const numericUserId = userId ? Number(userId) : undefined;
+                    updateFilters({ user_id: numericUserId });
+                  })
+                }
+                title="Мои путешествия"
+                leadingIcon={({ size }) => <Feather name="map" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+              <Menu.Item
+                onPress={() => handleNavigate('/userpoints')}
+                title="Мои точки"
+                leadingIcon={({ size }) => <Feather name="map-pin" size={size} color={styles.iconMuted.color} />}
+                style={styles.menuItem}
+                titleStyle={styles.menuItemTitle}
+              />
+            </>
+          )}
+
+          <View style={styles.sectionDivider} />
           <Pressable onPress={() => toggleSection('account')} style={styles.sectionHeader}>
             <Text style={styles.sectionHeaderText}>Аккаунт</Text>
             <Feather 
@@ -471,47 +512,6 @@ function AccountMenu() {
               titleStyle={styles.menuItemTitle}
             />
           ))}
-
-          <View style={styles.sectionDivider} />
-          <Pressable onPress={() => toggleSection('travels')} style={styles.sectionHeader}>
-            <Text style={styles.sectionHeaderText}>Путешествия</Text>
-            <Feather 
-              name={expandedSections.travels ? 'chevron-up' : 'chevron-down'} 
-              size={14} 
-              color={colors.textMuted} 
-            />
-          </Pressable>
-
-          {expandedSections.travels && (
-            <>
-              <Menu.Item
-                onPress={() => handleNavigate('/travel/new')}
-                title="Добавить путешествие"
-                leadingIcon={({ size }) => <Feather name="plus-circle" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() =>
-                  handleNavigate('/metravel', () => {
-                    const numericUserId = userId ? Number(userId) : undefined;
-                    updateFilters({ user_id: numericUserId });
-                  })
-                }
-                title="Мои путешествия"
-                leadingIcon={({ size }) => <Feather name="map" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
-              />
-              <Menu.Item
-                onPress={() => handleNavigate('/userpoints')}
-                title="Мои точки"
-                leadingIcon={({ size }) => <Feather name="map-pin" size={size} color={styles.iconMuted.color} />}
-                style={styles.menuItem}
-                titleStyle={styles.menuItemTitle}
-              />
-            </>
-          )}
 
           <View style={styles.sectionDivider} />
           <Pressable onPress={() => toggleSection('theme')} style={styles.sectionHeader}>

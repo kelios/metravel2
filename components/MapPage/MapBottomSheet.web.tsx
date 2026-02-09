@@ -6,7 +6,7 @@
  */
 
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import IconButton from '@/components/ui/IconButton';
@@ -57,7 +57,8 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       },
     }));
 
-    const sheetMaxHeight = sheetIndex < 0 ? 0 : sheetIndex === 0 ? '70vh' : '80vh';
+    const isCollapsed = sheetIndex < 0;
+    const sheetMaxHeight = isCollapsed ? 'none' : sheetIndex === 0 ? '70vh' : '80vh';
 
     const handleClose = useCallback(() => {
       const dt = Date.now() - lastProgrammaticOpenTsRef.current;
@@ -66,20 +67,37 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       onStateChange?.('collapsed');
     }, [onStateChange]);
 
+    const handlePeekTap = useCallback(() => {
+      lastProgrammaticOpenTsRef.current = Date.now();
+      setSheetIndex(0);
+      onStateChange?.('half');
+    }, [onStateChange]);
+
     return (
       <View
         style={[
           styles.webRoot,
+          isCollapsed ? styles.webRootCollapsed : null,
           {
-            // @ts-ignore: web-only style
-            height: (sheetIndex < 0 ? 0 : 'auto') as any,
             // @ts-ignore: web-only style
             maxHeight: sheetMaxHeight as any,
             bottom: bottomInset,
           },
         ]}
         accessibilityLabel="Панель карты"
+        // Allow map touches to pass through when collapsed and no peek content
+        pointerEvents={isCollapsed && !peekContent ? 'none' : 'auto'}
       >
+        {/* Drag handle — always visible as affordance */}
+        <Pressable
+          onPress={isCollapsed ? handlePeekTap : handleClose}
+          style={styles.dragHandleArea}
+          accessibilityLabel={isCollapsed ? 'Развернуть панель' : 'Свернуть панель'}
+          accessibilityRole="button"
+        >
+          <View style={styles.dragHandle} />
+        </Pressable>
+
         {sheetIndex >= 0 && (
           <View style={styles.header}>
             <View style={styles.headerContent}>
@@ -105,7 +123,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         )}
 
         <View style={[styles.contentContainer, { paddingBottom: contentBottomPadding }]}>
-          {sheetIndex < 0 ? peekContent : children}
+          {isCollapsed ? peekContent : children}
         </View>
       </View>
     );
@@ -128,6 +146,21 @@ const getStyles = (colors: ThemedColors) =>
       borderTopRightRadius: 16,
       overflow: 'hidden',
       ...(Platform.OS === 'web' ? ({ boxShadow: colors.boxShadows.heavy } as any) : null),
+    },
+    webRootCollapsed: {
+      overflow: 'visible' as any,
+    },
+    dragHandleArea: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 8,
+      ...(Platform.OS === 'web' ? ({ cursor: 'pointer', touchAction: 'manipulation' } as any) : null),
+    },
+    dragHandle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.borderStrong,
     },
     header: {
       flexDirection: 'row',

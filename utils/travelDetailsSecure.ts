@@ -15,7 +15,6 @@ const getDOMPurify = (): typeof import('dompurify').default | null => {
   if (_DOMPurify) return _DOMPurify;
   try {
     // Synchronous require works in Metro/webpack bundles (already bundled, no network fetch).
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     _DOMPurify = require('dompurify') as typeof import('dompurify').default;
     // Handle default export wrapper
     if (_DOMPurify && typeof (_DOMPurify as any).default?.sanitize === 'function') {

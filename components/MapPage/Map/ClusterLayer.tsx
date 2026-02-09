@@ -256,10 +256,13 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
 
   const handleMarkerClick = useCallback(
     (e: any, point: Point, coords: { lat: number; lng: number }) => {
-      // Prevent marker click from being treated as a map click (important in route mode).
-      // Leaflet passes the DOM event via `originalEvent`.
-      e?.originalEvent?.preventDefault?.();
-      e?.originalEvent?.stopPropagation?.();
+      // Stop propagation to prevent map click handler (route mode).
+      // IMPORTANT: Do NOT call preventDefault on originalEvent — it breaks touch-to-click on mobile.
+      try {
+        e?.originalEvent?.stopPropagation?.();
+      } catch {
+        // noop
+      }
 
       onMarkerClick?.(point, coords);
       if (e?.target?.openPopup) {
@@ -269,7 +272,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           } catch {
             // noop
           }
-        }, 360);
+        }, 250);
       }
     },
     [onMarkerClick]
@@ -373,8 +376,11 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             icon={icon as any}
             eventHandlers={{
               click: (e: any) => {
-                e?.originalEvent?.preventDefault?.();
-                e?.originalEvent?.stopPropagation?.();
+                try {
+                  e?.originalEvent?.stopPropagation?.();
+                } catch {
+                  // noop
+                }
                 if (
                   !Number.isFinite(cluster.bounds?.[0]?.[0]) ||
                   !Number.isFinite(cluster.bounds?.[0]?.[1]) ||

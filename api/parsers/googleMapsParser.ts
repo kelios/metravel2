@@ -1,7 +1,8 @@
 import type { ParsedPoint, PointColor } from '@/types/userPoints';
 import { PointStatus } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
-import JSZip from 'jszip';
+// JSZip is loaded dynamically to avoid pulling ~90 KiB into the initial bundle
+const getJSZip = () => import('jszip').then((m) => m.default ?? m);
 import { DESIGN_COLORS } from '@/constants/designSystem';
 
 type FileInput = File | DocumentPickerAsset;
@@ -135,6 +136,7 @@ export class GoogleMapsParser {
   }
 
   private static async parseKMZ(buffer: ArrayBuffer): Promise<ParsedPoint[]> {
+    const JSZip = await getJSZip();
     const zip = await JSZip.loadAsync(buffer);
 
     const fileNames = Object.keys(zip.files);

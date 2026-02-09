@@ -248,6 +248,8 @@ function ImageCardMedia({
                 aria-hidden
                 src={webBlurUri || webBlurFallbackUri || undefined}
                 alt=""
+                width={64}
+                height={64}
                 style={{
                   position: 'absolute',
                   left: '50%',
@@ -282,6 +284,8 @@ function ImageCardMedia({
             <img
               src={webMainSrc}
               alt={alt || ''}
+              width={typeof width === 'number' ? width : 400}
+              height={typeof height === 'number' ? height : 300}
               style={{
                 position: 'absolute',
                 objectFit: fit === 'cover' ? 'cover' : 'contain',
