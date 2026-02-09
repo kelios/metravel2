@@ -46,7 +46,6 @@ export interface SliderProps {
   blurBackground?: boolean
   onFirstImageLoad?: () => void
   mobileHeightPercent?: number
-  onImagePress?: (index: number) => void
   firstImagePreloaded?: boolean
 }
 
@@ -59,6 +58,9 @@ export interface SliderRef {
 const DEFAULT_AR = 16 / 9
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
+
+// Compute preferred format once at module level (never changes at runtime)
+const PREFERRED_FORMAT = Platform.OS === 'web' ? getPreferredImageFormat() : undefined
 
 const buildUri = (
   img: SliderImage,
@@ -79,7 +81,7 @@ const buildUri = (
     return (
       optimizeImageUrl(versionedUrl, {
         width: optimalSize.width,
-        format: getPreferredImageFormat(),
+        format: PREFERRED_FORMAT,
         quality,
         fit: fitForUrl,
         dpr: 1,
@@ -93,7 +95,7 @@ const buildUri = (
     return (
       optimizeImageUrl(versionedUrl, {
         width: cappedWidth,
-        format: getPreferredImageFormat(),
+        format: PREFERRED_FORMAT,
         quality,
         fit: fitForUrl,
         dpr: 1,
@@ -122,17 +124,14 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     blurBackground = true,
     onFirstImageLoad,
     mobileHeightPercent = 0.6,
-    onImagePress,
   } = props
 
   const insets = useSafeAreaInsets()
   const { width: winW, height: winH, isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
 
-  // On web, start with 0 so we don't render slides at the wrong width.
-  // onLayout will provide the correct width before the first meaningful paint.
-  // On native, use winW immediately since there's no sidebar layout issue.
-  const [containerW, setContainerW] = useState(Platform.OS === 'web' ? 0 : winW)
+  const [containerW, setContainerW] = useState(winW)
+  const containerWRef = useRef(winW)
   const wrapperRef = useRef<any>(null)
   const scrollRef = useRef<any>(null)
   const indexRef = useRef(0)
@@ -141,6 +140,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const renderIndexRef = useRef(0)
   const rafRef = useRef<number | null>(null)
   const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web')
+  const prefetchEnabledRef = useRef(Platform.OS !== 'web')
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const syncContainerWidthFromDom = useCallback(() => {
@@ -149,21 +149,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     const node = raw?._nativeNode || raw?._domNode || raw
     const w = node?.getBoundingClientRect?.()?.width
     if (!Number.isFinite(w) || w <= 0) return
-    setContainerW((prev) => (Math.abs(prev - w) > 2 ? w : prev))
+    if (Math.abs(containerWRef.current - w) > 2) {
+      containerWRef.current = w
+      setContainerW(w)
+    }
   }, [])
-
-  // Fallback: if onLayout/ResizeObserver hasn't set containerW yet, use winW.
-  // This runs after mount effects, covering test environments where onLayout doesn't fire.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    if (containerW > 0) return
-    // Use microtask so it fires within act() in tests
-    let cancelled = false
-    Promise.resolve().then(() => {
-      if (!cancelled) setContainerW((prev) => (prev === 0 ? winW : prev))
-    })
-    return () => { cancelled = true }
-  }, [containerW, winW])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -280,10 +270,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const enablePrefetch = useCallback(() => {
     if (Platform.OS !== 'web') return
-    if (prefetchEnabled) return
+    if (prefetchEnabledRef.current) return
     if (!canPrefetchOnWeb) return
+    prefetchEnabledRef.current = true
     setPrefetchEnabled(true)
-  }, [canPrefetchOnWeb, prefetchEnabled])
+  }, [canPrefetchOnWeb])
 
   const setActiveIndex = useCallback(
     (idx: number) => {
@@ -335,9 +326,12 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (e: any) => {
       const w = e?.nativeEvent?.layout?.width
       if (!Number.isFinite(w)) return
-      if (Math.abs(w - containerW) > 2) setContainerW(w)
+      if (Math.abs(containerWRef.current - w) > 2) {
+        containerWRef.current = w
+        setContainerW(w)
+      }
     },
-    [containerW]
+    []
   )
 
   useEffect(() => {
@@ -366,6 +360,18 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     enablePrefetch()
   }, [onFirstImageLoad, enablePrefetch])
 
+  // Memoize slide dimensions to avoid creating new style objects per slide
+  const slideDimensions = useMemo(
+    () => ({ width: containerW, height: containerH }),
+    [containerW, containerH]
+  )
+
+  // Memoize merged imageProps to avoid new object per slide
+  const mergedImagePropsBase = useMemo(
+    () => ({ ...(imageProps || {}), contentPosition: 'center' as const }),
+    [imageProps]
+  )
+
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
       const distance = Math.abs(index - renderIndex)
@@ -377,7 +383,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
       if (!shouldRender) {
         return (
-          <View style={[styles.slide, { width: containerW, height: containerH }]}>
+          <View style={[styles.slide, slideDimensions]}>
             <View style={styles.imageCardWrapper}>
               <View style={styles.imageCardSurface} />
             </View>
@@ -385,8 +391,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         )
       }
 
-      const slideContent = (
-        <View style={[styles.slide, { width: containerW, height: containerH }]}>
+      return (
+        <View style={[styles.slide, slideDimensions]}>
           <View style={styles.imageCardWrapper}>
             <View style={styles.imageCardSurface}>
               <ImageCardMedia
@@ -400,8 +406,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 style={styles.img}
                 alt={`Фотография путешествия ${index + 1} из ${images.length}`}
                 imageProps={{
-                  ...(imageProps || {}),
-                  contentPosition: 'center',
+                  ...mergedImagePropsBase,
                   testID: `slider-image-${index}`,
                   accessibilityRole: 'image',
                   accessibilityLabel: `Фотография путешествия ${index + 1} из ${images.length}`,
@@ -412,18 +417,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           </View>
         </View>
       )
-
-      if (onImagePress) {
-        return (
-          <TouchableOpacity activeOpacity={0.9} onPress={() => onImagePress(index)} accessibilityRole="button" accessibilityLabel={`Открыть фото ${index + 1} на весь экран`}>
-            {slideContent}
-          </TouchableOpacity>
-        )
-      }
-
-      return slideContent
     },
-    [blurBackground, containerH, containerW, fit, handleFirstImageLoad, imageProps, images.length, onImagePress, renderIndex, renderWindow, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
+    [blurBackground, fit, handleFirstImageLoad, images.length, mergedImagePropsBase, renderIndex, renderWindow, slideDimensions, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, uriMap]
   )
 
   const handleScroll = useCallback(
@@ -484,8 +479,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const navInset = isMobile ? 8 : Math.max(insets.left || 0, insets.right || 0)
   const navOffset = Math.max(44, 16 + navInset)
 
-  const ready = containerW > 0
-
   return (
     <View style={styles.sliderStack}>
       <View
@@ -493,114 +486,110 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         onLayout={onLayout}
         style={[
           styles.wrapper,
-          ready ? { height: containerH } : { aspectRatio: firstAR, maxHeight: 640 },
+          { height: containerH },
           Platform.OS === 'web' && !fullBleed
             ? ({ maxWidth: 1280, marginHorizontal: 'auto' } as any)
             : null,
         ]}
       >
-        {ready ? (
+        <View style={styles.clip}>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16}
+            style={styles.scrollView}
+            contentContainerStyle={[styles.scrollContent, { height: containerH }]}
+            onScrollBeginDrag={() => {
+              enablePrefetch()
+            }}
+            onScroll={handleScroll}
+          >
+            {images.map((item, index) => (
+              <React.Fragment key={keyExtractor(item)}>
+                {renderItem({ item, index })}
+              </React.Fragment>
+            ))}
+          </ScrollView>
+        </View>
+
+        {Platform.OS === 'web' && shouldShowSideBlurPanels ? (
           <>
-            <View style={styles.clip}>
-              <ScrollView
-                ref={scrollRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                scrollEventThrottle={16}
-                style={styles.scrollView}
-                contentContainerStyle={[styles.scrollContent, { height: containerH }]}
-                onScrollBeginDrag={() => {
-                  enablePrefetch()
-                }}
-                onScroll={handleScroll}
-              >
-                {images.map((item, index) => (
-                  <React.Fragment key={keyExtractor(item)}>
-                    {renderItem({ item, index })}
-                  </React.Fragment>
-                ))}
-              </ScrollView>
-            </View>
-
-            {Platform.OS === 'web' && shouldShowSideBlurPanels ? (
-              <>
-                <View
-                  pointerEvents="none"
-                  style={styles.edgeScrimLeft}
-                  testID={shouldShowSideBlurPanels ? `slider-side-blur-left-${currentIndex}` : undefined}
-                />
-                <View
-                  pointerEvents="none"
-                  style={styles.edgeScrimRight}
-                  testID={shouldShowSideBlurPanels ? `slider-side-blur-right-${currentIndex}` : undefined}
-                />
-              </>
-            ) : null}
-
-            {showArrows && images.length > 1 && !(isMobile && hideArrowsOnMobile) ? (
-              <>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Previous slide"
-                  onPress={prev}
-                  activeOpacity={0.8}
-                  style={[styles.navBtn, { left: navOffset }]}
-                >
-                  <View style={styles.arrowIconContainer}>
-                    <Feather
-                      name="chevron-left"
-                      size={isMobile ? 20 : 24}
-                      color={colors.textOnDark}
-                      style={styles.arrowIcon}
-                    />
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel="Next slide"
-                  onPress={next}
-                  activeOpacity={0.8}
-                  style={[styles.navBtn, { right: navOffset }]}
-                >
-                  <View style={styles.arrowIconContainer}>
-                    <Feather
-                      name="chevron-right"
-                      size={isMobile ? 20 : 24}
-                      color={colors.textOnDark}
-                      style={styles.arrowIcon}
-                    />
-                  </View>
-                </TouchableOpacity>
-              </>
-            ) : null}
-
-            {images.length > 1 ? (
-              <View style={styles.counter} pointerEvents="none">
-                <View style={styles.counterContainer}>
-                  <Text style={styles.counterText}>
-                    {currentIndex + 1}/{images.length}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-
-            {showDots && images.length > 1 ? (
-              <View style={styles.dots}>
-                <View style={styles.dotsContainer}>
-                  {images.map((_, i) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.dot,
-                        i === currentIndex ? styles.dotActive : null,
-                      ]}
-                    />
-                  ))}
-                </View>
-              </View>
-            ) : null}
+            <View
+              pointerEvents="none"
+              style={styles.edgeScrimLeft}
+              testID={shouldShowSideBlurPanels ? `slider-side-blur-left-${currentIndex}` : undefined}
+            />
+            <View
+              pointerEvents="none"
+              style={styles.edgeScrimRight}
+              testID={shouldShowSideBlurPanels ? `slider-side-blur-right-${currentIndex}` : undefined}
+            />
           </>
+        ) : null}
+
+        {showArrows && images.length > 1 && !(isMobile && hideArrowsOnMobile) ? (
+          <>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Previous slide"
+              onPress={prev}
+              activeOpacity={0.8}
+              style={[styles.navBtn, { left: navOffset }]}
+            >
+              <View style={styles.arrowIconContainer}>
+                <Feather
+                  name="chevron-left"
+                  size={isMobile ? 20 : 24}
+                  color={colors.textOnDark}
+                  style={styles.arrowIcon}
+                />
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Next slide"
+              onPress={next}
+              activeOpacity={0.8}
+              style={[styles.navBtn, { right: navOffset }]}
+            >
+              <View style={styles.arrowIconContainer}>
+                <Feather
+                  name="chevron-right"
+                  size={isMobile ? 20 : 24}
+                  color={colors.textOnDark}
+                  style={styles.arrowIcon}
+                />
+              </View>
+            </TouchableOpacity>
+          </>
+        ) : null}
+
+        {images.length > 1 ? (
+          <View style={styles.counter} pointerEvents="none">
+            <View style={styles.counterContainer}>
+              <Text style={styles.counterText}>
+                {currentIndex + 1}/{images.length}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {showDots && images.length > 1 ? (
+          <View style={styles.dots}>
+            <View style={styles.dotsContainer}>
+              {images.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dot,
+                    i === currentIndex ? styles.dotActive : null,
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
         ) : null}
       </View>
     </View>

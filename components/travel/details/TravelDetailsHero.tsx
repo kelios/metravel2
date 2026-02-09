@@ -32,7 +32,6 @@ import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
 
-const GalleryLightbox = withLazy(() => import('@/components/travel/GalleryLightbox'))
 const Slider: React.FC<any> = withLazy(() => import('@/components/travel/Slider'))
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
@@ -391,14 +390,6 @@ function TravelHeroSectionInner({
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
   const canShowSlider = renderSlider
 
-  // 3.7: Fullscreen gallery lightbox state
-  const [lightboxIndex, setLightboxIndex] = useState(-1)
-  const handleOpenLightbox = useCallback((index: number) => {
-    setLightboxIndex(index)
-  }, [])
-  const handleCloseLightbox = useCallback(() => {
-    setLightboxIndex(-1)
-  }, [])
   const quickJumpLinks = useMemo(() => {
     return HERO_QUICK_JUMP_KEYS.map((key) => sectionLinks.find((link) => link.key === key)).filter(
       Boolean
@@ -509,7 +500,6 @@ function TravelHeroSectionInner({
               aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.6}
               onFirstImageLoad={onFirstImageLoad}
-              onImagePress={handleOpenLightbox}
               firstImagePreloaded={renderSlider && Platform.OS === 'web'}
             />
           )}
@@ -626,17 +616,6 @@ function TravelHeroSectionInner({
         </View>
       )}
 
-      {/* 3.7: Fullscreen gallery lightbox */}
-      {galleryImages.length > 0 && lightboxIndex >= 0 && (
-        <Suspense fallback={null}>
-          <GalleryLightbox
-            images={galleryImages}
-            initialIndex={lightboxIndex}
-            visible={lightboxIndex >= 0}
-            onClose={handleCloseLightbox}
-          />
-        </Suspense>
-      )}
     </>
   )
 }

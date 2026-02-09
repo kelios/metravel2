@@ -58,7 +58,7 @@ const OptimizedMap: React.FC<OptimizedMapProps> = ({
   setRoutingLoading,
   setRoutingError,
   placesAlongRoute: _placesAlongRoute, // Accepted but not passed to Map.web
-  radius: _radius, // Accepted for API compatibility but not used by Map.web
+  radius,
   onMapUiApiReady,
   onUserLocationChange,
 }) => {
@@ -78,6 +78,7 @@ const OptimizedMap: React.FC<OptimizedMapProps> = ({
       setRouteElevationStats={setRouteElevationStats}
       setRoutingLoading={setRoutingLoading}
       setRoutingError={setRoutingError}
+      radius={radius}
       onMapUiApiReady={onMapUiApiReady}
       onUserLocationChange={onUserLocationChange}
     />
@@ -140,6 +141,11 @@ const arePropsEqual = (
       );
     })
   ) {
+    return false;
+  }
+
+  // Сравниваем радиус
+  if (prevProps.radius !== nextProps.radius) {
     return false;
   }
 
