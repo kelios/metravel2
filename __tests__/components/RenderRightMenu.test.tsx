@@ -290,8 +290,8 @@ describe('AccountMenu', () => {
     } as any);
 
     renderWithClient(<RenderRightMenu />);
-    // We now apply optimizeImageUrl to avatars which adds version parameter
-    expect(getLastImageSourceUri()).toBe(signed + '&v=5');
+    // Signed S3 URLs should NOT get a cache-buster appended
+    expect(getLastImageSourceUri()).toBe(signed);
   });
 
   it('appends cache-buster param to non-signed avatar url', () => {
