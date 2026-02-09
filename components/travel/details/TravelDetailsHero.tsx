@@ -358,16 +358,15 @@ function TravelHeroSectionInner({
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
-    // ✅ РЕДИЗАЙН: Уменьшение высоты на 15%
-    if (Platform.OS === 'web' && !isMobile) return 357; // было 420 (-15%)
-    if (!resolvedWidth) return isMobile ? 238 : 357; // было 280/420 (-15%)
+    // 80% высоты экрана для всех платформ
+    const target = winH * 0.8
+    if (Platform.OS === 'web' && !isMobile) return Math.max(320, Math.min(target, winH * 0.85))
+    if (!resolvedWidth) return isMobile ? Math.max(280, target) : Math.max(320, target)
     if (isMobile) {
-      const mobileHeight = winH * 0.68; // было 0.8 (-15%)
-      return Math.max(170, Math.min(mobileHeight, winH * 0.72)); // было 200/0.85 (-15%)
+      return Math.max(280, Math.min(target, winH * 0.85))
     }
-    const h = resolvedWidth / (aspectRatio || 16 / 9)
-    return Math.max(272, Math.min(h, 544)); // было 320/640 (-15%)
-  }, [aspectRatio, isMobile, winH, resolvedWidth])
+    return Math.max(320, Math.min(target, winH * 0.85))
+  }, [isMobile, winH, resolvedWidth])
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
     return gallery.map((item, index) =>
@@ -492,7 +491,7 @@ function TravelHeroSectionInner({
               preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
               blurBackground
               aspectRatio={aspectRatio as number}
-              mobileHeightPercent={0.6}
+              mobileHeightPercent={0.8}
               onFirstImageLoad={onFirstImageLoad}
               firstImagePreloaded={renderSlider && Platform.OS === 'web'}
             />

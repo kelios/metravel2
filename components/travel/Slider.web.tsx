@@ -205,8 +205,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         const safeMax = Math.max(targetH, viewportH - (insets.top || 0) - (insets.bottom || 0))
         return clamp(targetH, 280, safeMax || targetH)
       }
+      const targetH = winH * 0.8
       const h = w / firstAR
-      return clamp(h, 320, 640)
+      return clamp(Math.max(h, targetH), 320, winH * 0.85)
     },
     [firstAR, images.length, insets.bottom, insets.top, isMobile, winH, mobileHeightPercent]
   )
@@ -244,7 +245,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const renderWindow = useMemo(() => {
     // Keep a window of mounted slides to avoid triggering requests for the entire gallery.
     // Wider window reduces "blank" risk and flicker when scrolling.
-    const base = isMobile ? 2 : 3
+    const base = isMobile ? 3 : 4
     return Math.max(base, effectivePreload)
   }, [effectivePreload, isMobile])
 
@@ -379,7 +380,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
       const mainPriority = isFirstSlide ? 'high' : (distance <= 1 ? 'normal' : 'low')
-      const shouldBlur = blurBackground && distance <= 1
+      const shouldBlur = blurBackground
 
       if (!shouldRender) {
         return (
@@ -400,7 +401,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 fit={fit}
                 blurBackground={shouldBlur}
                 priority={mainPriority as any}
-                loading={distance <= 1 ? 'eager' : 'lazy'}
+                loading={distance <= 2 ? 'eager' : 'lazy'}
                 prefetch={isFirstSlide}
                 transition={0}
                 style={styles.img}
@@ -636,7 +637,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     slide: {
       flexShrink: 0,
       position: 'relative',
-      backgroundColor: colors.mutedBackground,
+      backgroundColor: '#1a1a1a',
       overflow: 'hidden',
     },
     imageCardWrapper: {

@@ -489,8 +489,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         const safeMax = Math.max(targetH, viewportH - (insets.top || 0) - (insets.bottom || 0));
         return clamp(targetH, 280, safeMax || targetH);
       } else {
+        const targetH = winH * 0.8;
         const h = w / firstAR;
-        return clamp(h, 320, 640);
+        return clamp(Math.max(h, targetH), 320, winH * 0.85);
       }
     },
     [firstAR, images.length, insets.bottom, insets.top, isMobile, winH, mobileHeightPercent]
@@ -948,7 +949,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   },
   flatBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: '#1a1a1a',
   },
   img: {
     width: "100%",
