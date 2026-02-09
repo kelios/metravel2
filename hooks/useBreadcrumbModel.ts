@@ -54,6 +54,8 @@ const pageTranslations: Record<string, string> = {
   'set-password': 'Установка пароля',
   new: 'Новое путешествие',
   userpoints: 'Мои точки',
+  messages: 'Сообщения',
+  subscriptions: 'Подписки',
 };
 
 function normalizePathname(pathname: string | null | undefined) {
@@ -80,10 +82,11 @@ function getResolvedPathname(pathname: string | null | undefined) {
 }
 
 function toTitleFromSegment(segment: string) {
-  const translated = pageTranslations[segment];
+  const cleanedSegment = String(segment ?? '').split('?')[0].split('#')[0];
+  const translated = pageTranslations[cleanedSegment];
   const base = translated
     ? translated
-    : segment
+    : cleanedSegment
         .split('-')
         .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
         .join(' ');
@@ -218,6 +221,57 @@ export function useBreadcrumbModel(): BreadcrumbModel {
 
     const parts = p.split('/').filter(Boolean);
 
+    // ✅ показываем breadcrumbs на ключевых одноуровневых страницах (личный кабинет)
+    // Требование: вложенность через Профиль
+    const cabinetSingleLevelRoutes = new Set([
+      '/profile',
+      '/settings',
+      '/messages',
+      '/subscriptions',
+      '/favorites',
+      '/history',
+    ]);
+
+    const getCabinetCrumbsForSingleLevelRoute = (route: string): BreadcrumbModelItem[] => {
+      if (route === '/profile') return [{ label: 'Профиль', path: '/profile' }];
+
+      const pageLabel = getRootTitle(route);
+      return [
+        { label: 'Профиль', path: '/profile' },
+        { label: pageLabel, path: route },
+      ];
+    };
+
+    if (parts.length === 1) {
+      const pageContextTitle = getRootTitle(p);
+
+      // По умолчанию одноуровневые страницы не показывают breadcrumbs.
+      // Но для личного кабинета и связанных разделов нужен явный контекст.
+      if (cabinetSingleLevelRoutes.has(p)) {
+        const items = getCabinetCrumbsForSingleLevelRoute(p);
+        const currentLabel = items[items.length - 1]?.label || pageContextTitle;
+        const backToPath = items.length >= 2 ? items[items.length - 2].path : '/';
+
+        return {
+          items,
+          depth: items.length + 1,
+          currentTitle: currentLabel,
+          pageContextTitle: items.length >= 2 ? 'Профиль' : getRootTitle('/'),
+          backToPath,
+          showBreadcrumbs: true,
+        };
+      }
+
+      return {
+        items: [],
+        depth: 1,
+        currentTitle: pageContextTitle,
+        pageContextTitle,
+        backToPath: '/',
+        showBreadcrumbs: false,
+      };
+    }
+
     const isTravelDetailsWithReturn =
       p.startsWith('/travels/') && typeof normalizedReturnToParam === 'string' && !!normalizedReturnToParam.trim();
     if (isTravelDetailsWithReturn) {
@@ -251,18 +305,6 @@ export function useBreadcrumbModel(): BreadcrumbModel {
         pageContextTitle: returnLabel,
         backToPath: normalizedReturnTo,
         showBreadcrumbs: true,
-      };
-    }
-
-    if (parts.length === 1) {
-      const pageContextTitle = getRootTitle(p);
-      return {
-        items: [],
-        depth: 1,
-        currentTitle: pageContextTitle,
-        pageContextTitle,
-        backToPath: '/',
-        showBreadcrumbs: false,
       };
     }
 

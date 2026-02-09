@@ -38,6 +38,12 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/SUBSCRIPTIONS_SPEC.md` — ТЗ по подписке/отписке (анализ AS-IS + требования к фронтенд-доработке)
 
+## Profile
+
+- `docs/PROFILE_PAGE_SPEC.md` — ТЗ по странице профиля (`/profile`) (фронтенд)
+- `docs/PROFILE_UI_REFACTORING_SPEC.md` — ТЗ по рефакторингу UI/UX личного кабинета
+- `docs/PROFILE_UI_REFACTORING_REPORT.md` — Отчет о выполнении рефакторинга UI/UX (Этапы 1-2)
+
 ## Design system
 
 - `docs/DESIGN_SYSTEM_CONSOLIDATION.md` — how to migrate to `DESIGN_TOKENS`

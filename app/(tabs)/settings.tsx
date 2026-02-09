@@ -310,14 +310,23 @@ export default function SettingsScreen() {
         }
     }, [clearFavorites]);
 
+    const handleBackToProfile = useCallback(() => {
+        router.push('/profile' as any);
+    }, [router]);
+
     if (!authReady) {
         return (
             <SafeAreaView style={styles.container}>
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={styles.pageContainer}>
                         <View style={styles.header}>
-                            <SkeletonLoader width={140} height={22} borderRadius={4} />
-                            <SkeletonLoader width={180} height={14} borderRadius={4} style={{ marginTop: 6 }} />
+                            <View style={styles.headerRow}>
+                                <View style={styles.headerTitleBlock}>
+                                    <SkeletonLoader width={140} height={22} borderRadius={4} />
+                                    <SkeletonLoader width={180} height={14} borderRadius={4} style={{ marginTop: 6 }} />
+                                </View>
+                                <SkeletonLoader width={110} height={40} borderRadius={10} />
+                            </View>
                         </View>
                         <View style={{ gap: 14 }}>
                             <SkeletonLoader width="100%" height={180} borderRadius={12} />
@@ -358,8 +367,22 @@ export default function SettingsScreen() {
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.pageContainer}>
                     <View style={styles.header}>
-                        <Text style={styles.title}>Настройки</Text>
-                        <Text style={styles.subtitle}>Аккаунт и данные</Text>
+                        <View style={styles.headerRow}>
+                            <View style={styles.headerTitleBlock}>
+                                <Text style={styles.title}>Настройки</Text>
+                                <Text style={styles.subtitle}>Профиль</Text>
+                            </View>
+                            <Pressable
+                                style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                                onPress={handleBackToProfile}
+                                accessibilityRole="button"
+                                accessibilityLabel="Перейти в профиль"
+                                {...Platform.select({ web: { cursor: 'pointer' } })}
+                            >
+                                <Feather name="user" size={16} color={colors.primary} />
+                                <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                            </Pressable>
+                        </View>
                     </View>
 
                     <View style={styles.section}>
@@ -977,5 +1000,31 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         fontSize: 14,
         fontWeight: '700',
         color: colors.danger,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    headerTitleBlock: {
+        flex: 1,
+    },
+    backToProfileButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        backgroundColor: colors.surface,
+        minHeight: 40,
+    },
+    backToProfileButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.primary,
     },
 });

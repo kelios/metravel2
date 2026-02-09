@@ -166,6 +166,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
           hideFooterReset={hideFooterReset}
           onReset={safeResetFilters}
           onBuildRoute={onBuildRoute}
+          totalPoints={totalPoints}
         />
       )}
     </View>

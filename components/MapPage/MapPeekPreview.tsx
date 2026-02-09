@@ -50,9 +50,9 @@ export const MapPeekPreview: React.FC<MapPeekPreviewProps> = React.memo(({
     [scrollX]
   );
 
-  // Топ-3 места
+  // Топ-5 мест
   const topPlaces = useMemo(() => {
-    return places.slice(0, 3);
+    return places.slice(0, 5);
   }, [places]);
 
   if (!topPlaces.length) {

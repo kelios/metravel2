@@ -27,6 +27,10 @@ export default function FavoritesScreen() {
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
 
+    const handleBackToProfile = useCallback(() => {
+        router.push('/profile' as any);
+    }, [router]);
+
     const styles = useMemo(() => StyleSheet.create({
         container: {
             flex: 1,
@@ -73,6 +77,23 @@ export default function FavoritesScreen() {
             fontSize: 14,
             fontWeight: '600',
             color: colors.danger,
+        },
+        backToProfileButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            backgroundColor: colors.surface,
+            minHeight: 40,
+        },
+        backToProfileButtonText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.primary,
         },
         listContent: {
             paddingHorizontal: 16,
@@ -213,7 +234,18 @@ export default function FavoritesScreen() {
                     <View style={styles.headerRow}>
                         <View style={styles.headerTitleBlock}>
                             <Text style={styles.title}>Избранное</Text>
+                            <Text style={styles.subtitle}>Профиль</Text>
                         </View>
+                        <Pressable
+                            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                            onPress={handleBackToProfile}
+                            accessibilityRole="button"
+                            accessibilityLabel="Перейти в профиль"
+                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                        >
+                            <Feather name="user" size={16} color={colors.primary} />
+                            <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                        </Pressable>
                     </View>
                 </View>
                 <View style={styles.listContent}>
@@ -261,8 +293,19 @@ export default function FavoritesScreen() {
                 <View style={styles.headerRow}>
                     <View style={styles.headerTitleBlock}>
                         <Text style={styles.title}>Избранное</Text>
-                        <Text style={styles.subtitle}>{data.length} шт.</Text>
+                        <Text style={styles.subtitle}>Профиль</Text>
                     </View>
+
+                    <Pressable
+                        style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                        onPress={handleBackToProfile}
+                        accessibilityRole="button"
+                        accessibilityLabel="Перейти в профиль"
+                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                        <Feather name="user" size={16} color={colors.primary} />
+                        <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                    </Pressable>
 
                     {typeof clearFavorites === 'function' && data.length > 0 && (
                         <Pressable

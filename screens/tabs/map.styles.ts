@@ -412,6 +412,116 @@ export const getStyles = (
       badgeTextActive: {
         color: themedColors.textInverse,
       },
+      collapsedPanel: {
+        width: 48,
+        flexShrink: 0,
+        alignItems: 'center',
+        paddingTop: 8,
+        gap: 12,
+        backgroundColor: themedColors.surface,
+        borderLeftWidth: 1,
+        borderLeftColor: themedColors.border,
+        ...(Platform.OS === 'web'
+          ? ({
+              transition: 'width 200ms cubic-bezier(0.4, 0, 0.2, 1)',
+            } as any)
+          : null),
+      },
+      collapseToggle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: themedColors.surfaceLight,
+        ...(Platform.OS === 'web'
+          ? ({ cursor: 'pointer' } as any)
+          : null),
+      },
+      collapseToggleInPanel: {
+        position: 'absolute',
+        top: 8,
+        left: -16,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: themedColors.surface,
+        borderWidth: 1,
+        borderColor: themedColors.border,
+        zIndex: 1002,
+        ...(Platform.OS === 'web'
+          ? ({
+              cursor: 'pointer',
+              boxShadow: themedColors.boxShadows.light,
+            } as any)
+          : null),
+      },
+      collapsedIconBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: themedColors.surfaceLight,
+        ...(Platform.OS === 'web'
+          ? ({ cursor: 'pointer' } as any)
+          : null),
+      },
+      collapsedBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: themedColors.primary,
+        borderRadius: 8,
+        minWidth: 16,
+        height: 16,
+        paddingHorizontal: 4,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      collapsedBadgeText: {
+        fontSize: 9,
+        fontWeight: '700',
+        color: themedColors.textOnPrimary,
+      },
+      resizeHandle: {
+        position: 'absolute',
+        left: -4,
+        top: 0,
+        bottom: 0,
+        width: 8,
+        zIndex: 1003,
+        ...(Platform.OS === 'web'
+          ? ({ cursor: 'col-resize' } as any)
+          : null),
+      },
+      geoBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: themedColors.warningSoft,
+        borderBottomWidth: 1,
+        borderBottomColor: themedColors.warningLight,
+      },
+      geoBannerText: {
+        flex: 1,
+        fontSize: 13,
+        color: themedColors.text,
+      },
+      geoBannerClose: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...(Platform.OS === 'web'
+          ? ({ cursor: 'pointer' } as any)
+          : null),
+      },
   });
 };
 

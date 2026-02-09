@@ -39,7 +39,7 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
 }) => {
   return (
     <View style={styles.stickyTop} testID="filters-panel-header">
-      {isMobile && totalPoints > 0 && (
+      {totalPoints > 0 && (
         <View style={styles.compactHeader}>
           <View style={styles.compactTitleRow}>
             <MapIcon name="map" size={18} color={colors.primary} />
@@ -47,12 +47,14 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
               {totalPoints} {mode === 'radius' ? `мест • ${radiusValue || '60'} км` : 'мест'}
             </Text>
           </View>
-          <IconButton
-            icon={<MapIcon name="close" size={20} color={colors.textMuted} />}
-            label="Закрыть"
-            onPress={onClose}
-            size="sm"
-          />
+          {isMobile && (
+            <IconButton
+              icon={<MapIcon name="close" size={20} color={colors.textMuted} />}
+              label="Закрыть"
+              onPress={onClose}
+              size="sm"
+            />
+          )}
         </View>
       )}
       <SegmentedControl

@@ -12,6 +12,7 @@ interface FiltersPanelFooterProps {
   hideFooterReset: boolean;
   onReset: () => void;
   onBuildRoute?: () => void;
+  totalPoints?: number;
 }
 
 const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
@@ -24,9 +25,15 @@ const FiltersPanelFooter: React.FC<FiltersPanelFooterProps> = ({
   hideFooterReset,
   onReset,
   onBuildRoute,
+  totalPoints,
 }) => {
   return (
     <View style={styles.stickyFooter} testID="filters-panel-footer">
+      {typeof totalPoints === 'number' && totalPoints > 0 && (
+        <Text style={styles.footerPreview} testID="footer-results-preview">
+          Найдено {totalPoints} мест
+        </Text>
+      )}
       {!canBuildRoute && mode === 'route' && (
         <Text style={styles.helperText}>
           Добавьте старт и финиш — кнопка «Построить маршрут» станет активной

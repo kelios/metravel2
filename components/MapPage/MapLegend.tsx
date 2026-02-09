@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -60,27 +60,37 @@ function MapLegend({ showRouteMode = false }: MapLegendProps) {
     return items;
   }, [colors, showRouteMode]);
 
+  const [collapsed, setCollapsed] = useState(true);
+
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>
-      <View style={styles.header}>
+      <Pressable
+        style={({ pressed }) => [styles.header, collapsed && styles.headerCollapsed, pressed && { opacity: 0.7 }]}
+        onPress={() => setCollapsed((v) => !v)}
+        accessibilityRole="button"
+        accessibilityLabel={collapsed ? 'Показать легенду' : 'Скрыть легенду'}
+      >
         <Feather name="info" size={16} color={colors.textMuted} />
         <Text style={styles.title}>Легенда карты</Text>
-      </View>
-      <View style={styles.items}>
-        {legendItems.map((item, index) => (
-          <View key={index} style={styles.item}>
-            <View style={[styles.iconContainer, { backgroundColor: item.background }]}>
-              <Feather name={item.icon as any} size={14} color={item.color} />
+        <Feather name={collapsed ? 'chevron-down' : 'chevron-up'} size={14} color={colors.textMuted} />
+      </Pressable>
+      {!collapsed && (
+        <View style={styles.items}>
+          {legendItems.map((item, index) => (
+            <View key={index} style={styles.item}>
+              <View style={[styles.iconContainer, { backgroundColor: item.background }]}>
+                <Feather name={item.icon as any} size={14} color={item.color} />
+              </View>
+              <View style={styles.textContainer}>
+                <Text style={styles.label}>{item.label}</Text>
+                {!isMobile && (
+                  <Text style={styles.description}>{item.description}</Text>
+                )}
+              </View>
             </View>
-            <View style={styles.textContainer}>
-              <Text style={styles.label}>{item.label}</Text>
-              {!isMobile && (
-                <Text style={styles.description}>{item.description}</Text>
-              )}
-            </View>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -105,6 +115,12 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+    ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : null),
+  },
+  headerCollapsed: {
+    marginBottom: 0,
+    paddingBottom: 0,
+    borderBottomWidth: 0,
   },
   title: {
     fontSize: 13,

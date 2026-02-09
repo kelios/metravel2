@@ -26,6 +26,10 @@ export default function HistoryScreen() {
     const colors = useThemedColors();
     const [isLoading, setIsLoading] = useState(true);
 
+    const handleBackToProfile = useCallback(() => {
+        router.push('/profile' as any);
+    }, [router]);
+
     const styles = useMemo(() => StyleSheet.create({
         container: {
             flex: 1,
@@ -35,8 +39,10 @@ export default function HistoryScreen() {
             paddingHorizontal: 16,
             paddingTop: 12,
             paddingBottom: 8,
+        },
+        headerRow: {
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: 'flex-end',
             justifyContent: 'space-between',
             gap: 12,
         },
@@ -69,6 +75,23 @@ export default function HistoryScreen() {
             fontSize: 14,
             fontWeight: '600',
             color: colors.danger,
+        },
+        backToProfileButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            backgroundColor: colors.surface,
+            minHeight: 40,
+        },
+        backToProfileButtonText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.primary,
         },
         gridContent: {
             paddingHorizontal: 16,
@@ -155,8 +178,21 @@ export default function HistoryScreen() {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
-                    <View style={styles.headerTitleBlock}>
-                        <Text style={styles.title}>История</Text>
+                    <View style={styles.headerRow}>
+                        <View style={styles.headerTitleBlock}>
+                            <Text style={styles.title}>История</Text>
+                            <Text style={styles.subtitle}>Профиль</Text>
+                        </View>
+                        <Pressable
+                            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                            onPress={handleBackToProfile}
+                            accessibilityRole="button"
+                            accessibilityLabel="Перейти в профиль"
+                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                        >
+                            <Feather name="user" size={16} color={colors.primary} />
+                            <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                        </Pressable>
                     </View>
                 </View>
                 <View style={styles.gridContent}>
@@ -190,8 +226,21 @@ export default function HistoryScreen() {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
-                    <View style={styles.headerTitleBlock}>
-                        <Text style={styles.title}>История</Text>
+                    <View style={styles.headerRow}>
+                        <View style={styles.headerTitleBlock}>
+                            <Text style={styles.title}>История</Text>
+                            <Text style={styles.subtitle}>Профиль</Text>
+                        </View>
+                        <Pressable
+                            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                            onPress={handleBackToProfile}
+                            accessibilityRole="button"
+                            accessibilityLabel="Перейти в профиль"
+                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                        >
+                            <Feather name="user" size={16} color={colors.primary} />
+                            <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                        </Pressable>
                     </View>
                 </View>
                 <View style={styles.gridContent}>
@@ -236,21 +285,34 @@ export default function HistoryScreen() {
                 robots="noindex, nofollow"
             />
             <View style={styles.header}>
-                <View style={styles.headerTitleBlock}>
-                    <Text style={styles.title}>История</Text>
-                    <Text style={styles.subtitle}>{data.length} шт.</Text>
-                </View>
+                <View style={styles.headerRow}>
+                    <View style={styles.headerTitleBlock}>
+                        <Text style={styles.title}>История</Text>
+                        <Text style={styles.subtitle}>Профиль</Text>
+                    </View>
 
-                <Pressable
-                    style={[styles.clearButton, globalFocusStyles.focusable]}
-                    onPress={handleClear}
-                    accessibilityRole="button"
-                    accessibilityLabel="Очистить историю просмотров"
-                    {...Platform.select({ web: { cursor: 'pointer' } })}
-                >
-                    <Feather name="trash-2" size={16} color={colors.danger} />
-                    <Text style={styles.clearButtonText}>Очистить</Text>
-                </Pressable>
+                    <Pressable
+                        style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                        onPress={handleBackToProfile}
+                        accessibilityRole="button"
+                        accessibilityLabel="Перейти в профиль"
+                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                        <Feather name="user" size={16} color={colors.primary} />
+                        <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                    </Pressable>
+
+                    <Pressable
+                        style={[styles.clearButton, globalFocusStyles.focusable]}
+                        onPress={handleClear}
+                        accessibilityRole="button"
+                        accessibilityLabel="Очистить историю просмотров"
+                        {...Platform.select({ web: { cursor: 'pointer' } })}
+                    >
+                        <Feather name="trash-2" size={16} color={colors.danger} />
+                        <Text style={styles.clearButtonText}>Очистить</Text>
+                    </Pressable>
+                </View>
             </View>
 
             {Platform.OS === 'web' ? (

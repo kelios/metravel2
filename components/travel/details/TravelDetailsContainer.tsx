@@ -26,6 +26,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import { useTravelDetails } from "@/hooks/travel-details";
 import InstantSEO from "@/components/seo/LazyInstantSEO";
+import { buildCanonicalUrl } from "@/utils/seo";
 import { createSafeJsonLd, stripHtml, getSafeOrigin } from "@/utils/travelDetailsSecure";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
@@ -169,11 +170,11 @@ export default function TravelDetailsContainer() {
     const desc = stripToDescription(travel?.description);
     const canonical =
       typeof travel?.slug === "string" && travel.slug
-        ? `https://metravel.by/travels/${travel.slug}`
+        ? buildCanonicalUrl(`/travels/${travel.slug}`)
         : typeof travel?.id === "number" || typeof travel?.id === "string"
-          ? `https://metravel.by/travels/${travel.id}`
+          ? buildCanonicalUrl(`/travels/${travel.id}`)
           : typeof slug === "string" && slug
-            ? `https://metravel.by/travels/${slug}`
+            ? buildCanonicalUrl(`/travels/${slug}`)
             : undefined;
     const rawFirst = travel?.travel_image_thumb_url || travel?.gallery?.[0];
     const firstUrl = rawFirst

@@ -39,12 +39,11 @@ function HomeScreen() {
 
     const shouldRenderHomeContent = useMemo(() => {
         if (Platform.OS !== 'web') return true;
-        if (typeof window === 'undefined') return true;
         // On web, skip rendering Home content when the URL is NOT the home page.
         // This prevents the flash of home page when directly navigating to /travels/* etc.
-        const p = String(window.location?.pathname ?? '').trim();
+        const p = String(effectivePathname ?? '').trim();
         return p === '' || p === '/' || p === '/index';
-    }, []);
+    }, [effectivePathname]);
 
     const title = 'Твоя книга путешествий | Metravel';
     const description = 'Добавляй поездки, фото и заметки — и собирай красивую книгу в PDF для печати.';

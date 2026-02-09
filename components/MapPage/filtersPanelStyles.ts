@@ -647,6 +647,13 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
       justifyContent: 'center',
       flex: Platform.OS === 'web' ? undefined : 1,
     },
+    footerPreview: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.primary,
+      textAlign: 'center',
+      marginBottom: 6,
+    },
     helperText: {
       fontSize: 12,
       color: colors.textMuted,

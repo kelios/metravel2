@@ -19,6 +19,7 @@ type Props = {
   onOpenGoogleMaps?: () => void;
   onOpenOrganicMaps?: () => void;
   onAddPoint?: () => void;
+  onBuildRoute?: () => void;
   addDisabled?: boolean;
   isAdding?: boolean;
   addLabel?: string;
@@ -137,6 +138,7 @@ const PlacePopupCard: React.FC<Props> = ({
   onOpenGoogleMaps,
   onOpenOrganicMaps,
   onAddPoint,
+  onBuildRoute,
   addDisabled = false,
   isAdding = false,
   addLabel = 'Мои точки',
@@ -309,6 +311,23 @@ const PlacePopupCard: React.FC<Props> = ({
             <Text style={styles.actionBtnText}>Статья</Text>
           </CardActionPressable>
         )}
+
+        {onBuildRoute && (
+          <CardActionPressable
+            accessibilityLabel="Маршрут сюда"
+            onPress={onBuildRoute}
+            title="Маршрут сюда"
+            testID="popup-build-route"
+            style={({ pressed }) => [
+              styles.actionBtn,
+              styles.routeBtn,
+              pressed && styles.actionBtnPressed,
+            ]}
+          >
+            <Feather name="corner-up-right" size={13} color={colors.primary} />
+            <Text style={[styles.actionBtnText, { color: colors.primary }]}>Маршрут</Text>
+          </CardActionPressable>
+        )}
       </View>
 
       {onAddPoint && (
@@ -469,6 +488,10 @@ const getStyles = (colors: ThemedColors, bp: BreakpointKey) => {
     actionBtnText: {
       fontSize: fs.small,
       color: colors.text,
+    },
+    routeBtn: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft ?? colors.surface,
     },
     addBtn: {
       flexDirection: 'row',

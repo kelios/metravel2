@@ -1,9 +1,14 @@
 /**
- * MapOnboarding - интерактивный тур для новых пользователей карты
- * Показывается один раз при первом визите на /map
+ * MapOnboarding - контекстный тур для новых пользователей карты.
+ *
+ * Показывает tooltip рядом с конкретным UI-элементом (по testID / data-testid).
+ * Шаги переключаются стрелками «Далее» / «Пропустить».
+ * Состояние завершения хранится в localStorage / AsyncStorage.
+ *
+ * Экспортирует `restartMapOnboarding()` для повторного запуска из настроек.
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -13,32 +18,91 @@ import Button from '@/components/ui/Button';
 
 const ONBOARDING_STORAGE_KEY = 'metravel_map_onboarding_completed';
 
+// --------------- restart support ---------------
+let _restartCb: (() => void) | null = null;
+
+/** Call from settings / menu to re-show the onboarding tour. */
+export function restartMapOnboarding(): void {
+  if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
+    try { localStorage.removeItem(ONBOARDING_STORAGE_KEY); } catch { /* noop */ }
+  }
+  _restartCb?.();
+}
+
+// --------------- step definitions ---------------
+type TooltipPosition = 'bottom' | 'top' | 'left' | 'right';
+
 interface OnboardingStep {
   title: string;
   description: string;
   icon: string;
+  /** data-testid of the target element (web) */
+  targetTestID?: string;
+  /** Preferred tooltip placement relative to target */
+  placement: TooltipPosition;
 }
 
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
-    title: 'Места для путешествий',
-    description: 'Здесь отображаются интересные места и маршруты от других путешественников',
+    title: 'Карта путешествий',
+    description: 'Здесь отображаются интересные места и маршруты от других путешественников. Перемещайте и масштабируйте карту.',
     icon: 'map',
+    targetTestID: 'map-panel',
+    placement: 'bottom',
   },
   {
-    title: 'Настройте поиск',
-    description: 'Используйте фильтры, чтобы найти подходящие места по категориям и радиусу',
+    title: 'Настройте фильтры',
+    description: 'Используйте фильтры по категориям и радиусу, чтобы найти подходящие места.',
     icon: 'filter',
+    targetTestID: 'map-panel-tab-filters',
+    placement: 'bottom',
+  },
+  {
+    title: 'Список мест',
+    description: 'Переключитесь на вкладку «Список», чтобы увидеть все найденные места с расстояниями.',
+    icon: 'list',
+    targetTestID: 'map-panel-tab-travels',
+    placement: 'bottom',
   },
   {
     title: 'Стройте маршруты',
-    description: 'Переключитесь в режим маршрута, чтобы проложить путь между точками',
+    description: 'Переключитесь в режим маршрута, чтобы проложить путь между точками на карте.',
     icon: 'navigation',
+    targetTestID: 'filters-panel-header',
+    placement: 'bottom',
   },
 ];
 
+// --------------- helpers ---------------
+interface Rect { top: number; left: number; width: number; height: number }
+
+function getTargetRect(testID: string | undefined): Rect | null {
+  if (Platform.OS !== 'web' || !testID || typeof document === 'undefined') return null;
+  const el = document.querySelector(`[data-testid="${testID}"]`);
+  if (!el) return null;
+  const r = el.getBoundingClientRect();
+  return { top: r.top, left: r.left, width: r.width, height: r.height };
+}
+
+function tooltipPosition(rect: Rect | null, placement: TooltipPosition): { top?: number; left?: number; bottom?: number; right?: number } {
+  if (!rect) return {}; // fallback: centered via flexbox
+  const GAP = 12;
+  switch (placement) {
+    case 'bottom':
+      return { top: rect.top + rect.height + GAP, left: Math.max(8, Math.min(rect.left, (typeof window !== 'undefined' ? window.innerWidth : 800) - 320)) };
+    case 'top':
+      return { bottom: (typeof window !== 'undefined' ? window.innerHeight : 600) - rect.top + GAP, left: Math.max(8, rect.left) };
+    case 'left':
+      return { top: rect.top, right: (typeof window !== 'undefined' ? window.innerWidth : 800) - rect.left + GAP };
+    case 'right':
+      return { top: rect.top, left: rect.left + rect.width + GAP };
+    default:
+      return {};
+  }
+}
+
+// --------------- component ---------------
 interface MapOnboardingProps {
-  /** Callback при завершении onboarding */
   onComplete?: () => void;
 }
 
@@ -47,28 +111,42 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
   const styles = useMemo(() => getStyles(colors), [colors]);
   const [currentStep, setCurrentStep] = useState(0);
   const [visible, setVisible] = useState(false);
+  const [targetRect, setTargetRect] = useState<Rect | null>(null);
+  const rafRef = useRef(0);
 
+  // Register restart callback
   useEffect(() => {
-    checkOnboardingStatus();
+    _restartCb = () => { setCurrentStep(0); setVisible(true); };
+    return () => { _restartCb = null; };
   }, []);
 
-  const checkOnboardingStatus = async () => {
-    try {
-      if (Platform.OS === 'web') {
-        const completed = localStorage.getItem(ONBOARDING_STORAGE_KEY);
-        if (!completed) {
-          setTimeout(() => setVisible(true), 500);
+  // Check storage on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        if (Platform.OS === 'web') {
+          if (!localStorage.getItem(ONBOARDING_STORAGE_KEY)) {
+            setTimeout(() => setVisible(true), 800);
+          }
+        } else {
+          const v = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
+          if (!v) setTimeout(() => setVisible(true), 800);
         }
-      } else {
-        const completed = await AsyncStorage.getItem(ONBOARDING_STORAGE_KEY);
-        if (!completed) {
-          setTimeout(() => setVisible(true), 500);
-        }
-      }
-    } catch {
-      // Игнорируем ошибки storage
-    }
-  };
+      } catch { /* noop */ }
+    })();
+  }, []);
+
+  // Measure target element when step changes
+  useEffect(() => {
+    if (!visible) return;
+    const measure = () => {
+      const step = ONBOARDING_STEPS[currentStep];
+      setTargetRect(getTargetRect(step?.targetTestID));
+    };
+    // Delay to let DOM settle
+    rafRef.current = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [visible, currentStep]);
 
   const handleComplete = useCallback(() => {
     try {
@@ -77,9 +155,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
       } else {
         void AsyncStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
       }
-    } catch {
-      // Игнорируем ошибки storage
-    }
+    } catch { /* noop */ }
     setVisible(false);
     onComplete?.();
   }, [onComplete]);
@@ -100,58 +176,79 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
 
   const step = ONBOARDING_STEPS[currentStep];
   const isLastStep = currentStep === ONBOARDING_STEPS.length - 1;
+  const pos = tooltipPosition(targetRect, step.placement);
+  const hasTarget = targetRect !== null;
 
   return (
-    <View style={styles.overlay}>
+    <View style={styles.overlay} pointerEvents="box-none">
+      {/* Semi-transparent backdrop */}
       <Pressable style={styles.backdrop} onPress={handleSkip} />
 
-      <View style={styles.card}>
-        {/* Иконка */}
-        <View style={styles.iconContainer}>
+      {/* Spotlight cutout around target element */}
+      {hasTarget && Platform.OS === 'web' && (
+        <View
+          style={[
+            styles.spotlight,
+            {
+              top: targetRect!.top - 4,
+              left: targetRect!.left - 4,
+              width: targetRect!.width + 8,
+              height: targetRect!.height + 8,
+            },
+          ]}
+          pointerEvents="none"
+        />
+      )}
+
+      {/* Tooltip card */}
+      <View
+        style={[
+          styles.card,
+          hasTarget ? { position: 'absolute', ...pos } as any : null,
+        ]}
+      >
+        {/* Arrow indicator */}
+        {hasTarget && step.placement === 'bottom' && (
+          <View style={styles.arrowUp} />
+        )}
+
+        <View style={styles.cardHeader}>
           <View style={styles.iconCircle}>
-            <Feather name={step.icon as any} size={32} color={colors.primary} />
+            <Feather name={step.icon as any} size={20} color={colors.primary} />
           </View>
+          <Text style={styles.title}>{step.title}</Text>
         </View>
 
-        {/* Контент */}
-        <Text style={styles.title}>{step.title}</Text>
         <Text style={styles.description}>{step.description}</Text>
 
-        {/* Индикаторы шагов */}
-        <View style={styles.stepsIndicator}>
-          {ONBOARDING_STEPS.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.stepDot,
-                index === currentStep && styles.stepDotActive,
-              ]}
+        {/* Step dots + actions */}
+        <View style={styles.footer}>
+          <View style={styles.stepsIndicator}>
+            {ONBOARDING_STEPS.map((_, index) => (
+              <View
+                key={index}
+                style={[styles.stepDot, index === currentStep && styles.stepDotActive]}
+              />
+            ))}
+          </View>
+
+          <View style={styles.actions}>
+            <Button
+              label="Пропустить"
+              onPress={handleSkip}
+              variant="ghost"
+              size="sm"
+              testID="onboarding-skip"
             />
-          ))}
+            <Button
+              label={isLastStep ? 'Готово' : 'Далее'}
+              onPress={handleNext}
+              variant="primary"
+              size="sm"
+              testID="onboarding-next"
+            />
+          </View>
         </View>
-
-        {/* Кнопки */}
-        <View style={styles.actions}>
-          <Button
-            label="Пропустить"
-            onPress={handleSkip}
-            variant="ghost"
-            size="md"
-            style={styles.skipButton}
-          />
-          <Button
-            label={isLastStep ? 'Начать' : 'Далее'}
-            onPress={handleNext}
-            variant="primary"
-            size="md"
-            style={styles.nextButton}
-          />
-        </View>
-
-        {/* Прогресс */}
-        <Text style={styles.progress}>
-          {currentStep + 1} из {ONBOARDING_STEPS.length}
-        </Text>
       </View>
     </View>
   );
@@ -163,82 +260,94 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     zIndex: 10000,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: DESIGN_TOKENS.spacing.lg,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  spotlight: {
+    position: 'absolute',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    backgroundColor: 'transparent',
+    zIndex: 10001,
+    ...(Platform.OS === 'web'
+      ? ({ boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' } as any)
+      : null),
+  },
+  arrowUp: {
+    position: 'absolute',
+    top: -8,
+    left: 24,
+    width: 0,
+    height: 0,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: colors.surface,
   },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.xl,
-    padding: DESIGN_TOKENS.spacing.xl,
-    maxWidth: 400,
-    width: '100%',
-    alignItems: 'center',
+    borderRadius: DESIGN_TOKENS.radii.lg,
+    padding: 16,
+    maxWidth: 340,
+    width: '90%',
+    zIndex: 10002,
     ...(Platform.OS === 'web'
       ? ({ boxShadow: colors.boxShadows.heavy } as any)
-      : {
-          ...colors.shadows.heavy,
-          elevation: 8,
-        }),
+      : { ...colors.shadows.heavy, elevation: 8 }),
   },
-  iconContainer: {
-    marginBottom: DESIGN_TOKENS.spacing.lg,
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
   },
   iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-    textAlign: 'center',
+    flex: 1,
   },
   description: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 14,
+    lineHeight: 20,
     color: colors.textMuted,
-    marginBottom: DESIGN_TOKENS.spacing.lg,
-    textAlign: 'center',
+    marginBottom: 12,
+  },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   stepsIndicator: {
     flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.sm,
-    marginBottom: DESIGN_TOKENS.spacing.lg,
+    gap: 4,
   },
   stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.border,
   },
   stepDotActive: {
     backgroundColor: colors.primary,
-    width: 24,
+    width: 16,
   },
   actions: {
     flexDirection: 'row',
-    gap: DESIGN_TOKENS.spacing.md,
-    width: '100%',
-    marginBottom: DESIGN_TOKENS.spacing.sm,
-  },
-  skipButton: {
-    flex: 1,
-  },
-  nextButton: {
-    flex: 1,
-  },
-  progress: {
-    fontSize: 12,
-    color: colors.textMuted,
-    textAlign: 'center',
+    gap: 8,
   },
 });
 

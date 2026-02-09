@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View, Platform } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import MultiSelectField from '@/components/forms/MultiSelectField';
 import MapIcon from './MapIcon';
 import CollapsibleSection from '@/components/MapPage/CollapsibleSection';
@@ -7,8 +8,70 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import Chip from '@/components/ui/Chip';
 import IconButton from '@/components/ui/IconButton';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
+import { CATEGORY_ICONS } from './MapQuickFilters';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
+
+// --------------- RadiusSlider (web only) ---------------
+interface RadiusSliderProps {
+  options: { id: string; name: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  colors: ThemedColors;
+}
+
+const RadiusSlider = React.memo(function RadiusSlider({ options, value, onChange, colors }: RadiusSliderProps) {
+  if (Platform.OS !== 'web') return null;
+
+  const sortedIds = useMemo(
+    () => options.map((o) => o.id).sort((a, b) => Number(a) - Number(b)),
+    [options]
+  );
+
+  const currentIndex = sortedIds.indexOf(value);
+  const idx = currentIndex >= 0 ? currentIndex : 0;
+
+  const handleChange = useCallback(
+    (e: any) => {
+      const i = Number(e?.target?.value ?? e?.nativeEvent?.text ?? 0);
+      const newVal = sortedIds[i];
+      if (newVal !== undefined) onChange(newVal);
+    },
+    [sortedIds, onChange]
+  );
+
+  // Render native HTML range input via dangerouslySetInnerHTML-free approach
+  const sliderStyle: any = {
+    width: '100%',
+    height: 4,
+    accentColor: colors.primary,
+    cursor: 'pointer',
+    margin: 0,
+  };
+
+  return (
+    <View style={{ marginTop: 8, gap: 4 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 11, color: colors.textMuted }}>{sortedIds[0]} км</Text>
+        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>
+          {value} км
+        </Text>
+        <Text style={{ fontSize: 11, color: colors.textMuted }}>{sortedIds[sortedIds.length - 1]} км</Text>
+      </View>
+      {/* @ts-ignore — web-only native input */}
+      <input
+        type="range"
+        min={0}
+        max={sortedIds.length - 1}
+        step={1}
+        value={idx}
+        onChange={handleChange}
+        style={sliderStyle}
+        aria-label="Радиус поиска"
+      />
+    </View>
+  );
+});
 
 interface FiltersPanelRadiusSectionProps {
   colors: ThemedColors;
@@ -160,8 +223,11 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
                       : String(cat || '');
                 const displayText = typeof catValue === 'string' ? catValue.split(' ')[0] : String(catValue || '');
 
+                const iconName = typeof catValue === 'string' ? CATEGORY_ICONS[catValue] : undefined;
+
                 return (
                   <View key={catKey} style={styles.categoryChip}>
+                    {iconName && <Feather name={iconName} size={12} color={colors.primary} />}
                     <Text style={styles.categoryChipText} numberOfLines={1}>
                       {displayText}
                     </Text>
@@ -207,6 +273,16 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
               );
             })}
           </View>
+
+          {/* Visual radius slider (web only) */}
+          {Platform.OS === 'web' && filters.radius.length > 1 && (
+            <RadiusSlider
+              options={filters.radius}
+              value={filterValue.radius || String(DEFAULT_RADIUS_KM)}
+              onChange={(v) => safeOnFilterChange('radius', v)}
+              colors={colors}
+            />
+          )}
         </CollapsibleSection>
       )}
     </>

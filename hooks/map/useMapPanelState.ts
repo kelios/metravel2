@@ -4,6 +4,47 @@ import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { usePanelController } from '@/hooks/usePanelController';
 
+const PANEL_COLLAPSED_KEY = 'metravel_map_panel_collapsed';
+const PANEL_WIDTH_KEY = 'metravel_map_panel_width';
+const PANEL_MIN_WIDTH = 300;
+const PANEL_MAX_WIDTH_RATIO = 0.5; // 50vw
+const PANEL_DEFAULT_WIDTH = 384;
+
+function readPanelCollapsed(): boolean {
+  if (Platform.OS !== 'web' || typeof localStorage === 'undefined') return false;
+  try {
+    return localStorage.getItem(PANEL_COLLAPSED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function writePanelCollapsed(collapsed: boolean): void {
+  if (Platform.OS !== 'web' || typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(PANEL_COLLAPSED_KEY, String(collapsed));
+  } catch {
+    // noop
+  }
+}
+
+function readPanelWidth(): number {
+  if (Platform.OS !== 'web' || typeof localStorage === 'undefined') return PANEL_DEFAULT_WIDTH;
+  try {
+    const v = localStorage.getItem(PANEL_WIDTH_KEY);
+    if (v) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n >= PANEL_MIN_WIDTH) return n;
+    }
+  } catch { /* noop */ }
+  return PANEL_DEFAULT_WIDTH;
+}
+
+function writePanelWidth(w: number): void {
+  if (Platform.OS !== 'web' || typeof localStorage === 'undefined') return;
+  try { localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(w))); } catch { /* noop */ }
+}
+
 type PressableRef = React.ElementRef<typeof View>;
 type ViewRef = React.ElementRef<typeof View>;
 
@@ -21,6 +62,38 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
 
   const [rightPanelTab, setRightPanelTab] = useState<'filters' | 'travels'>('filters');
   const [mapReady, setMapReady] = useState(false);
+
+  // Desktop panel collapse (persisted)
+  const [isDesktopCollapsed, setDesktopCollapsed] = useState(() => readPanelCollapsed());
+
+  // Desktop panel width (persisted)
+  const [desktopPanelWidth, setDesktopPanelWidth] = useState(() => readPanelWidth());
+  const onResizePanelWidth = useCallback((newWidth: number) => {
+    const maxW = Platform.OS === 'web' && typeof window !== 'undefined'
+      ? window.innerWidth * PANEL_MAX_WIDTH_RATIO
+      : 600;
+    const clamped = Math.max(PANEL_MIN_WIDTH, Math.min(newWidth, maxW));
+    setDesktopPanelWidth(clamped);
+    writePanelWidth(clamped);
+    // Trigger Leaflet resize
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
+  }, []);
+
+  const toggleDesktopCollapse = useCallback(() => {
+    setDesktopCollapsed((prev) => {
+      const next = !prev;
+      writePanelCollapsed(next);
+      // Dispatch resize so Leaflet recalculates
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new Event('resize'));
+        });
+      }
+      return next;
+    });
+  }, []);
 
   const lastIsMobileRef = useRef(isMobile);
   const filtersTabRef = useRef<PressableRef>(null);
@@ -112,12 +185,16 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     mapReady,
     rightPanelTab,
     rightPanelVisible: isPanelVisible,
+    isDesktopCollapsed,
+    desktopPanelWidth,
 
     // Actions
     selectFiltersTab,
     selectTravelsTab,
     openRightPanel: openPanel,
     closeRightPanel,
+    toggleDesktopCollapse,
+    onResizePanelWidth,
 
     // Styles
     panelStyle,
@@ -131,10 +208,14 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     mapReady,
     rightPanelTab,
     isPanelVisible,
+    isDesktopCollapsed,
+    desktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openPanel,
     closeRightPanel,
+    toggleDesktopCollapse,
+    onResizePanelWidth,
     panelStyle,
     overlayStyle,
     filtersTabRef,

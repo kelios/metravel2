@@ -17,11 +17,12 @@ interface MapBottomSheetProps {
   subtitle?: string;
   peekContent?: React.ReactNode;
   bottomInset?: number;
-  onStateChange?: (state: 'collapsed' | 'half' | 'full') => void;
+  onStateChange?: (state: 'collapsed' | 'quarter' | 'half' | 'full') => void;
 }
 
 export interface MapBottomSheetRef {
   snapToCollapsed: () => void;
+  snapToQuarter: () => void;
   snapToHalf: () => void;
   snapToFull: () => void;
   close: () => void;
@@ -41,14 +42,19 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         setSheetIndex(-1);
         onStateChange?.('collapsed');
       },
-      snapToHalf: () => {
+      snapToQuarter: () => {
         lastProgrammaticOpenTsRef.current = Date.now();
         setSheetIndex(0);
+        onStateChange?.('quarter');
+      },
+      snapToHalf: () => {
+        lastProgrammaticOpenTsRef.current = Date.now();
+        setSheetIndex(1);
         onStateChange?.('half');
       },
       snapToFull: () => {
         lastProgrammaticOpenTsRef.current = Date.now();
-        setSheetIndex(1);
+        setSheetIndex(2);
         onStateChange?.('full');
       },
       close: () => {
@@ -58,7 +64,8 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     }));
 
     const isCollapsed = sheetIndex < 0;
-    const sheetMaxHeight = isCollapsed ? 'none' : sheetIndex === 0 ? '70vh' : '80vh';
+    const SNAP_HEIGHTS = ['25vh', '55vh', '80vh'] as const;
+    const sheetMaxHeight = isCollapsed ? 'none' : SNAP_HEIGHTS[sheetIndex] ?? '55vh';
 
     const handleClose = useCallback(() => {
       const dt = Date.now() - lastProgrammaticOpenTsRef.current;
@@ -70,7 +77,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const handlePeekTap = useCallback(() => {
       lastProgrammaticOpenTsRef.current = Date.now();
       setSheetIndex(0);
-      onStateChange?.('half');
+      onStateChange?.('quarter');
     }, [onStateChange]);
 
     return (
@@ -98,7 +105,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           <View style={styles.dragHandle} />
         </Pressable>
 
-        {sheetIndex >= 0 && (
+        {sheetIndex > 0 && (
           <View style={styles.header}>
             <View style={styles.headerContent}>
               {!!title && (

@@ -13,6 +13,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
 import IconButton from '@/components/ui/IconButton';
 import Button from '@/components/ui/Button';
+import { MapFAB } from './MapFAB';
 import { useMapPanelStore } from '@/stores/mapPanelStore';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
 import { LAYOUT } from '@/constants/layout';
@@ -37,6 +38,8 @@ interface MapMobileLayoutProps {
   // Optional
   onToggleFavorite?: (id: string | number) => void;
   favorites?: Set<string | number>;
+  onResetFilters?: () => void;
+  onExpandRadius?: () => void;
 }
 
 export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
@@ -45,11 +48,13 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   coordinates,
   transportMode,
   buildRouteTo,
-  onCenterOnUser: _onCenterOnUser,
-  onOpenFilters: _onOpenFilters,
+  onCenterOnUser,
+  onOpenFilters,
   filtersPanelProps,
   onToggleFavorite,
   favorites,
+  onResetFilters,
+  onExpandRadius,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -59,8 +64,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const [uiTab, setUiTab] = useState<'list' | 'filters'>('list');
   const [contentTab, setContentTab] = useState<'list' | 'filters'>('list');
   const [, startTransition] = useTransition();
-  const [_sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
-  const sheetStateRef = useRef<'collapsed' | 'half' | 'full'>('collapsed');
+  const [_sheetState, setSheetState] = useState<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed');
+  const sheetStateRef = useRef<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed');
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
   const toggleNonce = useMapPanelStore((s) => s.toggleNonce);
@@ -68,7 +73,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   // Синхронизация состояния Bottom Sheet с глобальным store
   const setBottomSheetState = useBottomSheetStore((s) => s.setState);
 
-  const handleSheetStateChange = useCallback((state: 'collapsed' | 'half' | 'full') => {
+  const handleSheetStateChange = useCallback((state: 'collapsed' | 'quarter' | 'half' | 'full') => {
     sheetStateRef.current = state;
     setSheetState(state);
     setBottomSheetState(state); // Синхронизация с store
@@ -233,6 +238,8 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
           transportMode={transportMode}
           onToggleFavorite={onToggleFavorite}
           favorites={favorites}
+          onResetFilters={onResetFilters}
+          onExpandRadius={onExpandRadius}
         />
       );
 
@@ -319,6 +326,25 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         {mapComponent}
       </View>
 
+      {/* FAB for mobile web */}
+      {Platform.OS === 'web' && (
+        <MapFAB
+          mainAction={{
+            icon: 'my-location',
+            label: 'Моё местоположение',
+            onPress: onCenterOnUser,
+          }}
+          actions={[{
+            icon: 'filter-list',
+            label: 'Открыть фильтры',
+            onPress: onOpenFilters,
+          }]}
+          position="bottom-right"
+          containerStyle={styles.fab}
+          mainActionTestID="map-mobile-fab"
+        />
+      )}
+
       {/* Bottom Sheet */}
       <MapBottomSheet
         ref={bottomSheetRef}
@@ -390,5 +416,9 @@ const getStyles = (colors: ThemedColors) =>
     filtersPeekCtaRow: {
       paddingHorizontal: 12,
       paddingBottom: 4,
+    },
+    fab: {
+      bottom: 140,
+      right: 12,
     },
   });

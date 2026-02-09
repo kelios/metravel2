@@ -30,6 +30,18 @@ export type UpdateUserProfilePayload = Partial<
     >
 >;
 
+/**
+ * Normalizes an avatar string from the API.
+ * Returns `null` for empty, "null", or "undefined" values.
+ */
+export const normalizeAvatar = (raw: unknown): string | null => {
+    const str = String(raw ?? '').trim();
+    if (!str) return null;
+    const lower = str.toLowerCase();
+    if (lower === 'null' || lower === 'undefined') return null;
+    return str;
+};
+
 // NOTE: apiClient.baseURL already includes `/api`, so endpoints here must be without it
 export const fetchUserProfile = async (userId: string | number): Promise<UserProfileDto> => {
     return apiClient.get<UserProfileDto>(`/user/${userId}/profile/`);

@@ -19,7 +19,7 @@ interface MapQuickFiltersProps {
   maxVisible?: number;
 }
 
-const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']> = {
+export const CATEGORY_ICONS: Record<string, React.ComponentProps<typeof Feather>['name']> = {
   'Горы': 'triangle',
   'Пляжи': 'sun',
   'Города': 'map-pin',

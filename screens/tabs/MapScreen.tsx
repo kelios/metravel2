@@ -1,5 +1,5 @@
 // src/screens/tabs/MapScreen.tsx
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -40,10 +40,14 @@ export default function MapScreen() {
         mapPanelProps,
         rightPanelTab,
         rightPanelVisible,
+        isDesktopCollapsed,
+        desktopPanelWidth,
         selectFiltersTab,
         selectTravelsTab,
         openRightPanel,
         closeRightPanel,
+        toggleDesktopCollapse,
+        onResizePanelWidth,
         panelStyle,
         overlayStyle,
         filtersPanelProps,
@@ -58,9 +62,37 @@ export default function MapScreen() {
         buildRouteTo,
         centerOnUser,
         panelRef,
+        geoError,
         coordinates,
         transportMode,
     } = useMapScreenController();
+
+    const [geoBannerDismissed, setGeoBannerDismissed] = useState(false);
+    const dismissGeoBanner = useCallback(() => setGeoBannerDismissed(true), []);
+    const showGeoBanner = Boolean(geoError && !geoBannerDismissed);
+
+    // Resize handle for desktop panel (web only)
+    const handleResizeMouseDown = useCallback((e: any) => {
+        if (Platform.OS !== 'web' || isMobile) return;
+        e.preventDefault();
+        const startX = e.clientX;
+        const startW = desktopPanelWidth;
+        const onMove = (ev: MouseEvent) => {
+            // Panel is on the right, dragging left = wider
+            const delta = startX - ev.clientX;
+            onResizePanelWidth(startW + delta);
+        };
+        const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        };
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }, [isMobile, desktopPanelWidth, onResizePanelWidth]);
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -112,14 +144,24 @@ export default function MapScreen() {
         onChange('categories', next);
     }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories]);
 
+    const currentMode = filtersPanelProps?.contextValue?.mode ?? 'radius';
+    const currentTransport = transportMode ?? 'car';
+
     const activeFilterItems = useMemo(() => {
         const items: { key: string; label: string }[] = [];
         quickFilterSelected.forEach((cat: string) => items.push({ key: `cat:${cat}`, label: cat }));
         if (currentRadius && currentRadius !== '30') {
             items.push({ key: 'radius', label: `${currentRadius} км` });
         }
+        if (currentMode === 'route') {
+            items.push({ key: 'mode', label: 'Маршрут' });
+        }
+        if (currentTransport !== 'car') {
+            const transportLabels: Record<string, string> = { bike: 'Велосипед', foot: 'Пешком' };
+            items.push({ key: 'transport', label: transportLabels[currentTransport] ?? currentTransport });
+        }
         return items;
-    }, [quickFilterSelected, currentRadius]);
+    }, [quickFilterSelected, currentRadius, currentMode, currentTransport]);
 
     const handleRemoveActiveFilter = useMemo(() => (key: string) => {
         const onChange = filtersPanelProps?.contextValue?.onFilterChange;
@@ -130,6 +172,8 @@ export default function MapScreen() {
             onChange('categories', current.filter((c: string) => c !== catName));
         } else if (key === 'radius') {
             onChange('radius', '30');
+        } else if (key === 'transport') {
+            onChange('transportMode', 'car');
         }
     }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories]);
 
@@ -138,16 +182,24 @@ export default function MapScreen() {
         if (typeof reset === 'function') reset();
     }, [filtersPanelProps?.contextValue?.resetFilters]);
 
+    const handleExpandRadius = useCallback(() => {
+        const onChange = filtersPanelProps?.contextValue?.onFilterChange;
+        if (!onChange) return;
+        const current = Number(filtersPanelProps?.contextValue?.filterValue?.radius) || 30;
+        const next = Math.min(current * 2, 500);
+        onChange('radius', String(next));
+    }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.radius]);
+
     const mapComponent = useMemo(
         () => (
             <View style={styles.mapArea}>
                 <MapLoadingBar visible={isFetching} />
-                {Platform.OS === 'web' && !isMobile && quickFilterCategories.length > 0 && (
+                {Platform.OS === 'web' && quickFilterCategories.length > 0 && (
                     <MapQuickFilters
                         categories={quickFilterCategories}
                         selectedCategories={quickFilterSelected}
                         onToggleCategory={quickFilterToggle}
-                        maxVisible={5}
+                        maxVisible={isMobile ? 3 : 5}
                     />
                 )}
                 {Platform.OS === 'web' && !isMobile && travelsData.length > 0 && rightPanelTab !== 'travels' && (
@@ -209,6 +261,8 @@ export default function MapScreen() {
                         onCenterOnUser={centerOnUser}
                         onOpenFilters={selectFiltersTab}
                         filtersPanelProps={filtersPanelProps}
+                        onResetFilters={handleClearAllFilters}
+                        onExpandRadius={handleExpandRadius}
                     />
                 </Suspense>
             </>
@@ -357,8 +411,89 @@ export default function MapScreen() {
                 />
             )}
 
+            {showGeoBanner && (
+                <View style={styles.geoBanner} testID="map-geo-banner">
+                    <Feather name="map-pin" size={14} color={themedColors.warning} />
+                    <Text style={styles.geoBannerText}>
+                        Геолокация недоступна — показываем карту по умолчанию
+                    </Text>
+                    <Pressable
+                        onPress={dismissGeoBanner}
+                        accessibilityRole="button"
+                        accessibilityLabel="Закрыть уведомление"
+                        style={({ pressed }) => [styles.geoBannerClose, pressed && { opacity: 0.6 }]}
+                    >
+                        <Feather name="x" size={14} color={themedColors.textMuted} />
+                    </Pressable>
+                </View>
+            )}
+
             <View style={styles.mapContainer}>
-                <Animated.View ref={panelRef} style={[styles.rightPanel, panelStyle]}>
+                {/* Desktop collapsed strip */}
+                {!isMobile && isDesktopCollapsed && Platform.OS === 'web' && (
+                    <View
+                        testID="map-panel-collapsed"
+                        style={styles.collapsedPanel}
+                    >
+                        <Pressable
+                            testID="map-panel-expand-button"
+                            style={({ pressed }) => [styles.collapseToggle, pressed && { opacity: 0.7 }]}
+                            onPress={toggleDesktopCollapse}
+                            accessibilityRole="button"
+                            accessibilityLabel="Развернуть панель"
+                        >
+                            <Feather name="chevron-left" size={18} color={themedColors.text} />
+                        </Pressable>
+                        <Pressable
+                            style={({ pressed }) => [styles.collapsedIconBtn, pressed && { opacity: 0.7 }]}
+                            onPress={() => { toggleDesktopCollapse(); selectFiltersTab(); }}
+                            accessibilityRole="button"
+                            accessibilityLabel="Фильтры"
+                        >
+                            <Feather name="filter" size={18} color={themedColors.textMuted} />
+                        </Pressable>
+                        <Pressable
+                            style={({ pressed }) => [styles.collapsedIconBtn, pressed && { opacity: 0.7 }]}
+                            onPress={() => { toggleDesktopCollapse(); selectTravelsTab(); }}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Список (${travelsData.length})`}
+                        >
+                            <Feather name="list" size={18} color={themedColors.textMuted} />
+                            {travelsData.length > 0 && (
+                                <View style={styles.collapsedBadge}>
+                                    <Text style={styles.collapsedBadgeText}>
+                                        {travelsData.length > 99 ? '99+' : travelsData.length}
+                                    </Text>
+                                </View>
+                            )}
+                        </Pressable>
+                    </View>
+                )}
+
+                {/* Desktop expanded panel */}
+                {!(isDesktopCollapsed && !isMobile && Platform.OS === 'web') && (
+                <Animated.View ref={panelRef} style={[styles.rightPanel, panelStyle, !isMobile && Platform.OS === 'web' ? { width: desktopPanelWidth } : null]}>
+                {/* Resize handle on desktop */}
+                {!isMobile && Platform.OS === 'web' && (
+                    <View
+                        testID="map-panel-resize-handle"
+                        style={styles.resizeHandle}
+                        onStartShouldSetResponder={() => true}
+                        {...({ onMouseDown: handleResizeMouseDown } as any)}
+                    />
+                )}
+                {/* Collapse button on desktop */}
+                {!isMobile && Platform.OS === 'web' && (
+                    <Pressable
+                        testID="map-panel-collapse-button"
+                        style={({ pressed }) => [styles.collapseToggleInPanel, pressed && { opacity: 0.7 }]}
+                        onPress={toggleDesktopCollapse}
+                        accessibilityRole="button"
+                        accessibilityLabel="Свернуть панель"
+                    >
+                        <Feather name="chevron-right" size={16} color={themedColors.textMuted} />
+                    </Pressable>
+                )}
                 {panelHeader}
                 {!isMobile && activeFilterItems.length > 0 && (
                     <ActiveFiltersBar
@@ -389,12 +524,15 @@ export default function MapScreen() {
                                     isRefreshing={isFetching && isPlaceholderData}
                                     userLocation={coordinates}
                                     transportMode={transportMode}
+                                    onResetFilters={handleClearAllFilters}
+                                    onExpandRadius={handleExpandRadius}
                                 />
                             </Suspense>
                         </View>
                     )}
                 </View>
             </Animated.View>
+                )}
                 
                 {mapComponent}
                 {rightPanelVisible && isMobile && (

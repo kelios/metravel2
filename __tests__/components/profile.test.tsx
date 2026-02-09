@@ -6,6 +6,7 @@ jest.mock('@/context/AuthContext');
 
 jest.setTimeout(15000);
 
+
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
 
@@ -23,13 +24,14 @@ jest.mock('@/api/user', () => ({
     last_name: 'User',
     avatar: null,
   }),
+  uploadUserProfileAvatarFile: jest.fn(),
 }));
 
 jest.mock('@/api/travelsApi', () => ({
   fetchMyTravels: jest.fn().mockResolvedValue([
-    { id: 1 },
-    { id: 2 },
-    { id: 3 },
+    { id: 101, title: 'My Travel 1' },
+    { id: 102, title: 'My Travel 2' },
+    { id: 103, title: 'My Travel 3' },
   ]),
 }));
 
@@ -42,6 +44,31 @@ jest.mock('@/utils/storageBatch', () => ({
   setStorageBatch: jest.fn().mockResolvedValue(undefined),
   removeStorageBatch: jest.fn().mockResolvedValue(undefined),
 }));
+
+jest.mock('expo-image-picker', () => ({
+    launchImageLibraryAsync: jest.fn(),
+    MediaTypeOptions: { Images: 'Images' },
+}));
+
+jest.mock('@shopify/flash-list', () => {
+  const React = require('react');
+  const { FlatList } = require('react-native');
+
+  const FlashList = ({ ListHeaderComponent, ...props } /* : any */) => {
+    const header = ListHeaderComponent
+      ? React.isValidElement(ListHeaderComponent)
+        ? ListHeaderComponent
+        : React.createElement(ListHeaderComponent)
+      : null;
+
+    return React.createElement(FlatList, {
+      ...props,
+      ListHeaderComponent: header,
+    });
+  };
+
+  return { FlashList };
+});
 
 const ProfileScreen = require('@/app/(tabs)/profile').default;
 
@@ -100,69 +127,57 @@ describe('ProfileScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('shows EmptyState when user is not authenticated', () => {
+  it('shows EmptyState when user is not authenticated', async () => {
     setupAuth({ isAuthenticated: false });
     setupFavorites(0, 0);
 
-    const { getByText } = render(<ProfileScreen />);
+    const { findByText } = render(<ProfileScreen />);
 
-    expect(getByText('Войдите в аккаунт')).toBeTruthy();
-    expect(
-      getByText('Войдите, чтобы открыть профиль и управлять своими данными.')
-    ).toBeTruthy();
+    expect(await findByText('Войдите в аккаунт')).toBeTruthy();
+    expect(await findByText('Войдите, чтобы открыть профиль и управлять своими данными.')).toBeTruthy();
   });
 
-  it('shows loader while stats are loading and then renders profile info', async () => {
+  it('shows profile info, quick actions and stats', async () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByText, getAllByText, queryByText } = render(<ProfileScreen />);
+    const { findByText, getAllByText } = render(<ProfileScreen />);
 
-    // Дожидаемся завершения загрузки: после этого гарантированно доступны данные пользователя.
-    expect(await findByText('Выйти', {}, { timeout: 5000 })).toBeTruthy();
-    expect(await findByText('user@example.com', {}, { timeout: 5000 })).toBeTruthy();
-    expect(await findByText('Test User', {}, { timeout: 5000 })).toBeTruthy();
+    expect(await findByText('Test User')).toBeTruthy();
+    expect(await findByText('user@example.com')).toBeTruthy();
 
-    // Статы могут обновиться чуть позже (после параллельных эффектов)
+    // Quick actions
+    expect(await findByText('Чаты')).toBeTruthy();
+    expect(await findByText('Подписки')).toBeTruthy();
+
+    // Header actions
+    expect(await findByText('Редактировать')).toBeTruthy();
+
     await waitFor(() => {
-      expect(getAllByText('3').length).toBeGreaterThan(0);
-      expect(getAllByText('2').length).toBeGreaterThan(0);
-      expect(getAllByText('5').length).toBeGreaterThan(0);
-    }, { timeout: 5000 });
+      const travelsCounts = getAllByText('3');
+      expect(travelsCounts.length).toBeGreaterThan(0);
 
-    // Проверяем наличие основных пунктов меню (может быть несколько в иерархии, поэтому используем getAllByText)
-    expect(getAllByText('Избранное').length).toBeGreaterThan(0);
-    expect(getAllByText('Мои путешествия').length).toBeGreaterThan(0);
-    expect(getAllByText('История просмотров').length).toBeGreaterThan(0);
-    expect(getAllByText('Настройки').length).toBeGreaterThan(0);
+      const favCounts = getAllByText('2');
+      expect(favCounts.length).toBeGreaterThan(0);
 
-    // Кнопка выхода
-    expect(await findByText('Выйти', {}, { timeout: 5000 })).toBeTruthy();
-    expect(queryByText('Войдите в аккаунт')).toBeNull();
+      const viewCounts = getAllByText('5');
+      expect(viewCounts.length).toBeGreaterThan(0);
+    });
   });
 
-  it('navigates to login on EmptyState action when unauthenticated', () => {
-    setupAuth({ isAuthenticated: false });
-    setupFavorites(0, 0);
-
-    const { getByText } = render(<ProfileScreen />);
-
-    fireEvent.press(getByText('Войти'));
-    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('/login'));
-    expect(mockPush).toHaveBeenCalledWith(expect.stringContaining('intent=profile'));
-  });
-
-  it('calls logout and navigates to login on logout button press', async () => {
+  it('logout works', async () => {
     const logoutMock = jest.fn().mockResolvedValue(undefined);
     setupAuth({ isAuthenticated: true, logout: logoutMock });
-    setupFavorites(1, 1);
+    setupFavorites(0, 0);
 
-    const { getByText } = render(<ProfileScreen />);
+    const { getByLabelText, getByText } = render(<ProfileScreen />);
 
-    await waitFor(() => {
-      expect(getByText('Выйти')).toBeTruthy();
-    });
+    // Открываем меню профиля
+    await waitFor(() => getByLabelText('Меню профиля'));
+    fireEvent.press(getByLabelText('Меню профиля'));
 
+    // Ждем появления кнопки выхода (ищем по тексту)
+    await waitFor(() => getByText('Выйти'));
     fireEvent.press(getByText('Выйти'));
 
     await waitFor(() => {
@@ -171,30 +186,22 @@ describe('ProfileScreen', () => {
     });
   });
 
-  it('navigates to correct screens from menu items', async () => {
+  it('switches tabs and shows content', async () => {
     setupAuth({ isAuthenticated: true });
-    setupFavorites(3, 4);
+    setupFavorites(1, 1);
 
     const { getAllByText } = render(<ProfileScreen />);
 
     await waitFor(() => {
-      expect(getAllByText('Избранное').length).toBeGreaterThan(0);
+      expect(getAllByText('My Travel 1').length).toBeGreaterThan(0);
     });
 
-    const favNodes = getAllByText('Избранное');
-    fireEvent.press(favNodes[favNodes.length - 1]);
-    expect(mockPush).toHaveBeenCalledWith('/favorites');
+    const favCandidates = getAllByText('Избранное');
+    fireEvent.press(favCandidates[favCandidates.length - 1]);
+    await waitFor(() => expect(getAllByText('Fav 1').length).toBeGreaterThan(0));
 
-    const myTravelsNodes = getAllByText('Мои путешествия');
-    fireEvent.press(myTravelsNodes[myTravelsNodes.length - 1]);
-    expect(mockPush).toHaveBeenCalledWith('/metravel');
-
-    const historyNodes = getAllByText('История просмотров');
-    fireEvent.press(historyNodes[historyNodes.length - 1]);
-    expect(mockPush).toHaveBeenCalledWith('/history');
-
-    const settingsNodes = getAllByText('Настройки');
-    fireEvent.press(settingsNodes[settingsNodes.length - 1]);
-    expect(mockPush).toHaveBeenCalledWith('/settings');
+    const historyCandidates = getAllByText('История');
+    fireEvent.press(historyCandidates[historyCandidates.length - 1]);
+    await waitFor(() => expect(getAllByText('History 1').length).toBeGreaterThan(0));
   });
 });

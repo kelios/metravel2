@@ -58,4 +58,39 @@ describe('useBreadcrumbModel', () => {
       { label: 'Длинное описание', path: '/travels/test-slug' },
     ]);
   });
+
+  it('should build breadcrumbs for single-level profile page', async () => {
+    usePathname.mockReturnValue('/profile');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy();
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.backToPath).toBe('/');
+    expect(result.current.items).toEqual([{ label: 'Профиль', path: '/profile' }]);
+    expect(result.current.currentTitle).toBe('Профиль');
+  });
+
+  it('should build nested breadcrumbs for subscriptions under profile', async () => {
+    usePathname.mockReturnValue('/subscriptions');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy();
+    });
+
+    expect(result.current.showBreadcrumbs).toBe(true);
+    expect(result.current.backToPath).toBe('/profile');
+    expect(result.current.items).toEqual([
+      { label: 'Профиль', path: '/profile' },
+      { label: 'Подписки', path: '/subscriptions' },
+    ]);
+    expect(result.current.currentTitle).toBe('Подписки');
+  });
 });

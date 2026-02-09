@@ -22,6 +22,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
+import { buildCanonicalUrl } from '@/utils/seo';
 import type { Travel } from '@/types/types';
 
 interface TravelStickyActionsProps {
@@ -113,9 +114,9 @@ function TravelStickyActions({
 
   const handleShare = useCallback(async () => {
     const url = travel?.slug
-      ? `https://metravel.by/travels/${travel.slug}`
+      ? buildCanonicalUrl(`/travels/${travel.slug}`)
       : travelId
-        ? `https://metravel.by/travels/${travelId}`
+        ? buildCanonicalUrl(`/travels/${travelId}`)
         : '';
     const title = travel?.name || 'Путешествие';
 

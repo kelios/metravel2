@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 
-export type BottomSheetState = 'collapsed' | 'half' | 'full';
+export type BottomSheetState = 'collapsed' | 'quarter' | 'half' | 'full';
 
 interface BottomSheetStore {
   /** Текущее состояние Bottom Sheet */
@@ -38,6 +38,11 @@ export const useBottomSheetStore = create<BottomSheetStore>((set, get) => ({
     // В collapsed состоянии отступ минимальный (peek preview)
     if (state === 'collapsed') {
       return 120; // Примерно высота peek preview + запас
+    }
+
+    // В quarter состоянии — компактный preview
+    if (state === 'quarter') {
+      return Math.max(heightPx * 0.25 + 20, 150);
     }
 
     // В half/full состоянии используем фактическую высоту + запас

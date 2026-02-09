@@ -251,7 +251,7 @@ function AuthorSection({
 
 export default function SubscriptionsScreen() {
     const router = useRouter();
-    const { width: _width } = useResponsive();
+    useResponsive();
     const { isAuthenticated, authReady } = useAuth();
     const colors = useThemedColors();
     const queryClient = useQueryClient();
@@ -395,6 +395,10 @@ export default function SubscriptionsScreen() {
         [router]
     );
 
+    const handleBackToProfile = useCallback(() => {
+        router.push('/profile' as any);
+    }, [router]);
+
     const filteredAuthors = useMemo(
         () => {
             if (!search.trim()) return authors;
@@ -408,7 +412,22 @@ export default function SubscriptionsScreen() {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Подписки</Text>
+                    <View style={styles.headerRow}>
+                        <View style={styles.headerTitleBlock}>
+                            <Text style={styles.title}>Подписки</Text>
+                            <Text style={styles.subtitle}>Профиль</Text>
+                        </View>
+                        <Pressable
+                            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                            onPress={handleBackToProfile}
+                            accessibilityRole="button"
+                            accessibilityLabel="Перейти в профиль"
+                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                        >
+                            <Feather name="user" size={16} color={colors.primary} />
+                            <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                        </Pressable>
+                    </View>
                 </View>
                 <View style={styles.loadingWrap}>
                     {Array.from({ length: 2 }).map((_, i) => (
@@ -446,7 +465,22 @@ export default function SubscriptionsScreen() {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Подписки</Text>
+                    <View style={styles.headerRow}>
+                        <View style={styles.headerTitleBlock}>
+                            <Text style={styles.title}>Подписки</Text>
+                            <Text style={styles.subtitle}>Профиль</Text>
+                        </View>
+                        <Pressable
+                            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                            onPress={handleBackToProfile}
+                            accessibilityRole="button"
+                            accessibilityLabel="Перейти в профиль"
+                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                        >
+                            <Feather name="user" size={16} color={colors.primary} />
+                            <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                        </Pressable>
+                    </View>
                 </View>
                 <View style={styles.loadingWrap}>
                     <ActivityIndicator size="large" color={colors.primary} />
@@ -618,7 +652,22 @@ export default function SubscriptionsScreen() {
             />
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.header}>
-                    <Text style={styles.title}>Подписки</Text>
+                    <View style={styles.headerRow}>
+                        <View style={styles.headerTitleBlock}>
+                            <Text style={styles.title}>Подписки</Text>
+                            <Text style={styles.subtitle}>Профиль</Text>
+                        </View>
+                        <Pressable
+                            style={[styles.backToProfileButton, globalFocusStyles.focusable]}
+                            onPress={handleBackToProfile}
+                            accessibilityRole="button"
+                            accessibilityLabel="Перейти в профиль"
+                            {...Platform.select({ web: { cursor: 'pointer' } })}
+                        >
+                            <Feather name="user" size={16} color={colors.primary} />
+                            <Text style={styles.backToProfileButtonText}>В профиль</Text>
+                        </Pressable>
+                    </View>
                 </View>
                 {renderTabBar()}
                 {activeTab === 'subscriptions' ? renderSubscriptionsTab() : renderSubscribersTab()}
@@ -720,6 +769,23 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
         noResultsText: {
             fontSize: 14,
             fontStyle: 'italic',
+        },
+        backToProfileButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: DESIGN_TOKENS.radii.md,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            backgroundColor: colors.surface,
+            minHeight: 40,
+        },
+        backToProfileButtonText: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.primary,
         },
     });
 

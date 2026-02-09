@@ -99,6 +99,26 @@ interface UseMapUIControllerResult {
    * Canonical URL for SEO
    */
   canonical: string;
+
+  /**
+   * Is desktop panel collapsed
+   */
+  isDesktopCollapsed: boolean;
+
+  /**
+   * Desktop panel width in px
+   */
+  desktopPanelWidth: number;
+
+  /**
+   * Toggle desktop panel collapse
+   */
+  toggleDesktopCollapse: () => void;
+
+  /**
+   * Resize desktop panel width
+   */
+  onResizePanelWidth: (width: number) => void;
 }
 
 /**
@@ -136,10 +156,14 @@ export function useMapUIController(): UseMapUIControllerResult {
     mapReady,
     rightPanelTab,
     rightPanelVisible,
+    isDesktopCollapsed,
+    desktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openRightPanel,
     closeRightPanel,
+    toggleDesktopCollapse,
+    onResizePanelWidth,
     panelStyle,
     overlayStyle,
     filtersTabRef,
@@ -163,10 +187,14 @@ export function useMapUIController(): UseMapUIControllerResult {
     mapReady,
     rightPanelTab,
     rightPanelVisible,
+    isDesktopCollapsed,
+    desktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openRightPanel,
     closeRightPanel,
+    toggleDesktopCollapse,
+    onResizePanelWidth,
     panelStyle,
     overlayStyle,
     filtersTabRef,
@@ -181,10 +209,14 @@ export function useMapUIController(): UseMapUIControllerResult {
     mapReady,
     rightPanelTab,
     rightPanelVisible,
+    isDesktopCollapsed,
+    desktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openRightPanel,
     closeRightPanel,
+    toggleDesktopCollapse,
+    onResizePanelWidth,
     panelStyle,
     overlayStyle,
     filtersTabRef,

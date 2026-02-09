@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchUserProfile, type UserProfileDto } from '@/api/user';
+import { fetchUserProfile, normalizeAvatar, type UserProfileDto } from '@/api/user';
 import { ApiError } from '@/api/client';
 
 type Options = {
@@ -43,16 +43,7 @@ export function useUserProfileCached(userId: string | number | null | undefined,
   const fullName = useMemo(() => {
     const p: UserProfileDto | null | undefined = query.data;
     if (!p) return '';
-
-    const clean = (value: unknown) => {
-      const v = String(value ?? '').trim();
-      if (!v) return '';
-      const lower = v.toLowerCase();
-      if (lower === 'null' || lower === 'undefined') return '';
-      return v;
-    };
-
-    return `${clean(p.first_name)} ${clean(p.last_name)}`.trim();
+    return `${normalizeAvatar(p.first_name) ?? ''} ${normalizeAvatar(p.last_name) ?? ''}`.trim();
   }, [query.data]);
 
   return useMemo(() => ({

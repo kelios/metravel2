@@ -76,37 +76,6 @@ export default function CustomHeaderMobileMenu({
           </View>
 
           <ScrollView style={styles.modalNavContainer} keyboardShouldPersistTaps="handled">
-            <Text style={styles.modalSectionTitle}>Навигация</Text>
-            {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
-              const isActive = activePath === item.path
-              return (
-                <Pressable
-                  key={item.path}
-                  onPress={() => onNavPress(item.path)}
-                  style={({ hovered, pressed }) => [
-                    styles.modalNavItem,
-                    (hovered || pressed) && styles.modalNavItemHover,
-                    isActive && styles.modalNavItemActive,
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={item.label}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <View style={styles.iconSlot20}>
-                    <Feather
-                      name={item.icon as any}
-                      size={20}
-                      color={isActive ? colors.primary : colors.textMuted}
-                    />
-                  </View>
-                  <Text style={[styles.modalNavLabel, isActive && styles.modalNavLabelActive]}>
-                    {item.label}
-                  </Text>
-                </Pressable>
-              )
-            })}
-
-            <View style={styles.modalDivider} />
             <Text style={styles.modalSectionTitle}>Аккаунт</Text>
 	            {!isAuthenticated ? (
 	              <>
@@ -222,6 +191,37 @@ export default function CustomHeaderMobileMenu({
                 </Pressable>
               </>
             )}
+
+            <View style={styles.modalDivider} />
+            <Text style={styles.modalSectionTitle}>Навигация</Text>
+            {PRIMARY_HEADER_NAV_ITEMS.map((item) => {
+              const isActive = activePath === item.path
+              return (
+                <Pressable
+                  key={item.path}
+                  onPress={() => onNavPress(item.path)}
+                  style={({ hovered, pressed }) => [
+                    styles.modalNavItem,
+                    (hovered || pressed) && styles.modalNavItemHover,
+                    isActive && styles.modalNavItemActive,
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.label}
+                  accessibilityState={{ selected: isActive }}
+                >
+                  <View style={styles.iconSlot20}>
+                    <Feather
+                      name={item.icon as any}
+                      size={20}
+                      color={isActive ? colors.primary : colors.textMuted}
+                    />
+                  </View>
+                  <Text style={[styles.modalNavLabel, isActive && styles.modalNavLabelActive]}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              )
+            })}
 
             {themeToggleNode ? (
               <>

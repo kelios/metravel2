@@ -465,7 +465,7 @@ const AddressListItem: React.FC<Props> = ({
 
     return (
       <Pressable
-        style={[styles.card, { height }]}
+        style={[styles.card, { height }, hovered && styles.cardHovered]}
         onHoverIn={() => !isMobile && setHovered(true)}
         onHoverOut={() => !isMobile && setHovered(false)}
       >
@@ -642,6 +642,17 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create<Record<string, any
         overflow: 'hidden',
         position: 'relative',
         // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+        ...(Platform.OS === 'web'
+          ? ({ transition: 'transform 150ms ease, box-shadow 150ms ease' } as any)
+          : null),
+    },
+    cardHovered: {
+        ...(Platform.OS === 'web'
+          ? ({
+              transform: [{ translateY: -2 }],
+              boxShadow: colors.boxShadows.heavy,
+            } as any)
+          : null),
     },
     image: {
         flex: 1,

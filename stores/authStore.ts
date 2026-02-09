@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/api/auth';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
-import { fetchUserProfile } from '@/api/user';
+import { fetchUserProfile, normalizeAvatar } from '@/api/user';
 
 export interface AuthState {
     isAuthenticated: boolean;
@@ -35,14 +35,6 @@ interface AuthActions {
 }
 
 export type AuthStore = AuthState & AuthActions;
-
-const normalizeAvatar = (value: unknown): string | null => {
-    const raw = String(value ?? '').trim();
-    if (!raw) return null;
-    const lower = raw.toLowerCase();
-    if (lower === 'null' || lower === 'undefined') return null;
-    return raw;
-};
 
 // Epoch counter to guard against races where an in-flight auth check
 // finishes after logout and re-applies stale authenticated state.

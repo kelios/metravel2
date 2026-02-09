@@ -1,8 +1,16 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, type DimensionValue } from 'react-native';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+
+const MARKER_POSITIONS: { top: DimensionValue; left: DimensionValue }[] = [
+  { top: '25%', left: '30%' },
+  { top: '40%', left: '55%' },
+  { top: '35%', left: '70%' },
+  { top: '55%', left: '40%' },
+  { top: '60%', left: '65%' },
+];
 
 export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false }) => {
   const colors = useThemedColors();
@@ -50,6 +58,10 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
       backgroundColor: colors.surface,
       marginBottom: DESIGN_TOKENS.spacing.sm,
     },
+    markerDot: {
+      position: 'absolute',
+      zIndex: 5,
+    },
   }), [colors]);
 
   if (inline) {
@@ -67,6 +79,13 @@ export const MapPageSkeleton: React.FC<{ inline?: boolean }> = ({ inline = false
         <SkeletonLoader width="100%" height={1} borderRadius={0} style={StyleSheet.absoluteFillObject} />
         <Text style={styles.headlineText}>Карта путешествий</Text>
         <Text style={styles.placeholderText}>Загружаем карту…</Text>
+
+        {/* Pulsing marker placeholders */}
+        {MARKER_POSITIONS.map((pos, i) => (
+          <View key={i} style={[styles.markerDot, { top: pos.top, left: pos.left }]}>
+            <SkeletonLoader width={20} height={20} borderRadius={10} />
+          </View>
+        ))}
         
         <View style={styles.mapControls}>
           <View style={styles.controlButton}>

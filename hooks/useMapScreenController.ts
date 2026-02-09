@@ -25,7 +25,7 @@ export function useMapScreenController() {
   }, []);
 
   // Coordinates
-  const { coordinates } = useMapCoordinates();
+  const { coordinates, error: geoError } = useMapCoordinates();
 
   // Actual current user location reported by the map implementation (web Leaflet).
   // This should be the primary source for radius-mode queries.
@@ -55,10 +55,14 @@ export function useMapScreenController() {
     mapReady,
     rightPanelTab,
     rightPanelVisible,
+    isDesktopCollapsed,
+    desktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openRightPanel,
     closeRightPanel,
+    toggleDesktopCollapse,
+    onResizePanelWidth,
     panelStyle,
     overlayStyle,
     panelRef,
@@ -315,10 +319,14 @@ export function useMapScreenController() {
     // Panel
     rightPanelTab,
     rightPanelVisible,
+    isDesktopCollapsed,
+    desktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openRightPanel,
     closeRightPanel,
+    toggleDesktopCollapse,
+    onResizePanelWidth,
     panelStyle,
     overlayStyle,
 
@@ -343,6 +351,9 @@ export function useMapScreenController() {
     // Refs
     panelRef,
 
+    // Geolocation
+    geoError,
+
     // Additional data for mobile layout
     coordinates,
     transportMode,
@@ -356,10 +367,14 @@ export function useMapScreenController() {
     mapPanelProps,
     rightPanelTab,
     rightPanelVisible,
+    isDesktopCollapsed,
+    desktopPanelWidth,
     selectFiltersTab,
     selectTravelsTab,
     openRightPanel,
     closeRightPanel,
+    toggleDesktopCollapse,
+    onResizePanelWidth,
     panelStyle,
     overlayStyle,
     filtersPanelProps,
@@ -375,6 +390,7 @@ export function useMapScreenController() {
     buildRouteToStable,
     centerOnUser,
     panelRef,
+    geoError,
     coordinates,
     transportMode,
   ]);

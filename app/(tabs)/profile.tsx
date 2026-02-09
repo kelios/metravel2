@@ -1,33 +1,31 @@
 // Страница профиля пользователя
-import { useMemo, useRef, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  Pressable,
-  Platform,
-  Image,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Feather from '@expo/vector-icons/Feather';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { ProfileStats } from '@/components/profile/ProfileStats';
+import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
+import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
+import { normalizeAvatar } from '@/api/user';
+import { fetchMyTravels } from '@/api/travelsApi';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
-import { fetchUserProfile, type UserProfileDto } from '@/api/user';
-import { fetchMyTravels } from '@/api/travelsApi';
-import { ApiError } from '@/api/client';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { globalFocusStyles } from '@/styles/globalFocus';
-import { openExternalUrl } from '@/utils/externalLinks';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { FlashList } from '@shopify/flash-list';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAvatarUpload } from '@/hooks/useAvatarUpload';
+import { getStorageBatch } from '@/utils/storageBatch';
 
 interface UserStats {
   travelsCount: number;
@@ -35,110 +33,63 @@ interface UserStats {
   viewsCount: number;
 }
 
+const unwrapTravelsPayload = (payload: any): { items: any[]; count: number } => {
+  if (Array.isArray(payload)) return { items: payload, count: payload.length };
+  if (Array.isArray(payload?.data)) return { items: payload.data, count: payload.data.length };
+  if (Array.isArray(payload?.results)) return { items: payload.results, count: payload.count ?? payload.results.length };
+  if (Array.isArray(payload?.items)) return { items: payload.items, count: payload.count ?? payload.items.length };
+  return { items: [], count: 0 };
+};
+
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, authReady, logout, userId, setUserAvatar, triggerProfileRefresh: _triggerProfileRefresh } = useAuth();
+  const { isAuthenticated, authReady, logout, userId } = useAuth();
   const favoritesContext = useFavorites();
   const { favorites = [], viewHistory = [] } = favoritesContext ?? { favorites: [], viewHistory: [] };
   const colors = useThemedColors();
+
+  const { profile, setProfile, isLoading: profileLoading, fullName } = useUserProfile();
+  const { pickAndUpload, isUploading: avatarUploading } = useAvatarUpload({
+    onSuccess: (updated) => setProfile(updated),
+  });
+
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
-  const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [stats, setStats] = useState<UserStats>({
     travelsCount: 0,
     favoritesCount: 0,
     viewsCount: 0,
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [profileAvatarError, setProfileAvatarError] = useState(false);
+  const [travelsLoading, setTravelsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
+  const [myTravels, setMyTravels] = useState<any[]>([]);
 
-  const scrollRef = useRef<ScrollView | null>(null);
-
-  const socialLinks = useMemo(
-    () =>
-      profile
-        ? [
-            { key: 'youtube', label: 'YouTube', url: profile.youtube },
-            { key: 'instagram', label: 'Instagram', url: profile.instagram },
-            { key: 'twitter', label: 'Twitter', url: profile.twitter },
-            { key: 'vk', label: 'VK', url: profile.vk },
-          ].filter((link) => !!link.url)
-        : [],
-    [profile]
-  );
-
-  const favoritesPreview = Array.isArray(favorites) ? favorites.slice(0, 4) : [];
-  const historyPreview = Array.isArray(viewHistory) ? viewHistory.slice(0, 4) : [];
-
-  const loadUserData = useCallback(async () => {
-    setIsLoading(true);
+  const loadTravels = useCallback(async () => {
+    const uid = userId;
+    if (!uid) { setTravelsLoading(false); return; }
+    setTravelsLoading(true);
     try {
-      // ✅ FIX-004: Используем батчинг для загрузки данных
-      const { getStorageBatch } = await import('@/utils/storageBatch');
-      const storageData = await getStorageBatch(['userName', 'userId', 'userEmail']);
-      const userName = storageData.userName || '';
-      const userIdFromStorage = storageData.userId;
-      const userEmail = storageData.userEmail || '';
-
-      setUserInfo({ name: userName, email: userEmail });
-
-      const uid = userId || userIdFromStorage;
-      if (uid) {
-        try {
-          const profileData = await fetchUserProfile(uid);
-          setProfile(profileData);
-
-          const rawAvatar = String((profileData as any)?.avatar ?? '').trim();
-          const lowerAvatar = rawAvatar.toLowerCase();
-          const normalizedAvatar = rawAvatar && lowerAvatar !== 'null' && lowerAvatar !== 'undefined' ? rawAvatar : null;
-
-          if (normalizedAvatar) {
-            setUserAvatar(normalizedAvatar);
-
-            const { setStorageBatch } = await import('@/utils/storageBatch');
-            await setStorageBatch([['userAvatar', normalizedAvatar]]);
-          }
-
-          // Загружаем путешествия пользователя для подсчёта
-          try {
-            const userTravels = await fetchMyTravels({ user_id: uid });
-            const payload: any = userTravels;
-            const travelsCount = (() => {
-              if (!payload) return 0;
-              if (Array.isArray(payload)) return payload.length;
-              if (Array.isArray(payload?.data)) return payload.data.length;
-              if (Array.isArray(payload?.results)) return payload.results.length;
-              if (Array.isArray(payload?.items)) return payload.items.length;
-              if (typeof payload?.total === 'number') return payload.total;
-              if (typeof payload?.count === 'number') return payload.count;
-              return 0;
-            })();
-            setStats((prev) => ({
-              ...prev,
-              travelsCount,
-            }));
-          } catch (e) {
-            if (__DEV__) {
-              const message = e instanceof ApiError ? e.message : String(e);
-              console.warn('Error loading user travels:', message);
-            }
-            setStats((prev) => ({
-              ...prev,
-              travelsCount: 0,
-            }));
-          }
-        } catch (e) {
-          if (__DEV__) {
-            const message = e instanceof ApiError ? e.message : String(e);
-            console.warn('Error loading user profile:', message);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error loading user data:', error);
+      const payload = await fetchMyTravels({ user_id: uid });
+      const { items, count } = unwrapTravelsPayload(payload);
+      setMyTravels(items);
+      setStats((prev) => ({
+        ...prev,
+        travelsCount: count || (typeof (payload as any)?.total === 'number' ? (payload as any).total : 0) || items.length,
+      }));
+    } catch {
+      setStats((prev) => ({ ...prev, travelsCount: 0 }));
     } finally {
-      setIsLoading(false);
+      setTravelsLoading(false);
     }
-  }, [setUserAvatar, userId]);
+  }, [userId]);
+
+  const loadUserInfo = useCallback(async () => {
+    try {
+      const storageData = await getStorageBatch(['userName', 'userEmail']);
+      setUserInfo({ name: storageData.userName || '', email: storageData.userEmail || '' });
+    } catch {
+      // storage read is non-critical
+    }
+  }, []);
 
   useEffect(() => {
     setStats((prev) => ({
@@ -149,8 +100,9 @@ export default function ProfileScreen() {
   }, [favorites.length, viewHistory.length]);
 
   useEffect(() => {
-    loadUserData();
-  }, [loadUserData]);
+    loadUserInfo();
+    loadTravels();
+  }, [loadUserInfo, loadTravels]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -161,219 +113,90 @@ export default function ProfileScreen() {
     }
   }, [logout, router]);
 
-  // Создаём стили до всех условных return
+  const isLoading = profileLoading || travelsLoading;
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: colors.background,
     },
-    scrollView: { flex: 1 },
-    content: { padding: 16, paddingBottom: 32 },
-    dashboardSections: { marginBottom: 16, gap: 12 },
-    dashboardSectionCard: {
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      paddingVertical: 12,
-      paddingHorizontal: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      ...Platform.select({
-        web: { boxShadow: colors.boxShadows.light } as any,
-        default: {},
-      }),
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    sectionTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 10,
-      paddingHorizontal: 4,
+    listContent: {
+      paddingBottom: 32,
     },
-    header: {
-      paddingTop: 8,
-      paddingBottom: 16,
-      marginBottom: 12,
+    headerComponent: {
+      backgroundColor: colors.background,
     },
-    headerRow: {
+    listItemWrap: {
+      paddingHorizontal: 16,
+    },
+    emptyWrap: {
+      paddingHorizontal: 16,
+      paddingTop: 16,
+    },
+    separator: {
+      height: 16,
+    },
+    skeletonWrap: {
+      padding: 16,
+      gap: 16,
+    },
+    skeletonHeaderRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 16,
-      marginBottom: 16,
+      marginBottom: 10,
     },
-    avatar: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
-      backgroundColor: colors.primaryLight,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    avatarImage: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
-    },
-    avatarPlaceholder: {
-      fontSize: 28,
-      fontWeight: '700',
-      color: colors.primary,
-    },
-    headerTextBlock: {
-      flex: 1,
-    },
-    userName: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 4,
-    },
-    userEmail: {
-      fontSize: 13,
-      color: colors.textMuted,
-    },
-    statsInline: {
-      fontSize: 14,
-      color: colors.textMuted,
-      marginTop: 4,
-      marginBottom: 12,
-    },
-    editProfileButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    skeletonHeaderText: {
       gap: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderRadius: 12,
-      backgroundColor: colors.primarySoft,
     },
-    editProfileButtonText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.primary,
-    },
-    socialsRow: {
+    skeletonStatsRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      paddingHorizontal: 6,
-      marginBottom: 12,
-    },
-    socialChip: {
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 999,
-      backgroundColor: colors.primarySoft,
-    },
-    socialChipText: {
-      color: colors.primary,
-      fontSize: 12,
-      fontWeight: '700',
-    },
-    sectionHeaderRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
       justifyContent: 'space-between',
+      gap: 8,
+    },
+    skeletonListWrap: {
+      marginTop: 16,
       gap: 12,
-      paddingHorizontal: 4,
-      marginBottom: 8,
-    },
-    sectionHeaderLeft: {
-      flex: 1,
-    },
-    sectionSubtitle: {
-      marginTop: 2,
-      fontSize: 12,
-      color: colors.textMuted,
-    },
-    sectionAction: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      borderRadius: 10,
-      backgroundColor: colors.primarySoft,
-    },
-    sectionActionText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.primary,
-    },
-    cardsRow: {
-      paddingHorizontal: 4,
-      paddingBottom: 4,
-    },
-    menuSection: {
-      backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      overflow: 'hidden',
-      marginBottom: 16,
-    },
-    menuSectionTitle: {
-      paddingHorizontal: 16,
-      paddingTop: 14,
-      paddingBottom: 8,
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    menuContainer: {
-      backgroundColor: colors.surface,
-    },
-    menuItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 16,
-      minHeight: 56,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.border,
-      ...Platform.select({
-        web: {
-          transition: 'all 0.2s ease',
-          cursor: 'pointer',
-          ':hover': { backgroundColor: colors.primarySoft } as any,
-        },
-      }),
-    },
-    menuIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12,
-    },
-    menuContent: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    menuLabel: {
-      fontSize: 16,
-      fontWeight: '500',
-      color: colors.text,
-    },
-    menuCount: {
-      fontSize: 14,
-      color: colors.textMuted,
-      marginLeft: 8,
-    },
-    logoutText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.danger,
     },
   }), [colors]);
 
   if (!authReady) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+         <View style={styles.skeletonWrap}>
+             <View style={styles.skeletonHeaderRow}>
+                 <SkeletonLoader width={80} height={80} borderRadius={40} />
+                 <View style={styles.skeletonHeaderText}>
+                     <SkeletonLoader width={150} height={24} borderRadius={4} />
+                     <SkeletonLoader width={200} height={16} borderRadius={4} />
+                 </View>
+             </View>
+             <View style={styles.skeletonStatsRow}>
+                 <SkeletonLoader width="30%" height={60} borderRadius={12} />
+                 <SkeletonLoader width="30%" height={60} borderRadius={12} />
+                 <SkeletonLoader width="30%" height={60} borderRadius={12} />
+             </View>
+             <SkeletonLoader width="100%" height={40} borderRadius={0} />
+             <View style={styles.skeletonListWrap}>
+                 <SkeletonLoader width="100%" height={200} borderRadius={12} />
+                 <SkeletonLoader width="100%" height={200} borderRadius={12} />
+             </View>
+         </View>
       </SafeAreaView>
     );
   }
@@ -394,76 +217,92 @@ export default function ProfileScreen() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-          <View style={styles.header}>
-            <View style={styles.headerRow}>
-              <SkeletonLoader width={72} height={72} borderRadius={36} />
-              <View style={styles.headerTextBlock}>
-                <SkeletonLoader width={150} height={24} borderRadius={4} style={{ marginBottom: 8 }} />
-                <SkeletonLoader width={200} height={16} borderRadius={4} />
-              </View>
-            </View>
-          </View>
-          <View style={styles.dashboardSections}>{Array.from({ length: 4 }).map((_, index) => (
-            <View key={index} style={{ marginBottom: 12 }}>
-              <SkeletonLoader width="100%" height={120} borderRadius={12} />
-            </View>
-          ))}</View>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  const currentData = useMemo(() => {
+    switch (activeTab) {
+      case 'travels': return myTravels;
+      case 'favorites': return favorites;
+      case 'history': return viewHistory;
+      default: return [];
+    }
+  }, [activeTab, myTravels, favorites, viewHistory]);
 
-  const menuItems = [
-    {
-      icon: 'heart',
-      label: 'Избранное',
-      count: stats.favoritesCount,
-      onPress: () => router.push('/favorites'),
-      color: colors.danger,
-      bg: colors.dangerSoft,
-    },
-    {
-      icon: 'map',
-      label: 'Мои путешествия',
-      count: stats.travelsCount,
-      onPress: () => router.push('/metravel'),
-      color: colors.primary,
-      bg: colors.primarySoft,
-    },
-    {
-      icon: 'eye',
-      label: 'История просмотров',
-      count: stats.viewsCount,
-      onPress: () => router.push('/history'),
-      color: colors.primary,
-      bg: colors.primarySoft,
-    },
-    {
-      icon: 'users',
-      label: 'Подписки',
-      onPress: () => router.push('/subscriptions'),
-      color: colors.primary,
-      bg: colors.primarySoft,
-    },
-    {
-      icon: 'settings',
-      label: 'Настройки',
-      onPress: () => router.push('/settings'),
-      color: colors.textMuted,
-      bg: colors.surfaceMuted,
-    },
-    {
-      icon: 'log-out',
-      label: 'Выйти',
-      onPress: handleLogout,
-      color: colors.danger,
-      bg: colors.dangerSoft,
-    },
-  ];
+  const emptyStateProps = useMemo(() => {
+    switch (activeTab) {
+      case 'travels':
+        return {
+          title: 'Нет путешествий',
+          description: 'Вы еще не создали ни одного путешествия.',
+          action: { label: 'Создать', onPress: () => router.push('/metravel') },
+        };
+      case 'favorites':
+        return {
+          title: 'Нет избранного',
+          description: 'Добавляйте интересные маршруты в избранное.',
+          action: { label: 'Найти', onPress: () => router.push('/travelsby') },
+        };
+      case 'history':
+        return {
+          title: 'История пуста',
+          description: 'История просмотров появится здесь.',
+          action: { label: 'Смотреть', onPress: () => router.push('/travelsby') },
+        };
+      default: return { title: 'Пусто', description: '' };
+    }
+  }, [activeTab, router]);
+
+  const displayName = useMemo(
+    () => (fullName || userInfo.name || 'Пользователь').trim(),
+    [fullName, userInfo.name],
+  );
+
+  const handleQuickAction = useCallback((key: string) => {
+    if (key === 'messages') router.push('/messages');
+    else if (key === 'subscriptions') router.push('/subscriptions');
+    else router.push('/settings');
+  }, [router]);
+
+  const handlePressStat = useCallback((key: string) => {
+    if (key === 'views') setActiveTab('history');
+    else setActiveTab(key as ProfileTabKey);
+  }, []);
+
+  const handleEdit = useCallback(() => router.push('/settings'), [router]);
+
+  const ItemSeparator = useCallback(() => <View style={styles.separator} />, [styles.separator]);
+
+  const Header = useMemo(() => (
+      <View style={styles.headerComponent}>
+        <ProfileHeader
+            user={{
+                name: displayName,
+                email: userInfo.email,
+                avatar: profile?.avatar,
+            }}
+            profile={profile}
+            onEdit={handleEdit}
+            onLogout={handleLogout}
+            onAvatarUpload={pickAndUpload}
+            avatarUploading={avatarUploading}
+        />
+
+        <ProfileQuickActions onPress={handleQuickAction} />
+
+        <ProfileStats
+            stats={stats}
+            onPressStat={handlePressStat}
+        />
+
+        <ProfileTabs
+            activeTab={activeTab}
+            onChangeTab={setActiveTab}
+            counts={{
+              travels: stats.travelsCount,
+              favorites: stats.favoritesCount,
+              history: stats.viewsCount,
+            }}
+        />
+      </View>
+  ), [styles, displayName, userInfo.email, profile, handleEdit, handleLogout, pickAndUpload, avatarUploading, handleQuickAction, stats, handlePressStat, activeTab]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -474,212 +313,41 @@ export default function ProfileScreen() {
         canonical={buildCanonicalUrl('/profile')}
         robots="noindex, nofollow"
       />
-      <ScrollView ref={scrollRef} style={styles.scrollView} contentContainerStyle={styles.content}>
-        <View
-          style={styles.header}
-        >
-          <View style={styles.headerRow}>
-              <View style={styles.avatar}>
-                {profile?.avatar && !profileAvatarError ? (
-                  <Image
-                    source={{ uri: profile.avatar }}
-                    style={styles.avatarImage}
-                    resizeMode="cover"
-                    onError={() => setProfileAvatarError(true)}
-                  />
-                ) : (
-                  <Feather name="user" size={28} color={colors.primary} />
-                )}
-              </View>
-            <View style={styles.headerTextBlock}>
-              <Text style={styles.userName}>
-                {(() => {
-                  const clean = (value: unknown) => {
-                    const v = String(value ?? '').trim();
-                    if (!v) return '';
-                    if (v.toLowerCase() === 'null' || v.toLowerCase() === 'undefined') return '';
-                    return v;
-                  };
-                  const fullName = profile
-                    ? `${clean(profile.first_name)} ${clean(profile.last_name)}`.trim()
-                    : '';
-                  return fullName || userInfo.name || 'Пользователь';
-                })()}
-              </Text>
-              {!!userInfo.email && <Text style={styles.userEmail}>{userInfo.email}</Text>}
-            </View>
 
-            <Pressable
-              style={[styles.editProfileButton, globalFocusStyles.focusable]}
-              onPress={() => router.push('/settings')}
-              accessibilityRole="button"
-              accessibilityLabel="Редактировать профиль"
-              {...Platform.select({ web: { cursor: 'pointer' } })}
-            >
-              <Feather name="edit-2" size={16} color={colors.primary} />
-              <Text style={styles.editProfileButtonText}>Редактировать</Text>
-            </Pressable>
-          </View>
-
-          <Text style={styles.statsInline}>
-            {stats.travelsCount} маршрутов · {stats.favoritesCount} избранных · {stats.viewsCount} просмотров
-          </Text>
-
-          {socialLinks.length > 0 && (
-            <View style={styles.socialsRow}>
-              {socialLinks.map((link) => (
-                <Pressable
-                  key={link.key}
-                  style={[styles.socialChip, globalFocusStyles.focusable]}
-                  onPress={() => openExternalUrl(String(link.url))}
-                  accessibilityRole="link"
-                  accessibilityLabel={`Открыть ${link.label}`}
-                  {...Platform.select({ web: { cursor: 'pointer' } })}
-                >
-                  <Text style={styles.socialChipText}>{link.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+      <FlashList
+          data={currentData}
+          // @ts-expect-error estimatedItemSize required by FlashList but types mismatch
+          estimatedItemSize={280}
+          ListHeaderComponent={Header}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={ItemSeparator}
+          keyExtractor={(item, index) => `${activeTab}-${item.id}-${index}`}
+          renderItem={({ item }) => (
+               <View style={styles.listItemWrap}>
+                 <TabTravelCard
+                    item={{
+                      id: item.id,
+                      title: item.title || item.name,
+                      imageUrl: item.imageUrl || item.travel_image_thumb_url || item.url,
+                      city: item.city || item.cityName || null,
+                      country: item.country || item.countryName || null,
+                    }}
+                    onPress={() => {
+                        const url = item.url || `/travels/${item.slug || item.id}`;
+                        router.push(url as any);
+                    }}
+                 />
+               </View>
           )}
-        </View>
-
-        {(favoritesPreview.length > 0 || historyPreview.length > 0) && (
-          <View style={styles.dashboardSections}>
-            {[
-              favoritesPreview.length > 0 ? (
-                <View
-                  key="favorites"
-                  style={styles.dashboardSectionCard}
-                >
-                  <View style={styles.sectionHeaderRow}>
-                    <View style={styles.sectionHeaderLeft}>
-                      <Text style={styles.sectionTitle}>Избранное</Text>
-                      <Text style={styles.sectionSubtitle}>{favorites.length} шт.</Text>
-                    </View>
-                    <Pressable
-                      style={[styles.sectionAction, globalFocusStyles.focusable]}
-                      onPress={() => router.push('/favorites')}
-                      accessibilityRole="button"
-                      accessibilityLabel="Открыть избранное"
-                      {...Platform.select({ web: { cursor: 'pointer' } })}
-                    >
-                      <Text style={styles.sectionActionText}>Смотреть все</Text>
-                      <Feather name="chevron-right" size={16} color={colors.primary} />
-                    </Pressable>
-                  </View>
-
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.cardsRow}
-                    {...Platform.select({
-                      web: {
-                        style: { overflowX: 'auto', overflowY: 'hidden', width: '100%' } as any,
-                      },
-                      default: {},
-                    })}
-                  >
-                    {favoritesPreview.map((item: any) => (
-                      <TabTravelCard
-                        key={`${item.type || 'travel'}-${item.id}`}
-                        item={{
-                          id: item.id,
-                          title: item.title,
-                          imageUrl: item.imageUrl,
-                          city: item.city ?? null,
-                          country: item.country ?? null,
-                        }}
-                        onPress={() => router.push(item.url as any)}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : null,
-              historyPreview.length > 0 ? (
-                <View
-                  key="history"
-                  style={styles.dashboardSectionCard}
-                >
-                  <View style={styles.sectionHeaderRow}>
-                    <View style={styles.sectionHeaderLeft}>
-                      <Text style={styles.sectionTitle}>История</Text>
-                      <Text style={styles.sectionSubtitle}>{viewHistory.length} шт.</Text>
-                    </View>
-                    <Pressable
-                      style={[styles.sectionAction, globalFocusStyles.focusable]}
-                      onPress={() => router.push('/history')}
-                      accessibilityRole="button"
-                      accessibilityLabel="Открыть историю просмотров"
-                      {...Platform.select({ web: { cursor: 'pointer' } })}
-                    >
-                      <Text style={styles.sectionActionText}>Смотреть все</Text>
-                      <Feather name="chevron-right" size={16} color={colors.primary} />
-                    </Pressable>
-                  </View>
-
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.cardsRow}
-                    {...Platform.select({
-                      web: {
-                        style: { overflowX: 'auto', overflowY: 'hidden', width: '100%' } as any,
-                      },
-                      default: {},
-                    })}
-                  >
-                    {historyPreview.map((item: any) => (
-                      <TabTravelCard
-                        key={`history-${item.type || 'travel'}-${item.id}-${item.viewedAt || ''}`}
-                        item={{
-                          id: item.id,
-                          title: item.title,
-                          imageUrl: item.imageUrl,
-                          city: item.city ?? null,
-                          country: item.country ?? null,
-                        }}
-                        badge={{ icon: 'clock', backgroundColor: colors.overlay ?? 'rgba(0,0,0,0.75)', iconColor: colors.textOnDark }}
-                        onPress={() => router.push(item.url as any)}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              ) : null,
-            ].filter(Boolean)}
-          </View>
-        )}
-
-        {/* Menu Items */}
-        <View
-          style={styles.menuSection}
-        >
-          <Text style={styles.menuSectionTitle}>Разделы</Text>
-          <View style={styles.menuContainer}>{menuItems.map((item, index) => (
-            <Pressable
-              key={index}
-              style={[styles.menuItem, globalFocusStyles.focusable]}
-              onPress={item.onPress}
-              accessibilityRole="button"
-              accessibilityLabel={item.label}
-              {...Platform.select({
-                web: { cursor: 'pointer' },
-              })}
-            >
-              <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
-                <Feather name={item.icon as any} size={20} color={item.color} />
+          ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                 <EmptyState
+                    icon="layers"
+                    {...emptyStateProps}
+                 />
               </View>
-              <View style={styles.menuContent}>
-                <Text style={styles.menuLabel}>{item.label}</Text>
-                {item.count !== undefined && (
-                  <Text style={styles.menuCount}>{item.count}</Text>
-                )}
-              </View>
-              <Feather name="chevron-right" size={20} color={colors.textMuted} />
-            </Pressable>
-          ))}</View>
-        </View>
-
-      </ScrollView>
+          }
+      />
     </SafeAreaView>
   );
 }

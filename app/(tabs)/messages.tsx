@@ -84,7 +84,7 @@ export default function MessagesScreen() {
         return null;
     }, [otherUserId, participantAvatars]);
 
-    // Deep-link: open thread with a specific user
+    // Диплинк: открыть диалог с конкретным пользователем
     useEffect(() => {
         if (!params.userId || !isAuthenticated || !authReady) return;
         if (userDismissedDeepLink.current) return;
@@ -137,7 +137,7 @@ export default function MessagesScreen() {
         return () => { cancelled = true; };
     }, [params.userId, isAuthenticated, authReady, userId, threads]);
 
-    // Deep-link: open specific thread by ID
+    // Диплинк: открыть конкретный диалог по ID
     useEffect(() => {
         if (!params.threadId || !isAuthenticated || !authReady) return;
         const tid = Number(params.threadId);
@@ -252,7 +252,7 @@ export default function MessagesScreen() {
         [removeMessage, optimisticRemove]
     );
 
-    // Not authenticated
+    // Пользователь не авторизован
     if (authReady && !isAuthenticated) {
         return (
             <View style={[styles.mobileContainer, { backgroundColor: colors.background }]}>
@@ -349,7 +349,7 @@ export default function MessagesScreen() {
         </View>
     );
 
-    // Desktop: two-panel layout
+    // Desktop: двухпанельный интерфейс
     if (isDesktop) {
         return (
             <View style={[styles.desktopContainer, { backgroundColor: colors.background }]}>
@@ -371,7 +371,7 @@ export default function MessagesScreen() {
         );
     }
 
-    // Mobile: stacked layout
+    // Mobile: стековая компоновка
     return (
         <View style={[styles.mobileContainer, { backgroundColor: colors.background }]}>
             {seoBlock}
