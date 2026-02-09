@@ -34,7 +34,7 @@ const RecommendationsTabs = lazy(async () => {
           <Text>Не удалось загрузить рекомендации</Text>
         </View>
       )),
-    }
+    } as unknown as typeof import('./RecommendationsTabs')
   }
 })
 
