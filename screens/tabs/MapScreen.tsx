@@ -21,6 +21,8 @@ import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar';
 import { MapQuickFilters } from '@/components/MapPage/MapQuickFilters';
 import { ActiveFiltersBar } from '@/components/MapPage/ActiveFiltersBar';
 import { MapShowListButton } from '@/components/MapPage/MapShowListButton';
+import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
+import { useRouteStore } from '@/stores/routeStore';
 
 const LazyMapPanel = lazy(() => import('@/components/MapPage/MapPanel'));
 const LazyTravelListPanel = lazy(() => import('@/components/MapPage/TravelListPanel'));
@@ -150,7 +152,7 @@ export default function MapScreen() {
     const activeFilterItems = useMemo(() => {
         const items: { key: string; label: string }[] = [];
         quickFilterSelected.forEach((cat: string) => items.push({ key: `cat:${cat}`, label: cat }));
-        if (currentRadius && currentRadius !== '30') {
+        if (currentRadius && currentRadius !== String(DEFAULT_RADIUS_KM)) {
             items.push({ key: 'radius', label: `${currentRadius} км` });
         }
         if (currentMode === 'route') {
@@ -171,16 +173,22 @@ export default function MapScreen() {
             const current: string[] = filtersPanelProps?.contextValue?.filterValue?.categories ?? [];
             onChange('categories', current.filter((c: string) => c !== catName));
         } else if (key === 'radius') {
-            onChange('radius', '30');
+            onChange('radius', String(DEFAULT_RADIUS_KM));
+        } else if (key === 'mode') {
+            // Atomic: clear route and switch to radius so the query doesn't get disabled on an intermediate render.
+            useRouteStore.getState().clearRouteAndSetMode('radius');
         } else if (key === 'transport') {
-            onChange('transportMode', 'car');
+            const setTransport = filtersPanelProps?.contextValue?.setTransportMode;
+            if (typeof setTransport === 'function') setTransport('car');
         }
-    }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories]);
+    }, [filtersPanelProps?.contextValue?.onFilterChange, filtersPanelProps?.contextValue?.filterValue?.categories, filtersPanelProps?.contextValue?.setTransportMode]);
 
     const handleClearAllFilters = useMemo(() => () => {
         const reset = filtersPanelProps?.contextValue?.resetFilters;
         if (typeof reset === 'function') reset();
     }, [filtersPanelProps?.contextValue?.resetFilters]);
+
+    const requestOpenBottomSheet = useMapPanelStore((s) => s.requestOpen);
 
     const handleExpandRadius = useCallback(() => {
         const onChange = filtersPanelProps?.contextValue?.onFilterChange;
@@ -259,7 +267,10 @@ export default function MapScreen() {
                         transportMode={transportMode}
                         buildRouteTo={buildRouteTo}
                         onCenterOnUser={centerOnUser}
-                        onOpenFilters={selectFiltersTab}
+                        onOpenFilters={() => {
+                            selectFiltersTab();
+                            requestOpenBottomSheet();
+                        }}
                         filtersPanelProps={filtersPanelProps}
                         onResetFilters={handleClearAllFilters}
                         onExpandRadius={handleExpandRadius}

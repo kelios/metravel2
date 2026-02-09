@@ -58,12 +58,10 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const bottomSheetRef = useRef<MapBottomSheetRef>(null);
-  const lastPanelOpenTsRef = useRef<number>(0);
 
   const [uiTab, setUiTab] = useState<'list' | 'filters'>('list');
   const [contentTab, setContentTab] = useState<'list' | 'filters'>('list');
   const [, startTransition] = useTransition();
-  const [_sheetState, setSheetState] = useState<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed');
   const sheetStateRef = useRef<'collapsed' | 'quarter' | 'half' | 'full'>('collapsed');
 
   const openNonce = useMapPanelStore((s) => s.openNonce);
@@ -74,7 +72,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
   const handleSheetStateChange = useCallback((state: 'collapsed' | 'quarter' | 'half' | 'full') => {
     sheetStateRef.current = state;
-    setSheetState(state);
     setBottomSheetState(state); // Синхронизация с store
   }, [setBottomSheetState]);
 
@@ -82,7 +79,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     if (!openNonce) return;
     setUiTab('filters');
     setContentTab('filters');
-    lastPanelOpenTsRef.current = Date.now();
     bottomSheetRef.current?.snapToFull();
   }, [openNonce]);
 
@@ -91,7 +87,6 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     if (sheetStateRef.current === 'collapsed') {
       setUiTab('filters');
       setContentTab('filters');
-      lastPanelOpenTsRef.current = Date.now();
       bottomSheetRef.current?.snapToFull();
       return;
     }
@@ -214,18 +209,22 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     const body =
       contentTab === 'filters' ? (
         (() => {
-          const FilterComponent = filtersPanelProps?.Component;
-          if (!FilterComponent) {
+          const ProviderComponent = filtersPanelProps?.Component;
+          const PanelComponent = filtersPanelProps?.Panel;
+          const providerProps = filtersPanelProps?.props;
+
+          if (!ProviderComponent || !PanelComponent || !providerProps) {
             return <View style={styles.sheetRoot} />;
           }
+
           return (
-            <FilterComponent
-              {...filtersPanelProps.props}
-              isMobile={true}
-              hideTopControls={true}
-              hideFooterCta={filtersMode === 'route'}
-              hideFooterReset={true}
-            />
+            <ProviderComponent {...providerProps}>
+              <PanelComponent
+                hideTopControls={true}
+                hideFooterCta={filtersMode === 'route'}
+                hideFooterReset={true}
+              />
+            </ProviderComponent>
           );
         })()
       ) : (

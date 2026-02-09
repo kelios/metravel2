@@ -39,7 +39,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
     const lastProgrammaticOpenTsRef = useRef(0);
     const [sheetIndex, setSheetIndex] = useState(-1);
 
-    const contentBottomPadding = Platform.OS === 'web' ? 12 : 40 + bottomInset;
+    const contentBottomPadding = Platform.OS === 'web' ? 12 + bottomInset : 40 + bottomInset;
 
     const snapPoints = useMemo(
       () => (Platform.OS === 'web' ? ['70%', '80%'] : ['55%', '80%']),
@@ -136,10 +136,19 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
       []
     );
 
+    const handleClosePress = useCallback(() => {
+      if (Platform.OS === 'web') {
+        setSheetIndex(-1);
+        onStateChange?.('collapsed');
+        return;
+      }
+      bottomSheetRef.current?.close();
+    }, [onStateChange]);
+
     return (
       <BottomSheet
         ref={bottomSheetRef}
-        index={-1}
+        index={Platform.OS === 'web' ? sheetIndex : -1}
         snapPoints={snapPoints}
         bottomInset={bottomInset}
         onChange={handleSheetChanges}
@@ -166,7 +175,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
               icon={<Feather name="x" size={20} color={colors.textMuted} />}
               label="Закрыть панель"
               size="sm"
-              onPress={() => bottomSheetRef.current?.close()}
+              onPress={handleClosePress}
               testID="map-panel-close"
               style={styles.headerButton}
             />
@@ -184,7 +193,7 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
         <BottomSheetView
           style={[
             styles.contentContainer,
-            { paddingBottom: (bottomInset > 0 ? 12 : 40) + bottomInset },
+            { paddingBottom: contentBottomPadding },
           ]}
         >
           {children}
