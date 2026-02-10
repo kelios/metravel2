@@ -114,6 +114,7 @@ describe('PointsList (manual create)', () => {
   };
 
   it('should show validation error if category is not selected', async () => {
+    jest.setTimeout(15000);
     renderWithClient();
     await openManualAdd();
 

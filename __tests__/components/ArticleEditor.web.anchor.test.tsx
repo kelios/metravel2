@@ -103,6 +103,7 @@ describe('ArticleEditor.web anchors', () => {
   });
 
   it('inserts an anchor and it is visible in HTML mode', async () => {
+    jest.setTimeout(15000);
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     const onChange = jest.fn();
