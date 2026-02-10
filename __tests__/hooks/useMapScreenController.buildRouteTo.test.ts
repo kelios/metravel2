@@ -11,43 +11,23 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }))
 
-jest.mock('@/hooks/map', () => ({
-  useMapResponsive: () => ({ isMobile: false, width: 1200 }),
-  useMapPanelState: () => ({
-    isFocused: true,
-    mapReady: true,
-    rightPanelTab: 'list',
-    rightPanelVisible: true,
-    selectFiltersTab: jest.fn(),
-    selectTravelsTab: jest.fn(),
-    openRightPanel: jest.fn(),
-    closeRightPanel: jest.fn(),
-    panelStyle: {},
-    overlayStyle: {},
-    filtersTabRef: { current: null },
-    panelRef: { current: null },
-  }),
+jest.mock('@/hooks/map/useMapCoordinates', () => ({
   useMapCoordinates: () => ({
     coordinates: { latitude: 53.9, longitude: 27.5667 },
     updateCoordinates: mockUpdateCoordinates,
   }),
+}))
+
+jest.mock('@/hooks/map/useMapFilters', () => ({
   useMapFilters: () => ({
     filters: { categories: [], radius: [], address: [] },
     filterValues: { radius: '60' },
     handleFilterChangeForPanel: jest.fn(),
     resetFilters: jest.fn(),
   }),
-  useMapTravels: () => ({
-    allTravelsData: [],
-    filteredTravelsData: [],
-    isLoading: false,
-    isFetching: false,
-    isPlaceholderData: false,
-    isError: false,
-    error: null,
-    refetch: jest.fn(),
-  }),
-  // New controllers from Phase 3 refactoring
+}))
+
+jest.mock('@/hooks/map/useMapUIController', () => ({
   useMapUIController: () => ({
     isFocused: true,
     isMobile: false,
@@ -67,6 +47,9 @@ jest.mock('@/hooks/map', () => ({
     canonical: 'http://localhost',
     openNonce: 0,
   }),
+}))
+
+jest.mock('@/hooks/map/useMapDataController', () => ({
   useMapDataController: () => ({
     allTravelsData: [],
     travelsData: [],
@@ -78,6 +61,9 @@ jest.mock('@/hooks/map', () => ({
     refetchMapData: jest.fn(),
     invalidateTravelsQuery: jest.fn(),
   }),
+}))
+
+jest.mock('@/hooks/map/useRouteController', () => ({
   useRouteController: () => ({
     mode: 'radius',
     setMode: jest.fn(),

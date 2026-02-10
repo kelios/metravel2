@@ -189,10 +189,7 @@ export async function generateLeafletRouteSnapshot(
   points: { lat: number; lng: number; label?: string }[],
   options: { width?: number; height?: number; zoom?: number } = {}
 ): Promise<string | null> {
-  if (typeof document === 'undefined' || typeof window === 'undefined') {
-    return null;
-  }
-
+  if (typeof document === 'undefined' || typeof window === 'undefined') return null;
   if (!points.length) return null;
 
   const width = options.width ?? 800;
@@ -201,158 +198,164 @@ export async function generateLeafletRouteSnapshot(
 
   const cacheKey = buildLeafletRouteSnapshotCacheKey(points, { width, height, zoom });
   const cached = leafletRouteSnapshotCache.get(cacheKey);
-  if (cached) {
-    return cached;
-    if (w.L) {
-      return w.L;
-    }
+  if (cached) return cached;
 
-    const isTestEnv =
-      typeof process !== 'undefined' &&
-      (process as any).env &&
-      (process as any).env.NODE_ENV === 'test';
-
-    if (isTestEnv) {
-      try {
-        // In Jest we mock 'leaflet', so prefer synchronous require to avoid hanging on CDN.
-        // Use an indirect require so Metro doesn't statically include Leaflet in the web entry bundle.
-        const req = (0, eval)('require') as NodeRequire;
-        const leafletMod = req('leaflet');
-        w.L = leafletMod?.default ?? leafletMod;
+  const task = (async (): Promise<string | null> => {
+    const ensureLeaflet = async (): Promise<any> => {
+      const w = window as any;
+      if (w.L) {
         return w.L;
-      } catch {
-        return null;
       }
-    }
 
-    if (!(ensureLeaflet as any)._loader) {
-      (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
-        const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        if (!document.querySelector(`link[href="${cssHref}"]`)) {
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = cssHref;
-          document.head.appendChild(link);
+      const isTestEnv =
+        typeof process !== 'undefined' &&
+        (process as any).env &&
+        (process as any).env.NODE_ENV === 'test';
+
+      if (isTestEnv) {
+        try {
+          // In Jest we mock 'leaflet', so prefer synchronous require to avoid hanging on CDN.
+          // Use an indirect require so Metro doesn't statically include Leaflet in the web entry bundle.
+          const req = (0, eval)('require') as NodeRequire;
+          const leafletMod = req('leaflet');
+          w.L = leafletMod?.default ?? leafletMod;
+          return w.L;
+        } catch {
+          return null;
         }
-
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        script.async = true;
-        script.onload = () => resolve();
-        script.onerror = (err) => {
-          (ensureLeaflet as any)._loader = null;
-          reject(err);
-        };
-        document.body.appendChild(script);
-      });
-    }
-
-    await (ensureLeaflet as any)._loader;
-
-    if (!w.L) {
-      throw new Error('Leaflet failed to load from CDN');
-    }
-
-    return w.L;
-  };
-
-  const L: any = await ensureLeaflet();
-  if (!L) {
-    return null;
-  }
-
-  // Создаем off-screen контейнер
-  const container = document.createElement('div');
-  container.style.position = 'absolute';
-  container.style.left = '-10000px';
-  container.style.top = '-10000px';
-  container.style.width = `${width}px`;
-  container.style.height = `${height}px`;
-  container.style.zIndex = '-1';
-  container.id = `metravel-map-snapshot-${Math.random().toString(16).slice(2)}`;
-  document.body.appendChild(container);
-
-  const escapeHtml = (value: string): string => {
-    return value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  };
-
-  // Фильтруем точки с валидными координатами
-  const validPoints = points.filter((p) =>
-    Number.isFinite(p.lat) &&
-    Number.isFinite(p.lng) &&
-    p.lat >= -90 && p.lat <= 90 &&
-    p.lng >= -180 && p.lng <= 180
-  );
-
-  if (validPoints.length === 0) {
-    document.body.removeChild(container);
-    return null;
-  }
-
-  // Минимальная инициализация карты (без анимаций, чтобы избежать багов в off-screen режиме)
-  const centerLat = validPoints.reduce((sum, p) => sum + p.lat, 0) / validPoints.length;
-  const centerLng = validPoints.reduce((sum, p) => sum + p.lng, 0) / validPoints.length;
-
-  let map: any | null = null;
-
-  try {
-    map = L.map(container, {
-      center: [centerLat, centerLng],
-      zoom,
-      zoomControl: false,
-      attributionControl: false,
-      zoomAnimation: false,
-      fadeAnimation: false,
-      markerZoomAnimation: false,
-    });
-
-    const tileLayer = L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      {
-        attribution: ' OpenStreetMap  CartoDB',
-        crossOrigin: true,
       }
-    ).addTo(map);
 
-    // Маркеры как в веб-карте + аккуратный номер точки поверх пина
-    const latLngs = validPoints.map((p) => L.latLng(p.lat, p.lng));
+      if (!(ensureLeaflet as any)._loader) {
+        (ensureLeaflet as any)._loader = new Promise<void>((resolve, reject) => {
+          const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          if (!document.querySelector(`link[href="${cssHref}"]`)) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = cssHref;
+            document.head.appendChild(link);
+          }
 
-    latLngs.forEach((latLng, index) => {
-      const number = index + 1;
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = (err) => {
+            (ensureLeaflet as any)._loader = null;
+            reject(err);
+          };
+          document.body.appendChild(script);
+        });
+      }
 
-      const labelRaw = validPoints[index]?.label;
-      const label =
-        typeof labelRaw === 'string'
-          ? labelRaw
-              .replace(/\s+/g, ' ')
-              .replace(/\s*,\s*/g, ', ')
-              .replace(/,\s*,+/g, ', ')
-              .replace(/[,\s]+$/g, '')
-              .trim()
-          : '';
+      await (ensureLeaflet as any)._loader;
 
-      const isStart = index === 0;
-      const isEnd = index === latLngs.length - 1;
-      const labelBg = DESIGN_TOKENS.colors.surface;
-      const labelText = DESIGN_TOKENS.colors.text;
-      const labelBorder = DESIGN_TOKENS.colors.border;
-      const fontFamily = DESIGN_TOKENS.typography.fontFamily;
+      if (!w.L) {
+        throw new Error('Leaflet failed to load from CDN');
+      }
 
-      const pinFill = isStart
-        ? DESIGN_TOKENS.colors.success
-        : isEnd
-          ? DESIGN_TOKENS.colors.danger
-          : DESIGN_TOKENS.colors.accent;
-      const pinStroke = DESIGN_TOKENS.colors.surface;
-      const pinShadow = 'drop-shadow(0 6px 14px rgba(0,0,0,0.22))';
-      const numberColor = DESIGN_TOKENS.colors.textOnPrimary;
+      return w.L;
+    };
 
-      const iconHtml = `
+    const L: any = await ensureLeaflet();
+    if (!L) {
+      return null;
+    }
+
+    // Создаем off-screen контейнер
+    const container = document.createElement('div');
+    container.style.position = 'absolute';
+    container.style.left = '-10000px';
+    container.style.top = '-10000px';
+    container.style.width = `${width}px`;
+    container.style.height = `${height}px`;
+    container.style.zIndex = '-1';
+    container.id = `metravel-map-snapshot-${Math.random().toString(16).slice(2)}`;
+    document.body.appendChild(container);
+
+    const escapeHtml = (value: string): string => {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
+    // Фильтруем точки с валидными координатами
+    const validPoints = points.filter(
+      (p) =>
+        Number.isFinite(p.lat) &&
+        Number.isFinite(p.lng) &&
+        p.lat >= -90 &&
+        p.lat <= 90 &&
+        p.lng >= -180 &&
+        p.lng <= 180
+    );
+
+    if (validPoints.length === 0) {
+      document.body.removeChild(container);
+      return null;
+    }
+
+    // Минимальная инициализация карты (без анимаций, чтобы избежать багов в off-screen режиме)
+    const centerLat = validPoints.reduce((sum, p) => sum + p.lat, 0) / validPoints.length;
+    const centerLng = validPoints.reduce((sum, p) => sum + p.lng, 0) / validPoints.length;
+
+    let map: any | null = null;
+
+    try {
+      map = L.map(container, {
+        center: [centerLat, centerLng],
+        zoom,
+        zoomControl: false,
+        attributionControl: false,
+        zoomAnimation: false,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
+      });
+
+      const tileLayer = L.tileLayer(
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+        {
+          attribution: ' OpenStreetMap  CartoDB',
+          crossOrigin: true,
+        }
+      ).addTo(map);
+
+      // Маркеры как в веб-карте + аккуратный номер точки поверх пина
+      const latLngs = validPoints.map((p) => L.latLng(p.lat, p.lng));
+
+      latLngs.forEach((latLng, index) => {
+        const number = index + 1;
+
+        const labelRaw = validPoints[index]?.label;
+        const label =
+          typeof labelRaw === 'string'
+            ? labelRaw
+                .replace(/\s+/g, ' ')
+                .replace(/\s*,\s*/g, ', ')
+                .replace(/,\s*,+/g, ', ')
+                .replace(/[,\s]+$/g, '')
+                .trim()
+            : '';
+
+        const isStart = index === 0;
+        const isEnd = index === latLngs.length - 1;
+        const labelBg = DESIGN_TOKENS.colors.surface;
+        const labelText = DESIGN_TOKENS.colors.text;
+        const labelBorder = DESIGN_TOKENS.colors.border;
+        const fontFamily = DESIGN_TOKENS.typography.fontFamily;
+
+        const pinFill = isStart
+          ? DESIGN_TOKENS.colors.success
+          : isEnd
+            ? DESIGN_TOKENS.colors.danger
+            : DESIGN_TOKENS.colors.accent;
+        const pinStroke = DESIGN_TOKENS.colors.surface;
+        const pinShadow = 'drop-shadow(0 6px 14px rgba(0,0,0,0.22))';
+        const numberColor = DESIGN_TOKENS.colors.textOnPrimary;
+
+        const iconHtml = `
         <div style="position: relative; width: 28px; height: 42px;">
           <div style="width: 28px; height: 42px; display: block; filter: ${pinShadow};">
             <svg
@@ -440,72 +443,74 @@ export async function generateLeafletRouteSnapshot(
         </div>
       `;
 
-      const icon = L.divIcon({
-        className: 'metravel-map-marker',
-        html: iconHtml,
-        iconSize: [28, 42],
-        iconAnchor: [14, 42],
+        const icon = L.divIcon({
+          className: 'metravel-map-marker',
+          html: iconHtml,
+          iconSize: [28, 42],
+          iconAnchor: [14, 42],
+        });
+
+        L.marker(latLng, { icon }).addTo(map);
       });
 
-      L.marker(latLng, { icon }).addTo(map);
-    });
+      // Подгоняем границы под маршрут (без плавной анимации)
+      if (latLngs.length > 0) {
+        const bounds = L.latLngBounds(latLngs);
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [28, 28], animate: false });
+        }
+      }
 
-    // Подгоняем границы под маршрут (без плавной анимации)
-    if (latLngs.length > 0) {
-      const bounds = L.latLngBounds(latLngs);
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [28, 28], animate: false });
+      // Ждем загрузки тайлов (или таймаут как fallback)
+      await new Promise<void>((resolve) => {
+        let resolved = false;
+        const timeout = window.setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            resolve();
+          }
+        }, 1500);
+
+        tileLayer.on('load', () => {
+          if (!resolved) {
+            resolved = true;
+            window.clearTimeout(timeout);
+            resolve();
+          }
+        });
+      });
+
+      // Скриншот контейнера
+      const dataUrl = await generateMapImageFromDOM(container, width, height);
+      return dataUrl;
+    } catch (error) {
+      // В случае ошибки вернем null, чтобы генератор PDF мог использовать SVG как fallback
+      if (typeof console !== 'undefined') {
+        console.error('[MAP_SNAPSHOT] generateLeafletRouteSnapshot error', error);
+      }
+      return null;
+    } finally {
+      if (map && typeof map.remove === 'function') {
+        map.remove();
+      }
+      if (container.parentNode) {
+        container.parentNode.removeChild(container);
       }
     }
+  })();
 
-    // Ждем загрузки тайлов (или таймаут как fallback)
-    await new Promise<void>((resolve) => {
-      let resolved = false;
-      const timeout = window.setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          resolve();
-        }
-      }, 1500);
-
-      tileLayer.on('load', () => {
-        if (!resolved) {
-          resolved = true;
-          window.clearTimeout(timeout);
-          resolve();
-        }
-      });
+  const wrapped = task
+    .then((result) => {
+      if (result === null) {
+        leafletRouteSnapshotCache.delete(cacheKey);
+      }
+      return result;
+    })
+    .catch((e) => {
+      leafletRouteSnapshotCache.delete(cacheKey);
+      throw e;
     });
 
-    // Скриншот контейнера
-    const dataUrl = await generateMapImageFromDOM(container, width, height);
-    return dataUrl;
-  } catch (error) {
-    // В случае ошибки вернем null, чтобы генератор PDF мог использовать SVG как fallback
-    if (typeof console !== 'undefined') {
-      console.error('[MAP_SNAPSHOT] generateLeafletRouteSnapshot error', error);
-    }
-    return null;
-  } finally {
-    if (map && typeof map.remove === 'function') {
-      map.remove();
-    }
-    if (container.parentNode) {
-      container.parentNode.removeChild(container);
-    }
-  }
-   })()
-     .then((result) => {
-       if (result === null) {
-         leafletRouteSnapshotCache.delete(cacheKey);
-       }
-       return result;
-     })
-     .catch((e) => {
-       leafletRouteSnapshotCache.delete(cacheKey);
-       throw e;
-     });
-
-   leafletRouteSnapshotCache.set(cacheKey, task);
-   return task;
+  leafletRouteSnapshotCache.set(cacheKey, wrapped);
+  return wrapped;
 }

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3.0.0';
+const CACHE_VERSION = 'v3.0.1';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -192,7 +192,8 @@ self.addEventListener('fetch', (event) => {
 
   // JS chunks з hash в імені (immutable) — агресивне кешування
   if (request.destination === 'script') {
-    const isHashedChunk = /\/_expo\/static\/js\/web\/.*-[a-f0-9]{32}\.js$/.test(url.pathname);
+    const isExpoWebJs = url.pathname.startsWith('/_expo/static/js/web/');
+    const isHashedChunk = isExpoWebJs && /-[a-f0-9]{8,}\.js$/i.test(url.pathname);
     
     if (isHashedChunk) {
       // Immutable chunks — cache-first з довгим TTL
@@ -329,27 +330,27 @@ async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_J
 async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
   try {
     const cache = await caches.open(cacheName);
-    const cached = await cache.match(request);
-
-    const fetchPromise = fetch(request).then(response => {
+    try {
+      const response = await fetch(request);
       if (response && response.status === 200) {
         const responseToCache = response.clone();
         const headers = new Headers(responseToCache.headers);
         headers.append('sw-cache-date', Date.now().toString());
 
-        responseToCache.blob().then(blob => {
-          const cachedResponse = new Response(blob, {
-            status: responseToCache.status,
-            statusText: responseToCache.statusText,
-            headers: headers,
-          });
-          cache.put(request, cachedResponse);
+        const blob = await responseToCache.blob();
+        const cachedResponse = new Response(blob, {
+          status: responseToCache.status,
+          statusText: responseToCache.statusText,
+          headers: headers,
         });
+        cache.put(request, cachedResponse);
+        limitCacheSize(cacheName, MAX_JS_CACHE_SIZE);
       }
       return response;
-    }).catch(() => null);
-
-    return cached || fetchPromise;
+    } catch {
+      const cached = await cache.match(request);
+      return cached || offlineResponse();
+    }
   } catch {
     const cached = await caches.match(request);
     return cached || offlineResponse();

@@ -5,7 +5,7 @@ import { FiltersProvider } from '@/context/MapFiltersContext';
 import { useRouteStore } from '@/stores/routeStore';
 import type { MapUiApi } from '@/types/mapUi';
 
-// Модульные хуки для карты — direct imports to avoid barrel re-export issues with inlineRequires
+// Модульные хуки для карты
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
 import { useMapFilters } from '@/hooks/map/useMapFilters';
 import { useMapDataController } from '@/hooks/map/useMapDataController';
