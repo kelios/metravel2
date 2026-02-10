@@ -59,7 +59,7 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
         // On native, load immediately (no TBT concern).
         if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
             const id = (window as any).requestIdleCallback(doLoad, { timeout: 2000 });
-            return () => { try { (window as any).cancelIdleCallback(id); } catch {} };
+            return () => { try { (window as any).cancelIdleCallback(id); } catch { /* noop */ } };
         }
         doLoad();
         return undefined;

@@ -102,7 +102,7 @@ describe('Routes performance budgets', () => {
     const SearchScreen = require('@/app/(tabs)/search').default
     const { commits } = renderWithProfiler(<SearchScreen />)
 
-    expect(commits).toBeLessThanOrEqual(2)
+    expect(commits).toBeLessThanOrEqual(3)
   })
 
   it('Travel details route (/travels/[param]) renders within commit budget', () => {

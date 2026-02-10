@@ -29,6 +29,41 @@ npm run lighthouse:travel:desktop
 ```
 
 - After deploying to production, validate performance against the real production URL (PageSpeed Insights or Lighthouse).
+
+### Performance testing with metravel.by
+
+Run Lighthouse directly against `https://metravel.by` to test real production performance.
+
+**Step-by-step:**
+
+```bash
+# Desktop:
+npx lighthouse https://metravel.by/ --preset=desktop --only-categories=performance --chrome-flags="--headless --no-sandbox"
+npx lighthouse https://metravel.by/search --preset=desktop --only-categories=performance --chrome-flags="--headless --no-sandbox"
+npx lighthouse https://metravel.by/map --preset=desktop --only-categories=performance --chrome-flags="--headless --no-sandbox"
+
+# Mobile:
+npx lighthouse https://metravel.by/ --form-factor=mobile --screenEmulation.mobile --throttling.cpuSlowdownMultiplier=4 --only-categories=performance --chrome-flags="--headless --no-sandbox"
+npx lighthouse https://metravel.by/search --form-factor=mobile --screenEmulation.mobile --throttling.cpuSlowdownMultiplier=4 --only-categories=performance --chrome-flags="--headless --no-sandbox"
+npx lighthouse https://metravel.by/map --form-factor=mobile --screenEmulation.mobile --throttling.cpuSlowdownMultiplier=4 --only-categories=performance --chrome-flags="--headless --no-sandbox"
+```
+
+For **local builds** (before deploy), serve and test via Network IP (not `localhost` — CORS blocks it):
+
+```bash
+npm run build:web:prod
+npx serve dist/prod -l 3000 -s
+# Use the Network IP from the output, e.g. http://192.168.50.10:3000
+```
+
+**Target scores:**
+- Desktop: ≥ 70 (current: Home 92, Search 91, Map 89)
+- Mobile: ≥ 60 (current: Home 65–68, Search 63–65, Map 62–64)
+- Mobile scores are limited by entry bundle size (4.7MB) on Lighthouse 4× CPU throttling
+
+**Important:**
+- If port 3000 is occupied: `lsof -ti:3000 | xargs kill -9`
+- Add `--output=json --output-path=/tmp/lh-report.json` to save reports for analysis
 - If you find unused code during work, remove it.
 
 ## UI rules

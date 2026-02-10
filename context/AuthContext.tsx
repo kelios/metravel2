@@ -31,7 +31,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     useEffect(() => {
         if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
             const id = (window as any).requestIdleCallback(() => checkAuthentication(), { timeout: 1500 });
-            return () => { try { (window as any).cancelIdleCallback(id); } catch {} };
+            return () => { try { (window as any).cancelIdleCallback(id); } catch { /* noop */ } };
         }
         checkAuthentication();
         return undefined;

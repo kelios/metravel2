@@ -117,8 +117,9 @@ export async function navigateToFirstTravel(
  * Wait for the main list page to render (cards, skeleton, or empty state).
  */
 export async function waitForMainListRender(page: Page) {
-  await Promise.race([
+  await Promise.any([
     page.waitForSelector('#search-input', { timeout: 30_000 }),
+    page.waitForSelector('[placeholder*="Найти путешествия"]', { timeout: 30_000 }),
     page.waitForSelector(
       '[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"], [data-testid="list-travel-skeleton"]',
       { timeout: 30_000 }

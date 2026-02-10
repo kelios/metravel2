@@ -87,8 +87,8 @@ test.describe('Travel Details Page - Loading and Display', () => {
     await preacceptCookies(page);
     await page.goto('/travels/non-existent-travel-99999', { waitUntil: 'domcontentloaded' });
 
-    // Wait for error state to render
-    await page.waitForSelector('text=/не найдено|не удалось|ошибка/i', { timeout: 15_000 }).catch(() => null);
+    // Wait for error state to render (API proxy may be slow to return 404)
+    await page.waitForSelector('text=/не найдено|не удалось|ошибка|not found/i', { timeout: 30_000 }).catch(() => null);
 
     // Проверяем наличие сообщения об ошибке
     const errorMessages = [
@@ -96,6 +96,7 @@ test.describe('Travel Details Page - Loading and Display', () => {
       'не удалось загрузить',
       'не существует',
       'ошибка',
+      'not found',
     ];
 
     const bodyText = await page.locator('body').textContent();

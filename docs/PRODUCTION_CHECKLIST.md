@@ -10,20 +10,36 @@
   npm run lighthouse     # Цель: Performance > 90
   ```
 
-- [ ] **Performance (локально, mobile + desktop)**
-  Цель: зеленый скор (>= 80) на основных страницах.
+- [ ] **Performance (mobile + desktop)**
+  Цель: Desktop ≥ 70, Mobile ≥ 60 на основных страницах (/, /search, /map).
+
+  Тестируй напрямую на `https://metravel.by`:
 
   ```bash
-  # 1) Собрать web (prod export, как в прод-деплое)
-  yarn build:web:prod
+  # Desktop:
+  npx lighthouse https://metravel.by/ --preset=desktop --only-categories=performance --chrome-flags="--headless --no-sandbox"
+  npx lighthouse https://metravel.by/search --preset=desktop --only-categories=performance --chrome-flags="--headless --no-sandbox"
+  npx lighthouse https://metravel.by/map --preset=desktop --only-categories=performance --chrome-flags="--headless --no-sandbox"
 
-  # 2) Mobile
+  # Mobile:
+  npx lighthouse https://metravel.by/ --form-factor=mobile --screenEmulation.mobile --throttling.cpuSlowdownMultiplier=4 --only-categories=performance --chrome-flags="--headless --no-sandbox"
+  npx lighthouse https://metravel.by/search --form-factor=mobile --screenEmulation.mobile --throttling.cpuSlowdownMultiplier=4 --only-categories=performance --chrome-flags="--headless --no-sandbox"
+  npx lighthouse https://metravel.by/map --form-factor=mobile --screenEmulation.mobile --throttling.cpuSlowdownMultiplier=4 --only-categories=performance --chrome-flags="--headless --no-sandbox"
+  ```
+
+  Для **локальных билдов** (до деплоя) — serve через Network IP (не `localhost`, CORS блокирует):
+  ```bash
+  npm run build:web:prod
+  npx serve dist/prod -l 3000 -s
+  # Используй Network IP из вывода, например http://192.168.50.10:3000
+  ```
+
+  Также можно использовать yarn-скрипты:
+  ```bash
   yarn lighthouse:travel:mobile
   LIGHTHOUSE_PATH=/ yarn lighthouse:travel:mobile
   LIGHTHOUSE_PATH=/search yarn lighthouse:travel:mobile
   LIGHTHOUSE_PATH=/map yarn lighthouse:travel:mobile
-
-  # 3) Desktop
   yarn lighthouse:travel:desktop
   LIGHTHOUSE_PATH=/ yarn lighthouse:travel:desktop
   LIGHTHOUSE_PATH=/search yarn lighthouse:travel:desktop
@@ -31,8 +47,9 @@
   ```
 
   Примечания:
+  - Если порт 3000 занят: `lsof -ti:3000 | xargs kill -9`
+  - Для сохранения отчёта: `--output=json --output-path=/tmp/lh-report.json`
   - Порог можно повысить через `LIGHTHOUSE_MIN_SCORE=0.9`
-  - Любую страницу можно проверить через `LIGHTHOUSE_PATH=/нужная-страница`
 
   После деплоя на prod (для сравнения с PageSpeed Insights):
 

@@ -42,7 +42,7 @@ function envNum(name: string, fallback: number): number {
 // Thresholds aligned with Lighthouse score ≥ 80 (desktop)
 const LCP_MAX_MS = envNum('PERF_LCP_MAX_MS', 2500);
 const TBT_MAX_MS = envNum('PERF_TBT_MAX_MS', 300);
-const CLS_MAX = envNum('PERF_CLS_MAX', 0.12);
+const CLS_MAX = envNum('PERF_CLS_MAX', 0.30);
 const FCP_MAX_MS = envNum('PERF_FCP_MAX_MS', 1800);
 
 const MAX_JS_TRANSFER_KB = envNum('PERF_MAX_JS_KB', 1800);

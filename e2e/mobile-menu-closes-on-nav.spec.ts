@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-import { preacceptCookies, gotoWithRetry, waitForMainListRender } from './helpers/navigation';
+import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
 
 test.describe('Mobile menu navigation', () => {
@@ -8,8 +8,8 @@ test.describe('Mobile menu navigation', () => {
     await preacceptCookies(page);
 
     await gotoWithRetry(page, getTravelsListPath());
-    await waitForMainListRender(page);
 
+    // Wait for the burger menu to appear — no need to wait for the full list render.
     const burger = page.getByTestId('mobile-menu-open');
     await expect(burger).toBeVisible({ timeout: 30_000 });
     await burger.click();

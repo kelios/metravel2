@@ -12,13 +12,7 @@ export default function MapScreen() {
   useEffect(() => {
     if (Platform.OS !== 'web') return
     ensureLeafletCss()
-    // Defer hydration to let main thread finish parsing before heavy render
-    if ('requestIdleCallback' in window) {
-      const id = (window as any).requestIdleCallback(() => setHydrated(true), { timeout: 800 })
-      return () => (window as any).cancelIdleCallback(id)
-    }
-    const t = setTimeout(() => setHydrated(true), 50)
-    return () => clearTimeout(t)
+    setHydrated(true)
   }, [])
 
   if (!hydrated) {

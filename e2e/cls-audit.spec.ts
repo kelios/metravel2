@@ -353,8 +353,9 @@ test.describe('@perf CLS audit', () => {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await page.goto('/travelsby', { waitUntil: 'domcontentloaded', timeout: 60_000 });
-        await Promise.race([
+        await Promise.any([
           page.waitForSelector('#search-input', { timeout: 30_000 }),
+          page.waitForSelector('[placeholder*="Найти путешествия"]', { timeout: 30_000 }),
           page.waitForSelector('[data-testid="travel-card-link"], [data-testid="travel-card-skeleton"]', { timeout: 30_000 }),
           page.waitForSelector('text=Пока нет путешествий', { timeout: 30_000 }),
         ]);
