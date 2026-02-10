@@ -171,9 +171,10 @@ function ImageCardMedia({
       optimizeImageUrl(uri, {
         width: numericWidth,
         height: numericHeight,
-        quality: 80,
+        quality: 60,
         fit: contentFit === 'contain' ? 'contain' : 'cover',
         format: 'auto',
+        dpr: 1,
       }) ?? uri
     );
   }, [resolvedSource, width, height, contentFit]);
@@ -185,6 +186,22 @@ function ImageCardMedia({
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     return uri || null;
   }, [resolvedSource, shouldDisableNetwork, webOptimizedSource]);
+
+  const webBlurSrc = useMemo(() => {
+    if (Platform.OS !== 'web' || !blurBackground) return null;
+    if (!resolvedSource || typeof resolvedSource === 'number') return null;
+    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
+    if (!uri) return null;
+    return (
+      optimizeImageUrl(uri, {
+        width: 100,
+        quality: 20,
+        fit: 'cover',
+        format: 'auto',
+        dpr: 1,
+      }) ?? uri
+    );
+  }, [resolvedSource, blurBackground]);
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
@@ -259,7 +276,7 @@ function ImageCardMedia({
                   inset: '-5%',
                   width: '110%',
                   height: '110%',
-                  backgroundImage: `url("${webMainSrc}")`,
+                  backgroundImage: `url("${webBlurSrc || webMainSrc}")`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   filter: 'blur(20px)',

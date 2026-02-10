@@ -14,7 +14,7 @@ import * as Clipboard from 'expo-clipboard';
 import Feather from '@expo/vector-icons/Feather';
 import { FlashList } from '@shopify/flash-list';
 // ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, buildVersionedImageUrl, getOptimalImageSize } from '@/utils/imageOptimization';
+import { optimizeImageUrl, buildVersionedImageUrl } from '@/utils/imageOptimization';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import PlaceListCard from '@/components/places/PlaceListCard';
@@ -77,15 +77,13 @@ const getOptimizedImageUrl = (url?: string, updatedAt?: string) => {
   // Создаем версионированный URL
   const versionedUrl = buildVersionedImageUrl(url, updatedAt);
   
-  // Оптимальный размер для изображений точек на карте (960x640 для десктопа)
-  const optimalSize = getOptimalImageSize(960, 640);
-  
   return optimizeImageUrl(versionedUrl, {
-    width: optimalSize.width,
-    height: optimalSize.height,
+    width: 480,
+    height: 320,
     format: 'webp',
-    quality: 82,
+    quality: 60,
     fit: 'cover',
+    dpr: 1,
   }) || versionedUrl;
 };
 

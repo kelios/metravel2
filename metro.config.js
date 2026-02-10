@@ -19,6 +19,19 @@ const path = require('path')
 const config = getDefaultConfig(__dirname)
 const previousEnhanceMiddleware = config.server && config.server.enhanceMiddleware
 
+// ✅ PERF: Enable inline requires — defers module execution until first use.
+// This dramatically reduces TBT because heavy modules (reanimated, leaflet, PDF, quill, etc.)
+// won't execute at startup even though they're in the same bundle.
+config.transformer = {
+  ...config.transformer,
+  getTransformOptions: async () => ({
+    transform: {
+      experimentalImportSupport: false,
+      inlineRequires: true,
+    },
+  }),
+}
+
 // ⚠️ НЕ трогаем resolver несколько раз
 config.resolver = {
   ...config.resolver,

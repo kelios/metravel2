@@ -194,18 +194,30 @@ const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: n
 
   // ✅ УЛУЧШЕНИЕ: Оптимизация размера изображения для контейнера
   if (containerWidth && img.width && img.height) {
+    if (isWeb) {
+      // Web: use CSS-pixel width directly (dpr=1) to avoid double-scaling.
+      // getOptimalImageSize multiplies by devicePixelRatio which is redundant
+      // when we pass dpr=1 to optimizeImageUrl (it would multiply again).
+      const cappedWidth = Math.min(containerWidth, 860);
+      const quality = isFirst ? 55 : 40;
+      return (
+        optimizeImageUrl(versionedUrl, {
+          width: cappedWidth,
+          quality,
+          fit: "contain",
+          dpr: 1,
+        }) || versionedUrl
+      );
+    }
+    // Native: use getOptimalImageSize which accounts for device DPR
     const aspectRatio = img.width / img.height;
-    const cappedWidth = isWeb ? Math.min(containerWidth, 1200) : containerWidth;
-    const optimalSize = getOptimalImageSize(cappedWidth, containerHeight, aspectRatio);
-    const quality = isWeb ? (isFirst ? 55 : 65) : isFirst ? 75 : 70;
-
-    // Не обрезаем изображение по высоте: сохраняем исходные пропорции, подстраиваясь только по ширине
+    const optimalSize = getOptimalImageSize(containerWidth, containerHeight, aspectRatio);
+    const quality = isFirst ? 75 : 70;
     return (
       optimizeImageUrl(versionedUrl, {
         width: optimalSize.width,
         quality,
         fit: "contain",
-        ...(isWeb ? { dpr: 1 } : null),
       }) || versionedUrl
     );
   }
@@ -802,9 +814,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             onScroll={onScroll}
             scrollEventThrottle={isWeb ? 64 : 16}
             renderItem={renderItem}
-            initialNumToRender={isTestEnv ? images.length : 2}
-            windowSize={isTestEnv ? images.length : 5}
-            maxToRenderPerBatch={isTestEnv ? images.length : 3}
+            initialNumToRender={isTestEnv ? images.length : (isWeb ? 1 : 2)}
+            windowSize={isTestEnv ? images.length : (isWeb ? 3 : 5)}
+            maxToRenderPerBatch={isTestEnv ? images.length : (isWeb ? 1 : 3)}
             disableVirtualization={isTestEnv}
             maintainVisibleContentPosition={Platform.OS === "ios" ? undefined : { minIndexForVisible: 0 }}
             disableIntervalMomentum

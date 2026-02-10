@@ -336,14 +336,12 @@ export default function Root({ children }: { children: React.ReactNode }) {
       
       {!isProduction && <meta name="robots" content="noindex,nofollow" />}
 
-      {/* Resource hints - critical domains */}
+      {/* Resource hints - critical domains only (map-specific hints moved to ensureLeafletCss) */}
       <link rel="dns-prefetch" href="//cdn.metravel.by" />
       <link rel="dns-prefetch" href="//api.metravel.by" />
-      <link rel="dns-prefetch" href="//tile.openstreetmap.org" />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://images.weserv.nl" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://tile.openstreetmap.org" crossOrigin="anonymous" />
       
       {/* Icons */}
       <link rel="icon" href="/assets/icons/logo_yellow.ico" sizes="any" type="image/x-icon" />

@@ -15,6 +15,9 @@ export function ensureLeafletCss(): boolean {
     // Inject Leaflet overrides (extracted from global.css to reduce CSS on non-map pages)
     ensureLeafletOverrides()
 
+    // Add preconnect for tile server (only needed on map page)
+    ensureTilePreconnect()
+
     return true
   } catch {
     return false
@@ -29,6 +32,18 @@ function ensureLeafletOverrides(): void {
   style.id = id
   style.textContent = getLeafletOverridesCSS()
   document.head.appendChild(style)
+}
+
+function ensureTilePreconnect(): void {
+  const id = 'metravel-tile-preconnect'
+  if (document.getElementById(id)) return
+
+  const link = document.createElement('link')
+  link.id = id
+  link.rel = 'preconnect'
+  link.href = 'https://tile.openstreetmap.org'
+  link.crossOrigin = 'anonymous'
+  document.head.appendChild(link)
 }
 
 function getLeafletOverridesCSS(): string {

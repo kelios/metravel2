@@ -390,12 +390,22 @@ function TravelHeroSectionInner({
     typeof navigator !== 'undefined' &&
     String((navigator as any).userAgent || '').toLowerCase().includes('jsdom')
   const [webHeroLoaded, setWebHeroLoaded] = useState(Platform.OS !== 'web' || isJSDOM)
+  // Keep LCP overlay visible briefly after Slider mounts to prevent flash
+  const [sliderMounted, setSliderMounted] = useState(false)
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
     // If we get a new travel/first image, reset swap state.
     setWebHeroLoaded(false)
+    setSliderMounted(false)
   }, [firstImg?.url])
+
+  // After webHeroLoaded triggers Slider mount, wait briefly then hide overlay
+  useEffect(() => {
+    if (!webHeroLoaded || Platform.OS !== 'web') return
+    const t = setTimeout(() => setSliderMounted(true), 150)
+    return () => clearTimeout(t)
+  }, [webHeroLoaded])
 
   const handleWebHeroLoad = useCallback(() => {
     if (Platform.OS === 'web') setWebHeroLoaded(true)
@@ -464,7 +474,7 @@ function TravelHeroSectionInner({
           ) : Platform.OS === 'web' && shouldShowOptimizedHero ? (
             // Web: defer heavy Slider (imports reanimated) until after LCP image loads.
             // Before LCP: render only the lightweight <img> hero (OptimizedLCPHeroInner).
-            // After LCP: mount the Slider underneath and fade out the LCP overlay.
+            // After LCP: mount the Slider underneath, keep overlay briefly, then fade out.
             <View style={{ width: '100%', height: '100%' } as any} collapsable={false}>
               {webHeroLoaded && (
                 <Slider
@@ -481,7 +491,7 @@ function TravelHeroSectionInner({
                   firstImagePreloaded
                 />
               )}
-              {!webHeroLoaded && (
+              {!sliderMounted && (
                 <View
                   pointerEvents="none"
                   style={{

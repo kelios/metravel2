@@ -125,6 +125,11 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
 </div>`;
             }
           )
+          // 1.5) Optimize weserv.nl proxied images: reduce w=1600 to w=800, add quality & webp
+          .replace(
+            /images\.weserv\.nl\/\?url=([^&"]+)&w=1600&fit=inside/g,
+            'images.weserv.nl/?url=$1&w=800&q=70&output=webp&fit=inside'
+          )
           // 2) Каждой картинке: width/height (если есть), height:auto, lazy (кроме LCP), fetchpriority
           .replace(imgRegex, (tag) => {
               // src

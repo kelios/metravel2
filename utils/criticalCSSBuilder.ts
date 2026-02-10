@@ -51,6 +51,8 @@ export function buildCriticalCSS(): string {
     'img[width][height]{aspect-ratio:attr(width)/attr(height)}',
     'img[fetchpriority="high"]{display:block}',
     'img[loading="lazy"]{content-visibility:auto;contain-intrinsic-size:auto 300px}',
+    '#root,#root>div{min-height:100vh;width:100%}',
+    '[data-testid="travel-details-page"]{min-height:100vh;contain:layout style}',
     '[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,' + BSL + ')}',
     '[data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:contain}',
     '[data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}',

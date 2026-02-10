@@ -429,20 +429,24 @@ export default function TravelDetailsContainer() {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
-          {/* Skeleton overlay inside stable layout (web only) */}
-          {Platform.OS === 'web' && skeletonPhase !== 'hidden' && (
+          {/* Skeleton overlay inside stable layout (web only).
+              Never unmount — use visibility/opacity to avoid CLS from DOM removal. */}
+          {Platform.OS === 'web' && (
             <View
               pointerEvents="none"
               collapsable={false}
               style={{
                 position: 'absolute',
                 inset: 0,
-                zIndex: 50,
-                opacity: skeletonPhase === 'fading' ? 0 : 1,
+                zIndex: skeletonPhase === 'hidden' ? -1 : 50,
+                opacity: skeletonPhase === 'loading' ? 1 : 0,
+                visibility: skeletonPhase === 'hidden' ? 'hidden' : 'visible',
                 transition: 'opacity 200ms ease-out',
+                contain: 'strict',
               } as any}
+              aria-hidden={skeletonPhase !== 'loading'}
             >
-              <TravelDetailPageSkeleton />
+              {skeletonPhase !== 'hidden' && <TravelDetailPageSkeleton />}
             </View>
           )}
 
