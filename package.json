@@ -68,6 +68,8 @@
     "design:migrate": "node scripts/migrate-design-imports.js",
     "design:migrate:dry": "node scripts/migrate-design-imports.js --dry-run",
     "design:verify": "node scripts/verify-design-system.js",
+    "test:seo:prod": "node scripts/test-seo-prod.js",
+    "test:seo:prod:verbose": "node scripts/test-seo-prod.js --verbose",
     "release:check": "yarn run lint && ./verify-security-fixes.sh && yarn run audit:high && yarn run test:run && yarn run e2e && yarn run build:web"
   },
   "dependencies": {

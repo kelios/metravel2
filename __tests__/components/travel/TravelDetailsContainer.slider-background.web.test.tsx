@@ -6,6 +6,7 @@ import React, { Suspense } from 'react'
 import renderer, { act } from 'react-test-renderer'
 
 import { Platform } from 'react-native'
+import { __testables } from '@/components/travel/details/TravelDetailsHero'
 
 const mockSliderSpy: jest.Mock<any, any> = jest.fn((_props: any) => null)
 
@@ -69,8 +70,6 @@ describe('TravelHeroSection slider background regression (web)', () => {
   })
 
   it('passes blurBackground=true to Slider when renderSlider=true', async () => {
-    const { __testables } = require('@/components/travel/details/TravelDetailsContainer')
-
     const travel: any = {
       id: 1,
       name: 'Demo travel',
@@ -107,8 +106,9 @@ describe('TravelHeroSection slider background regression (web)', () => {
       excursions: { current: null },
     }
 
+    let tree: renderer.ReactTestRenderer
     await act(async () => {
-      renderer.create(
+      tree = renderer.create(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}
@@ -122,6 +122,18 @@ describe('TravelHeroSection slider background regression (web)', () => {
         </Suspense>,
       )
 
+      jest.runAllTimers()
+      await Promise.resolve()
+    })
+
+    // Step 2: emulate hero image load → component swaps to Slider.
+    const img = (tree as any).root.findAll((n: any) => n.type === 'img')?.[0]
+    expect(img).toBeTruthy()
+    const onLoad = img.props?.onLoad
+    expect(typeof onLoad).toBe('function')
+
+    await act(async () => {
+      onLoad({ currentTarget: {} })
       jest.runAllTimers()
       await Promise.resolve()
     })

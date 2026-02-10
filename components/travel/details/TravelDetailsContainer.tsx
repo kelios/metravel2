@@ -8,7 +8,6 @@ import React, {
   useTransition,
 } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Platform,
   SafeAreaView,
@@ -131,6 +130,10 @@ export default function TravelDetailsContainer() {
   const themedColors = useThemedColors();
   const styles = useTravelDetailsStyles();
 
+  // Web: avoid large layout shifts when switching from page skeleton → real content.
+  // Keep skeleton mounted briefly and fade it out (no layout collapse).
+  const [skeletonPhase, setSkeletonPhase] = useState<'loading' | 'fading' | 'hidden'>('loading')
+
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
   const travelDetails = useTravelDetails({
     isMobile,
@@ -143,9 +146,23 @@ export default function TravelDetailsContainer() {
   const { anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey } =
     travelDetails.navigation
   const { lcpLoaded, setLcpLoaded, sliderReady, deferAllowed } = travelDetails.performance
-  const { closeMenu, animatedX, menuWidth: _menuWidth, menuWidthNum } = travelDetails.menu
+  const { closeMenu, animatedX, menuWidthNum } = travelDetails.menu
   const { scrollY, contentHeight, viewportHeight, handleContentSizeChange, handleLayout } =
     travelDetails.scroll
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (!travel) {
+      setSkeletonPhase('loading')
+      return
+    }
+
+    // Let content paint first, then fade skeleton out, then unmount.
+    setSkeletonPhase('fading')
+    const t = setTimeout(() => setSkeletonPhase('hidden'), 220)
+    return () => clearTimeout(t)
+  }, [travel])
+
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
   // Стабильный ключ для <Head> — используем slug (доступен сразу из URL),
   // чтобы Helmet instance НЕ пересоздавался при загрузке данных.
@@ -170,12 +187,12 @@ export default function TravelDetailsContainer() {
     const canonical =
       typeof travel?.slug === "string" && travel.slug
         ? buildCanonicalUrl(`/travels/${travel.slug}`)
-        : typeof travel?.id === "number" || typeof travel?.id === "string"
+        : typeof travel?.id === "number"
           ? buildCanonicalUrl(`/travels/${travel.id}`)
-          : typeof slug === "string" && slug
+          : slug
             ? buildCanonicalUrl(`/travels/${slug}`)
             : undefined;
-    const rawFirst = travel?.travel_image_thumb_url || travel?.gallery?.[0];
+    const rawFirst = travel?.gallery?.[0] || travel?.travel_image_thumb_url;
     const firstUrl = rawFirst
       ? typeof rawFirst === "string"
         ? rawFirst
@@ -197,11 +214,23 @@ export default function TravelDetailsContainer() {
   }, [travel, slug]);
   // ✅ FIX: Синхронизируем title экрана с navigation options,
   // чтобы useDocumentTitle из expo-router устанавливал правильный document.title
-  // вместо пустой строки из HIDDEN = { title: '' }
+  // вместо пустой строки из HIDDEN = { title: '' }.
+  // Также устанавливаем document.title напрямую через rAF, т.к. useDocumentTitle
+  // из @react-navigation (родительский эффект) перезаписывает его пустой строкой
+  // ПОСЛЕ нашего дочернего эффекта в том же цикле рендера.
+  // rAF гарантирует, что наш document.title выставится после всех эффектов.
   useEffect(() => {
     if (readyTitle) {
       navigation.setOptions({ title: readyTitle });
+      if (Platform.OS === 'web' && typeof document !== 'undefined') {
+        const rafId = requestAnimationFrame(() => {
+          document.title = readyTitle;
+        });
+        return () => cancelAnimationFrame(rafId);
+      }
     }
+
+    return undefined;
   }, [navigation, readyTitle]);
 
   const forceDeferMount = !!forceOpenKey;
@@ -328,6 +357,9 @@ export default function TravelDetailsContainer() {
     />
   ) : null;
 
+  // NOTE: Skeleton gate is purely data-driven: show skeleton until `travel` is available.
+  // Avoid delaying first paint with RAF, as it can increase CLS in perf audits.
+
   /* -------------------- READY -------------------- */
 
   // Пока данные путешествия не загружены — показываем простой лоадер,
@@ -376,23 +408,6 @@ export default function TravelDetailsContainer() {
     );
   }
 
-  if (!travel) {
-    return (
-      <>
-        {seoBlock}
-        {Platform.OS === 'web' ? (
-          <TravelDetailPageSkeleton />
-        ) : (
-          <SafeAreaView style={styles.safeArea}>
-            <View style={[styles.mainContainer, styles.mainContainerMobile]}>
-              <ActivityIndicator size="large" color={themedColors.primary} />
-            </View>
-          </SafeAreaView>
-        )}
-      </>
-    );
-  }
-
   return (
     <>
       {seoBlock}
@@ -414,7 +429,27 @@ export default function TravelDetailsContainer() {
     >
       <SafeAreaView style={styles.safeArea}>
         <View style={[styles.mainContainer, isMobile && styles.mainContainerMobile]}>
-          {!isMobile && responsiveWidth >= METRICS.breakpoints.largeTablet && (
+          {/* Skeleton overlay inside stable layout (web only) */}
+          {Platform.OS === 'web' && skeletonPhase !== 'hidden' && (
+            <View
+              pointerEvents="none"
+              collapsable={false}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 50,
+                opacity: skeletonPhase === 'fading' ? 0 : 1,
+                transition: 'opacity 200ms ease-out',
+              } as any}
+            >
+              <TravelDetailPageSkeleton />
+            </View>
+          )}
+
+          {/* If travel isn't ready yet, we still render the stable chrome underneath */}
+          {/* (side menu/progress/scroll) but keep heavy sections gated */}
+
+          {!isMobile && responsiveWidth >= METRICS.breakpoints.largeTablet && travel && (
             <View style={sideMenuContainerStyle}>
               <Defer when={deferAllowed}>
                 <Animated.View
@@ -440,7 +475,7 @@ export default function TravelDetailsContainer() {
           )}
 
           {/* Прогресс-бар чтения */}
-          {contentHeight > viewportHeight && (
+          {travel && contentHeight > viewportHeight && (
             <Suspense fallback={null}>
               <ReadingProgressBar
                 scrollY={scrollY}
@@ -453,9 +488,7 @@ export default function TravelDetailsContainer() {
           <ScrollView
             testID="travel-details-scroll"
             ref={scrollRef}
-            contentContainerStyle={[
-              styles.scrollContent,
-            ]}
+            contentContainerStyle={[styles.scrollContent]}
             keyboardShouldPersistTaps="handled"
             onScroll={scrollEventHandler}
             scrollEventThrottle={Platform.OS === 'web' ? 32 : 48}
@@ -466,66 +499,68 @@ export default function TravelDetailsContainer() {
           >
             <View style={styles.contentOuter} collapsable={false}>
               <View
-                style={[
-                  styles.contentWrapper,
-                  { paddingHorizontal: contentHorizontalPadding },
-                ]}
+                style={[styles.contentWrapper, { paddingHorizontal: contentHorizontalPadding }]}
                 collapsable={false}
               >
-                <SList revealOrder="forwards" tail="collapsed">
-                  <View collapsable={false}>
-                  <TravelHeroSection
-                    travel={travel}
-                    anchors={anchors}
-                    isMobile={isMobile}
-                    renderSlider={Platform.OS !== "web" ? true : sliderReady && lcpLoaded}
-                    onFirstImageLoad={handleFirstImageLoad}
-                    sectionLinks={sectionLinks}
-                    onQuickJump={scrollToWithMenuClose}
-                    deferExtras={!deferAllowed}
-                  />
-                  </View>
+                {travel ? (
+                  <SList revealOrder="forwards" tail="collapsed">
+                    <View collapsable={false}>
+                      <TravelHeroSection
+                        travel={travel}
+                        anchors={anchors}
+                        isMobile={isMobile}
+                        renderSlider={Platform.OS !== "web" ? true : sliderReady && lcpLoaded}
+                        onFirstImageLoad={handleFirstImageLoad}
+                        sectionLinks={sectionLinks}
+                        onQuickJump={scrollToWithMenuClose}
+                        deferExtras={!deferAllowed}
+                      />
+                    </View>
 
-                  {responsiveWidth < METRICS.breakpoints.largeTablet && sectionLinks.length > 0 && (
-                    <View style={styles.sectionTabsContainer}>
-                      <Suspense fallback={null}>
-                        <TravelSectionsSheet
-                          links={sectionLinks}
-                          activeSection={activeSection}
-                          onNavigate={scrollToWithMenuClose}
-                          testID="travel-sections-sheet-wrapper"
+                    {responsiveWidth < METRICS.breakpoints.largeTablet && sectionLinks.length > 0 && (
+                      <View style={styles.sectionTabsContainer}>
+                        <Suspense fallback={null}>
+                          <TravelSectionsSheet
+                            links={sectionLinks}
+                            activeSection={activeSection}
+                            onNavigate={scrollToWithMenuClose}
+                            testID="travel-sections-sheet-wrapper"
+                          />
+                        </Suspense>
+                      </View>
+                    )}
+
+                    {/* -------- deferred heavy content -------- */}
+                    <Defer when={deferAllowed || forceDeferMount || isWebAutomation}>
+                      <Suspense fallback={<SectionSkeleton />}>
+                        <TravelDeferredSections
+                          travel={travel}
+                          isMobile={isMobile}
+                          forceOpenKey={forceOpenKey}
+                          anchors={anchors}
+                          scrollY={scrollY}
+                          viewportHeight={viewportHeight}
+                          scrollRef={scrollRef}
+                          scrollToMapSection={scrollToMapSection}
                         />
                       </Suspense>
-                    </View>
-                  )}
-
-                  {/* -------- deferred heavy content -------- */}
-                  <Defer when={deferAllowed || forceDeferMount || isWebAutomation}>
-                    <Suspense fallback={<SectionSkeleton />}>
-                      <TravelDeferredSections
-                        travel={travel}
-                        isMobile={isMobile}
-                        forceOpenKey={forceOpenKey}
-                        anchors={anchors}
-                        scrollY={scrollY}
-                        viewportHeight={viewportHeight}
-                        scrollRef={scrollRef}
-                        scrollToMapSection={scrollToMapSection}
-                      />
-                    </Suspense>
-                  </Defer>
-                </SList>
+                    </Defer>
+                  </SList>
+                ) : (
+                  // Underlay can be empty; skeleton overlay above provides the visual.
+                  <View />
+                )}
               </View>
             </View>
           </ScrollView>
+
           {/* ✅ Кнопка "Наверх" */}
-          <Suspense fallback={null}>
-            <ScrollToTopButton
-              scrollViewRef={scrollRef}
-              scrollY={scrollY}
-              threshold={300}
-            />
-          </Suspense>
+          {travel && (
+            <Suspense fallback={null}>
+              <ScrollToTopButton scrollViewRef={scrollRef} scrollY={scrollY} threshold={300} />
+            </Suspense>
+          )}
+
           {/* 3.6: Sticky-bar действий на мобильном */}
           {isMobile && travel && (
             <Suspense fallback={null}>
@@ -536,13 +571,11 @@ export default function TravelDetailsContainer() {
               />
             </Suspense>
           )}
-        </View>
-      </SafeAreaView>
-    </View>
-    </>
-  );
+         </View>
+       </SafeAreaView>
+     </View>
+     </>
+   );
 }
 
-export const __testables = {
-  TravelHeroSection,
-};
+// (no test-only exports)

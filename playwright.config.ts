@@ -37,10 +37,11 @@ const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8085');
 const baseURL = process.env.BASE_URL || `http://127.0.0.1:${E2E_WEB_PORT}`;
 const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.env.BASE_URL;
 
- // For local E2E we hardcode dev API by default to avoid env drift.
- // Override with E2E_API_URL or switch to real API by setting E2E_USE_REAL_API=1.
- const E2E_API_URL =
-   process.env.E2E_API_URL || (process.env.E2E_USE_REAL_API === '1' ? '' : 'http://192.168.50.36');
+// For local E2E we hardcode dev API by default to avoid env drift.
+// Override with E2E_API_URL or switch to real API by setting E2E_USE_REAL_API=1.
+// If E2E_API_URL is explicitly provided, use it. Otherwise let the webserver proxy default
+// to production (see scripts/serve-web-build.js defaults to https://metravel.by).
+const E2E_API_URL = process.env.E2E_API_URL || '';
 
 // ---------------------------------------------------------------------------
 // Test strategy (controlled via E2E_SUITE env var or --grep):

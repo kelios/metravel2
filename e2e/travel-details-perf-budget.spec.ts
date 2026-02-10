@@ -63,6 +63,32 @@ function travelUrl(slug: string): string {
 
 /** Inject PerformanceObserver collectors before page load. */
 async function injectPerfObservers(page: any) {
+  await page.addInitScript(() => {
+    const w: any = window as any
+    w.__layoutShiftEntries = []
+    try {
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries() as any[]) {
+          if (entry.entryType === 'layout-shift' && !entry.hadRecentInput) {
+            w.__layoutShiftEntries.push({
+              value: entry.value,
+              hadRecentInput: entry.hadRecentInput,
+              sources: entry.sources
+                ? entry.sources.map((s: any) => ({
+                    node: s.node,
+                    previousRect: s.previousRect,
+                    currentRect: s.currentRect,
+                  }))
+                : [],
+            })
+          }
+        }
+      }).observe({ type: 'layout-shift', buffered: true } as any)
+    } catch {
+      // noop
+    }
+  })
+
   await preacceptCookies(page);
   await page.addInitScript(() => {
     const w = window as any;
@@ -231,6 +257,78 @@ function createNetworkTracker(page: any): { getStats: () => NetworkStats } {
   };
 }
 
+async function collectLayoutShiftDebug(page: any) {
+  return page.evaluate(() => {
+    const w: any = window as any;
+    const entries = Array.isArray(w.__layoutShiftEntries) ? w.__layoutShiftEntries : [];
+
+    const safeOuterHTML = (el: Element | null) => {
+      try {
+        if (!el) return null;
+        const html = (el as HTMLElement).outerHTML || '';
+        return html.length > 600 ? html.slice(0, 600) + '…' : html;
+      } catch {
+        return null;
+      }
+    };
+
+    const closestContext = (el: Element | null) => {
+      if (!el) return null;
+      const pick = (node: Element | null) => {
+        if (!node) return null;
+        const testId = (node as HTMLElement).getAttribute?.('data-testid');
+        const aria = (node as HTMLElement).getAttribute?.('aria-label');
+        const role = (node as HTMLElement).getAttribute?.('role');
+        const section = (node as HTMLElement).getAttribute?.('data-section-key');
+        if (testId || aria || section) {
+          return {
+            tag: node.tagName.toLowerCase(),
+            testId,
+            aria,
+            role,
+            section,
+          };
+        }
+        return null;
+      };
+
+      // walk up a bit
+      let cur: Element | null = el;
+      for (let i = 0; i < 6 && cur; i++) {
+        const ctx = pick(cur);
+        if (ctx) return ctx;
+        cur = cur.parentElement;
+      }
+      return null;
+    };
+
+    const fingerprint = (el: Element | null) => {
+      if (!el) return null;
+      const id = (el as HTMLElement).id ? `#${(el as HTMLElement).id}` : '';
+      const className = (el as HTMLElement).getAttribute?.('class') || '';
+      const cls = className
+        ? `.${String(className).split(' ').filter(Boolean).slice(0, 3).join('.')}`
+        : '';
+      const testId = (el as HTMLElement).getAttribute?.('data-testid');
+      const section = (el as HTMLElement).getAttribute?.('data-section-key');
+      const aria = (el as HTMLElement).getAttribute?.('aria-label');
+      const tag = el.tagName ? el.tagName.toLowerCase() : 'unknown';
+      return { tag, id, cls, testId, section, aria };
+    };
+
+    return entries.map((e: any) => ({
+      value: e.value,
+      sources: (e.sources || []).slice(0, 8).map((s: any) => ({
+        previousRect: s.previousRect,
+        currentRect: s.currentRect,
+        node: fingerprint(s.node || null),
+        closest: closestContext(s.node || null),
+        outerHTML: safeOuterHTML(s.node || null),
+      })),
+    }));
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /*  Tests                                                              */
 /* ------------------------------------------------------------------ */
@@ -260,6 +358,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
 
     const metrics = await collectMetrics(page);
     const network = tracker.getStats();
+    const layoutShiftDebug = await collectLayoutShiftDebug(page);
 
     // Log all metrics for debugging
     const report = {
@@ -284,6 +383,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
       },
       longTasks: metrics.longTasks.map((d: number) => `${Math.round(d)}ms`),
       clsEntries: metrics.clsEntries,
+      layoutShiftDebug,
       largestResources: network.largestResources,
     };
 

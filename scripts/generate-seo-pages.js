@@ -94,6 +94,38 @@ function escapeAttr(str) {
     .replace(/>/g, '&gt;');
 }
 
+/** Run async tasks with limited concurrency. */
+async function batchAsync(items, concurrency, fn) {
+  const results = new Array(items.length);
+  let idx = 0;
+  async function worker() {
+    while (idx < items.length) {
+      const i = idx++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  const workers = [];
+  for (let w = 0; w < Math.min(concurrency, items.length); w++) {
+    workers.push(worker());
+  }
+  await Promise.all(workers);
+  return results;
+}
+
+/** Fetch a single travel detail (description + gallery). */
+async function fetchTravelDetail(id) {
+  try {
+    const url = `${API_BASE}/api/travels/${id}/`;
+    const detail = await fetchJson(url);
+    return {
+      description: detail.description || '',
+      gallery: Array.isArray(detail.gallery) ? detail.gallery : [],
+    };
+  } catch {
+    return { description: '', gallery: [] };
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Meta-tag injection
 // ---------------------------------------------------------------------------
@@ -370,7 +402,19 @@ async function main() {
   }
 
   if (travels.length > 0) {
-    console.log(`\n📝 Generating ${travels.length} travel pages...`);
+    // Fetch detail for each travel (description + gallery) with concurrency limit
+    const travelsWithId = travels.filter((t) => t.id);
+    console.log(`\n� Fetching details for ${travelsWithId.length} travels (concurrency: 10)...`);
+    const details = await batchAsync(travelsWithId, 10, async (travel, i) => {
+      if ((i + 1) % 50 === 0 || i === travelsWithId.length - 1) {
+        console.log(`  📡 Fetched ${i + 1}/${travelsWithId.length} details...`);
+      }
+      return fetchTravelDetail(travel.id);
+    });
+    const detailMap = new Map();
+    travelsWithId.forEach((t, i) => detailMap.set(t.id, details[i]));
+
+    console.log(`\n�📝 Generating ${travels.length} travel pages...`);
     let generated = 0;
     let skipped = 0;
 
@@ -386,19 +430,29 @@ async function main() {
       const routeKey = slug || String(id);
       const name = travel.name || '';
       const title = name ? `${name} | MeTravel` : 'MeTravel';
-      const rawDesc = travel.description || '';
+
+      // Use description from detail endpoint (list endpoint doesn't include it)
+      const detail = detailMap.get(id) || { description: '', gallery: [] };
+      const rawDesc = detail.description || travel.description || '';
       const description = stripHtml(rawDesc, 160) || FALLBACK_DESC;
       const canonical = `${SITE_URL}/travels/${routeKey}`;
 
-      // Use travel image or fallback to OG image
+      // Prefer HD gallery image (≥1200px) for og:image; fall back to thumb, then site OG
       let image = OG_IMAGE;
-      const thumbUrl = travel.travel_image_thumb_url || travel.travelImageThumbUrl || '';
-      if (thumbUrl) {
-        // Ensure absolute URL
-        if (thumbUrl.startsWith('http')) {
-          image = thumbUrl;
-        } else if (thumbUrl.startsWith('/')) {
-          image = `${SITE_URL}${thumbUrl}`;
+      const galleryFirst = detail.gallery[0];
+      const galleryUrl = galleryFirst
+        ? (typeof galleryFirst === 'string' ? galleryFirst : galleryFirst.url)
+        : '';
+      if (galleryUrl) {
+        image = galleryUrl.startsWith('http') ? galleryUrl
+              : galleryUrl.startsWith('/') ? `${SITE_URL}${galleryUrl}`
+              : galleryUrl;
+      } else {
+        const thumbUrl = travel.travel_image_thumb_url || travel.travelImageThumbUrl || '';
+        if (thumbUrl) {
+          image = thumbUrl.startsWith('http') ? thumbUrl
+                : thumbUrl.startsWith('/') ? `${SITE_URL}${thumbUrl}`
+                : thumbUrl;
         }
       }
 

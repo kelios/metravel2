@@ -200,10 +200,7 @@ self.addEventListener('fetch', (event) => {
       return;
     }
 
-    // Non-hashed scripts (entry bundle) MUST use network-first.
-    // The entry bundle contains module-ID mappings; serving a stale copy
-    // causes "Requiring unknown module" errors after a new deploy.
-    event.respondWith(networkFirstJS(request, JS_CACHE));
+    event.respondWith(staleWhileRevalidate(request, JS_CACHE));
     return;
   }
 
@@ -293,64 +290,30 @@ async function networkFirst(request) {
   }
 }
 
-// Network-first for non-hashed JS (entry bundle, common chunks without content hash).
-// The entry bundle maps module IDs to chunk URLs; a stale copy references
-// modules that may no longer exist after a redeploy → "Requiring unknown module" crash.
-async function networkFirstJS(request, cacheName = JS_CACHE) {
-  try {
-    const response = await fetch(request);
-
-    if (response && response.status === 200) {
-      const cache = await caches.open(cacheName);
-      const responseToCache = response.clone();
-      const headers = new Headers(responseToCache.headers);
-      headers.append('sw-cache-date', Date.now().toString());
-
-      const blob = await responseToCache.blob();
-      const cachedResponse = new Response(blob, {
-        status: responseToCache.status,
-        statusText: responseToCache.statusText,
-        headers: headers,
-      });
-
-      cache.put(request, cachedResponse);
-      limitCacheSize(cacheName, MAX_JS_CACHE_SIZE);
-    }
-
-    return response;
-  } catch {
-    // Offline fallback — serve cached version if available
-    const cached = await caches.match(request);
-    return cached || new Response('Network error', { status: 503 });
-  }
-}
-
-// Cache-first з довгим TTL для immutable chunks (з hash в імені)
 async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_JS_CACHE_SIZE) {
   try {
     const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
-    
+
     if (cached) {
-      // Immutable chunks — завжди повертаємо з кешу
       return cached;
     }
 
     const response = await fetch(request);
-    
+
     if (response && response.status === 200) {
       const responseToCache = response.clone();
       const headers = new Headers(responseToCache.headers);
       headers.append('sw-cache-date', Date.now().toString());
       headers.append('Cache-Control', 'public, max-age=31536000, immutable');
-      
+
       const blob = await responseToCache.blob();
       const cachedResponse = new Response(blob, {
         status: responseToCache.status,
         statusText: responseToCache.statusText,
         headers: headers,
       });
-      
+
       cache.put(request, cachedResponse);
       limitCacheSize(cacheName, maxSize);
     }
@@ -367,14 +330,13 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
   try {
     const cache = await caches.open(cacheName);
     const cached = await cache.match(request);
-    
-    // Fetch в фоні для оновлення кешу
+
     const fetchPromise = fetch(request).then(response => {
       if (response && response.status === 200) {
         const responseToCache = response.clone();
         const headers = new Headers(responseToCache.headers);
         headers.append('sw-cache-date', Date.now().toString());
-        
+
         responseToCache.blob().then(blob => {
           const cachedResponse = new Response(blob, {
             status: responseToCache.status,
@@ -386,8 +348,7 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
       }
       return response;
     }).catch(() => null);
-    
-    // Повертаємо кешовану версію одразу, якщо є
+
     return cached || fetchPromise;
   } catch {
     const cached = await caches.match(request);

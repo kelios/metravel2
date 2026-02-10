@@ -149,6 +149,12 @@ const OptimizedLCPHeroInner: React.FC<{
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
 
+  // ✅ Keep a stable box size to avoid CLS on web.
+  const ratioInv = useMemo(() => {
+    const r = img.width && img.height ? img.width / img.height : 16 / 9
+    return r > 0 ? 100 / r : 56.25
+  }, [img.width, img.height])
+
   if (!srcWithRetry) {
     return <NeutralHeroPlaceholder height={height} />
   }
@@ -221,6 +227,8 @@ const OptimizedLCPHeroInner: React.FC<{
             backgroundColor: colors.backgroundSecondary,
           }}
         >
+          {/* Reserve space inside to prevent micro shifts while image decodes */}
+          <div aria-hidden="true" style={{ width: '100%', height: 0, paddingTop: `${ratioInv}%` }} />
           <div
             style={{
               position: 'absolute',
@@ -274,7 +282,7 @@ const OptimizedLCPHeroInner: React.FC<{
 
 function TravelHeroSectionInner({
   travel,
-  anchors,
+  anchors: _anchors,
   isMobile,
   renderSlider = true,
   onFirstImageLoad,
@@ -374,7 +382,25 @@ function TravelHeroSectionInner({
   }, [travel.gallery])
   const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : 'Фото путешествия'
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
-  const canShowSlider = renderSlider
+  // renderSlider is kept for API compatibility; on web we always mount Slider and overlay LCP image.
+
+  // ✅ Web: keep a stable LCP hero image, then swap to Slider after it's loaded.
+  const isJSDOM =
+    Platform.OS === 'web' &&
+    typeof navigator !== 'undefined' &&
+    String((navigator as any).userAgent || '').toLowerCase().includes('jsdom')
+  const [webHeroLoaded, setWebHeroLoaded] = useState(Platform.OS !== 'web' || isJSDOM)
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    // If we get a new travel/first image, reset swap state.
+    setWebHeroLoaded(false)
+  }, [firstImg?.url])
+
+  const handleWebHeroLoad = useCallback(() => {
+    if (Platform.OS === 'web') setWebHeroLoaded(true)
+    onFirstImageLoad()
+  }, [onFirstImageLoad])
 
   const quickJumpLinks = useMemo(() => {
     return HERO_QUICK_JUMP_KEYS.map((key) => sectionLinks.find((link) => link.key === key)).filter(
@@ -408,76 +434,76 @@ function TravelHeroSectionInner({
 
   return (
     <>
-      <View
-        ref={anchors.gallery}
-        testID="travel-details-section-gallery"
-        collapsable={false}
-        style={Platform.OS === 'web' ? { height: 0 } : undefined}
-        {...(Platform.OS === 'web'
-          ? {
-              // @ts-ignore - устанавливаем data-атрибут для Intersection Observer
-              'data-section-key': 'gallery',
-            }
-          : {})}
-      />
-
+      {/* P0: Hero-изображение, заголовок и кнопка «В избранное» */}
       <View
         testID="travel-details-hero"
         accessibilityRole="none"
+        accessibilityLabel="Геройский блок с изображением, заголовком и кнопкой избранного"
         style={[styles.sectionContainer, styles.contentStable]}
       >
-        {Platform.OS === 'web' ? (
-          <h1
-            style={{
-              position: 'absolute',
-              width: 1,
-              height: 1,
-              padding: 0,
-              margin: -1,
-              overflow: 'hidden',
-              clip: 'rect(0,0,0,0)',
-              whiteSpace: 'nowrap',
-              border: 0,
-            }}
-          >
-            {travel?.name || 'Путешествие'}
-          </h1>
-        ) : null}
-
         <View
-        style={[
-          styles.sliderContainer,
-          { height: heroHeight },
-          Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
-        ]}
-        collapsable={false}
-        onLayout={
-          Platform.OS === 'web'
-            ? undefined
-            : (e: LayoutChangeEvent) => {
-                  const w = e.nativeEvent.layout.width
-                  if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2) {
-                    setHeroContainerWidth(w)
+          style={[
+            styles.sliderContainer,
+            { height: heroHeight },
+            Platform.OS === 'web' && ({ overflow: 'hidden' } as any),
+          ]}
+          collapsable={false}
+          onLayout={
+            Platform.OS === 'web'
+              ? undefined
+              : (e: LayoutChangeEvent) => {
+                    const w = e.nativeEvent.layout.width
+                    if (w && Math.abs((heroContainerWidth ?? 0) - w) > 2) {
+                      setHeroContainerWidth(w)
+                    }
                   }
-                }
           }
         >
           {!firstImg ? (
             <NeutralHeroPlaceholder height={heroHeight} />
-          ) : shouldShowOptimizedHero && !canShowSlider ? (
-            <OptimizedLCPHeroInner
-              img={{
-                url: firstImg.url,
-                width: firstImg.width,
-                height: firstImg.height,
-                updated_at: firstImg.updated_at,
-                id: firstImg.id,
-              }}
-              alt={heroAlt}
-              height={heroHeight}
-              isMobile={isMobile}
-              onLoad={onFirstImageLoad}
-            />
+          ) : Platform.OS === 'web' && shouldShowOptimizedHero ? (
+            // Web: keep geometry stable.
+            // Always mount the Slider; overlay the dedicated LCP image until it's loaded.
+            <View style={{ width: '100%', height: '100%' } as any} collapsable={false}>
+              <Slider
+                images={galleryImages}
+                showArrows={!isMobile}
+                hideArrowsOnMobile
+                showDots={isMobile}
+                autoPlay={false}
+                preloadCount={0}
+                blurBackground
+                aspectRatio={aspectRatio as number}
+                mobileHeightPercent={0.7}
+                onFirstImageLoad={onFirstImageLoad}
+                firstImagePreloaded
+              />
+              {!webHeroLoaded && (
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 5,
+                  } as any}
+                  collapsable={false}
+                >
+                  <OptimizedLCPHeroInner
+                    img={{
+                      url: firstImg.url,
+                      width: firstImg.width,
+                      height: firstImg.height,
+                      updated_at: firstImg.updated_at,
+                      id: firstImg.id,
+                    }}
+                    alt={heroAlt}
+                    height={heroHeight}
+                    isMobile={isMobile}
+                    onLoad={handleWebHeroLoad}
+                  />
+                </View>
+              )}
+            </View>
           ) : (
             <Slider
               images={galleryImages}
