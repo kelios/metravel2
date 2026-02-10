@@ -195,6 +195,9 @@ export default function RootLayout() {
           }
     );
 
+    // Font timeout suppression (web only).
+    // Module error recovery is handled by the inline script in +html.tsx
+    // to catch errors before React mounts.
     useEffect(() => {
       if (!isWeb) return;
       const onUnhandled = (e: PromiseRejectionEvent) => {
@@ -202,8 +205,6 @@ export default function RootLayout() {
         const msg = String(reason?.message ?? reason ?? '');
         const stack = typeof reason?.stack === 'string' ? reason.stack : '';
 
-        // On web, font loading (expo-font / FontFaceObserver) can reject with timeout exceeded.
-        // Do not let this crash the app.
         const isFontTimeout =
           msg.includes('timeout exceeded') &&
           (String(msg).toLowerCase().includes('fontfaceobserver') ||
@@ -213,54 +214,11 @@ export default function RootLayout() {
         if (isFontTimeout) {
           e.preventDefault();
         }
-
-        // Module resolution errors (stale SW cache after redeploy).
-        // Clear JS caches and reload to fetch fresh bundles.
-        const isModuleError = /requiring unknown module|cannot find module/i.test(msg);
-        if (isModuleError && !(window as any).__metravelModuleReloadTriggered) {
-          (window as any).__metravelModuleReloadTriggered = true;
-          e.preventDefault();
-          const doReload = () => { try { window.location.reload(); } catch { /* noop */ } };
-          if ('caches' in window) {
-            caches.keys()
-              .then((names) => Promise.all(
-                names.filter((n) => n.startsWith('metravel-js') || n.startsWith('metravel-critical'))
-                  .map((n) => caches.delete(n))
-              ))
-              .then(doReload)
-              .catch(doReload);
-          } else {
-            doReload();
-          }
-        }
-      };
-
-      const onError = (e: ErrorEvent) => {
-        const msg = String(e?.message ?? '');
-        const isModuleError = /requiring unknown module|cannot find module/i.test(msg);
-        if (isModuleError && !(window as any).__metravelModuleReloadTriggered) {
-          (window as any).__metravelModuleReloadTriggered = true;
-          e.preventDefault();
-          const doReload = () => { try { window.location.reload(); } catch { /* noop */ } };
-          if ('caches' in window) {
-            caches.keys()
-              .then((names) => Promise.all(
-                names.filter((n) => n.startsWith('metravel-js') || n.startsWith('metravel-critical'))
-                  .map((n) => caches.delete(n))
-              ))
-              .then(doReload)
-              .catch(doReload);
-          } else {
-            doReload();
-          }
-        }
       };
 
       window.addEventListener('unhandledrejection', onUnhandled);
-      window.addEventListener('error', onError);
       return () => {
         window.removeEventListener('unhandledrejection', onUnhandled);
-        window.removeEventListener('error', onError);
       };
     }, []);
 

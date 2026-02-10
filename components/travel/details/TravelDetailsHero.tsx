@@ -128,7 +128,7 @@ const OptimizedLCPHeroInner: React.FC<{
     quality: lcpQuality,
     format: 'auto',
     fit: 'cover',
-    dpr: isMobile ? 1 : undefined,
+    dpr: isMobile ? 1 : 1.5,
     sizes: isMobile
       ? '100vw'
       : '(max-width: 1024px) 92vw, 860px',
@@ -244,7 +244,8 @@ const OptimizedLCPHeroInner: React.FC<{
             width={img.width || 1200}
             height={img.height || Math.round(1200 / ratio)}
             style={{
-              position: 'relative',
+              position: 'absolute',
+              inset: 0,
               zIndex: 1,
               width: '100%',
               height: '100%',
@@ -461,22 +462,25 @@ function TravelHeroSectionInner({
           {!firstImg ? (
             <NeutralHeroPlaceholder height={heroHeight} />
           ) : Platform.OS === 'web' && shouldShowOptimizedHero ? (
-            // Web: keep geometry stable.
-            // Always mount the Slider; overlay the dedicated LCP image until it's loaded.
+            // Web: defer heavy Slider (imports reanimated) until after LCP image loads.
+            // Before LCP: render only the lightweight <img> hero (OptimizedLCPHeroInner).
+            // After LCP: mount the Slider underneath and fade out the LCP overlay.
             <View style={{ width: '100%', height: '100%' } as any} collapsable={false}>
-              <Slider
-                images={galleryImages}
-                showArrows={!isMobile}
-                hideArrowsOnMobile
-                showDots={isMobile}
-                autoPlay={false}
-                preloadCount={0}
-                blurBackground
-                aspectRatio={aspectRatio as number}
-                mobileHeightPercent={0.7}
-                onFirstImageLoad={onFirstImageLoad}
-                firstImagePreloaded
-              />
+              {webHeroLoaded && (
+                <Slider
+                  images={galleryImages}
+                  showArrows={!isMobile}
+                  hideArrowsOnMobile
+                  showDots={isMobile}
+                  autoPlay={false}
+                  preloadCount={0}
+                  blurBackground
+                  aspectRatio={aspectRatio as number}
+                  mobileHeightPercent={0.7}
+                  onFirstImageLoad={onFirstImageLoad}
+                  firstImagePreloaded
+                />
+              )}
               {!webHeroLoaded && (
                 <View
                   pointerEvents="none"

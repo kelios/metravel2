@@ -41,7 +41,7 @@ export function buildCriticalCSS(): string {
     '}',
     'img,picture,video,canvas,svg{display:block;max-width:100%;height:auto}',
     'svg[viewBox="0 0 32 32"][width="100%"][height="100%"]{width:32px;height:32px;max-width:none;max-height:none;display:inline-block}',
-    'img{width:100%;object-fit:cover;font-style:italic;vertical-align:middle}',
+    'img{width:100%;font-style:italic;vertical-align:middle}',
     'input,button,textarea,select{font:inherit;color:inherit}',
     'button{cursor:pointer;background:transparent;border:0}',
     'button:focus-visible,a:focus-visible{outline:2px solid var(--color-focus,' + FL + ');outline-offset:2px}',
@@ -52,7 +52,7 @@ export function buildCriticalCSS(): string {
     'img[fetchpriority="high"]{display:block}',
     'img[loading="lazy"]{content-visibility:auto;contain-intrinsic-size:auto 300px}',
     '[data-testid="travel-details-hero"]{min-height:300px;contain:layout style paint;background:var(--color-backgroundSecondary,' + BSL + ')}',
-    '[data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:cover}',
+    '[data-testid="travel-details-hero"] img{aspect-ratio:16/9;width:100%;max-width:860px;object-fit:contain}',
     '[data-testid="main-header"]{min-height:56px;contain:layout style;position:sticky;top:0;z-index:2000;width:100%}',
     '[data-testid="home-hero"]{contain:layout style}',
     '[data-testid="home-trust-block"]{content-visibility:auto;contain-intrinsic-size:auto 220px}',
@@ -105,5 +105,10 @@ export function buildCriticalCSS(): string {
     '[data-testid="travel-details-quick-facts"]{content-visibility:auto;contain-intrinsic-size:auto 80px}',
     '[data-testid="map-skeleton"],[data-testid="search-skeleton"]{animation:pulse 1.5s ease-in-out infinite}',
     '@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.7}}',
+    // CSS-only skeleton shimmer for header and hero — visible before JS loads.
+    // Once React hydrates it replaces these elements, so no CLS.
+    '@keyframes crit-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}',
+    '[data-testid="main-header"]{background:var(--color-background,' + BL + ');border-bottom:1px solid var(--color-backgroundSecondary,' + BSL + ')}',
+    '[data-testid="home-hero-stack"]{background:var(--color-background,' + BL + ')}',
   ].join('\n');
 }

@@ -256,16 +256,17 @@ const getTravelHeroPreloadScript = () => String.raw`
         // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [640, 860]
         var widths = isMobile ? [320, 400] : [640, 860];
 
-        // Build srcSet entries with dpr=1 (matches generateSrcSet in buildResponsiveImageProps)
+        // Build srcSet entries — dpr must match TravelDetailsHero.tsx buildResponsiveImageProps
+        var srcSetDpr = isMobile ? 1 : 1.5;
         var srcSetParts = [];
         for (var i = 0; i < widths.length; i++) {
-          var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id, 1);
+          var u = buildOptimizedUrl(url, widths[i], quality, updatedAt, id, srcSetDpr);
           if (u) srcSetParts.push(u + ' ' + widths[i] + 'w');
         }
 
         // The main src uses the widest breakpoint; on mobile use dpr=1 to match buildResponsiveImageProps
         var widest = widths[widths.length - 1];
-        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, isMobile ? 1 : undefined);
+        var preloadHref = buildOptimizedUrl(url, widest, quality, updatedAt, id, isMobile ? 1 : 1.5);
         if (!preloadHref) return;
 
         try {
@@ -326,47 +327,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorLight} media="(prefers-color-scheme: light)" />
 	      <meta name="color-scheme" content="light dark" />
 
-	      <script
-	        dangerouslySetInnerHTML={{
-	          __html: String.raw`
-(function(){
-  try {
-    var fallback = 'MeTravel';
-    var rhTitle = document.querySelector('head title[data-rh=\"true\"]');
-    if (rhTitle && !rhTitle.textContent) rhTitle.textContent = fallback;
-    if (!document.title) document.title = fallback;
-  } catch (_e) {}
-})();
-`,
+	      {/* Consolidated critical head script: title fallback + theme detection */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false})();`,
         }}
       />
       
       {!isProduction && <meta name="robots" content="noindex,nofollow" />}
-
-      <script
-        dangerouslySetInnerHTML={{
-          __html: String.raw`
-(function(){
-  try {
-    var stored = null;
-    try { stored = window.localStorage.getItem('theme'); } catch (_e) {}
-    var theme = (stored === 'light' || stored === 'dark' || stored === 'auto') ? stored : 'auto';
-    var isDark = false;
-    if (theme === 'dark') {
-      isDark = true;
-    } else if (theme === 'light') {
-      isDark = false;
-    } else {
-      isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    var root = document.documentElement;
-    root.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    root.style.colorScheme = isDark ? 'dark' : 'light';
-  } catch (_e) {}
-})();
-`,
-        }}
-      />
 
       {/* Resource hints - critical domains */}
       <link rel="dns-prefetch" href="//cdn.metravel.by" />
@@ -394,108 +362,26 @@ export default function Root({ children }: { children: React.ReactNode }) {
         dangerouslySetInnerHTML={{ __html: getEntryPreloadScript() }}
       />
 
-      {/* Early travel hero preload to improve LCP on /travels/* */}
-      <script
-        dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
-      />
-
       <ScrollViewStyleReset />
 
-      {/* Stale chunk recovery: catch module errors before React mounts */}
+      {/* Consolidated non-critical head script: stale chunk recovery + console suppression */}
       <script
-        dangerouslySetInnerHTML={{ __html: String.raw`(function(){
-  if(typeof window==='undefined')return;
-  var KEY='__metravel_chunk_reload';
-  function isStaleChunkError(msg){
-    return /requiring unknown module|cannot find module|loading chunk|failed to fetch dynamically imported module/i.test(msg);
-  }
-  function doReload(){
-    try{sessionStorage.setItem(KEY,'1')}catch(_){}
-    try{window.location.reload()}catch(_){}
-  }
-  function handler(e){
-    var msg=String((e&&e.message)||(e&&e.reason&&e.reason.message)||'');
-    if(!isStaleChunkError(msg))return;
-    try{if(sessionStorage.getItem(KEY))return}catch(_){}
-    e.preventDefault&&e.preventDefault();
-    if('caches' in window){
-      caches.keys().then(function(ns){
-        return Promise.all(ns.filter(function(n){return n.indexOf('metravel-js')===0||n.indexOf('metravel-critical')===0}).map(function(n){return caches.delete(n)}));
-      }).then(doReload).catch(doReload);
-    }else{doReload()}
-  }
-  window.addEventListener('error',handler);
-  window.addEventListener('unhandledrejection',function(e){
-    var r=e&&e.reason;
-    var msg=String((r&&r.message)||r||'');
-    if(!isStaleChunkError(msg))return;
-    handler({message:msg,preventDefault:function(){e.preventDefault&&e.preventDefault()}});
-  });
-  try{sessionStorage.removeItem(KEY)}catch(_){}
-})();` }}
-      />
-
-      {/* Выключаем Expo Router Inspector */}
-      <script
-        dangerouslySetInnerHTML={{ __html: 'window.__EXPO_ROUTER_INSPECTOR=false;' }}
-      />
-
-      {/* Suppress known RN/SVG/navigation console noise */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){
-  if(typeof window==='undefined')return;
-  var h=window.location&&window.location.hostname;
-  if(h!=='metravel.by'&&h!=='www.metravel.by'&&h!=='localhost'&&h!=='127.0.0.1')return;
-  var re=/Indexed property setter is not supported|shadow\*.*deprecated|textShadow\*.*deprecated|pointerEvents is deprecated|useNativeDriver.*native animated module|useLayoutEffect does nothing on the server/;
-  var oe=console.error,ow=console.warn;
-  console.error=function(){var m=arguments[0];if(typeof m==='string'&&re.test(m))return;oe.apply(console,arguments)};
-  console.warn=function(){var m=arguments[0];if(typeof m==='string'&&re.test(m))return;ow.apply(console,arguments)};
-})();`,
-        }}
+        dangerouslySetInnerHTML={{ __html: String.raw`(function(){if(typeof window==='undefined')return;var KEY='__metravel_chunk_reload';function isStale(m){return/requiring unknown module|cannot find module|loading chunk|failed to fetch dynamically imported module/i.test(m)}function doReload(){try{sessionStorage.setItem(KEY,'1')}catch(_){}try{window.location.reload()}catch(_){}}function handler(e){var m=String((e&&e.message)||(e&&e.reason&&e.reason.message)||'');if(!isStale(m))return;try{if(sessionStorage.getItem(KEY))return}catch(_){}e.preventDefault&&e.preventDefault();if('caches' in window){caches.keys().then(function(ns){return Promise.all(ns.filter(function(n){return n.indexOf('metravel-js')===0||n.indexOf('metravel-critical')===0}).map(function(n){return caches.delete(n)}))}).then(doReload).catch(doReload)}else{doReload()}}window.addEventListener('error',handler);window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;var m=String((r&&r.message)||r||'');if(!isStale(m))return;handler({message:m,preventDefault:function(){e.preventDefault&&e.preventDefault()}})});try{sessionStorage.removeItem(KEY)}catch(_){}var h=window.location&&window.location.hostname;if(h==='metravel.by'||h==='www.metravel.by'||h==='localhost'||h==='127.0.0.1'){var re=/Indexed property setter is not supported|shadow\*.*deprecated|textShadow\*.*deprecated|pointerEvents is deprecated|useNativeDriver.*native animated module|useLayoutEffect does nothing on the server/;var oe=console.error,ow=console.warn;console.error=function(){var m=arguments[0];if(typeof m==='string'&&re.test(m))return;oe.apply(console,arguments)};console.warn=function(){var m=arguments[0];if(typeof m==='string'&&re.test(m))return;ow.apply(console,arguments)}}})();` }}
       />
     </head>
 
     <body>
     {children}
 
+    {/* Travel hero preload — moved to body to avoid blocking head parsing on non-travel pages */}
+    <script
+      dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
+    />
+
     {/* LCP decode helper */}
     <script
       dangerouslySetInnerHTML={{
-        __html: `
-(function () {
-  // IMPORTANT: do not mutate DOM before React hydration.
-  function optimizeLCP() {
-    try {
-      const lcpImg = document.querySelector('[data-lcp]');
-      if (!lcpImg) return;
-      if (!lcpImg.getAttribute('fetchPriority')) {
-        lcpImg.setAttribute('fetchPriority', 'high');
-      }
-      if (lcpImg.decode && lcpImg.complete) {
-        lcpImg.decode().catch(() => undefined);
-      }
-    } catch (_) {
-      // noop
-    }
-  }
-
-  function scheduleOptimize() {
-    if (window.requestIdleCallback) {
-      window.requestIdleCallback(optimizeLCP, { timeout: 2000 });
-    } else {
-      setTimeout(optimizeLCP, 1500);
-    }
-  }
-
-  // Run after full load to avoid hydration mismatch.
-  if (document.readyState === 'complete') {
-    scheduleOptimize();
-  } else {
-    window.addEventListener('load', scheduleOptimize, { once: true });
-  }
-})();
-`,
+        __html: `(function(){function o(){try{var i=document.querySelector('[data-lcp]');if(!i)return;if(!i.getAttribute('fetchPriority'))i.setAttribute('fetchPriority','high');if(i.decode&&i.complete)i.decode().catch(function(){})}catch(_){}}function s(){if(window.requestIdleCallback)window.requestIdleCallback(o,{timeout:2000});else setTimeout(o,1500)}if(document.readyState==='complete')s();else window.addEventListener('load',s,{once:true})})();`,
       }}
     />
 

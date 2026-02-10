@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useCallback, useMemo } from 'react';
+import { Platform } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useFavoritesStore, type FavoriteItem } from '@/stores/favoritesStore';
 import { useViewHistoryStore, type ViewHistoryItem } from '@/stores/viewHistoryStore';
@@ -36,21 +37,32 @@ export const FavoritesProvider = ({ children }: { children: React.ReactNode }) =
     const recommended = useRecommendationsStore((s) => s.recommended);
 
     useEffect(() => {
-        const fav = useFavoritesStore.getState();
-        const hist = useViewHistoryStore.getState();
-        const rec = useRecommendationsStore.getState();
+        const doLoad = () => {
+            const fav = useFavoritesStore.getState();
+            const hist = useViewHistoryStore.getState();
+            const rec = useRecommendationsStore.getState();
 
-        if (isAuthenticated && userId) {
-            fav.resetFetchState(userId);
-            hist.resetFetchState(userId);
-            rec.resetFetchState(userId);
-            fav.loadServerCached(userId);
-            hist.loadServerCached(userId);
-            rec.loadServerCached(userId);
-        } else {
-            fav.loadLocal(userId);
-            hist.loadLocal(userId);
+            if (isAuthenticated && userId) {
+                fav.resetFetchState(userId);
+                hist.resetFetchState(userId);
+                rec.resetFetchState(userId);
+                fav.loadServerCached(userId);
+                hist.loadServerCached(userId);
+                rec.loadServerCached(userId);
+            } else {
+                fav.loadLocal(userId);
+                hist.loadLocal(userId);
+            }
+        };
+
+        // Defer data loading on web to reduce TBT during initial render.
+        // On native, load immediately (no TBT concern).
+        if (Platform.OS === 'web' && typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+            const id = (window as any).requestIdleCallback(doLoad, { timeout: 2000 });
+            return () => { try { (window as any).cancelIdleCallback(id); } catch {} };
         }
+        doLoad();
+        return undefined;
     }, [isAuthenticated, userId]);
 
     const isFavorite = useCallback(
