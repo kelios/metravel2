@@ -340,9 +340,13 @@ export default function TravelDetailsContainer() {
       ogType="article"
       additionalTags={
         <>
-          {firstImg?.url && firstImgOrigin && (
-            <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />
-          )}
+          {firstImg?.url &&
+            firstImgOrigin &&
+            (Platform.OS !== 'web' ||
+              typeof window === 'undefined' ||
+              firstImgOrigin !== window.location.origin) && (
+              <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />
+            )}
           <meta name="theme-color" content={themedColors.background} />
           {jsonLd && (
             <script

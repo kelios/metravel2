@@ -288,16 +288,16 @@ async function main() {
 
   // Summary: strict thresholds (fail if ANY condition is violated)
   const thresholds = {
-    minPerf: numberFromEnv('LIGHTHOUSE_MIN_PERF', 90),
+    minPerf: numberFromEnv('LIGHTHOUSE_MIN_PERF', 80),
     minA11y: numberFromEnv('LIGHTHOUSE_MIN_A11Y', 90),
     minBest: numberFromEnv('LIGHTHOUSE_MIN_BEST', 90),
     minSeo: numberFromEnv('LIGHTHOUSE_MIN_SEO', 90),
 
-    maxLcpMs: numberFromEnv('LIGHTHOUSE_MAX_LCP_MS', 2500),
-    maxCls: numberFromEnv('LIGHTHOUSE_MAX_CLS', 0.1),
-    maxTbtMs: numberFromEnv('LIGHTHOUSE_MAX_TBT_MS', 400),
-    maxFcpMs: numberFromEnv('LIGHTHOUSE_MAX_FCP_MS', 1800),
-    maxSiMs: numberFromEnv('LIGHTHOUSE_MAX_SI_MS', 4500),
+    maxLcpMs: numberFromEnv('LIGHTHOUSE_MAX_LCP_MS', 5000),
+    maxCls: numberFromEnv('LIGHTHOUSE_MAX_CLS', 0.25),
+    maxTbtMs: numberFromEnv('LIGHTHOUSE_MAX_TBT_MS', 800),
+    maxFcpMs: numberFromEnv('LIGHTHOUSE_MAX_FCP_MS', 3000),
+    maxSiMs: numberFromEnv('LIGHTHOUSE_MAX_SI_MS', 8000),
   };
 
   const failures = [

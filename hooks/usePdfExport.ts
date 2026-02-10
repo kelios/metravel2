@@ -7,7 +7,7 @@ import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { ExportStage, ExportConfig } from '@/types/pdf-export';
 import { fetchTravel, fetchTravelBySlug } from '@/api/travelsApi';
-import { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
+import type { BookHtmlExportService } from '@/services/book/BookHtmlExportService';
 import { openBookPreviewWindow } from '@/utils/openBookPreviewWindow';
 
 /**
@@ -30,7 +30,11 @@ export function usePdfExport(selected: Travel[], config?: ExportConfig) {
   useEffect(() => {
     const canUseDom = typeof document !== 'undefined';
     if ((Platform.OS === 'web' || canUseDom) && !htmlServiceRef.current) {
-      htmlServiceRef.current = new BookHtmlExportService();
+      import('@/services/book/BookHtmlExportService').then((mod) => {
+        if (isMountedRef.current) {
+          htmlServiceRef.current = new mod.BookHtmlExportService();
+        }
+      });
     }
 
     return () => {

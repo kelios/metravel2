@@ -188,6 +188,9 @@ describe('usePdfExport', () => {
     it('должен показывать предупреждение, если не выбрано ни одного путешествия', async () => {
       const { result } = renderHook(() => usePdfExport([]));
 
+      // Wait for the dynamic import() in useEffect to resolve
+      await act(async () => { await Promise.resolve(); });
+
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
       });
@@ -221,6 +224,9 @@ describe('usePdfExport', () => {
       ];
 
       const { result } = renderHook(() => usePdfExport(detailedTravels));
+
+      // Wait for the dynamic import() in useEffect to resolve
+      await act(async () => { await Promise.resolve(); });
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -258,6 +264,9 @@ describe('usePdfExport', () => {
       mockGenerateTravelsHtml.mockRejectedValueOnce(error);
 
       const { result } = renderHook(() => usePdfExport(mockTravels));
+
+      // Wait for the dynamic import() in useEffect to resolve
+      await act(async () => { await Promise.resolve(); });
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
