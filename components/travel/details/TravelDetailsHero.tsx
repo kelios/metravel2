@@ -257,8 +257,7 @@ const OptimizedLCPHeroInner: React.FC<{
             fetchPriority="high"
             // @ts-ignore
             ref={imgRef as any}
-            crossOrigin="anonymous"
-            referrerPolicy="no-referrer"
+            referrerPolicy="no-referrer-when-downgrade"
             data-lcp
             onLoad={onLoad as any}
             onError={() => {
