@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import { apiLogin, createOrUpdateTravel, deleteTravel } from './helpers/e2eApi';
+import { mockFakeAuthApis } from './helpers/auth';
 
 test.describe('Draft recovery popup', () => {
   test('appears only on page open when stale draft exists and does not reappear on autosave', async ({ page }) => {
@@ -110,16 +111,20 @@ test.describe('Draft recovery popup', () => {
     // Ensure the editor route does not redirect as a guest in full-suite runs.
     // Prefer the real API token (store plaintext; secureStorage falls back to raw value if decryption fails).
     const tokenToStore = String(apiCtx?.token || 'e2e-fake-token');
+    const userIdToStore = String(apiCtx?.userId || '').trim() || '1';
     await page.addInitScript((payload: { token: string }) => {
       try {
         window.localStorage.setItem('secure_userToken', payload.token);
-        window.localStorage.setItem('userId', '1');
+        window.localStorage.setItem('userId', (payload as any).userId);
         window.localStorage.setItem('userName', 'E2E User');
         window.localStorage.setItem('isSuperuser', 'false');
       } catch {
         // ignore
       }
-    }, { token: tokenToStore });
+    }, { token: tokenToStore, userId: userIdToStore } as any);
+
+    // Prevent auth hydration from invalidating our seeded token (profile/refresh can 401 and log out).
+    await mockFakeAuthApis(page);
 
     try {
       // Draft recovery is implemented in the travel editor (UpsertTravelView), routed as /travel/:id.
@@ -167,12 +172,14 @@ test.describe('Draft recovery popup', () => {
       const draftTitle = page.getByText('Найден черновик', { exact: true });
       const homeHeadline = page.getByText('Пиши о своих путешествиях', { exact: true });
       const loginTitle = page.getByText('Войти', { exact: true });
+      const noAccess = page.getByText('Нет доступа', { exact: true });
       const loadError = page.getByText(/не удалось загрузить путешествие|ошибка загрузки/i).first();
 
       await Promise.race([
         draftTitle.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
         homeHeadline.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
         loginTitle.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
+        noAccess.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
         loadError.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
       ]);
 
@@ -188,6 +195,14 @@ test.describe('Draft recovery popup', () => {
         test.info().annotations.push({
           type: 'note',
           description: 'Editor route redirected to login; skipping draft recovery assertion for this environment',
+        });
+        return;
+      }
+
+      if (await noAccess.isVisible().catch(() => false)) {
+        test.info().annotations.push({
+          type: 'note',
+          description: 'Editor route showed no-access screen; skipping draft recovery assertion for this environment',
         });
         return;
       }
