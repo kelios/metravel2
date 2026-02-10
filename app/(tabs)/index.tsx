@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useMemo } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -16,6 +16,8 @@ function HomeScreen() {
     const isFocused = useIsFocused();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
+    const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
+    useEffect(() => { if (Platform.OS === 'web') setHydrated(true); }, []);
 
     const effectivePathname = useMemo(() => {
         if (Platform.OS !== 'web') return pathname;
@@ -84,9 +86,13 @@ function HomeScreen() {
                         </View>
                     }
                 >
-                    <Suspense fallback={<View style={styles.container} />}>
-                        <Home />
-                    </Suspense>
+                    {hydrated ? (
+                      <Suspense fallback={<View style={styles.container} />}>
+                          <Home />
+                      </Suspense>
+                    ) : (
+                      <View style={styles.container} />
+                    )}
                 </ErrorBoundary>
             </View>
         </>

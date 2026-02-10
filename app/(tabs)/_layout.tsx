@@ -7,15 +7,17 @@ const ScrollToTopButtonLazy = React.lazy(() => import('@/components/ui/ScrollToT
 
 const GlobalScrollToTop = React.memo(function GlobalScrollToTop() {
     const scrollY = useRef(new Animated.Value(0)).current;
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+        setMounted(true);
         const handler = () => scrollY.setValue(window.scrollY);
         window.addEventListener('scroll', handler, { passive: true });
         return () => window.removeEventListener('scroll', handler);
     }, [scrollY]);
 
-    if (Platform.OS !== 'web') return null;
+    if (Platform.OS !== 'web' || !mounted) return null;
 
     return (
         <React.Suspense fallback={null}>

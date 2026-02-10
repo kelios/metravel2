@@ -478,7 +478,7 @@ function ThemedContent({
 	                              </Head>
 
                               {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}
-                              {Platform.OS === 'web' && (
+                              {isWeb && isMounted && (
                                 <React.Suspense fallback={null}>
                                   <SkipLinksLazy />
                                 </React.Suspense>

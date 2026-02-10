@@ -91,8 +91,8 @@ describe('Routes performance budgets', () => {
     const HomeScreen = require('@/app/(tabs)/index').default
     const { commits } = renderWithProfiler(<HomeScreen />)
 
-    // One commit is expected; allow a small buffer for wrappers.
-    expect(commits).toBeLessThanOrEqual(2)
+    // Two commits expected: initial render + hydration state update.
+    expect(commits).toBeLessThanOrEqual(3)
   })
 
   it('SearchScreen (/search) renders within commit budget', () => {
