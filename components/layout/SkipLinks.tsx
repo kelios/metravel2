@@ -118,7 +118,9 @@ const createLinkStyle = (colors: ThemedColors) => ({
       cursor: 'pointer',
       // @ts-ignore
       ':focus': {
-        outline: `3px solid ${colors.primary}`,
+        outlineWidth: 3,
+        outlineStyle: 'solid',
+        outlineColor: colors.primary,
         outlineOffset: 2,
       },
     },

@@ -85,7 +85,9 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     searchInput: {
         width: '100%',
         border: 'none',
-        outline: 'none',
+        outlineWidth: 0,
+        outlineStyle: 'none' as const,
+        outlineColor: 'transparent',
         fontSize: '13px',
         color: colors.text,
         backgroundColor: 'transparent',

@@ -196,7 +196,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...Platform.select({
       web: {
         transition: 'border-color 0.2s ease',
-        outline: 'none',
+        outlineWidth: 0,
+        outlineStyle: 'none',
+        outlineColor: 'transparent',
       } as any,
     }),
   },

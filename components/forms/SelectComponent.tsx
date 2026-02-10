@@ -146,7 +146,9 @@ const SelectComponent: React.FC<SelectProps> = ({
                         minHeight: 44,
                         cursor: disabled ? 'not-allowed' : 'pointer',
                         opacity: disabled ? 0.6 : 1,
-                        outline: 'none',
+                        outlineWidth: 0,
+                        outlineStyle: 'none',
+                        outlineColor: 'transparent',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     }}
                 >
