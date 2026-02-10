@@ -1839,11 +1839,15 @@ export class EnhancedPdfGenerator {
     const wrapperStyle = `
       width: ${size};
       height: ${size};
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
+      vertical-align: middle;
+      line-height: 1;
     `;
 
-    const svgStart = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${sizePt}" height="${sizePt}" fill="none" stroke="${this.escapeHtml(color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`;
+    const svgStart = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${sizePt}" height="${sizePt}" fill="none" stroke="${this.escapeHtml(color)}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;">`;
     const svgEnd = `</svg>`;
 
     const paths: Record<typeof name, string> = {

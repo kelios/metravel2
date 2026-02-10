@@ -319,41 +319,54 @@ export async function generateLeafletRouteSnapshot(
 
       const isStart = index === 0;
       const isEnd = index === latLngs.length - 1;
-      const markerUrl = isStart
-        ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png'
-        : isEnd
-          ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png'
-          : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png';
-
       const labelBg = DESIGN_TOKENS.colors.surface;
       const labelText = DESIGN_TOKENS.colors.text;
       const labelBorder = DESIGN_TOKENS.colors.border;
-      const badgeBg = DESIGN_TOKENS.colors.surface;
-      const badgeText = DESIGN_TOKENS.colors.text;
       const fontFamily = DESIGN_TOKENS.typography.fontFamily;
 
+      const pinFill = isStart
+        ? DESIGN_TOKENS.colors.success
+        : isEnd
+          ? DESIGN_TOKENS.colors.danger
+          : DESIGN_TOKENS.colors.accent;
+      const pinStroke = DESIGN_TOKENS.colors.surface;
+      const pinShadow = 'drop-shadow(0 6px 14px rgba(0,0,0,0.22))';
+      const numberColor = DESIGN_TOKENS.colors.textOnPrimary;
+
       const iconHtml = `
-        <div style="position: relative; width: 25px; height: 41px;">
-          <img src="${markerUrl}"
-            style="width: 25px; height: 41px; display: block;" />
+        <div style="position: relative; width: 28px; height: 42px;">
+          <div style="width: 28px; height: 42px; display: block; filter: ${pinShadow};">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="28"
+              height="42"
+              viewBox="0 0 28 42"
+              style="display: block;"
+            >
+              <path
+                d="M14 0C6.27 0 0 6.27 0 14c0 11.2 14 28 14 28s14-16.8 14-28C28 6.27 21.73 0 14 0z"
+                fill="${pinFill}"
+                stroke="${pinStroke}"
+                stroke-width="2"
+              />
+              <circle cx="14" cy="14" r="7" fill="${pinStroke}" opacity="0.22" />
+            </svg>
+          </div>
           <div style="
             position: absolute;
-            top: 8px;
+            top: 6px;
             left: 50%;
             transform: translateX(-50%);
-            width: 20px;
-            height: 20px;
-            border-radius: 999px;
-            background: ${badgeBg};
-            color: ${badgeText};
-            border: 1px solid ${labelBorder};
+            width: 18px;
+            height: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: ${fontFamily};
             font-size: 12px;
-            font-weight: 700;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.28);
+            font-weight: 800;
+            color: ${numberColor};
+            text-shadow: 0 1px 2px rgba(0,0,0,0.35);
             text-rendering: geometricPrecision;
             -webkit-font-smoothing: antialiased;
           ">${number}</div>
@@ -361,7 +374,7 @@ export async function generateLeafletRouteSnapshot(
             <div style="
               position: absolute;
               top: -8px;
-              left: 30px;
+              left: 34px;
               max-width: 320px;
               padding: 10px 12px;
               border-radius: 14px;
@@ -411,8 +424,8 @@ export async function generateLeafletRouteSnapshot(
       const icon = L.divIcon({
         className: 'metravel-map-marker',
         html: iconHtml,
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
+        iconSize: [28, 42],
+        iconAnchor: [14, 42],
       });
 
       L.marker(latLng, { icon }).addTo(map);

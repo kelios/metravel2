@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
-import { Filters, FiltersContextType } from '@/types/types';
+import type { Filters, FiltersContextType } from '@/types/types';
 
 const FiltersContext = createContext<FiltersContextType | undefined>(undefined);
 
-export const useFilters = () => {
+export function useFilters() {
     const context = useContext(FiltersContext);
     if (context === undefined) {
         throw new Error('useFilters must be used within a FiltersProvider');
@@ -15,7 +15,7 @@ interface FiltersProviderProps {
     children: ReactNode;
 }
 
-export const FiltersProvider: React.FC<FiltersProviderProps> = ({ children }) => {
+export function FiltersProvider({ children }: FiltersProviderProps) {
     // Хук useState вызываем на верхнем уровне компонента
     const [filters, setFilters] = useState<Filters>({
         countries: [],
