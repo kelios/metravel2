@@ -5,14 +5,12 @@ import { FiltersProvider } from '@/context/MapFiltersContext';
 import { useRouteStore } from '@/stores/routeStore';
 import type { MapUiApi } from '@/types/mapUi';
 
-// Модульные хуки для карты
-import {
-  useMapCoordinates,
-  useMapFilters,
-  useMapDataController,
-  useMapUIController,
-  useRouteController,
-} from '@/hooks/map';
+// Модульные хуки для карты — direct imports to avoid barrel re-export issues with inlineRequires
+import { useMapCoordinates } from '@/hooks/map/useMapCoordinates';
+import { useMapFilters } from '@/hooks/map/useMapFilters';
+import { useMapDataController } from '@/hooks/map/useMapDataController';
+import { useMapUIController } from '@/hooks/map/useMapUIController';
+import { useRouteController } from '@/hooks/map/useRouteController';
 
 /**
  * Главный контроллер экрана карты (facade pattern).

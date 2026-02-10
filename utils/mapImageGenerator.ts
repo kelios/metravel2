@@ -4,6 +4,23 @@
 import type { MapPoint } from '@/types/article-pdf';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
+ const leafletRouteSnapshotCache = new Map<string, Promise<string | null>>();
+
+ function buildLeafletRouteSnapshotCacheKey(
+   points: { lat: number; lng: number; label?: string }[],
+   options: { width: number; height: number; zoom: number }
+ ): string {
+   const normalizedPoints = points
+     .map((p) => {
+       const lat = Number.isFinite(p.lat) ? Number(p.lat).toFixed(6) : 'NaN';
+       const lng = Number.isFinite(p.lng) ? Number(p.lng).toFixed(6) : 'NaN';
+       const label = typeof p.label === 'string' ? p.label.trim() : '';
+       return `${lat},${lng},${label}`;
+     })
+     .join('|');
+   return `${options.width}x${options.height}@${options.zoom}:${normalizedPoints}`;
+ }
+
 /**
  * Генерирует URL для статичной карты через Google Static Maps API
  */
@@ -182,8 +199,10 @@ export async function generateLeafletRouteSnapshot(
   const height = options.height ?? 480;
   const zoom = options.zoom ?? 10;
 
-  const ensureLeaflet = async (): Promise<any> => {
-    const w = window as any;
+  const cacheKey = buildLeafletRouteSnapshotCacheKey(points, { width, height, zoom });
+  const cached = leafletRouteSnapshotCache.get(cacheKey);
+  if (cached) {
+    return cached;
     if (w.L) {
       return w.L;
     }
@@ -250,7 +269,7 @@ export async function generateLeafletRouteSnapshot(
   container.style.width = `${width}px`;
   container.style.height = `${height}px`;
   container.style.zIndex = '-1';
-  container.id = 'metravel-map-snapshot';
+  container.id = `metravel-map-snapshot-${Math.random().toString(16).slice(2)}`;
   document.body.appendChild(container);
 
   const escapeHtml = (value: string): string => {
@@ -475,4 +494,18 @@ export async function generateLeafletRouteSnapshot(
       container.parentNode.removeChild(container);
     }
   }
+   })()
+     .then((result) => {
+       if (result === null) {
+         leafletRouteSnapshotCache.delete(cacheKey);
+       }
+       return result;
+     })
+     .catch((e) => {
+       leafletRouteSnapshotCache.delete(cacheKey);
+       throw e;
+     });
+
+   leafletRouteSnapshotCache.set(cacheKey, task);
+   return task;
 }
