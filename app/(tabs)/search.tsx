@@ -1,4 +1,4 @@
-import { Suspense, lazy, memo, useMemo } from 'react';
+import { Suspense, lazy, memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
@@ -40,6 +40,18 @@ function SearchScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
     const colors = useThemedColors();
+    const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        // Defer hydration to let main thread finish parsing before heavy render
+        if ('requestIdleCallback' in window) {
+            const id = (window as any).requestIdleCallback(() => setHydrated(true), { timeout: 800 });
+            return () => (window as any).cancelIdleCallback(id);
+        }
+        const t = setTimeout(() => setHydrated(true), 50);
+        return () => clearTimeout(t);
+    }, []);
 
     const title = 'Поиск путешествий | Metravel';
     const description = 'Найдите путешествия по фильтрам и сохраните лучшие идеи в свою книгу.';
@@ -93,9 +105,13 @@ function SearchScreen() {
                         </View>
                     }
                 >
-                    <Suspense fallback={<SearchPageSkeleton />}>
-                        <ListTravel />
-                    </Suspense>
+                    {hydrated ? (
+                        <Suspense fallback={<SearchPageSkeleton />}>
+                            <ListTravel />
+                        </Suspense>
+                    ) : (
+                        <SearchPageSkeleton />
+                    )}
                 </ErrorBoundary>
             </View>
         </>

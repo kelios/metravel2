@@ -8,6 +8,7 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { HomePageSkeleton } from '@/components/home/HomePageSkeleton';
 
 const Home = lazy(() => import('@/components/home/Home'));
 
@@ -87,11 +88,11 @@ function HomeScreen() {
                     }
                 >
                     {hydrated ? (
-                      <Suspense fallback={<View style={styles.container} />}>
+                      <Suspense fallback={<HomePageSkeleton />}>
                           <Home />
                       </Suspense>
                     ) : (
-                      <View style={styles.container} />
+                      <HomePageSkeleton />
                     )}
                 </ErrorBoundary>
             </View>

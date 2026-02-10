@@ -229,7 +229,10 @@ describe('Platform Compatibility Tests', () => {
     it('should have expo-router plugin', () => {
       const appConfig = readAppConfig();
       const plugins = appConfig.expo.plugins;
-      expect(plugins).toContain('expo-router');
+      const hasRouter = plugins.some((p: any) =>
+        p === 'expo-router' || (Array.isArray(p) && p[0] === 'expo-router')
+      );
+      expect(hasRouter).toBe(true);
     });
 
     it('should have expo-location plugin with config', () => {

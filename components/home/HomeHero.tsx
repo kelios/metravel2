@@ -54,7 +54,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
   }, [isAuthenticated, travelsCount]);
 
   const isMobile = isSmallPhone || isPhone;
-  const shouldRenderImageSlot = isWeb;
+  const shouldRenderImageSlot = isWeb && !isMobile;
 
   // Preload removed: the <img loading="eager"> already fetches the image.
   // A separate <link rel="preload"> caused "preloaded but not used" warnings,

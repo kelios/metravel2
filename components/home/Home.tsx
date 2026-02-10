@@ -11,9 +11,9 @@ import { queueAnalyticsEvent } from '@/utils/analytics';
 
 const isWeb = Platform.OS === 'web';
 const TRUST_PLACEHOLDER_STYLE = { minHeight: 220 } as const;
-const HOW_IT_WORKS_PLACEHOLDER_STYLE = { minHeight: 320 } as const;
-const FAQ_PLACEHOLDER_STYLE = { minHeight: 260 } as const;
-const FINAL_CTA_PLACEHOLDER_STYLE = { height: 300 } as const;
+const HOW_IT_WORKS_PLACEHOLDER_STYLE = { minHeight: 420 } as const;
+const FAQ_PLACEHOLDER_STYLE = { minHeight: 360 } as const;
+const FINAL_CTA_PLACEHOLDER_STYLE = { minHeight: 300 } as const;
 
 const HomeTrustBlock = lazy(() => import('./HomeTrustBlock'));
 const HomeHowItWorks = lazy(() => import('./HomeHowItWorks'));
@@ -139,11 +139,45 @@ function Home() {
         </Suspense>
       )}
 
-      <Suspense fallback={<View style={TRUST_PLACEHOLDER_STYLE} />}>
+      <Suspense fallback={
+        <View style={TRUST_PLACEHOLDER_STYLE}>
+          <View style={{ paddingHorizontal: 24, paddingVertical: 40, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: isMobile ? 'column' as const : 'row' as const, gap: 16 }}>
+              {[0,1,2].map(i => (
+                <View key={i} style={{ flex: isMobile ? undefined : 1, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 }}>
+                  <SkeletonLoader width={34} height={34} borderRadius={10} />
+                  <View style={{ flex: 1, gap: 4 }}>
+                    <SkeletonLoader width="60%" height={14} borderRadius={4} />
+                    <SkeletonLoader width="80%" height={12} borderRadius={4} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      }>
         <HomeTrustBlock />
       </Suspense>
 
-      <Suspense fallback={<View style={HOW_IT_WORKS_PLACEHOLDER_STYLE} />}>
+      <Suspense fallback={
+        <View style={HOW_IT_WORKS_PLACEHOLDER_STYLE}>
+          <View style={{ paddingHorizontal: 24, paddingVertical: 64, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
+            <SkeletonLoader width={isMobile ? 180 : 260} height={isMobile ? 28 : 36} borderRadius={8} style={{ alignSelf: 'center' }} />
+            <View style={{ flexDirection: isMobile ? 'column' as const : 'row' as const, gap: isMobile ? 20 : 24, marginTop: 40 }}>
+              {[0,1,2].map(i => (
+                <View key={i} style={{ flex: isMobile ? undefined : 1, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 28, gap: 16 }}>
+                  <View style={{ flexDirection: 'row' as const, alignItems: 'center' as const, gap: 16 }}>
+                    <SkeletonLoader width={56} height={56} borderRadius={8} />
+                    <SkeletonLoader width={36} height={36} borderRadius={18} />
+                  </View>
+                  <SkeletonLoader width="70%" height={20} borderRadius={6} />
+                  <SkeletonLoader width="90%" height={14} borderRadius={4} />
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      }>
         <HomeHowItWorks />
       </Suspense>
 
@@ -157,18 +191,41 @@ function Home() {
         <SectionSkeleton hydrated={false} />
       )}
 
-      <Suspense fallback={<View style={FAQ_PLACEHOLDER_STYLE} />}>
+      <Suspense fallback={
+        <View style={FAQ_PLACEHOLDER_STYLE}>
+          <View style={{ paddingHorizontal: 24, paddingVertical: 64, maxWidth: 1200, alignSelf: 'center' as const, width: '100%' }}>
+            <SkeletonLoader width={100} height={28} borderRadius={8} style={{ alignSelf: 'center', marginBottom: 32 }} />
+            <View style={{ gap: 12 }}>
+              {[0,1,2,3,4].map(i => (
+                <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 16 }}>
+                  <SkeletonLoader width={i % 2 === 0 ? '70%' : '55%'} height={16} borderRadius={4} />
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      }>
         <HomeFAQSection />
       </Suspense>
 
       {showHeavyContent ? (
         <View style={heavyFadeStyle}>
-          <Suspense fallback={<View style={FINAL_CTA_PLACEHOLDER_STYLE} />}>
+          <Suspense fallback={
+            <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: 88 }]}>
+              <SkeletonLoader width={isMobile ? 260 : 400} height={isMobile ? 32 : 40} borderRadius={8} />
+              <SkeletonLoader width={isMobile ? 200 : 340} height={20} borderRadius={6} style={{ marginTop: 16 }} />
+              <SkeletonLoader width={isMobile ? 200 : 300} height={60} borderRadius={12} style={{ marginTop: 32 }} />
+            </View>
+          }>
             <HomeFinalCTA />
           </Suspense>
         </View>
       ) : (
-        <View style={FINAL_CTA_PLACEHOLDER_STYLE} />
+        <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: 88 }]}>
+          <SkeletonLoader width={isMobile ? 260 : 400} height={isMobile ? 32 : 40} borderRadius={8} />
+          <SkeletonLoader width={isMobile ? 200 : 340} height={20} borderRadius={6} style={{ marginTop: 16 }} />
+          <SkeletonLoader width={isMobile ? 200 : 300} height={60} borderRadius={12} style={{ marginTop: 32 }} />
+        </View>
       )}
     </ScrollView>
   );
