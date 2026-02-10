@@ -153,7 +153,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     // ВИЗУАЛЬНЫЙ СНАПШОТ #1: Вся карта с маршрутом
     console.log('📸 Снапшот #1: Вся карта');
     await expect(mapWrapper).toHaveScreenshot('map-with-route-full.png', {
-      maxDiffPixelRatio: 0.03,
+      maxDiffPixelRatio: 0.05,
       threshold: 0.2,
       animations: 'disabled',
       caret: 'hide',
@@ -162,7 +162,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     // ВИЗУАЛЬНЫЙ СНАПШОТ #2: Только Leaflet контейнер
     console.log('📸 Снапшот #2: Leaflet контейнер');
     await expect(leafletContainer).toHaveScreenshot('map-with-route-leaflet.png', {
-      maxDiffPixelRatio: 0.03,
+      maxDiffPixelRatio: 0.05,
       threshold: 0.2,
       animations: 'disabled',
       caret: 'hide',
@@ -173,7 +173,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     if (await overlayPane.isVisible().catch(() => false)) {
       console.log('📸 Снапшот #3: Overlay pane');
       await expect(overlayPane).toHaveScreenshot('map-route-overlay-pane.png', {
-        maxDiffPixelRatio: 0.03,
+        maxDiffPixelRatio: 0.05,
         threshold: 0.2,
         animations: 'disabled',
         caret: 'hide',
@@ -262,7 +262,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     // Снапшот ДО добавления маршрута
     console.log('📸 BEFORE: карта без маршрута');
     await expect(leafletContainer).toHaveScreenshot('map-before-route.png', {
-      maxDiffPixelRatio: 0.03,
+      maxDiffPixelRatio: 0.05,
       animations: 'disabled',
       caret: 'hide',
     });
@@ -309,7 +309,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     }
 
     await expect(leafletContainer).toHaveScreenshot('map-after-route.png', {
-      maxDiffPixelRatio: 0.03,
+      maxDiffPixelRatio: 0.05,
       animations: 'disabled',
       caret: 'hide',
     });

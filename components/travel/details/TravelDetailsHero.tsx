@@ -574,6 +574,9 @@ function TravelHeroSectionInner({
 
       {/* 4.3: WeatherWidget перенесён в TravelDetailsMapSection */}
 
+      {quickJumpLinks.length > 0 && !extrasReady && (
+        <View style={[styles.sectionContainer, styles.contentStable, styles.quickJumpWrapper, { minHeight: 48 }]} />
+      )}
       {quickJumpLinks.length > 0 && extrasReady && (
         <View style={[styles.sectionContainer, styles.contentStable, styles.quickJumpWrapper]}>
           {isMobile ? (
