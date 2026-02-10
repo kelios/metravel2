@@ -12,6 +12,7 @@ type LoginResponse = {
 export type E2EApiContext = {
   apiBase: string;
   token: string;
+  userId: string | null;
 };
 
 function simpleDecrypt(base64: string, key: string): string {
@@ -73,8 +74,12 @@ export async function apiLogin(email: string, password: string): Promise<E2EApiC
   const token = String(json?.token ?? '').trim();
   expect(token, 'API login did not return token').toBeTruthy();
 
+  const userIdRaw = json?.id;
+  const userId = userIdRaw == null ? '' : String(userIdRaw).trim();
+  expect(userId, 'API login did not return user id').toBeTruthy();
+
   await api.dispose();
-  return { apiBase, token };
+  return { apiBase, token, userId };
 }
 
 export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
@@ -85,7 +90,7 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
 
   const tokenFromEnv = normalizeToken(process.env.E2E_API_TOKEN || '');
   if (tokenFromEnv) {
-    return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromEnv };
+    return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromEnv, userId: null };
   }
 
   const email = String(process.env.E2E_EMAIL || '').trim();
@@ -97,7 +102,7 @@ export async function apiContextFromEnv(): Promise<E2EApiContext | null> {
   // Fallback: use token from the Playwright storageState (global-setup writes it).
   const tokenFromState = tokenFromStorageState();
   if (tokenFromState) {
-    return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromState };
+    return { apiBase: apiBaseRaw.replace(/\/+$/, ''), token: tokenFromState, userId: null };
   }
 
   return null;
@@ -108,7 +113,7 @@ export function apiContextFromTracker(opts: { apiBase?: string | null; token?: s
   if (!apiBase) return null;
   const token = normalizeToken(opts.token || '') || tokenFromStorageState();
   if (!token) return null;
-  return { apiBase, token };
+  return { apiBase, token, userId: null };
 }
 
 export function installCreatedTravelsTracker(page: any) {

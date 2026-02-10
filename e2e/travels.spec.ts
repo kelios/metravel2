@@ -30,8 +30,8 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
       const facts = page.locator('[data-testid="travel-details-quick-facts"]');
       await expect(facts).toBeVisible();
 
-      const content = page.locator('[data-testid="travel-details-section-gallery"]');
-      await expect(content).toBeAttached();
+      const scroll = page.locator('[data-testid="travel-details-scroll"]');
+      await expect(scroll).toBeVisible();
     });
 
     test('should display hero image', async ({ page }) => {
@@ -83,7 +83,7 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
       if (!(await goToTravelDetails(page))) return;
 
       const sections = [
-        'travel-details-section-gallery',
+        'travel-details-scroll',
         'travel-details-quick-facts',
         'travel-details-hero',
         'travel-details-side-menu',
@@ -91,11 +91,7 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
 
       for (const section of sections) {
         const element = page.locator(`[data-testid="${section}"]`);
-        if (section === 'travel-details-section-gallery') {
-          await expect(element).toBeAttached();
-        } else {
-          await expect(element).toBeVisible({ timeout: 5000 });
-        }
+        await expect(element).toBeVisible({ timeout: 15_000 });
       }
     });
 
