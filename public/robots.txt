@@ -7,7 +7,3 @@ Disallow: /assets/icons/
 Disallow: /*?debug=*
 
 Sitemap: https://metravel.by/sitemap.xml
-
-Host: metravel.by
-
-Clean-param: ref,utm_source,utm_medium,utm_campaign,utm_term,utm_content
