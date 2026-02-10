@@ -1351,16 +1351,17 @@ export class EnhancedPdfGenerator {
         border-radius: ${this.theme.blocks.borderRadius};
         margin-bottom: ${spacing.sectionSpacing};
         font-size: ${typography.caption.size};
+        line-height: 1.15;
         color: ${colors.textMuted};
         font-family: ${typography.bodyFont};
         align-items: center;
       ">
         ${items.map((item) => `
-          <span style="display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
+          <span style="display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; line-height: 1.15;">
             ${item.icon}
             <span>${this.escapeHtml(item.value)}</span>
           </span>
-        `).join(`<span style="color: ${colors.border};">•</span>`)}
+        `).join(`<span style="color: ${colors.border}; display: inline-flex; align-items: center; line-height: 1;">•</span>`)}
       </div>
     `;
   }

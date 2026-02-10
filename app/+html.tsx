@@ -107,7 +107,20 @@ const getTravelHeroPreloadScript = () => String.raw`
 (function(){
   try {
     var host = window.location && window.location.hostname;
-    var isProdHost = host === 'metravel.by' || host === 'www.metravel.by' || host === 'localhost' || host === '127.0.0.1';
+    function isPrivateHost(h){
+      try {
+        if (!h) return false;
+        h = String(h).toLowerCase();
+        if (h === 'localhost' || h === '127.0.0.1') return true;
+        if (/^10\./.test(h)) return true;
+        if (/^192\.168\./.test(h)) return true;
+        if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
+        return false;
+      } catch (_e) {
+        return false;
+      }
+    }
+    var isProdHost = host === 'metravel.by' || host === 'www.metravel.by' || isPrivateHost(host);
     if (!isProdHost) return;
     var path = window.location && window.location.pathname;
     if (!path || path.indexOf('/travels/') !== 0) return;
@@ -115,11 +128,30 @@ const getTravelHeroPreloadScript = () => String.raw`
     if (!slug) return;
 
     var isId = /^[0-9]+$/.test(slug);
-    var apiBase = (window.location && window.location.origin) || '';
-    if (!apiBase) return;
+    var apiBaseEnv = ${JSON.stringify(process.env.EXPO_PUBLIC_API_URL || '')};
+    function normalizeApiOrigin(raw){
+      try {
+        if (!raw) return '';
+        var s = String(raw);
+        s = s.replace(/\s+/g, '');
+        s = s.replace(/\/api\/?$/i, '');
+        if (!s) return '';
+        var u = new URL(s);
+        return u.origin;
+      } catch (_e) {
+        try {
+          var s2 = String(raw).replace(/\/api\/?$/i, '');
+          return s2;
+        } catch (_e2) {
+          return '';
+        }
+      }
+    }
+    var apiOrigin = normalizeApiOrigin(apiBaseEnv) || ((window.location && window.location.origin) || '');
+    if (!apiOrigin) return;
     var endpoint = isId
-      ? apiBase + '/api/travels/' + encodeURIComponent(slug) + '/'
-      : apiBase + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
+      ? apiOrigin + '/api/travels/' + encodeURIComponent(slug) + '/'
+      : apiOrigin + '/api/travels/by-slug/' + encodeURIComponent(slug) + '/';
 
     function supportsAvif() {
       try {
@@ -215,7 +247,7 @@ const getTravelHeroPreloadScript = () => String.raw`
       var controller = window.AbortController ? new AbortController() : null;
       var timeout = setTimeout(function(){
         try { if (controller) controller.abort(); } catch (_e) {}
-      }, 2500);
+      }, 8000);
 
       fetch(endpoint, {
         method: 'GET',
@@ -369,12 +401,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
     </head>
 
     <body>
-    {children}
 
     {/* Travel hero preload — moved to body to avoid blocking head parsing on non-travel pages */}
     <script
       dangerouslySetInnerHTML={{ __html: getTravelHeroPreloadScript() }}
     />
+
+    {children}
 
     {/* LCP decode helper */}
     <script

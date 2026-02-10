@@ -1,4 +1,4 @@
-import React, { Suspense, memo, useEffect, useState } from 'react'
+import React, { Suspense, memo, useCallback, useEffect, useState } from 'react'
 import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
 
@@ -61,6 +61,37 @@ export const TravelDeferredSections: React.FC<{
   const [canRenderSidebar, setCanRenderSidebar] = useState(false)
   const [canRenderComments, setCanRenderComments] = useState(false)
 
+  const tdTraceEnabled =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as any).__METRAVEL_TD_TRACE === true)
+
+  const tdTrace = useCallback(
+    (event: string, data?: any) => {
+      if (!tdTraceEnabled) return
+      try {
+        const perf = (window as any).performance
+        const now = typeof perf?.now === 'function' ? perf.now() : Date.now()
+        const base =
+          (window as any).__METRAVEL_TD_TRACE_START ??
+          (typeof perf?.now === 'function' ? perf.now() : now)
+        ;(window as any).__METRAVEL_TD_TRACE_START = base
+        const delta = Math.round(now - base)
+        // eslint-disable-next-line no-console
+        console.log(`[TD] +${delta}ms ${event}`, data ?? '')
+        if (typeof perf?.mark === 'function') perf.mark(`TD:${event}`)
+      } catch {
+        // noop
+      }
+    },
+    [tdTraceEnabled]
+  )
+
+  useEffect(() => {
+    tdTrace('deferred:mount', { travelId: travel?.id })
+    return () => tdTrace('deferred:unmount', { travelId: travel?.id })
+  }, [tdTrace, travel?.id])
+
   useEffect(() => {
     if (Platform.OS === 'web') return
     const task = InteractionManager.runAfterInteractions(() => setCanRenderHeavy(true))
@@ -73,6 +104,10 @@ export const TravelDeferredSections: React.FC<{
       setCanRenderHeavy(true)
     }
   }, [])
+
+  useEffect(() => {
+    if (canRenderHeavy) tdTrace('deferred:heavy:enabled')
+  }, [canRenderHeavy, tdTrace])
 
   // Stagger heavy sections on web to spread TBT across multiple idle periods
   // instead of mounting all chunks at once.
@@ -91,6 +126,18 @@ export const TravelDeferredSections: React.FC<{
     // CommentsSection chunk is ~247ms to parse — load it last.
     rIC(() => setCanRenderComments(true), 1500)
   }, [canRenderHeavy])
+
+  useEffect(() => {
+    if (canRenderMap) tdTrace('deferred:map:enabled')
+  }, [canRenderMap, tdTrace])
+
+  useEffect(() => {
+    if (canRenderSidebar) tdTrace('deferred:sidebar:enabled')
+  }, [canRenderSidebar, tdTrace])
+
+  useEffect(() => {
+    if (canRenderComments) tdTrace('deferred:comments:enabled')
+  }, [canRenderComments, tdTrace])
 
   return (
     <>

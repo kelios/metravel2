@@ -305,10 +305,41 @@ function TravelHeroSectionInner({
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
   const [extrasReady, setExtrasReady] = useState(!deferExtras || Platform.OS !== 'web')
 
+  const tdTraceEnabled =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as any).__METRAVEL_TD_TRACE === true)
+
+  const tdTrace = useCallback(
+    (event: string, data?: any) => {
+      if (!tdTraceEnabled) return
+      try {
+        const perf = (window as any).performance
+        const now = typeof perf?.now === 'function' ? perf.now() : Date.now()
+        const base =
+          (window as any).__METRAVEL_TD_TRACE_START ??
+          (typeof perf?.now === 'function' ? perf.now() : now)
+        ;(window as any).__METRAVEL_TD_TRACE_START = base
+        const delta = Math.round(now - base)
+        // eslint-disable-next-line no-console
+        console.log(`[TD] +${delta}ms ${event}`, data ?? '')
+        if (typeof perf?.mark === 'function') perf.mark(`TD:${event}`)
+      } catch {
+        // noop
+      }
+    },
+    [tdTraceEnabled]
+  )
+
   const { isAuthenticated } = useAuth()
   const { requireAuth } = useRequireAuth({ intent: 'favorite' })
   const { addFavorite, removeFavorite, isFavorite: checkIsFavorite } = useFavorites()
   const isFavorite = checkIsFavorite(travel.id, 'travel')
+
+  useEffect(() => {
+    tdTrace('hero:mount', { travelId: travel?.id })
+    return () => tdTrace('hero:unmount', { travelId: travel?.id })
+  }, [tdTrace, travel?.id])
 
   const handleFavoriteToggle = useCallback(async () => {
     if (!isAuthenticated) {
@@ -359,6 +390,11 @@ function TravelHeroSectionInner({
     return firstRaw
   }, [firstRaw]) as ImgLike | null
 
+  useEffect(() => {
+    if (!firstImg?.url) return
+    tdTrace('hero:firstImgReady')
+  }, [firstImg?.url, tdTrace])
+
   const aspectRatio =
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
@@ -398,7 +434,8 @@ function TravelHeroSectionInner({
     // If we get a new travel/first image, reset swap state.
     setWebHeroLoaded(false)
     setSliderMounted(false)
-  }, [firstImg?.url])
+    tdTrace('hero:swapReset')
+  }, [firstImg?.url, tdTrace])
 
   // After webHeroLoaded triggers Slider mount, wait briefly then hide overlay
   useEffect(() => {
@@ -407,10 +444,21 @@ function TravelHeroSectionInner({
     return () => clearTimeout(t)
   }, [webHeroLoaded])
 
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (webHeroLoaded) tdTrace('hero:webHeroLoaded')
+  }, [webHeroLoaded, tdTrace])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (sliderMounted) tdTrace('hero:overlayHidden')
+  }, [sliderMounted, tdTrace])
+
   const handleWebHeroLoad = useCallback(() => {
     if (Platform.OS === 'web') setWebHeroLoaded(true)
+    tdTrace('hero:lcpImg:onLoad')
     onFirstImageLoad()
-  }, [onFirstImageLoad])
+  }, [onFirstImageLoad, tdTrace])
 
   const quickJumpLinks = useMemo(() => {
     return HERO_QUICK_JUMP_KEYS.map((key) => sectionLinks.find((link) => link.key === key)).filter(

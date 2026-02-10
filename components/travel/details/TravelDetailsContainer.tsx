@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -134,6 +135,39 @@ export default function TravelDetailsContainer() {
   // Keep skeleton mounted briefly and fade it out (no layout collapse).
   const [skeletonPhase, setSkeletonPhase] = useState<'loading' | 'fading' | 'hidden'>('loading')
 
+  const tdTraceEnabled =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as any).__METRAVEL_TD_TRACE === true)
+
+  const tdTraceStartRef = useRef<number | null>(null)
+
+  const tdTrace = useCallback(
+    (event: string, data?: any) => {
+      if (!tdTraceEnabled) return
+      try {
+        const perf = (window as any).performance
+        const now = typeof perf?.now === 'function' ? perf.now() : Date.now()
+
+        const start =
+          tdTraceStartRef.current ??
+          (typeof perf?.now === 'function' ? perf.now() : now)
+        tdTraceStartRef.current = start
+
+        const delta = Math.round(now - start)
+        // eslint-disable-next-line no-console
+        console.log(`[TD] +${delta}ms ${event}`, data ?? '')
+
+        if (typeof perf?.mark === 'function') {
+          perf.mark(`TD:${event}`)
+        }
+      } catch {
+        // noop
+      }
+    },
+    [tdTraceEnabled]
+  )
+
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
   const travelDetails = useTravelDetails({
     isMobile,
@@ -141,7 +175,7 @@ export default function TravelDetailsContainer() {
     startTransition,
   })
 
-  const { travel, isError, error, refetch, slug, isMissingParam } = travelDetails.data
+  const { travel, isLoading, isError, error, refetch, slug, isMissingParam } = travelDetails.data
   const { contentHorizontalPadding, sideMenuPlatformStyles } = travelDetails.layout
   const { anchors, scrollTo, scrollRef, activeSection, setActiveSection, forceOpenKey } =
     travelDetails.navigation
@@ -151,16 +185,63 @@ export default function TravelDetailsContainer() {
     travelDetails.scroll
 
   useEffect(() => {
+    tdTrace('container:mount')
+    return () => tdTrace('container:unmount')
+  }, [tdTrace])
+
+  useEffect(() => {
+    tdTrace(`skeleton:${skeletonPhase}`)
+  }, [skeletonPhase, tdTrace])
+
+  useEffect(() => {
+    tdTrace(isMissingParam ? 'data:missing-param' : isError ? 'data:error' : travel ? 'data:ready' : 'data:loading', {
+      hasTravel: Boolean(travel),
+      isLoading,
+      isError,
+      slug,
+      travelId: travel?.id,
+    })
+  }, [isMissingParam, isError, travel, isLoading, slug, tdTrace])
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    tdTrace(lcpLoaded ? 'hero:lcpLoaded' : 'hero:lcpPending')
+  }, [lcpLoaded, tdTrace])
+
+  useEffect(() => {
     if (Platform.OS !== 'web') return
     if (!travel) {
       setSkeletonPhase('loading')
       return
     }
 
-    // Let content paint first, then fade skeleton out, then unmount.
-    setSkeletonPhase('fading')
-    const t = setTimeout(() => setSkeletonPhase('hidden'), 220)
-    return () => clearTimeout(t)
+    let cancelled = false
+    let raf1: number | null = null
+    let raf2: number | null = null
+    let t: any = null
+
+    const fade = () => {
+      if (cancelled) return
+      setSkeletonPhase('fading')
+      t = setTimeout(() => {
+        if (!cancelled) setSkeletonPhase('hidden')
+      }, 220)
+    }
+
+    if (typeof requestAnimationFrame === 'function') {
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(fade)
+      })
+    } else {
+      fade()
+    }
+
+    return () => {
+      cancelled = true
+      if (raf1 != null) cancelAnimationFrame(raf1)
+      if (raf2 != null) cancelAnimationFrame(raf2)
+      if (t) clearTimeout(t)
+    }
   }, [travel])
 
   const sectionLinks = useMemo(() => buildTravelSectionLinks(travel), [travel]);
