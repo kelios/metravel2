@@ -46,6 +46,7 @@ const SENDPASSWORD = `${URLAPI}/user/sendpassword/`;
 
 export const loginApi = async (email: string, password: string): Promise<{
     token: string;
+    refresh?: string;
     name: string;
     email: string;
     id: string | number;
@@ -80,6 +81,7 @@ export const loginApi = async (email: string, password: string): Promise<{
 
         const json = await safeJsonParse<{
             token?: string;
+            refresh?: string;
             name?: string;
             email?: string;
             id?: string | number;
@@ -253,6 +255,9 @@ export const registration = async (values: FormValues): Promise<string | { ok: b
 
         if (jsonResponse.token) {
             await setSecureItem('userToken', jsonResponse.token);
+            if ((jsonResponse as any).refresh) {
+                await setSecureItem('refreshToken', (jsonResponse as any).refresh);
+            }
             await AsyncStorage.setItem('userName', jsonResponse.name || '');
         }
 
@@ -280,6 +285,9 @@ export const confirmAccount = async (hash: string) => {
 
         if (jsonResponse.userToken) {
             await setSecureItem('userToken', jsonResponse.userToken);
+            if ((jsonResponse as any).refreshToken) {
+                await setSecureItem('refreshToken', (jsonResponse as any).refreshToken);
+            }
             await AsyncStorage.setItem('userName', jsonResponse.userName || '');
         }
         return jsonResponse;

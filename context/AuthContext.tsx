@@ -4,6 +4,7 @@
 // Вся логика (login, logout, checkAuthentication, epoch guard) живёт в authStore.
 
 import { createContext, FC, ReactNode, useContext, useEffect, useMemo } from 'react';
+import { Platform } from 'react-native';
 import { setAuthInvalidationHandler } from '@/api/client';
 import { useAuthStore, type AuthStore } from '@/stores/authStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -38,6 +39,23 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
             setAuthInvalidationHandler(null);
         };
     }, [invalidateAuthState]);
+
+    // Cross-tab sync: when another tab updates/clears the token in localStorage,
+    // re-check authentication so this tab doesn't use a stale or missing token.
+    useEffect(() => {
+        if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === 'secure_userToken') {
+                if (!e.newValue) {
+                    invalidateAuthState();
+                } else {
+                    checkAuthentication();
+                }
+            }
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, [checkAuthentication, invalidateAuthState]);
 
     // Provider value is a stable sentinel — useAuth reads directly from Zustand.
     const value = useMemo(() => ({} as AuthStore), []);

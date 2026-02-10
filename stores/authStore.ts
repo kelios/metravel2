@@ -151,6 +151,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             if (epochAtStart !== authEpoch) return false;
 
             await setSecureItem('userToken', userData.token);
+            if (userData.refresh) {
+                await setSecureItem('refreshToken', userData.refresh);
+            }
 
             let profile: any = null;
             try {

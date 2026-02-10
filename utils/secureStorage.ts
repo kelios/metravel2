@@ -11,6 +11,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const STORAGE_PREFIX = 'secure_';
 const ENCRYPTION_KEY = 'metravel_encryption_key_v1'; // В production должен быть уникальным для каждого пользователя
 
+// Prefix marker to distinguish encrypted values from legacy plaintext.
+// Without this, simpleDecrypt could accidentally XOR-decode a plaintext
+// token that happens to be valid base64, producing a corrupted token
+// that silently fails authentication on the backend.
+const ENCRYPTED_PREFIX = 'enc1:';
+
 /**
  * Простое шифрование для web (XOR шифрование - не для production безопасности, но лучше чем открытый текст)
  * В production рекомендуется использовать Web Crypto API или библиотеку типа crypto-js
@@ -27,7 +33,7 @@ function simpleEncrypt(text: string, key: string): string {
   for (let i = 0; i < text.length; i++) {
     result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
   }
-  return btoa(result); // Base64 encode
+  return ENCRYPTED_PREFIX + btoa(result); // Prefix + Base64 encode
 }
 
 function simpleDecrypt(encrypted: string, key: string): string {
@@ -37,8 +43,15 @@ function simpleDecrypt(encrypted: string, key: string): string {
     return '';
   }
 
+  // Only attempt decryption if the value was encrypted by us (has prefix).
+  // Legacy plaintext values (from older builds or SSR fallback) are returned as-is.
+  if (!encrypted.startsWith(ENCRYPTED_PREFIX)) {
+    return encrypted;
+  }
+
   try {
-    const text = atob(encrypted); // Base64 decode
+    const payload = encrypted.slice(ENCRYPTED_PREFIX.length);
+    const text = atob(payload); // Base64 decode
     let result = '';
     for (let i = 0; i < text.length; i++) {
       result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
@@ -97,15 +110,29 @@ export async function getSecureItem(key: string): Promise<string | null> {
         const encrypted = window.localStorage.getItem(`${STORAGE_PREFIX}${key}`);
         if (!encrypted) return null;
         const decrypted = simpleDecrypt(encrypted, ENCRYPTION_KEY);
-        // Backward compatibility: older builds could store plaintext values.
-        // If decryption fails (returns empty string), fall back to the raw stored value.
-        return decrypted || encrypted;
+        if (!decrypted) return null;
+        // Re-encrypt legacy plaintext values so future reads use the safe path.
+        if (!encrypted.startsWith(ENCRYPTED_PREFIX) && typeof btoa === 'function') {
+          try {
+            const reEncrypted = simpleEncrypt(decrypted, ENCRYPTION_KEY);
+            window.localStorage.setItem(`${STORAGE_PREFIX}${key}`, reEncrypted);
+          } catch { /* best-effort migration */ }
+        }
+        return decrypted;
       } else {
         // Fallback на AsyncStorage
         const encrypted = await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`);
         if (!encrypted) return null;
         const decrypted = simpleDecrypt(encrypted, ENCRYPTION_KEY);
-        return decrypted || encrypted;
+        if (!decrypted) return null;
+        // Re-encrypt legacy plaintext values
+        if (!encrypted.startsWith(ENCRYPTED_PREFIX)) {
+          try {
+            const reEncrypted = simpleEncrypt(decrypted, ENCRYPTION_KEY);
+            await AsyncStorage.setItem(`${STORAGE_PREFIX}${key}`, reEncrypted);
+          } catch { /* best-effort migration */ }
+        }
+        return decrypted;
       }
     } else {
       // Для native используем SecureStore
