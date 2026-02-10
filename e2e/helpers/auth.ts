@@ -128,6 +128,35 @@ export async function ensureAuthedStorageFallback(page: Page): Promise<void> {
   }, { encrypted });
 }
 
+/**
+ * Mocks API endpoints that are called during auth hydration (e.g. fetchUserProfile)
+ * to prevent 401 responses from invalidating the fake auth state.
+ * Call this BEFORE navigating to any page that requires auth.
+ */
+export async function mockFakeAuthApis(page: Page): Promise<void> {
+  await page.route('**/api/user/*/profile/**', (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 1,
+          user: 1,
+          first_name: 'E2E',
+          last_name: 'User',
+          avatar: null,
+        }),
+      });
+    }
+    return route.continue();
+  });
+
+  // Mock token refresh to prevent 401 cascade
+  await page.route('**/api/user/refresh/**', (route) => {
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access: 'fake-access' }) });
+  });
+}
+
 export async function waitForAuth(page: Page, timeoutMs = 5000): Promise<boolean> {
   try {
     await page.waitForFunction(

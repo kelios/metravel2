@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies, gotoWithRetry, assertNoHorizontalScroll } from './helpers/navigation';
-import { ensureAuthedStorageFallback } from './helpers/auth';
+import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import type { Page } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
@@ -167,6 +167,7 @@ test.describe('Messages @smoke', () => {
   test('authenticated user sees messages page', async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
     await gotoWithRetry(page, '/messages');
 
@@ -186,6 +187,7 @@ test.describe('Messages @smoke', () => {
   test('messages page has noindex meta', async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
     await gotoWithRetry(page, '/messages');
     await waitForMessagesPage(page);
@@ -199,6 +201,7 @@ test.describe('Messages @smoke', () => {
   test('deep-link with userId opens chat view', async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
     await gotoWithRetry(page, '/messages?userId=2');
 
@@ -221,6 +224,7 @@ test.describe('Messages @smoke', () => {
   test('no horizontal scroll on messages page', async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
     await gotoWithRetry(page, '/messages');
     await waitForMessagesPage(page);
@@ -237,6 +241,7 @@ test.describe('Messages — Thread List', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
   });
 
@@ -317,6 +322,7 @@ test.describe('Messages — Chat View', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
   });
 
@@ -454,6 +460,7 @@ test.describe('Messages — Deep Links', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
   });
 
@@ -515,6 +522,7 @@ test.describe('Messages — New Conversation', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
   });
 
@@ -636,6 +644,7 @@ test.describe('Messages — Desktop Layout', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
   });
 
@@ -708,6 +717,7 @@ test.describe('Messages — Mobile Layout', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
   });
 
@@ -796,6 +806,7 @@ test.describe('Messages — Accessibility', () => {
   test.beforeEach(async ({ page }) => {
     await preacceptCookies(page);
     await mockMessagingApi(page);
+    await mockFakeAuthApis(page);
     await ensureAuthedStorageFallback(page);
   });
 

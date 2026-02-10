@@ -1,6 +1,6 @@
 import { test as base, expect, type Page, type BrowserContext } from '@playwright/test';
 import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
-import { simpleEncrypt } from './helpers/auth';
+import { simpleEncrypt, mockFakeAuthApis } from './helpers/auth';
 
 // ---------------------------------------------------------------------------
 // Two-user conversation E2E test
@@ -178,10 +178,12 @@ base.describe.serial('Messages — Two-user conversation', () => {
     // Seed auth and install mocks for each user
     await seedAuth(page1, USER1);
     await installMocks(page1, USER1);
+    await mockFakeAuthApis(page1);
     await preacceptCookies(page1);
 
     await seedAuth(page2, USER2);
     await installMocks(page2, USER2);
+    await mockFakeAuthApis(page2);
     await preacceptCookies(page2);
   });
 

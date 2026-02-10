@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { mockFakeAuthApis } from './helpers/auth';
 
 test.describe('Gallery: delete broken image (404)', () => {
   test('shows delete UI for 404 image and removes card after confirm', async ({ page, baseURL }) => {
@@ -111,6 +112,7 @@ test.describe('Gallery: delete broken image (404)', () => {
       });
     }
 
+    await mockFakeAuthApis(page);
     await page.goto('/travel/new', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
     // Recover draft if dialog appears (it can mount async after initial render).
