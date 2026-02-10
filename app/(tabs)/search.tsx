@@ -20,11 +20,16 @@ const isClient = typeof window !== 'undefined';
 // Prefetch default travels data alongside lazy bundle load to avoid waterfall
 const DEFAULT_QUERY_KEY = ['travels', { perPage: PER_PAGE, search: '', params: JSON.stringify({ moderation: 1, publish: 1 }) }];
 if (isWeb && isClient) {
-  queryClient.prefetchInfiniteQuery({
+  const doPrefetch = () => queryClient.prefetchInfiniteQuery({
     queryKey: DEFAULT_QUERY_KEY,
     queryFn: ({ pageParam = 0 }) => fetchTravels(pageParam, PER_PAGE, '', { moderation: 1, publish: 1 }),
     initialPageParam: 0,
   });
+  if ('requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(doPrefetch, { timeout: 2000 });
+  } else {
+    setTimeout(doPrefetch, 100);
+  }
 }
 
 const ListTravel = isWeb && isClient
@@ -72,7 +77,7 @@ function SearchScreen() {
                     ogType="website"
                 />
             )}
-            <View style={styles.container}>
+            <View style={styles.container} testID="search-container">
                 <ErrorBoundary
                     fallback={
                         <View style={styles.errorContainer}>

@@ -62,7 +62,7 @@ function Home() {
 
     const mobile = isMobileRef.current;
     const fallbackMs = Platform.OS === 'web'
-      ? (mobile ? 150 : 50)
+      ? (mobile ? 500 : 100)
       : (mobile ? 300 : 100);
     const timer = setTimeout(show, fallbackMs);
 
