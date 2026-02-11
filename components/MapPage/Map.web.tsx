@@ -739,7 +739,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, []);
 
   const renderLoader = useCallback(
-    (message: string) => (
+    (_message: string) => (
       <View style={[styles.loader, { position: 'relative', overflow: 'hidden' }] as any}>
         {Platform.OS === 'web' && (
           <img
@@ -761,9 +761,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
                     '</linearGradient>' +
                   '</defs>' +
                   '<rect width="1200" height="900" rx="24" fill="url(%23g)" />' +
-                  '<text x="60" y="120" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto" font-size="28" font-weight="700" fill="rgba(0,0,0,0.55)">' +
-                    String(message || 'Загружаем карту…').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
-                  '</text>' +
                 '</svg>'
               )
             }
@@ -781,11 +778,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
         )}
         <View style={{ position: 'relative', zIndex: 1, alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={{ color: colors.textMuted, marginTop: 12 }}>{message}</Text>
         </View>
       </View>
     ),
-    [colors.primary, colors.textMuted, styles.loader]
+    [colors.primary, styles.loader]
   );
 
   // Safe center calculation with strict validation
@@ -878,8 +874,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const routePointsForRouting = useMemo(() => {
     if (!Array.isArray(routePoints) || routePoints.length === 0) return [] as [number, number][];
 
-    const normalized = routePoints.map((p) => normalizeLngLatWithHint(p));
-    return normalized;
+    return routePoints.map((p) => normalizeLngLatWithHint(p));
   }, [normalizeLngLatWithHint, routePoints]);
 
   const hasWarnedInvalidCircleRef = useRef(false);
@@ -997,7 +992,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
                   '</linearGradient>' +
                 '</defs>' +
                 '<rect width="1200" height="900" rx="24" fill="url(%23g)" />' +
-                '<text x="60" y="120" font-family="system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto" font-size="28" font-weight="700" fill="rgba(0,0,0,0.55)">Загружаем карту…</text>' +
               '</svg>'
             )
           }

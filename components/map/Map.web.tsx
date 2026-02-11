@@ -335,7 +335,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   // Очистка Leaflet контейнера при размонтировании, чтобы избежать "Map container is already initialized"
   // Do NOT call map.remove() here — react-leaflet's MapContainer handles its own
-  // cleanup via its unmount effect, and our leafletFix.ts patch makes that safe.
+  // cleanup via its unmount effect, and our leafletFix.ts patch делает это безопасным.
   useEffect(() => {
     const rootEl = rootRef.current;
     const mapContainerId = mapContainerIdRef.current;
@@ -418,8 +418,8 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   }, [leafletIcons]);
 
   const renderPlaceholder = () => (
-    <View style={styles.mapContainer}>
-      <Text style={styles.placeholderText}>Загружаем карту…</Text>
+    <View style={[styles.mapContainer, styles.placeholderContainer]}>
+      <View style={styles.placeholderSkeleton} />
     </View>
   );
 
@@ -947,10 +947,17 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     minHeight: 400,
   },
-  placeholderText: {
-    color: colors.textMuted,
-    fontSize: 16,
-    textAlign: 'center',
-    padding: 20,
+  placeholderContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderSkeleton: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.border,
+    opacity: 0.9,
   },
 });

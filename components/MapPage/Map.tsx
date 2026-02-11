@@ -47,7 +47,6 @@ export default function Map(props: any) {
         ) : (
           <ActivityIndicator size="large" />
         )}
-        <Text style={{ marginTop: 12, color: colors.textMuted }}>Загружаем карту…</Text>
       </View>
     )
   }

@@ -104,9 +104,10 @@ describe('ExportScreen', () => {
       userId: null,
     } as any);
 
-    const { queryByText, getByTestId } = renderExport(queryClient);
+    const { queryByText, getByText } = renderExport(queryClient);
 
-    expect(getByTestId('list-travel')).toBeTruthy();
+    // Пока userId нет — показываем загрузку и не показываем empty state
+    expect(getByText('Загрузка...')).toBeTruthy();
     expect(
       queryByText('Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие')
     ).toBeNull();

@@ -91,7 +91,6 @@ const ToggleableMapSection = ({
                                 ) : (
                                     <ActivityIndicator color={colors.primary} />
                                 )}
-                                <Text style={styles.loadingText}>{loadingLabel}</Text>
                             </View>
                         ) : (
                             children

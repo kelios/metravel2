@@ -353,13 +353,17 @@ describe('MapPageComponent (Map.web.tsx)', () => {
   })
 
   it('renders loading state initially', async () => {
-    const { getByText } = renderWithProviders(<MapPageComponent {...defaultProps} />)
-    expect(getByText(/(Loading map|Загрузка карты)/i)).toBeTruthy()
+    const { getByTestId } = renderWithProviders(<MapPageComponent {...defaultProps} />)
+
+    // Лоадер на старте — это overlay, не текст
+    expect(getByTestId('map-leaflet-wrapper')).toBeTruthy()
+    expect(getByTestId('map-loading-overlay')).toBeTruthy()
+
     await act(async () => {})
   })
 
   it('renders map container on web and hides loading overlay', async () => {
-    const { getByTestId, queryByText } = renderWithProviders(
+    const { getByTestId, queryByTestId } = renderWithProviders(
       <MapPageComponent {...defaultProps} />
     )
     await act(async () => {})
@@ -368,7 +372,7 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     expect(mapContainer).toBeTruthy()
 
     await waitFor(() => {
-      expect(queryByText(/(Loading map|Загрузка карты)/i)).toBeNull()
+      expect(queryByTestId('map-loading-overlay')).toBeNull()
     })
   })
 

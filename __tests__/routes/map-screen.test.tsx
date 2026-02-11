@@ -220,17 +220,15 @@ describe('MapScreen (map tab)', () => {
   })
 
   it('renders map placeholder and filters panel', async () => {
-    const { getByText, getByTestId } = renderWithClient()
+    const { getByTestId } = renderWithClient()
 
-    // Сначала отображается плейсхолдер карты
-    expect(getByText('Загружаем карту…')).toBeTruthy()
+    // На старте показываем визуальный лоадер карты (overlay)
+    expect(getByTestId('map-loading-overlay')).toBeTruthy()
 
-    // На mobile панель закрыта по умолчанию — открываем, чтобы увидеть фильтры
     act(() => {
       useMapPanelStore.getState().requestOpen()
     })
 
-    // Ждём, пока смонтируется правая панель с фильтрами
     await waitFor(() => {
       expect(getByTestId('filters-panel')).toBeTruthy()
     })
