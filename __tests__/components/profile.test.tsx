@@ -76,6 +76,14 @@ jest.mock('@/api/travelsApi', () => ({
     { id: 102, title: 'My Travel 2' },
     { id: 103, title: 'My Travel 3' },
   ]),
+  unwrapMyTravelsPayload: (payload: any) => {
+    if (!payload) return { items: [], total: 0 };
+    if (Array.isArray(payload)) return { items: payload, total: payload.length };
+    if (Array.isArray(payload?.data)) return { items: payload.data, total: payload.data.length };
+    if (Array.isArray(payload?.results)) return { items: payload.results, total: Number(payload.count ?? payload.total ?? payload.results.length) || payload.results.length };
+    if (Array.isArray(payload?.items)) return { items: payload.items, total: Number(payload.total ?? payload.count ?? payload.items.length) || payload.items.length };
+    return { items: [], total: Number(payload?.total ?? payload?.count ?? 0) || 0 };
+  },
 }));
 
 jest.mock('@/utils/storageBatch', () => ({
@@ -212,8 +220,7 @@ describe('ProfileScreen', () => {
     expect(await findByText('Редактировать')).toBeTruthy();
 
     await waitFor(() => {
-      // В тестовом UI «Мои» сейчас не подтягиваются — ожидаем 0
-      expect(getByLabelText('Мои: 0')).toBeTruthy();
+      expect(getByLabelText('Мои: 3')).toBeTruthy();
       expect(getByLabelText('Избранное: 2')).toBeTruthy();
       expect(getByLabelText('История: 5')).toBeTruthy();
     });
@@ -246,8 +253,8 @@ describe('ProfileScreen', () => {
 
     const { getAllByText, findByText, findByLabelText } = renderProfile();
 
-    // По умолчанию активна вкладка "Мои" и там empty-state
-    expect(await findByText('Нет путешествий')).toBeTruthy();
+    // По умолчанию активна вкладка "Мои" и показываются путешествия пользователя
+    expect(await findByLabelText('My Travel 1')).toBeTruthy();
 
     const favCandidates = getAllByText('Избранное');
     fireEvent.press(favCandidates[favCandidates.length - 1]);
