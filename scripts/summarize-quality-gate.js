@@ -4,6 +4,11 @@ const path = require('path')
 const eslintPathArg = process.argv[2] || 'test-results/eslint-results.json'
 const jestPathArg = process.argv[3] || 'test-results/jest-smoke-results.json'
 const strictMissing = process.argv.includes('--fail-on-missing')
+const jsonOutputFlagIndex = process.argv.indexOf('--json-output')
+const jsonOutputPathArg =
+  jsonOutputFlagIndex >= 0 && process.argv[jsonOutputFlagIndex + 1]
+    ? process.argv[jsonOutputFlagIndex + 1]
+    : ''
 const lintJobResult = String(process.env.LINT_JOB_RESULT || '').trim().toLowerCase()
 const smokeJobResult = String(process.env.SMOKE_JOB_RESULT || '').trim().toLowerCase()
 const smokeDurationBudgetSeconds = Number(process.env.SMOKE_DURATION_BUDGET_SECONDS || 0)
@@ -114,6 +119,21 @@ const recommendationAnchorByClass = {
 const recommendationId = recommendationByClass[failureClass] || 'QG-000'
 const recommendationAnchor = recommendationAnchorByClass[failureClass] || 'troubleshooting-by-failure-class'
 
+const qualitySnapshot = {
+  overallOk,
+  failureClass,
+  recommendationId: overallOk ? null : recommendationId,
+  lintOk: eslintOk,
+  smokeOk: jestOk,
+  lintJobResult: lintJobResult || 'unknown',
+  smokeJobResult: smokeJobResult || 'unknown',
+  smokeDurationSeconds,
+  smokeDurationBudgetSeconds,
+  smokeDurationOverBudget,
+  budgetBlocking,
+  inconsistencies,
+}
+
 print('## Quality Gate Summary')
 print('')
 print(`- Overall Quality Gate: ${overallOk ? 'PASS' : 'FAIL'}`)
@@ -122,6 +142,17 @@ if (!overallOk) {
   print(`- Recommendation ID: ${recommendationId}`)
   print(`- See: docs/TESTING.md#${recommendationAnchor} (${recommendationId})`)
   print(`- QG quick map: ${recommendationQuickMap}`)
+}
+
+if (jsonOutputPathArg) {
+  const outputPath = path.resolve(process.cwd(), jsonOutputPathArg)
+  const outputDir = path.dirname(outputPath)
+  try {
+    fs.mkdirSync(outputDir, { recursive: true })
+    fs.writeFileSync(outputPath, JSON.stringify(qualitySnapshot, null, 2), 'utf8')
+  } catch (error) {
+    print(`- Warning: failed to write quality snapshot to ${jsonOutputPathArg}: ${String(error)}`)
+  }
 }
 print(`- Lint: ${eslintOk ? 'PASS' : 'FAIL'}${eslint === null ? ' (report missing)' : ''}`)
 print(`- Smoke tests: ${jestOk ? 'PASS' : 'FAIL'}${jest === null ? ' (report missing)' : ''}`)

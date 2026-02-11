@@ -46,6 +46,7 @@ describe('summarize-quality-gate script', () => {
   let jestFailPath: string;
   let jestSlowPath: string;
   let missingPath: string;
+  let summaryJsonPath: string;
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-gate-'));
@@ -55,6 +56,7 @@ describe('summarize-quality-gate script', () => {
     jestFailPath = path.join(tempDir, 'jest-fail.json');
     jestSlowPath = path.join(tempDir, 'jest-slow.json');
     missingPath = path.join(tempDir, 'missing.json');
+    summaryJsonPath = path.join(tempDir, 'quality-summary.json');
 
     writeJson(eslintPassPath, [{ filePath: '/tmp/a.ts', errorCount: 0, warningCount: 0 }]);
     writeJson(eslintFailPath, [{ filePath: '/tmp/a.ts', errorCount: 1, warningCount: 0 }]);
@@ -90,6 +92,20 @@ describe('summarize-quality-gate script', () => {
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Overall Quality Gate: PASS');
     expect(result.stdout).not.toContain('Failure Class:');
+  });
+
+  it('writes machine-readable quality snapshot when --json-output is provided', () => {
+    const result = runSummary(
+      eslintFailPath,
+      jestPassPath,
+      ['--fail-on-missing', '--json-output', summaryJsonPath],
+    );
+    expect(result.status).toBe(0);
+
+    const snapshot = JSON.parse(fs.readFileSync(summaryJsonPath, 'utf8'));
+    expect(snapshot.overallOk).toBe(false);
+    expect(snapshot.failureClass).toBe('lint_only');
+    expect(snapshot.recommendationId).toBe('QG-003');
   });
 
   it('classifies missing report as infra_artifact and fails in strict mode', () => {

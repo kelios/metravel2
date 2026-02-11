@@ -149,6 +149,9 @@ Jobs:
 - `lint` (gating): runs `yarn lint:ci`, publishes summary + `eslint-results` artifact.
 - `smoke-critical` (gating): runs `yarn test:smoke:critical:ci`, publishes summary + `jest-smoke-results` artifact.
 - `quality-summary` (aggregation): downloads both artifacts and publishes one combined quality summary.
+  - For failed PR gates, also prints a ready-to-copy incident snippet into job summary.
+  - Also writes a machine-readable snapshot at `test-results/quality-summary.json` (for downstream CI steps).
+  - Uploads `quality-summary` artifact with this snapshot for post-run diagnostics.
 
 Policy:
 
@@ -188,18 +191,118 @@ yarn smoke:baseline:recommend
    - CLI alternative:
 
 ```bash
+# Preflight
+gh auth status
+gh repo view --json nameWithOwner
+
+# Update variable
 gh variable set SMOKE_DURATION_PREVIOUS_SECONDS --body "<recommended value>"
 ```
 
    - Example:
 
 ```bash
+gh auth status
+gh repo view --json nameWithOwner
 gh variable set SMOKE_DURATION_PREVIOUS_SECONDS --body "18.6"
 ```
 5. Save and verify on next `CI Smoke` run:
    - `Quality Gate Summary` should show `Smoke trend: ... vs previous <value>s`.
 6. Cadence:
    - Update weekly, or right after significant changes to smoke test scope.
+
+Common `gh` errors:
+
+- `not logged in`
+  - Check: `gh auth status`
+  - Fix: `gh auth login`
+
+- `resource not accessible by integration`
+  - Usually token/SSO/repo access issue.
+  - Check:
+    - `gh auth status`
+    - `gh repo view --json nameWithOwner`
+  - Fix:
+    - refresh auth (`gh auth login`)
+    - confirm you have write access to repository variables.
+
+- `insufficient OAuth scopes`
+  - Check current scopes via `gh auth status`.
+  - Fix:
+    - re-auth with required scopes (for repo variables, ensure repo/admin access as per org policy)
+    - if your org uses SSO, ensure token/session is authorized for the org.
+
+Owner handoff:
+
+- Baseline owner:
+  - Responsible for updating `SMOKE_DURATION_PREVIOUS_SECONDS` on schedule.
+  - Recommended SLA: weekly update or within 1 business day after major smoke scope change.
+
+- CI exception approver:
+  - Reviews `CI Exception` block in PR when `Failure Class != pass`.
+  - Confirms business reason, risk statement, rollback plan, owner, and deadline are concrete.
+
+- Follow-up accountability:
+  - The `Owner` field in PR exception is responsible for delivering the fix by `Fix deadline`.
+  - If deadline is missed, reopen triage and re-evaluate merge risk.
+
+Escalation path:
+
+- Repeated `inconsistent_state` (`QG-002`)
+  - Trigger: 2+ occurrences within 7 days.
+  - Escalate to: CI/workflow maintainer + repository admin.
+  - Target response time: within 1 business day.
+  - First actions:
+    - inspect artifact upload/download steps
+    - inspect runner/job cancellation/timeouts
+    - verify job result propagation in `quality-summary`
+
+- Persistent `performance_budget` (`QG-006`)
+  - Trigger: strict budget failure on `main` in 2+ consecutive runs.
+  - Escalate to: test owner + platform/infra owner.
+  - Target response time: same business day.
+  - First actions:
+    - identify slowest suites/tests in smoke scope
+    - split or optimize heavy tests
+    - reassess budget only with explicit approval and note in PR/issue
+
+- Exception process escalation
+  - Trigger: missing owner/deadline or repeated deadline misses.
+  - Escalate to: engineering lead for decision on merge freeze vs rollback.
+  - Target response time: within 1 business day.
+
+Incident template (minimum):
+
+Use this template in PR comment, issue, or incident log when escalation is triggered.
+
+```md
+### CI Smoke Incident
+- Date (UTC): YYYY-MM-DD HH:MM
+- Workflow run: <link>
+- Branch / PR: <branch-or-pr-link>
+- Failure Class: <infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget>
+- Recommendation ID: <QG-001..QG-006>
+- Impact: <what is blocked / affected>
+- Owner: <person-or-team>
+- ETA: <expected resolution time>
+- Immediate action taken: <one-line summary>
+- Follow-up required: <yes/no + short note>
+```
+
+Generator helper:
+
+```bash
+# Print template with placeholders
+yarn ci:incident:template
+
+# Example with prefilled fields
+yarn ci:incident:template -- \
+  --failure-class inconsistent_state \
+  --recommendation-id QG-002 \
+  --owner "CI Team" \
+  --impact "Merge blocked" \
+  --eta "2026-02-12 12:00 UTC"
+```
 
 Local reproduction:
 

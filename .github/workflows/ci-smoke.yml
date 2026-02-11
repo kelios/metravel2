@@ -115,7 +115,48 @@ jobs:
           SMOKE_DURATION_BUDGET_SECONDS: "30"
           SMOKE_DURATION_PREVIOUS_SECONDS: ${{ vars.SMOKE_DURATION_PREVIOUS_SECONDS }}
           SMOKE_DURATION_BUDGET_STRICT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        run: node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing
+        run: node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json
+
+      - name: Upload quality summary snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-summary
+          path: test-results/quality-summary.json
+          if-no-files-found: ignore
+
+      - name: Publish incident snippet (PR, when gate failed)
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success')
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          SMOKE_RESULT: ${{ needs.smoke-critical.result }}
+        run: |
+          FAILURE_CLASS=$(node -e 'const fs=require("fs");const p="test-results/quality-summary.json";if(fs.existsSync(p)){const o=JSON.parse(fs.readFileSync(p,"utf8"));process.stdout.write(String(o.failureClass||""));}')
+          RECOMMENDATION_ID=$(node -e 'const fs=require("fs");const p="test-results/quality-summary.json";if(fs.existsSync(p)){const o=JSON.parse(fs.readFileSync(p,"utf8"));process.stdout.write(String(o.recommendationId||""));}')
+
+          if [ -z "$FAILURE_CLASS" ]; then
+            FAILURE_CLASS="mixed"
+            if [ "$LINT_RESULT" != "success" ] && [ "$SMOKE_RESULT" = "success" ]; then
+              FAILURE_CLASS="lint_only"
+            elif [ "$LINT_RESULT" = "success" ] && [ "$SMOKE_RESULT" != "success" ]; then
+              FAILURE_CLASS="smoke_only"
+            fi
+          fi
+
+          if [ -z "$RECOMMENDATION_ID" ]; then
+            RECOMMENDATION_ID="<from Quality Gate Summary>"
+          fi
+
+          node scripts/generate-ci-incident.js \
+            --failure-class "$FAILURE_CLASS" \
+            --recommendation-id "$RECOMMENDATION_ID" \
+            --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --branch-pr "${{ github.event.pull_request.html_url }}" \
+            --impact "<fill>" \
+            --owner "<fill>" \
+            --eta "<fill>" \
+            --immediate-action "Initial triage started" \
+            --follow-up "yes" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Validate PR CI exception block
         if: always() && github.event_name == 'pull_request'
