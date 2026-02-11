@@ -15,11 +15,6 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 
-// Leaflet/react-leaflet через Metro (без CDN)
-import Leaflet from 'leaflet';
-import * as ReactLeaflet from 'react-leaflet';
-import '@/utils/leafletFix';
-
 type StepPoint = { lat: number; lng: number; title?: string };
 
 type Mods = {
@@ -154,18 +149,25 @@ function QuestFullMap({
         let cancelled = false;
         (async () => {
             try {
+                await import('@/utils/leafletFix');
                 const { ensureLeafletCss } = await import('@/utils/ensureLeafletCss');
                 await ensureLeafletCss();
+                const [leafletModule, reactLeafletModule] = await Promise.all([
+                    import('leaflet'),
+                    import('react-leaflet'),
+                ]);
+                const L = leafletModule.default ?? leafletModule;
+                const RL = reactLeafletModule as any;
                 if (cancelled) return;
                 setMods({
-                    L: Leaflet,
-                    MapContainer: (ReactLeaflet as any).MapContainer,
-                    TileLayer: (ReactLeaflet as any).TileLayer,
-                    Marker: (ReactLeaflet as any).Marker,
-                    Polyline: (ReactLeaflet as any).Polyline,
-                    Popup: (ReactLeaflet as any).Popup,
-                    FeatureGroup: (ReactLeaflet as any).FeatureGroup,
-                    useMap: (ReactLeaflet as any).useMap,
+                    L,
+                    MapContainer: RL.MapContainer,
+                    TileLayer: RL.TileLayer,
+                    Marker: RL.Marker,
+                    Polyline: RL.Polyline,
+                    Popup: RL.Popup,
+                    FeatureGroup: RL.FeatureGroup,
+                    useMap: RL.useMap,
                 });
             } catch (error) {
                 console.error('Error loading map modules:', error);

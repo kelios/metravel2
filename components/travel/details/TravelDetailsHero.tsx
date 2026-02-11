@@ -383,7 +383,8 @@ function TravelHeroSectionInner({
     return parts.join(' \u00B7 ')
   }, [travel])
 
-  const firstRaw = travel?.travel_image_thumb_url || travel?.gallery?.[0]
+  // Keep hero LCP source aligned with Slider first frame to avoid visible swap flicker.
+  const firstRaw = travel?.gallery?.[0] || travel?.travel_image_thumb_url
   const firstImg = useMemo(() => {
     if (!firstRaw) return null
     if (typeof firstRaw === 'string') return { url: firstRaw }
@@ -429,15 +430,29 @@ function TravelHeroSectionInner({
   // Keep LCP overlay visible until the Slider's first image actually loads
   const [sliderMounted, setSliderMounted] = useState(false)
   const [sliderImageReady, setSliderImageReady] = useState(false)
+  const webHeroLoadNotifiedRef = useRef(false)
+  const sliderLoadNotifiedRef = useRef(false)
+  const lastTravelIdRef = useRef<number | string | null>(travel?.id ?? null)
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    // If we get a new travel/first image, reset swap state.
-    setWebHeroLoaded(false)
-    setSliderMounted(false)
-    setSliderImageReady(false)
-    tdTrace('hero:swapReset')
-  }, [firstImg?.url, tdTrace])
+    const nextTravelId = (travel?.id as any) ?? null
+    const prevTravelId = lastTravelIdRef.current
+    const isFirstRun = prevTravelId === null
+
+    if (!isFirstRun && prevTravelId !== nextTravelId) {
+      // Reset swap state only when route/travel actually changes.
+      // URL normalization of the same image should not trigger a visual restart.
+      setWebHeroLoaded(false)
+      setSliderMounted(false)
+      setSliderImageReady(false)
+      webHeroLoadNotifiedRef.current = false
+      sliderLoadNotifiedRef.current = false
+      tdTrace('hero:swapReset')
+    }
+
+    lastTravelIdRef.current = nextTravelId
+  }, [travel?.id, tdTrace])
 
   // After Slider's first image loads, hide the LCP overlay
   useEffect(() => {
@@ -463,12 +478,16 @@ function TravelHeroSectionInner({
   }, [sliderMounted, tdTrace])
 
   const handleWebHeroLoad = useCallback(() => {
+    if (webHeroLoadNotifiedRef.current) return
+    webHeroLoadNotifiedRef.current = true
     if (Platform.OS === 'web') setWebHeroLoaded(true)
     tdTrace('hero:lcpImg:onLoad')
     onFirstImageLoad()
   }, [onFirstImageLoad, tdTrace])
 
   const handleSliderImageLoad = useCallback(() => {
+    if (sliderLoadNotifiedRef.current) return
+    sliderLoadNotifiedRef.current = true
     setSliderImageReady(true)
     tdTrace('hero:sliderImgLoaded')
   }, [tdTrace])

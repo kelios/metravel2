@@ -117,7 +117,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                 // Резервируем место ~16:9, можно поправить через style
                 return `
 <div class="yt-lite" data-yt="${vid}" style="position:relative;aspect-ratio:16/9;background:var(--color-backgroundTertiary);overflow:hidden;border-radius:8px">
-  <img src="${poster}" alt="YouTube preview" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" />
+  <img src="${poster}" alt="YouTube preview" width="1280" height="720" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" />
   <div role="button" tabindex="0" aria-label="Смотреть видео"
        style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent;cursor:pointer">
     <span style="width:68px;height:48px;background:var(--color-overlay);clip-path:polygon(20% 10%, 20% 90%, 85% 50%);"></span>

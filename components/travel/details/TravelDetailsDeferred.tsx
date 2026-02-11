@@ -1,6 +1,11 @@
 import React, { Suspense, memo, useCallback, useEffect, useState } from 'react'
 import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
+import {
+  CommentsSkeleton,
+  MapSkeleton,
+  TravelListSkeleton,
+} from '@/components/travel/TravelDetailSkeletons'
 
 import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
@@ -36,6 +41,50 @@ const CommentsSection = withLazy(() =>
 
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
+
+const DeferredMapPlaceholder = () => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
+      <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
+      <View style={{ marginTop: 12 }}>
+        <MapSkeleton />
+      </View>
+    </View>
+  )
+}
+
+const DeferredSidebarPlaceholder = () => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <>
+      <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
+        <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
+        <View style={{ marginTop: 8 }}>
+          <TravelListSkeleton count={3} />
+        </View>
+      </View>
+      <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
+        <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
+        <View style={{ marginTop: 8 }}>
+          <TravelListSkeleton count={3} />
+        </View>
+      </View>
+    </>
+  )
+}
+
+const DeferredCommentsPlaceholder = () => {
+  const styles = useTravelDetailsStyles()
+  return (
+    <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
+      <Text style={styles.sectionHeaderText}>Комментарии</Text>
+      <View style={{ marginTop: 8 }}>
+        <CommentsSkeleton />
+      </View>
+    </View>
+  )
+}
 
 export const TravelDeferredSections: React.FC<{
   travel: Travel
@@ -156,8 +205,8 @@ export const TravelDeferredSections: React.FC<{
         <MobileAuthorShareSection travel={travel} />
       )}
 
-      {canRenderMap && (
-        <Suspense fallback={null}>
+      {canRenderMap ? (
+        <Suspense fallback={<DeferredMapPlaceholder />}>
           <TravelDetailsMapSection
             travel={travel}
             anchors={anchors}
@@ -165,10 +214,12 @@ export const TravelDeferredSections: React.FC<{
             scrollToMapSection={scrollToMapSection}
           />
         </Suspense>
+      ) : (
+        <DeferredMapPlaceholder />
       )}
 
-      {canRenderSidebar && (
-        <Suspense fallback={null}>
+      {canRenderSidebar ? (
+        <Suspense fallback={<DeferredSidebarPlaceholder />}>
           <TravelDetailsSidebarSection
             travel={travel}
             anchors={anchors}
@@ -177,6 +228,8 @@ export const TravelDeferredSections: React.FC<{
             canRenderHeavy={canRenderHeavy}
           />
         </Suspense>
+      ) : (
+        <DeferredSidebarPlaceholder />
       )}
 
       <View 
@@ -184,8 +237,10 @@ export const TravelDeferredSections: React.FC<{
         collapsable={false}
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
-        {canRenderComments && travel?.id && (
+        {canRenderComments && travel?.id ? (
           <CommentsSection travelId={travel.id} />
+        ) : (
+          <DeferredCommentsPlaceholder />
         )}
       </View>
 

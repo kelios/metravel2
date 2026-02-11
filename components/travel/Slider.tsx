@@ -318,6 +318,7 @@ const Slide = memo(function Slide({
   const [status, setStatus] = useState<LoadStatus>(
     index === 0 && firstImagePreloaded ? 'loaded' : 'loading'
   );
+  const firstLoadReportedRef = useRef(false);
 
   const isFirstSlide = index === 0;
   const mainPriority = isFirstSlide ? 'high' : 'low';
@@ -330,10 +331,20 @@ const Slide = memo(function Slide({
 
   const handleLoad = useCallback(() => {
     setStatus('loaded');
-    if (isFirstSlide) {
+    if (isFirstSlide && !firstLoadReportedRef.current) {
+      firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
     }
   }, [isFirstSlide, onFirstImageLoad]);
+
+  useEffect(() => {
+    // If first slide is already preloaded/cached, report readiness once on mount.
+    if (!isFirstSlide) return;
+    if (!firstImagePreloaded) return;
+    if (firstLoadReportedRef.current) return;
+    firstLoadReportedRef.current = true;
+    onFirstImageLoad?.();
+  }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad]);
 
   const handleError = useCallback(() => {
     setStatus('error');

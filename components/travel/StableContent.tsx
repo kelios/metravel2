@@ -93,6 +93,7 @@ const replaceYouTubeIframes = (html: string): string =>
 <div class="yt-lite" data-yt="${id}"
      style="position:relative;aspect-ratio:16/9;background:var(--color-backgroundTertiary);border-radius:12px;overflow:hidden;margin:16px 0">
   <img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg"
+       width="1280" height="720"
        alt="YouTube preview" loading="lazy" decoding="async"
        style="width:100%;height:100%;object-fit:cover;display:block"/>
   <div role="button" tabindex="0" aria-label="Смотреть видео"

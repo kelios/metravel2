@@ -5,17 +5,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem';
 
-// Leaflet/react-leaflet через Metro (без CDN)
-import Leaflet from 'leaflet';
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMap,
-} from 'react-leaflet';
-import '@/utils/leafletFix';
-
 import PlacePopupCard from '@/components/MapPage/Map/PlacePopupCard';
 import { useLeafletIcons } from '@/components/MapPage/Map/useLeafletIcons';
 import { useAuth } from '@/context/AuthContext';
@@ -174,6 +163,7 @@ const getLatLng = (latlng: string): [number, number] | null => {
 };
 
 type LeafletNS = typeof import('leaflet');
+type ReactLeafletNS = typeof import('react-leaflet');
 
 const hasMapPane = (map: any) => !!map && !!(map as any)._mapPane;
 
@@ -187,6 +177,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   const queryClient = useQueryClient();
 
   const [L, setL] = useState<LeafletNS | null>(null);
+  const [rl, setRl] = useState<ReactLeafletNS | null>(null);
 
   const rootRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
@@ -384,8 +375,29 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
     if (!isWeb) return;
-
-    setL(Leaflet);
+    let cancelled = false;
+    ;(async () => {
+      try {
+        const [{ ensureLeafletCss }, leafletModule, reactLeafletModule] = await Promise.all([
+          import('@/utils/ensureLeafletCss'),
+          import('leaflet'),
+          import('react-leaflet'),
+        ]);
+        ensureLeafletCss();
+        await import('@/utils/leafletFix');
+        if (cancelled) return;
+        setL((leafletModule as any).default ?? leafletModule);
+        setRl(reactLeafletModule as any);
+      } catch {
+        if (!cancelled) {
+          setL(null);
+          setRl(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const travelData = useMemo(() => {
@@ -415,13 +427,20 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     return <Text style={{ padding: 20 }}>Карта доступна только в браузере</Text>;
   }
 
-  if (!L || !siteMarkerIcon) {
+  if (!L || !rl || !siteMarkerIcon) {
     return renderPlaceholder();
   }
 
+  const RL = rl as any;
+  const MapContainerC = RL.MapContainer;
+  const TileLayerC = RL.TileLayer;
+  const MarkerC = RL.Marker;
+  const PopupC = RL.Popup;
+  const useMapHook = RL.useMap;
+
 
   const FitBoundsOnData: React.FC<{ data: Point[] }> = ({ data }) => {
-    const map = useMap();
+    const map = useMapHook?.();
 
     useEffect(() => {
       if (typeof window !== 'undefined') {
@@ -453,7 +472,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           return;
         }
 
-        const bounds = Leaflet.latLngBounds(coords);
+        const bounds = L.latLngBounds(coords);
         if (!bounds.isValid()) return;
 
         try {
@@ -474,7 +493,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   };
 
   const MarkerWithPopup: React.FC<{ point: Point; latLng: [number, number] }> = ({ point, latLng }) => {
-    const map = useMap();
+    const map = useMapHook?.();
     const markerRef = useRef<any>(null);
     const normalizedKey = useMemo(() => normalizeCoordKey(point.coord), [point.coord]);
 
@@ -507,7 +526,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     }, [latLng, map]);
 
     return (
-      <Marker
+      <MarkerC
         key={`${point.id}`}
         position={latLng}
         icon={siteMarkerIcon}
@@ -517,13 +536,13 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         ref={markerRef}
       >
         <PopupWithClose point={point} />
-      </Marker>
+      </MarkerC>
     );
   };
 
   // Компонент для центрирования карты при открытии попапа
   const MapCenterOnPopup: React.FC = () => {
-    const map = useMap();
+    const map = useMapHook?.();
 
     const handlePopupOpen = useCallback(
       (e: any) => {
@@ -606,7 +625,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
 
   // Компонент для управления закрытием попапа
   const PopupWithClose: React.FC<{ point: Point }> = ({ point }) => {
-    const map = useMap();
+    const map = useMapHook?.();
     const { isAuthenticated, authReady } = useAuth();
     const [isAddingPoint, setIsAddingPoint] = useState(false);
 
@@ -776,7 +795,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     ]);
 
     return (
-      <Popup
+      <PopupC
         autoPan
         keepInView
         autoPanPadding={[16, 16] as any}
@@ -798,7 +817,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           addDisabled={!authReady || !isAuthenticated || !normalizedLatLng || isAddingPoint}
           isAdding={isAddingPoint}
         />
-      </Popup>
+      </PopupC>
     );
   };
 
@@ -875,7 +894,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
         }
         `}
       </style>
-      <MapContainer
+      <MapContainerC
         center={initialCenter}
         zoom={7}
         style={{ height: '100%', width: '100%' }}
@@ -896,7 +915,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           }
         }}
       >
-        <TileLayer
+        <TileLayerC
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution="&copy; OpenStreetMap &copy; CartoDB"
           crossOrigin="anonymous"
@@ -910,7 +929,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
             <MarkerWithPopup key={`${point.id}`} point={point} latLng={latLng} />
           );
         })}
-      </MapContainer>
+      </MapContainerC>
     </View>
   );
 };

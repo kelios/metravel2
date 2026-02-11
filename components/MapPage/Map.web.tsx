@@ -745,6 +745,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
           <img
             alt=""
             aria-hidden="true"
+            width={1200}
+            height={900}
+            loading="eager"
+            decoding="async"
             src={
               'data:image/svg+xml;utf8,' +
               encodeURIComponent(
@@ -977,6 +981,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
         <img
           alt=""
           aria-hidden="true"
+          width={1200}
+          height={900}
+          loading="eager"
+          decoding="async"
           src={
             'data:image/svg+xml;utf8,' +
             encodeURIComponent(

@@ -13,11 +13,6 @@ import type { MapUiApi } from '@/types/mapUi';
 import type { PointColor } from '@/types/userPoints';
 import { buildDropMarkerHtml } from '@/utils/markerSvg';
 
-// Leaflet/react-leaflet через Metro (без CDN)
-import Leaflet from 'leaflet';
-import * as ReactLeaflet from 'react-leaflet';
-import '@/utils/leafletFix';
-
 import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
 import { useMapInstance } from '@/components/MapPage/Map/useMapInstance';
@@ -942,21 +937,30 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   React.useEffect(() => {
     if (Platform.OS !== 'web') return;
     let cancelled = false;
-    try {
-      ensureLeafletCss();
-      if (cancelled) return;
-      setMods({
-        L: Leaflet,
-        MapContainer: (ReactLeaflet as any).MapContainer,
-        Marker: (ReactLeaflet as any).Marker,
-        Popup: (ReactLeaflet as any).Popup,
-        Polyline: (ReactLeaflet as any).Polyline,
-        useMap: (ReactLeaflet as any).useMap,
-        useMapEvents: (ReactLeaflet as any).useMapEvents,
-      });
-    } catch {
-      if (!cancelled) setMods(null);
-    }
+    ;(async () => {
+      try {
+        ensureLeafletCss();
+        await import('@/utils/leafletFix');
+        const [leafletModule, reactLeafletModule] = await Promise.all([
+          import('leaflet'),
+          import('react-leaflet'),
+        ]);
+        if (cancelled) return;
+        const L = leafletModule.default ?? leafletModule;
+        const RL = reactLeafletModule as any;
+        setMods({
+          L,
+          MapContainer: RL.MapContainer,
+          Marker: RL.Marker,
+          Popup: RL.Popup,
+          Polyline: RL.Polyline,
+          useMap: RL.useMap,
+          useMapEvents: RL.useMapEvents,
+        });
+      } catch {
+        if (!cancelled) setMods(null);
+      }
+    })();
     return () => {
       cancelled = true;
     };

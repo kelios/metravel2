@@ -160,6 +160,10 @@ export const VideoSection: React.FC<VideoSectionProps> = memo(({
               <img
                 src={thumbnailUrl}
                 alt="Превью видео"
+                width={1280}
+                height={720}
+                loading="lazy"
+                decoding="async"
                 style={{
                   position: 'absolute',
                   top: 0,
