@@ -1,4 +1,8 @@
-const fs = require('fs')
+const {
+  readJsonFile,
+} = require('./validation-utils')
+const { ERROR_CODES } = require('./validator-error-codes')
+const { buildResult, emitResult } = require('./validator-output')
 
 const REQUIRED_FIELDS = [
   'Business reason',
@@ -13,16 +17,24 @@ const isTruthy = (value) => {
   return normalized === 'true' || normalized === '1' || normalized === 'yes'
 }
 
+const parseArgs = (argv) => {
+  const args = {
+    output: 'text',
+  }
+  if (argv.includes('--json')) {
+    args.output = 'json'
+  }
+  return args
+}
+
 const readPrBody = () => {
   const fromEnv = String(process.env.PR_BODY || '')
   if (fromEnv.trim()) return fromEnv
 
   const eventPath = process.env.GITHUB_EVENT_PATH
   if (!eventPath) return ''
-  if (!fs.existsSync(eventPath)) return ''
-
   try {
-    const payload = JSON.parse(fs.readFileSync(eventPath, 'utf8'))
+    const payload = readJsonFile(eventPath, 'github event payload')
     return String(payload?.pull_request?.body || '')
   } catch {
     return ''
@@ -60,18 +72,36 @@ const parseExceptionSection = (body) => {
 }
 
 const validateException = ({ body, requireException }) => {
+  const detailed = validateExceptionDetailed({ body, requireException })
+  return {
+    valid: detailed.valid,
+    requested: detailed.requested,
+    fields: detailed.fields,
+    errors: detailed.errors.map((e) => e.message),
+  }
+}
+
+const validateExceptionDetailed = ({ body, requireException }) => {
   const { requested, fields } = parseExceptionSection(body)
   const errors = []
 
   if (requireException && !requested) {
-    errors.push('Exception is required because CI gate failed, but "Exception requested" is not checked.')
+    errors.push({
+      code: ERROR_CODES.prCiException.EXCEPTION_REQUIRED,
+      field: 'Exception requested',
+      message: 'Exception is required because CI gate failed, but "Exception requested" is not checked.',
+    })
   }
 
   if (requested) {
     for (const label of REQUIRED_FIELDS) {
       const value = fields[label]
       if (isPlaceholder(value)) {
-        errors.push(`Field "${label}" must be filled with a concrete value.`)
+        errors.push({
+          code: ERROR_CODES.prCiException.REQUIRED_FIELD_PLACEHOLDER,
+          field: label,
+          message: `Field "${label}" must be filled with a concrete value.`,
+        })
       }
     }
   }
@@ -85,23 +115,40 @@ const validateException = ({ body, requireException }) => {
 }
 
 const main = () => {
+  const args = parseArgs(process.argv.slice(2))
   const body = readPrBody()
   const requireException = isTruthy(process.env.REQUIRE_EXCEPTION)
-  const result = validateException({ body, requireException })
+  const result = validateExceptionDetailed({ body, requireException })
+  const outputResult = buildResult({
+    errors: result.errors,
+    extra: {
+      requested: result.requested,
+      requireException,
+      fields: result.fields,
+    },
+  })
+
+  if (args.output === 'json') {
+    const exitCode = emitResult({
+      result: outputResult,
+      output: 'json',
+    })
+    if (exitCode !== 0) process.exit(exitCode)
+    return
+  }
 
   if (!result.requested && !requireException) {
     console.log('PR CI exception validation: no exception requested (not required).')
     return
   }
 
-  if (result.valid) {
-    console.log('PR CI exception validation: passed.')
-    return
-  }
-
-  console.log('PR CI exception validation: failed.')
-  result.errors.forEach((err) => console.log(`- ${err}`))
-  process.exit(1)
+  const exitCode = emitResult({
+    result: outputResult,
+    output: 'text',
+    successMessage: 'PR CI exception validation: passed.',
+    failurePrefix: 'PR CI exception validation',
+  })
+  if (exitCode !== 0) process.exit(exitCode)
 }
 
 if (require.main === module) {
@@ -110,6 +157,8 @@ if (require.main === module) {
 
 module.exports = {
   REQUIRED_FIELDS,
+  parseArgs,
   parseExceptionSection,
+  validateExceptionDetailed,
   validateException,
 }

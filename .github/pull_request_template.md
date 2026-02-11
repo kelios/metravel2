@@ -7,10 +7,14 @@
 - [ ] `yarn lint`
 - [ ] `yarn test:smoke:critical`
 - [ ] If `quality-summary.json` schema changed, followed `docs/TESTING.md` schema change checklist.
+- [ ] If schema guard override was used, added `schema-guard: skip - <reason>` in PR body and documented risk.
+- [ ] If validator contract guard override was used, added `validator-guard: skip - <reason>` in PR body and documented risk.
 
 ## CI Smoke Gate
 
 - If CI fails, check `Quality Gate Summary` in workflow `CI Smoke`.
+- For schema/quality contract changes, ensure `schema-contract-checks` job is green.
+- For validator/contract changes, ensure `validator-contract-checks` job is green.
 - Capture and include:
   - `Failure Class`
   - `Recommendation ID` (`QG-00x`)

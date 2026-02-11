@@ -1,4 +1,6 @@
 const {
+  parseArgs,
+  validateExceptionDetailed,
   validateException,
 } = require('@/scripts/validate-pr-ci-exception');
 
@@ -14,6 +16,11 @@ const bodyWithException = `
 `;
 
 describe('validate-pr-ci-exception script', () => {
+  it('parses json output flag', () => {
+    expect(parseArgs([])).toEqual({ output: 'text' });
+    expect(parseArgs(['--json'])).toEqual({ output: 'json' });
+  });
+
   it('passes when exception is not required and not requested', () => {
     const result = validateException({
       body: 'Regular PR body',
@@ -58,5 +65,17 @@ describe('validate-pr-ci-exception script', () => {
     expect(result.errors.length).toBeGreaterThanOrEqual(3);
     expect(result.errors.join('\n')).toContain('Business reason');
     expect(result.errors.join('\n')).toContain('Fix deadline');
+  });
+
+  it('returns structured detailed errors', () => {
+    const result = validateExceptionDetailed({
+      body: 'Regular PR body',
+      requireException: true,
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors[0]).toHaveProperty('code');
+    expect(result.errors[0]).toHaveProperty('field');
+    expect(result.errors[0]).toHaveProperty('message');
   });
 });

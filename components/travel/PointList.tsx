@@ -770,7 +770,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
         <View
           style={[
             styles.col,
-            numColumns === 2 ? styles.col2 : styles.col1,
+            Platform.OS === 'web' ? styles.colHorizontal : (numColumns === 2 ? styles.col2 : styles.col1),
           ]}
         >
           {Platform.OS === 'web' ? (
@@ -937,7 +937,10 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       {showList && (
         Platform.OS === 'web' ? (
           <ScrollView
-            contentContainerStyle={[styles.listContent, numColumns > 1 && styles.columnWrap]}
+            horizontal
+            showsHorizontalScrollIndicator
+            contentContainerStyle={styles.horizontalListContent}
+            style={styles.horizontalScroll}
           >
             {safePoints.map((item) => (
               <React.Fragment key={keyExtractor(item)}>
@@ -1096,6 +1099,22 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       },
     }),
   },
+  horizontalScroll: {
+    width: '100%',
+    ...Platform.select({
+      web: {
+        overflowX: 'auto' as any,
+        overflowY: 'hidden' as any,
+        WebkitOverflowScrolling: 'touch' as any,
+      },
+    }),
+  },
+  horizontalListContent: {
+    flexDirection: 'row' as any,
+    gap: DESIGN_TOKENS.spacing.md,
+    paddingBottom: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: 4,
+  },
 
   // ✅ УЛУЧШЕНИЕ: Адаптивные колонки с одинаковой высотой карточек
   col: { 
@@ -1116,6 +1135,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   col1: { 
     width: '100%' 
+  },
+  colHorizontal: {
+    width: 320,
+    flexShrink: 0,
   },
 
   // ✅ УЛУЧШЕНИЕ: Матовая карточка без границ, только тени

@@ -7,6 +7,60 @@ on:
       - main
 
 jobs:
+  schema-contract-checks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Collect changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/collect-changed-files.js --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" --output-file changed_files.txt
+
+      - name: Run selective schema contract checks
+        run: node scripts/run-schema-contract-tests-if-needed.js --changed-files-file changed_files.txt
+
+  validator-contract-checks:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Collect changed files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/collect-changed-files.js --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" --output-file changed_files.txt
+
+      - name: Run selective validator contract checks
+        run: node scripts/run-validator-contract-tests-if-needed.js --changed-files-file changed_files.txt
+
   # Gating job: static analysis must pass for merge.
   # Always publishes a JSON artifact + markdown summary for fast diagnosis.
   lint:
@@ -94,6 +148,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Collect changed files (PR)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/collect-changed-files.js --base-sha "$BASE_SHA" --head-sha "$HEAD_SHA" --output-file changed_files.txt
+
+      - name: Guard quality schema changes (PR)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          CHANGED_FILES_CONTENT="$(cat changed_files.txt 2>/dev/null || true)"
+          export CHANGED_FILES="$CHANGED_FILES_CONTENT"
+          node scripts/guard-quality-schema-change.js
+
+      - name: Guard validator contract changes (PR)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          CHANGED_FILES_CONTENT="$(cat changed_files.txt 2>/dev/null || true)"
+          export CHANGED_FILES="$CHANGED_FILES_CONTENT"
+          node scripts/guard-validator-contract-change.js
+
       - name: Download lint report
         uses: actions/download-artifact@v4
         with:
@@ -114,12 +193,29 @@ jobs:
           SMOKE_JOB_RESULT: ${{ needs.smoke-critical.result }}
           SMOKE_DURATION_BUDGET_SECONDS: "30"
           SMOKE_DURATION_PREVIOUS_SECONDS: ${{ vars.SMOKE_DURATION_PREVIOUS_SECONDS }}
+          SMOKE_SUITE_FILES_BASELINE: ${{ vars.SMOKE_SUITE_FILES_BASELINE }}
           SMOKE_DURATION_BUDGET_STRICT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json
 
       - name: Validate quality summary snapshot
         if: always()
         run: node scripts/validate-quality-summary.js test-results/quality-summary.json
+
+      - name: Publish suite baseline recommendation
+        if: always()
+        run: node scripts/publish-smoke-suite-recommendation.js --summary-file test-results/quality-summary.json --output-file test-results/smoke-suite-baseline-recommendation.json --format json
+
+      - name: Validate suite baseline recommendation
+        if: always() && hashFiles('test-results/smoke-suite-baseline-recommendation.json') != ''
+        run: node scripts/validate-smoke-suite-baseline-recommendation.js --file test-results/smoke-suite-baseline-recommendation.json
+
+      - name: Upload smoke suite baseline recommendation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-suite-baseline-recommendation
+          path: test-results/smoke-suite-baseline-recommendation.json
+          if-no-files-found: ignore
 
       - name: Upload quality summary snapshot
         if: always()
@@ -134,33 +230,19 @@ jobs:
         env:
           LINT_RESULT: ${{ needs.lint.result }}
           SMOKE_RESULT: ${{ needs.smoke-critical.result }}
-        run: |
-          FAILURE_CLASS=$(node -e 'const fs=require("fs");const p="test-results/quality-summary.json";if(fs.existsSync(p)){const o=JSON.parse(fs.readFileSync(p,"utf8"));process.stdout.write(String(o.failureClass||""));}')
-          RECOMMENDATION_ID=$(node -e 'const fs=require("fs");const p="test-results/quality-summary.json";if(fs.existsSync(p)){const o=JSON.parse(fs.readFileSync(p,"utf8"));process.stdout.write(String(o.recommendationId||""));}')
+        run: node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes"
 
-          if [ -z "$FAILURE_CLASS" ]; then
-            FAILURE_CLASS="mixed"
-            if [ "$LINT_RESULT" != "success" ] && [ "$SMOKE_RESULT" = "success" ]; then
-              FAILURE_CLASS="lint_only"
-            elif [ "$LINT_RESULT" = "success" ] && [ "$SMOKE_RESULT" != "success" ]; then
-              FAILURE_CLASS="smoke_only"
-            fi
-          fi
+      - name: Validate incident snippet (PR, when gate failed)
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success')
+        run: node scripts/validate-ci-incident-snippet.js --file test-results/ci-incident-snippet.md
 
-          if [ -z "$RECOMMENDATION_ID" ]; then
-            RECOMMENDATION_ID="<from Quality Gate Summary>"
-          fi
-
-          node scripts/generate-ci-incident.js \
-            --failure-class "$FAILURE_CLASS" \
-            --recommendation-id "$RECOMMENDATION_ID" \
-            --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --branch-pr "${{ github.event.pull_request.html_url }}" \
-            --impact "<fill>" \
-            --owner "<fill>" \
-            --eta "<fill>" \
-            --immediate-action "Initial triage started" \
-            --follow-up "yes" >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload incident snippet artifact
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-incident-snippet
+          path: test-results/ci-incident-snippet.md
+          if-no-files-found: ignore
 
       - name: Validate PR CI exception block
         if: always() && github.event_name == 'pull_request'

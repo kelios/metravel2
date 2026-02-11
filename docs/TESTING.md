@@ -146,10 +146,25 @@ Workflow:
 
 Jobs:
 
+- `schema-contract-checks` (PR selective gating):
+  - runs only on `pull_request`
+  - checks changed files and runs targeted schema contract tests only when relevant files changed
+  - uses `scripts/run-schema-contract-tests-if-needed.js`
+  - writes decision summary to job summary (`run` / `skip`, plus matched files preview)
+- `validator-contract-checks` (PR selective gating):
+  - runs only on `pull_request`
+  - checks changed files and runs targeted validator contract tests only when relevant files changed
+  - uses `scripts/run-validator-contract-tests-if-needed.js`
+  - writes decision summary to job summary (`run` / `skip`, plus matched files preview)
+- PR jobs that need changed files use shared helper:
+  - `scripts/collect-changed-files.js` (`BASE_SHA` + `HEAD_SHA` -> `changed_files.txt`)
 - `lint` (gating): runs `yarn lint:ci`, publishes summary + `eslint-results` artifact.
 - `smoke-critical` (gating): runs `yarn test:smoke:critical:ci`, publishes summary + `jest-smoke-results` artifact.
 - `quality-summary` (aggregation): downloads both artifacts and publishes one combined quality summary.
-  - For failed PR gates, also prints a ready-to-copy incident snippet into job summary.
+  - For failed PR gates, also prints a ready-to-copy incident snippet into job summary via `scripts/publish-ci-incident-snippet.js`.
+  - Validates incident snippet structure and required auto fields via `scripts/validate-ci-incident-snippet.js`.
+  - Uploads `ci-incident-snippet` artifact (`test-results/ci-incident-snippet.md`) for incident/audit trail.
+  - Includes `Smoke Composition` section (critical suite/test counts and suite files preview).
   - Also writes a machine-readable snapshot at `test-results/quality-summary.json` (for downstream CI steps).
   - Snapshot includes `schemaVersion` (current: `1`).
   - Validates snapshot schema/version before upload via `scripts/validate-quality-summary.js`.
@@ -172,6 +187,21 @@ Schema change checklist (`quality-summary.json`):
    - this section in `docs/TESTING.md` (current schema version and compatibility note)
 6. Add compatibility note in PR:
    - mention `schemaVersion` change and expected impact on downstream steps/artifacts.
+7. PR guard behavior:
+   - In `pull_request`, CI runs `scripts/guard-quality-schema-change.js`.
+   - If schema files changed without companion tests/docs, guard fails.
+   - Guard writes decision summary (`pass`/`fail`, matched files, missing companions) to job summary.
+   - Emergency override token in PR body:
+     - `schema-guard: skip - <reason>`
+8. Validator contract guard behavior:
+   - In `pull_request`, CI runs `scripts/guard-validator-contract-change.js`.
+   - If validator contract files changed without companion tests/docs, guard fails.
+   - Guard writes decision summary (`pass`/`fail`, matched files, missing companions) to job summary.
+   - Contract files:
+     - `scripts/validator-error-codes.js`
+     - `scripts/validator-output.js`
+   - Emergency override token in PR body:
+     - `validator-guard: skip - <reason>`
 
 Policy:
 
@@ -230,6 +260,65 @@ gh variable set SMOKE_DURATION_PREVIOUS_SECONDS --body "18.6"
    - `Quality Gate Summary` should show `Smoke trend: ... vs previous <value>s`.
 6. Cadence:
    - Update weekly, or right after significant changes to smoke test scope.
+
+Smoke suite baseline (`SMOKE_SUITE_FILES_BASELINE`):
+
+- Optional GitHub repository variable used for suite drift signal in `Smoke Composition`.
+- Format:
+  - CSV list of suite paths, or
+  - JSON array string (example: `["__tests__/app/export.test.tsx","__tests__/api/travels.test.ts"]`)
+- Summary output includes:
+  - `Suite drift vs baseline: +N / -M`
+  - preview lists of added/removed suite files.
+- In `CI Smoke` summary:
+  - workflow step `Publish suite baseline recommendation` runs `scripts/publish-smoke-suite-recommendation.js`.
+  - when drift is detected (`+N / -M`, where `N+M > 0`), summary prints a ready baseline recommendation and `gh variable set` command generated via `--json` mode.
+- CI artifact:
+  - when drift is detected, workflow uploads `smoke-suite-baseline-recommendation` artifact with `test-results/smoke-suite-baseline-recommendation.json`.
+  - artifact is validated before upload by `scripts/validate-smoke-suite-baseline-recommendation.js`.
+- Update when smoke scope is intentionally changed and accepted as new baseline.
+
+Runbook: update `SMOKE_SUITE_FILES_BASELINE`:
+
+1. Download `quality-summary` artifact from the latest successful `CI Smoke` run.
+2. Extract suite list from snapshot:
+
+```bash
+yarn smoke:suite-baseline:recommend
+```
+
+3. Choose variable format:
+   - Preferred: JSON array string.
+   - Alternative: CSV string.
+   - Machine-readable output (for scripts/automation):
+
+```bash
+node scripts/recommend-smoke-suite-baseline.js --file test-results/quality-summary.json --format json --json
+```
+   - For CSV output:
+
+```bash
+node scripts/recommend-smoke-suite-baseline.js --file test-results/quality-summary.json --format csv
+```
+4. Update GitHub variable:
+   - UI: `Settings` -> `Secrets and variables` -> `Actions` -> `Variables`
+   - Name: `SMOKE_SUITE_FILES_BASELINE`
+   - Value: output from step 2 (or CSV)
+5. CLI alternative:
+
+```bash
+yarn smoke:suite-baseline:recommend
+# copy the generated gh command from output
+
+# validate generated recommendation artifact
+yarn smoke:suite-baseline:validate
+
+# machine-readable validation result
+yarn smoke:suite-baseline:validate:json
+```
+
+6. Verify on next run:
+   - `Quality Gate Summary` should show `Suite drift vs baseline: +0 / -0` (or expected intentional drift).
 
 Common `gh` errors:
 
@@ -322,6 +411,22 @@ yarn ci:incident:template -- \
   --owner "CI Team" \
   --impact "Merge blocked" \
   --eta "2026-02-12 12:00 UTC"
+
+# Publish incident snippet to GITHUB_STEP_SUMMARY from local quality snapshot
+LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish -- \
+  --workflow-run "https://github.com/org/repo/actions/runs/123" \
+  --branch-pr "https://github.com/org/repo/pull/42"
+
+# Publish and print machine-readable payload (JSON)
+LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish:json -- \
+  --workflow-run "https://github.com/org/repo/actions/runs/123" \
+  --branch-pr "https://github.com/org/repo/pull/42"
+
+# Validate generated snippet file
+yarn ci:incident:validate
+
+# machine-readable validation result
+yarn ci:incident:validate:json
 ```
 
 Local reproduction:
@@ -349,6 +454,22 @@ Validation rules:
   - `Owner`
   - `Fix deadline (YYYY-MM-DD)`
 - Placeholders like `TBD`, `N/A`, `-`, `todo`, `<...>`, `[...]` are treated as invalid.
+
+Machine-readable validator output:
+
+```bash
+yarn pr:ci-exception:validate:json
+```
+
+Validator JSON contract:
+
+- All validator `--json` outputs include:
+  - `contractVersion` (current: `1`)
+  - `ok`, `errorCount`, `errors` (array of objects with `code`, `field`, `message`)
+- Error code prefixes:
+  - `PR_...` for PR exception validator
+  - `INCIDENT_...` for incident snippet validator
+  - `SUITE_...` for smoke suite baseline recommendation validator
 
 Template snippet:
 

@@ -65,6 +65,18 @@ describe('summarize-quality-gate script', () => {
       numFailedTestSuites: 0,
       numTotalTests: 10,
       numFailedTests: 0,
+      testResults: [
+        {
+          name: `${process.cwd()}/__tests__/app/export.test.tsx`,
+          startTime: 0,
+          endTime: 1000,
+        },
+        {
+          name: `${process.cwd()}/__tests__/app/subscriptions.test.tsx`,
+          startTime: 0,
+          endTime: 1000,
+        },
+      ],
     });
     writeJson(jestFailPath, {
       numTotalTestSuites: 2,
@@ -91,7 +103,25 @@ describe('summarize-quality-gate script', () => {
     const result = runSummary(eslintPassPath, jestPassPath, ['--fail-on-missing']);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Overall Quality Gate: PASS');
+    expect(result.stdout).toContain('### Smoke Composition');
+    expect(result.stdout).toContain('Suites in critical run: 2');
     expect(result.stdout).not.toContain('Failure Class:');
+  });
+
+  it('prints suite drift when baseline files are provided', () => {
+    const result = runSummary(
+      eslintPassPath,
+      jestPassPath,
+      ['--fail-on-missing'],
+      {
+        SMOKE_SUITE_FILES_BASELINE: '__tests__/legacy/old.test.ts,__tests__/scripts/summarize-quality-gate.test.ts',
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Suite drift vs baseline: +2 / -2');
+    expect(result.stdout).toContain('Added suite files:');
+    expect(result.stdout).toContain('Removed suite files:');
   });
 
   it('writes machine-readable quality snapshot when --json-output is provided', () => {
@@ -107,6 +137,10 @@ describe('summarize-quality-gate script', () => {
     expect(snapshot.overallOk).toBe(false);
     expect(snapshot.failureClass).toBe('lint_only');
     expect(snapshot.recommendationId).toBe('QG-003');
+    expect(Array.isArray(snapshot.smokeSuiteFiles)).toBe(true);
+    expect(typeof snapshot.smokeSuiteBaselineProvided).toBe('boolean');
+    expect(Array.isArray(snapshot.smokeSuiteAddedFiles)).toBe(true);
+    expect(Array.isArray(snapshot.smokeSuiteRemovedFiles)).toBe(true);
   });
 
   it('classifies missing report as infra_artifact and fails in strict mode', () => {

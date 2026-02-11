@@ -18,6 +18,10 @@ describe('validate-quality-summary schema checks', () => {
     smokeDurationOverBudget: false,
     budgetBlocking: false,
     inconsistencies: [],
+    smokeSuiteFiles: ['__tests__/app/export.test.tsx'],
+    smokeSuiteBaselineProvided: true,
+    smokeSuiteAddedFiles: ['__tests__/app/export.test.tsx'],
+    smokeSuiteRemovedFiles: [],
   };
 
   it('passes for valid payload', () => {
@@ -37,10 +41,18 @@ describe('validate-quality-summary schema checks', () => {
       schemaVersion: 999,
       recommendationId: 42,
       inconsistencies: [1, 2],
+      smokeSuiteFiles: [123],
+      smokeSuiteBaselineProvided: 'yes',
+      smokeSuiteAddedFiles: [123],
+      smokeSuiteRemovedFiles: [false],
     };
     const errors = validate(payload);
     expect(errors.join('\n')).toContain('Unsupported schemaVersion');
     expect(errors.join('\n')).toContain('recommendationId');
     expect(errors.join('\n')).toContain('inconsistencies');
+    expect(errors.join('\n')).toContain('smokeSuiteFiles');
+    expect(errors.join('\n')).toContain('smokeSuiteBaselineProvided');
+    expect(errors.join('\n')).toContain('smokeSuiteAddedFiles');
+    expect(errors.join('\n')).toContain('smokeSuiteRemovedFiles');
   });
 });

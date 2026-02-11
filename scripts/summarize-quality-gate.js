@@ -13,10 +13,12 @@ const lintJobResult = String(process.env.LINT_JOB_RESULT || '').trim().toLowerCa
 const smokeJobResult = String(process.env.SMOKE_JOB_RESULT || '').trim().toLowerCase()
 const smokeDurationBudgetSeconds = Number(process.env.SMOKE_DURATION_BUDGET_SECONDS || 0)
 const smokeDurationPreviousSecondsRaw = Number(process.env.SMOKE_DURATION_PREVIOUS_SECONDS || 0)
+const smokeSuiteFilesBaselineRaw = String(process.env.SMOKE_SUITE_FILES_BASELINE || '').trim()
 const smokeDurationBudgetStrict =
   String(process.env.SMOKE_DURATION_BUDGET_STRICT || '').trim().toLowerCase() === 'true'
 const eslintPath = path.resolve(process.cwd(), eslintPathArg)
 const jestPath = path.resolve(process.cwd(), jestPathArg)
+const cwd = process.cwd()
 
 const appendStepSummary = (markdown) => {
   const summaryPath = process.env.GITHUB_STEP_SUMMARY
@@ -51,6 +53,42 @@ const jestSuitesFailed = Number(jest?.numFailedTestSuites ?? 0)
 const jestTests = Number(jest?.numTotalTests ?? 0)
 const jestTestsFailed = Number(jest?.numFailedTests ?? 0)
 const jestOk = jest !== null && jestSuitesFailed === 0 && jestTestsFailed === 0
+const smokeSuiteFiles = Array.isArray(jest?.testResults)
+  ? jest.testResults
+      .map((t) => String(t?.name || '').trim())
+      .filter(Boolean)
+      .map((name) => (path.isAbsolute(name) ? path.relative(cwd, name) : name))
+  : []
+const smokeSuiteFilesPreviewLimit = 10
+const smokeSuiteFilesPreview = smokeSuiteFiles.slice(0, smokeSuiteFilesPreviewLimit)
+const smokeSuiteFilesRemaining = Math.max(0, smokeSuiteFiles.length - smokeSuiteFilesPreview.length)
+const parseSuiteBaseline = (raw) => {
+  if (!raw) return []
+  const trimmed = raw.trim()
+  if (!trimmed) return []
+
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) {
+        return parsed.map((v) => String(v).trim()).filter(Boolean)
+      }
+    } catch {
+      // fall back to CSV parsing
+    }
+  }
+
+  return trimmed
+    .split(',')
+    .map((v) => String(v).trim())
+    .filter(Boolean)
+}
+const smokeSuiteFilesBaseline = parseSuiteBaseline(smokeSuiteFilesBaselineRaw)
+const smokeSuiteBaselineProvided = smokeSuiteFilesBaseline.length > 0
+const currentSuiteSet = new Set(smokeSuiteFiles)
+const baselineSuiteSet = new Set(smokeSuiteFilesBaseline)
+const smokeSuiteAddedFiles = smokeSuiteFiles.filter((f) => !baselineSuiteSet.has(f))
+const smokeSuiteRemovedFiles = smokeSuiteFilesBaseline.filter((f) => !currentSuiteSet.has(f))
 const smokeDurationMs = Array.isArray(jest?.testResults)
   ? jest.testResults.reduce((sum, t) => sum + (Number(t?.endTime ?? 0) - Number(t?.startTime ?? 0)), 0)
   : 0
@@ -134,6 +172,10 @@ const qualitySnapshot = {
   smokeDurationOverBudget,
   budgetBlocking,
   inconsistencies,
+  smokeSuiteFiles,
+  smokeSuiteBaselineProvided,
+  smokeSuiteAddedFiles,
+  smokeSuiteRemovedFiles,
 }
 
 print('## Quality Gate Summary')
@@ -175,6 +217,36 @@ if (hasSmokeDurationPrevious) {
   const sign = smokeDurationDeltaSeconds > 0 ? '+' : ''
   const trend = smokeDurationDeltaSeconds > 0 ? 'slower' : (smokeDurationDeltaSeconds < 0 ? 'faster' : 'unchanged')
   print(`- Smoke trend: ${sign}${smokeDurationDeltaSeconds}s (${sign}${smokeDurationDeltaPercent}%) vs previous ${smokeDurationPreviousSeconds}s [${trend}]`)
+}
+
+print('')
+print('### Smoke Composition')
+print(`- Suites in critical run: ${jestSuites}`)
+print(`- Tests in critical run: ${jestTests}`)
+if (smokeSuiteFilesPreview.length > 0) {
+  print('- Suite files:')
+  smokeSuiteFilesPreview.forEach((suite) => print(`  - \`${suite}\``))
+  if (smokeSuiteFilesRemaining > 0) {
+    print(`  - ... and ${smokeSuiteFilesRemaining} more`)
+  }
+}
+if (smokeSuiteBaselineProvided) {
+  print(`- Suite drift vs baseline: +${smokeSuiteAddedFiles.length} / -${smokeSuiteRemovedFiles.length}`)
+  const previewLimit = 5
+  if (smokeSuiteAddedFiles.length > 0) {
+    print('- Added suite files:')
+    smokeSuiteAddedFiles.slice(0, previewLimit).forEach((f) => print(`  - \`${f}\``))
+    if (smokeSuiteAddedFiles.length > previewLimit) {
+      print(`  - ... and ${smokeSuiteAddedFiles.length - previewLimit} more`)
+    }
+  }
+  if (smokeSuiteRemovedFiles.length > 0) {
+    print('- Removed suite files:')
+    smokeSuiteRemovedFiles.slice(0, previewLimit).forEach((f) => print(`  - \`${f}\``))
+    if (smokeSuiteRemovedFiles.length > previewLimit) {
+      print(`  - ... and ${smokeSuiteRemovedFiles.length - previewLimit} more`)
+    }
+  }
 }
 
 if (inconsistencies.length > 0) {

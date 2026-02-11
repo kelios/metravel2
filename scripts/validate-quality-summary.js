@@ -5,7 +5,14 @@ const SUPPORTED_SCHEMA_VERSION = 1
 const REQUIRED_STRING_FIELDS = ['failureClass', 'lintJobResult', 'smokeJobResult']
 const REQUIRED_BOOLEAN_FIELDS = ['overallOk', 'lintOk', 'smokeOk', 'smokeDurationOverBudget', 'budgetBlocking']
 const REQUIRED_NUMBER_FIELDS = ['smokeDurationSeconds', 'smokeDurationBudgetSeconds']
-const OPTIONAL_FIELDS = ['recommendationId', 'inconsistencies']
+const OPTIONAL_FIELDS = [
+  'recommendationId',
+  'inconsistencies',
+  'smokeSuiteFiles',
+  'smokeSuiteBaselineProvided',
+  'smokeSuiteAddedFiles',
+  'smokeSuiteRemovedFiles',
+]
 
 const validate = (payload) => {
   const errors = []
@@ -53,6 +60,25 @@ const validate = (payload) => {
     }
   } else {
     errors.push('Field "inconsistencies" is required.')
+  }
+
+  if ('smokeSuiteFiles' in payload) {
+    if (!Array.isArray(payload.smokeSuiteFiles) || payload.smokeSuiteFiles.some((v) => typeof v !== 'string')) {
+      errors.push('Field "smokeSuiteFiles" must be an array of strings when provided.')
+    }
+  }
+  if ('smokeSuiteBaselineProvided' in payload && typeof payload.smokeSuiteBaselineProvided !== 'boolean') {
+    errors.push('Field "smokeSuiteBaselineProvided" must be a boolean when provided.')
+  }
+  if ('smokeSuiteAddedFiles' in payload) {
+    if (!Array.isArray(payload.smokeSuiteAddedFiles) || payload.smokeSuiteAddedFiles.some((v) => typeof v !== 'string')) {
+      errors.push('Field "smokeSuiteAddedFiles" must be an array of strings when provided.')
+    }
+  }
+  if ('smokeSuiteRemovedFiles' in payload) {
+    if (!Array.isArray(payload.smokeSuiteRemovedFiles) || payload.smokeSuiteRemovedFiles.some((v) => typeof v !== 'string')) {
+      errors.push('Field "smokeSuiteRemovedFiles" must be an array of strings when provided.')
+    }
   }
 
   const knownFields = new Set([
