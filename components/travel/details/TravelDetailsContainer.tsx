@@ -26,7 +26,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelDetails } from "@/hooks/travel-details";
 import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { buildCanonicalUrl } from "@/utils/seo";
-import { createSafeJsonLd, stripHtml, getSafeOrigin } from "@/utils/travelDetailsSecure";
+import { createSafeJsonLd, stripHtml } from "@/utils/travelDetailsSecure";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import { TravelDetailPageSkeleton } from '@/components/travel/TravelDetailPageSkeleton';
@@ -75,7 +75,6 @@ const SList: React.FC<{
 
 // Переадресация для обратной совместимости внутри компонента
 const stripToDescription = (html?: string) => stripHtml(html).slice(0, 160);
-const getOrigin = getSafeOrigin;
 
 /* -------------------- Defer wrapper -------------------- */
 const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, children }) => {
@@ -258,7 +257,6 @@ export default function TravelDetailsContainer() {
     readyDesc,
     canonicalUrl,
     readyImage,
-    firstImgOrigin,
     firstImg,
     jsonLd,
   } = useMemo(() => {
@@ -278,8 +276,6 @@ export default function TravelDetailsContainer() {
         ? rawFirst
         : rawFirst.url
       : undefined;
-    const origin = firstUrl ? getOrigin(firstUrl) : null;
-
     const structuredData = createSafeJsonLd(travel);
 
     return {
@@ -287,7 +283,6 @@ export default function TravelDetailsContainer() {
       readyDesc: desc,
       canonicalUrl: canonical,
       readyImage: firstUrl,
-      firstImgOrigin: origin,
       firstImg: firstUrl ? { url: firstUrl } : null,
       jsonLd: structuredData,
     };
@@ -422,13 +417,7 @@ export default function TravelDetailsContainer() {
       ogType="article"
       additionalTags={
         <>
-          {firstImg?.url &&
-            firstImgOrigin &&
-            (Platform.OS !== 'web' ||
-              typeof window === 'undefined' ||
-              firstImgOrigin !== window.location.origin) && (
-              <link rel="preconnect" href={firstImgOrigin} crossOrigin="anonymous" />
-            )}
+          {/* preconnect for image origin removed — already covered by static hints in +html.tsx */}
           <meta name="theme-color" content={themedColors.background} />
           {jsonLd && (
             <script

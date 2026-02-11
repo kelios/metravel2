@@ -48,7 +48,7 @@ export function buildCriticalCSS(): string {
     'a{color:inherit;text-decoration:none}',
     '[hidden]{display:none !important}',
     'img[data-lcp]{min-height:300px;background:var(--color-backgroundSecondary,' + BSL + ');aspect-ratio:16/9}',
-    'img[width][height]{aspect-ratio:attr(width)/attr(height)}',
+    'img[width][height]{height:auto}',
     'img[fetchpriority="high"]{display:block}',
     'img[loading="lazy"]{content-visibility:auto;contain-intrinsic-size:auto 300px}',
     '#root,#root>div,#root>div>div{min-height:100vh;width:100%}',
@@ -109,7 +109,7 @@ export function buildCriticalCSS(): string {
     '@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.7}}',
     // CSS-only skeleton shimmer for header and hero — visible before JS loads.
     // Once React hydrates it replaces these elements, so no CLS.
-    '@keyframes crit-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}',
+    '@keyframes crit-shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}',
     '[data-testid="main-header"]{background:var(--color-background,' + BL + ');border-bottom:1px solid var(--color-backgroundSecondary,' + BSL + ')}',
     '[data-testid="home-hero-stack"]{background:var(--color-background,' + BL + ')}',
   ].join('\n');

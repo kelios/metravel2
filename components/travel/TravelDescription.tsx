@@ -156,7 +156,8 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
               // стили
               const styleMatch = tag.match(/\bstyle="([^"]*)"/i);
               const style = styleMatch?.[1] ?? "";
-              const baseResponsiveStyle = "max-width:100%;height:auto;display:block;object-fit:contain";
+              const aspectRatioStyle = ww && hh ? `aspect-ratio:${ww}/${hh};` : "";
+              const baseResponsiveStyle = `max-width:100%;height:auto;display:block;object-fit:contain;${aspectRatioStyle}`;
               const styleWithResponsiveDefaults = style
                 ? `${style};${baseResponsiveStyle}`
                 : baseResponsiveStyle;

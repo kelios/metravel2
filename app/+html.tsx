@@ -368,12 +368,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
       
       {!isProduction && <meta name="robots" content="noindex,nofollow" />}
 
-      {/* Resource hints - critical domains only (map-specific hints moved to ensureLeafletCss) */}
-      <link rel="dns-prefetch" href="//cdn.metravel.by" />
-      <link rel="dns-prefetch" href="//api.metravel.by" />
+      {/* Resource hints - only the 2 most critical origins (dns-prefetch removed: preconnect implies it).
+          images.weserv.nl preconnect deferred to when content images actually load. */}
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://images.weserv.nl" crossOrigin="anonymous" />
       
       {/* Icons */}
       <link rel="icon" href="/favicon.ico" sizes="any" type="image/x-icon" />
@@ -425,27 +423,30 @@ export default function Root({ children }: { children: React.ReactNode }) {
               color: rgba(47, 59, 54, 0.92);
               text-wrap: balance;
             }
-            #metravel-shell .hero {
+            #metravel-shell .hero,
+            #metravel-shell .bar,
+            #metravel-shell .card {
               position: relative;
-              border-radius: 16px;
               overflow: hidden;
-              min-height: clamp(220px, 46vh, 520px);
-              background: linear-gradient(160deg, rgba(122, 157, 143, 0.18) 0%, rgba(122, 157, 143, 0.08) 100%);
-              border: 1px solid rgba(122, 157, 143, 0.2);
+              background: rgba(122, 157, 143, 0.12);
             }
-            #metravel-shell .hero img {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              object-position: center;
-              filter: saturate(0.92) contrast(1.02);
+            #metravel-shell .hero::after,
+            #metravel-shell .bar::after,
+            #metravel-shell .card::after {
+              content: '';
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(90deg, transparent 0%, rgba(122, 157, 143, 0.14) 50%, transparent 100%);
+              animation: metravel-shell-shimmer 1.4s ease-in-out infinite;
+              will-change: transform;
+            }
+            #metravel-shell .hero {
+              border-radius: 16px;
+              min-height: clamp(220px, 46vh, 520px);
             }
             #metravel-shell .bar {
               height: 20px;
               border-radius: 10px;
-              background: linear-gradient(90deg, rgba(122, 157, 143, 0.16) 0%, rgba(122, 157, 143, 0.28) 50%, rgba(122, 157, 143, 0.16) 100%);
-              background-size: 200% 100%;
-              animation: metravel-shell-shimmer 1.4s ease-in-out infinite;
             }
             #metravel-shell .bar.title { height: 34px; width: min(640px, 82vw); }
             #metravel-shell .bar.sub { width: min(520px, 74vw); }
@@ -458,9 +459,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
             #metravel-shell .card {
               height: 128px;
               border-radius: 12px;
-              background: linear-gradient(90deg, rgba(122, 157, 143, 0.12) 0%, rgba(122, 157, 143, 0.22) 50%, rgba(122, 157, 143, 0.12) 100%);
-              background-size: 200% 100%;
-              animation: metravel-shell-shimmer 1.4s ease-in-out infinite;
             }
             @media (max-width: 768px) {
               #metravel-shell .brand { font-size: clamp(24px, 8vw, 34px); }
@@ -470,8 +468,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
               #metravel-shell .row { grid-template-columns: 1fr; }
             }
             @keyframes metravel-shell-shimmer {
-              0% { background-position: 200% 0; }
-              100% { background-position: -200% 0; }
+              0% { transform: translateX(-100%); }
+              100% { transform: translateX(100%); }
             }
             html.rnw-styles-ready #metravel-shell {
               opacity: 0;
@@ -512,14 +510,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <div className="brand">MeTravel</div>
         <div className="tagline">Собираем путешествие и подготавливаем страницы без рывков.</div>
         <div className="lcp-lock">Читай поездки других путешественников, сохраняй лучшие маршруты и собирай свои.</div>
-        <div className="hero">
-          <img
-            alt=""
-            width={1200}
-            height={680}
-            src="/assets/icons/logo_yellow_60x60.png"
-          />
-        </div>
+        <div className="hero" />
         <div className="bar title" />
         <div className="bar sub" />
         <div className="bar sub" style={{ width: 'min(420px, 60vw)' }} />
