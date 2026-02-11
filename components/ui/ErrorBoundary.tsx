@@ -39,9 +39,46 @@ export default class ErrorBoundary extends Component<Props, State> {
     });
     this.props.onError?.(error, errorInfo);
 
+    const msg = String(error?.message ?? '');
+
+    // Auto-recover from stale-bundle module mismatch errors.
+    // When the SW serves cached JS chunks from a previous build, module IDs can
+    // shift and named exports resolve to undefined (e.g. "useFilters is not a function").
+    // Unregister the SW, purge JS caches, and hard-reload once.
+    if (
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      !(window as any).__metravelModuleReloadTriggered
+    ) {
+      const isModuleError =
+        msg.includes('is not a function') ||
+        msg.includes('is undefined') ||
+        msg.includes('Requiring unknown module');
+      if (isModuleError) {
+        (window as any).__metravelModuleReloadTriggered = true;
+        const cleanup = async () => {
+          try {
+            if ('serviceWorker' in navigator) {
+              const regs = await navigator.serviceWorker.getRegistrations();
+              await Promise.all(regs.map((r) => r.unregister()));
+            }
+          } catch { /* noop */ }
+          try {
+            const keys = await caches.keys();
+            await Promise.all(
+              keys.filter((k) => k.includes('js') || k.includes('critical')).map((k) => caches.delete(k)),
+            );
+          } catch { /* noop */ }
+        };
+        cleanup().finally(() => {
+          window.location.reload();
+        });
+        return; // skip further recovery attempts
+      }
+    }
+
     // Auto-recover from Leaflet "Map container is being reused by another instance"
     // by cleaning all map containers and resetting (max 2 retries to avoid loops).
-    const msg = String(error?.message ?? '');
     if (
       msg.includes('reused by another instance') &&
       this._leafletAutoRetryCount < 2 &&
@@ -88,7 +125,13 @@ export default class ErrorBoundary extends Component<Props, State> {
             {Platform.OS === 'web' && (
               <Button
                 label="Перезагрузить страницу"
-                onPress={() => window.location.reload()}
+                onPress={() => {
+                  // Force bypass SW + HTTP cache on manual reload
+                  const purge = typeof caches !== 'undefined'
+                    ? caches.keys().then((ks) => Promise.all(ks.filter((k) => k.includes('js')).map((k) => caches.delete(k))))
+                    : Promise.resolve();
+                  purge.catch(() => {}).finally(() => { location.reload(); });
+                }}
                 variant="ghost"
                 style={[styles.button, styles.secondaryButton]}
                 accessibilityLabel="Перезагрузить страницу"

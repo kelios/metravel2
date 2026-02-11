@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3.0.2';
+const CACHE_VERSION = 'v3.1.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -43,23 +43,15 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames
           .filter((name) => {
-            // Delete caches from old versions
-            if (name.startsWith('metravel-') && 
-                name !== STATIC_CACHE && 
-                name !== DYNAMIC_CACHE && 
-                name !== IMAGE_CACHE && 
-                name !== JS_CACHE &&
-                name !== CRITICAL_CACHE) {
-              return true;
+            // Keep only STATIC_CACHE and IMAGE_CACHE across activations.
+            // Everything else is purged to guarantee consistency after deploy:
+            // - JS_CACHE / CRITICAL_CACHE: stale chunks cause module errors
+            // - DYNAMIC_CACHE: stale HTML references old chunk URLs
+            // - Old-version caches: no longer needed
+            if (name === STATIC_CACHE || name === IMAGE_CACHE) {
+              return false;
             }
-            // Always purge JS cache on activation — stale chunks from
-            // previous deploys cause "Requiring unknown module" errors.
-            // Hashed chunk URLs change between builds, so old entries are
-            // useless and keeping them risks serving mismatched modules.
-            if (name === JS_CACHE || name === CRITICAL_CACHE) {
-              return true;
-            }
-            return false;
+            return name.startsWith('metravel-');
           })
           .map((name) => caches.delete(name))
       );
@@ -150,7 +142,10 @@ function offlineResponse() {
 
 async function networkFirstDocument(request) {
   try {
-    const response = await fetch(request);
+    // cache:'no-store' bypasses the browser HTTP cache entirely.
+    // Without it, fetch() respects Cache-Control headers and can return
+    // stale HTML from the HTTP cache — causing old chunk URLs to load.
+    const response = await fetch(request, { cache: 'no-store' });
     // Cache successful document responses for offline fallback
     if (response && response.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
@@ -331,7 +326,9 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
   try {
     const cache = await caches.open(cacheName);
     try {
-      const response = await fetch(request);
+      // Bypass browser HTTP cache for non-hashed scripts (entry bundle etc.)
+      // whose URL stays the same across deploys but content changes.
+      const response = await fetch(request, { cache: 'no-store' });
       if (response && response.status === 200) {
         const responseToCache = response.clone();
         const headers = new Headers(responseToCache.headers);
