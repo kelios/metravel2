@@ -3,7 +3,6 @@ const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
 const JS_CACHE = `metravel-js-${CACHE_VERSION}`;
-const CRITICAL_CACHE = `metravel-critical-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
   '/manifest.json',
@@ -45,7 +44,7 @@ self.addEventListener('activate', (event) => {
           .filter((name) => {
             // Keep only STATIC_CACHE and IMAGE_CACHE across activations.
             // Everything else is purged to guarantee consistency after deploy:
-            // - JS_CACHE / CRITICAL_CACHE: stale chunks cause module errors
+            // - JS_CACHE: stale chunks cause module errors
             // - DYNAMIC_CACHE: stale HTML references old chunk URLs
             // - Old-version caches: no longer needed
             if (name === STATIC_CACHE || name === IMAGE_CACHE) {

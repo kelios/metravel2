@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useRef, useMemo, useState } from 'react'
+import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, Pressable } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 

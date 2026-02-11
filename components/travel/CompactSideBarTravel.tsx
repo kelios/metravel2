@@ -1,5 +1,5 @@
 // components/travel/CompactSideBarTravel.tsx
-import React, { memo, Suspense, useCallback, useMemo, useRef, useState, lazy } from "react";
+import React, { memo, Suspense, useCallback, useMemo, useState, lazy } from "react";
 import {
   View,
   StyleSheet,
