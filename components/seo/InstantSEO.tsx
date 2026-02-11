@@ -7,6 +7,8 @@ type Props = {
     description?: string;
     canonical?: string;
     image?: string;
+    imageWidth?: number;
+    imageHeight?: number;
     ogType?: 'website' | 'article';
     robots?: string;
     additionalTags?: React.ReactNode;
@@ -19,6 +21,8 @@ const InstantSEO: React.FC<Props> = ({
     description,
     canonical,
     image,
+    imageWidth,
+    imageHeight,
     ogType = 'website',
     robots,
     additionalTags,
@@ -37,6 +41,9 @@ const InstantSEO: React.FC<Props> = ({
             {description && <meta key="og:description" property="og:description" content={description} />}
             {canonical && <meta key="og:url" property="og:url" content={canonical} />}
             {image && <meta key="og:image" property="og:image" content={image} />}
+            {image && imageWidth && <meta key="og:image:width" property="og:image:width" content={String(imageWidth)} />}
+            {image && imageHeight && <meta key="og:image:height" property="og:image:height" content={String(imageHeight)} />}
+            <meta key="og:site_name" property="og:site_name" content="MeTravel" />
 
             {/* Twitter */}
             <meta key="twitter:card" name="twitter:card" content="summary_large_image" />

@@ -1,26 +1,44 @@
+import type { MyTravelsItem, MyTravelsPayload } from '@/api/travelsApi';
+
 export const mockFetchMyTravels = jest.fn();
 
-export const mockUnwrapMyTravelsPayload = (payload: any) => {
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+
+const toItems = (value: unknown): MyTravelsItem[] =>
+  Array.isArray(value) ? (value as MyTravelsItem[]) : [];
+
+export const mockUnwrapMyTravelsPayload = (payload: MyTravelsPayload | null | undefined) => {
   if (!payload) return { items: [], total: 0 };
+
   if (Array.isArray(payload)) return { items: payload, total: payload.length };
-  if (Array.isArray(payload?.data)) return { items: payload.data, total: payload.data.length };
-  if (Array.isArray(payload?.results)) {
+
+  const obj = asRecord(payload);
+  const data = toItems(obj.data);
+  if (data.length > 0) {
+    return { items: data, total: data.length };
+  }
+
+  const results = toItems(obj.results);
+  if (results.length > 0) {
     return {
-      items: payload.results,
-      total: Number(payload.count ?? payload.total ?? payload.results.length) || payload.results.length,
+      items: results,
+      total: Number(obj.count ?? obj.total ?? results.length) || results.length,
     };
   }
-  if (Array.isArray(payload?.items)) {
+
+  const items = toItems(obj.items);
+  if (items.length > 0) {
     return {
-      items: payload.items,
-      total: Number(payload.total ?? payload.count ?? payload.items.length) || payload.items.length,
+      items,
+      total: Number(obj.total ?? obj.count ?? items.length) || items.length,
     };
   }
-  return { items: [], total: Number(payload?.total ?? payload?.count ?? 0) || 0 };
+
+  return { items: [], total: Number(obj.total ?? obj.count ?? 0) || 0 };
 };
 
 export const resetTravelsApiMocks = () => {
   mockFetchMyTravels.mockReset();
   mockFetchMyTravels.mockResolvedValue([]);
 };
-

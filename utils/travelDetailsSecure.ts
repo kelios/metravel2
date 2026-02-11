@@ -136,6 +136,39 @@ export function createSafeJsonLd(
     }
   }
 
+  // Add datePublished / dateModified (required for Google Article rich results)
+  if (travel.created_at) {
+    const dateStr = typeof travel.created_at === 'number'
+      ? new Date(travel.created_at * 1000).toISOString()
+      : String(travel.created_at);
+    if (dateStr && !isNaN(Date.parse(dateStr))) {
+      safeData.datePublished = dateStr;
+    }
+  }
+  if (travel.updated_at) {
+    const dateStr = typeof travel.updated_at === 'number'
+      ? new Date(travel.updated_at * 1000).toISOString()
+      : String(travel.updated_at);
+    if (dateStr && !isNaN(Date.parse(dateStr))) {
+      safeData.dateModified = dateStr;
+    }
+  }
+
+  // Add author (recommended for Article rich results)
+  const authorName = travel.user?.name || travel.user?.first_name;
+  if (authorName && authorName.length > 0) {
+    safeData.author = {
+      "@type": "Person",
+      name: stripHtml(authorName).slice(0, 100),
+    };
+  }
+
+  // Publisher (required for Article rich results)
+  safeData.publisher = {
+    "@type": "Organization",
+    name: "MeTravel",
+    url: "https://metravel.by",
+  };
 
   return safeData;
 }

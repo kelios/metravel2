@@ -1,0 +1,117 @@
+name: CI Smoke
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  # Gating job: static analysis must pass for merge.
+  # Always publishes a JSON artifact + markdown summary for fast diagnosis.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run lint
+        id: lint_run
+        # Keep job alive to publish summary/artifact even when lint fails.
+        continue-on-error: true
+        run: yarn lint:ci
+
+      - name: Publish lint summary
+        if: always()
+        run: node scripts/summarize-eslint.js test-results/eslint-results.json
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslint-results
+          path: test-results/eslint-results.json
+          if-no-files-found: ignore
+
+      - name: Fail on lint errors
+        if: steps.lint_run.outcome != 'success'
+        run: exit 1
+
+  smoke-critical:
+    # Gating job: critical user-flow regressions for profile/export/subscriptions/travels API.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run critical smoke tests
+        run: yarn test:smoke:critical:ci
+
+      - name: Publish smoke summary
+        if: always()
+        run: node scripts/summarize-jest-smoke.js test-results/jest-smoke-results.json
+
+      - name: Upload smoke test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-smoke-results
+          path: test-results/jest-smoke-results.json
+          if-no-files-found: ignore
+
+  quality-summary:
+    # Non-gating aggregation job: provides one combined quality snapshot.
+    # Runs even when upstream jobs fail and fails fast if expected artifacts are missing.
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - lint
+      - smoke-critical
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download lint report
+        uses: actions/download-artifact@v4
+        with:
+          name: eslint-results
+          path: test-results/lint
+          if-no-artifact-found: ignore
+
+      - name: Download smoke report
+        uses: actions/download-artifact@v4
+        with:
+          name: jest-smoke-results
+          path: test-results/smoke
+          if-no-artifact-found: ignore
+
+      - name: Publish quality summary
+        env:
+          LINT_JOB_RESULT: ${{ needs.lint.result }}
+          SMOKE_JOB_RESULT: ${{ needs.smoke-critical.result }}
+          SMOKE_DURATION_BUDGET_SECONDS: "30"
+          SMOKE_DURATION_BUDGET_STRICT: "false"
+        run: node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing

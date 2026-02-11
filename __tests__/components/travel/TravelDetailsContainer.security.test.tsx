@@ -116,6 +116,11 @@ describe('TravelDetailsContainer - Security & Sanitization', () => {
         description: 'A test travel description',
         image: ['https://example.com/image.jpg'],
         url: 'https://metravel.by/travels/test-travel',
+        publisher: {
+          '@type': 'Organization',
+          name: 'MeTravel',
+          url: 'https://metravel.by',
+        },
       });
     });
 

@@ -1,9 +1,16 @@
+import type { ComponentProps, ComponentType, ReactElement } from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { mockPush, mockReplace, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
+import { mockReplace, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
 import { createQueryWrapper } from '../helpers/testQueryClient';
 import { mockFetchMyTravels, mockUnwrapMyTravelsPayload, resetTravelsApiMocks } from '../helpers/mockTravelsApi';
+import {
+  createAuthValue,
+  createFavoriteItem,
+  createFavoritesValue,
+  createHistoryItem,
+} from '../helpers/mockContextValues';
 
 jest.mock('@/context/AuthContext');
 
@@ -89,7 +96,11 @@ jest.mock('@shopify/flash-list', () => {
   const React = require('react');
   const { FlatList } = require('react-native');
 
-  const FlashList = ({ ListHeaderComponent, ...props }: any) => {
+  type MockFlashListProps = ComponentProps<typeof FlatList> & {
+    ListHeaderComponent?: ComponentType<unknown> | ReactElement | null;
+  };
+
+  const FlashList = ({ ListHeaderComponent, ...props }: MockFlashListProps) => {
     const header = ListHeaderComponent
       ? React.isValidElement(ListHeaderComponent)
         ? ListHeaderComponent
@@ -111,50 +122,16 @@ const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseFavorites = useFavorites as jest.MockedFunction<typeof useFavorites>;
 
 const setupAuth = (overrides?: Partial<ReturnType<typeof useAuth>>) => {
-  mockUseAuth.mockReturnValue({
-    isAuthenticated: true,
-    authReady: true,
-    logout: jest.fn().mockResolvedValue(undefined),
-    userId: '123',
-    username: 'Test User',
-    isSuperuser: false,
-    user: { id: '123', name: 'Test User', email: 'user@example.com' },
-    setUserAvatar: jest.fn(),
-    triggerProfileRefresh: jest.fn(),
-    setIsAuthenticated: jest.fn(),
-    setUsername: jest.fn(),
-    setIsSuperuser: jest.fn(),
-    setUserId: jest.fn(),
-    login: jest.fn(),
-    sendPassword: jest.fn(),
-    setNewPassword: jest.fn(),
-    ...(overrides || {}),
-  } as any);
+  mockUseAuth.mockReturnValue(createAuthValue(overrides));
 };
 
 const setupFavorites = (favoritesLen = 2, historyLen = 5) => {
-  mockUseFavorites.mockReturnValue({
-    favorites: new Array(favoritesLen).fill(null).map((_, i) => ({
-      id: i + 1,
-      type: 'travel',
-      title: `Fav ${i + 1}`,
-      url: `/travels/${i + 1}`,
-      addedAt: Date.now(),
-    })),
-    viewHistory: new Array(historyLen).fill(null).map((_, i) => ({
-      id: i + 1,
-      type: 'travel',
-      title: `History ${i + 1}`,
-      url: `/travels/${i + 1}`,
-      viewedAt: Date.now(),
-    })),
-    addFavorite: jest.fn(),
-    removeFavorite: jest.fn(),
-    isFavorite: jest.fn(),
-    addToHistory: jest.fn(),
-    clearHistory: jest.fn(),
-    getRecommendations: jest.fn(),
-  } as any);
+  mockUseFavorites.mockReturnValue(
+    createFavoritesValue({
+      favorites: Array.from({ length: favoritesLen }, (_, i) => createFavoriteItem(i + 1)),
+      viewHistory: Array.from({ length: historyLen }, (_, i) => createHistoryItem(i + 1)),
+    })
+  );
 };
 
 describe('ProfileScreen', () => {
@@ -227,7 +204,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(1, 1);
 
-    const { getAllByText, findByText, findByLabelText } = renderProfile();
+    const { getAllByText, findByLabelText } = renderProfile();
 
     // По умолчанию активна вкладка "Мои" и показываются путешествия пользователя
     expect(await findByLabelText('My Travel 1')).toBeTruthy();

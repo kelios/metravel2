@@ -6,6 +6,7 @@ import {
   mockUnwrapMyTravelsPayload,
   resetTravelsApiMocks,
 } from '../helpers/mockTravelsApi';
+import { createAuthValue } from '../helpers/mockContextValues';
 import ExportScreen from '@/app/(tabs)/export';
 import { useAuth } from '@/context/AuthContext';
 import { useIsFocused } from '@react-navigation/native';
@@ -42,7 +43,7 @@ jest.mock('@/components/listTravel/ListTravel', () => {
 });
 
 jest.mock('@expo/vector-icons', () => ({
-  Feather: ({ name, ...props }: any) => {
+  Feather: ({ name, ...props }: { name: string; [key: string]: unknown }) => {
     const React = require('react');
     const { View } = require('react-native');
     return React.createElement(View, { testID: `feather-${name}`, ...props });
@@ -67,10 +68,10 @@ describe('ExportScreen', () => {
 
   it('shows login empty state for unauthenticated users', () => {
     const { Wrapper } = createQueryWrapper();
-    mockUseAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue(createAuthValue({
       isAuthenticated: false,
       userId: null,
-    } as any);
+    }));
 
     const { getByText } = render(<ExportScreen />, { wrapper: Wrapper });
 
@@ -80,10 +81,10 @@ describe('ExportScreen', () => {
 
   it('does not show empty state until userId is available', () => {
     const { Wrapper } = createQueryWrapper();
-    mockUseAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue(createAuthValue({
       isAuthenticated: true,
       userId: null,
-    } as any);
+    }));
 
     const { queryByText, getByText } = render(<ExportScreen />, { wrapper: Wrapper });
 
@@ -97,11 +98,11 @@ describe('ExportScreen', () => {
 
   it('shows empty state when there are no travels', async () => {
     const { Wrapper } = createQueryWrapper();
-    mockUseAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue(createAuthValue({
       isAuthenticated: true,
       userId: '123',
-    } as any);
-    mockFetchMyTravels.mockResolvedValueOnce([] as any);
+    }));
+    mockFetchMyTravels.mockResolvedValueOnce([]);
 
     const { findByText } = render(<ExportScreen />, { wrapper: Wrapper });
 
@@ -117,10 +118,10 @@ describe('ExportScreen', () => {
 
   it('falls back to the list when count query fails', async () => {
     const { Wrapper } = createQueryWrapper();
-    mockUseAuth.mockReturnValue({
+    mockUseAuth.mockReturnValue(createAuthValue({
       isAuthenticated: true,
       userId: '123',
-    } as any);
+    }));
     mockFetchMyTravels.mockRejectedValueOnce(new Error('boom'));
 
     const { getByTestId, queryByText } = render(<ExportScreen />, { wrapper: Wrapper });

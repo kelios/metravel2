@@ -2,6 +2,7 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import { mockPush, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
 import { createQueryWrapper } from '../helpers/testQueryClient';
+import { createAuthValue } from '../helpers/mockContextValues';
 import {
     mockFetchMyTravels,
     mockUnwrapMyTravelsPayload,
@@ -47,7 +48,7 @@ import SubscriptionsScreen from '@/app/(tabs)/subscriptions';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMySubscriptions, fetchMySubscribers } from '@/api/user';
 
-const mockedUseAuth = useAuth as jest.Mock;
+const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockedFetchMySubscriptions = fetchMySubscriptions as jest.Mock;
 const mockedFetchMySubscribers = fetchMySubscribers as jest.Mock;
 const mockedFetchMyTravels = mockFetchMyTravels as jest.Mock;
@@ -57,22 +58,22 @@ describe('SubscriptionsScreen', () => {
         jest.clearAllMocks();
         resetExpoRouterMocks();
         resetTravelsApiMocks();
-        mockedUseAuth.mockReturnValue({
+        mockedUseAuth.mockReturnValue(createAuthValue({
             isAuthenticated: true,
             authReady: true,
             userId: '1',
-        });
+        }));
         mockedFetchMySubscriptions.mockResolvedValue([]);
         mockedFetchMySubscribers.mockResolvedValue([]);
         mockedFetchMyTravels.mockResolvedValue([]);
     });
 
     it('shows login prompt when not authenticated', () => {
-        mockedUseAuth.mockReturnValue({
+        mockedUseAuth.mockReturnValue(createAuthValue({
             isAuthenticated: false,
             authReady: true,
             userId: null,
-        });
+        }));
 
         const { getByText } = render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
@@ -117,11 +118,11 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('shows loading state when auth is not ready', () => {
-        mockedUseAuth.mockReturnValue({
+        mockedUseAuth.mockReturnValue(createAuthValue({
             isAuthenticated: true,
             authReady: false,
             userId: '1',
-        });
+        }));
 
         const { getByText } = render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
