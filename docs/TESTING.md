@@ -138,6 +138,90 @@ yarn test:ci
 
 Includes `npm run check:image-architecture` and then runs Jest in CI mode.
 
+## CI Smoke quality gate
+
+Workflow:
+
+- `.github/workflows/ci-smoke.yml`
+
+Jobs:
+
+- `lint` (gating): runs `yarn lint:ci`, publishes summary + `eslint-results` artifact.
+- `smoke-critical` (gating): runs `yarn test:smoke:critical:ci`, publishes summary + `jest-smoke-results` artifact.
+- `quality-summary` (aggregation): downloads both artifacts and publishes one combined quality summary.
+
+Policy:
+
+- For `pull_request`, smoke duration budget is warning-only.
+- For `push` to `main`, smoke duration budget strict mode is enabled and may fail the quality gate.
+
+Local reproduction:
+
+```bash
+yarn lint:ci
+yarn test:smoke:critical:ci
+node scripts/summarize-eslint.js test-results/eslint-results.json
+node scripts/summarize-jest-smoke.js test-results/jest-smoke-results.json
+node scripts/summarize-quality-gate.js test-results/eslint-results.json test-results/jest-smoke-results.json --fail-on-missing
+```
+
+### Troubleshooting by Failure Class
+
+<a id="qg-001"></a>
+- `infra_artifact` (`QG-001`)
+  - Meaning: one of required reports is missing (`eslint-results` or `jest-smoke-results`).
+  - Check:
+    - upload steps in `lint` / `smoke-critical`
+    - download steps in `quality-summary`
+  - Re-run locally:
+    - `yarn lint:ci`
+    - `yarn test:smoke:critical:ci`
+
+<a id="qg-002"></a>
+- `inconsistent_state` (`QG-002`)
+  - Meaning: upstream job status and report content contradict each other.
+  - Check:
+    - `needs.lint.result` / `needs.smoke-critical.result`
+    - whether report files contain expected failures
+    - infra errors in job logs (timeout, canceled step, artifact mismatch)
+  - Re-run locally:
+    - `yarn lint:ci`
+    - `yarn test:smoke:critical:ci`
+
+<a id="qg-003"></a>
+- `lint_only` (`QG-003`)
+  - Meaning: lint report has violations, smoke report is green.
+  - Re-run locally:
+    - `yarn lint:ci`
+    - `node scripts/summarize-eslint.js test-results/eslint-results.json`
+
+<a id="qg-004"></a>
+- `smoke_only` (`QG-004`)
+  - Meaning: smoke report has failing suites/tests, lint is green.
+  - Re-run locally:
+    - `yarn test:smoke:critical`
+    - `yarn test:smoke:critical:ci`
+    - `node scripts/summarize-jest-smoke.js test-results/jest-smoke-results.json`
+
+<a id="qg-005"></a>
+- `mixed` (`QG-005`)
+  - Meaning: both lint and smoke contain failures.
+  - Suggested order:
+    1. Fix lint first (`yarn lint:ci`).
+    2. Re-run smoke (`yarn test:smoke:critical:ci`).
+    3. Re-run combined summary script.
+
+<a id="qg-006"></a>
+- `performance_budget` (`QG-006`)
+  - Meaning: smoke duration exceeded configured budget in strict mode.
+  - Check:
+    - `SMOKE_DURATION_BUDGET_SECONDS`
+    - `SMOKE_DURATION_BUDGET_STRICT`
+    - suite growth in `test:smoke:critical`
+  - Re-run locally:
+    - `yarn test:smoke:critical:ci`
+    - `SMOKE_DURATION_BUDGET_SECONDS=10 SMOKE_DURATION_BUDGET_STRICT=true node scripts/summarize-quality-gate.js test-results/eslint-results.json test-results/jest-smoke-results.json --fail-on-missing`
+
 ## Known peer dependency warnings
 
 You may see warnings during `yarn install`:

@@ -95,6 +95,8 @@ describe('summarize-quality-gate script', () => {
     const result = runSummary(missingPath, jestPassPath, ['--fail-on-missing']);
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('Failure Class: infra_artifact');
+    expect(result.stdout).toContain('Recommendation ID: QG-001');
+    expect(result.stdout).toContain('docs/TESTING.md#qg-001 (QG-001)');
     expect(result.stdout).toContain('Quality summary failed: required report artifact is missing.');
   });
 
@@ -107,6 +109,8 @@ describe('summarize-quality-gate script', () => {
     );
     expect(result.status).toBe(1);
     expect(result.stdout).toContain('Failure Class: inconsistent_state');
+    expect(result.stdout).toContain('Recommendation ID: QG-002');
+    expect(result.stdout).toContain('docs/TESTING.md#qg-002 (QG-002)');
     expect(result.stdout).toContain('Consistency Checks');
   });
 
@@ -114,18 +118,24 @@ describe('summarize-quality-gate script', () => {
     const result = runSummary(eslintFailPath, jestPassPath, ['--fail-on-missing']);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Failure Class: lint_only');
+    expect(result.stdout).toContain('Recommendation ID: QG-003');
+    expect(result.stdout).toContain('docs/TESTING.md#qg-003 (QG-003)');
   });
 
   it('classifies smoke-only failure', () => {
     const result = runSummary(eslintPassPath, jestFailPath, ['--fail-on-missing']);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Failure Class: smoke_only');
+    expect(result.stdout).toContain('Recommendation ID: QG-004');
+    expect(result.stdout).toContain('docs/TESTING.md#qg-004 (QG-004)');
   });
 
   it('classifies mixed failure when both lint and smoke fail', () => {
     const result = runSummary(eslintFailPath, jestFailPath, ['--fail-on-missing']);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('Failure Class: mixed');
+    expect(result.stdout).toContain('Recommendation ID: QG-005');
+    expect(result.stdout).toContain('docs/TESTING.md#qg-005 (QG-005)');
   });
 
   it('prints performance budget warning when smoke duration exceeds threshold', () => {
@@ -151,6 +161,9 @@ describe('summarize-quality-gate script', () => {
       },
     );
     expect(result.status).toBe(1);
+    expect(result.stdout).toContain('Failure Class: performance_budget');
+    expect(result.stdout).toContain('Recommendation ID: QG-006');
+    expect(result.stdout).toContain('docs/TESTING.md#qg-006 (QG-006)');
     expect(result.stdout).toContain('Strict budget mode is enabled');
     expect(result.stdout).toContain('Quality summary failed: smoke duration budget exceeded in strict mode.');
   });

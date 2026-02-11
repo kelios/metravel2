@@ -113,5 +113,5 @@ jobs:
           LINT_JOB_RESULT: ${{ needs.lint.result }}
           SMOKE_JOB_RESULT: ${{ needs.smoke-critical.result }}
           SMOKE_DURATION_BUDGET_SECONDS: "30"
-          SMOKE_DURATION_BUDGET_STRICT: "false"
+          SMOKE_DURATION_BUDGET_STRICT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing

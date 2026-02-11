@@ -197,6 +197,29 @@ yarn e2e:headed
 yarn e2e:ui
 ```
 
+### CI Quality Gate
+
+- Workflow: `.github/workflows/ci-smoke.yml`
+- Gating jobs:
+  - `lint` (ESLint JSON report + summary)
+  - `smoke-critical` (critical app/API tests + JSON report + summary)
+- Aggregation job:
+  - `quality-summary` (always runs, combines lint + smoke status, emits one final summary)
+
+Policy:
+- On `pull_request`: smoke duration budget is warning-only.
+- On `push` to `main`: smoke duration budget strict mode is enabled and can fail the gate.
+
+Local commands to reproduce CI gate:
+
+```bash
+yarn lint:ci
+yarn test:smoke:critical:ci
+node scripts/summarize-eslint.js test-results/eslint-results.json
+node scripts/summarize-jest-smoke.js test-results/jest-smoke-results.json
+node scripts/summarize-quality-gate.js test-results/eslint-results.json test-results/jest-smoke-results.json --fail-on-missing
+```
+
 More details: see `docs/TESTING.md`.
 
 ## 🖼 Images & Cards (важно)

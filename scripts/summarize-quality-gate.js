@@ -52,6 +52,7 @@ const smokeDurationSeconds = smokeDurationMs > 0 ? Number((smokeDurationMs / 100
 const smokeDurationOverBudget =
   smokeDurationBudgetSeconds > 0 &&
   smokeDurationSeconds > smokeDurationBudgetSeconds
+const budgetBlocking = smokeDurationBudgetStrict && smokeDurationOverBudget
 
 const inconsistencies = []
 
@@ -69,24 +70,45 @@ if (smokeJobResult === 'success' && !jestOk) {
   inconsistencies.push('Smoke job succeeded but Jest report indicates failures or is missing.')
 }
 
-const overallOk = eslintOk && jestOk && inconsistencies.length === 0
+const overallOk = eslintOk && jestOk && inconsistencies.length === 0 && !budgetBlocking
 
 const getFailureClass = () => {
   if (overallOk) return 'pass'
   if (inconsistencies.length > 0) return 'inconsistent_state'
   if (eslint === null || jest === null) return 'infra_artifact'
+  if (budgetBlocking && eslintOk && jestOk) return 'performance_budget'
   if (!eslintOk && jestOk) return 'lint_only'
   if (eslintOk && !jestOk) return 'smoke_only'
   return 'mixed'
 }
 
 const failureClass = getFailureClass()
+const recommendationByClass = {
+  infra_artifact: 'QG-001',
+  inconsistent_state: 'QG-002',
+  lint_only: 'QG-003',
+  smoke_only: 'QG-004',
+  mixed: 'QG-005',
+  performance_budget: 'QG-006',
+}
+const recommendationAnchorByClass = {
+  infra_artifact: 'qg-001',
+  inconsistent_state: 'qg-002',
+  lint_only: 'qg-003',
+  smoke_only: 'qg-004',
+  mixed: 'qg-005',
+  performance_budget: 'qg-006',
+}
+const recommendationId = recommendationByClass[failureClass] || 'QG-000'
+const recommendationAnchor = recommendationAnchorByClass[failureClass] || 'troubleshooting-by-failure-class'
 
 print('## Quality Gate Summary')
 print('')
 print(`- Overall Quality Gate: ${overallOk ? 'PASS' : 'FAIL'}`)
 if (!overallOk) {
   print(`- Failure Class: ${failureClass}`)
+  print(`- Recommendation ID: ${recommendationId}`)
+  print(`- See: docs/TESTING.md#${recommendationAnchor} (${recommendationId})`)
 }
 print(`- Lint: ${eslintOk ? 'PASS' : 'FAIL'}${eslint === null ? ' (report missing)' : ''}`)
 print(`- Smoke tests: ${jestOk ? 'PASS' : 'FAIL'}${jest === null ? ' (report missing)' : ''}`)
@@ -138,6 +160,9 @@ if (!overallOk) {
   } else if (!jestOk) {
     print('- Investigate failing smoke tests and re-run `yarn test:smoke:critical`.')
   }
+  if (budgetBlocking) {
+    print('- Reduce smoke runtime or raise budget threshold if justified for the current suite size.')
+  }
 
   print('')
   print('### How to Reproduce Locally')
@@ -157,6 +182,9 @@ if (!overallOk) {
     print('- `yarn test:smoke:critical:ci`')
     print('- Re-check CI artifact upload/download steps for both jobs.')
   }
+  if (!hasReproCommands && budgetBlocking) {
+    print('- `SMOKE_DURATION_BUDGET_SECONDS=10 SMOKE_DURATION_BUDGET_STRICT=true node scripts/summarize-quality-gate.js test-results/eslint-results.json test-results/jest-smoke-results.json --fail-on-missing`')
+  }
 }
 
 if (strictMissing && (eslint === null || jest === null)) {
@@ -171,7 +199,7 @@ if (strictMissing && inconsistencies.length > 0) {
   process.exit(1)
 }
 
-if (smokeDurationBudgetStrict && smokeDurationOverBudget) {
+if (budgetBlocking) {
   print('')
   print('- Quality summary failed: smoke duration budget exceeded in strict mode.')
   process.exit(1)
