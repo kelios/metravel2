@@ -61,6 +61,7 @@ const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(ma
 
 // Compute preferred format once at module level (never changes at runtime)
 const PREFERRED_FORMAT = Platform.OS === 'web' ? getPreferredImageFormat() : undefined
+const FIRST_SLIDE_URI_CACHE = new Map<string, string>()
 
 const buildUri = (
   img: SliderImage,
@@ -124,6 +125,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     blurBackground = true,
     onFirstImageLoad,
     mobileHeightPercent = 0.6,
+    firstImagePreloaded = false,
   } = props
 
   const insets = useSafeAreaInsets()
@@ -139,6 +141,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web')
   const prefetchEnabledRef = useRef(Platform.OS !== 'web')
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const firstSlideStableKeyRef = useRef<string | null>(null)
+  const firstSlideStableUriRef = useRef<string | null>(null)
 
   const syncContainerWidthFromDom = useCallback(() => {
     if (Platform.OS !== 'web') return
@@ -211,12 +215,46 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const containerH = useMemo(() => computeHeight(containerW), [computeHeight, containerW])
 
+  const firstSlideStableKey = useMemo(() => {
+    const first = images[0]
+    if (!first) return null
+    return `${String(first.id)}|${String(first.updated_at ?? '')}|${String(first.url)}|${fit}`
+  }, [images, fit])
+
+  useEffect(() => {
+    if (firstSlideStableKeyRef.current === firstSlideStableKey) return
+    firstSlideStableKeyRef.current = firstSlideStableKey
+    firstSlideStableUriRef.current =
+      firstSlideStableKey && FIRST_SLIDE_URI_CACHE.has(firstSlideStableKey)
+        ? FIRST_SLIDE_URI_CACHE.get(firstSlideStableKey) || null
+        : null
+  }, [firstSlideStableKey])
+
   const uriMap = useMemo(
     () =>
-      images.map((img, idx) =>
-        buildUri(img, containerW, containerH, fit, idx === 0)
-      ),
-    [images, containerW, containerH, fit]
+      images.map((img, idx) => {
+        // Keep first-slide URI stable during initial web hydration/sizing to avoid visible
+        // src swaps (hero overlay -> slider first frame flicker).
+        if (Platform.OS === 'web' && firstImagePreloaded && idx === 0) {
+          if (firstSlideStableUriRef.current) return firstSlideStableUriRef.current
+
+          if (firstSlideStableKey && FIRST_SLIDE_URI_CACHE.has(firstSlideStableKey)) {
+            const cached = FIRST_SLIDE_URI_CACHE.get(firstSlideStableKey) || null
+            firstSlideStableUriRef.current = cached
+            if (cached) return cached
+          }
+
+          const initial = buildUri(img, containerW, containerH, fit, true)
+          firstSlideStableUriRef.current = initial
+          if (firstSlideStableKey) {
+            FIRST_SLIDE_URI_CACHE.set(firstSlideStableKey, initial)
+          }
+          return initial
+        }
+
+        return buildUri(img, containerW, containerH, fit, idx === 0)
+      }),
+    [images, containerW, containerH, fit, firstImagePreloaded, firstSlideStableKey]
   )
 
   const canPrefetchOnWeb = useMemo(() => {
