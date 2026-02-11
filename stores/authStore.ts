@@ -116,7 +116,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
             // Always fetch profile in background to ensure avatar is up-to-date
             if (storageData.userId) {
                 getUserApi()
-                    .then(({ fetchUserProfile }) => fetchUserProfile(storageData.userId))
+                    .then(({ fetchUserProfile }) => fetchUserProfile(storageData.userId!))
                     .then((profile) => {
                         if (epochAtStart !== authEpoch) return;
                         const avatar = normalizeAvatar(profile?.avatar);

@@ -66,9 +66,9 @@ const WEB_CURSOR_POINTER_STYLE: WebEnhancedViewStyle = {
     cursor: 'pointer',
 };
 
-const WEB_TEXT_OUTLINE_NONE_STYLE: WebEnhancedTextStyle = {
+const WEB_TEXT_OUTLINE_NONE_STYLE = {
     outlineStyle: 'none',
-};
+} as WebEnhancedTextStyle;
 
 function SubscriberSection({
     profile,
