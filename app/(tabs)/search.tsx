@@ -8,6 +8,7 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
 import { SearchPageSkeleton } from '@/components/listTravel/SearchPageSkeleton';
 import { queryClient } from '@/queryClient';
@@ -40,7 +41,9 @@ function SearchScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
     const colors = useThemedColors();
+    const { isHydrated: isResponsiveHydrated = true } = useResponsive();
     const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
+    const canMountContent = hydrated && isResponsiveHydrated;
 
     useEffect(() => {
         if (Platform.OS !== 'web') return;
@@ -99,7 +102,7 @@ function SearchScreen() {
                         </View>
                     }
                 >
-                    {hydrated ? (
+                    {canMountContent ? (
                         <Suspense fallback={<SearchPageSkeleton />}>
                             <ListTravel />
                         </Suspense>

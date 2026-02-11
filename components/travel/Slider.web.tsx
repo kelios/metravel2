@@ -150,7 +150,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     const node = raw?._nativeNode || raw?._domNode || raw
     const w = node?.getBoundingClientRect?.()?.width
     if (!Number.isFinite(w) || w <= 0) return
-    if (Math.abs(containerWRef.current - w) > 2) {
+    if (Math.abs(containerWRef.current - w) > 4) {
       containerWRef.current = w
       setContainerW(w)
     }
@@ -353,7 +353,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (e: any) => {
       const w = e?.nativeEvent?.layout?.width
       if (!Number.isFinite(w)) return
-      if (Math.abs(containerWRef.current - w) > 2) {
+      if (Math.abs(containerWRef.current - w) > 4) {
         containerWRef.current = w
         setContainerW(w)
       }
@@ -484,7 +484,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     <View style={styles.sliderStack}>
       <View
         ref={wrapperRef}
-        onLayout={onLayout}
+        onLayout={Platform.OS === 'web' ? undefined : onLayout}
         style={[
           styles.wrapper,
           { height: containerH },

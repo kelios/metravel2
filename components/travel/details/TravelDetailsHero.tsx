@@ -428,7 +428,8 @@ function TravelHeroSectionInner({
     String((navigator as any).userAgent || '').toLowerCase().includes('jsdom')
   const [webHeroLoaded, setWebHeroLoaded] = useState(Platform.OS !== 'web' || isJSDOM)
   // Keep LCP overlay visible until the Slider's first image actually loads
-  const [sliderMounted, setSliderMounted] = useState(false)
+  const [overlayUnmounted, setOverlayUnmounted] = useState(false)
+  const [isOverlayFading, setIsOverlayFading] = useState(false)
   const [sliderImageReady, setSliderImageReady] = useState(false)
   const webHeroLoadNotifiedRef = useRef(false)
   const sliderLoadNotifiedRef = useRef(false)
@@ -444,7 +445,8 @@ function TravelHeroSectionInner({
       // Reset swap state only when route/travel actually changes.
       // URL normalization of the same image should not trigger a visual restart.
       setWebHeroLoaded(false)
-      setSliderMounted(false)
+      setOverlayUnmounted(false)
+      setIsOverlayFading(false)
       setSliderImageReady(false)
       webHeroLoadNotifiedRef.current = false
       sliderLoadNotifiedRef.current = false
@@ -458,12 +460,16 @@ function TravelHeroSectionInner({
   useEffect(() => {
     if (!webHeroLoaded || Platform.OS !== 'web') return
     if (sliderImageReady) {
-      // Image loaded — wait for the 0.3s CSS opacity transition to finish, then remove overlay
-      const t = setTimeout(() => setSliderMounted(true), 400)
+      setIsOverlayFading(true)
+      // Image loaded — after opacity transition completes, unmount overlay.
+      const t = setTimeout(() => setOverlayUnmounted(true), 340)
       return () => clearTimeout(t)
     }
     // Safety fallback: remove overlay after 6s even if slider image hasn't loaded
-    const fallback = setTimeout(() => setSliderMounted(true), 6000)
+    const fallback = setTimeout(() => {
+      setIsOverlayFading(true)
+      setOverlayUnmounted(true)
+    }, 6000)
     return () => clearTimeout(fallback)
   }, [webHeroLoaded, sliderImageReady])
 
@@ -474,8 +480,8 @@ function TravelHeroSectionInner({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
-    if (sliderMounted) tdTrace('hero:overlayHidden')
-  }, [sliderMounted, tdTrace])
+    if (overlayUnmounted) tdTrace('hero:overlayHidden')
+  }, [overlayUnmounted, tdTrace])
 
   const handleWebHeroLoad = useCallback(() => {
     if (webHeroLoadNotifiedRef.current) return
@@ -571,13 +577,15 @@ function TravelHeroSectionInner({
                   firstImagePreloaded
                 />
               )}
-              {!sliderMounted && (
+              {!overlayUnmounted && (
                 <View
                   pointerEvents="none"
                   style={{
                     position: 'absolute',
                     inset: 0,
                     zIndex: 5,
+                    opacity: isOverlayFading ? 0 : 1,
+                    transition: 'opacity 320ms ease',
                   } as any}
                   collapsable={false}
                 >
