@@ -1,11 +1,13 @@
-const fs = require('fs')
 const { spawnSync } = require('child_process')
+const { parseSelectiveRunnerArgs } = require('./selective-runner-args')
 const {
   parseChangedFiles,
   getMatchedFiles,
+  getCategoryBreakdown,
   buildDecisionSummary,
   appendStepSummary,
 } = require('./selective-check-utils')
+const { readChangedFiles } = require('./changed-files-utils')
 
 const VALIDATOR_CONTRACT_TESTS = [
   '__tests__/scripts/validator-json-contract.test.ts',
@@ -17,51 +19,25 @@ const VALIDATOR_CONTRACT_TESTS = [
   '__tests__/scripts/guard-validator-contract-change.test.ts',
 ]
 
-const RELEVANT_PATTERNS = [
-  /^scripts\/validator-/,
-  /^scripts\/validation-utils\.js$/,
-  /^scripts\/validate-.*\.js$/,
-  /^scripts\/guard-validator-contract-change\.js$/,
-  /^__tests__\/scripts\/validator-.*\.test\.ts$/,
-  /^__tests__\/scripts\/validate-.*\.test\.ts$/,
-  /^__tests__\/scripts\/guard-validator-contract-change\.test\.ts$/,
-  /^docs\/TESTING\.md$/,
-  /^\.github\/workflows\/ci-smoke\.yml$/,
+const RELEVANT_CATEGORIES = [
+  { name: 'validator', pattern: /^scripts\/validator-/ },
+  { name: 'validators', pattern: /^scripts\/validate-.*\.js$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/validator-.*\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/validate-.*\.test\.ts$/ },
+  { name: 'guards', pattern: /^scripts\/guard-validator-contract-change\.js$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/guard-validator-contract-change\.test\.ts$/ },
+  { name: 'shared', pattern: /^scripts\/validation-utils\.js$/ },
+  { name: 'docs', pattern: /^docs\/TESTING\.md$/ },
+  { name: 'workflow', pattern: /^\.github\/workflows\/ci-smoke\.yml$/ },
 ]
+const RELEVANT_PATTERNS = RELEVANT_CATEGORIES.map((c) => c.pattern)
 
-const parseArgs = (argv) => {
-  const args = {
-    changedFilesFile: '',
-    dryRun: false,
-  }
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const token = argv[i]
-    if (token === '--changed-files-file' && argv[i + 1]) {
-      args.changedFilesFile = argv[i + 1]
-      i += 1
-      continue
-    }
-    if (token === '--dry-run') {
-      args.dryRun = true
-      continue
-    }
-  }
-
-  return args
-}
+const parseArgs = (argv) => parseSelectiveRunnerArgs(argv)
 
 const getMatchedValidatorFiles = (changedFiles) => getMatchedFiles(changedFiles, RELEVANT_PATTERNS)
 
 const shouldRunForChangedFiles = (changedFiles) => {
   return getMatchedValidatorFiles(changedFiles).length > 0
-}
-
-const readChangedFiles = ({ changedFilesFile }) => {
-  if (changedFilesFile && fs.existsSync(changedFilesFile)) {
-    return parseChangedFiles(fs.readFileSync(changedFilesFile, 'utf8'))
-  }
-  return parseChangedFiles(process.env.CHANGED_FILES || '')
 }
 
 const runValidatorContractTests = () => {
@@ -75,6 +51,10 @@ const runValidatorContractTests = () => {
 
 const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun }) => {
   const notes = []
+  const breakdown = getCategoryBreakdown(changedFiles || [], RELEVANT_CATEGORIES)
+  if (breakdown.length > 0) {
+    notes.push(`Category matches: ${breakdown.map((item) => `${item.name}=${item.count}`).join(', ')}`)
+  }
   if (status === 'run') {
     notes.push(`Targeted tests: ${VALIDATOR_CONTRACT_TESTS.length}`)
     if (dryRun) notes.push('Mode: dry-run')

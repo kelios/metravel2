@@ -51,6 +51,7 @@ describe('run-validator-contract-tests-if-needed', () => {
     expect(runSummary).toContain('Decision: run')
     expect(runSummary).toContain('Mode: dry-run')
     expect(runSummary).toContain('Matched files:')
+    expect(runSummary).toContain('Category matches:')
 
     const skipSummary = buildSummaryMarkdown({
       status: 'skip',
@@ -60,6 +61,7 @@ describe('run-validator-contract-tests-if-needed', () => {
     })
     expect(skipSummary).toContain('Decision: skip')
     expect(skipSummary).toContain('Relevant file matches: 0')
+    expect(skipSummary).toContain('Category matches:')
   })
 
   it('keeps targeted validator test list stable', () => {

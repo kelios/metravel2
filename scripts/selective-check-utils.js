@@ -14,6 +14,20 @@ const getMatchedFiles = (changedFiles, patterns) => {
   )
 }
 
+const getCategoryBreakdown = (changedFiles, categories) => {
+  const safeCategories = Array.isArray(categories) ? categories : []
+  const buckets = new Map()
+  safeCategories.forEach((category) => {
+    const name = String(category?.name || '').trim()
+    const pattern = category?.pattern
+    if (!name) return
+    const count = (changedFiles || []).filter((filePath) => pattern && pattern.test(filePath)).length
+    buckets.set(name, (buckets.get(name) || 0) + count)
+  })
+
+  return [...buckets.entries()].map(([name, count]) => ({ name, count }))
+}
+
 const buildDecisionSummary = ({
   title,
   decision,
@@ -54,6 +68,7 @@ const appendStepSummary = (markdown, stepSummaryPath) => {
 module.exports = {
   parseChangedFiles,
   getMatchedFiles,
+  getCategoryBreakdown,
   buildDecisionSummary,
   appendStepSummary,
 }

@@ -1,11 +1,13 @@
-const fs = require('fs')
 const { spawnSync } = require('child_process')
+const { parseSelectiveRunnerArgs } = require('./selective-runner-args')
 const {
   parseChangedFiles,
   getMatchedFiles,
+  getCategoryBreakdown,
   buildDecisionSummary,
   appendStepSummary,
 } = require('./selective-check-utils')
+const { readChangedFiles } = require('./changed-files-utils')
 
 const SCHEMA_CONTRACT_TESTS = [
   '__tests__/scripts/summarize-quality-gate.test.ts',
@@ -13,50 +15,24 @@ const SCHEMA_CONTRACT_TESTS = [
   '__tests__/scripts/guard-quality-schema-change.test.ts',
 ]
 
-const RELEVANT_PATTERNS = [
-  /^scripts\/summarize-quality-gate\.js$/,
-  /^scripts\/validate-quality-summary\.js$/,
-  /^scripts\/guard-quality-schema-change\.js$/,
-  /^__tests__\/scripts\/summarize-quality-gate\.test\.ts$/,
-  /^__tests__\/scripts\/validate-quality-summary\.test\.ts$/,
-  /^__tests__\/scripts\/guard-quality-schema-change\.test\.ts$/,
-  /^docs\/TESTING\.md$/,
-  /^\.github\/workflows\/ci-smoke\.yml$/,
+const RELEVANT_CATEGORIES = [
+  { name: 'schema', pattern: /^scripts\/summarize-quality-gate\.js$/ },
+  { name: 'schema', pattern: /^scripts\/validate-quality-summary\.js$/ },
+  { name: 'guards', pattern: /^scripts\/guard-quality-schema-change\.js$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/summarize-quality-gate\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/validate-quality-summary\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/guard-quality-schema-change\.test\.ts$/ },
+  { name: 'docs', pattern: /^docs\/TESTING\.md$/ },
+  { name: 'workflow', pattern: /^\.github\/workflows\/ci-smoke\.yml$/ },
 ]
+const RELEVANT_PATTERNS = RELEVANT_CATEGORIES.map((c) => c.pattern)
 
-const parseArgs = (argv) => {
-  const args = {
-    changedFilesFile: '',
-    dryRun: false,
-  }
-
-  for (let i = 0; i < argv.length; i += 1) {
-    const token = argv[i]
-    if (token === '--changed-files-file' && argv[i + 1]) {
-      args.changedFilesFile = argv[i + 1]
-      i += 1
-      continue
-    }
-    if (token === '--dry-run') {
-      args.dryRun = true
-      continue
-    }
-  }
-
-  return args
-}
+const parseArgs = (argv) => parseSelectiveRunnerArgs(argv)
 
 const getMatchedSchemaFiles = (changedFiles) => getMatchedFiles(changedFiles, RELEVANT_PATTERNS)
 
 const shouldRunForChangedFiles = (changedFiles) => {
   return getMatchedSchemaFiles(changedFiles).length > 0
-}
-
-const readChangedFiles = ({ changedFilesFile }) => {
-  if (changedFilesFile && fs.existsSync(changedFilesFile)) {
-    return parseChangedFiles(fs.readFileSync(changedFilesFile, 'utf8'))
-  }
-  return parseChangedFiles(process.env.CHANGED_FILES || '')
 }
 
 const runSchemaContractTests = () => {
@@ -70,6 +46,10 @@ const runSchemaContractTests = () => {
 
 const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun }) => {
   const notes = []
+  const breakdown = getCategoryBreakdown(changedFiles || [], RELEVANT_CATEGORIES)
+  if (breakdown.length > 0) {
+    notes.push(`Category matches: ${breakdown.map((item) => `${item.name}=${item.count}`).join(', ')}`)
+  }
   if (status === 'run') {
     notes.push(`Targeted tests: ${SCHEMA_CONTRACT_TESTS.length}`)
     if (dryRun) notes.push('Mode: dry-run')

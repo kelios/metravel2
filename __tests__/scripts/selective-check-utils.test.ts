@@ -4,6 +4,7 @@ const path = require('path')
 const {
   parseChangedFiles,
   getMatchedFiles,
+  getCategoryBreakdown,
   buildDecisionSummary,
   appendStepSummary,
 } = require('@/scripts/selective-check-utils')
@@ -21,6 +22,21 @@ describe('selective-check-utils', () => {
     expect(matched).toEqual([
       'scripts/validator-output.js',
       '__tests__/scripts/validator-output.test.ts',
+    ])
+  })
+
+  it('aggregates category breakdown counts by category name', () => {
+    const breakdown = getCategoryBreakdown(
+      ['scripts/a.js', '__tests__/scripts/a.test.ts', '__tests__/scripts/b.test.ts'],
+      [
+        { name: 'scripts', pattern: /^scripts\// },
+        { name: 'tests', pattern: /^__tests__\/scripts\/.*\.test\.ts$/ },
+        { name: 'tests', pattern: /^__tests__\/scripts\/a\.test\.ts$/ },
+      ],
+    )
+    expect(breakdown).toEqual([
+      { name: 'scripts', count: 1 },
+      { name: 'tests', count: 3 },
     ])
   })
 
