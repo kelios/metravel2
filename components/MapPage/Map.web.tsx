@@ -1010,6 +1010,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
       {shouldShowLoadingOverlay && (
         <View
+          testID="map-loading-overlay"
           style={{
             position: 'absolute',
             inset: 0,

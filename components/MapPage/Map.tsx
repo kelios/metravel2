@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Platform, Text, View } from 'react-native'
+import { ActivityIndicator, Platform, View } from 'react-native'
 import { useThemedColors } from '@/hooks/useTheme'
 
 type AnyComponent = React.ComponentType<any>
