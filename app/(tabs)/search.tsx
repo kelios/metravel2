@@ -15,14 +15,9 @@ import { queryClient } from '@/queryClient';
 import { fetchTravels } from '@/api/travelsApi';
 import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 
-const isWeb = Platform.OS === 'web';
-const isClient = typeof window !== 'undefined';
-
 const DEFAULT_QUERY_KEY = ['travels', { perPage: PER_PAGE, search: '', params: JSON.stringify({ moderation: 1, publish: 1 }) }];
 
-const ListTravel = isWeb && isClient
-  ? lazy(() => import('@/components/listTravel/ListTravelBase'))
-  : require('@/components/listTravel/ListTravelBase').default;
+const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
 function SearchScreen() {
     const pathname = usePathname();
@@ -89,14 +84,6 @@ function SearchScreen() {
             padding: DESIGN_TOKENS.spacing.lg,
         },
     }), [colors]);
-
-    if (isWeb && !isClient) {
-        return (
-            <View style={styles.container}>
-                <SearchPageSkeleton />
-            </View>
-        );
-    }
 
     return (
         <>

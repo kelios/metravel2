@@ -1,21 +1,17 @@
 // app/travelsby/index.tsx
 import { Suspense, lazy, useMemo } from 'react';
-import { Platform, StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text } from 'react-native';
 import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useIsFocused } from '@react-navigation/native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
 
-const isWeb = Platform.OS === 'web';
-const isClient = typeof window !== 'undefined';
-const ListTravel = isWeb && isClient
-  ? lazy(() => import('@/components/listTravel/ListTravelBase'))
-  : require('@/components/listTravel/ListTravelBase').default;
+const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
 export default function TravelsByScreen() {
     const pathname = usePathname();
     const isFocused = useIsFocused();
-    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 

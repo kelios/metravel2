@@ -467,9 +467,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
               opacity: 0;
               visibility: hidden;
             }
-            html:not(.rnw-styles-ready) #root {
-              visibility: hidden;
-            }
           `,
         }}
       />

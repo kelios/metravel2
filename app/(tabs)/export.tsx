@@ -1,6 +1,6 @@
 // app/export.tsx (или соответствующий путь)
 import { Suspense, lazy, useEffect, useMemo } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { usePathname, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -11,27 +11,19 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchMyTravels } from '@/api/travelsApi';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
 
-const isWeb = Platform.OS === 'web';
-const isClient = typeof window !== 'undefined';
-const ListTravel = isWeb && isClient
-  ? lazy(async () => {
-      const mod: any = await import('@/components/listTravel/ListTravel');
-      const Comp = mod?.default ?? mod;
-      return { default: Comp };
-    })
-  : (() => {
-      const mod: any = require('@/components/listTravel/ListTravel');
-      return mod?.default ?? mod;
-    })();
+const ListTravel = lazy(async () => {
+    const mod: any = await import('@/components/listTravel/ListTravel');
+    const Comp = mod?.default ?? mod;
+    return { default: Comp };
+});
 
 export default function ExportScreen() {
     const isFocused = useIsFocused();
     const pathname = usePathname();
     const router = useRouter();
     const { isAuthenticated, userId } = useAuth();
-    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
-
     const title = 'Экспорт в pdf | Metravel';
     const description =
         'Экспорт ваших опубликованных и черновых путешествий на платформе Metravel.by';
