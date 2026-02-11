@@ -463,8 +463,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
               0% { background-position: 200% 0; }
               100% { background-position: -200% 0; }
             }
-            html.app-hydrated.rnw-styles-ready #metravel-shell {
+            html.rnw-styles-ready #metravel-shell {
               opacity: 0;
+              visibility: hidden;
+            }
+            html:not(.rnw-styles-ready) #root {
               visibility: hidden;
             }
           `,
@@ -481,7 +484,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
       <script
         dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;if(document.getElementById('react-native-stylesheet')){root.classList.add('rnw-styles-ready');return;}var links=document.querySelectorAll('link[data-rnw-styles="1"]');for(var i=0;i<links.length;i++){var l=links[i];if(l&&l.sheet||l&&l.getAttribute('data-loaded')==='1'){root.classList.add('rnw-styles-ready');return;}}}catch(_){}})();`,
+          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;function mark(){if(done)return;done=true;root.classList.add('rnw-styles-ready')}if(document.getElementById('react-native-stylesheet')){mark();return}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true;if(l.sheet)return true}return false}catch(_){return false}}if(hasReadyLink()){mark();return}var started=Date.now();var timer=setInterval(function(){if(hasReadyLink()){clearInterval(timer);mark();return}if(Date.now()-started>1200){clearInterval(timer);mark()}},50)}catch(_){}})();`,
         }}
       />
 
