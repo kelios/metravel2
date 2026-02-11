@@ -67,6 +67,43 @@ describe('src/api/travelsApi.ts', () => {
     mockedGetSecureItem.mockResolvedValue(null);
   });
 
+  describe('normalizeTravelItem', () => {
+    it('builds canonical travel url and hydrates user from user_ids', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        id: '12',
+        slug: 'trip-slug',
+        url: 'test',
+        user_ids: '55,77',
+        user_name: 'Alice',
+      } as any);
+
+      expect(travel.url).toBe('/travels/trip-slug');
+      expect(travel.userName).toBe('Alice');
+      expect(travel.user).toEqual(expect.objectContaining({ id: 55, name: 'Alice' }));
+    });
+
+    it('normalizes gallery urls and keeps existing user id unchanged', () => {
+      const { normalizeTravelItem } = loadTravelsApi();
+      const travel = normalizeTravelItem({
+        user: { id: 999, name: 'Old' },
+        userIds: '55,77',
+        gallery: [
+          '/gallery/a.jpg',
+          { id: 1, url: 'http://example.com/pic.jpg', extra: 'x' },
+          null,
+        ],
+      } as any);
+
+      expect(travel.user).toEqual(expect.objectContaining({ id: 999 }));
+      expect(travel.gallery).toHaveLength(2);
+      expect(String(travel.gallery[0])).toMatch(/\/gallery\/a\.jpg$/);
+      expect(travel.gallery[1]).toEqual(
+        expect.objectContaining({ id: 1, url: 'https://example.com/pic.jpg', extra: 'x' })
+      );
+    });
+  });
+
   describe('fetchTravelsForMap normalization', () => {
     it('normalizes snake_case payload into TravelCoords shape', async () => {
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
@@ -156,6 +193,17 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedFetchWithTimeout).toHaveBeenCalled();
     });
 
+    it('нормализует total/count, даже если backend прислал строки', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ results: [{ id: 1 }], count: '7' } as any);
+
+      const result = await fetchTravels(0, 10, '', {}, {} as any);
+
+      expect(result.total).toBe(7);
+      expect(result.data).toHaveLength(1);
+    });
+
     it('должен корректно обрабатывать Invalid page в ошибочном ответе', async () => {
       const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
@@ -164,6 +212,16 @@ describe('src/api/travelsApi.ts', () => {
       const result = await fetchTravels(10, 10, '', {}, {} as any);
 
       expect(result).toEqual({ data: [], total: 0 });
+    });
+
+    it('корректно обрабатывает Invalid page в успешном payload', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Invalid page.', total: '15' } as any);
+
+      const result = await fetchTravels(10, 10, '', {}, {} as any);
+
+      expect(result).toEqual({ data: [], total: 15 });
     });
 
     it('не добавляет publish по умолчанию, если есть user_id (user-scoped)', async () => {
@@ -207,6 +265,16 @@ describe('src/api/travelsApi.ts', () => {
       expect(result).toEqual({ data: [], total: 10 });
     });
 
+    it('обрабатывает unknown shape со строковым total', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ foo: 'bar', total: '12' } as any);
+
+      const result = await fetchTravels(0, 10, '', {}, {} as any);
+
+      expect(result).toEqual({ data: [], total: 12 });
+    });
+
     it('нормализует числовые массивы фильтров и отбрасывает мусорные значения', async () => {
       const { fetchTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
@@ -223,6 +291,30 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(where.countries).toEqual([1, 2]);
       expect(where.categories).toEqual([1, 2]);
+    });
+
+    it('отбрасывает Infinity/NaN/whitespace и сохраняет только конечные числа', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ data: [], total: 0 } as any);
+
+      await fetchTravels(
+        0,
+        10,
+        '',
+        {
+          countries: [' ', 'Infinity', Infinity, -Infinity, '2', 3, null, '0'],
+          categories: [NaN, ' 4 ', undefined],
+        } as any,
+        {} as any
+      );
+
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+
+      expect(where.countries).toEqual([2, 3, 0]);
+      expect(where.categories).toEqual([4]);
     });
   });
 
@@ -256,6 +348,17 @@ describe('src/api/travelsApi.ts', () => {
       expect(result.data).toEqual([{ id: 1 }]);
     });
 
+    it('нормализует total/count строки в random-ответах', async () => {
+      const { fetchRandomTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ data: [{ id: 1 }], total: '9' } as any);
+
+      const result = await fetchRandomTravels(1, 12, 'q', {}, {} as any);
+
+      expect(result.total).toBe(9);
+      expect(result.data).toEqual([{ id: 1 }]);
+    });
+
     it('корректно обрабатывает Invalid page', async () => {
       const { fetchRandomTravels } = loadTravelsApi();
       mockedFetchWithTimeout.mockResolvedValueOnce({ ok: false, status: 400 } as any);
@@ -264,6 +367,97 @@ describe('src/api/travelsApi.ts', () => {
       const result = await fetchRandomTravels(10, 12, '', {}, {} as any);
 
       expect(result).toEqual({ data: [], total: 0 });
+    });
+
+    it('корректно обрабатывает Invalid page в успешном random payload', async () => {
+      const { fetchRandomTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ detail: 'Invalid page.', total: '6' } as any);
+
+      const result = await fetchRandomTravels(10, 12, '', {}, {} as any);
+
+      expect(result).toEqual({ data: [], total: 6 });
+    });
+
+    it('возвращает total из unknown shape со строковым total', async () => {
+      const { fetchRandomTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ foo: 'bar', total: '11' } as any);
+
+      const result = await fetchRandomTravels(0, 12, '', {}, {} as any);
+
+      expect(result).toEqual({ data: [], total: 11 });
+    });
+  });
+
+  describe('fetchMyTravels', () => {
+    it('ставит publish/moderation по умолчанию и сериализует where', async () => {
+      const { fetchMyTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ data: [] } as any);
+
+      await fetchMyTravels({ user_id: 42 });
+
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+
+      expect(where).toEqual(
+        expect.objectContaining({
+          user_id: 42,
+          publish: 1,
+          moderation: 1,
+        })
+      );
+    });
+
+    it('собирает country/year/gallery и не подставляет статусы при includeDrafts=true', async () => {
+      const { fetchMyTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ data: [] } as any);
+
+      await fetchMyTravels({
+        user_id: 'u-1',
+        includeDrafts: true,
+        country: 'BY',
+        yearFrom: '2020',
+        yearTo: '2024',
+        onlyWithGallery: true,
+      });
+
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+
+      expect(where).toEqual(
+        expect.objectContaining({
+          user_id: 'u-1',
+          countries: ['BY'],
+          hasGallery: true,
+          year: { gte: '2020', lte: '2024' },
+        })
+      );
+      expect(where.publish).toBeUndefined();
+      expect(where.moderation).toBeUndefined();
+    });
+
+    it('unwrapMyTravelsPayload нормализует total/count и списки', () => {
+      const { unwrapMyTravelsPayload } = loadTravelsApi();
+
+      expect(unwrapMyTravelsPayload([{ id: 1 } as any])).toEqual({
+        items: [{ id: 1 }],
+        total: 1,
+      });
+
+      expect(
+        unwrapMyTravelsPayload({
+          results: [{ id: 1 }, { id: 2 }] as any,
+          count: '7',
+        } as any)
+      ).toEqual({
+        items: [{ id: 1 }, { id: 2 }],
+        total: 7,
+      });
     });
   });
 
@@ -338,6 +532,26 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
       expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/by-slug/sluggy/');
+    });
+
+    it('fetchTravel пробрасывает AbortError без логирования', async () => {
+      const { fetchTravel } = loadTravelsApi();
+      const abortError: any = new Error('aborted');
+      abortError.name = 'AbortError';
+      mockedApiClientGet.mockRejectedValueOnce(abortError);
+
+      await expect(fetchTravel(7)).rejects.toBe(abortError);
+      expect(devError).not.toHaveBeenCalledWith('Error fetching Travel:', abortError);
+    });
+
+    it('fetchTravelBySlug пробрасывает AbortError без логирования', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const abortError: any = new Error('aborted');
+      abortError.name = 'AbortError';
+      mockedApiClientGet.mockRejectedValueOnce(abortError);
+
+      await expect(fetchTravelBySlug('trip')).rejects.toBe(abortError);
+      expect(devError).not.toHaveBeenCalledWith('Error fetching Travel by slug:', abortError);
     });
 
     it('fetchTravelsNear пробрасывает AbortError', async () => {

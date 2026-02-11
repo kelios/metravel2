@@ -56,8 +56,9 @@ const travelCache = new Map<number, Travel>();
  */
 const filterPublished = (items: Travel[]): Travel[] =>
     items.filter((t) => {
-        const pub = (t as any).publish;
-        const mod = (t as any).moderation;
+        const withStatus = t as Travel & { publish?: unknown; moderation?: unknown };
+        const pub = withStatus.publish;
+        const mod = withStatus.moderation;
         // Keep items where publish/moderation are truthy or undefined (not explicitly false/0)
         const pubOk = pub === undefined || pub === null || pub === true || pub === 1 || pub === '1';
         const modOk = mod === undefined || mod === null || mod === true || mod === 1 || mod === '1';
@@ -65,9 +66,39 @@ const filterPublished = (items: Travel[]): Travel[] =>
     });
 const TOKEN_KEY = 'userToken';
 
-export const normalizeTravelItem = (input: any): Travel => {
-    const t = (input && typeof input === 'object') ? input : {};
-    const out: any = { ...t };
+export type MyTravelsItem = Record<string, unknown>;
+export type MyTravelsPayload =
+    | MyTravelsItem[]
+    | {
+        data?: MyTravelsItem[];
+        results?: MyTravelsItem[];
+        items?: MyTravelsItem[];
+        total?: unknown;
+        count?: unknown;
+    };
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+    value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+
+const getPositiveNumericId = (value: unknown): number | null => {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return n;
+};
+
+const extractFirstUserId = (raw: unknown): number | null => {
+    if (typeof raw === 'string') {
+        return getPositiveNumericId(raw.split(',')[0]?.trim() ?? '');
+    }
+    if (Array.isArray(raw) && raw.length > 0) {
+        return getPositiveNumericId(raw[0]);
+    }
+    return getPositiveNumericId(raw);
+};
+
+export const normalizeTravelItem = (input: unknown): Travel => {
+    const t = asRecord(input);
+    const out: Record<string, unknown> = { ...t };
 
     if (typeof t.id !== 'undefined') {
         out.id = Number(t.id) || 0;
@@ -177,33 +208,34 @@ export const normalizeTravelItem = (input: any): Travel => {
     }
 
     // Normalize user object: ensure travel.user.id is populated from userIds when missing
-    if (!out.user?.id) {
+    const existingUser = asRecord(out.user);
+    const hasExistingUserId = getPositiveNumericId(existingUser.id) !== null;
+
+    if (!hasExistingUserId) {
         const raw = t.userIds ?? t.user_ids;
-        if (raw != null) {
-            const first = typeof raw === 'string'
-                ? raw.split(',')[0].trim()
-                : Array.isArray(raw) && raw.length > 0
-                    ? String(raw[0])
-                    : typeof raw === 'number' ? String(raw) : '';
-            const uid = Number(first);
-            if (Number.isFinite(uid) && uid > 0) {
-                out.user = { ...out.user, id: uid, name: out.userName || '' };
-            }
+        const uid = extractFirstUserId(raw);
+        if (uid !== null) {
+            out.user = {
+                ...existingUser,
+                id: uid,
+                name: typeof out.userName === 'string' ? out.userName : '',
+            };
         }
     }
 
-    if (Array.isArray((out as any).gallery)) {
-        out.gallery = (out as any).gallery
-            .map((item: any) => {
+    if (Array.isArray(out.gallery)) {
+        out.gallery = out.gallery
+            .map((item: unknown) => {
                 if (typeof item === 'string') {
                     const normalized = normalizeImageUrl(item);
                     return normalized || item;
                 }
                 if (item && typeof item === 'object') {
-                    const rawUrl = typeof (item as any).url === 'string' ? String((item as any).url) : '';
+                    const galleryItem = item as Record<string, unknown>;
+                    const rawUrl = typeof galleryItem.url === 'string' ? galleryItem.url : '';
                     const normalized = rawUrl ? normalizeImageUrl(rawUrl) : rawUrl;
                     return {
-                        ...(item as any),
+                        ...galleryItem,
                         ...(normalized ? { url: normalized } : null),
                     };
                 }
@@ -215,44 +247,37 @@ export const normalizeTravelItem = (input: any): Travel => {
     return out as Travel;
 };
 
-const coerceTotal = (value: any, fallback = 0): number => {
+const coerceTotal = (value: unknown, fallback = 0): number => {
     const n = typeof value === 'number' ? value : Number(value);
     return Number.isFinite(n) ? n : fallback;
 };
 
-const normalizeNumericFilterArray = (value: any): number[] => {
+const toFiniteNumber = (value: unknown): number | null => {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        const parsed = Number(trimmed);
+        return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+};
+
+const normalizeNumericFilterArray = (value: unknown): number[] => {
     if (!Array.isArray(value)) return [];
 
     return value
-        .filter((val: any) => {
-            if (val === undefined || val === null || val === '') return false;
-            if (typeof val === 'string') {
-                const num = Number(val);
-                return !isNaN(num) && isFinite(num) && val.trim() !== '';
-            }
-            if (typeof val === 'number') {
-                return !isNaN(val) && isFinite(val);
-            }
-            return false;
-        })
-        .map((val: any) => {
-            if (typeof val === 'string') {
-                const num = Number(val);
-                return !isNaN(num) && isFinite(num) ? num : null;
-            }
-            if (typeof val === 'number') {
-                return !isNaN(val) && isFinite(val) ? val : null;
-            }
-            return null;
-        })
-        .filter((val: any): val is number => val !== null && val !== undefined);
+        .map((val: unknown) => toFiniteNumber(val))
+        .filter((val): val is number => val !== null);
 };
 
 const buildWhereQueryParams = (params: {
     page?: number;
     perPage?: number;
     query?: string;
-    where: Record<string, any>;
+    where: Record<string, unknown>;
 }): string => {
     const searchParams: Record<string, string> = {
         where: JSON.stringify(params.where),
@@ -272,8 +297,8 @@ const buildWhereQueryParams = (params: {
 };
 
 const unwrapTravelsList = (
-    payload: any
-): { items: any[]; total: number } => {
+    payload: unknown
+): { items: unknown[]; total: number } => {
     if (!payload) return { items: [], total: 0 };
 
     if (Array.isArray(payload)) {
@@ -281,29 +306,29 @@ const unwrapTravelsList = (
     }
 
     if (payload && typeof payload === 'object') {
-        if (Array.isArray((payload as any).items)) {
+        const source = payload as Record<string, unknown>;
+        const items = source.items;
+        const results = source.results;
+        const data = source.data;
+
+        if (Array.isArray(items)) {
             return {
-                items: (payload as any).items,
-                total:
-                    typeof (payload as any).total === 'number'
-                        ? (payload as any).total
-                        : (typeof (payload as any).count === 'number'
-                            ? (payload as any).count
-                            : (payload as any).items.length),
+                items,
+                total: coerceTotal(source.total, coerceTotal(source.count, items.length)),
             };
         }
 
-        if (Array.isArray((payload as any).results)) {
+        if (Array.isArray(results)) {
             return {
-                items: (payload as any).results,
-                total: typeof (payload as any).count === 'number' ? (payload as any).count : (payload as any).results.length,
+                items: results,
+                total: coerceTotal(source.count, coerceTotal(source.total, results.length)),
             };
         }
 
-        if (Array.isArray((payload as any).data)) {
+        if (Array.isArray(data)) {
             return {
-                items: (payload as any).data,
-                total: typeof (payload as any).total === 'number' ? (payload as any).total : (payload as any).data.length,
+                items: data,
+                total: coerceTotal(source.total, coerceTotal(source.count, data.length)),
             };
         }
     }
@@ -311,9 +336,52 @@ const unwrapTravelsList = (
     return { items: [], total: 0 };
 };
 
+const isInvalidPagePayload = (payload: unknown): payload is { detail: string; total?: unknown } => {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+    const detail = (payload as Record<string, unknown>).detail;
+    return detail === 'Invalid page.';
+};
+
+const hasKnownListArrays = (payload: unknown): boolean => {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+    const source = payload as Record<string, unknown>;
+    return Array.isArray(source.results) || Array.isArray(source.data) || Array.isArray(source.items);
+};
+
+const isAbortError = (error: unknown): error is { name: string } =>
+    !!error && typeof error === 'object' && (error as { name?: unknown }).name === 'AbortError';
+
+export const unwrapMyTravelsPayload = (
+    payload: MyTravelsPayload | null | undefined
+): { items: MyTravelsItem[]; total: number } => {
+    if (!payload) return { items: [], total: 0 };
+    if (Array.isArray(payload)) return { items: payload, total: payload.length };
+
+    if (Array.isArray(payload.data)) {
+        return {
+            items: payload.data,
+            total: coerceTotal(payload.total, coerceTotal(payload.count, payload.data.length)),
+        };
+    }
+    if (Array.isArray(payload.results)) {
+        return {
+            items: payload.results,
+            total: coerceTotal(payload.count, coerceTotal(payload.total, payload.results.length)),
+        };
+    }
+    if (Array.isArray(payload.items)) {
+        return {
+            items: payload.items,
+            total: coerceTotal(payload.total, coerceTotal(payload.count, payload.items.length)),
+        };
+    }
+
+    return { items: [], total: coerceTotal(payload.total, coerceTotal(payload.count, 0)) };
+};
+
 const applyPublishModeration = (
-    target: Record<string, any>,
-    source: Record<string, any> | undefined | null,
+    target: Record<string, unknown>,
+    source: Record<string, unknown> | undefined | null,
     defaults?: { publish?: number; moderation?: number },
 ) => {
     if (!source) {
@@ -341,11 +409,11 @@ export const fetchTravels = async (
     page: number,
     itemsPerPage: number,
     search: string,
-    urlParams: Record<string, any>,
+    urlParams: Record<string, unknown>,
     options?: { signal?: AbortSignal }
 ) => {
     try {
-        const whereObject: Record<string, any> = {};
+        const whereObject: Record<string, unknown> = {};
 
         const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
 
@@ -428,14 +496,14 @@ export const fetchTravels = async (
 
         const result = await safeJsonParse<{
             data?: Travel[];
-            total?: number;
+            total?: unknown;
             results?: Travel[];
-            count?: number;
+            count?: unknown;
             detail?: string;
         } | Travel[]>(res, []);
 
         if (!res.ok) {
-            if (typeof result === 'object' && !Array.isArray(result) && result?.detail === "Invalid page.") {
+            if (isInvalidPagePayload(result)) {
                 devError('Invalid page requested:', page + 1);
                 return { data: [], total: 0 };
             }
@@ -445,23 +513,18 @@ export const fetchTravels = async (
 
         const { items, total } = unwrapTravelsList(result);
 
-        if (result && typeof result === 'object' && !Array.isArray(result) && (result as any).detail === "Invalid page.") {
+        if (isInvalidPagePayload(result)) {
             devError('Invalid page in response:', page + 1);
-            return { data: [], total: typeof (result as any).total === 'number' ? (result as any).total : total };
+            return { data: [], total: coerceTotal(result.total, total) };
         }
 
         if (items.length === 0 && result && typeof result === 'object' && !Array.isArray(result)) {
-            const hasKnownListShape =
-                Array.isArray((result as any).results) ||
-                Array.isArray((result as any).data) ||
-                Array.isArray((result as any).items);
-
             // Empty list is a valid response; warn only if the structure is truly unknown.
-            if (!hasKnownListShape && __DEV__) {
+            if (!hasKnownListArrays(result) && __DEV__) {
                 devWarn('API returned unexpected structure:', result);
             }
 
-            return { data: [], total: coerceTotal((result as any).total, 0) };
+            return { data: [], total: coerceTotal((result as Record<string, unknown>).total, 0) };
         }
 
         return {
@@ -478,11 +541,11 @@ export const fetchRandomTravels = async (
     page: number,
     itemsPerPage: number,
     search: string,
-    urlParams: Record<string, any>,
+    urlParams: Record<string, unknown>,
     options?: { signal?: AbortSignal }
 ) => {
     try {
-        const whereObject: Record<string, any> = {};
+        const whereObject: Record<string, unknown> = {};
 
         applyPublishModeration(whereObject, urlParams, { publish: 1, moderation: 1 });
 
@@ -533,14 +596,14 @@ export const fetchRandomTravels = async (
 
         const result = await safeJsonParse<{
             data?: Travel[];
-            total?: number;
+            total?: unknown;
             results?: Travel[];
-            count?: number;
+            count?: unknown;
             detail?: string;
         } | Travel[]>(res, []);
 
         if (!res.ok) {
-            if (typeof result === 'object' && !Array.isArray(result) && result?.detail === "Invalid page.") {
+            if (isInvalidPagePayload(result)) {
                 devError('Invalid random page requested:', page + 1);
                 return { data: [], total: 0 };
             }
@@ -555,23 +618,18 @@ export const fetchRandomTravels = async (
 
         const { items, total } = unwrapTravelsList(result);
 
-        if (result && typeof result === 'object' && !Array.isArray(result) && (result as any).detail === "Invalid page.") {
+        if (isInvalidPagePayload(result)) {
             devError('Invalid random page in response:', page + 1);
-            return { data: [], total: coerceTotal((result as any).total, 0) };
+            return { data: [], total: coerceTotal(result.total, 0) };
         }
 
         if (items.length === 0 && result && typeof result === 'object' && !Array.isArray(result)) {
-            const hasKnownListShape =
-                Array.isArray((result as any).results) ||
-                Array.isArray((result as any).data) ||
-                Array.isArray((result as any).items);
-
             // Empty list is a valid response; warn only if the structure is truly unknown.
-            if (!hasKnownListShape && __DEV__) {
-                console.warn('API returned unexpected random structure:', result);
+            if (!hasKnownListArrays(result) && __DEV__) {
+                devWarn('API returned unexpected random structure:', result);
             }
 
-            return { data: [], total: coerceTotal((result as any).total, 0) };
+            return { data: [], total: coerceTotal((result as Record<string, unknown>).total, 0) };
         }
 
         return {
@@ -602,8 +660,8 @@ export const fetchTravel = async (
             travelCache.set(id, normalized);
         }
         return normalized;
-    } catch (e: any) {
-        if (e?.name === 'AbortError') {
+    } catch (e: unknown) {
+        if (isAbortError(e)) {
             throw e;
         }
         devError('Error fetching Travel:', e);
@@ -619,8 +677,8 @@ export const fetchTravelBySlug = async (
         const safeSlug = encodeURIComponent(String(slug).replace(/^\/+/, ''));
         const travel = await apiClient.get<Travel>(`/travels/by-slug/${safeSlug}/`, LONG_TIMEOUT, { signal: options?.signal });
         return normalizeTravelItem(travel);
-    } catch (e: any) {
-        if (e?.name === 'AbortError') {
+    } catch (e: unknown) {
+        if (isAbortError(e)) {
             throw e;
         }
         devError('Error fetching Travel by slug:', e);
@@ -638,9 +696,23 @@ export const fetchMyTravels = async (params: {
     publish?: number;
     moderation?: number;
     throwOnError?: boolean;
-}) => {
+}): Promise<MyTravelsPayload> => {
+    type MyTravelsYearRange = {
+        gte?: string;
+        lte?: string;
+    };
+
+    type MyTravelsWhere = {
+        user_id: string | number;
+        publish?: number;
+        moderation?: number;
+        countries?: string[];
+        year?: MyTravelsYearRange;
+        hasGallery?: true;
+    };
+
     try {
-        const whereObject: Record<string, any> = {
+        const whereObject: MyTravelsWhere = {
             user_id: params.user_id,
         };
 
@@ -684,7 +756,7 @@ export const fetchMyTravels = async (params: {
             const errorText = await res.text().catch(() => 'Unknown error');
             throw new Error(errorText);
         }
-        return await safeJsonParse<any>(res, {});
+        return await safeJsonParse<MyTravelsPayload>(res, {});
     } catch (e) {
         if (__DEV__) {
             devError('Error fetching MyTravels:', e);

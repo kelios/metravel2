@@ -14,7 +14,7 @@ import { useFavorites } from '@/context/FavoritesContext';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { ProfileTabs, type ProfileTabKey } from '@/components/profile/ProfileTabs';
 import { ProfileQuickActions } from '@/components/profile/ProfileQuickActions';
-import { deleteTravel, fetchMyTravels } from '@/api/travelsApi';
+import { deleteTravel, fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import EmptyState from '@/components/ui/EmptyState';
 import Button from '@/components/ui/Button';
 import type { Travel } from '@/types/types';
@@ -47,7 +47,7 @@ const getSlugFromUrl = (url: string | undefined | null, fallback: string) => {
   return match?.[1] ? String(match[1]) : fallback;
 };
 
-const normalizeToTravel = (item: any): Travel => {
+const normalizeToTravel = (item: Record<string, unknown>): Travel => {
   const idRaw = item?.id ?? item?._id ?? 0;
   const id = typeof idRaw === 'number' ? idRaw : Number(idRaw) || 0;
   const url = String(item?.url ?? item?.urlTravel ?? item?.href ?? '').trim();
@@ -97,14 +97,6 @@ const normalizeToTravel = (item: any): Travel => {
     created_at: item?.created_at,
     updated_at: item?.updated_at,
   };
-};
-
-const unwrapTravelsPayload = (payload: any): { items: any[]; count: number } => {
-  if (Array.isArray(payload)) return { items: payload, count: payload.length };
-  if (Array.isArray(payload?.data)) return { items: payload.data, count: payload.data.length };
-  if (Array.isArray(payload?.results)) return { items: payload.results, count: payload.count ?? payload.results.length };
-  if (Array.isArray(payload?.items)) return { items: payload.items, count: payload.count ?? payload.items.length };
-  return { items: [], count: 0 };
 };
 
 const keyExtractor = (item: Travel, index: number) => `${item.id}-${index}`;
@@ -191,11 +183,11 @@ export default function ProfileScreen() {
     setTravelsLoading(true);
     try {
       const payload = await fetchMyTravels({ user_id: uid });
-      const { items, count } = unwrapTravelsPayload(payload);
+      const { items, total } = unwrapMyTravelsPayload(payload);
       setMyTravels(items.map(normalizeToTravel));
       setStats((prev) => ({
         ...prev,
-        travelsCount: count || (typeof (payload as any)?.total === 'number' ? (payload as any).total : 0) || items.length,
+        travelsCount: total || items.length,
       }));
     } catch {
       setStats((prev) => ({ ...prev, travelsCount: 0 }));

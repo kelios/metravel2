@@ -2,6 +2,7 @@ import sanitizeHtml, { Attributes } from 'sanitize-html'
 
 const ALLOWED_IFRAME_HOSTS = [
   'youtube.com',
+  'youtube-nocookie.com',
   'youtu.be',
   'player.vimeo.com',
   'www.google.com',
@@ -135,11 +136,16 @@ const allowedSchemesByTag: sanitizeHtml.IOptions['allowedSchemesByTag'] = {
   img: ['http', 'https', 'data', 'blob'],
 }
 
+function isAllowedHostOrSubdomain(hostname: string, allowedHost: string) {
+  return hostname === allowedHost || hostname.endsWith(`.${allowedHost}`)
+}
+
 function isAllowedIframe(src?: string) {
   if (!src) return false
   try {
     const url = new URL(src, 'https://metravel.by')
-    return ALLOWED_IFRAME_HOSTS.some((host) => url.hostname.endsWith(host))
+    const hostname = url.hostname.toLowerCase()
+    return ALLOWED_IFRAME_HOSTS.some((host) => isAllowedHostOrSubdomain(hostname, host))
   } catch {
     return false
   }

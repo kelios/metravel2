@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import EmptyState from '@/components/ui/EmptyState';
 import { useAuth } from '@/context/AuthContext';
-import { fetchMyTravels } from '@/api/travelsApi';
+import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
@@ -51,15 +51,7 @@ export default function ExportScreen() {
     });
 
     const travelsCount = useMemo(() => {
-        const payload: any = myTravelsPayload;
-        if (!payload) return 0;
-        if (Array.isArray(payload)) return payload.length;
-        if (Array.isArray(payload?.data)) return payload.data.length;
-        if (Array.isArray(payload?.results)) return payload.results.length;
-        if (Array.isArray(payload?.items)) return payload.items.length;
-        if (typeof payload?.total === 'number') return payload.total;
-        if (typeof payload?.count === 'number') return payload.count;
-        return 0;
+        return unwrapMyTravelsPayload(myTravelsPayload).total;
     }, [myTravelsPayload]);
 
     const shouldShowEmptyState =

@@ -17,7 +17,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/context/AuthContext';
 import { fetchMySubscriptions, fetchMySubscribers, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
-import { fetchMyTravels } from '@/api/travelsApi';
+import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import EmptyState from '@/components/ui/EmptyState';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import SubscribeButton from '@/components/ui/SubscribeButton';
@@ -318,14 +318,8 @@ export default function SubscriptionsScreen() {
             });
 
             fetchMyTravels({ user_id: userId })
-                .then((result: any) => {
-                    const list = Array.isArray(result)
-                        ? result
-                        : Array.isArray(result?.data)
-                            ? result.data
-                            : Array.isArray(result?.results)
-                                ? result.results
-                                : [];
+                .then((result) => {
+                    const { items: list } = unwrapMyTravelsPayload(result);
                     setAuthorTravels((prev) => ({
                         ...prev,
                         [userId]: { travels: list, loading: false },

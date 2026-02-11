@@ -15,6 +15,18 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('height="640"')
   })
 
+  it('keeps youtube-nocookie embeds intact', () => {
+    const html =
+      '<iframe src="https://www.youtube-nocookie.com/embed/abc123" width="560" height="315"></iframe>'
+
+    const sanitized = sanitizeRichText(html)
+
+    expect(sanitized).toContain('<iframe')
+    expect(sanitized).toContain('https://www.youtube-nocookie.com/embed/abc123')
+    expect(sanitized).toContain('width="560"')
+    expect(sanitized).toContain('height="315"')
+  })
+
   it('still strips disallowed iframe hosts', () => {
     const html = '<iframe src="https://malicious.example.com/embed" height="400"></iframe>'
 
@@ -22,6 +34,18 @@ describe('sanitizeRichText', () => {
 
     expect(sanitized).not.toContain('<iframe')
     expect(sanitized).toBe('<div></div>')
+  })
+
+  it('blocks lookalike iframe domains that only end with allowed host text', () => {
+    const html = [
+      '<iframe src="https://evilyoutube.com/embed/abc" height="400"></iframe>',
+      '<iframe src="https://youtube.com.evil.example/embed/abc" height="400"></iframe>',
+    ].join('')
+
+    const sanitized = sanitizeRichText(html)
+
+    expect(sanitized).not.toContain('<iframe')
+    expect(sanitized).toBe('<div></div><div></div>')
   })
 
   it('preserves anchor ids and hash links', () => {
@@ -60,4 +84,3 @@ describe('sanitizeRichText', () => {
     expect(sanitized).toContain('rel="noopener noreferrer"')
   })
 })
-
