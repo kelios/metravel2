@@ -362,7 +362,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      {/* Consolidated critical head script: title fallback + theme detection */}
       <script
         dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false})();`,
+          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var p=(window.location&&window.location.pathname)||'';if(/^\/travels?(\/|$)/.test(p)){document.documentElement.classList.add('route-travel')}}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false})();`,
         }}
       />
       
@@ -376,8 +376,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="preconnect" href="https://images.weserv.nl" crossOrigin="anonymous" />
       
       {/* Icons */}
-      <link rel="icon" href="/assets/icons/logo_yellow.ico" sizes="any" type="image/x-icon" />
-      <link rel="apple-touch-icon" href="/assets/icons/logo_yellow.ico" />
+      <link rel="icon" href="/favicon.ico" sizes="any" type="image/x-icon" />
+      <link rel="icon" href="/assets/icons/logo_yellow_60x60.png" sizes="60x60" type="image/png" />
+      <link rel="apple-touch-icon" href="/assets/icons/logo_yellow_60x60.png" />
       <link rel="manifest" href="/manifest.json" />
 
       {/* Critical CSS */}
@@ -467,6 +468,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
               opacity: 0;
               visibility: hidden;
             }
+            html.route-travel:not(.rnw-styles-ready) #root {
+              visibility: hidden;
+            }
           `,
         }}
       />
@@ -481,7 +485,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
       <script
         dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;function mark(){if(done)return;done=true;root.classList.add('rnw-styles-ready')}if(document.getElementById('react-native-stylesheet')){mark();return}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true;if(l.sheet)return true}return false}catch(_){return false}}if(hasReadyLink()){mark();return}var started=Date.now();var timer=setInterval(function(){if(hasReadyLink()){clearInterval(timer);mark();return}if(Date.now()-started>1200){clearInterval(timer);mark()}},50)}catch(_){}})();`,
+          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;function mark(){if(done)return;done=true;try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}root.classList.add('rnw-styles-ready')}if(document.getElementById('react-native-stylesheet')){mark();return}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true;if(l.sheet)return true}return false}catch(_){return false}}if(hasReadyLink()){mark();return}hard=setTimeout(mark,400);poll=setInterval(function(){if(hasReadyLink())mark()},50)}catch(_){}})();`,
         }}
       />
 

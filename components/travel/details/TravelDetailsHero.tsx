@@ -7,12 +7,12 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native'
 
 import Feather from '@expo/vector-icons/Feather'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import { useThemedColors } from '@/hooks/useTheme'
+import { useResponsive } from '@/hooks/useResponsive'
 import { useFavorites } from '@/context/FavoritesContext'
 import { useAuth } from '@/context/AuthContext'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -127,7 +127,7 @@ const OptimizedLCPHeroInner: React.FC<{
     widths: lcpWidths,
     quality: lcpQuality,
     format: 'auto',
-    fit: 'cover',
+    fit: 'contain',
     dpr: isMobile ? 1 : 1.5,
     sizes: isMobile
       ? '100vw'
@@ -301,7 +301,7 @@ function TravelHeroSectionInner({
 }) {
   const styles = useTravelDetailsStyles()
   const colors = useThemedColors()
-  const { width: winW, height: winH } = useWindowDimensions()
+  const { width: winW, height: winH } = useResponsive()
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
   const [extrasReady, setExtrasReady] = useState(!deferExtras || Platform.OS !== 'web')
 

@@ -16,7 +16,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import { useAuth } from '@/context/AuthContext';
@@ -112,7 +111,7 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 
 export default function TravelDetailsContainer() {
   const { isMobile, width: responsiveWidth } = useResponsive();
-  const { width: screenWidth } = useWindowDimensions();
+  const screenWidth = responsiveWidth;
   // Fallback to true if hook is unavailable (e.g., static render) while preserving hook order
   const useIsFocusedSafe = useIsFocused ?? (() => true);
   const isFocused = useIsFocusedSafe();
