@@ -6,6 +6,9 @@ type Breakpoint = keyof typeof METRICS.breakpoints;
 type Orientation = 'portrait' | 'landscape';
 
 interface ResponsiveState {
+  // Hydration state (web)
+  isHydrated: boolean;
+
   // Screen size flags
   isSmallPhone: boolean;
   isPhone: boolean;
@@ -245,6 +248,7 @@ const getSnapshot = () => (_hydrated ? currentSnapshot : SSR_SNAPSHOT);
  */
 export function useResponsive(): ResponsiveState {
   const { width, height } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const isHydrated = Platform.OS !== 'web' || (_hydrated && width > 0 && height > 0);
   const isPortrait = height > width;
   const orientation: Orientation = isPortrait ? 'portrait' : 'landscape';
 
@@ -271,6 +275,7 @@ export function useResponsive(): ResponsiveState {
 
   return useMemo(
     () => ({
+      isHydrated,
       // Screen size flags
       isSmallPhone,
       isPhone,
@@ -299,6 +304,7 @@ export function useResponsive(): ResponsiveState {
     }),
     [
       height,
+      isHydrated,
       isAtLeast,
       isAtMost,
       isBetween,

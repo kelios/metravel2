@@ -19,14 +19,8 @@ import {
     REFRESH_TOKEN_KEY,
     isE2E,
 } from '@/api/apiConfig';
-
-type AuthInvalidationHandler = () => void;
-
-let authInvalidationHandler: AuthInvalidationHandler | null = null;
-
-export const setAuthInvalidationHandler = (handler: AuthInvalidationHandler | null) => {
-    authInvalidationHandler = handler;
-};
+import { notifyAuthInvalidation } from '@/api/authInvalidation';
+export { setAuthInvalidationHandler } from '@/api/authInvalidation';
 
 /**
  * Класс ошибки API
@@ -202,7 +196,7 @@ class ApiClient {
      */
     private async clearTokens(): Promise<void> {
         await removeSecureItems([TOKEN_KEY, REFRESH_TOKEN_KEY]);
-        authInvalidationHandler?.();
+        notifyAuthInvalidation();
     }
 
     /**

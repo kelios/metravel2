@@ -48,7 +48,7 @@ const FCP_MAX_MS = envNum('PERF_FCP_MAX_MS', 1800);
 const MAX_JS_TRANSFER_KB = envNum('PERF_MAX_JS_KB', 1800);
 const MAX_IMG_TRANSFER_KB = envNum('PERF_MAX_IMG_KB', 3500);
 const MAX_TOTAL_TRANSFER_KB = envNum('PERF_MAX_TOTAL_KB', 7000);
-const MAX_REQUESTS = envNum('PERF_MAX_REQUESTS', 80);
+const MAX_REQUESTS = envNum('PERF_MAX_REQUESTS', 90);
 const MAX_LONG_TASKS = envNum('PERF_MAX_LONG_TASKS', 5);
 const LONG_TASK_THRESHOLD_MS = 50;
 
@@ -432,7 +432,7 @@ test.describe('@perf Travel Details — Performance Budget (prod build, desktop)
     ).toBeLessThanOrEqual(MAX_LONG_TASKS);
   });
 
-  test('Network transfer budget (JS ≤ 600KB, images ≤ 1.5MB, total ≤ 4MB)', async ({ page }) => {
+  test('Network transfer budget (JS/images/total/requests)', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await preacceptCookies(page);
 

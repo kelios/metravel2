@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchUserRecommendedTravels } from '@/api/user';
 import { devError } from '@/utils/logger';
 import { safeJsonParseString } from '@/utils/safeJsonParse';
 import type { FavoriteItem } from '@/stores/favoritesStore';
 
 const SERVER_RECOMMENDATIONS_CACHE_KEY = 'metravel_recommendations_server';
+const getUserApi = async () => import('@/api/user');
 
 interface RecommendationsState {
     recommended: FavoriteItem[];
@@ -52,6 +52,7 @@ export const useRecommendationsStore = create<RecommendationsState>((set, get) =
     refreshFromServer: async (userId) => {
         if (!userId) return;
         try {
+            const { fetchUserRecommendedTravels } = await getUserApi();
             const recDto = await fetchUserRecommendedTravels(userId);
             const recArr = Array.isArray(recDto) ? recDto : [];
             const userRecommended: FavoriteItem[] = recArr.map((t) => ({

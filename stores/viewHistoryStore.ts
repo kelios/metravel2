@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchUserHistory, clearUserHistory } from '@/api/user';
 import { devError } from '@/utils/logger';
 import { safeJsonParseString } from '@/utils/safeJsonParse';
 
 const VIEW_HISTORY_KEY = 'metravel_view_history';
 const SERVER_HISTORY_CACHE_KEY = 'metravel_view_history_server';
 const MAX_HISTORY_ITEMS = 50;
+const getUserApi = async () => import('@/api/user');
 
 export type ViewHistoryItem = {
     id: string | number;
@@ -64,6 +64,7 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
 
     clearHistory: async ({ isAuthenticated, userId }) => {
         if (isAuthenticated && userId) {
+            const { clearUserHistory } = await getUserApi();
             await clearUserHistory(userId);
             set({ viewHistory: [] });
             await AsyncStorage.setItem(`${SERVER_HISTORY_CACHE_KEY}_${userId}`, JSON.stringify([]));
@@ -107,6 +108,7 @@ export const useViewHistoryStore = create<ViewHistoryState>((set, get) => ({
     refreshFromServer: async (userId) => {
         if (!userId) return;
         try {
+            const { fetchUserHistory } = await getUserApi();
             const historyDto = await fetchUserHistory(userId);
             const historyArr = Array.isArray(historyDto) ? historyDto : [];
             const userHistory: ViewHistoryItem[] = historyArr.map((t) => ({

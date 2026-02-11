@@ -5,7 +5,7 @@
 
 import { createContext, FC, ReactNode, useContext, useEffect, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { setAuthInvalidationHandler } from '@/api/client';
+import { setAuthInvalidationHandler } from '@/api/authInvalidation';
 import { useAuthStore, type AuthStore } from '@/stores/authStore';
 import { useShallow } from 'zustand/react/shallow';
 

@@ -1,8 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { markTravelAsFavorite, unmarkTravelAsFavorite } from '@/api/travelsFavorites';
-import { fetchUserFavoriteTravels, clearUserFavorites } from '@/api/user';
 import { devError } from '@/utils/logger';
 import { safeJsonParseString } from '@/utils/safeJsonParse';
 import { cleanupInvalidFavorites, isValidFavoriteId } from '@/utils/favoritesCleanup';
@@ -10,6 +8,9 @@ import { showToast } from '@/utils/toast';
 
 const FAVORITES_KEY = 'metravel_favorites';
 const SERVER_FAVORITES_CACHE_KEY = 'metravel_favorites_server';
+
+const getFavoritesApi = async () => import('@/api/travelsFavorites');
+const getUserApi = async () => import('@/api/user');
 
 export type FavoriteItem = {
     id: string | number;
@@ -71,6 +72,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             set((s) => ({ favorites: [...s.favorites, optimistic] }));
 
             try {
+                const { markTravelAsFavorite } = await getFavoritesApi();
                 await markTravelAsFavorite(item.id);
                 await get().refreshFromServer(userId);
             } catch (error) {
@@ -129,6 +131,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
             try {
                 if (type === 'travel') {
+                    const { unmarkTravelAsFavorite } = await getFavoritesApi();
                     await unmarkTravelAsFavorite(id);
                 }
                 await get().refreshFromServer(userId);
@@ -166,6 +169,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
 
     clearFavorites: async ({ isAuthenticated, userId }) => {
         if (isAuthenticated && userId) {
+            const { clearUserFavorites } = await getUserApi();
             await clearUserFavorites(userId);
             set({ favorites: [] });
             await AsyncStorage.setItem(`${SERVER_FAVORITES_CACHE_KEY}_${userId}`, JSON.stringify([]));
@@ -210,6 +214,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     refreshFromServer: async (userId) => {
         if (!userId) return;
         try {
+            const { fetchUserFavoriteTravels } = await getUserApi();
             const favDto = await fetchUserFavoriteTravels(userId);
             const favArr = Array.isArray(favDto) ? favDto : [];
             const userFavorites: FavoriteItem[] = favArr.map((t) => ({
