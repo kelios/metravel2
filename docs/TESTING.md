@@ -155,6 +155,52 @@ Policy:
 - For `pull_request`, smoke duration budget is warning-only.
 - For `push` to `main`, smoke duration budget strict mode is enabled and may fail the quality gate.
 
+Smoke trend baseline (`SMOKE_DURATION_PREVIOUS_SECONDS`):
+
+- Source: GitHub repository variable `SMOKE_DURATION_PREVIOUS_SECONDS`.
+- Used by `quality-summary` to print trend: `previous -> current`.
+- Recommended value: stable recent baseline (for example, median smoke duration from last 7 successful `main` runs).
+- Update cadence: weekly or after meaningful CI test-scope changes.
+- If variable is missing/empty, trend line is skipped (budget checks still work).
+- Helper command (local recommendation from report files):
+
+```bash
+yarn smoke:baseline:recommend
+# optional: custom folder/limit
+node scripts/recommend-smoke-baseline.js --dir test-results --limit 7
+```
+
+Runbook: update `SMOKE_DURATION_PREVIOUS_SECONDS` in GitHub:
+
+1. Generate recommendation locally:
+
+```bash
+yarn smoke:baseline:recommend
+```
+
+2. Copy numeric value from output line:
+   - `Recommended SMOKE_DURATION_PREVIOUS_SECONDS: <value>`
+3. Open repository settings:
+   - `Settings` -> `Secrets and variables` -> `Actions` -> `Variables`
+4. Create or update variable:
+   - Name: `SMOKE_DURATION_PREVIOUS_SECONDS`
+   - Value: `<recommended value>` (for example `18.6`)
+   - CLI alternative:
+
+```bash
+gh variable set SMOKE_DURATION_PREVIOUS_SECONDS --body "<recommended value>"
+```
+
+   - Example:
+
+```bash
+gh variable set SMOKE_DURATION_PREVIOUS_SECONDS --body "18.6"
+```
+5. Save and verify on next `CI Smoke` run:
+   - `Quality Gate Summary` should show `Smoke trend: ... vs previous <value>s`.
+6. Cadence:
+   - Update weekly, or right after significant changes to smoke test scope.
+
 Local reproduction:
 
 ```bash
@@ -163,6 +209,35 @@ yarn test:smoke:critical:ci
 node scripts/summarize-eslint.js test-results/eslint-results.json
 node scripts/summarize-jest-smoke.js test-results/jest-smoke-results.json
 node scripts/summarize-quality-gate.js test-results/eslint-results.json test-results/jest-smoke-results.json --fail-on-missing
+```
+
+### PR Exception format
+
+Used by validator: `scripts/validate-pr-ci-exception.js`.
+
+Validation rules:
+
+- Required only when CI gate is not green for PR (`lint` or `smoke-critical` failed).
+- `Exception requested` checkbox must be checked.
+- Required fields must be filled with concrete values:
+  - `Business reason`
+  - `Risk statement`
+  - `Rollback plan`
+  - `Owner`
+  - `Fix deadline (YYYY-MM-DD)`
+- Placeholders like `TBD`, `N/A`, `-`, `todo`, `<...>`, `[...]` are treated as invalid.
+
+Template snippet:
+
+```md
+## CI Exception (Only if Failure Class != pass)
+
+- [x] Exception requested
+- Business reason: <why merge is still needed now>
+- Risk statement: <explicit risk>
+- Rollback plan: <exact rollback action>
+- Owner: <person/team responsible>
+- Fix deadline (YYYY-MM-DD): <date>
 ```
 
 ### Troubleshooting by Failure Class

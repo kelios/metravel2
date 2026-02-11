@@ -20,6 +20,7 @@
     "test:run:mem": "NODE_OPTIONS=--max-old-space-size=8192 jest --passWithNoTests --runInBand",
     "test:smoke:critical": "jest --passWithNoTests --runInBand __tests__/app/export.test.tsx __tests__/app/subscriptions.test.tsx __tests__/components/profile.test.tsx __tests__/api/travels.test.ts __tests__/scripts/summarize-quality-gate.test.ts",
     "test:smoke:critical:ci": "mkdir -p test-results && jest --passWithNoTests --runInBand --json --outputFile=test-results/jest-smoke-results.json __tests__/app/export.test.tsx __tests__/app/subscriptions.test.tsx __tests__/components/profile.test.tsx __tests__/api/travels.test.ts __tests__/scripts/summarize-quality-gate.test.ts",
+    "smoke:baseline:recommend": "node scripts/recommend-smoke-baseline.js --dir test-results --limit 7",
     "test:watch": "jest --watch",
     "test:ci": "npm run check:image-architecture && jest --ci --runInBand --reporters=default --testLocationInResults --json --outputFile=jest-results.json | tee jest-full.log",
     "test:coverage": "jest --coverage",

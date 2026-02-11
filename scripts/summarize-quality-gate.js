@@ -7,6 +7,7 @@ const strictMissing = process.argv.includes('--fail-on-missing')
 const lintJobResult = String(process.env.LINT_JOB_RESULT || '').trim().toLowerCase()
 const smokeJobResult = String(process.env.SMOKE_JOB_RESULT || '').trim().toLowerCase()
 const smokeDurationBudgetSeconds = Number(process.env.SMOKE_DURATION_BUDGET_SECONDS || 0)
+const smokeDurationPreviousSecondsRaw = Number(process.env.SMOKE_DURATION_PREVIOUS_SECONDS || 0)
 const smokeDurationBudgetStrict =
   String(process.env.SMOKE_DURATION_BUDGET_STRICT || '').trim().toLowerCase() === 'true'
 const eslintPath = path.resolve(process.cwd(), eslintPathArg)
@@ -49,6 +50,15 @@ const smokeDurationMs = Array.isArray(jest?.testResults)
   ? jest.testResults.reduce((sum, t) => sum + (Number(t?.endTime ?? 0) - Number(t?.startTime ?? 0)), 0)
   : 0
 const smokeDurationSeconds = smokeDurationMs > 0 ? Number((smokeDurationMs / 1000).toFixed(2)) : 0
+const hasSmokeDurationPrevious =
+  Number.isFinite(smokeDurationPreviousSecondsRaw) && smokeDurationPreviousSecondsRaw > 0
+const smokeDurationPreviousSeconds = hasSmokeDurationPrevious ? smokeDurationPreviousSecondsRaw : 0
+const smokeDurationDeltaSeconds = hasSmokeDurationPrevious
+  ? Number((smokeDurationSeconds - smokeDurationPreviousSeconds).toFixed(2))
+  : 0
+const smokeDurationDeltaPercent = hasSmokeDurationPrevious && smokeDurationPreviousSeconds > 0
+  ? Number((((smokeDurationSeconds - smokeDurationPreviousSeconds) / smokeDurationPreviousSeconds) * 100).toFixed(2))
+  : 0
 const smokeDurationOverBudget =
   smokeDurationBudgetSeconds > 0 &&
   smokeDurationSeconds > smokeDurationBudgetSeconds
@@ -91,6 +101,8 @@ const recommendationByClass = {
   mixed: 'QG-005',
   performance_budget: 'QG-006',
 }
+const recommendationQuickMap =
+  'QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget'
 const recommendationAnchorByClass = {
   infra_artifact: 'qg-001',
   inconsistent_state: 'qg-002',
@@ -109,6 +121,7 @@ if (!overallOk) {
   print(`- Failure Class: ${failureClass}`)
   print(`- Recommendation ID: ${recommendationId}`)
   print(`- See: docs/TESTING.md#${recommendationAnchor} (${recommendationId})`)
+  print(`- QG quick map: ${recommendationQuickMap}`)
 }
 print(`- Lint: ${eslintOk ? 'PASS' : 'FAIL'}${eslint === null ? ' (report missing)' : ''}`)
 print(`- Smoke tests: ${jestOk ? 'PASS' : 'FAIL'}${jest === null ? ' (report missing)' : ''}`)
@@ -124,6 +137,11 @@ print(`- Jest suites: ${jestSuites} total, ${jestSuitesFailed} failed`)
 print(`- Jest tests: ${jestTests} total, ${jestTestsFailed} failed`)
 if (smokeDurationBudgetSeconds > 0) {
   print(`- Smoke duration: ${smokeDurationSeconds}s (budget: ${smokeDurationBudgetSeconds}s)${smokeDurationOverBudget ? ' [OVER BUDGET]' : ''}`)
+}
+if (hasSmokeDurationPrevious) {
+  const sign = smokeDurationDeltaSeconds > 0 ? '+' : ''
+  const trend = smokeDurationDeltaSeconds > 0 ? 'slower' : (smokeDurationDeltaSeconds < 0 ? 'faster' : 'unchanged')
+  print(`- Smoke trend: ${sign}${smokeDurationDeltaSeconds}s (${sign}${smokeDurationDeltaPercent}%) vs previous ${smokeDurationPreviousSeconds}s [${trend}]`)
 }
 
 if (inconsistencies.length > 0) {
