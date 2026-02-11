@@ -1,9 +1,14 @@
 import { render, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
+import { createQueryWrapper } from '../helpers/testQueryClient';
+import {
+  mockFetchMyTravels,
+  mockUnwrapMyTravelsPayload,
+  resetTravelsApiMocks,
+} from '../helpers/mockTravelsApi';
 import ExportScreen from '@/app/(tabs)/export';
 import { useAuth } from '@/context/AuthContext';
 import { useIsFocused } from '@react-navigation/native';
-import { fetchMyTravels } from '@/api/travelsApi';
 
 jest.mock('@/context/AuthContext');
 
@@ -13,9 +18,7 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('expo-router', () => ({
   usePathname: () => '/export',
-  useRouter: () => ({
-    push: jest.fn(),
-  }),
+  useRouter: mockUseRouter,
 }));
 
 jest.mock('@/utils/analytics', () => ({
@@ -47,64 +50,42 @@ jest.mock('@expo/vector-icons', () => ({
 }));
 
 jest.mock('@/api/travelsApi', () => ({
-  fetchMyTravels: jest.fn(),
-  unwrapMyTravelsPayload: (payload: any) => {
-    if (!payload) return { items: [], total: 0 };
-    if (Array.isArray(payload)) return { items: payload, total: payload.length };
-    if (Array.isArray(payload?.data)) return { items: payload.data, total: payload.data.length };
-    if (Array.isArray(payload?.results)) return { items: payload.results, total: Number(payload.count ?? payload.total ?? payload.results.length) || payload.results.length };
-    if (Array.isArray(payload?.items)) return { items: payload.items, total: Number(payload.total ?? payload.count ?? payload.items.length) || payload.items.length };
-    return { items: [], total: Number(payload?.total ?? payload?.count ?? 0) || 0 };
-  },
+  fetchMyTravels: mockFetchMyTravels,
+  unwrapMyTravelsPayload: mockUnwrapMyTravelsPayload,
 }));
 
 const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
 const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused>;
-const mockFetchMyTravels = fetchMyTravels as jest.MockedFunction<typeof fetchMyTravels>;
-
-const renderExport = (queryClient: QueryClient) =>
-  render(
-    <QueryClientProvider client={queryClient}>
-      <ExportScreen />
-    </QueryClientProvider>
-  );
 
 describe('ExportScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetExpoRouterMocks();
+    resetTravelsApiMocks();
     mockUseIsFocused.mockReturnValue(true);
   });
 
-  const createQueryClient = () =>
-    new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    });
-
   it('shows login empty state for unauthenticated users', () => {
-    const queryClient = createQueryClient();
+    const { Wrapper } = createQueryWrapper();
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       userId: null,
     } as any);
 
-    const { getByText } = renderExport(queryClient);
+    const { getByText } = render(<ExportScreen />, { wrapper: Wrapper });
 
     expect(getByText('Войдите, чтобы собрать PDF‑книгу')).toBeTruthy();
     expect(mockFetchMyTravels).not.toHaveBeenCalled();
   });
 
   it('does not show empty state until userId is available', () => {
-    const queryClient = createQueryClient();
+    const { Wrapper } = createQueryWrapper();
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       userId: null,
     } as any);
 
-    const { queryByText, getByText } = renderExport(queryClient);
+    const { queryByText, getByText } = render(<ExportScreen />, { wrapper: Wrapper });
 
     // Пока userId нет — показываем загрузку и не показываем empty state
     expect(getByText('Загрузка...')).toBeTruthy();
@@ -115,14 +96,14 @@ describe('ExportScreen', () => {
   });
 
   it('shows empty state when there are no travels', async () => {
-    const queryClient = createQueryClient();
+    const { Wrapper } = createQueryWrapper();
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       userId: '123',
     } as any);
     mockFetchMyTravels.mockResolvedValueOnce([] as any);
 
-    const { findByText } = renderExport(queryClient);
+    const { findByText } = render(<ExportScreen />, { wrapper: Wrapper });
 
     expect(
       await findByText('Чтобы собрать PDF‑книгу, добавьте хотя бы одно путешествие')
@@ -135,14 +116,14 @@ describe('ExportScreen', () => {
   });
 
   it('falls back to the list when count query fails', async () => {
-    const queryClient = createQueryClient();
+    const { Wrapper } = createQueryWrapper();
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       userId: '123',
     } as any);
     mockFetchMyTravels.mockRejectedValueOnce(new Error('boom'));
 
-    const { getByTestId, queryByText } = renderExport(queryClient);
+    const { getByTestId, queryByText } = render(<ExportScreen />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(getByTestId('list-travel')).toBeTruthy();

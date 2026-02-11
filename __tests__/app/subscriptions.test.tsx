@@ -1,6 +1,16 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { mockPush, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
+import { createQueryWrapper } from '../helpers/testQueryClient';
+import {
+    mockFetchMyTravels,
+    mockUnwrapMyTravelsPayload,
+    resetTravelsApiMocks,
+} from '../helpers/mockTravelsApi';
+import {
+    SUBSCRIPTION_AUTHOR_FIXTURE,
+    SUBSCRIBER_FIXTURE,
+} from '../fixtures/travelFixtures';
 
 jest.mock('@/api/user', () => ({
     fetchMySubscriptions: jest.fn(),
@@ -9,15 +19,8 @@ jest.mock('@/api/user', () => ({
 }));
 
 jest.mock('@/api/travelsApi', () => ({
-    fetchMyTravels: jest.fn(),
-    unwrapMyTravelsPayload: (payload: any) => {
-        if (!payload) return { items: [], total: 0 };
-        if (Array.isArray(payload)) return { items: payload, total: payload.length };
-        if (Array.isArray(payload?.data)) return { items: payload.data, total: payload.data.length };
-        if (Array.isArray(payload?.results)) return { items: payload.results, total: Number(payload.count ?? payload.total ?? payload.results.length) || payload.results.length };
-        if (Array.isArray(payload?.items)) return { items: payload.items, total: Number(payload.total ?? payload.count ?? payload.items.length) || payload.items.length };
-        return { items: [], total: Number(payload?.total ?? payload?.count ?? 0) || 0 };
-    },
+    fetchMyTravels: mockFetchMyTravels,
+    unwrapMyTravelsPayload: mockUnwrapMyTravelsPayload,
 }));
 
 jest.mock('@/context/AuthContext', () => ({
@@ -36,31 +39,24 @@ jest.mock('@/utils/toast', () => ({
     showToast: jest.fn(),
 }));
 
+jest.mock('expo-router', () => ({
+    useRouter: mockUseRouter,
+}));
+
 import SubscriptionsScreen from '@/app/(tabs)/subscriptions';
 import { useAuth } from '@/context/AuthContext';
 import { fetchMySubscriptions, fetchMySubscribers } from '@/api/user';
-import { fetchMyTravels } from '@/api/travelsApi';
 
 const mockedUseAuth = useAuth as jest.Mock;
 const mockedFetchMySubscriptions = fetchMySubscriptions as jest.Mock;
 const mockedFetchMySubscribers = fetchMySubscribers as jest.Mock;
-const mockedFetchMyTravels = fetchMyTravels as jest.Mock;
-
-function createWrapper() {
-    const queryClient = new QueryClient({
-        defaultOptions: {
-            queries: { retry: false },
-            mutations: { retry: false },
-        },
-    });
-    return ({ children }: { children: React.ReactNode }) => (
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-}
+const mockedFetchMyTravels = mockFetchMyTravels as jest.Mock;
 
 describe('SubscriptionsScreen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        resetExpoRouterMocks();
+        resetTravelsApiMocks();
         mockedUseAuth.mockReturnValue({
             isAuthenticated: true,
             authReady: true,
@@ -79,7 +75,7 @@ describe('SubscriptionsScreen', () => {
         });
 
         const { getByText } = render(<SubscriptionsScreen />, {
-            wrapper: createWrapper(),
+            wrapper: createQueryWrapper().Wrapper,
         });
 
         expect(getByText('Войдите в аккаунт')).toBeTruthy();
@@ -89,7 +85,7 @@ describe('SubscriptionsScreen', () => {
         mockedFetchMySubscriptions.mockResolvedValue([]);
 
         const { findByText } = render(<SubscriptionsScreen />, {
-            wrapper: createWrapper(),
+            wrapper: createQueryWrapper().Wrapper,
         });
 
         const emptyText = await findByText('Вы ещё ни на кого не подписаны');
@@ -97,23 +93,11 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('shows subscribed authors with their names', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([
-            {
-                id: 10,
-                first_name: 'Иван',
-                last_name: 'Петров',
-                youtube: '',
-                instagram: '',
-                twitter: '',
-                vk: '',
-                avatar: '',
-                user: 42,
-            },
-        ]);
+        mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText } = render(<SubscriptionsScreen />, {
-            wrapper: createWrapper(),
+            wrapper: createQueryWrapper().Wrapper,
         });
 
         const authorName = await findByText('Иван Петров');
@@ -121,23 +105,11 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('shows header with author count', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([
-            {
-                id: 10,
-                first_name: 'Иван',
-                last_name: 'Петров',
-                youtube: '',
-                instagram: '',
-                twitter: '',
-                vk: '',
-                avatar: '',
-                user: 42,
-            },
-        ]);
+        mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText } = render(<SubscriptionsScreen />, {
-            wrapper: createWrapper(),
+            wrapper: createQueryWrapper().Wrapper,
         });
 
         const subtitle = await findByText('1 автор');
@@ -152,31 +124,19 @@ describe('SubscriptionsScreen', () => {
         });
 
         const { getByText } = render(<SubscriptionsScreen />, {
-            wrapper: createWrapper(),
+            wrapper: createQueryWrapper().Wrapper,
         });
 
         expect(getByText('Подписки')).toBeTruthy();
     });
 
     it('shows tab bar with Подписки and Подписчики tabs', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([
-            {
-                id: 10,
-                first_name: 'Иван',
-                last_name: 'Петров',
-                youtube: '',
-                instagram: '',
-                twitter: '',
-                vk: '',
-                avatar: '',
-                user: 42,
-            },
-        ]);
+        mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
         mockedFetchMySubscribers.mockResolvedValue([]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText } = render(<SubscriptionsScreen />, {
-            wrapper: createWrapper(),
+            wrapper: createQueryWrapper().Wrapper,
         });
 
         const subscriptionsTab = await findByText('Подписки (1)');
@@ -188,23 +148,11 @@ describe('SubscriptionsScreen', () => {
 
     it('shows subscribers list when Подписчики tab is pressed', async () => {
         mockedFetchMySubscriptions.mockResolvedValue([]);
-        mockedFetchMySubscribers.mockResolvedValue([
-            {
-                id: 20,
-                first_name: 'Мария',
-                last_name: 'Сидорова',
-                youtube: '',
-                instagram: '',
-                twitter: '',
-                vk: '',
-                avatar: '',
-                user: 55,
-            },
-        ]);
+        mockedFetchMySubscribers.mockResolvedValue([SUBSCRIBER_FIXTURE]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText, findByLabelText } = render(<SubscriptionsScreen />, {
-            wrapper: createWrapper(),
+            wrapper: createQueryWrapper().Wrapper,
         });
 
         const subscribersTab = await findByLabelText('Подписчики');
@@ -220,7 +168,7 @@ describe('SubscriptionsScreen', () => {
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText, findByLabelText } = render(<SubscriptionsScreen />, {
-            wrapper: createWrapper(),
+            wrapper: createQueryWrapper().Wrapper,
         });
 
         const subscribersTab = await findByLabelText('Подписчики');
@@ -228,5 +176,30 @@ describe('SubscriptionsScreen', () => {
 
         const emptyText = await findByText('У вас пока нет подписчиков');
         expect(emptyText).toBeTruthy();
+    });
+
+    it('opens travel by explicit url, then falls back to slug and id routes', async () => {
+        mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
+        mockedFetchMyTravels.mockResolvedValue([
+            { id: 100, title: 'Travel With Url', url: '/custom/travel-url' },
+            { id: 101, title: 'Travel With Slug', slug: 'slug-trip' },
+            { id: 102, title: 'Travel With Id Only' },
+        ]);
+
+        const { findByLabelText } = render(<SubscriptionsScreen />, {
+            wrapper: createQueryWrapper().Wrapper,
+        });
+
+        const withUrl = await findByLabelText('Travel With Url');
+        fireEvent.press(withUrl);
+        expect(mockPush).toHaveBeenCalledWith('/custom/travel-url');
+
+        const withSlug = await findByLabelText('Travel With Slug');
+        fireEvent.press(withSlug);
+        expect(mockPush).toHaveBeenCalledWith('/travels/slug-trip');
+
+        const withIdOnly = await findByLabelText('Travel With Id Only');
+        fireEvent.press(withIdOnly);
+        expect(mockPush).toHaveBeenCalledWith('/travels/102');
     });
 });

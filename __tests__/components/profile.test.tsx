@@ -1,21 +1,16 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { mockPush, mockReplace, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
+import { createQueryWrapper } from '../helpers/testQueryClient';
+import { mockFetchMyTravels, mockUnwrapMyTravelsPayload, resetTravelsApiMocks } from '../helpers/mockTravelsApi';
 
 jest.mock('@/context/AuthContext');
 
 jest.setTimeout(15000);
 
-
-const mockPush = jest.fn();
-const mockReplace = jest.fn();
-
 jest.mock('expo-router', () => ({
-  useRouter: () => ({
-    push: mockPush,
-    replace: mockReplace,
-  }),
+  useRouter: mockUseRouter,
 }));
 
 jest.mock('@/api/user', () => ({
@@ -71,19 +66,8 @@ jest.mock('@/hooks/useAvatarUpload', () => ({
 }));
 
 jest.mock('@/api/travelsApi', () => ({
-  fetchMyTravels: jest.fn().mockResolvedValue([
-    { id: 101, title: 'My Travel 1' },
-    { id: 102, title: 'My Travel 2' },
-    { id: 103, title: 'My Travel 3' },
-  ]),
-  unwrapMyTravelsPayload: (payload: any) => {
-    if (!payload) return { items: [], total: 0 };
-    if (Array.isArray(payload)) return { items: payload, total: payload.length };
-    if (Array.isArray(payload?.data)) return { items: payload.data, total: payload.data.length };
-    if (Array.isArray(payload?.results)) return { items: payload.results, total: Number(payload.count ?? payload.total ?? payload.results.length) || payload.results.length };
-    if (Array.isArray(payload?.items)) return { items: payload.items, total: Number(payload.total ?? payload.count ?? payload.items.length) || payload.items.length };
-    return { items: [], total: Number(payload?.total ?? payload?.count ?? 0) || 0 };
-  },
+  fetchMyTravels: mockFetchMyTravels,
+  unwrapMyTravelsPayload: mockUnwrapMyTravelsPayload,
 }));
 
 jest.mock('@/utils/storageBatch', () => ({
@@ -176,21 +160,13 @@ const setupFavorites = (favoritesLen = 2, historyLen = 5) => {
 describe('ProfileScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetExpoRouterMocks();
+    resetTravelsApiMocks();
+    mockFetchMyTravels.mockResolvedValue(require('../fixtures/travelFixtures').MY_TRAVELS_FIXTURE);
   });
 
   const renderProfile = () => {
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <ProfileScreen />
-      </QueryClientProvider>
-    );
+    return render(<ProfileScreen />, { wrapper: createQueryWrapper().Wrapper });
   };
 
   it('shows EmptyState when user is not authenticated', async () => {

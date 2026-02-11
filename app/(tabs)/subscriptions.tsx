@@ -10,9 +10,11 @@ import {
     ActivityIndicator,
     Image,
     TextInput,
+    type TextStyle,
+    type ViewStyle,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/context/AuthContext';
@@ -32,13 +34,40 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { confirmAction } from '@/utils/confirmAction';
 import { ApiError } from '@/api/client';
+import { normalizeTravelPreview, resolveTravelUrl, type TravelPreview } from '@/app/(tabs)/subscriptions.helpers';
 
 type SubscriptionTab = 'subscriptions' | 'subscribers';
+type WebEnhancedViewStyle = ViewStyle & {
+    boxShadow?: string;
+    cursor?: 'pointer';
+    WebkitOverflowScrolling?: 'touch';
+    touchAction?: 'pan-x';
+};
+type WebEnhancedTextStyle = TextStyle & {
+    outlineStyle?: 'none';
+};
 
 type AuthorWithTravels = {
     profile: UserProfileDto;
-    travels: any[];
+    travels: TravelPreview[];
     isLoadingTravels: boolean;
+};
+
+const WEB_HORIZONTAL_SCROLL_STYLE: WebEnhancedViewStyle = {
+    WebkitOverflowScrolling: 'touch',
+    touchAction: 'pan-x',
+};
+
+const WEB_CARD_SHADOW_STYLE: WebEnhancedViewStyle = {
+    boxShadow: DESIGN_TOKENS.shadows.card,
+};
+
+const WEB_CURSOR_POINTER_STYLE: WebEnhancedViewStyle = {
+    cursor: 'pointer',
+};
+
+const WEB_TEXT_OUTLINE_NONE_STYLE: WebEnhancedTextStyle = {
+    outlineStyle: 'none',
 };
 
 function SubscriberSection({
@@ -197,19 +226,12 @@ function AuthorSection({
                     contentContainerStyle={styles.travelsScroll}
                     {...Platform.select({
                         web: {
-                            style: {
-                                WebkitOverflowScrolling: 'touch',
-                                touchAction: 'pan-x',
-                            } as any,
+                            style: WEB_HORIZONTAL_SCROLL_STYLE,
                         },
                     })}
                 >
-                    {travels.slice(0, 10).map((travel: any) => {
-                        const travelUrl =
-                            travel.url ||
-                            travel.slug
-                                ? `/travels/${travel.slug || travel.id}`
-                                : `/travels/${travel.id}`;
+                    {travels.slice(0, 10).map((travel) => {
+                        const travelUrl = resolveTravelUrl(travel);
                         return (
                             <View key={travel.id} style={styles.travelCardWrap}>
                                 <TabTravelCard
@@ -251,6 +273,9 @@ function AuthorSection({
 
 export default function SubscriptionsScreen() {
     const router = useRouter();
+    const pushRoute = useCallback((href: string) => {
+        router.push(href as Href);
+    }, [router]);
     useResponsive();
     const { isAuthenticated, authReady } = useAuth();
     const colors = useThemedColors();
@@ -300,7 +325,7 @@ export default function SubscriptionsScreen() {
         return subscribers.filter((p) => getFullName(p).includes(q));
     }, [subscribers, search, getFullName]);
 
-    const [authorTravels, setAuthorTravels] = useState<Record<number, { travels: any[]; loading: boolean }>>({});
+    const [authorTravels, setAuthorTravels] = useState<Record<number, { travels: TravelPreview[]; loading: boolean }>>({});
 
     useEffect(() => {
         if (!subscriptions.length) return;
@@ -320,9 +345,10 @@ export default function SubscriptionsScreen() {
             fetchMyTravels({ user_id: userId })
                 .then((result) => {
                     const { items: list } = unwrapMyTravelsPayload(result);
+                    const normalizedTravels = list.map(normalizeTravelPreview);
                     setAuthorTravels((prev) => ({
                         ...prev,
-                        [userId]: { travels: list, loading: false },
+                        [userId]: { travels: normalizedTravels, loading: false },
                     }));
                 })
                 .catch(() => {
@@ -370,28 +396,28 @@ export default function SubscriptionsScreen() {
 
     const handleMessage = useCallback(
         (userId: number) => {
-            router.push(`/messages?userId=${encodeURIComponent(userId)}` as any);
+            pushRoute(`/messages?userId=${encodeURIComponent(userId)}`);
         },
-        [router]
+        [pushRoute]
     );
 
     const handleOpenTravel = useCallback(
         (url: string) => {
-            router.push(url as any);
+            pushRoute(url);
         },
-        [router]
+        [pushRoute]
     );
 
     const handleOpenProfile = useCallback(
         (userId: number) => {
-            router.push(`/user/${userId}` as any);
+            pushRoute(`/user/${userId}`);
         },
-        [router]
+        [pushRoute]
     );
 
     const handleBackToProfile = useCallback(() => {
-        router.push('/profile' as any);
-    }, [router]);
+        pushRoute('/profile');
+    }, [pushRoute]);
 
     const filteredAuthors = useMemo(
         () => {
@@ -442,8 +468,8 @@ export default function SubscriptionsScreen() {
                     action={{
                         label: 'Войти',
                         onPress: () =>
-                            router.push(
-                                buildLoginHref({ redirect: '/subscriptions', intent: 'subscriptions' }) as any
+                            pushRoute(
+                                buildLoginHref({ redirect: '/subscriptions', intent: 'subscriptions' })
                             ),
                     }}
                 />
@@ -726,7 +752,7 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
         tabActive: {
             backgroundColor: colors.surface,
             ...(Platform.OS === 'web'
-                ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+                ? WEB_CARD_SHADOW_STYLE
                 : Platform.OS === 'android'
                     ? { elevation: 1 }
                     : {}),
@@ -754,7 +780,7 @@ const createPageStyles = (colors: ReturnType<typeof useThemedColors>) =>
             flex: 1,
             fontSize: 14,
             paddingVertical: DESIGN_TOKENS.spacing.xs,
-            ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
+            ...(Platform.OS === 'web' ? WEB_TEXT_OUTLINE_NONE_STYLE : {}),
         },
         noResults: {
             paddingVertical: DESIGN_TOKENS.spacing.xl,
@@ -793,7 +819,7 @@ const createSubscriberStyles = (colors: ReturnType<typeof useThemedColors>) =>
             borderWidth: 1,
             borderColor: colors.border,
             ...(Platform.OS === 'web'
-                ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+                ? WEB_CARD_SHADOW_STYLE
                 : Platform.OS === 'android'
                     ? { elevation: 2 }
                     : {}),
@@ -846,7 +872,7 @@ const createSubscriberStyles = (colors: ReturnType<typeof useThemedColors>) =>
             backgroundColor: colors.primarySoft,
             alignItems: 'center',
             justifyContent: 'center',
-            ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+            ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
         },
     });
 
@@ -861,7 +887,7 @@ const createAuthorStyles = (colors: ReturnType<typeof useThemedColors>) =>
             borderColor: colors.border,
             overflow: 'hidden',
             ...(Platform.OS === 'web'
-                ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any)
+                ? WEB_CARD_SHADOW_STYLE
                 : Platform.OS === 'android'
                     ? { elevation: 2 }
                     : {}),
@@ -921,7 +947,7 @@ const createAuthorStyles = (colors: ReturnType<typeof useThemedColors>) =>
             backgroundColor: colors.primarySoft,
             alignItems: 'center',
             justifyContent: 'center',
-            ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+            ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
         },
         actionButtonDanger: {
             width: 36,
@@ -930,7 +956,7 @@ const createAuthorStyles = (colors: ReturnType<typeof useThemedColors>) =>
             backgroundColor: colors.dangerSoft,
             alignItems: 'center',
             justifyContent: 'center',
-            ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+            ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
         },
         travelsLoading: {
             paddingHorizontal: 14,
@@ -961,7 +987,7 @@ const createAuthorStyles = (colors: ReturnType<typeof useThemedColors>) =>
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            ...(Platform.OS === 'web' ? ({ cursor: 'pointer' } as any) : {}),
+            ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
         },
         showMoreText: {
             fontSize: 13,

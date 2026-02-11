@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
+  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -38,6 +39,19 @@ interface UserStats {
   favoritesCount: number;
   viewsCount: number;
 }
+
+type ProfileListItem = {
+  type?: string;
+  id?: unknown;
+  title?: unknown;
+  url?: unknown;
+  imageUrl?: unknown;
+  country?: unknown;
+  city?: unknown;
+};
+
+const isTravelListItem = (value: unknown): value is ProfileListItem =>
+  !!value && typeof value === 'object' && (value as ProfileListItem).type === 'travel';
 
 const getSlugFromUrl = (url: string | undefined | null, fallback: string) => {
   const raw = String(url ?? '').trim();
@@ -246,8 +260,8 @@ export default function ProfileScreen() {
 
   const normalizedFavorites = useMemo<Travel[]>(() =>
     (favorites || [])
-      .filter((f: any) => f?.type === 'travel')
-      .map((f: any) => normalizeToTravel({
+      .filter((f) => isTravelListItem(f))
+      .map((f) => normalizeToTravel({
         id: f.id,
         name: f.title,
         title: f.title,
@@ -261,8 +275,8 @@ export default function ProfileScreen() {
 
   const normalizedHistory = useMemo<Travel[]>(() =>
     (viewHistory || [])
-      .filter((h: any) => h?.type === 'travel')
-      .map((h: any) => normalizeToTravel({
+      .filter((h) => isTravelListItem(h))
+      .map((h) => normalizeToTravel({
         id: h.id,
         name: h.title,
         title: h.title,
@@ -392,7 +406,7 @@ export default function ProfileScreen() {
         web: {
           columnGap: gapSize,
           rowGap: gapSize,
-        } as any,
+        },
         default: {},
       }),
     },
@@ -533,7 +547,7 @@ export default function ProfileScreen() {
 
   const singleColStyle = useMemo(() => ({
     width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%',
-  } as any), []);
+  } as ViewStyle), []);
 
   const placeholderBaseStyle = useMemo(() => ({
     flexGrow: 0, flexShrink: 0, minWidth: 0, opacity: 0, pointerEvents: 'none' as const,
@@ -606,46 +620,51 @@ export default function ProfileScreen() {
                 return (
                   <View key={`row-${rowIndex}`}>
                     <View style={styles.cardsRow}>
-                      {rowItems.map((travel, itemIndex) => (
-                        <View
-                          key={String(travel.id)}
-                          style={
-                            isCardsSingleColumn
-                              ? singleColStyle
-                              : ({
-                                  flexGrow: 0,
-                                  flexShrink: 0,
-                                  flexBasis: calcWidth,
-                                  width: calcWidth,
-                                  maxWidth: calcWidth,
-                                  minWidth: 0,
-                                } as any)
-                          }
-                        >
-                          <RenderTravelItem
-                            item={travel}
-                            index={rowIndex * cols + itemIndex}
-                            isMobile={isMobileDevice}
-                            isFirst={rowIndex === 0 && itemIndex === 0}
-                            currentUserId={userId}
-                            isSuperuser={isSuperuser}
-                            onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
-                          />
-                        </View>
-                      ))}
+                      {rowItems.map((travel, itemIndex) => {
+                        const rowItemStyle: ViewStyle | undefined = isCardsSingleColumn
+                          ? singleColStyle
+                          : {
+                              flexGrow: 0,
+                              flexShrink: 0,
+                              flexBasis: calcWidth,
+                              width: calcWidth,
+                              maxWidth: calcWidth,
+                              minWidth: 0,
+                            };
+
+                        return (
+                          <View
+                            key={String(travel.id)}
+                            style={rowItemStyle}
+                          >
+                            <RenderTravelItem
+                              item={travel}
+                              index={rowIndex * cols + itemIndex}
+                              isMobile={isMobileDevice}
+                              isFirst={rowIndex === 0 && itemIndex === 0}
+                              currentUserId={userId}
+                              isSuperuser={isSuperuser}
+                              onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
+                            />
+                          </View>
+                        );
+                      })}
 
                       {!isCardsSingleColumn && missingSlots > 0
-                        ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => (
-                            <View
-                              key={`placeholder-${rowIndex}-${placeholderIndex}`}
-                              style={{
-                                ...placeholderBaseStyle,
-                                flexBasis: calcWidth,
-                                width: calcWidth,
-                                maxWidth: calcWidth,
-                              } as any}
-                            />
-                          ))
+                        ? Array.from({ length: missingSlots }).map((_, placeholderIndex) => {
+                            const placeholderStyle: ViewStyle = {
+                              ...placeholderBaseStyle,
+                              flexBasis: calcWidth,
+                              width: calcWidth,
+                              maxWidth: calcWidth,
+                            };
+                            return (
+                              <View
+                                key={`placeholder-${rowIndex}-${placeholderIndex}`}
+                                style={placeholderStyle}
+                              />
+                            );
+                          })
                         : null}
                     </View>
                     {rowIndex < rows.length - 1 ? <View style={styles.rowSeparator} /> : null}
