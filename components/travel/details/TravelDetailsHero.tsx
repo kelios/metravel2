@@ -426,23 +426,31 @@ function TravelHeroSectionInner({
     typeof navigator !== 'undefined' &&
     String((navigator as any).userAgent || '').toLowerCase().includes('jsdom')
   const [webHeroLoaded, setWebHeroLoaded] = useState(Platform.OS !== 'web' || isJSDOM)
-  // Keep LCP overlay visible briefly after Slider mounts to prevent flash
+  // Keep LCP overlay visible until the Slider's first image actually loads
   const [sliderMounted, setSliderMounted] = useState(false)
+  const [sliderImageReady, setSliderImageReady] = useState(false)
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
     // If we get a new travel/first image, reset swap state.
     setWebHeroLoaded(false)
     setSliderMounted(false)
+    setSliderImageReady(false)
     tdTrace('hero:swapReset')
   }, [firstImg?.url, tdTrace])
 
-  // After webHeroLoaded triggers Slider mount, wait briefly then hide overlay
+  // After Slider's first image loads, hide the LCP overlay
   useEffect(() => {
     if (!webHeroLoaded || Platform.OS !== 'web') return
-    const t = setTimeout(() => setSliderMounted(true), 150)
-    return () => clearTimeout(t)
-  }, [webHeroLoaded])
+    if (sliderImageReady) {
+      // Image loaded — wait for the 0.3s CSS opacity transition to finish, then remove overlay
+      const t = setTimeout(() => setSliderMounted(true), 400)
+      return () => clearTimeout(t)
+    }
+    // Safety fallback: remove overlay after 6s even if slider image hasn't loaded
+    const fallback = setTimeout(() => setSliderMounted(true), 6000)
+    return () => clearTimeout(fallback)
+  }, [webHeroLoaded, sliderImageReady])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
@@ -459,6 +467,11 @@ function TravelHeroSectionInner({
     tdTrace('hero:lcpImg:onLoad')
     onFirstImageLoad()
   }, [onFirstImageLoad, tdTrace])
+
+  const handleSliderImageLoad = useCallback(() => {
+    setSliderImageReady(true)
+    tdTrace('hero:sliderImgLoaded')
+  }, [tdTrace])
 
   const quickJumpLinks = useMemo(() => {
     return HERO_QUICK_JUMP_KEYS.map((key) => sectionLinks.find((link) => link.key === key)).filter(
@@ -535,7 +548,7 @@ function TravelHeroSectionInner({
                   blurBackground
                   aspectRatio={aspectRatio as number}
                   mobileHeightPercent={0.7}
-                  onFirstImageLoad={onFirstImageLoad}
+                  onFirstImageLoad={handleSliderImageLoad}
                   firstImagePreloaded
                 />
               )}

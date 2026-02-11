@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Animated, Pressable, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -49,6 +49,8 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
     );
 
     const scaleAnim = useRef(new Animated.Value(1)).current;
+    const btnRef = useRef<any>(null);
+    const titleText = isSubscribed ? 'Отписаться' : 'Подписаться';
 
     const originalHandlePress = handlePress;
     const animatedHandlePress = useCallback(() => {
@@ -58,6 +60,13 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
         ]).start();
         originalHandlePress();
     }, [scaleAnim, originalHandlePress]);
+
+    useEffect(() => {
+        if (Platform.OS === 'web' && btnRef.current) {
+            const node = btnRef.current;
+            if (node?.setAttribute) node.setAttribute('title', titleText);
+        }
+    }, [titleText]);
 
     if (!canSubscribe && isAuthenticated) return null;
 
@@ -71,6 +80,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
         return (
             <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
                 <Pressable
+                    ref={btnRef}
                     onPress={animatedHandlePress}
                     disabled={isLoading}
                     accessibilityRole="button"
@@ -80,7 +90,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
                         ? {
                               role: 'button',
                               'aria-label': a11yLabel,
-                              title: isSubscribed ? 'Отписаться' : 'Подписаться',
+                              'data-action-btn': true,
                           } as any
                         : {})}
                 >

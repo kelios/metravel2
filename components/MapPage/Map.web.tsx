@@ -401,10 +401,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   }, [safeCoordinates.latitude, safeCoordinates.longitude, safeCoordinates.zoom, leafletReady]);
 
   const canRenderTravelPoints = useMemo(() => {
-    if (isTestEnv) return true;
-    if (mode !== 'radius') return true;
-    return !!userLocationLatLng;
-  }, [mode, userLocationLatLng]);
+    return true;
+  }, []);
 
   useEffect(() => {
     try {

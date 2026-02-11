@@ -1,5 +1,5 @@
 // components/travel/CompactSideBarTravel.tsx
-import React, { memo, Suspense, useCallback, useMemo, useState, lazy } from "react";
+import React, { memo, Suspense, useCallback, useMemo, useRef, useState, lazy } from "react";
 import {
   View,
   StyleSheet,
@@ -227,6 +227,16 @@ function CompactSideBarTravel({
   };
   const handleEdit = () => canEdit && openUrl(`/travel/${travel.id}/`);
 
+  const setWebTitle = useCallback(
+    (title: string) => (el: any) => {
+      if (Platform.OS === 'web' && el) {
+        const node = el instanceof HTMLElement ? el : el._nativeTag ?? el;
+        if (node?.setAttribute) node.setAttribute('title', title);
+      }
+    },
+    []
+  );
+
   const menuItems = [
     isMobile ? (
       <View key="close-top" style={styles.closeTopBar}>
@@ -315,12 +325,12 @@ function CompactSideBarTravel({
                     globalFocusStyles.focusable,
                     pressed && styles.actionBtnPressed,
                   ]}
+                  ref={setWebTitle('Редактировать')}
                   {...(Platform.OS === 'web'
                     ? {
                         'data-action-btn': true,
                         role: 'button',
                         'aria-label': 'Редактировать путешествие',
-                        title: 'Редактировать',
                       }
                     : {})}
                 >
@@ -358,12 +368,12 @@ function CompactSideBarTravel({
                     globalFocusStyles.focusable,
                     pressed && styles.actionBtnPressed,
                   ]}
+                  ref={setWebTitle('Написать автору')}
                   {...(Platform.OS === 'web'
                     ? {
                         'data-action-btn': true,
                         role: 'button',
                         'aria-label': `Написать автору ${userName || 'Пользователь'}`,
-                        title: 'Написать автору',
                       }
                     : {})}
                 >

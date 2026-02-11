@@ -84,17 +84,6 @@ export function useMapTravels({
   fullRouteCoords,
   isFocused,
 }: UseMapTravelsParams) {
-  const isDefaultCoordinates = useMemo(() => {
-    if (!coordinates) return true;
-    // Default from useMapCoordinates.ts
-    const DEFAULT_LAT = 53.9006;
-    const DEFAULT_LNG = 27.559;
-    return (
-      Math.abs(Number(coordinates.latitude) - DEFAULT_LAT) < 0.000001 &&
-      Math.abs(Number(coordinates.longitude) - DEFAULT_LNG) < 0.000001
-    );
-  }, [coordinates]);
-
   // Условие активации запроса
   const isEnabled = useMemo(() => {
     if (!isFocused) return false;
@@ -107,13 +96,11 @@ export function useMapTravels({
 
     if (!hasValidCoordinates) return false;
 
-    // In radius mode we should query around the user's real current location.
-    // Avoid sending a query with placeholder default coords (e.g. Minsk), which results in irrelevant points.
-    if (mode === 'radius') return !isDefaultCoordinates;
+    if (mode === 'radius') return true;
     if (mode === 'route' && fullRouteCoords.length >= 2) return true;
 
     return false;
-  }, [isFocused, coordinates, mode, fullRouteCoords.length, isDefaultCoordinates]);
+  }, [isFocused, coordinates, mode, fullRouteCoords.length]);
 
   // Вычисляем нормализованные ID категорий
   const normalizedCategoryIds = useMemo(

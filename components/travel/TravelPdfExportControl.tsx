@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useCallback, useMemo, useState } from 'react'
+import React, { Suspense, lazy, useCallback, useRef, useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Platform, Pressable } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -59,6 +59,13 @@ function TravelPdfExportControl({
     return <Feather name="file-text" size={18} color={mutedText} />
   }, [mutedText, pdfExport.isGenerating])
 
+  const setWebTitle = useCallback((el: any) => {
+    if (Platform.OS === 'web' && el) {
+      const node = el instanceof HTMLElement ? el : el._nativeTag ?? el
+      if (node?.setAttribute) node.setAttribute('title', 'Экспорт в PDF')
+    }
+  }, [])
+
   return (
     <>
       <Pressable
@@ -66,6 +73,7 @@ function TravelPdfExportControl({
         disabled={pdfExport.isGenerating}
         accessibilityRole="button"
         accessibilityLabel="Экспорт в PDF"
+        ref={setWebTitle}
         style={({ pressed }) => [
           actionBtnStyle,
           pressed && !pdfExport.isGenerating ? actionBtnPressedStyle : null,
