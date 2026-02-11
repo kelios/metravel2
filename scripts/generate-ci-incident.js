@@ -29,9 +29,9 @@ const valueOrPlaceholder = (value, placeholder) => {
 const buildIncidentMarkdown = (params = {}) => {
   const failureClass = valueOrPlaceholder(
     params.failureClass,
-    '<infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget>'
+    '<infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget|selective_contract>'
   )
-  const recommendationId = valueOrPlaceholder(params.recommendationId, '<QG-001..QG-006>')
+  const recommendationId = valueOrPlaceholder(params.recommendationId, '<QG-001..QG-007>')
   const workflowRun = valueOrPlaceholder(params.workflowRun, '<link>')
   const branchOrPr = valueOrPlaceholder(params.branchOrPr, '<branch-or-pr-link>')
   const impact = valueOrPlaceholder(params.impact, '<what is blocked / affected>')
@@ -39,6 +39,7 @@ const buildIncidentMarkdown = (params = {}) => {
   const eta = valueOrPlaceholder(params.eta, '<expected resolution time>')
   const immediateAction = valueOrPlaceholder(params.immediateAction, '<one-line summary>')
   const followUp = valueOrPlaceholder(params.followUp, '<yes/no + short note>')
+  const selectiveArtifact = String(params.selectiveArtifact || '').trim()
   const dateUtc = valueOrPlaceholder(params.dateUtc, nowUtc())
 
   return [
@@ -53,6 +54,7 @@ const buildIncidentMarkdown = (params = {}) => {
     `- ETA: ${eta}`,
     `- Immediate action taken: ${immediateAction}`,
     `- Follow-up required: ${followUp}`,
+    ...(selectiveArtifact ? [`- Selective decisions artifact: ${selectiveArtifact}`] : []),
     '',
   ].join('\n')
 }
@@ -70,6 +72,7 @@ const main = () => {
     eta: args.eta,
     immediateAction: args['immediate-action'],
     followUp: args['follow-up'],
+    selectiveArtifact: args['artifact-url'],
   })
 
   process.stdout.write(markdown)

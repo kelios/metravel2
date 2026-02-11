@@ -168,11 +168,15 @@ Jobs:
   - selective runner CLI args (`--changed-files-file`, `--dry-run`, `--json`) are parsed by `scripts/selective-runner-args.js`
   - `--json` is decision-only output mode and is supported only together with `--dry-run`
   - shared decision contract payload is built by `scripts/selective-runner-output.js` (`contractVersion: 1`)
+  - aggregate snapshot is assembled by `scripts/collect-selective-decisions.js` into `test-results/selective-decisions.json`
+  - aggregate schema is validated by `scripts/validate-selective-decisions.js` (`schemaVersion: 1`)
 - `lint` (gating): runs `yarn lint:ci`, publishes summary + `eslint-results` artifact.
 - `smoke-critical` (gating): runs `yarn test:smoke:critical:ci`, publishes summary + `jest-smoke-results` artifact.
 - `quality-summary` (aggregation): downloads both artifacts and publishes one combined quality summary.
   - In PR runs, also downloads selective decision artifacts and includes them in summary + `quality-summary.json`.
   - In PR runs, validates downloaded selective decision artifacts before publishing summary (missing artifacts are reported as summary warnings).
+  - In PR runs, builds and validates a single selective decisions aggregate before calling `scripts/summarize-quality-gate.js`.
+  - In PR runs, uploads aggregate selective decisions snapshot as `selective-decisions` artifact (`test-results/selective-decisions.json`).
   - For failed PR gates, also prints a ready-to-copy incident snippet into job summary via `scripts/publish-ci-incident-snippet.js`.
   - Validates incident snippet structure and required auto fields via `scripts/validate-ci-incident-snippet.js`.
   - Uploads `ci-incident-snippet` artifact (`test-results/ci-incident-snippet.md`) for incident/audit trail.
@@ -401,13 +405,15 @@ Use this template in PR comment, issue, or incident log when escalation is trigg
 - Date (UTC): YYYY-MM-DD HH:MM
 - Workflow run: <link>
 - Branch / PR: <branch-or-pr-link>
-- Failure Class: <infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget>
-- Recommendation ID: <QG-001..QG-006>
+- Failure Class: <infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget|selective_contract>
+  - For aggregate selective-decision contract issues use `selective_contract`.
+- Recommendation ID: <QG-001..QG-007>
 - Impact: <what is blocked / affected>
 - Owner: <person-or-team>
 - ETA: <expected resolution time>
 - Immediate action taken: <one-line summary>
 - Follow-up required: <yes/no + short note>
+- Selective decisions artifact: <optional artifact URL; recommended for selective_contract>
 ```
 
 Generator helper:
@@ -429,10 +435,20 @@ LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish -- \
   --workflow-run "https://github.com/org/repo/actions/runs/123" \
   --branch-pr "https://github.com/org/repo/pull/42"
 
+# Optional for selective_contract: if artifact id is known, publisher can build direct artifact URL
+LINT_RESULT=success SMOKE_RESULT=success yarn ci:incident:publish -- \
+  --workflow-run "https://github.com/org/repo/actions/runs/123" \
+  --branch-pr "https://github.com/org/repo/pull/42" \
+  --artifact-id "456"
+
 # Publish and print machine-readable payload (JSON)
 LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish:json -- \
   --workflow-run "https://github.com/org/repo/actions/runs/123" \
   --branch-pr "https://github.com/org/repo/pull/42"
+
+# JSON payload fields for artifact provenance:
+# - artifactUrl: resolved artifact link (if available)
+# - artifactSource: explicit | run_id | fallback | none
 
 # Validate generated snippet file
 yarn ci:incident:validate
@@ -552,6 +568,17 @@ Template snippet:
   - Re-run locally:
     - `yarn test:smoke:critical:ci`
     - `SMOKE_DURATION_BUDGET_SECONDS=10 SMOKE_DURATION_BUDGET_STRICT=true node scripts/summarize-quality-gate.js test-results/eslint-results.json test-results/jest-smoke-results.json --fail-on-missing`
+
+<a id="qg-007"></a>
+- `selective_contract` (`QG-007`)
+  - Meaning: aggregate selective decisions payload is missing/invalid while lint+smoke are otherwise green.
+  - Check:
+    - `test-results/selective-decisions.json`
+    - `scripts/collect-selective-decisions.js`
+    - `scripts/validate-selective-decisions.js`
+  - Re-run locally:
+    - `node scripts/collect-selective-decisions.js --schema-file test-results/selective/schema/schema-selective-decision.json --validator-file test-results/selective/validator/validator-selective-decision.json --output-file test-results/selective-decisions.json`
+    - `node scripts/validate-selective-decisions.js --file test-results/selective-decisions.json`
 
 ## Known peer dependency warnings
 

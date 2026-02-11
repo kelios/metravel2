@@ -35,6 +35,7 @@ describe('run-schema-contract-tests-if-needed', () => {
     expect(shouldRunForChangedFiles(['scripts/summarize-quality-gate.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/validate-quality-summary.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/validate-selective-decision.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/collect-selective-decisions.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['__tests__/scripts/validate-quality-summary.test.ts'])).toBe(true)
     expect(shouldRunForChangedFiles(['README.md'])).toBe(false)
   })
@@ -94,6 +95,8 @@ describe('run-schema-contract-tests-if-needed', () => {
       '__tests__/scripts/validate-quality-summary.test.ts',
       '__tests__/scripts/selective-decision-contract.test.ts',
       '__tests__/scripts/validate-selective-decision.test.ts',
+      '__tests__/scripts/collect-selective-decisions.test.ts',
+      '__tests__/scripts/validate-selective-decisions.test.ts',
       '__tests__/scripts/guard-quality-schema-change.test.ts',
     ])
   })

@@ -14,6 +14,7 @@ const ALLOWED_FAILURE_CLASSES = new Set([
   'smoke_only',
   'mixed',
   'performance_budget',
+  'selective_contract',
 ])
 
 const parseArgs = (argv) => {

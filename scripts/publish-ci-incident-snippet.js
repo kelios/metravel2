@@ -14,6 +14,8 @@ const parseArgs = (argv) => {
     eta: '<fill>',
     immediateAction: 'Initial triage started',
     followUp: 'yes',
+    artifactUrl: '',
+    artifactId: '',
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -67,6 +69,16 @@ const parseArgs = (argv) => {
       out.output = 'json'
       continue
     }
+    if (token === '--artifact-url' && argv[i + 1]) {
+      out.artifactUrl = argv[i + 1]
+      i += 1
+      continue
+    }
+    if (token === '--artifact-id' && argv[i + 1]) {
+      out.artifactId = argv[i + 1]
+      i += 1
+      continue
+    }
   }
 
   return out
@@ -96,6 +108,44 @@ const resolveRecommendationId = (summary) => {
   return '<from Quality Gate Summary>'
 }
 
+const resolveArtifactUrl = ({ workflowRun, artifactUrl, artifactId }) => {
+  const explicit = String(artifactUrl || '').trim()
+  if (explicit) return explicit
+
+  const runUrl = String(workflowRun || '').trim()
+  const id = String(artifactId || '').trim()
+  if (!runUrl || !id) return ''
+  if (!/^https:\/\/github\.com\/.+\/actions\/runs\/\d+$/.test(runUrl)) return ''
+  if (!/^\d+$/.test(id)) return ''
+  return `${runUrl}/artifacts/${id}`
+}
+
+const resolveArtifactSource = ({ failureClass, artifactUrl, workflowRun, artifactId }) => {
+  const explicit = String(artifactUrl || '').trim()
+  if (explicit) return 'explicit'
+
+  const runUrl = String(workflowRun || '').trim()
+  const id = String(artifactId || '').trim()
+  if (runUrl && id && /^https:\/\/github\.com\/.+\/actions\/runs\/\d+$/.test(runUrl) && /^\d+$/.test(id)) {
+    return 'run_id'
+  }
+  if (failureClass === 'selective_contract') return 'fallback'
+  return 'none'
+}
+
+const normalizeFollowUp = ({ failureClass, followUp, artifactUrl }) => {
+  const base = String(followUp || '').trim() || 'yes'
+  if (failureClass !== 'selective_contract') {
+    return base
+  }
+  if (/selective-decisions/i.test(base)) {
+    return base
+  }
+  const artifactRef = String(artifactUrl || '').trim()
+    || 'test-results/selective-decisions.json'
+  return `${base}; inspect selective-decisions artifact (${artifactRef})`
+}
+
 const appendStepSummary = (markdown, stepSummaryPath) => {
   const summaryPath = stepSummaryPath || process.env.GITHUB_STEP_SUMMARY
   if (!summaryPath) return false
@@ -118,6 +168,8 @@ const renderIncidentPayload = ({
   branchPr,
   outputFile,
   markdown,
+  artifactUrl = '',
+  artifactSource = 'none',
 }) => {
   return {
     failureClass,
@@ -126,6 +178,8 @@ const renderIncidentPayload = ({
     branchPr,
     outputFile,
     markdown,
+    artifactUrl,
+    artifactSource,
   }
 }
 
@@ -139,6 +193,8 @@ const publishIncidentSnippet = ({
   eta,
   immediateAction,
   followUp,
+  artifactUrl,
+  artifactId,
   lintResult = String(process.env.LINT_RESULT || '').trim(),
   smokeResult = String(process.env.SMOKE_RESULT || '').trim(),
   stepSummaryPath,
@@ -146,6 +202,22 @@ const publishIncidentSnippet = ({
   const summary = readQualitySummary(summaryFile)
   const failureClass = resolveFailureClass({ summary, lintResult, smokeResult })
   const recommendationId = resolveRecommendationId(summary)
+  const resolvedArtifactUrl = resolveArtifactUrl({
+    workflowRun,
+    artifactUrl,
+    artifactId,
+  })
+  const artifactSource = resolveArtifactSource({
+    failureClass,
+    artifactUrl,
+    workflowRun,
+    artifactId,
+  })
+  const resolvedFollowUp = normalizeFollowUp({
+    failureClass,
+    followUp,
+    artifactUrl: resolvedArtifactUrl,
+  })
 
   const markdown = buildIncidentMarkdown({
     workflowRun,
@@ -156,7 +228,8 @@ const publishIncidentSnippet = ({
     owner,
     eta,
     immediateAction,
-    followUp,
+    followUp: resolvedFollowUp,
+    selectiveArtifact: resolvedArtifactUrl,
   })
 
   const writtenOutputFile = writeIncidentFile(outputFile, markdown)
@@ -168,6 +241,8 @@ const publishIncidentSnippet = ({
     branchPr,
     outputFile: writtenOutputFile,
     markdown,
+    artifactUrl: resolvedArtifactUrl,
+    artifactSource,
   })
 }
 
@@ -194,6 +269,9 @@ module.exports = {
   fallbackFailureClass,
   resolveFailureClass,
   resolveRecommendationId,
+  resolveArtifactUrl,
+  resolveArtifactSource,
+  normalizeFollowUp,
   appendStepSummary,
   writeIncidentFile,
   renderIncidentPayload,

@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 
 const scriptPath = path.resolve(process.cwd(), 'scripts/summarize-quality-gate.js');
-const quickMapSnippet = 'QG quick map: QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget';
+const quickMapSnippet = 'QG quick map: QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract';
 
 type RunResult = {
   status: number;
@@ -49,6 +49,7 @@ describe('summarize-quality-gate script', () => {
   let summaryJsonPath: string;
   let schemaDecisionPath: string;
   let validatorDecisionPath: string;
+  let selectiveDecisionsPath: string;
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-gate-'));
@@ -61,6 +62,7 @@ describe('summarize-quality-gate script', () => {
     summaryJsonPath = path.join(tempDir, 'quality-summary.json');
     schemaDecisionPath = path.join(tempDir, 'schema-selective-decision.json');
     validatorDecisionPath = path.join(tempDir, 'validator-selective-decision.json');
+    selectiveDecisionsPath = path.join(tempDir, 'selective-decisions.json');
 
     writeJson(eslintPassPath, [{ filePath: '/tmp/a.ts', errorCount: 0, warningCount: 0 }]);
     writeJson(eslintFailPath, [{ filePath: '/tmp/a.ts', errorCount: 1, warningCount: 0 }]);
@@ -121,6 +123,14 @@ describe('summarize-quality-gate script', () => {
       dryRun: true,
       targetedTests: 7,
     });
+    writeJson(selectiveDecisionsPath, {
+      schemaVersion: 1,
+      decisions: [
+        JSON.parse(fs.readFileSync(schemaDecisionPath, 'utf8')),
+        JSON.parse(fs.readFileSync(validatorDecisionPath, 'utf8')),
+      ],
+      warnings: [],
+    });
   });
 
   afterEach(() => {
@@ -160,10 +170,8 @@ describe('summarize-quality-gate script', () => {
         '--fail-on-missing',
         '--json-output',
         summaryJsonPath,
-        '--schema-decision-file',
-        schemaDecisionPath,
-        '--validator-decision-file',
-        validatorDecisionPath,
+        '--selective-decisions-file',
+        selectiveDecisionsPath,
       ],
     );
     expect(result.status).toBe(0);
@@ -180,6 +188,7 @@ describe('summarize-quality-gate script', () => {
     expect(Array.isArray(snapshot.selectiveDecisions)).toBe(true);
     expect(snapshot.selectiveDecisions).toHaveLength(2);
     expect(snapshot.selectiveDecisionWarnings).toEqual([]);
+    expect(snapshot.selectiveDecisionsAggregateIssue).toBe(false);
     expect(result.stdout).toContain('### Selective Checks');
     expect(result.stdout).toContain('schema-contract-checks: run');
   });
@@ -199,6 +208,49 @@ describe('summarize-quality-gate script', () => {
     expect(result.stdout).toContain('### Selective Checks');
     expect(result.stdout).toContain('Decision artifact warnings:');
     expect(result.stdout).toContain('schema-contract-checks: decision file not found');
+  });
+
+  it('prints selective decision warnings from aggregate file', () => {
+    writeJson(selectiveDecisionsPath, {
+      schemaVersion: 1,
+      decisions: [],
+      warnings: ['schema-contract-checks: decision file not found (x.json).'],
+    });
+    const result = runSummary(
+      eslintPassPath,
+      jestPassPath,
+      [
+        '--fail-on-missing',
+        '--selective-decisions-file',
+        selectiveDecisionsPath,
+      ],
+    );
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Decision artifact warnings:');
+    expect(result.stdout).toContain('schema-contract-checks: decision file not found');
+  });
+
+  it('classifies invalid selective decisions aggregate as selective_contract', () => {
+    writeJson(selectiveDecisionsPath, {
+      schemaVersion: 2,
+      decisions: [],
+      warnings: [],
+    });
+    const result = runSummary(
+      eslintPassPath,
+      jestPassPath,
+      [
+        '--fail-on-missing',
+        '--selective-decisions-file',
+        selectiveDecisionsPath,
+      ],
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Failure Class: selective_contract');
+    expect(result.stdout).toContain('Recommendation ID: QG-007');
+    expect(result.stdout).toContain('docs/TESTING.md#qg-007 (QG-007)');
+    expect(result.stdout).toContain('Fix selective decisions aggregate contract');
   });
 
   it('classifies missing report as infra_artifact and fails in strict mode', () => {

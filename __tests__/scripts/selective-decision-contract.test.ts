@@ -1,4 +1,7 @@
-const { validateSelectiveDecision } = require('@/scripts/selective-decision-contract')
+const {
+  validateSelectiveDecision,
+  validateSelectiveDecisionsAggregate,
+} = require('@/scripts/selective-decision-contract')
 
 describe('selective-decision-contract', () => {
   it('accepts valid decision payload', () => {
@@ -33,5 +36,36 @@ describe('selective-decision-contract', () => {
     expect(errors.join('\n')).toContain('contractVersion')
     expect(errors.join('\n')).toContain('decision')
     expect(errors.join('\n')).toContain('matchedFiles')
+  })
+
+  it('accepts valid aggregate payload', () => {
+    expect(validateSelectiveDecisionsAggregate({
+      schemaVersion: 1,
+      decisions: [{
+        contractVersion: 1,
+        check: 'schema-contract-checks',
+        decision: 'run',
+        shouldRun: true,
+        reason: 'match',
+        changedFilesScanned: 2,
+        relevantMatches: 1,
+        matchedFiles: ['scripts/validate-quality-summary.js'],
+        dryRun: true,
+        targetedTests: 5,
+      }],
+      warnings: [],
+    })).toEqual([])
+  })
+
+  it('fails malformed aggregate payload', () => {
+    const errors = validateSelectiveDecisionsAggregate({
+      schemaVersion: 2,
+      decisions: [{ contractVersion: 2 }],
+      warnings: [1],
+    })
+
+    expect(errors.join('\n')).toContain('schemaVersion')
+    expect(errors.join('\n')).toContain('decisions[0]')
+    expect(errors.join('\n')).toContain('warnings')
   })
 })

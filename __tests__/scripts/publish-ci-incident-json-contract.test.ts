@@ -1,0 +1,54 @@
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+const { spawnSync } = require('child_process')
+
+const runNode = (args, env = {}) => {
+  const result = spawnSync(process.execPath, args, {
+    cwd: process.cwd(),
+    env: { ...process.env, ...env },
+    encoding: 'utf8',
+  })
+  return {
+    status: result.status ?? 1,
+    stdout: String(result.stdout || ''),
+    stderr: String(result.stderr || ''),
+  }
+}
+
+describe('publish incident json contract', () => {
+  it('emits artifactUrl and artifactSource in json output for selective contract', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-incident-json-'))
+    const summaryFile = path.join(dir, 'quality-summary.json')
+    const outputFile = path.join(dir, 'incident.md')
+    fs.writeFileSync(summaryFile, JSON.stringify({
+      failureClass: 'selective_contract',
+      recommendationId: 'QG-007',
+    }), 'utf8')
+
+    const result = runNode([
+      'scripts/publish-ci-incident-snippet.js',
+      '--summary-file',
+      summaryFile,
+      '--output-file',
+      outputFile,
+      '--workflow-run',
+      'https://github.com/org/repo/actions/runs/123',
+      '--branch-pr',
+      'https://github.com/org/repo/pull/42',
+      '--artifact-id',
+      '456',
+      '--json',
+    ])
+
+    expect(result.status).toBe(0)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.failureClass).toBe('selective_contract')
+    expect(payload.recommendationId).toBe('QG-007')
+    expect(payload.artifactUrl).toBe('https://github.com/org/repo/actions/runs/123/artifacts/456')
+    expect(payload.artifactSource).toBe('run_id')
+    expect(payload.markdown).toContain('Selective decisions artifact')
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+})

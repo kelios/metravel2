@@ -255,6 +255,23 @@ jobs:
             echo "validator selective decision artifact is missing; summary will include warning"
           fi
 
+      - name: Collect selective decisions aggregate (PR)
+        if: github.event_name == 'pull_request'
+        run: node scripts/collect-selective-decisions.js --schema-file test-results/selective/schema/schema-selective-decision.json --validator-file test-results/selective/validator/validator-selective-decision.json --output-file test-results/selective-decisions.json
+
+      - name: Validate selective decisions aggregate (PR)
+        if: github.event_name == 'pull_request'
+        run: node scripts/validate-selective-decisions.js --file test-results/selective-decisions.json
+
+      - name: Upload selective decisions aggregate (PR)
+        id: selective_decisions_upload
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: selective-decisions
+          path: test-results/selective-decisions.json
+          if-no-files-found: ignore
+
       - name: Publish quality summary
         env:
           LINT_JOB_RESULT: ${{ needs.lint.result }}
@@ -266,13 +283,20 @@ jobs:
         run: |
           EXTRA_DECISION_ARGS=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            EXTRA_DECISION_ARGS="--schema-decision-file test-results/selective/schema/schema-selective-decision.json --validator-decision-file test-results/selective/validator/validator-selective-decision.json"
+            EXTRA_DECISION_ARGS="--selective-decisions-file test-results/selective-decisions.json"
           fi
           node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json $EXTRA_DECISION_ARGS
 
       - name: Validate quality summary snapshot
         if: always()
         run: node scripts/validate-quality-summary.js test-results/quality-summary.json
+
+      - name: Extract quality failure class (PR)
+        if: always() && github.event_name == 'pull_request'
+        id: quality_failure_class
+        run: |
+          VALUE="$(node -e "const fs=require('fs');const p='test-results/quality-summary.json';try{const j=JSON.parse(fs.readFileSync(p,'utf8'));process.stdout.write(String(j.failureClass||''));}catch{process.stdout.write('');}")"
+          echo "failure_class=$VALUE" >> "$GITHUB_OUTPUT"
 
       - name: Publish suite baseline recommendation
         if: always()
@@ -299,18 +323,20 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish incident snippet (PR, when gate failed)
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
         env:
           LINT_RESULT: ${{ needs.lint.result }}
           SMOKE_RESULT: ${{ needs.smoke-critical.result }}
-        run: node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes"
+        run: |
+          ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
+          node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes" --artifact-url "$ARTIFACT_URL" --artifact-id "${{ steps.selective_decisions_upload.outputs.artifact-id }}"
 
       - name: Validate incident snippet (PR, when gate failed)
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
         run: node scripts/validate-ci-incident-snippet.js --file test-results/ci-incident-snippet.md
 
       - name: Upload incident snippet artifact
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
         uses: actions/upload-artifact@v4
         with:
           name: ci-incident-snippet

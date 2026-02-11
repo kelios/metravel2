@@ -32,6 +32,16 @@ describe('guard-quality-schema-change', () => {
     expect(result.missing).toContain('docs/TESTING.md');
   });
 
+  it('fails when selective decisions aggregate collector changes without companion test/docs', () => {
+    const result = evaluateGuard({
+      changedFiles: ['scripts/collect-selective-decisions.js'],
+      prBody: '',
+    });
+    expect(result.ok).toBe(false);
+    expect(result.missing).toContain('__tests__/scripts/collect-selective-decisions.test.ts');
+    expect(result.missing).toContain('docs/TESTING.md');
+  });
+
   it('passes when schema changes include required tests and docs', () => {
     const result = evaluateGuard({
       changedFiles: [

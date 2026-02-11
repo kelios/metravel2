@@ -10,6 +10,8 @@ const SCHEMA_FILES = [
   'scripts/validate-quality-summary.js',
   'scripts/selective-decision-contract.js',
   'scripts/validate-selective-decision.js',
+  'scripts/collect-selective-decisions.js',
+  'scripts/validate-selective-decisions.js',
 ]
 const SCHEMA_PATTERNS = SCHEMA_FILES.map((filePath) => new RegExp(`^${filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
 
@@ -18,6 +20,8 @@ const REQUIRED_TESTS_BY_SCHEMA_FILE = {
   'scripts/validate-quality-summary.js': '__tests__/scripts/validate-quality-summary.test.ts',
   'scripts/selective-decision-contract.js': '__tests__/scripts/selective-decision-contract.test.ts',
   'scripts/validate-selective-decision.js': '__tests__/scripts/validate-selective-decision.test.ts',
+  'scripts/collect-selective-decisions.js': '__tests__/scripts/collect-selective-decisions.test.ts',
+  'scripts/validate-selective-decisions.js': '__tests__/scripts/validate-selective-decisions.test.ts',
 }
 
 const REQUIRED_DOCS = ['docs/TESTING.md']

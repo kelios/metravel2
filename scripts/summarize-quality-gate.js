@@ -1,6 +1,9 @@
 const fs = require('fs')
 const path = require('path')
-const { validateSelectiveDecision } = require('./selective-decision-contract')
+const {
+  validateSelectiveDecision,
+  validateSelectiveDecisionsAggregate,
+} = require('./selective-decision-contract')
 
 const eslintPathArg = process.argv[2] || 'test-results/eslint-results.json'
 const jestPathArg = process.argv[3] || 'test-results/jest-smoke-results.json'
@@ -11,6 +14,7 @@ const getFlagValue = (flag) => {
   return process.argv[flagIndex + 1] ? String(process.argv[flagIndex + 1]).trim() : ''
 }
 const jsonOutputPathArg = getFlagValue('--json-output')
+const selectiveDecisionsFileArg = getFlagValue('--selective-decisions-file')
 const schemaDecisionPathArg = getFlagValue('--schema-decision-file')
 const validatorDecisionPathArg = getFlagValue('--validator-decision-file')
 const lintJobResult = String(process.env.LINT_JOB_RESULT || '').trim().toLowerCase()
@@ -79,6 +83,49 @@ const readSelectiveDecision = (rawPath, label) => {
   return {
     decision: payload,
     warning: '',
+  }
+}
+
+const readSelectiveDecisionsAggregate = (rawPath) => {
+  if (!rawPath) {
+    return {
+      decisions: [],
+      warnings: [],
+      aggregateIssue: false,
+    }
+  }
+
+  const resolved = path.resolve(process.cwd(), rawPath)
+  if (!fs.existsSync(resolved)) {
+    return {
+      decisions: [],
+      warnings: [`selective-decisions: aggregate file not found (${rawPath}).`],
+      aggregateIssue: true,
+    }
+  }
+
+  const payload = readJson(resolved)
+  if (!payload) {
+    return {
+      decisions: [],
+      warnings: [`selective-decisions: cannot parse aggregate JSON (${rawPath}).`],
+      aggregateIssue: true,
+    }
+  }
+
+  const errors = validateSelectiveDecisionsAggregate(payload)
+  if (errors.length > 0) {
+    return {
+      decisions: [],
+      warnings: [`selective-decisions: invalid aggregate payload: ${errors.join(' ')}`],
+      aggregateIssue: true,
+    }
+  }
+
+  return {
+    decisions: payload.decisions,
+    warnings: payload.warnings,
+    aggregateIssue: false,
   }
 }
 
@@ -165,12 +212,34 @@ if (smokeJobResult === 'success' && !jestOk) {
   inconsistencies.push('Smoke job succeeded but Jest report indicates failures or is missing.')
 }
 
-const overallOk = eslintOk && jestOk && inconsistencies.length === 0 && !budgetBlocking
+let selectiveDecisions = []
+let selectiveDecisionWarnings = []
+let selectiveDecisionsAggregateIssue = false
+if (selectiveDecisionsFileArg) {
+  const aggregate = readSelectiveDecisionsAggregate(selectiveDecisionsFileArg)
+  selectiveDecisions = aggregate.decisions
+  selectiveDecisionWarnings = aggregate.warnings
+  selectiveDecisionsAggregateIssue = aggregate.aggregateIssue
+} else {
+  const selectiveDecisionReads = [
+    readSelectiveDecision(schemaDecisionPathArg, 'schema-contract-checks'),
+    readSelectiveDecision(validatorDecisionPathArg, 'validator-contract-checks'),
+  ]
+  selectiveDecisions = selectiveDecisionReads.map((item) => item.decision).filter(Boolean)
+  selectiveDecisionWarnings = selectiveDecisionReads.map((item) => item.warning).filter(Boolean)
+}
+
+const overallOk = eslintOk
+  && jestOk
+  && inconsistencies.length === 0
+  && !budgetBlocking
+  && !selectiveDecisionsAggregateIssue
 
 const getFailureClass = () => {
   if (overallOk) return 'pass'
   if (inconsistencies.length > 0) return 'inconsistent_state'
   if (eslint === null || jest === null) return 'infra_artifact'
+  if (selectiveDecisionsAggregateIssue && eslintOk && jestOk && !budgetBlocking) return 'selective_contract'
   if (budgetBlocking && eslintOk && jestOk) return 'performance_budget'
   if (!eslintOk && jestOk) return 'lint_only'
   if (eslintOk && !jestOk) return 'smoke_only'
@@ -185,9 +254,10 @@ const recommendationByClass = {
   smoke_only: 'QG-004',
   mixed: 'QG-005',
   performance_budget: 'QG-006',
+  selective_contract: 'QG-007',
 }
 const recommendationQuickMap =
-  'QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget'
+  'QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract'
 const recommendationAnchorByClass = {
   infra_artifact: 'qg-001',
   inconsistent_state: 'qg-002',
@@ -195,16 +265,11 @@ const recommendationAnchorByClass = {
   smoke_only: 'qg-004',
   mixed: 'qg-005',
   performance_budget: 'qg-006',
+  selective_contract: 'qg-007',
 }
 const recommendationId = recommendationByClass[failureClass] || 'QG-000'
 const recommendationAnchor = recommendationAnchorByClass[failureClass] || 'troubleshooting-by-failure-class'
 const qualitySchemaVersion = 1
-const selectiveDecisionReads = [
-  readSelectiveDecision(schemaDecisionPathArg, 'schema-contract-checks'),
-  readSelectiveDecision(validatorDecisionPathArg, 'validator-contract-checks'),
-]
-const selectiveDecisions = selectiveDecisionReads.map((item) => item.decision).filter(Boolean)
-const selectiveDecisionWarnings = selectiveDecisionReads.map((item) => item.warning).filter(Boolean)
 
 const qualitySnapshot = {
   schemaVersion: qualitySchemaVersion,
@@ -226,6 +291,7 @@ const qualitySnapshot = {
   smokeSuiteRemovedFiles,
   selectiveDecisions,
   selectiveDecisionWarnings,
+  selectiveDecisionsAggregateIssue,
 }
 
 print('## Quality Gate Summary')
@@ -352,6 +418,9 @@ if (!overallOk) {
   if (budgetBlocking) {
     print('- Reduce smoke runtime or raise budget threshold if justified for the current suite size.')
   }
+  if (selectiveDecisionsAggregateIssue) {
+    print('- Fix selective decisions aggregate contract and re-run quality summary.')
+  }
 
   print('')
   print('### How to Reproduce Locally')
@@ -373,6 +442,10 @@ if (!overallOk) {
   }
   if (!hasReproCommands && budgetBlocking) {
     print('- `SMOKE_DURATION_BUDGET_SECONDS=10 SMOKE_DURATION_BUDGET_STRICT=true node scripts/summarize-quality-gate.js test-results/eslint-results.json test-results/jest-smoke-results.json --fail-on-missing`')
+  }
+  if (!hasReproCommands && selectiveDecisionsAggregateIssue) {
+    print('- `node scripts/collect-selective-decisions.js --schema-file test-results/selective/schema/schema-selective-decision.json --validator-file test-results/selective/validator/validator-selective-decision.json --output-file test-results/selective-decisions.json`')
+    print('- `node scripts/validate-selective-decisions.js --file test-results/selective-decisions.json`')
   }
 }
 

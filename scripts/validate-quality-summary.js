@@ -14,6 +14,7 @@ const OPTIONAL_FIELDS = [
   'smokeSuiteRemovedFiles',
   'selectiveDecisions',
   'selectiveDecisionWarnings',
+  'selectiveDecisionsAggregateIssue',
 ]
 
 const validate = (payload) => {
@@ -129,6 +130,9 @@ const validate = (payload) => {
         }
       })
     }
+  }
+  if ('selectiveDecisionsAggregateIssue' in payload && typeof payload.selectiveDecisionsAggregateIssue !== 'boolean') {
+    errors.push('Field "selectiveDecisionsAggregateIssue" must be a boolean when provided.')
   }
 
   const knownFields = new Set([

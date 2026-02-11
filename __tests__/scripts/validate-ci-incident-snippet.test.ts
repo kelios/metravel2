@@ -57,6 +57,21 @@ describe('validate-ci-incident-snippet', () => {
     expect(validate(markdown)).toEqual([])
   })
 
+  it('accepts selective_contract failure class', () => {
+    const markdown = [
+      '### CI Smoke Incident',
+      '- Date (UTC): 2026-02-11 20:10',
+      '- Workflow run: https://example.com/run/1',
+      '- Branch / PR: https://example.com/pull/42',
+      '- Failure Class: selective_contract',
+      '- Recommendation ID: QG-007',
+      '- Follow-up required: yes; inspect selective-decisions artifact (test-results/selective-decisions.json)',
+      '',
+    ].join('\n')
+
+    expect(validate(markdown)).toEqual([])
+  })
+
   it('fails for placeholder/invalid required auto fields', () => {
     const markdown = [
       '### CI Smoke Incident',

@@ -1,4 +1,5 @@
 const SELECTIVE_DECISION_CONTRACT_VERSION = 1
+const SELECTIVE_DECISIONS_AGGREGATE_SCHEMA_VERSION = 1
 
 const validateSelectiveDecision = (payload) => {
   const errors = []
@@ -40,7 +41,34 @@ const validateSelectiveDecision = (payload) => {
   return errors
 }
 
+const validateSelectiveDecisionsAggregate = (payload) => {
+  const errors = []
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return ['Payload must be a JSON object.']
+  }
+
+  if (payload.schemaVersion !== SELECTIVE_DECISIONS_AGGREGATE_SCHEMA_VERSION) {
+    errors.push(`Field "schemaVersion" must be ${SELECTIVE_DECISIONS_AGGREGATE_SCHEMA_VERSION}.`)
+  }
+  if (!Array.isArray(payload.decisions)) {
+    errors.push('Field "decisions" must be an array.')
+  } else {
+    payload.decisions.forEach((decision, index) => {
+      validateSelectiveDecision(decision).forEach((error) => {
+        errors.push(`decisions[${index}]: ${error}`)
+      })
+    })
+  }
+  if (!Array.isArray(payload.warnings) || payload.warnings.some((v) => typeof v !== 'string')) {
+    errors.push('Field "warnings" must be an array of strings.')
+  }
+
+  return errors
+}
+
 module.exports = {
   SELECTIVE_DECISION_CONTRACT_VERSION,
+  SELECTIVE_DECISIONS_AGGREGATE_SCHEMA_VERSION,
   validateSelectiveDecision,
+  validateSelectiveDecisionsAggregate,
 }
