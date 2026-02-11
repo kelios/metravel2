@@ -144,4 +144,57 @@ describe('TravelHeroSection slider background regression (web)', () => {
     expect(lastProps).toBeTruthy()
     expect(lastProps.blurBackground).toBe(true)
   })
+
+  it('marks hero section as gallery anchor on web', async () => {
+    const travel: any = {
+      id: 2,
+      name: 'Anchor test travel',
+      gallery: [
+        {
+          url: 'https://cdn.example.com/img.jpg',
+          width: 1200,
+          height: 800,
+          updated_at: '2025-01-01',
+          id: 1,
+        },
+      ],
+      travelAddress: [],
+    }
+
+    const anchors: any = {
+      gallery: { current: null },
+      video: { current: null },
+      description: { current: null },
+      recommendation: { current: null },
+      plus: { current: null },
+      minus: { current: null },
+      map: { current: null },
+      points: { current: null },
+      near: { current: null },
+      popular: { current: null },
+      excursions: { current: null },
+    }
+
+    let tree: renderer.ReactTestRenderer
+    await act(async () => {
+      tree = renderer.create(
+        <Suspense fallback={null}>
+          <__testables.TravelHeroSection
+            travel={travel}
+            anchors={anchors}
+            isMobile={false}
+            renderSlider
+            onFirstImageLoad={() => {}}
+            sectionLinks={[]}
+            onQuickJump={() => {}}
+          />
+        </Suspense>,
+      )
+      jest.runAllTimers()
+      await Promise.resolve()
+    })
+
+    const galleryAnchors = (tree as any).root.findAllByProps({ 'data-section-key': 'gallery' })
+    expect(galleryAnchors.length).toBeGreaterThan(0)
+  })
 })

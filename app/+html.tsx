@@ -417,6 +417,14 @@ export default function Root({ children }: { children: React.ReactNode }) {
               color: rgba(47, 59, 54, 0.72);
               max-width: 48ch;
             }
+            #metravel-shell .lcp-lock {
+              width: min(860px, 94vw);
+              font-size: clamp(20px, 2.6vw, 28px);
+              line-height: 1.3;
+              font-weight: 600;
+              color: rgba(47, 59, 54, 0.92);
+              text-wrap: balance;
+            }
             #metravel-shell .hero {
               position: relative;
               border-radius: 16px;
@@ -457,6 +465,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
             @media (max-width: 768px) {
               #metravel-shell .brand { font-size: clamp(24px, 8vw, 34px); }
               #metravel-shell .tagline { font-size: 15px; }
+              #metravel-shell .lcp-lock { font-size: 21px; line-height: 1.32; }
               #metravel-shell .hero { min-height: 36vh; }
               #metravel-shell .row { grid-template-columns: 1fr; }
             }
@@ -468,7 +477,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
               opacity: 0;
               visibility: hidden;
             }
-            html.route-travel:not(.rnw-styles-ready) #root {
+            html:not(.rnw-styles-ready) #root {
               visibility: hidden;
             }
           `,
@@ -485,7 +494,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
       <script
         dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;function mark(){if(done)return;done=true;try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}root.classList.add('rnw-styles-ready')}if(document.getElementById('react-native-stylesheet')){mark();return}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true;if(l.sheet)return true}return false}catch(_){return false}}if(hasReadyLink()){mark();return}hard=setTimeout(mark,400);poll=setInterval(function(){if(hasReadyLink())mark()},50)}catch(_){}})();`,
+          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;function mark(){if(done)return;done=true;try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}root.classList.add('rnw-styles-ready')}if(document.getElementById('react-native-stylesheet')){mark();return}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true}return false}catch(_){return false}}if(hasReadyLink()){mark();return}hard=setTimeout(mark,520);poll=setInterval(function(){if(hasReadyLink())mark()},50)}catch(_){}})();`,
         }}
       />
 
@@ -498,16 +507,17 @@ export default function Root({ children }: { children: React.ReactNode }) {
     </head>
 
     <body>
-    <div id="metravel-shell" aria-hidden="true">
+    <div id="metravel-shell">
       <div className="inner">
         <div className="brand">MeTravel</div>
         <div className="tagline">Собираем путешествие и подготавливаем страницы без рывков.</div>
+        <div className="lcp-lock">Читай поездки других путешественников, сохраняй лучшие маршруты и собирай свои.</div>
         <div className="hero">
           <img
             alt=""
             width={1200}
             height={680}
-            src="data:image/gif;base64,R0lGODlhAQABAIAAAObm5gAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+            src="/assets/icons/logo_yellow_60x60.png"
           />
         </div>
         <div className="bar title" />

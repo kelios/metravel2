@@ -282,7 +282,7 @@ const OptimizedLCPHeroInner: React.FC<{
 
 function TravelHeroSectionInner({
   travel,
-  anchors: _anchors,
+  anchors,
   isMobile,
   renderSlider = true,
   onFirstImageLoad,
@@ -533,8 +533,10 @@ function TravelHeroSectionInner({
       {/* P0: Hero-изображение, заголовок и кнопка «В избранное» */}
       <View
         testID="travel-details-hero"
+        ref={anchors.gallery}
         accessibilityRole="none"
         accessibilityLabel="Геройский блок с изображением, заголовком и кнопкой избранного"
+        {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : {})}
         style={[styles.sectionContainer, styles.contentStable]}
       >
         <View
