@@ -13,10 +13,17 @@ describe('run-validator-contract-tests-if-needed', () => {
     expect(parseArgs([])).toEqual({
       changedFilesFile: '',
       dryRun: false,
+      output: 'text',
     })
     expect(parseArgs(['--changed-files-file', 'changed_files.txt', '--dry-run'])).toEqual({
       changedFilesFile: 'changed_files.txt',
       dryRun: true,
+      output: 'text',
+    })
+    expect(parseArgs(['--dry-run', '--json'])).toEqual({
+      changedFilesFile: '',
+      dryRun: true,
+      output: 'json',
     })
   })
 

@@ -13,10 +13,17 @@ describe('run-schema-contract-tests-if-needed', () => {
     expect(parseArgs([])).toEqual({
       changedFilesFile: '',
       dryRun: false,
+      output: 'text',
     })
     expect(parseArgs(['--changed-files-file', 'changed_files.txt', '--dry-run'])).toEqual({
       changedFilesFile: 'changed_files.txt',
       dryRun: true,
+      output: 'text',
+    })
+    expect(parseArgs(['--dry-run', '--json'])).toEqual({
+      changedFilesFile: '',
+      dryRun: true,
+      output: 'json',
     })
   })
 
@@ -27,6 +34,7 @@ describe('run-schema-contract-tests-if-needed', () => {
   it('detects relevant changed files for schema contract checks', () => {
     expect(shouldRunForChangedFiles(['scripts/summarize-quality-gate.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/validate-quality-summary.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/validate-selective-decision.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['__tests__/scripts/validate-quality-summary.test.ts'])).toBe(true)
     expect(shouldRunForChangedFiles(['README.md'])).toBe(false)
   })
@@ -84,6 +92,8 @@ describe('run-schema-contract-tests-if-needed', () => {
     expect(SCHEMA_CONTRACT_TESTS).toEqual([
       '__tests__/scripts/summarize-quality-gate.test.ts',
       '__tests__/scripts/validate-quality-summary.test.ts',
+      '__tests__/scripts/selective-decision-contract.test.ts',
+      '__tests__/scripts/validate-selective-decision.test.ts',
       '__tests__/scripts/guard-quality-schema-change.test.ts',
     ])
   })

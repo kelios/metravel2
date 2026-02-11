@@ -1,14 +1,18 @@
 const fs = require('fs')
 const path = require('path')
+const { validateSelectiveDecision } = require('./selective-decision-contract')
 
 const eslintPathArg = process.argv[2] || 'test-results/eslint-results.json'
 const jestPathArg = process.argv[3] || 'test-results/jest-smoke-results.json'
 const strictMissing = process.argv.includes('--fail-on-missing')
-const jsonOutputFlagIndex = process.argv.indexOf('--json-output')
-const jsonOutputPathArg =
-  jsonOutputFlagIndex >= 0 && process.argv[jsonOutputFlagIndex + 1]
-    ? process.argv[jsonOutputFlagIndex + 1]
-    : ''
+const getFlagValue = (flag) => {
+  const flagIndex = process.argv.indexOf(flag)
+  if (flagIndex < 0) return ''
+  return process.argv[flagIndex + 1] ? String(process.argv[flagIndex + 1]).trim() : ''
+}
+const jsonOutputPathArg = getFlagValue('--json-output')
+const schemaDecisionPathArg = getFlagValue('--schema-decision-file')
+const validatorDecisionPathArg = getFlagValue('--validator-decision-file')
 const lintJobResult = String(process.env.LINT_JOB_RESULT || '').trim().toLowerCase()
 const smokeJobResult = String(process.env.SMOKE_JOB_RESULT || '').trim().toLowerCase()
 const smokeDurationBudgetSeconds = Number(process.env.SMOKE_DURATION_BUDGET_SECONDS || 0)
@@ -37,6 +41,44 @@ const readJson = (filePath) => {
     return JSON.parse(fs.readFileSync(filePath, 'utf8'))
   } catch {
     return null
+  }
+}
+
+const readSelectiveDecision = (rawPath, label) => {
+  if (!rawPath) {
+    return {
+      decision: null,
+      warning: '',
+    }
+  }
+
+  const resolved = path.resolve(process.cwd(), rawPath)
+  if (!fs.existsSync(resolved)) {
+    return {
+      decision: null,
+      warning: `${label}: decision file not found (${rawPath}).`,
+    }
+  }
+
+  const payload = readJson(resolved)
+  if (!payload) {
+    return {
+      decision: null,
+      warning: `${label}: cannot parse decision JSON (${rawPath}).`,
+    }
+  }
+
+  const errors = validateSelectiveDecision(payload)
+  if (errors.length > 0) {
+    return {
+      decision: null,
+      warning: `${label}: invalid decision payload: ${errors.join(' ')}`,
+    }
+  }
+
+  return {
+    decision: payload,
+    warning: '',
   }
 }
 
@@ -157,6 +199,12 @@ const recommendationAnchorByClass = {
 const recommendationId = recommendationByClass[failureClass] || 'QG-000'
 const recommendationAnchor = recommendationAnchorByClass[failureClass] || 'troubleshooting-by-failure-class'
 const qualitySchemaVersion = 1
+const selectiveDecisionReads = [
+  readSelectiveDecision(schemaDecisionPathArg, 'schema-contract-checks'),
+  readSelectiveDecision(validatorDecisionPathArg, 'validator-contract-checks'),
+]
+const selectiveDecisions = selectiveDecisionReads.map((item) => item.decision).filter(Boolean)
+const selectiveDecisionWarnings = selectiveDecisionReads.map((item) => item.warning).filter(Boolean)
 
 const qualitySnapshot = {
   schemaVersion: qualitySchemaVersion,
@@ -176,6 +224,8 @@ const qualitySnapshot = {
   smokeSuiteBaselineProvided,
   smokeSuiteAddedFiles,
   smokeSuiteRemovedFiles,
+  selectiveDecisions,
+  selectiveDecisionWarnings,
 }
 
 print('## Quality Gate Summary')
@@ -247,6 +297,22 @@ if (smokeSuiteBaselineProvided) {
       print(`  - ... and ${smokeSuiteRemovedFiles.length - previewLimit} more`)
     }
   }
+}
+
+print('')
+print('### Selective Checks')
+if (selectiveDecisions.length === 0) {
+  print('- No selective decision artifacts provided.')
+} else {
+  selectiveDecisions.forEach((decision) => {
+    print(
+      `- ${decision.check}: ${decision.decision} (reason: ${decision.reason}, matches: ${decision.relevantMatches}, scanned: ${decision.changedFilesScanned}, targeted tests: ${decision.targetedTests})`
+    )
+  })
+}
+if (selectiveDecisionWarnings.length > 0) {
+  print('- Decision artifact warnings:')
+  selectiveDecisionWarnings.forEach((warning) => print(`  - ${warning}`))
 }
 
 if (inconsistencies.length > 0) {

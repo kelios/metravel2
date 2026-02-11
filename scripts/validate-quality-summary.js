@@ -12,6 +12,8 @@ const OPTIONAL_FIELDS = [
   'smokeSuiteBaselineProvided',
   'smokeSuiteAddedFiles',
   'smokeSuiteRemovedFiles',
+  'selectiveDecisions',
+  'selectiveDecisionWarnings',
 ]
 
 const validate = (payload) => {
@@ -78,6 +80,54 @@ const validate = (payload) => {
   if ('smokeSuiteRemovedFiles' in payload) {
     if (!Array.isArray(payload.smokeSuiteRemovedFiles) || payload.smokeSuiteRemovedFiles.some((v) => typeof v !== 'string')) {
       errors.push('Field "smokeSuiteRemovedFiles" must be an array of strings when provided.')
+    }
+  }
+  if ('selectiveDecisionWarnings' in payload) {
+    if (!Array.isArray(payload.selectiveDecisionWarnings) || payload.selectiveDecisionWarnings.some((v) => typeof v !== 'string')) {
+      errors.push('Field "selectiveDecisionWarnings" must be an array of strings when provided.')
+    }
+  }
+  if ('selectiveDecisions' in payload) {
+    const decisions = payload.selectiveDecisions
+    if (!Array.isArray(decisions)) {
+      errors.push('Field "selectiveDecisions" must be an array when provided.')
+    } else {
+      decisions.forEach((decision, index) => {
+        if (!decision || typeof decision !== 'object' || Array.isArray(decision)) {
+          errors.push(`Field "selectiveDecisions[${index}]" must be an object.`)
+          return
+        }
+        if (decision.contractVersion !== 1) {
+          errors.push(`Field "selectiveDecisions[${index}].contractVersion" must be 1.`)
+        }
+        if (typeof decision.check !== 'string' || !decision.check.trim()) {
+          errors.push(`Field "selectiveDecisions[${index}].check" must be a non-empty string.`)
+        }
+        if (decision.decision !== 'run' && decision.decision !== 'skip') {
+          errors.push(`Field "selectiveDecisions[${index}].decision" must be "run" or "skip".`)
+        }
+        if (typeof decision.shouldRun !== 'boolean') {
+          errors.push(`Field "selectiveDecisions[${index}].shouldRun" must be a boolean.`)
+        }
+        if (typeof decision.reason !== 'string' || !decision.reason.trim()) {
+          errors.push(`Field "selectiveDecisions[${index}].reason" must be a non-empty string.`)
+        }
+        if (typeof decision.changedFilesScanned !== 'number' || !Number.isFinite(decision.changedFilesScanned)) {
+          errors.push(`Field "selectiveDecisions[${index}].changedFilesScanned" must be a finite number.`)
+        }
+        if (typeof decision.relevantMatches !== 'number' || !Number.isFinite(decision.relevantMatches)) {
+          errors.push(`Field "selectiveDecisions[${index}].relevantMatches" must be a finite number.`)
+        }
+        if (!Array.isArray(decision.matchedFiles) || decision.matchedFiles.some((v) => typeof v !== 'string')) {
+          errors.push(`Field "selectiveDecisions[${index}].matchedFiles" must be an array of strings.`)
+        }
+        if (typeof decision.dryRun !== 'boolean') {
+          errors.push(`Field "selectiveDecisions[${index}].dryRun" must be a boolean.`)
+        }
+        if (typeof decision.targetedTests !== 'number' || !Number.isFinite(decision.targetedTests)) {
+          errors.push(`Field "selectiveDecisions[${index}].targetedTests" must be a finite number.`)
+        }
+      })
     }
   }
 

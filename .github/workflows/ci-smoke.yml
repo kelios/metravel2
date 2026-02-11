@@ -34,6 +34,24 @@ jobs:
       - name: Run selective schema contract checks
         run: node scripts/run-schema-contract-tests-if-needed.js --changed-files-file changed_files.txt
 
+      - name: Capture schema selective decision snapshot
+        if: always()
+        run: |
+          mkdir -p test-results
+          node scripts/run-schema-contract-tests-if-needed.js --changed-files-file changed_files.txt --dry-run --json > test-results/schema-selective-decision.json
+
+      - name: Validate schema selective decision snapshot
+        if: always()
+        run: node scripts/validate-selective-decision.js --file test-results/schema-selective-decision.json
+
+      - name: Upload schema selective decision snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: schema-selective-decision
+          path: test-results/schema-selective-decision.json
+          if-no-files-found: ignore
+
   validator-contract-checks:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -60,6 +78,24 @@ jobs:
 
       - name: Run selective validator contract checks
         run: node scripts/run-validator-contract-tests-if-needed.js --changed-files-file changed_files.txt
+
+      - name: Capture validator selective decision snapshot
+        if: always()
+        run: |
+          mkdir -p test-results
+          node scripts/run-validator-contract-tests-if-needed.js --changed-files-file changed_files.txt --dry-run --json > test-results/validator-selective-decision.json
+
+      - name: Validate validator selective decision snapshot
+        if: always()
+        run: node scripts/validate-selective-decision.js --file test-results/validator-selective-decision.json
+
+      - name: Upload validator selective decision snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-selective-decision
+          path: test-results/validator-selective-decision.json
+          if-no-files-found: ignore
 
   # Gating job: static analysis must pass for merge.
   # Always publishes a JSON artifact + markdown summary for fast diagnosis.
@@ -141,6 +177,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs:
+      - schema-contract-checks
+      - validator-contract-checks
       - lint
       - smoke-critical
 
@@ -187,6 +225,36 @@ jobs:
           path: test-results/smoke
           if-no-artifact-found: ignore
 
+      - name: Download schema selective decision
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          name: schema-selective-decision
+          path: test-results/selective/schema
+          if-no-artifact-found: ignore
+
+      - name: Download validator selective decision
+        if: github.event_name == 'pull_request'
+        uses: actions/download-artifact@v4
+        with:
+          name: validator-selective-decision
+          path: test-results/selective/validator
+          if-no-artifact-found: ignore
+
+      - name: Validate downloaded selective decisions (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          if [ -f test-results/selective/schema/schema-selective-decision.json ]; then
+            node scripts/validate-selective-decision.js --file test-results/selective/schema/schema-selective-decision.json
+          else
+            echo "schema selective decision artifact is missing; summary will include warning"
+          fi
+          if [ -f test-results/selective/validator/validator-selective-decision.json ]; then
+            node scripts/validate-selective-decision.js --file test-results/selective/validator/validator-selective-decision.json
+          else
+            echo "validator selective decision artifact is missing; summary will include warning"
+          fi
+
       - name: Publish quality summary
         env:
           LINT_JOB_RESULT: ${{ needs.lint.result }}
@@ -195,7 +263,12 @@ jobs:
           SMOKE_DURATION_PREVIOUS_SECONDS: ${{ vars.SMOKE_DURATION_PREVIOUS_SECONDS }}
           SMOKE_SUITE_FILES_BASELINE: ${{ vars.SMOKE_SUITE_FILES_BASELINE }}
           SMOKE_DURATION_BUDGET_STRICT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        run: node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json
+        run: |
+          EXTRA_DECISION_ARGS=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            EXTRA_DECISION_ARGS="--schema-decision-file test-results/selective/schema/schema-selective-decision.json --validator-decision-file test-results/selective/validator/validator-selective-decision.json"
+          fi
+          node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json $EXTRA_DECISION_ARGS
 
       - name: Validate quality summary snapshot
         if: always()

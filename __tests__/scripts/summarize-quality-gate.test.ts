@@ -47,6 +47,8 @@ describe('summarize-quality-gate script', () => {
   let jestSlowPath: string;
   let missingPath: string;
   let summaryJsonPath: string;
+  let schemaDecisionPath: string;
+  let validatorDecisionPath: string;
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-gate-'));
@@ -57,6 +59,8 @@ describe('summarize-quality-gate script', () => {
     jestSlowPath = path.join(tempDir, 'jest-slow.json');
     missingPath = path.join(tempDir, 'missing.json');
     summaryJsonPath = path.join(tempDir, 'quality-summary.json');
+    schemaDecisionPath = path.join(tempDir, 'schema-selective-decision.json');
+    validatorDecisionPath = path.join(tempDir, 'validator-selective-decision.json');
 
     writeJson(eslintPassPath, [{ filePath: '/tmp/a.ts', errorCount: 0, warningCount: 0 }]);
     writeJson(eslintFailPath, [{ filePath: '/tmp/a.ts', errorCount: 1, warningCount: 0 }]);
@@ -93,6 +97,30 @@ describe('summarize-quality-gate script', () => {
         { startTime: 0, endTime: 25_000 },
       ],
     });
+    writeJson(schemaDecisionPath, {
+      contractVersion: 1,
+      check: 'schema-contract-checks',
+      decision: 'run',
+      shouldRun: true,
+      reason: 'match',
+      changedFilesScanned: 6,
+      relevantMatches: 2,
+      matchedFiles: ['scripts/validate-quality-summary.js'],
+      dryRun: true,
+      targetedTests: 3,
+    });
+    writeJson(validatorDecisionPath, {
+      contractVersion: 1,
+      check: 'validator-contract-checks',
+      decision: 'skip',
+      shouldRun: false,
+      reason: 'no-match',
+      changedFilesScanned: 6,
+      relevantMatches: 0,
+      matchedFiles: [],
+      dryRun: true,
+      targetedTests: 7,
+    });
   });
 
   afterEach(() => {
@@ -128,7 +156,15 @@ describe('summarize-quality-gate script', () => {
     const result = runSummary(
       eslintFailPath,
       jestPassPath,
-      ['--fail-on-missing', '--json-output', summaryJsonPath],
+      [
+        '--fail-on-missing',
+        '--json-output',
+        summaryJsonPath,
+        '--schema-decision-file',
+        schemaDecisionPath,
+        '--validator-decision-file',
+        validatorDecisionPath,
+      ],
     );
     expect(result.status).toBe(0);
 
@@ -141,6 +177,28 @@ describe('summarize-quality-gate script', () => {
     expect(typeof snapshot.smokeSuiteBaselineProvided).toBe('boolean');
     expect(Array.isArray(snapshot.smokeSuiteAddedFiles)).toBe(true);
     expect(Array.isArray(snapshot.smokeSuiteRemovedFiles)).toBe(true);
+    expect(Array.isArray(snapshot.selectiveDecisions)).toBe(true);
+    expect(snapshot.selectiveDecisions).toHaveLength(2);
+    expect(snapshot.selectiveDecisionWarnings).toEqual([]);
+    expect(result.stdout).toContain('### Selective Checks');
+    expect(result.stdout).toContain('schema-contract-checks: run');
+  });
+
+  it('prints selective decision warnings when artifacts are missing', () => {
+    const result = runSummary(
+      eslintPassPath,
+      jestPassPath,
+      [
+        '--fail-on-missing',
+        '--schema-decision-file',
+        path.join(tempDir, 'missing-schema-decision.json'),
+      ],
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('### Selective Checks');
+    expect(result.stdout).toContain('Decision artifact warnings:');
+    expect(result.stdout).toContain('schema-contract-checks: decision file not found');
   });
 
   it('classifies missing report as infra_artifact and fails in strict mode', () => {

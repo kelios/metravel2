@@ -9,6 +9,7 @@ const {
   appendStepSummary,
 } = require('./selective-check-utils')
 const { readChangedFiles, readChangedFilesWithMeta } = require('./changed-files-utils')
+const { buildSelectiveDecision, emitSelectiveDecision } = require('./selective-runner-output')
 
 const VALIDATOR_CONTRACT_TESTS = [
   '__tests__/scripts/validator-json-contract.test.ts',
@@ -74,6 +75,11 @@ const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun, exec
 
 const main = () => {
   const args = parseArgs(process.argv.slice(2))
+  const log = args.output === 'json' ? console.error : console.log
+  if (args.output === 'json' && !args.dryRun) {
+    console.error('validator-contract-check: --json is supported only with --dry-run.')
+    process.exit(2)
+  }
   const changedFilesMeta = readChangedFilesWithMeta({ changedFilesFile: args.changedFilesFile })
   const changedFiles = changedFilesMeta.files
   const matchedFiles = getMatchedValidatorFiles(changedFiles)
@@ -83,7 +89,7 @@ const main = () => {
   })
 
   if (!execution.shouldRun) {
-    console.log('validator-contract-check: skipped (no relevant file changes).')
+    log('validator-contract-check: skipped (no relevant file changes).')
     appendStepSummary(buildSummaryMarkdown({
       status: 'skip',
       changedFiles,
@@ -91,13 +97,24 @@ const main = () => {
       dryRun: args.dryRun,
       executionReason: execution.reason,
     }))
+    if (args.output === 'json') {
+      emitSelectiveDecision(buildSelectiveDecision({
+        check: 'validator-contract-checks',
+        decision: 'skip',
+        reason: execution.reason,
+        changedFiles,
+        matchedFiles,
+        dryRun: args.dryRun,
+        targetedTests: VALIDATOR_CONTRACT_TESTS.length,
+      }))
+    }
     return
   }
 
   if (execution.reason === 'missing-input') {
-    console.log('validator-contract-check: changed-files input unavailable; forcing targeted validator contract tests.')
+    log('validator-contract-check: changed-files input unavailable; forcing targeted validator contract tests.')
   } else {
-    console.log('validator-contract-check: running targeted validator contract tests.')
+    log('validator-contract-check: running targeted validator contract tests.')
   }
   appendStepSummary(buildSummaryMarkdown({
     status: 'run',
@@ -107,7 +124,18 @@ const main = () => {
     executionReason: execution.reason,
   }))
   if (args.dryRun) {
-    console.log(`validator-contract-check: dry-run, would run ${VALIDATOR_CONTRACT_TESTS.length} tests.`)
+    log(`validator-contract-check: dry-run, would run ${VALIDATOR_CONTRACT_TESTS.length} tests.`)
+    if (args.output === 'json') {
+      emitSelectiveDecision(buildSelectiveDecision({
+        check: 'validator-contract-checks',
+        decision: 'run',
+        reason: execution.reason,
+        changedFiles,
+        matchedFiles,
+        dryRun: args.dryRun,
+        targetedTests: VALIDATOR_CONTRACT_TESTS.length,
+      }))
+    }
     return
   }
 
@@ -131,6 +159,7 @@ module.exports = {
   readChangedFiles,
   readChangedFilesWithMeta,
   decideExecutionFromMatches,
+  buildSelectiveDecision,
   buildSummaryMarkdown,
   appendStepSummary,
 }

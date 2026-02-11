@@ -5,6 +5,7 @@ describe('selective-runner-args', () => {
     expect(parseSelectiveRunnerArgs([])).toEqual({
       changedFilesFile: '',
       dryRun: false,
+      output: 'text',
     })
   })
 
@@ -16,6 +17,15 @@ describe('selective-runner-args', () => {
     ])).toEqual({
       changedFilesFile: 'changed_files.txt',
       dryRun: true,
+      output: 'text',
+    })
+  })
+
+  it('parses json output flag', () => {
+    expect(parseSelectiveRunnerArgs(['--dry-run', '--json'])).toEqual({
+      changedFilesFile: '',
+      dryRun: true,
+      output: 'json',
     })
   })
 })

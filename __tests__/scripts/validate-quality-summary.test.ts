@@ -22,6 +22,21 @@ describe('validate-quality-summary schema checks', () => {
     smokeSuiteBaselineProvided: true,
     smokeSuiteAddedFiles: ['__tests__/app/export.test.tsx'],
     smokeSuiteRemovedFiles: [],
+    selectiveDecisions: [
+      {
+        contractVersion: 1,
+        check: 'schema-contract-checks',
+        decision: 'run',
+        shouldRun: true,
+        reason: 'match',
+        changedFilesScanned: 10,
+        relevantMatches: 2,
+        matchedFiles: ['scripts/validate-quality-summary.js'],
+        dryRun: true,
+        targetedTests: 3,
+      },
+    ],
+    selectiveDecisionWarnings: [],
   };
 
   it('passes for valid payload', () => {
@@ -45,6 +60,19 @@ describe('validate-quality-summary schema checks', () => {
       smokeSuiteBaselineProvided: 'yes',
       smokeSuiteAddedFiles: [123],
       smokeSuiteRemovedFiles: [false],
+      selectiveDecisions: [{
+        contractVersion: 2,
+        check: '',
+        decision: 'maybe',
+        shouldRun: 'yes',
+        reason: '',
+        changedFilesScanned: '10',
+        relevantMatches: null,
+        matchedFiles: [1],
+        dryRun: 'true',
+        targetedTests: '3',
+      }],
+      selectiveDecisionWarnings: [1],
     };
     const errors = validate(payload);
     expect(errors.join('\n')).toContain('Unsupported schemaVersion');
@@ -54,5 +82,8 @@ describe('validate-quality-summary schema checks', () => {
     expect(errors.join('\n')).toContain('smokeSuiteBaselineProvided');
     expect(errors.join('\n')).toContain('smokeSuiteAddedFiles');
     expect(errors.join('\n')).toContain('smokeSuiteRemovedFiles');
+    expect(errors.join('\n')).toContain('selectiveDecisionWarnings');
+    expect(errors.join('\n')).toContain('selectiveDecisions[0].contractVersion');
+    expect(errors.join('\n')).toContain('selectiveDecisions[0].decision');
   });
 });

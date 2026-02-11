@@ -9,19 +9,26 @@ const {
   appendStepSummary,
 } = require('./selective-check-utils')
 const { readChangedFiles, readChangedFilesWithMeta } = require('./changed-files-utils')
+const { buildSelectiveDecision, emitSelectiveDecision } = require('./selective-runner-output')
 
 const SCHEMA_CONTRACT_TESTS = [
   '__tests__/scripts/summarize-quality-gate.test.ts',
   '__tests__/scripts/validate-quality-summary.test.ts',
+  '__tests__/scripts/selective-decision-contract.test.ts',
+  '__tests__/scripts/validate-selective-decision.test.ts',
   '__tests__/scripts/guard-quality-schema-change.test.ts',
 ]
 
 const RELEVANT_CATEGORIES = [
   { name: 'schema', pattern: /^scripts\/summarize-quality-gate\.js$/ },
   { name: 'schema', pattern: /^scripts\/validate-quality-summary\.js$/ },
+  { name: 'schema', pattern: /^scripts\/selective-decision-contract\.js$/ },
+  { name: 'schema', pattern: /^scripts\/validate-selective-decision\.js$/ },
   { name: 'guards', pattern: /^scripts\/guard-quality-schema-change\.js$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/summarize-quality-gate\.test\.ts$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/validate-quality-summary\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/selective-decision-contract\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/validate-selective-decision\.test\.ts$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/guard-quality-schema-change\.test\.ts$/ },
   { name: 'docs', pattern: /^docs\/TESTING\.md$/ },
   { name: 'workflow', pattern: /^\.github\/workflows\/ci-smoke\.yml$/ },
@@ -69,6 +76,11 @@ const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun, exec
 
 const main = () => {
   const args = parseArgs(process.argv.slice(2))
+  const log = args.output === 'json' ? console.error : console.log
+  if (args.output === 'json' && !args.dryRun) {
+    console.error('schema-contract-check: --json is supported only with --dry-run.')
+    process.exit(2)
+  }
   const changedFilesMeta = readChangedFilesWithMeta({ changedFilesFile: args.changedFilesFile })
   const changedFiles = changedFilesMeta.files
   const matchedFiles = getMatchedSchemaFiles(changedFiles)
@@ -78,7 +90,7 @@ const main = () => {
   })
 
   if (!execution.shouldRun) {
-    console.log('schema-contract-check: skipped (no relevant file changes).')
+    log('schema-contract-check: skipped (no relevant file changes).')
     appendStepSummary(buildSummaryMarkdown({
       status: 'skip',
       changedFiles,
@@ -86,13 +98,24 @@ const main = () => {
       dryRun: args.dryRun,
       executionReason: execution.reason,
     }))
+    if (args.output === 'json') {
+      emitSelectiveDecision(buildSelectiveDecision({
+        check: 'schema-contract-checks',
+        decision: 'skip',
+        reason: execution.reason,
+        changedFiles,
+        matchedFiles,
+        dryRun: args.dryRun,
+        targetedTests: SCHEMA_CONTRACT_TESTS.length,
+      }))
+    }
     return
   }
 
   if (execution.reason === 'missing-input') {
-    console.log('schema-contract-check: changed-files input unavailable; forcing targeted schema contract tests.')
+    log('schema-contract-check: changed-files input unavailable; forcing targeted schema contract tests.')
   } else {
-    console.log('schema-contract-check: running targeted schema contract tests.')
+    log('schema-contract-check: running targeted schema contract tests.')
   }
   appendStepSummary(buildSummaryMarkdown({
     status: 'run',
@@ -102,7 +125,18 @@ const main = () => {
     executionReason: execution.reason,
   }))
   if (args.dryRun) {
-    console.log(`schema-contract-check: dry-run, would run ${SCHEMA_CONTRACT_TESTS.length} tests.`)
+    log(`schema-contract-check: dry-run, would run ${SCHEMA_CONTRACT_TESTS.length} tests.`)
+    if (args.output === 'json') {
+      emitSelectiveDecision(buildSelectiveDecision({
+        check: 'schema-contract-checks',
+        decision: 'run',
+        reason: execution.reason,
+        changedFiles,
+        matchedFiles,
+        dryRun: args.dryRun,
+        targetedTests: SCHEMA_CONTRACT_TESTS.length,
+      }))
+    }
     return
   }
 
@@ -126,5 +160,6 @@ module.exports = {
   readChangedFiles,
   readChangedFilesWithMeta,
   decideExecutionFromMatches,
+  buildSelectiveDecision,
   buildSummaryMarkdown,
 }

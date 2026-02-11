@@ -8,12 +8,16 @@ const {
 const SCHEMA_FILES = [
   'scripts/summarize-quality-gate.js',
   'scripts/validate-quality-summary.js',
+  'scripts/selective-decision-contract.js',
+  'scripts/validate-selective-decision.js',
 ]
 const SCHEMA_PATTERNS = SCHEMA_FILES.map((filePath) => new RegExp(`^${filePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
 
 const REQUIRED_TESTS_BY_SCHEMA_FILE = {
   'scripts/summarize-quality-gate.js': '__tests__/scripts/summarize-quality-gate.test.ts',
   'scripts/validate-quality-summary.js': '__tests__/scripts/validate-quality-summary.test.ts',
+  'scripts/selective-decision-contract.js': '__tests__/scripts/selective-decision-contract.test.ts',
+  'scripts/validate-selective-decision.js': '__tests__/scripts/validate-selective-decision.test.ts',
 }
 
 const REQUIRED_DOCS = ['docs/TESTING.md']

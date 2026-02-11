@@ -152,19 +152,27 @@ Jobs:
   - uses `scripts/run-schema-contract-tests-if-needed.js`
   - writes decision summary to job summary (`run` / `skip`, matched files preview, category breakdown)
   - fail-safe: if changed-files input is unavailable, forced `run` is used to avoid false `skip`
+  - publishes `schema-selective-decision` artifact (`test-results/schema-selective-decision.json`)
+  - validates artifact schema via `scripts/validate-selective-decision.js`
 - `validator-contract-checks` (PR selective gating):
   - runs only on `pull_request`
   - checks changed files and runs targeted validator contract tests only when relevant files changed
   - uses `scripts/run-validator-contract-tests-if-needed.js`
   - writes decision summary to job summary (`run` / `skip`, matched files preview, category breakdown)
   - fail-safe: if changed-files input is unavailable, forced `run` is used to avoid false `skip`
+  - publishes `validator-selective-decision` artifact (`test-results/validator-selective-decision.json`)
+  - validates artifact schema via `scripts/validate-selective-decision.js`
 - PR jobs that need changed files use shared helper:
   - `scripts/collect-changed-files.js` (`BASE_SHA` + `HEAD_SHA` -> `changed_files.txt`)
   - selective runners consume `changed_files.txt` via `scripts/changed-files-utils.js` (with `CHANGED_FILES` env fallback)
-  - selective runner CLI args (`--changed-files-file`, `--dry-run`) are parsed by `scripts/selective-runner-args.js`
+  - selective runner CLI args (`--changed-files-file`, `--dry-run`, `--json`) are parsed by `scripts/selective-runner-args.js`
+  - `--json` is decision-only output mode and is supported only together with `--dry-run`
+  - shared decision contract payload is built by `scripts/selective-runner-output.js` (`contractVersion: 1`)
 - `lint` (gating): runs `yarn lint:ci`, publishes summary + `eslint-results` artifact.
 - `smoke-critical` (gating): runs `yarn test:smoke:critical:ci`, publishes summary + `jest-smoke-results` artifact.
 - `quality-summary` (aggregation): downloads both artifacts and publishes one combined quality summary.
+  - In PR runs, also downloads selective decision artifacts and includes them in summary + `quality-summary.json`.
+  - In PR runs, validates downloaded selective decision artifacts before publishing summary (missing artifacts are reported as summary warnings).
   - For failed PR gates, also prints a ready-to-copy incident snippet into job summary via `scripts/publish-ci-incident-snippet.js`.
   - Validates incident snippet structure and required auto fields via `scripts/validate-ci-incident-snippet.js`.
   - Uploads `ci-incident-snippet` artifact (`test-results/ci-incident-snippet.md`) for incident/audit trail.
