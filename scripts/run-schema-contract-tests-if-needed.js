@@ -4,10 +4,11 @@ const {
   parseChangedFiles,
   getMatchedFiles,
   getCategoryBreakdown,
+  decideExecutionFromMatches,
   buildDecisionSummary,
   appendStepSummary,
 } = require('./selective-check-utils')
-const { readChangedFiles } = require('./changed-files-utils')
+const { readChangedFiles, readChangedFilesWithMeta } = require('./changed-files-utils')
 
 const SCHEMA_CONTRACT_TESTS = [
   '__tests__/scripts/summarize-quality-gate.test.ts',
@@ -44,11 +45,14 @@ const runSchemaContractTests = () => {
   return result.status ?? 1
 }
 
-const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun }) => {
+const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun, executionReason }) => {
   const notes = []
   const breakdown = getCategoryBreakdown(changedFiles || [], RELEVANT_CATEGORIES)
   if (breakdown.length > 0) {
     notes.push(`Category matches: ${breakdown.map((item) => `${item.name}=${item.count}`).join(', ')}`)
+  }
+  if (executionReason === 'missing-input') {
+    notes.push('Fail-safe: changed-files input unavailable; forcing run to avoid false skip.')
   }
   if (status === 'run') {
     notes.push(`Targeted tests: ${SCHEMA_CONTRACT_TESTS.length}`)
@@ -65,26 +69,37 @@ const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun }) =>
 
 const main = () => {
   const args = parseArgs(process.argv.slice(2))
-  const changedFiles = readChangedFiles({ changedFilesFile: args.changedFilesFile })
+  const changedFilesMeta = readChangedFilesWithMeta({ changedFilesFile: args.changedFilesFile })
+  const changedFiles = changedFilesMeta.files
   const matchedFiles = getMatchedSchemaFiles(changedFiles)
+  const execution = decideExecutionFromMatches({
+    matchedFiles,
+    inputAvailable: changedFilesMeta.available,
+  })
 
-  if (matchedFiles.length === 0) {
+  if (!execution.shouldRun) {
     console.log('schema-contract-check: skipped (no relevant file changes).')
     appendStepSummary(buildSummaryMarkdown({
       status: 'skip',
       changedFiles,
       matchedFiles,
       dryRun: args.dryRun,
+      executionReason: execution.reason,
     }))
     return
   }
 
-  console.log('schema-contract-check: running targeted schema contract tests.')
+  if (execution.reason === 'missing-input') {
+    console.log('schema-contract-check: changed-files input unavailable; forcing targeted schema contract tests.')
+  } else {
+    console.log('schema-contract-check: running targeted schema contract tests.')
+  }
   appendStepSummary(buildSummaryMarkdown({
     status: 'run',
     changedFiles,
     matchedFiles,
     dryRun: args.dryRun,
+    executionReason: execution.reason,
   }))
   if (args.dryRun) {
     console.log(`schema-contract-check: dry-run, would run ${SCHEMA_CONTRACT_TESTS.length} tests.`)
@@ -109,5 +124,7 @@ module.exports = {
   getMatchedFiles: getMatchedSchemaFiles,
   shouldRunForChangedFiles,
   readChangedFiles,
+  readChangedFilesWithMeta,
+  decideExecutionFromMatches,
   buildSummaryMarkdown,
 }

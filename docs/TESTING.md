@@ -151,11 +151,13 @@ Jobs:
   - checks changed files and runs targeted schema contract tests only when relevant files changed
   - uses `scripts/run-schema-contract-tests-if-needed.js`
   - writes decision summary to job summary (`run` / `skip`, matched files preview, category breakdown)
+  - fail-safe: if changed-files input is unavailable, forced `run` is used to avoid false `skip`
 - `validator-contract-checks` (PR selective gating):
   - runs only on `pull_request`
   - checks changed files and runs targeted validator contract tests only when relevant files changed
   - uses `scripts/run-validator-contract-tests-if-needed.js`
   - writes decision summary to job summary (`run` / `skip`, matched files preview, category breakdown)
+  - fail-safe: if changed-files input is unavailable, forced `run` is used to avoid false `skip`
 - PR jobs that need changed files use shared helper:
   - `scripts/collect-changed-files.js` (`BASE_SHA` + `HEAD_SHA` -> `changed_files.txt`)
   - selective runners consume `changed_files.txt` via `scripts/changed-files-utils.js` (with `CHANGED_FILES` env fallback)

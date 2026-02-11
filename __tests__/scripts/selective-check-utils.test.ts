@@ -5,6 +5,7 @@ const {
   parseChangedFiles,
   getMatchedFiles,
   getCategoryBreakdown,
+  decideExecutionFromMatches,
   buildDecisionSummary,
   appendStepSummary,
 } = require('@/scripts/selective-check-utils')
@@ -53,6 +54,21 @@ describe('selective-check-utils', () => {
     expect(markdown).toContain('Changed files scanned: 2')
     expect(markdown).toContain('Relevant file matches: 1')
     expect(markdown).toContain('note 1')
+  })
+
+  it('decides whether selective checks should run', () => {
+    expect(decideExecutionFromMatches({ matchedFiles: ['scripts/a.js'], inputAvailable: true })).toEqual({
+      shouldRun: true,
+      reason: 'match',
+    })
+    expect(decideExecutionFromMatches({ matchedFiles: [], inputAvailable: true })).toEqual({
+      shouldRun: false,
+      reason: 'no-match',
+    })
+    expect(decideExecutionFromMatches({ matchedFiles: [], inputAvailable: false })).toEqual({
+      shouldRun: true,
+      reason: 'missing-input',
+    })
   })
 
   it('appends summary to file path', () => {

@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { readChangedFiles } = require('@/scripts/changed-files-utils')
+const { readChangedFiles, readChangedFilesWithMeta } = require('@/scripts/changed-files-utils')
 
 describe('changed-files-utils', () => {
   it('reads changed files from file when file exists', () => {
@@ -10,12 +10,22 @@ describe('changed-files-utils', () => {
     fs.writeFileSync(filePath, 'a\nb\n\n', 'utf8')
 
     expect(readChangedFiles({ changedFilesFile: filePath })).toEqual(['a', 'b'])
+    expect(readChangedFilesWithMeta({ changedFilesFile: filePath })).toEqual({
+      files: ['a', 'b'],
+      source: 'file',
+      available: true,
+    })
     fs.rmSync(dir, { recursive: true, force: true })
   })
 
   it('falls back to env var when file is absent', () => {
     process.env.CHANGED_FILES = 'x\ny\n'
     expect(readChangedFiles({ changedFilesFile: '/tmp/does-not-exist' })).toEqual(['x', 'y'])
+    expect(readChangedFilesWithMeta({ changedFilesFile: '/tmp/does-not-exist' })).toEqual({
+      files: ['x', 'y'],
+      source: 'env',
+      available: true,
+    })
     delete process.env.CHANGED_FILES
   })
 
@@ -23,5 +33,14 @@ describe('changed-files-utils', () => {
     process.env.CUSTOM_CHANGED = 'one\ntwo\n'
     expect(readChangedFiles({ envVarName: 'CUSTOM_CHANGED' })).toEqual(['one', 'two'])
     delete process.env.CUSTOM_CHANGED
+  })
+
+  it('returns unavailable meta when no input source exists', () => {
+    delete process.env.CHANGED_FILES
+    expect(readChangedFilesWithMeta({ changedFilesFile: '/tmp/does-not-exist' })).toEqual({
+      files: [],
+      source: 'none',
+      available: false,
+    })
   })
 })

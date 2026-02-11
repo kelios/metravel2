@@ -28,6 +28,16 @@ const getCategoryBreakdown = (changedFiles, categories) => {
   return [...buckets.entries()].map(([name, count]) => ({ name, count }))
 }
 
+const decideExecutionFromMatches = ({ matchedFiles = [], inputAvailable = true } = {}) => {
+  if (!inputAvailable) {
+    return { shouldRun: true, reason: 'missing-input' }
+  }
+  if (matchedFiles.length > 0) {
+    return { shouldRun: true, reason: 'match' }
+  }
+  return { shouldRun: false, reason: 'no-match' }
+}
+
 const buildDecisionSummary = ({
   title,
   decision,
@@ -69,6 +79,7 @@ module.exports = {
   parseChangedFiles,
   getMatchedFiles,
   getCategoryBreakdown,
+  decideExecutionFromMatches,
   buildDecisionSummary,
   appendStepSummary,
 }

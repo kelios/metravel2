@@ -1,14 +1,37 @@
 const fs = require('fs')
 const { parseChangedFiles } = require('./selective-check-utils')
 
-const readChangedFiles = ({ changedFilesFile = '', envVarName = 'CHANGED_FILES' } = {}) => {
+const readChangedFilesWithMeta = ({ changedFilesFile = '', envVarName = 'CHANGED_FILES' } = {}) => {
   if (changedFilesFile && fs.existsSync(changedFilesFile)) {
-    return parseChangedFiles(fs.readFileSync(changedFilesFile, 'utf8'))
+    const raw = fs.readFileSync(changedFilesFile, 'utf8')
+    return {
+      files: parseChangedFiles(raw),
+      source: 'file',
+      available: true,
+    }
   }
 
-  return parseChangedFiles(process.env[envVarName] || '')
+  const envRaw = process.env[envVarName] || ''
+  if (String(envRaw).trim()) {
+    return {
+      files: parseChangedFiles(envRaw),
+      source: 'env',
+      available: true,
+    }
+  }
+
+  return {
+    files: [],
+    source: 'none',
+    available: false,
+  }
+}
+
+const readChangedFiles = ({ changedFilesFile = '', envVarName = 'CHANGED_FILES' } = {}) => {
+  return readChangedFilesWithMeta({ changedFilesFile, envVarName }).files
 }
 
 module.exports = {
   readChangedFiles,
+  readChangedFilesWithMeta,
 }

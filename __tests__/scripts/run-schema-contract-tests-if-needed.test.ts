@@ -5,6 +5,7 @@ const {
   getMatchedFiles,
   shouldRunForChangedFiles,
   buildSummaryMarkdown,
+  decideExecutionFromMatches,
 } = require('@/scripts/run-schema-contract-tests-if-needed')
 
 describe('run-schema-contract-tests-if-needed', () => {
@@ -62,6 +63,21 @@ describe('run-schema-contract-tests-if-needed', () => {
     expect(skipSummary).toContain('Decision: skip')
     expect(skipSummary).toContain('Relevant file matches: 0')
     expect(skipSummary).toContain('Category matches:')
+  })
+
+  it('forces run when changed-files input is unavailable', () => {
+    expect(decideExecutionFromMatches({ matchedFiles: [], inputAvailable: false })).toEqual({
+      shouldRun: true,
+      reason: 'missing-input',
+    })
+    const summary = buildSummaryMarkdown({
+      status: 'run',
+      changedFiles: [],
+      matchedFiles: [],
+      dryRun: true,
+      executionReason: 'missing-input',
+    })
+    expect(summary).toContain('Fail-safe: changed-files input unavailable')
   })
 
   it('keeps targeted schema test list stable', () => {

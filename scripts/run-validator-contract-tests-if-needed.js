@@ -4,10 +4,11 @@ const {
   parseChangedFiles,
   getMatchedFiles,
   getCategoryBreakdown,
+  decideExecutionFromMatches,
   buildDecisionSummary,
   appendStepSummary,
 } = require('./selective-check-utils')
-const { readChangedFiles } = require('./changed-files-utils')
+const { readChangedFiles, readChangedFilesWithMeta } = require('./changed-files-utils')
 
 const VALIDATOR_CONTRACT_TESTS = [
   '__tests__/scripts/validator-json-contract.test.ts',
@@ -49,11 +50,14 @@ const runValidatorContractTests = () => {
   return result.status ?? 1
 }
 
-const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun }) => {
+const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun, executionReason }) => {
   const notes = []
   const breakdown = getCategoryBreakdown(changedFiles || [], RELEVANT_CATEGORIES)
   if (breakdown.length > 0) {
     notes.push(`Category matches: ${breakdown.map((item) => `${item.name}=${item.count}`).join(', ')}`)
+  }
+  if (executionReason === 'missing-input') {
+    notes.push('Fail-safe: changed-files input unavailable; forcing run to avoid false skip.')
   }
   if (status === 'run') {
     notes.push(`Targeted tests: ${VALIDATOR_CONTRACT_TESTS.length}`)
@@ -70,26 +74,37 @@ const buildSummaryMarkdown = ({ status, changedFiles, matchedFiles, dryRun }) =>
 
 const main = () => {
   const args = parseArgs(process.argv.slice(2))
-  const changedFiles = readChangedFiles({ changedFilesFile: args.changedFilesFile })
+  const changedFilesMeta = readChangedFilesWithMeta({ changedFilesFile: args.changedFilesFile })
+  const changedFiles = changedFilesMeta.files
   const matchedFiles = getMatchedValidatorFiles(changedFiles)
+  const execution = decideExecutionFromMatches({
+    matchedFiles,
+    inputAvailable: changedFilesMeta.available,
+  })
 
-  if (matchedFiles.length === 0) {
+  if (!execution.shouldRun) {
     console.log('validator-contract-check: skipped (no relevant file changes).')
     appendStepSummary(buildSummaryMarkdown({
       status: 'skip',
       changedFiles,
       matchedFiles,
       dryRun: args.dryRun,
+      executionReason: execution.reason,
     }))
     return
   }
 
-  console.log('validator-contract-check: running targeted validator contract tests.')
+  if (execution.reason === 'missing-input') {
+    console.log('validator-contract-check: changed-files input unavailable; forcing targeted validator contract tests.')
+  } else {
+    console.log('validator-contract-check: running targeted validator contract tests.')
+  }
   appendStepSummary(buildSummaryMarkdown({
     status: 'run',
     changedFiles,
     matchedFiles,
     dryRun: args.dryRun,
+    executionReason: execution.reason,
   }))
   if (args.dryRun) {
     console.log(`validator-contract-check: dry-run, would run ${VALIDATOR_CONTRACT_TESTS.length} tests.`)
@@ -114,6 +129,8 @@ module.exports = {
   getMatchedFiles: getMatchedValidatorFiles,
   shouldRunForChangedFiles,
   readChangedFiles,
+  readChangedFilesWithMeta,
+  decideExecutionFromMatches,
   buildSummaryMarkdown,
   appendStepSummary,
 }
