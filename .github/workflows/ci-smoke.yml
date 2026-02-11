@@ -117,6 +117,10 @@ jobs:
           SMOKE_DURATION_BUDGET_STRICT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json
 
+      - name: Validate quality summary snapshot
+        if: always()
+        run: node scripts/validate-quality-summary.js test-results/quality-summary.json
+
       - name: Upload quality summary snapshot
         if: always()
         uses: actions/upload-artifact@v4

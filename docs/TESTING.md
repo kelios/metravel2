@@ -151,7 +151,27 @@ Jobs:
 - `quality-summary` (aggregation): downloads both artifacts and publishes one combined quality summary.
   - For failed PR gates, also prints a ready-to-copy incident snippet into job summary.
   - Also writes a machine-readable snapshot at `test-results/quality-summary.json` (for downstream CI steps).
+  - Snapshot includes `schemaVersion` (current: `1`).
+  - Validates snapshot schema/version before upload via `scripts/validate-quality-summary.js`.
   - Uploads `quality-summary` artifact with this snapshot for post-run diagnostics.
+
+Schema change checklist (`quality-summary.json`):
+
+1. Decide if change is backward-compatible:
+   - Non-breaking (optional field): keep `schemaVersion` unchanged.
+   - Breaking (required field/type/semantics change): bump `schemaVersion`.
+2. Update producer:
+   - `scripts/summarize-quality-gate.js`
+3. Update consumer validator:
+   - `scripts/validate-quality-summary.js`
+   - `SUPPORTED_SCHEMA_VERSION`
+4. Update tests:
+   - `__tests__/scripts/summarize-quality-gate.test.ts`
+   - `__tests__/scripts/validate-quality-summary.test.ts`
+5. Update docs:
+   - this section in `docs/TESTING.md` (current schema version and compatibility note)
+6. Add compatibility note in PR:
+   - mention `schemaVersion` change and expected impact on downstream steps/artifacts.
 
 Policy:
 

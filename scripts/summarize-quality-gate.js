@@ -118,8 +118,10 @@ const recommendationAnchorByClass = {
 }
 const recommendationId = recommendationByClass[failureClass] || 'QG-000'
 const recommendationAnchor = recommendationAnchorByClass[failureClass] || 'troubleshooting-by-failure-class'
+const qualitySchemaVersion = 1
 
 const qualitySnapshot = {
+  schemaVersion: qualitySchemaVersion,
   overallOk,
   failureClass,
   recommendationId: overallOk ? null : recommendationId,

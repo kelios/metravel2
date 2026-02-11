@@ -6,6 +6,7 @@
 
 - [ ] `yarn lint`
 - [ ] `yarn test:smoke:critical`
+- [ ] If `quality-summary.json` schema changed, followed `docs/TESTING.md` schema change checklist.
 
 ## CI Smoke Gate
 

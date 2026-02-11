@@ -103,6 +103,7 @@ describe('summarize-quality-gate script', () => {
     expect(result.status).toBe(0);
 
     const snapshot = JSON.parse(fs.readFileSync(summaryJsonPath, 'utf8'));
+    expect(snapshot.schemaVersion).toBe(1);
     expect(snapshot.overallOk).toBe(false);
     expect(snapshot.failureClass).toBe('lint_only');
     expect(snapshot.recommendationId).toBe('QG-003');
