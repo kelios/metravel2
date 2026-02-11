@@ -382,6 +382,94 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       {/* Critical CSS */}
       <style dangerouslySetInnerHTML={{ __html: buildCriticalCSS() }} />
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            #metravel-shell {
+              position: fixed;
+              inset: 0;
+              z-index: 9999;
+              background: linear-gradient(180deg, var(--color-background, #fdfcfb) 0%, var(--color-backgroundSecondary, #f9f8f6) 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              transition: opacity 220ms ease, visibility 220ms ease;
+              opacity: 1;
+              visibility: visible;
+              pointer-events: none;
+            }
+            #metravel-shell .inner {
+              width: min(960px, calc(100vw - 32px));
+              display: grid;
+              gap: 14px;
+            }
+            #metravel-shell .brand {
+              font-size: clamp(28px, 5vw, 44px);
+              line-height: 1.05;
+              font-weight: 700;
+              letter-spacing: -0.02em;
+              color: var(--color-text, #2f3b36);
+            }
+            #metravel-shell .tagline {
+              font-size: clamp(15px, 2.3vw, 20px);
+              line-height: 1.35;
+              color: rgba(47, 59, 54, 0.72);
+              max-width: 48ch;
+            }
+            #metravel-shell .hero {
+              position: relative;
+              border-radius: 16px;
+              overflow: hidden;
+              min-height: clamp(220px, 46vh, 520px);
+              background: linear-gradient(160deg, rgba(122, 157, 143, 0.18) 0%, rgba(122, 157, 143, 0.08) 100%);
+              border: 1px solid rgba(122, 157, 143, 0.2);
+            }
+            #metravel-shell .hero img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              object-position: center;
+              filter: saturate(0.92) contrast(1.02);
+            }
+            #metravel-shell .bar {
+              height: 20px;
+              border-radius: 10px;
+              background: linear-gradient(90deg, rgba(122, 157, 143, 0.16) 0%, rgba(122, 157, 143, 0.28) 50%, rgba(122, 157, 143, 0.16) 100%);
+              background-size: 200% 100%;
+              animation: metravel-shell-shimmer 1.4s ease-in-out infinite;
+            }
+            #metravel-shell .bar.title { height: 34px; width: min(640px, 82vw); }
+            #metravel-shell .bar.sub { width: min(520px, 74vw); }
+            #metravel-shell .row {
+              margin-top: 8px;
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 12px;
+            }
+            #metravel-shell .card {
+              height: 128px;
+              border-radius: 12px;
+              background: linear-gradient(90deg, rgba(122, 157, 143, 0.12) 0%, rgba(122, 157, 143, 0.22) 50%, rgba(122, 157, 143, 0.12) 100%);
+              background-size: 200% 100%;
+              animation: metravel-shell-shimmer 1.4s ease-in-out infinite;
+            }
+            @media (max-width: 768px) {
+              #metravel-shell .brand { font-size: clamp(24px, 8vw, 34px); }
+              #metravel-shell .tagline { font-size: 15px; }
+              #metravel-shell .hero { min-height: 36vh; }
+              #metravel-shell .row { grid-template-columns: 1fr; }
+            }
+            @keyframes metravel-shell-shimmer {
+              0% { background-position: 200% 0; }
+              100% { background-position: -200% 0; }
+            }
+            html.app-hydrated.rnw-styles-ready #metravel-shell {
+              opacity: 0;
+              visibility: hidden;
+            }
+          `,
+        }}
+      />
 
       {/* Ensure font-display=swap for dynamically injected icon fonts */}
       <script
@@ -390,6 +478,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       <script
         dangerouslySetInnerHTML={{ __html: getEntryPreloadScript() }}
+      />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;if(document.getElementById('react-native-stylesheet')){root.classList.add('rnw-styles-ready');return;}var links=document.querySelectorAll('link[data-rnw-styles="1"]');for(var i=0;i<links.length;i++){var l=links[i];if(l&&l.sheet||l&&l.getAttribute('data-loaded')==='1'){root.classList.add('rnw-styles-ready');return;}}}catch(_){}})();`,
+        }}
       />
 
       <ScrollViewStyleReset />
@@ -401,6 +494,28 @@ export default function Root({ children }: { children: React.ReactNode }) {
     </head>
 
     <body>
+    <div id="metravel-shell" aria-hidden="true">
+      <div className="inner">
+        <div className="brand">MeTravel</div>
+        <div className="tagline">Собираем путешествие и подготавливаем страницы без рывков.</div>
+        <div className="hero">
+          <img
+            alt=""
+            width={1200}
+            height={680}
+            src="data:image/gif;base64,R0lGODlhAQABAIAAAObm5gAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+          />
+        </div>
+        <div className="bar title" />
+        <div className="bar sub" />
+        <div className="bar sub" style={{ width: 'min(420px, 60vw)' }} />
+        <div className="row">
+          <div className="card" />
+          <div className="card" />
+          <div className="card" />
+        </div>
+      </div>
+    </div>
 
     {/* Travel hero preload — moved to body to avoid blocking head parsing on non-travel pages */}
     <script

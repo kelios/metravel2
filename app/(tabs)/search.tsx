@@ -18,20 +18,7 @@ import { PER_PAGE } from '@/components/listTravel/utils/listTravelConstants';
 const isWeb = Platform.OS === 'web';
 const isClient = typeof window !== 'undefined';
 
-// Prefetch default travels data alongside lazy bundle load to avoid waterfall
 const DEFAULT_QUERY_KEY = ['travels', { perPage: PER_PAGE, search: '', params: JSON.stringify({ moderation: 1, publish: 1 }) }];
-if (isWeb && isClient) {
-  const doPrefetch = () => queryClient.prefetchInfiniteQuery({
-    queryKey: DEFAULT_QUERY_KEY,
-    queryFn: ({ pageParam = 0 }) => fetchTravels(pageParam, PER_PAGE, '', { moderation: 1, publish: 1 }),
-    initialPageParam: 0,
-  });
-  if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(doPrefetch, { timeout: 2000 });
-  } else {
-    setTimeout(doPrefetch, 100);
-  }
-}
 
 const ListTravel = isWeb && isClient
   ? lazy(() => import('@/components/listTravel/ListTravelBase'))
@@ -49,6 +36,43 @@ function SearchScreen() {
         if (Platform.OS !== 'web') return;
         setHydrated(true);
     }, []);
+
+    useEffect(() => {
+        if (Platform.OS !== 'web') return;
+        if (!isFocused) return;
+        if (!canMountContent) return;
+        if (typeof window === 'undefined') return;
+
+        const existing = queryClient.getQueryState(DEFAULT_QUERY_KEY);
+        if (existing?.data || existing?.status === 'pending') return;
+
+        let cancelled = false;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        let idleId: number | null = null;
+
+        const doPrefetch = () => {
+            if (cancelled) return;
+            queryClient.prefetchInfiniteQuery({
+                queryKey: DEFAULT_QUERY_KEY,
+                queryFn: ({ pageParam = 0 }) => fetchTravels(pageParam, PER_PAGE, '', { moderation: 1, publish: 1 }),
+                initialPageParam: 0,
+            }).catch(() => undefined);
+        };
+
+        if ('requestIdleCallback' in window) {
+            idleId = (window as any).requestIdleCallback(doPrefetch, { timeout: 2400 });
+        } else {
+            timer = setTimeout(doPrefetch, 300);
+        }
+
+        return () => {
+            cancelled = true;
+            if (timer) clearTimeout(timer);
+            if (idleId != null && 'cancelIdleCallback' in window) {
+                (window as any).cancelIdleCallback(idleId);
+            }
+        };
+    }, [canMountContent, isFocused]);
 
     const title = 'Поиск путешествий | Metravel';
     const description = 'Найдите путешествия по фильтрам и сохраните лучшие идеи в свою книгу.';

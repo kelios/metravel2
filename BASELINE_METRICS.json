@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-01-28T21:06:21.957Z",
+  "timestamp": "2026-02-11T14:16:32.546Z",
   "phase": 4,
   "week": 1,
   "dependencies": {
-    "total": 136,
-    "production": 94,
-    "dev": 42,
+    "total": 110,
+    "production": 71,
+    "dev": 39,
     "heavyDependencies": [
       {
         "name": "react-leaflet",

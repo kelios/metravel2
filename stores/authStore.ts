@@ -4,10 +4,19 @@
 // для инициализации и регистрации invalidation handler.
 
 import { create } from 'zustand';
-import { loginApi, logoutApi, resetPasswordLinkApi, setNewPasswordApi } from '@/api/auth';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
-import { fetchUserProfile, normalizeAvatar } from '@/api/user';
+
+const getAuthApi = async () => import('@/api/auth');
+const getUserApi = async () => import('@/api/user');
+
+const normalizeAvatar = (raw: unknown): string | null => {
+    const str = String(raw ?? '').trim();
+    if (!str) return null;
+    const lower = str.toLowerCase();
+    if (lower === 'null' || lower === 'undefined') return null;
+    return str;
+};
 
 export interface AuthState {
     isAuthenticated: boolean;
@@ -106,7 +115,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
             // Always fetch profile in background to ensure avatar is up-to-date
             if (storageData.userId) {
-                fetchUserProfile(storageData.userId)
+                getUserApi()
+                    .then(({ fetchUserProfile }) => fetchUserProfile(storageData.userId))
                     .then((profile) => {
                         if (epochAtStart !== authEpoch) return;
                         const avatar = normalizeAvatar(profile?.avatar);
@@ -146,6 +156,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     login: async (email, password) => {
         const epochAtStart = authEpoch;
         try {
+            const { loginApi } = await getAuthApi();
             const userData = await loginApi(email, password);
             if (!userData) return false;
             if (epochAtStart !== authEpoch) return false;
@@ -157,6 +168,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
             let profile: any = null;
             try {
+                const { fetchUserProfile } = await getUserApi();
                 profile = await fetchUserProfile(String(userData.id));
             } catch (e) {
                 if (__DEV__) {
@@ -210,6 +222,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         get().invalidateAuthState();
 
         try {
+            const { logoutApi } = await getAuthApi();
             await logoutApi();
         } catch (e) {
             if (__DEV__) {
@@ -226,6 +239,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // --- password reset ---
     sendPassword: async (email) => {
         try {
+            const { resetPasswordLinkApi } = await getAuthApi();
             const response = await resetPasswordLinkApi(email);
             return typeof response === 'string'
                 ? response
@@ -240,6 +254,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     // --- set new password ---
     setNewPassword: async (token, newPassword) => {
+        const { setNewPasswordApi } = await getAuthApi();
         return await setNewPasswordApi(token, newPassword);
     },
 }));

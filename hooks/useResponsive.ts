@@ -58,6 +58,17 @@ let currentSnapshot: DimensionsSnapshot = (() => {
   return { width, height };
 })();
 
+const setSnapshotIfChanged = (next: DimensionsSnapshot): boolean => {
+  if (
+    currentSnapshot.width === next.width &&
+    currentSnapshot.height === next.height
+  ) {
+    return false;
+  }
+  currentSnapshot = next;
+  return true;
+};
+
 const subscribers = new Set<() => void>();
 let subscription: { remove: () => void } | null = null;
 
@@ -89,8 +100,9 @@ const ensureSubscription = () => {
   };
 
   const dimSub = Dimensions.addEventListener('change', ({ window }) => {
-    currentSnapshot = { width: window.width, height: window.height };
-    notify();
+    if (setSnapshotIfChanged({ width: window.width, height: window.height })) {
+      notify();
+    }
   }) as any;
 
   // On web static/prod builds Dimensions can occasionally report stale/zero values.
@@ -104,22 +116,14 @@ const ensureSubscription = () => {
         raf = 0;
         const webSnapshot = getWebWindowSnapshot();
         if (!webSnapshot) return;
-        if (
-          currentSnapshot.width !== webSnapshot.width ||
-          currentSnapshot.height !== webSnapshot.height
-        ) {
-          currentSnapshot = webSnapshot;
+        if (setSnapshotIfChanged(webSnapshot)) {
           notify();
         }
       }) ?? setTimeout(() => {
         raf = 0;
         const webSnapshot = getWebWindowSnapshot();
         if (!webSnapshot) return;
-        if (
-          currentSnapshot.width !== webSnapshot.width ||
-          currentSnapshot.height !== webSnapshot.height
-        ) {
-          currentSnapshot = webSnapshot;
+        if (setSnapshotIfChanged(webSnapshot)) {
           notify();
         }
       }, 0);

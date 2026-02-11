@@ -64,8 +64,7 @@ export default function RootLayout() {
 	function RootLayoutNav() {
 	    const pathname = usePathname();
 	    const colorScheme = useColorScheme();
-	    const { width } = useResponsive();
-	    const [clientWidth, setClientWidth] = useState<number | null>(null);
+	    const { width, isHydrated: isResponsiveHydrated = true } = useResponsive();
     const loadingColors = useMemo(
       () => getThemedColors(colorScheme === 'dark'),
       [colorScheme],
@@ -77,26 +76,6 @@ export default function RootLayout() {
             retry: false,
         },
     }));
-
-    useEffect(() => {
-      if (!isWeb) return;
-      if (typeof window === 'undefined') return;
-
-      let rafId: number | null = null;
-      const update = () => setClientWidth(window.innerWidth);
-
-      // Avoid updating state during React hydration (can trigger React error 421 with Suspense).
-      // Defer the initial read to the next frame.
-      rafId = window.requestAnimationFrame(() => update());
-
-      window.addEventListener('resize', update);
-      return () => {
-        if (rafId != null) {
-          window.cancelAnimationFrame(rafId);
-        }
-        window.removeEventListener('resize', update);
-      };
-    }, []);
 
     useEffect(() => {
       if (!isWeb) return;
@@ -126,19 +105,13 @@ export default function RootLayout() {
       }
     }, [pathname]);
 
-	    // ✅ ИСПРАВЛЕНИЕ: Детерминированная ширина на SSR и первом клиентском рендере.
-	    // На web `useResponsive()` может сразу вернуть реальную ширину на клиенте,
-	    // но на SSR она всегда 0, что приводит к разному дереву и hydration mismatch.
-	    // Поэтому до маунта используем только `clientWidth` (null/0), а после эффекта
-	    // она обновится и UI адаптируется уже после гидрации.
-	    const effectiveWidth = Platform.OS === 'web' ? (clientWidth ?? 0) : width;
-    // Важно: на SSR/первом клиентском рендере effectiveWidth может быть 0.
-    // Делаем детерминированное значение (не читаем window в рендере), чтобы избежать hydration mismatch.
+    // Single source of truth for width: useResponsive().
+    // While web hydration is not complete we keep desktop layout to avoid mismatch.
     const isMobile =
       Platform.OS !== "web"
         ? true
-        : effectiveWidth > 0
-          ? effectiveWidth < DESIGN_TOKENS.breakpoints.mobile
+        : isResponsiveHydrated
+          ? width < DESIGN_TOKENS.breakpoints.mobile
           : false;
 
 
@@ -166,6 +139,7 @@ export default function RootLayout() {
     useEffect(() => {
         let mountedTimer: ReturnType<typeof setTimeout> | null = null;
         let consentTimer: ReturnType<typeof setTimeout> | null = null;
+        let rafId: number | null = null;
 
         // Defer mount-only UI to avoid hydration-time updates (React error 421 with Suspense).
         mountedTimer = setTimeout(() => setIsMounted(true), 0);
@@ -173,9 +147,16 @@ export default function RootLayout() {
         // Відкладаємо ConsentBanner на 4 секунди для покращення FCP/LCP
         consentTimer = setTimeout(() => setShowConsentBanner(true), 4000);
 
+        if (isWeb && typeof document !== 'undefined') {
+          rafId = requestAnimationFrame(() => {
+            document.documentElement.classList.add('app-hydrated');
+          });
+        }
+
         return () => {
           if (mountedTimer) clearTimeout(mountedTimer);
           if (consentTimer) clearTimeout(consentTimer);
+          if (rafId != null) cancelAnimationFrame(rafId);
         };
     }, []);
 

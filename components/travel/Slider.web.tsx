@@ -125,7 +125,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     blurBackground = true,
     onFirstImageLoad,
     mobileHeightPercent = 0.6,
-    firstImagePreloaded = false,
   } = props
 
   const insets = useSafeAreaInsets()
@@ -138,11 +137,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const scrollRef = useRef<any>(null)
   const indexRef = useRef(0)
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web')
   const prefetchEnabledRef = useRef(Platform.OS !== 'web')
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const firstSlideStableKeyRef = useRef<string | null>(null)
   const firstSlideStableUriRef = useRef<string | null>(null)
+  const firstSlideLockedRef = useRef(true)
 
   const syncContainerWidthFromDom = useCallback(() => {
     if (Platform.OS !== 'web') return
@@ -224,6 +223,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   useEffect(() => {
     if (firstSlideStableKeyRef.current === firstSlideStableKey) return
     firstSlideStableKeyRef.current = firstSlideStableKey
+    firstSlideLockedRef.current = true
     firstSlideStableUriRef.current =
       firstSlideStableKey && FIRST_SLIDE_URI_CACHE.has(firstSlideStableKey)
         ? FIRST_SLIDE_URI_CACHE.get(firstSlideStableKey) || null
@@ -233,9 +233,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const uriMap = useMemo(
     () =>
       images.map((img, idx) => {
-        // Keep first-slide URI stable during initial web hydration/sizing to avoid visible
-        // src swaps (hero overlay -> slider first frame flicker).
-        if (Platform.OS === 'web' && firstImagePreloaded && idx === 0) {
+        // Keep first slide URI stable until first actual image load.
+        // This prevents src swaps while width/hydration settles on web.
+        if (Platform.OS === 'web' && idx === 0 && firstSlideLockedRef.current) {
           if (firstSlideStableUriRef.current) return firstSlideStableUriRef.current
 
           if (firstSlideStableKey && FIRST_SLIDE_URI_CACHE.has(firstSlideStableKey)) {
@@ -254,7 +254,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
         return buildUri(img, containerW, containerH, fit, idx === 0)
       }),
-    [images, containerW, containerH, fit, firstImagePreloaded, firstSlideStableKey]
+    [images, containerW, containerH, fit, firstSlideStableKey]
   )
 
   const canPrefetchOnWeb = useMemo(() => {
@@ -271,15 +271,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, [isMobile])
 
   const effectivePreload = useMemo(() => {
-    if (!prefetchEnabled) return 0
     const effective = Math.max(0, preloadCount)
     if (Platform.OS === 'web') return effective > 0 ? effective : 1
     return effective
-  }, [prefetchEnabled, preloadCount])
+  }, [preloadCount])
 
   const warmNeighbors = useCallback(
     (idx: number) => {
       if (!canPrefetchOnWeb) return
+      if (Platform.OS === 'web' && !prefetchEnabledRef.current) return
       if (!effectivePreload) return
       for (let d = -effectivePreload; d <= effectivePreload; d++) {
         if (d === 0) continue
@@ -292,18 +292,13 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [canPrefetchOnWeb, effectivePreload, images.length, uriMap]
   )
 
-  useEffect(() => {
-    if (!prefetchEnabled) return
-    warmNeighbors(indexRef.current)
-  }, [prefetchEnabled, warmNeighbors])
-
   const enablePrefetch = useCallback(() => {
     if (Platform.OS !== 'web') return
     if (prefetchEnabledRef.current) return
     if (!canPrefetchOnWeb) return
     prefetchEnabledRef.current = true
-    setPrefetchEnabled(true)
-  }, [canPrefetchOnWeb])
+    warmNeighbors(indexRef.current)
+  }, [canPrefetchOnWeb, warmNeighbors])
 
   const setActiveIndex = useCallback(
     (idx: number) => {
@@ -379,6 +374,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const keyExtractor = useCallback((it: SliderImage) => String(it.id), [])
 
   const handleFirstImageLoad = useCallback(() => {
+    firstSlideLockedRef.current = false
     onFirstImageLoad?.()
     enablePrefetch()
   }, [onFirstImageLoad, enablePrefetch])

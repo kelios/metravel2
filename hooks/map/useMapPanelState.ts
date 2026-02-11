@@ -69,32 +69,53 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
 
   // Desktop panel width (persisted)
   const [desktopPanelWidth, setDesktopPanelWidth] = useState(() => readPanelWidth());
+  const resizeRafRef = useRef<number | null>(null);
+  const widthPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dispatchMapResize = useCallback(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (resizeRafRef.current != null) return;
+
+    resizeRafRef.current = requestAnimationFrame(() => {
+      resizeRafRef.current = null;
+      window.dispatchEvent(new Event('resize'));
+    });
+  }, []);
+
+  const schedulePersistPanelWidth = useCallback((width: number) => {
+    if (Platform.OS !== 'web') return;
+    if (widthPersistTimerRef.current) clearTimeout(widthPersistTimerRef.current);
+    widthPersistTimerRef.current = setTimeout(() => {
+      writePanelWidth(width);
+      widthPersistTimerRef.current = null;
+    }, 200);
+  }, []);
+
   const onResizePanelWidth = useCallback((newWidth: number) => {
     const maxW = Platform.OS === 'web' && typeof window !== 'undefined'
       ? window.innerWidth * PANEL_MAX_WIDTH_RATIO
       : 600;
     const clamped = Math.max(PANEL_MIN_WIDTH, Math.min(newWidth, maxW));
-    setDesktopPanelWidth(clamped);
-    writePanelWidth(clamped);
-    // Trigger Leaflet resize
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    setDesktopPanelWidth((prev) => {
+      if (Math.abs(prev - clamped) < 1) return prev;
+      return clamped;
+    });
+    schedulePersistPanelWidth(clamped);
+    if (!isMobile) {
+      dispatchMapResize();
     }
-  }, []);
+  }, [dispatchMapResize, isMobile, schedulePersistPanelWidth]);
 
   const toggleDesktopCollapse = useCallback(() => {
     setDesktopCollapsed((prev) => {
       const next = !prev;
       writePanelCollapsed(next);
-      // Dispatch resize so Leaflet recalculates
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        requestAnimationFrame(() => {
-          window.dispatchEvent(new Event('resize'));
-        });
+      if (!isMobile) {
+        dispatchMapResize();
       }
       return next;
     });
-  }, []);
+  }, [dispatchMapResize, isMobile]);
 
   const lastIsMobileRef = useRef(isMobile);
   const filtersTabRef = useRef<PressableRef>(null);
@@ -119,11 +140,25 @@ export function useMapPanelState({ isMobile }: UseMapPanelStateOptions) {
     return () => cancelAnimationFrame(frame);
   }, [mapReady]);
 
-  // Resize event для web при изменении панели
+  // Resize event for desktop web map when panel visibility changes
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    window.dispatchEvent(new Event('resize'));
-  }, [isPanelVisible, isMobile]);
+    if (Platform.OS !== 'web') return;
+    if (isMobile) return;
+    dispatchMapResize();
+  }, [dispatchMapResize, isPanelVisible, isMobile]);
+
+  useEffect(() => {
+    return () => {
+      if (resizeRafRef.current != null) {
+        cancelAnimationFrame(resizeRafRef.current);
+        resizeRafRef.current = null;
+      }
+      if (widthPersistTimerRef.current) {
+        clearTimeout(widthPersistTimerRef.current);
+        widthPersistTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Blur активного элемента при уходе со страницы
   useEffect(() => {
@@ -236,4 +271,3 @@ export function useMapResponsive() {
     width,
   }), [isMobile, width]);
 }
-
