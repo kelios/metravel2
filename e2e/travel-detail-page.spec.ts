@@ -425,6 +425,7 @@ test.describe('Travel Details - SEO', () => {
     // Проверяем наличие meta description
     const description = await page
       .locator('meta[name="description"]')
+      .first()
       .getAttribute('content');
     expect(description).toBeTruthy();
 

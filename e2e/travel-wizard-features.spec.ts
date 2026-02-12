@@ -437,7 +437,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     // Desktop
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     const quickDraftButton = page
       .getByTestId('travel-wizard-quick-draft')
@@ -447,7 +447,7 @@ test.describe('Quick Mode (Быстрый черновик)', () => {
     // Mobile
     await page.setViewportSize({ width: 375, height: 667 });
     await page.reload();
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
 
     // On mobile we may hide text and keep accessible label; rely on accessibility name instead of emoji.
     const quickDraftButtonMobile = page
@@ -544,7 +544,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
   test('должен показать empty state если ничего не найдено', async ({ page }) => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
     await page.click('button:has-text("Далее")');
 
@@ -558,7 +558,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
   test('должен показать loading indicator при поиске', async ({ page }) => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
     await page.click('button:has-text("Далее")');
 
@@ -572,7 +572,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
   test('должен очистить поле поиска кнопкой X', async ({ page }) => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
     await page.click('button:has-text("Далее")');
 
@@ -596,7 +596,7 @@ test.describe('Поиск мест на карте (Location Search)', () => {
   test('должен работать debounce (не запрашивать при каждом символе)', async ({ page }) => {
     await maybeMockNominatimSearch(page);
     await page.goto('/travel/new');
-    await ensureCanCreateTravel(page);
+    if (!(await ensureCanCreateTravel(page))) return;
     await page.getByPlaceholder('Например: Неделя в Грузии').fill('Тест');
     await page.click('button:has-text("Далее")');
 

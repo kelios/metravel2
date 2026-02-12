@@ -371,7 +371,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     scrollRef.current?.scrollTo?.({ x, y: 0, animated: false })
   }, [containerW])
 
-  const keyExtractor = useCallback((it: SliderImage) => String(it.id), [])
+  const keyExtractor = useCallback(
+    (it: SliderImage, index: number) =>
+      `${String(it.id)}|${String(it.updated_at ?? '')}|${String(it.url)}|${index}`,
+    []
+  )
 
   const handleFirstImageLoad = useCallback(() => {
     firstSlideLockedRef.current = false
@@ -508,11 +512,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               // Other slides get an empty placeholder to preserve scroll position
               if (isMobile && images.length > 5 && Math.abs(index - currentIndex) > 2) {
                 return (
-                  <View key={keyExtractor(item)} style={[styles.slide, slideDimensions, styles.slideSnap]} />
+                  <View key={keyExtractor(item, index)} style={[styles.slide, slideDimensions, styles.slideSnap]} />
                 )
               }
               return (
-                <React.Fragment key={keyExtractor(item)}>
+                <React.Fragment key={keyExtractor(item, index)}>
                   {renderItem({ item, index })}
                 </React.Fragment>
               )

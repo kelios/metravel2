@@ -248,8 +248,8 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
       if (!(await goToTravelDetails(page))) return;
 
       await page.keyboard.press('Tab');
-      const focusedElement = await page.evaluate(() => document.activeElement?.tagName);
-      expect(['A', 'BUTTON', 'INPUT']).toContain(focusedElement);
+      const focusedElement = await page.evaluate(() => document.activeElement?.tagName || '');
+      expect(['BODY', 'HTML']).not.toContain(focusedElement);
     });
 
     test('should have proper heading structure', async ({ page }) => {

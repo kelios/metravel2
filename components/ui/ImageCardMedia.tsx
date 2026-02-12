@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
@@ -20,6 +20,7 @@ type WebMainImageProps = {
   loading: 'lazy' | 'eager';
   priority: Priority;
   hasBlurBehind: boolean;
+  loaded: boolean;
   onLoad?: () => void;
   onError?: () => void;
 };
@@ -34,27 +35,16 @@ const WebMainImage = memo(function WebMainImage({
   loading,
   priority,
   hasBlurBehind,
-  blurRef,
+  loaded,
   onLoad,
   onError,
-}: WebMainImageProps & { blurRef?: React.RefObject<HTMLElement | null> }) {
-  const imgRef = useRef<HTMLImageElement | null>(null);
-
+}: WebMainImageProps) {
   const handleLoad = useCallback(() => {
-    const el = imgRef.current;
-    if (el) {
-      el.style.opacity = '1';
-    }
-    const blurEl = blurRef?.current;
-    if (blurEl) {
-      blurEl.style.opacity = '1';
-    }
     onLoad?.();
-  }, [onLoad, blurRef]);
+  }, [onLoad]);
 
   return (
     <img
-      ref={imgRef}
       src={src}
       alt={alt}
       width={width}
@@ -71,7 +61,7 @@ const WebMainImage = memo(function WebMainImage({
         zIndex: 1,
         borderRadius,
         display: 'block',
-        opacity: hasBlurBehind ? 0 : 1,
+        opacity: hasBlurBehind ? (loaded ? 1 : 0) : 1,
         transition: hasBlurBehind ? 'opacity 0.3s ease' : 'none',
       }}
       loading={loading}
@@ -140,7 +130,7 @@ function ImageCardMedia({
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
   const contentFit: ImageContentFit = fit === 'cover' ? 'cover' : 'contain';
-  const blurImgRef = useRef<HTMLElement | null>(null);
+  const [webLoaded, setWebLoaded] = useState(false);
 
   const resolvedBorderRadius = useMemo(() => {
     const flattened = StyleSheet.flatten(style) as any;
@@ -187,26 +177,27 @@ function ImageCardMedia({
     return uri || null;
   }, [resolvedSource, shouldDisableNetwork, webOptimizedSource]);
 
+  // Reuse the same image source for both foreground and blur background on web.
+  // This avoids requesting a separate "blur" asset URL.
   const webBlurSrc = useMemo(() => {
     if (Platform.OS !== 'web' || !blurBackground) return null;
-    if (!resolvedSource || typeof resolvedSource === 'number') return null;
-    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
-    if (!uri) return null;
-    return (
-      optimizeImageUrl(uri, {
-        width: 100,
-        quality: 20,
-        fit: 'cover',
-        format: 'auto',
-        dpr: 1,
-      }) ?? uri
-    );
-  }, [resolvedSource, blurBackground]);
+    return webMainSrc;
+  }, [blurBackground, webMainSrc]);
 
   const webImageProps = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;
     return {};
   }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    setWebLoaded(false);
+  }, [webMainSrc, webBlurSrc, blurBackground]);
+
+  const handleWebLoad = useCallback(() => {
+    setWebLoaded(true);
+    onLoad?.();
+  }, [onLoad]);
 
   const prefetchHref = useMemo(() => {
     if (Platform.OS !== 'web') return null;
@@ -269,20 +260,22 @@ function ImageCardMedia({
             blurBackground &&
             webMainSrc && (
               <div
-                ref={blurImgRef as any}
                 aria-hidden="true"
                 style={{
                   position: 'absolute',
                   inset: '-5%',
                   width: '110%',
                   height: '110%',
-                  backgroundImage: `url("${webBlurSrc || webMainSrc}")`,
+                  backgroundImage:
+                    webLoaded && (webBlurSrc || webMainSrc)
+                      ? `url("${webBlurSrc || webMainSrc}")`
+                      : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   filter: 'blur(20px)',
                   zIndex: 0,
                   borderRadius: resolvedBorderRadius,
-                  opacity: 0,
+                  opacity: webLoaded ? 1 : 0,
                   transition: 'opacity 0.3s ease',
                 }}
               />
@@ -298,8 +291,8 @@ function ImageCardMedia({
               loading={loading}
               priority={priority}
               hasBlurBehind={blurBackground}
-              blurRef={blurImgRef as any}
-              onLoad={onLoad}
+              loaded={webLoaded}
+              onLoad={handleWebLoad}
               onError={onError}
             />
           ) : (!blurOnly || Platform.OS !== 'web') && (
