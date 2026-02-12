@@ -348,6 +348,30 @@ jobs:
         if: always()
         run: node scripts/validate-quality-summary.js test-results/quality-summary.json
 
+      - name: Validate CI smoke workflow contract
+        if: always()
+        env:
+          CI_WORKFLOW_CONTRACT_SUMMARY_MAX_ITEMS: "5"
+        run: |
+          mkdir -p test-results
+          set +e
+          node scripts/validate-ci-smoke-workflow-contract.js --json > test-results/ci-smoke-workflow-contract-validation.json
+          STATUS=$?
+          set -e
+          node scripts/summarize-ci-smoke-workflow-contract-validation.js --file test-results/ci-smoke-workflow-contract-validation.json --max-items "$CI_WORKFLOW_CONTRACT_SUMMARY_MAX_ITEMS"
+          if [ "$STATUS" -ne 0 ]; then
+            cat test-results/ci-smoke-workflow-contract-validation.json
+            exit "$STATUS"
+          fi
+
+      - name: Upload CI smoke workflow contract validation snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-smoke-workflow-contract-validation
+          path: test-results/ci-smoke-workflow-contract-validation.json
+          if-no-files-found: ignore
+
       - name: Extract quality failure class (PR)
         if: always() && github.event_name == 'pull_request'
         id: quality_failure_class

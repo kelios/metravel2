@@ -173,6 +173,20 @@ Jobs:
 - `lint` (gating): runs `yarn lint:ci`, publishes summary + `eslint-results` artifact.
 - `smoke-critical` (gating): runs `yarn test:smoke:critical:ci`, publishes summary + `jest-smoke-results` artifact.
 - `quality-summary` (aggregation): downloads both artifacts and publishes one combined quality summary.
+  - On every run, validates workflow artifact/step/output contracts via `scripts/validate-ci-smoke-workflow-contract.js`, publishes summary via `scripts/summarize-ci-smoke-workflow-contract-validation.js` (default max-items comes from `scripts/ci-smoke-workflow-contract.js`, currently `5`), and uploads `ci-smoke-workflow-contract-validation` snapshot (`test-results/ci-smoke-workflow-contract-validation.json`).
+  - Workflow contract summary includes grouped top missing entries plus actionable hints (what to restore in workflow when contracts drift).
+  - Workflow contract hint priorities:
+    - `[P1]` critical wiring issues that typically block artifact URL derivation or summary behavior (`summary settings`, `output refs`).
+    - `[P2]` high-impact contract drift that commonly breaks downstream references (`step ids`, `artifact names`).
+    - `[P3]` lower-risk path-level drift (`artifact paths`) that is still required for full contract compliance.
+  - Workflow Hint Rules Contract (stable order):
+    - `missingSummarySettings` -> `[P1]`
+    - `missingOutputRefs` -> `[P1]`
+    - `missingStepIds` -> `[P2]`
+    - `missingArtifactNames` -> `[P2]`
+    - `missingArtifactPaths` -> `[P3]`
+    - Source of truth: `scripts/summarize-ci-smoke-workflow-contract-validation.js` (`ACTION_HINT_RULES`).
+  - `quality-summary` sets `CI_WORKFLOW_CONTRACT_SUMMARY_MAX_ITEMS=5` to keep triage details concise and consistent across runs.
   - In PR runs, also downloads selective decision artifacts and includes them in summary + `quality-summary.json`.
   - In PR runs, validates downloaded selective decision artifacts before publishing summary (missing artifacts are reported as summary warnings).
   - In PR runs, builds and validates a single selective decisions aggregate before calling `scripts/summarize-quality-gate.js`.
@@ -198,6 +212,9 @@ Jobs:
     - `yarn validator:contracts:check`
     - `yarn validator:contracts:summary`
     - `yarn validator:contracts:summary:validate`
+    - `yarn ci:workflow:contract:validate`
+    - `yarn ci:workflow:contract:validate:json`
+    - `yarn ci:workflow:contract:summarize`
   - In PR runs, CI manages a marker-based PR comment lifecycle for validator guard:
     - when `ok=false`: creates or updates comment from `validator-guard-comment.md`
     - when `ok=true`: updates existing marker comment into resolved/pass status
