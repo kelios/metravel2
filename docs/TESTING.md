@@ -189,9 +189,15 @@ Jobs:
   - CI contract guard also enforces unique `ERROR_CODES` values via `__tests__/scripts/validator-error-codes-uniqueness.test.ts`.
   - Validator error-codes docs table consistency is enforced via `scripts/validate-validator-error-codes-doc-table.js` and `__tests__/scripts/validate-validator-error-codes-doc-table.test.ts`.
   - In PR runs, quality-summary emits `validator-error-codes-doc-table-validation` snapshot (`test-results/validator-error-codes-doc-table-validation.json`) and summary via `scripts/summarize-validator-error-codes-doc-table-validation.js`.
+  - In PR runs, quality-summary emits `validator-error-codes-policy-validation` snapshot (`test-results/validator-error-codes-policy-validation.json`) and summary via `scripts/summarize-validator-error-codes-policy-validation.js`.
+  - In PR runs, quality-summary also emits an aggregate validator contracts summary + snapshot via `scripts/summarize-validator-contracts.js` (`test-results/validator-contracts-summary.json`).
+  - In PR runs, quality-summary validates aggregate summary schema via `scripts/validate-validator-contracts-summary.js` and emits `validator-contracts-summary-validation` snapshot (`test-results/validator-contracts-summary-validation.json`) + summary via `scripts/summarize-validator-contracts-summary-validation.js`.
   - Local helper commands:
     - `yarn validator:error-codes:docs:check`
     - `yarn validator:error-codes:docs:update`
+    - `yarn validator:contracts:check`
+    - `yarn validator:contracts:summary`
+    - `yarn validator:contracts:summary:validate`
   - In PR runs, CI manages a marker-based PR comment lifecycle for validator guard:
     - when `ok=false`: creates or updates comment from `validator-guard-comment.md`
     - when `ok=true`: updates existing marker comment into resolved/pass status
@@ -230,6 +236,19 @@ Jobs:
 | validatorGuardComment | INVALID_GUARD_ARTIFACT | VALIDATOR_GUARD_COMMENT_INVALID_GUARD_ARTIFACT |
 | errorCodesDoc | MISSING_MARKERS | ERROR_CODES_DOC_MISSING_MARKERS |
 | errorCodesDoc | OUTDATED_TABLE | ERROR_CODES_DOC_OUTDATED_TABLE |
+| errorCodesPolicy | PREFIX_MISMATCH | ERROR_CODES_POLICY_PREFIX_MISMATCH |
+| errorCodesPolicy | DUPLICATE_VALUE | ERROR_CODES_POLICY_DUPLICATE_VALUE |
+| validatorContractsSummary | INVALID_JSON | VALIDATOR_CONTRACTS_SUMMARY_INVALID_JSON |
+| validatorContractsSummary | INVALID_PAYLOAD_OBJECT | VALIDATOR_CONTRACTS_SUMMARY_INVALID_PAYLOAD_OBJECT |
+| validatorContractsSummary | INVALID_SCHEMA_VERSION | VALIDATOR_CONTRACTS_SUMMARY_INVALID_SCHEMA_VERSION |
+| validatorContractsSummary | INVALID_OVERALL_STATUS | VALIDATOR_CONTRACTS_SUMMARY_INVALID_OVERALL_STATUS |
+| validatorContractsSummary | INVALID_COUNT_FIELD | VALIDATOR_CONTRACTS_SUMMARY_INVALID_COUNT_FIELD |
+| validatorContractsSummary | INVALID_CHECKS_ARRAY | VALIDATOR_CONTRACTS_SUMMARY_INVALID_CHECKS_ARRAY |
+| validatorContractsSummary | INVALID_ERROR_CODES_ARRAY | VALIDATOR_CONTRACTS_SUMMARY_INVALID_ERROR_CODES_ARRAY |
+| validatorContractsSummary | INVALID_CHECK_ENTRY | VALIDATOR_CONTRACTS_SUMMARY_INVALID_CHECK_ENTRY |
+| validatorContractsSummary | COUNT_MISMATCH | VALIDATOR_CONTRACTS_SUMMARY_COUNT_MISMATCH |
+| validatorContractsSummary | STATUS_MISMATCH | VALIDATOR_CONTRACTS_SUMMARY_STATUS_MISMATCH |
+| validatorContractsSummary | ERROR_CODES_MISMATCH | VALIDATOR_CONTRACTS_SUMMARY_ERROR_CODES_MISMATCH |
 | suiteBaselineRecommendation | INVALID_PAYLOAD_OBJECT | SUITE_INVALID_PAYLOAD_OBJECT |
 | suiteBaselineRecommendation | INVALID_SOURCE_SNAPSHOT | SUITE_INVALID_SOURCE_SNAPSHOT |
 | suiteBaselineRecommendation | INVALID_SUITE_COUNT | SUITE_INVALID_SUITE_COUNT |

@@ -416,6 +416,61 @@ jobs:
           path: test-results/validator-error-codes-doc-table-validation.json
           if-no-files-found: ignore
 
+      - name: Validate validator error-codes policy (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          mkdir -p test-results
+          set +e
+          node scripts/validate-validator-error-codes-policy.js --json > test-results/validator-error-codes-policy-validation.json
+          STATUS=$?
+          set -e
+          node scripts/summarize-validator-error-codes-policy-validation.js --file test-results/validator-error-codes-policy-validation.json
+          if [ "$STATUS" -ne 0 ]; then
+            exit "$STATUS"
+          fi
+
+      - name: Upload validator error-codes policy validation snapshot (PR)
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-error-codes-policy-validation
+          path: test-results/validator-error-codes-policy-validation.json
+          if-no-files-found: ignore
+
+      - name: Publish validator contracts aggregate summary (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          node scripts/summarize-validator-contracts.js --json-output test-results/validator-contracts-summary.json
+
+      - name: Upload validator contracts aggregate summary snapshot (PR)
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-contracts-summary
+          path: test-results/validator-contracts-summary.json
+          if-no-files-found: ignore
+
+      - name: Validate validator contracts aggregate summary (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          mkdir -p test-results
+          set +e
+          node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json --json > test-results/validator-contracts-summary-validation.json
+          STATUS=$?
+          set -e
+          node scripts/summarize-validator-contracts-summary-validation.js --file test-results/validator-contracts-summary-validation.json
+          if [ "$STATUS" -ne 0 ]; then
+            exit "$STATUS"
+          fi
+
+      - name: Upload validator contracts aggregate summary validation snapshot (PR)
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-contracts-summary-validation
+          path: test-results/validator-contracts-summary-validation.json
+          if-no-files-found: ignore
+
       - name: Publish/update validator guard PR comment
         if: always() && github.event_name == 'pull_request'
         continue-on-error: true

@@ -164,4 +164,43 @@ describe('validator json contract (negative paths)', () => {
 
     fs.rmSync(dir, { recursive: true, force: true })
   })
+
+  it('returns structured json errors for validator error-codes policy validator', () => {
+    const result = runNode([
+      'scripts/validate-validator-error-codes-policy.js',
+      '--json',
+    ], {
+      // no env needed; validator uses in-repo ERROR_CODES
+    })
+
+    // Current repository policy is expected to pass.
+    expect(result.status).toBe(0)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.contractVersion).toBe(1)
+    expect(payload.ok).toBe(true)
+    expect(payload.errorCount).toBe(0)
+    expect(Array.isArray(payload.errors)).toBe(true)
+  })
+
+  it('returns structured json errors for validator contracts summary validator', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const summaryPath = path.join(dir, 'validator-contracts-summary.json')
+    fs.writeFileSync(summaryPath, '{', 'utf8')
+
+    const result = runNode([
+      'scripts/validate-validator-contracts-summary.js',
+      '--file',
+      summaryPath,
+      '--json',
+    ])
+
+    expect(result.status).toBe(1)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.contractVersion).toBe(1)
+    expect(payload.ok).toBe(false)
+    expect(payload.errorCount).toBeGreaterThan(0)
+    expect(payload.errors.some((e) => e.code === 'VALIDATOR_CONTRACTS_SUMMARY_INVALID_JSON')).toBe(true)
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
 })

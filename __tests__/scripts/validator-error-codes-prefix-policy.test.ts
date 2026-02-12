@@ -6,6 +6,7 @@ const REQUIRED_PREFIX_BY_NAMESPACE = {
   incidentPayload: 'INCIDENT_PAYLOAD_',
   validatorGuardComment: 'VALIDATOR_GUARD_COMMENT_',
   errorCodesDoc: 'ERROR_CODES_DOC_',
+  validatorContractsSummary: 'VALIDATOR_CONTRACTS_SUMMARY_',
   suiteBaselineRecommendation: 'SUITE_',
 }
 

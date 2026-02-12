@@ -12,6 +12,8 @@ const CONTRACT_FILES = [
   'scripts/validation-rules.js',
   'scripts/validate-validator-guard-comment.js',
   'scripts/validate-validator-error-codes-doc-table.js',
+  'scripts/validate-validator-error-codes-policy.js',
+  'scripts/validate-validator-contracts-summary.js',
   'scripts/update-validator-error-codes-doc-table.js',
   'scripts/validator-guard-comment-template.js',
 ]
@@ -40,6 +42,12 @@ const REQUIRED_TESTS_BY_CONTRACT_FILE = {
   ],
   'scripts/validate-validator-error-codes-doc-table.js': [
     '__tests__/scripts/validate-validator-error-codes-doc-table.test.ts',
+  ],
+  'scripts/validate-validator-error-codes-policy.js': [
+    '__tests__/scripts/validate-validator-error-codes-policy.test.ts',
+  ],
+  'scripts/validate-validator-contracts-summary.js': [
+    '__tests__/scripts/validate-validator-contracts-summary.test.ts',
   ],
   'scripts/update-validator-error-codes-doc-table.js': [
     '__tests__/scripts/update-validator-error-codes-doc-table.test.ts',

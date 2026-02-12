@@ -129,6 +129,50 @@ describe('guard-validator-contract-change', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('fails when validator error-codes policy validator changes without companions', () => {
+    const result = evaluateGuard({
+      changedFiles: ['scripts/validate-validator-error-codes-policy.js'],
+      prBody: '',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.missing).toContain('__tests__/scripts/validate-validator-error-codes-policy.test.ts')
+    expect(result.missing).toContain('docs/TESTING.md')
+  })
+
+  it('passes when validator error-codes policy validator changes include companions', () => {
+    const result = evaluateGuard({
+      changedFiles: [
+        'scripts/validate-validator-error-codes-policy.js',
+        '__tests__/scripts/validate-validator-error-codes-policy.test.ts',
+        'docs/TESTING.md',
+      ],
+      prBody: '',
+    })
+    expect(result.ok).toBe(true)
+  })
+
+  it('fails when validator contracts summary validator changes without companions', () => {
+    const result = evaluateGuard({
+      changedFiles: ['scripts/validate-validator-contracts-summary.js'],
+      prBody: '',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.missing).toContain('__tests__/scripts/validate-validator-contracts-summary.test.ts')
+    expect(result.missing).toContain('docs/TESTING.md')
+  })
+
+  it('passes when validator contracts summary validator changes include companions', () => {
+    const result = evaluateGuard({
+      changedFiles: [
+        'scripts/validate-validator-contracts-summary.js',
+        '__tests__/scripts/validate-validator-contracts-summary.test.ts',
+        'docs/TESTING.md',
+      ],
+      prBody: '',
+    })
+    expect(result.ok).toBe(true)
+  })
+
   it('fails when validator error-codes docs-table updater changes without companions', () => {
     const result = evaluateGuard({
       changedFiles: ['scripts/update-validator-error-codes-doc-table.js'],
