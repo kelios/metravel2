@@ -7,6 +7,11 @@
   ```bash
   npm run guard:external-links
   ```
+- [ ] **Governance verification**
+  ```bash
+  npm run governance:verify
+  ```
+- [ ] **Canonical governance reference checked:** `docs/TESTING.md#governance-commands`
 - [ ] **Testing**
   ```bash
   npm run test:coverage  # Цель: > 60%

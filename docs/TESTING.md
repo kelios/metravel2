@@ -18,6 +18,25 @@
   - `Linking.openURL` usage rules,
   - allowlist expansion requirements.
 
+## Governance commands
+
+Use this section as canonical command entrypoint for governance checks.
+
+```bash
+yarn governance:verify
+```
+
+Equivalent npm command:
+
+```bash
+npm run governance:verify
+```
+
+Includes:
+
+- `yarn guard:external-links`
+- `yarn test:governance`
+
 ## Node.js version
 
 - React Native `0.81.5` requires Node `>= 20.19.4`.

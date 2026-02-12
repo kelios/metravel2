@@ -84,6 +84,8 @@ npx serve dist/prod -l 3000 -s
   - `openWebWindow(...)` only for low-level infrastructure cases (single chokepoint).
 - CI enforcement:
   - `yarn guard:external-links`
+  - `yarn governance:verify`
+  - Canonical commands reference: `docs/TESTING.md#governance-commands`
 - Allowlist expansion policy:
   - expanding guard allowlists is exceptional and must be temporary;
   - every allowlist expansion PR must include:

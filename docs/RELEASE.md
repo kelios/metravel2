@@ -21,6 +21,8 @@ It runs:
 
 Notes:
 - `npm run lint` includes `npm run guard:external-links`.
+- For policy integrity checks, run `npm run governance:verify`.
+- Canonical governance command reference: `docs/TESTING.md#governance-commands`.
 
 ## Web build
 
