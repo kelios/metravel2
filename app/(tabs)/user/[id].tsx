@@ -9,6 +9,7 @@ import { openExternalUrl } from '@/utils/externalLinks';
 import { useUserProfileCached } from '@/hooks/useUserProfileCached';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useAuth } from '@/context/AuthContext';
+import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { fetchMySubscriptions, fetchMySubscribers, type UserProfileDto } from '@/api/user';
@@ -18,6 +19,7 @@ import SubscribeButton from '@/components/ui/SubscribeButton';
 
 export default function PublicUserProfileScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const params = useLocalSearchParams<{ id?: string }>();
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -112,13 +114,15 @@ export default function PublicUserProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <InstantSEO
-        headKey={`user-${userId}`}
-        title={`${fullName || 'Пользователь'} | Metravel`}
-        description={`Профиль автора ${fullName || ''} на Metravel`}
-        canonical={buildCanonicalUrl(`/user/${userId}`)}
-        ogType="website"
-      />
+      {isFocused && (
+        <InstantSEO
+          headKey={`user-${userId}`}
+          title={`${fullName || 'Пользователь'} | Metravel`}
+          description={`Профиль автора ${fullName || ''} на Metravel`}
+          canonical={buildCanonicalUrl(`/user/${userId}`)}
+          ogType="website"
+        />
+      )}
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.headerCard}>
           <View style={styles.headerRow}>

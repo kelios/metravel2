@@ -89,8 +89,8 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
       // sooner, but we never block the paint for more than one idle period.
       let cancelled = false;
       const kick = () => { if (!cancelled) setReady(true); };
-      rIC(kick, 300);
-      return () => { cancelled = true; };
+      const cancelRIC = rIC(kick, 300);
+      return () => { cancelled = true; cancelRIC(); };
     }
     let done = false;
     const kick = () => {

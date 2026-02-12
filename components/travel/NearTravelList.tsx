@@ -28,10 +28,10 @@ import Button from '@/components/ui/Button';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import { queryKeys } from '@/queryKeys';
+import SegmentedControl from '@/components/MapPage/SegmentedControl';
 
-// ✅ ОПТИМИЗАЦИЯ: Lazy imports для map-компонентов
+// ✅ ОПТИМИЗАЦИЯ: Lazy import для map-компонента (тяжёлый, Leaflet внутри)
 const MapClientSideComponent = React.lazy(() => import('@/components/map/Map'));
-const SegmentedControl = React.lazy(() => import('@/components/MapPage/SegmentedControl'));
 
 type Segment = 'list' | 'map';
 
@@ -699,14 +699,12 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
 
         {!isMobile ? (
           <>
-            <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} />}>
-              <SegmentedControl
-                options={segmentOptions}
-                value={viewMode}
-                onChange={(key) => setViewMode(key as Segment)}
-                accessibilityLabel="Переключатель вида"
-              />
-            </React.Suspense>
+            <SegmentedControl
+              options={segmentOptions}
+              value={viewMode}
+              onChange={(key) => setViewMode(key as Segment)}
+              accessibilityLabel="Переключатель вида"
+            />
 
             {viewMode === 'map' ? (
               <View style={styles.mobileMapColumn}>
@@ -763,14 +761,12 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
           </>
         ) : (
           <>
-            <React.Suspense fallback={<ActivityIndicator size="small" color={colors.primary} />}>
-              <SegmentedControl
-                options={segmentOptions}
-                value={viewMode}
-                onChange={(key) => setViewMode(key as Segment)}
-                accessibilityLabel="Переключатель вида"
-              />
-            </React.Suspense>
+            <SegmentedControl
+              options={segmentOptions}
+              value={viewMode}
+              onChange={(key) => setViewMode(key as Segment)}
+              accessibilityLabel="Переключатель вида"
+            />
 
             {viewMode === 'list' ? (
               <FlashList

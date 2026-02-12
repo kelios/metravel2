@@ -1,11 +1,13 @@
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { usePathname } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
 
 export default function PrivacyScreen() {
   const pathname = usePathname();
+  const isFocused = useIsFocused();
   const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
   const canonical = buildCanonicalUrl(pathname || '/privacy');
   const colors = useThemedColors();
@@ -16,14 +18,16 @@ export default function PrivacyScreen() {
 
   return (
     <View style={styles.root}>
-      <InstantSEO
-        headKey="privacy-policy"
-        title={title}
-        description={description}
-        canonical={canonical}
-        image={buildOgImageUrl('/og-preview.jpg')}
-        ogType="website"
-      />
+      {isFocused && (
+        <InstantSEO
+          headKey="privacy-policy"
+          title={title}
+          description={description}
+          canonical={canonical}
+          image={buildOgImageUrl('/og-preview.jpg')}
+          ogType="website"
+        />
+      )}
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.heading}>Политика конфиденциальности</Text>
 

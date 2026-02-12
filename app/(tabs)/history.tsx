@@ -17,9 +17,11 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { useIsFocused } from '@react-navigation/native';
 
 export default function HistoryScreen() {
     const router = useRouter();
+    const isFocused = useIsFocused();
     const { width } = useResponsive();
     const { isAuthenticated, authReady } = useAuth();
     const { viewHistory, clearHistory } = useFavorites() as any;
@@ -277,13 +279,15 @@ export default function HistoryScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <InstantSEO
-                headKey="history"
-                title="История просмотров | Metravel"
-                description="История просмотренных путешествий"
-                canonical={buildCanonicalUrl('/history')}
-                robots="noindex, nofollow"
-            />
+            {isFocused && (
+                <InstantSEO
+                    headKey="history"
+                    title="История просмотров | Metravel"
+                    description="История просмотренных путешествий"
+                    canonical={buildCanonicalUrl('/history')}
+                    robots="noindex, nofollow"
+                />
+            )}
             <View style={styles.header}>
                 <View style={styles.headerRow}>
                     <View style={styles.headerTitleBlock}>

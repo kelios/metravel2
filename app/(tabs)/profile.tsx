@@ -30,6 +30,7 @@ import { buildLoginHref } from '@/utils/authNavigation';
 import { confirmAction } from '@/utils/confirmAction';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { useIsFocused } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
@@ -118,6 +119,7 @@ const keyExtractor = (item: Travel, index: number) => `${item.id}-${index}`;
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { isAuthenticated, authReady, logout, userId, isSuperuser } = useAuth();
   const favoritesContext = useFavorites();
   const {
@@ -591,13 +593,15 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <InstantSEO
-        headKey="profile"
-        title="Профиль | Metravel"
-        description="Профиль пользователя"
-        canonical={buildCanonicalUrl('/profile')}
-        robots="noindex, nofollow"
-      />
+      {isFocused && (
+        <InstantSEO
+          headKey="profile"
+          title="Профиль | Metravel"
+          description="Профиль пользователя"
+          canonical={buildCanonicalUrl('/profile')}
+          robots="noindex, nofollow"
+        />
+      )}
       {Platform.OS === 'web' ? (
         <ScrollView
           style={scrollViewStyle}

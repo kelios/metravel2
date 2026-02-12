@@ -17,9 +17,11 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { useIsFocused } from '@react-navigation/native';
 
 export default function FavoritesScreen() {
     const router = useRouter();
+    const isFocused = useIsFocused();
     const canonical = buildCanonicalUrl('/favorites');
     const { width } = useResponsive();
     const { isAuthenticated, authReady } = useAuth();
@@ -282,13 +284,15 @@ export default function FavoritesScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <InstantSEO
-                headKey="favorites"
-                title="Избранное | Metravel"
-                description="Ваши избранные путешествия"
-                canonical={canonical}
-                robots="noindex, nofollow"
-            />
+            {isFocused && (
+                <InstantSEO
+                    headKey="favorites"
+                    title="Избранное | Metravel"
+                    description="Ваши избранные путешествия"
+                    canonical={canonical}
+                    robots="noindex, nofollow"
+                />
+            )}
             <View style={styles.header}>
                 <View style={styles.headerRow}>
                     <View style={styles.headerTitleBlock}>

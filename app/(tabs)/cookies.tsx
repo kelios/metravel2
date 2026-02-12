@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Pressable } from 'react-native';
 import { usePathname, useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useThemedColors } from '@/hooks/useTheme';
 const CONSENT_KEY = 'metravel_consent_v1';
@@ -44,6 +45,7 @@ function writeConsent(consent: ConsentState) {
 export default function CookieSettingsScreen() {
   const pathname = usePathname();
   const router = useRouter();
+  const isFocused = useIsFocused();
   const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
   const canonical = buildCanonicalUrl(pathname || '/cookies');
   const colors = useThemedColors();
@@ -99,15 +101,17 @@ export default function CookieSettingsScreen() {
 
   return (
     <View style={styles.root}>
-      <InstantSEO
-        headKey="cookie-settings"
-        title={title}
-        description={description}
-        canonical={canonical}
-        image={buildOgImageUrl('/og-preview.jpg')}
-        ogType="website"
-        robots="noindex, nofollow"
-      />
+      {isFocused && (
+        <InstantSEO
+          headKey="cookie-settings"
+          title={title}
+          description={description}
+          canonical={canonical}
+          image={buildOgImageUrl('/og-preview.jpg')}
+          ogType="website"
+          robots="noindex, nofollow"
+        />
+      )}
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.heading}>Настройки cookies и аналитики</Text>
         <Text style={styles.paragraph}>

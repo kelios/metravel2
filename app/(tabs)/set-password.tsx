@@ -10,6 +10,7 @@ import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation'
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
 import { useThemedColors } from '@/hooks/useTheme';
+import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 
@@ -22,6 +23,7 @@ interface SetPasswordFormValues {
 export default function SetPassword() {
     const navigation = useNavigation();
     const route = useRoute();
+    const isFocused = useIsFocused();
     const { setNewPassword } = useAuth();
     const [msg, setMsg] = useState<{ text: string; error: boolean }>({ text: '', error: false });
     const colors = useThemedColors();
@@ -67,13 +69,15 @@ export default function SetPassword() {
 
     return (
         <View style={styles.container}>
-            <InstantSEO
-                headKey="set-password"
-                title="Смена пароля | Metravel"
-                description="Смена пароля"
-                canonical={buildCanonicalUrl('/set-password')}
-                robots="noindex, nofollow"
-            />
+            {isFocused && (
+                <InstantSEO
+                    headKey="set-password"
+                    title="Смена пароля | Metravel"
+                    description="Смена пароля"
+                    canonical={buildCanonicalUrl('/set-password')}
+                    robots="noindex, nofollow"
+                />
+            )}
             <View style={styles.heroWrapper}>
                 <Image
                     source={require('@/assets/images/media/slider/about.jpg')}

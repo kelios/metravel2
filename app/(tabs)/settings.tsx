@@ -18,11 +18,13 @@ import { showToast } from '@/utils/toast';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
+import { useIsFocused } from '@react-navigation/native';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAvatarUpload } from '@/hooks/useAvatarUpload';
 
 export default function SettingsScreen() {
     const router = useRouter();
+    const isFocused = useIsFocused();
     const { isAuthenticated, authReady, logout, username, userId } = useAuth();
     const isWeb = Platform.OS === 'web';
     const favoritesContext = useFavorites();
@@ -241,13 +243,15 @@ export default function SettingsScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <InstantSEO
-                headKey="settings"
-                title="Настройки | Metravel"
-                description="Настройки аккаунта"
-                canonical={buildCanonicalUrl('/settings')}
-                robots="noindex, nofollow"
-            />
+            {isFocused && (
+                <InstantSEO
+                    headKey="settings"
+                    title="Настройки | Metravel"
+                    description="Настройки аккаунта"
+                    canonical={buildCanonicalUrl('/settings')}
+                    robots="noindex, nofollow"
+                />
+            )}
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.pageContainer}>
                     <View style={styles.header}>

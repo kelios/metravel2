@@ -5,6 +5,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { confirmAccount } from '@/api/auth';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useIsFocused } from '@react-navigation/native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 
@@ -13,6 +14,7 @@ const { height } = Dimensions.get('window');
 export default function AccountConfirmation() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const isFocused = useIsFocused();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -44,13 +46,15 @@ export default function AccountConfirmation() {
 
     return (
         <View style={styles.container}>
-            <InstantSEO
-                headKey="account-confirmation"
-                title="Подтверждение аккаунта | Metravel"
-                description="Подтверждение учётной записи"
-                canonical={buildCanonicalUrl('/accountconfirmation')}
-                robots="noindex, nofollow"
-            />
+            {isFocused && (
+                <InstantSEO
+                    headKey="account-confirmation"
+                    title="Подтверждение аккаунта | Metravel"
+                    description="Подтверждение учётной записи"
+                    canonical={buildCanonicalUrl('/accountconfirmation')}
+                    robots="noindex, nofollow"
+                />
+            )}
             <Image
                 source={require('@/assets/images/media/slider/about.jpg')}
                 style={styles.backgroundImage}

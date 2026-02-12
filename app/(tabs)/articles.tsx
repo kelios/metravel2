@@ -13,9 +13,13 @@ import { FlashList } from '@shopify/flash-list'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { queryConfigs } from '@/utils/reactQueryConfig'
 import { queryKeys } from '@/queryKeys'
+import { useIsFocused } from '@react-navigation/native'
+import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
 
 export default function TabOneScreen() {
   const initialPage = 0
+  const isFocused = useIsFocused()
   const colors = useThemedColors()
   const styles = useMemo(() => getStyles(colors), [colors])
 
@@ -106,6 +110,16 @@ export default function TabOneScreen() {
 
   return (
       <SafeAreaView style={{ flex: 1 }}>
+        {isFocused && (
+          <InstantSEO
+            headKey="articles"
+            title="Статьи | Metravel"
+            description="Статьи путешественников на платформе Metravel — советы, истории и полезные материалы."
+            canonical={buildCanonicalUrl('/articles')}
+            image={buildOgImageUrl('/og-preview.jpg')}
+            ogType="website"
+          />
+        )}
         <View style={styles.container}>
           <View style={styles.content}>
             {isError && (
