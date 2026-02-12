@@ -4,6 +4,7 @@ const {
   collectFilesRecursive,
   toPosixRelative,
   readTextFile,
+  buildForbiddenUsageMessage,
 } = require('./policy-test-utils')
 
 const scriptsTestsDir = path.resolve(process.cwd(), '__tests__', 'scripts')
@@ -29,7 +30,11 @@ describe('temp dir policy', () => {
 
     ensure(
       forbidden.length === 0,
-      `Found forbidden mkdtempSync usage in: [${forbidden.join(', ')}]. Use makeTempDir from __tests__/scripts/cli-test-utils.ts.`,
+      buildForbiddenUsageMessage({
+        subject: 'mkdtempSync usage',
+        forbidden,
+        remediation: 'Use makeTempDir from __tests__/scripts/cli-test-utils.ts.',
+      }),
     )
   })
 })

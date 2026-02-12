@@ -1,4 +1,7 @@
-const { validateSelectiveRunnerPolicyContent } = require('./targeted-test-list-policy-utils')
+const {
+  validateSelectiveRunnerPolicyContent,
+  buildScopeUnexpectedMessage,
+} = require('./targeted-test-list-policy-utils')
 
 const validFixture = `
 const {
@@ -39,5 +42,12 @@ describe('targeted-test-list-policy-utils', () => {
       file: 'broken-fs.test.ts',
       content: broken,
     })).toThrow('broken-fs.test.ts: forbidden')
+  })
+
+  it('builds scope mismatch message with subset-semantics hint', () => {
+    const message = buildScopeUnexpectedMessage(['rogue.test.ts'])
+    expect(message).toContain('subset semantics')
+    expect(message).toContain('Only unexpected helper consumers are failures')
+    expect(message).toContain('Unexpected: [rogue.test.ts].')
   })
 })

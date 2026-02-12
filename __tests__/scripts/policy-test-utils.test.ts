@@ -6,6 +6,7 @@ const {
   collectFilesRecursive,
   toPosixRelative,
   readTextFile,
+  buildForbiddenUsageMessage,
 } = require('./policy-test-utils')
 
 describe('policy-test-utils', () => {
@@ -39,5 +40,15 @@ describe('policy-test-utils', () => {
     const file = path.join(dir, 'sample.txt')
     fs.writeFileSync(file, 'hello-policy', 'utf8')
     expect(readTextFile(file)).toBe('hello-policy')
+  })
+
+  it('buildForbiddenUsageMessage formats context and remediation', () => {
+    const message = buildForbiddenUsageMessage({
+      subject: 'mkdtempSync usage',
+      forbidden: ['a.test.ts', 'b.test.ts'],
+      remediation: 'Use makeTempDir from __tests__/scripts/cli-test-utils.ts.',
+    })
+    expect(message).toContain('Found forbidden mkdtempSync usage in: [a.test.ts, b.test.ts].')
+    expect(message).toContain('Use makeTempDir from __tests__/scripts/cli-test-utils.ts.')
   })
 })

@@ -1,7 +1,10 @@
 const fs = require('fs')
 const path = require('path')
 const { ensure, readTextFile } = require('./policy-test-utils')
-const { validateSelectiveRunnerPolicyContent } = require('./targeted-test-list-policy-utils')
+const {
+  validateSelectiveRunnerPolicyContent,
+  buildScopeUnexpectedMessage,
+} = require('./targeted-test-list-policy-utils')
 const {
   SELECTIVE_RUNNER_TEST_PATTERN,
   TARGETED_POLICY_SUITE_PATTERN,
@@ -73,7 +76,7 @@ describe('targeted test list policy', () => {
     const unexpected = helperConsumers.filter((file) => !allowedConsumers.includes(file))
     ensure(
       unexpected.length === 0,
-      `Helper import scope mismatch. Unexpected: [${unexpected.join(', ')}].`,
+      buildScopeUnexpectedMessage(unexpected),
     )
   })
 
@@ -96,5 +99,25 @@ describe('targeted test list policy', () => {
     ].sort()
     const uniqueExpected = [...new Set(expected)].sort()
     expect(allowedConsumers).toEqual(uniqueExpected)
+  })
+
+  it('treats helper import scope check as subset semantics', () => {
+    const allowedConsumers = [
+      'run-schema-contract-tests-if-needed.test.ts',
+      'run-validator-contract-tests-if-needed.test.ts',
+      'targeted-test-list-policy-index-utils.test.ts',
+    ]
+    const helperConsumers = [
+      'run-schema-contract-tests-if-needed.test.ts',
+      'run-validator-contract-tests-if-needed.test.ts',
+    ]
+
+    const unexpected = helperConsumers.filter((file) => !allowedConsumers.includes(file))
+    const missing = allowedConsumers.filter((file) => !helperConsumers.includes(file))
+
+    expect(unexpected).toEqual([])
+    expect(missing).toEqual([
+      'targeted-test-list-policy-index-utils.test.ts',
+    ])
   })
 })

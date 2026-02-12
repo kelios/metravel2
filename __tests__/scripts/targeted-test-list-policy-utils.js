@@ -29,8 +29,17 @@ const validateSelectiveRunnerPolicyContent = ({ file, content }) => {
   ensureNotContains(content, "require('path')", file, 'do not duplicate path checks locally')
 }
 
+const buildScopeUnexpectedMessage = (unexpected) => {
+  return [
+    'Helper import scope mismatch (subset semantics).',
+    'Only unexpected helper consumers are failures.',
+    `Unexpected: [${unexpected.join(', ')}].`,
+  ].join(' ')
+}
+
 module.exports = {
   validateSelectiveRunnerPolicyContent,
+  buildScopeUnexpectedMessage,
   ensureContains,
   ensureNotContains,
 }

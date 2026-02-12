@@ -28,9 +28,17 @@ const readTextFile = (filePath) => {
   return fs.readFileSync(filePath, 'utf8')
 }
 
+const buildForbiddenUsageMessage = ({ subject, forbidden, remediation }) => {
+  return [
+    `Found forbidden ${subject} in: [${forbidden.join(', ')}].`,
+    remediation,
+  ].join(' ')
+}
+
 module.exports = {
   ensure,
   collectFilesRecursive,
   toPosixRelative,
   readTextFile,
+  buildForbiddenUsageMessage,
 }

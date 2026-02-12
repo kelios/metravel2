@@ -4,6 +4,7 @@ const {
   collectFilesRecursive,
   toPosixRelative,
   readTextFile,
+  buildForbiddenUsageMessage,
 } = require('./policy-test-utils')
 
 const scriptsTestsDir = path.resolve(process.cwd(), '__tests__', 'scripts')
@@ -30,7 +31,11 @@ describe('cli runner policy', () => {
 
     ensure(
       forbidden.length === 0,
-      `Found forbidden direct CLI process calls in: [${forbidden.join(', ')}]. Use runNodeCli from __tests__/scripts/cli-test-utils.ts.`,
+      buildForbiddenUsageMessage({
+        subject: 'direct CLI process calls',
+        forbidden,
+        remediation: 'Use runNodeCli from __tests__/scripts/cli-test-utils.ts.',
+      }),
     )
   })
 })
