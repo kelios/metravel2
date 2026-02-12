@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, StyleSheet, ActivityIndicator, Linking } from 'react-native';
+import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { DESIGN_COLORS } from '@/constants/designSystem';
+import { openExternalUrl } from '@/utils/externalLinks';
 
 type Point = {
   id: number;
@@ -249,10 +250,7 @@ const Map: React.FC<TravelProps> = ({ travel, coordinates: propCoordinates }) =>
             if (parsed?.type !== 'OPEN_URL') return;
             const safeUrl = getSafeExternalUrl(parsed?.url, { allowRelative: true, baseUrl: getSiteBaseUrl() });
             if (!safeUrl) return;
-            const can = await Linking.canOpenURL(safeUrl);
-            if (can) {
-              await Linking.openURL(safeUrl);
-            }
+            await openExternalUrl(safeUrl, { allowRelative: true, baseUrl: getSiteBaseUrl() });
           } catch {
             // noop
           }

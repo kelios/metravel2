@@ -3,7 +3,6 @@ import React, { memo, Suspense, useCallback, useMemo, useState, lazy } from "rea
 import {
   View,
   StyleSheet,
-  Linking,
   Pressable,
   ScrollView,
   Platform,
@@ -11,6 +10,7 @@ import {
   DeviceEventEmitter,
   Alert,
 } from "react-native";
+import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { Text } from "@/ui/paper";
 import type { Travel } from "@/types/types";
@@ -41,14 +41,6 @@ const Fallback = () => {
 };
 
 const TravelPdfExportControlLazy = lazy(() => import('@/components/travel/TravelPdfExportControl'));
-
-const openUrl = (url: string) => {
-  if (Platform.OS === "web") {
-    window.open(url, "_blank", "noopener");
-  } else {
-    Linking.openURL(url);
-  }
-};
 
 // универсальный эмиттер "открой секцию"
 const emitOpenSection = (key: string) => {
@@ -85,6 +77,7 @@ function CompactSideBarTravel({
 }: SideBarProps) {
   const { isTablet } = useResponsive();
   const isWeb = Platform.OS === 'web';
+  const router = useRouter();
   const { isDark } = useTheme();
   const themedColors = useThemedColors();
   const styles = useMemo(() => createStyles(themedColors), [themedColors]);
@@ -157,6 +150,14 @@ function CompactSideBarTravel({
     [closeMenu, isMobile, isSectionAvailable, navLinks, notifyUnavailable, onNavigate]
   );
 
+  const navigateInternalUrl = useCallback(
+    (url: string) => {
+      if (!url || !url.startsWith('/')) return;
+      router.push(url as any);
+    },
+    [router]
+  );
+
   // Надёжная проверка права редактирования (типы могут отличаться)
   const canEdit = useMemo(() => {
     const a = String(storedUserId ?? "");
@@ -193,8 +194,8 @@ function CompactSideBarTravel({
 
   const handleOpenAuthorProfile = useCallback(() => {
     if (!authorUserId) return;
-    openUrl(`/user/${authorUserId}`);
-  }, [authorUserId]);
+    navigateInternalUrl(`/user/${authorUserId}`);
+  }, [authorUserId, navigateInternalUrl]);
 
   const normalizeMediaUrl = useCallback((raw: string) => {
     const value = String(raw ?? '').trim();
@@ -222,10 +223,10 @@ function CompactSideBarTravel({
   const handleUserTravels = () => {
     const id = (travel as any).userIds ?? (travel as any).userId;
     if (id) {
-      openUrl(`/search?user_id=${encodeURIComponent(id)}`);
+      navigateInternalUrl(`/search?user_id=${encodeURIComponent(id)}`);
     }
   };
-  const handleEdit = () => canEdit && openUrl(`/travel/${travel.id}/`);
+  const handleEdit = () => canEdit && navigateInternalUrl(`/travel/${travel.id}/`);
 
   const setWebTitle = useCallback(
     (title: string) => (el: any) => {
@@ -360,7 +361,7 @@ function CompactSideBarTravel({
 
               {!isOwnTravel && authorUserId && (
                 <Pressable
-                  onPress={() => openUrl(`/messages?userId=${encodeURIComponent(authorUserId)}`)}
+                  onPress={() => navigateInternalUrl(`/messages?userId=${encodeURIComponent(authorUserId)}`)}
                   accessibilityRole="button"
                   accessibilityLabel={`Написать автору ${userName || 'Пользователь'}`}
                   style={({ pressed }) => [
@@ -1052,3 +1053,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
   fallback: { paddingVertical: 40, alignItems: "center" },
 });
+  const navigateInternalUrl = useCallback(
+    (url: string) => {
+      if (!url || !url.startsWith('/')) return;
+      router.push(url as any);
+    },
+    [router]
+  );

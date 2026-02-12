@@ -1,7 +1,11 @@
 import { render, fireEvent } from '@testing-library/react-native';
-import { Linking } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
 import type { Travel } from '@/types/types';
+import { useRouter } from 'expo-router';
+
+jest.mock('expo-router', () => ({
+  useRouter: jest.fn(),
+}));
 
 jest.mock('@/hooks/useUserProfileCached', () => ({
   __esModule: true,
@@ -86,6 +90,7 @@ const createMockRefs = () => ({
 } as any);
 
 describe('CompactSideBarTravel', () => {
+  const mockPush = jest.fn();
   const defaultProps = {
     refs: createMockRefs(),
     travel: createMockTravel(),
@@ -98,6 +103,9 @@ describe('CompactSideBarTravel', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (useRouter as jest.Mock).mockReturnValue({
+      push: mockPush,
+    });
   });
 
   it('should render without crashing', () => {
@@ -310,7 +318,6 @@ describe('CompactSideBarTravel', () => {
   });
 
   it('opens author travels search with user_id param', () => {
-    const openSpy = jest.spyOn(Linking, 'openURL').mockResolvedValueOnce(undefined as any);
     const travel = createMockTravel({
       userId: '555',
       userName: 'Test User',
@@ -322,8 +329,7 @@ describe('CompactSideBarTravel', () => {
 
     fireEvent.press(getByText('Все путешествия автора'));
 
-    expect(openSpy).toHaveBeenCalledWith('/search?user_id=555');
-    openSpy.mockRestore();
+    expect(mockPush).toHaveBeenCalledWith('/search?user_id=555');
   });
 
   it('should render WeatherWidget', () => {
@@ -352,4 +358,3 @@ describe('CompactSideBarTravel', () => {
     expect(galleryLink).toBeTruthy();
   });
 });
-
