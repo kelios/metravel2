@@ -8,6 +8,8 @@ const { isConcreteValue, isHttpUrl } = require('./validation-rules')
 const { ERROR_CODES } = require('./validator-error-codes')
 
 const MARKER = '<!-- validator-guard-comment -->'
+const ALLOWED_STATUSES = ['PASS', 'FAIL']
+const REQUIRED_LABELS = ['Status', 'Reason', 'Workflow run', 'Guard artifact']
 
 const parseArgs = (argv) => {
   const args = {
@@ -45,7 +47,7 @@ const validateDetailed = (markdown) => {
   }
 
   const status = extractLineValue(text, 'Status')
-  if (status !== 'PASS' && status !== 'FAIL') {
+  if (!ALLOWED_STATUSES.includes(status)) {
     errors.push({
       code: ERROR_CODES.validatorGuardComment.INVALID_STATUS,
       field: 'Status',
@@ -114,6 +116,8 @@ if (require.main === module) {
 
 module.exports = {
   MARKER,
+  ALLOWED_STATUSES,
+  REQUIRED_LABELS,
   parseArgs,
   extractLineValue,
   validate,

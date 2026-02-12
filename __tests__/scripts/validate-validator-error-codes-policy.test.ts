@@ -42,4 +42,10 @@ describe('validate-validator-error-codes-policy', () => {
       suiteBaselineRecommendation: 'SUITE_',
     })
   })
+
+  it('keeps namespace coverage aligned with validator-error-codes map', () => {
+    const requiredNamespaces = Object.keys(REQUIRED_PREFIX_BY_NAMESPACE).sort()
+    const availableNamespaces = Object.keys(ERROR_CODES).sort()
+    expect(requiredNamespaces).toEqual(availableNamespaces)
+  })
 })

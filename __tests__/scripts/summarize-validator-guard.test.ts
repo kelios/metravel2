@@ -1,7 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
+const { makeTempDir, runNodeCli, writeJsonFile } = require('./cli-test-utils')
 const {
   parseArgs,
   buildSummaryLines,
@@ -40,7 +39,7 @@ describe('summarize-validator-guard', () => {
   })
 
   it('writes summary to GITHUB_STEP_SUMMARY in cli mode', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'summarize-validator-guard-'))
+    const dir = makeTempDir('summarize-validator-guard-')
     const payloadPath = path.join(dir, 'validator-guard.json')
     const stepSummaryPath = path.join(dir, 'step-summary.md')
 

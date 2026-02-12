@@ -1,14 +1,13 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { writeJsonFile } = require('./cli-test-utils')
+const { writeJsonFile, makeTempDir } = require('./cli-test-utils')
 const { publishIncidentSnippet } = require('@/scripts/publish-ci-incident-snippet')
 const { validate } = require('@/scripts/validate-ci-incident-snippet')
 const { validate: validatePayload } = require('@/scripts/validate-ci-incident-payload')
 
 describe('ci incident pipeline integration', () => {
   it('publishes and validates incident snippet from quality-summary fixture', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-pipeline-'))
+    const dir = makeTempDir('ci-incident-pipeline-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'ci-incident-snippet.md')
     const stepSummaryFile = path.join(dir, 'step-summary.md')
@@ -55,7 +54,7 @@ describe('ci incident pipeline integration', () => {
   })
 
   it('adds selective decisions follow-up note for selective_contract failures', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-pipeline-'))
+    const dir = makeTempDir('ci-incident-pipeline-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'ci-incident-snippet.md')
     const stepSummaryFile = path.join(dir, 'step-summary.md')
@@ -102,7 +101,7 @@ describe('ci incident pipeline integration', () => {
   })
 
   it('fails payload validation on inconsistent artifact metadata', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-pipeline-'))
+    const dir = makeTempDir('ci-incident-pipeline-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'ci-incident-snippet.md')
 
@@ -148,7 +147,7 @@ describe('ci incident pipeline integration', () => {
   })
 
   it('adds runtime diagnostics follow-up/artifact for config_contract failures', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-pipeline-'))
+    const dir = makeTempDir('ci-incident-pipeline-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'ci-incident-snippet.md')
 

@@ -1,7 +1,6 @@
 import fs from 'fs'
-import os from 'os'
 import path from 'path'
-import { runNodeCli, writeJsonFile } from './cli-test-utils'
+import { makeTempDir, runNodeCli, writeJsonFile } from './cli-test-utils'
 
 const summarizeQualityGateScript = path.resolve(process.cwd(), 'scripts/summarize-quality-gate.js')
 const validateQualitySummaryScript = path.resolve(process.cwd(), 'scripts/validate-quality-summary.js')
@@ -10,7 +9,7 @@ const validateIncidentPayloadScript = path.resolve(process.cwd(), 'scripts/valid
 
 describe('quality-summary -> incident payload e2e contract', () => {
   it('keeps contracts consistent for config_contract escalation path', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-incident-e2e-'))
+    const dir = makeTempDir('quality-incident-e2e-')
     const eslintPath = path.join(dir, 'eslint-pass.json')
     const jestPath = path.join(dir, 'jest-pass.json')
     const runtimeDiagnosticsPath = path.join(dir, 'runtime-config-diagnostics.json')
@@ -89,7 +88,7 @@ describe('quality-summary -> incident payload e2e contract', () => {
   })
 
   it('keeps contracts consistent for validator_contract escalation path', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-incident-e2e-'))
+    const dir = makeTempDir('quality-incident-e2e-')
     const eslintPath = path.join(dir, 'eslint-pass.json')
     const jestPath = path.join(dir, 'jest-pass.json')
     const validatorContractsSummaryValidationPath = path.join(dir, 'validator-contracts-summary-validation.json')
@@ -167,7 +166,7 @@ describe('quality-summary -> incident payload e2e contract', () => {
   })
 
   it('keeps contracts consistent for selective_contract escalation path', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-incident-e2e-'))
+    const dir = makeTempDir('quality-incident-e2e-')
     const eslintPath = path.join(dir, 'eslint-pass.json')
     const jestPath = path.join(dir, 'jest-pass.json')
     const selectiveDecisionsPath = path.join(dir, 'selective-decisions.json')

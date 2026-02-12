@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { writeJsonFile } from '../scripts/cli-test-utils'
 
 describe('Lighthouse performance report', () => {
   const reportPath = path.resolve(process.cwd(), 'lighthouse-report.json')
@@ -12,7 +13,7 @@ describe('Lighthouse performance report', () => {
           },
         },
       }
-      fs.writeFileSync(reportPath, JSON.stringify(stubReport), 'utf8')
+      writeJsonFile(reportPath, stubReport)
     }
 
     const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))

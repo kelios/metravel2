@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeJsonFile, writeTextFile } = require('./cli-test-utils')
 const {
   resolveFromCwd,
   readJsonFileWithStatus,
@@ -14,9 +14,9 @@ describe('summary-utils', () => {
   })
 
   it('reads json payload with success status', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'summary-utils-'))
+    const dir = makeTempDir('summary-utils-')
     const file = path.join(dir, 'payload.json')
-    fs.writeFileSync(file, JSON.stringify({ ok: true }), 'utf8')
+    writeJsonFile(file, { ok: true })
     const result = readJsonFileWithStatus(file)
     expect(result.ok).toBe(true)
     expect(result.payload).toEqual({ ok: true })
@@ -24,7 +24,7 @@ describe('summary-utils', () => {
   })
 
   it('returns missing status for absent file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'summary-utils-'))
+    const dir = makeTempDir('summary-utils-')
     const file = path.join(dir, 'missing.json')
     const result = readJsonFileWithStatus(file)
     expect(result.missing).toBe(true)
@@ -32,9 +32,9 @@ describe('summary-utils', () => {
   })
 
   it('returns parseError for invalid json', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'summary-utils-'))
+    const dir = makeTempDir('summary-utils-')
     const file = path.join(dir, 'broken.json')
-    fs.writeFileSync(file, '{"ok":', 'utf8')
+    writeTextFile(file, '{"ok":')
     const result = readJsonFileWithStatus(file)
     expect(result.ok).toBe(false)
     expect(result.parseError).toBeTruthy()
@@ -42,7 +42,7 @@ describe('summary-utils', () => {
   })
 
   it('appends lines to explicit summary path', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'summary-utils-'))
+    const dir = makeTempDir('summary-utils-')
     const summaryPath = path.join(dir, 'summary.md')
     const appended = appendLinesToStepSummary({
       lines: ['## X', '- ok'],

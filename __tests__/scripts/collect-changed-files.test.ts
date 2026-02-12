@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir } = require('./cli-test-utils')
 const {
   parseArgs,
   normalizeChangedFiles,
@@ -34,7 +34,7 @@ describe('collect-changed-files', () => {
   })
 
   it('writes changed files to output path', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'changed-files-'))
+    const dir = makeTempDir('changed-files-')
     const output = path.join(dir, 'changed.txt')
     const resolved = writeChangedFiles(output, ['a', 'b'])
     expect(resolved).toBe(path.resolve(output))

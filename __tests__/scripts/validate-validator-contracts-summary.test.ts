@@ -50,6 +50,32 @@ const buildValidPayload = () => ({
 })
 
 describe('validate-validator-contracts-summary', () => {
+  it('keeps payload field contract stable', () => {
+    const payload = buildValidPayload()
+    expect(Object.keys(payload)).toEqual([
+      'schemaVersion',
+      'overallStatus',
+      'checkCount',
+      'passCount',
+      'failCount',
+      'warningCount',
+      'totalErrors',
+      'errorCodes',
+      'checks',
+    ])
+
+    expect(Object.keys(payload.checks[0])).toEqual([
+      'id',
+      'title',
+      'file',
+      'status',
+      'ok',
+      'errorCount',
+      'errorCodes',
+      'reason',
+    ])
+  })
+
   it('keeps status contract stable', () => {
     expect(ALLOWED_STATUSES).toEqual(['pass', 'fail', 'warning'])
   })

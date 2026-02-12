@@ -1,7 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
+const { makeTempDir, runNodeCli, writeJsonFile } = require('./cli-test-utils')
 const {
   ACTION_HINT_RULES,
   parseArgs,
@@ -27,9 +26,9 @@ describe('summarize-ci-smoke-workflow-contract-validation', () => {
   })
 
   it('reads validation payload from file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'workflow-contract-summary-'))
+    const dir = makeTempDir('workflow-contract-summary-')
     const payloadFile = path.join(dir, 'validation.json')
-    fs.writeFileSync(payloadFile, JSON.stringify({
+    writeJsonFile(payloadFile, {
       ok: false,
       errorCount: 1,
       file: '.github/workflows/ci-smoke.yml',
@@ -43,7 +42,7 @@ describe('summarize-ci-smoke-workflow-contract-validation', () => {
       errors: [
         { code: 'CI_SMOKE_WORKFLOW_CONTRACT_MISSING_ARTIFACT_NAME', message: 'missing quality-summary' },
       ],
-    }), 'utf8')
+    })
 
     const result = readValidationFile(payloadFile)
     expect(result.ok).toBe(true)
@@ -130,7 +129,7 @@ describe('summarize-ci-smoke-workflow-contract-validation', () => {
   })
 
   it('appends summary to explicit step summary path', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'workflow-contract-summary-'))
+    const dir = makeTempDir('workflow-contract-summary-')
     const stepSummaryPath = path.join(dir, 'summary.md')
     const appended = appendStepSummary({
       lines: ['### CI Smoke Workflow Contract Validation', '- OK: true', ''],
@@ -143,11 +142,11 @@ describe('summarize-ci-smoke-workflow-contract-validation', () => {
   })
 
   it('writes summary to GITHUB_STEP_SUMMARY in cli mode', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'workflow-contract-summary-'))
+    const dir = makeTempDir('workflow-contract-summary-')
     const payloadPath = path.join(dir, 'validation.json')
     const stepSummaryPath = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(payloadPath, JSON.stringify({
+    writeJsonFile(payloadPath, {
       ok: false,
       errorCount: 1,
       file: '.github/workflows/ci-smoke.yml',
@@ -161,19 +160,14 @@ describe('summarize-ci-smoke-workflow-contract-validation', () => {
       errors: [
         { code: 'CI_SMOKE_WORKFLOW_CONTRACT_MISSING_ARTIFACT_NAME', message: 'missing quality-summary' },
       ],
-    }), 'utf8')
+    })
 
-    const result = spawnSync(process.execPath, [
+    const result = runNodeCli([
       'scripts/summarize-ci-smoke-workflow-contract-validation.js',
       '--file',
       payloadPath,
     ], {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        GITHUB_STEP_SUMMARY: stepSummaryPath,
-      },
-      encoding: 'utf8',
+      GITHUB_STEP_SUMMARY: stepSummaryPath,
     })
 
     expect(result.status).toBe(0)

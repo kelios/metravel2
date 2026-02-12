@@ -1,7 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { runNodeCli, writeTextFile } = require('./cli-test-utils')
+const { makeTempDir, runNodeCli, writeTextFile } = require('./cli-test-utils')
 const {
   parseArgs,
   validate,
@@ -71,7 +70,7 @@ describe('validate-ci-smoke-workflow-contract', () => {
   })
 
   it('fails with json payload for broken workflow file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-ci-smoke-workflow-contract-'))
+    const dir = makeTempDir('validate-ci-smoke-workflow-contract-')
     const file = path.join(dir, 'ci-smoke.yml')
     const workflow = fs.readFileSync(workflowPath, 'utf8')
     const brokenWorkflow = workflow.replace('name: quality-summary', 'name: quality-aggregate-broken')

@@ -1,7 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
+const { makeTempDir, runNodeCli, writeJsonFile } = require('./cli-test-utils')
 const {
   parseArgs,
   buildCommentMarkdown,
@@ -83,7 +82,7 @@ describe('render-validator-guard-comment', () => {
   })
 
   it('writes markdown file and returns json payload in cli mode', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-validator-guard-'))
+    const dir = makeTempDir('render-validator-guard-')
     const inputFile = path.join(dir, 'validator-guard.json')
     const outputFile = path.join(dir, 'validator-guard-comment.md')
 

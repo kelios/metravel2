@@ -1,9 +1,10 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { writeJsonFile } = require('./cli-test-utils')
+const { makeTempDir, writeJsonFile } = require('./cli-test-utils')
 const {
   SUPPORTED_SCHEMA_VERSION,
+  ALLOWED_FAILURE_CLASSES,
+  ALLOWED_ARTIFACT_SOURCES,
   ALLOWED_PRIMARY_ARTIFACT_KINDS,
   parseArgs,
   validate,
@@ -64,6 +65,29 @@ describe('validate-ci-incident-payload', () => {
       'selective_decisions',
       'validator_contracts',
       'runtime_config_diagnostics',
+    ])
+  })
+
+  it('keeps allowed failure classes stable', () => {
+    expect([...ALLOWED_FAILURE_CLASSES]).toEqual([
+      'infra_artifact',
+      'inconsistent_state',
+      'lint_only',
+      'smoke_only',
+      'mixed',
+      'performance_budget',
+      'selective_contract',
+      'validator_contract',
+      'config_contract',
+    ])
+  })
+
+  it('keeps allowed artifact sources stable', () => {
+    expect([...ALLOWED_ARTIFACT_SOURCES]).toEqual([
+      'explicit',
+      'run_id',
+      'fallback',
+      'none',
     ])
   })
 
@@ -210,7 +234,7 @@ describe('validate-ci-incident-payload', () => {
   })
 
   it('reads and validates payload file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-incident-payload-'))
+    const dir = makeTempDir('validate-incident-payload-')
     const payloadPath = path.join(dir, 'payload.json')
     writeJsonFile(payloadPath, validPayload())
     const loaded = JSON.parse(fs.readFileSync(payloadPath, 'utf8'))

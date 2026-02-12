@@ -1,11 +1,10 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
+const { runNodeCli, writeJsonFile, makeTempDir } = require('./cli-test-utils')
 
 describe('publish incident json contract', () => {
   it('emits artifactUrl and artifactSource in json output for selective contract', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-incident-json-'))
+    const dir = makeTempDir('publish-incident-json-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
     writeJsonFile(summaryFile, {
@@ -46,7 +45,7 @@ describe('publish incident json contract', () => {
   })
 
   it('emits validator artifact fields for validator contract', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-incident-json-'))
+    const dir = makeTempDir('publish-incident-json-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
     writeJsonFile(summaryFile, {
@@ -85,7 +84,7 @@ describe('publish incident json contract', () => {
   })
 
   it('emits runtime artifact fields for config contract', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-incident-json-'))
+    const dir = makeTempDir('publish-incident-json-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
     writeJsonFile(summaryFile, {

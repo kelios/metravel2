@@ -1,11 +1,10 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
+const { makeTempDir, runNodeCli, writeJsonFile } = require('./cli-test-utils')
 
 describe('summarize-jest-smoke script', () => {
   it('prints and appends smoke summary in cli mode', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'summarize-jest-smoke-'))
+    const dir = makeTempDir('summarize-jest-smoke-')
     const inputFile = path.join(dir, 'jest-smoke-results.json')
     const stepSummary = path.join(dir, 'step-summary.md')
 
@@ -38,7 +37,7 @@ describe('summarize-jest-smoke script', () => {
   })
 
   it('reports missing file in cli mode', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'summarize-jest-smoke-'))
+    const dir = makeTempDir('summarize-jest-smoke-')
     const missing = path.join(dir, 'missing.json')
     const stepSummary = path.join(dir, 'step-summary.md')
     const result = runNodeCli(['scripts/summarize-jest-smoke.js', missing], {

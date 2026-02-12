@@ -1,23 +1,23 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeJsonFile } = require('./cli-test-utils')
 const { publishRecommendation } = require('@/scripts/publish-smoke-suite-recommendation')
 
 describe('smoke suite baseline pipeline integration', () => {
   it('publishes recommendation artifact and summary from quality-summary fixture', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'suite-baseline-pipeline-'))
+    const dir = makeTempDir('suite-baseline-pipeline-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'smoke-suite-baseline-recommendation.json')
     const stepSummaryFile = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       smokeSuiteFiles: [
         '__tests__/app/export.test.tsx',
         '__tests__/app/subscriptions.test.tsx',
       ],
       smokeSuiteAddedFiles: ['__tests__/app/subscriptions.test.tsx'],
       smokeSuiteRemovedFiles: ['__tests__/legacy/old.test.tsx'],
-    }), 'utf8')
+    })
 
     const result = publishRecommendation({
       summaryFile,

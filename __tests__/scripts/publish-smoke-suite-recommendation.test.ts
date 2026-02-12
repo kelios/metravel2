@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeJsonFile } = require('./cli-test-utils')
 const {
   parseArgs,
   getDriftCounts,
@@ -43,16 +43,16 @@ describe('publish-smoke-suite-recommendation', () => {
   })
 
   it('publishes no-drift summary without writing recommendation file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-suite-reco-'))
+    const dir = makeTempDir('publish-suite-reco-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'recommendation.json')
     const stepSummaryFile = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       smokeSuiteAddedFiles: [],
       smokeSuiteRemovedFiles: [],
       smokeSuiteFiles: ['__tests__/a.test.ts'],
-    }), 'utf8')
+    })
 
     const result = publishRecommendation({
       summaryFile,
@@ -71,16 +71,16 @@ describe('publish-smoke-suite-recommendation', () => {
   })
 
   it('publishes drift recommendation and writes output file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-suite-reco-'))
+    const dir = makeTempDir('publish-suite-reco-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'recommendation.json')
     const stepSummaryFile = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       smokeSuiteAddedFiles: ['__tests__/new.test.ts'],
       smokeSuiteRemovedFiles: ['__tests__/old.test.ts'],
       smokeSuiteFiles: ['__tests__/new.test.ts'],
-    }), 'utf8')
+    })
 
     const result = publishRecommendation({
       summaryFile,

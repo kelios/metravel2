@@ -1,6 +1,6 @@
 const path = require('path')
 const fs = require('fs')
-const os = require('os')
+const { makeTempDir } = require('./cli-test-utils')
 const {
   DEFAULT_GUARD_FILE,
   DEFAULT_DOCS_FILE,
@@ -138,7 +138,7 @@ describe('summarize-validator-contracts', () => {
   })
 
   it('writes json summary snapshot', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contracts-summary-'))
+    const dir = makeTempDir('validator-contracts-summary-')
     const output = path.join(dir, 'summary.json')
     const payload = { schemaVersion: SUMMARY_SCHEMA_VERSION, overallStatus: 'pass' }
     expect(writeJsonSummary({ jsonOutput: output, payload })).toBe(true)

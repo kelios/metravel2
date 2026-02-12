@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeJsonFile } = require('./cli-test-utils')
 const {
   parseArgs,
   collectSelectiveDecisions,
@@ -25,9 +25,9 @@ describe('collect-selective-decisions', () => {
   })
 
   it('collects valid decisions and warnings for missing files', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'collect-selective-'))
+    const dir = makeTempDir('collect-selective-')
     const schemaFile = path.join(dir, 'schema.json')
-    fs.writeFileSync(schemaFile, JSON.stringify({
+    writeJsonFile(schemaFile, {
       contractVersion: 1,
       check: 'schema-contract-checks',
       decision: 'run',
@@ -38,7 +38,7 @@ describe('collect-selective-decisions', () => {
       matchedFiles: ['scripts/summarize-quality-gate.js'],
       dryRun: true,
       targetedTests: 5,
-    }), 'utf8')
+    })
 
     const aggregate = collectSelectiveDecisions({
       schemaFile,

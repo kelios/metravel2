@@ -1,13 +1,13 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeTextFile } = require('./cli-test-utils')
 const { readChangedFiles, readChangedFilesWithMeta } = require('@/scripts/changed-files-utils')
 
 describe('changed-files-utils', () => {
   it('reads changed files from file when file exists', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'changed-files-utils-'))
+    const dir = makeTempDir('changed-files-utils-')
     const filePath = path.join(dir, 'changed.txt')
-    fs.writeFileSync(filePath, 'a\nb\n\n', 'utf8')
+    writeTextFile(filePath, 'a\nb\n\n')
 
     expect(readChangedFiles({ changedFilesFile: filePath })).toEqual(['a', 'b'])
     expect(readChangedFilesWithMeta({ changedFilesFile: filePath })).toEqual({

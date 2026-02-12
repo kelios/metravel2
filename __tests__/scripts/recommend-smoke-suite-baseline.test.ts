@@ -5,8 +5,8 @@ const {
   renderRecommendation,
 } = require('@/scripts/recommend-smoke-suite-baseline');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+const { makeTempDir, writeJsonFile } = require('./cli-test-utils');
 
 describe('recommend-smoke-suite-baseline helpers', () => {
   it('parses default args and supports file/format overrides', () => {
@@ -40,15 +40,11 @@ describe('recommend-smoke-suite-baseline helpers', () => {
   });
 
   it('reads suite files from snapshot and trims entries', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'suite-baseline-'));
+    const dir = makeTempDir('suite-baseline-');
     const filePath = path.join(dir, 'quality-summary.json');
-    fs.writeFileSync(
-      filePath,
-      JSON.stringify({
-        smokeSuiteFiles: ['__tests__/a.test.ts', '  __tests__/b.test.ts  ', ''],
-      }),
-      'utf8',
-    );
+    writeJsonFile(filePath, {
+      smokeSuiteFiles: ['__tests__/a.test.ts', '  __tests__/b.test.ts  ', ''],
+    });
 
     const suites = readSnapshot(filePath);
     expect(suites).toEqual(['__tests__/a.test.ts', '__tests__/b.test.ts']);
@@ -57,12 +53,12 @@ describe('recommend-smoke-suite-baseline helpers', () => {
   });
 
   it('throws when smokeSuiteFiles are missing or empty', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'suite-baseline-'));
+    const dir = makeTempDir('suite-baseline-');
     const missingPath = path.join(dir, 'missing.json');
     const emptyPath = path.join(dir, 'empty.json');
 
-    fs.writeFileSync(missingPath, JSON.stringify({}), 'utf8');
-    fs.writeFileSync(emptyPath, JSON.stringify({ smokeSuiteFiles: [] }), 'utf8');
+    writeJsonFile(missingPath, {});
+    writeJsonFile(emptyPath, { smokeSuiteFiles: [] });
 
     expect(() => readSnapshot(missingPath)).toThrow('snapshot.smokeSuiteFiles is missing or not an array');
     expect(() => readSnapshot(emptyPath)).toThrow('snapshot.smokeSuiteFiles is empty');

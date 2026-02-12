@@ -1,11 +1,10 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { runNodeCli, writeJsonFile, writeTextFile } = require('./cli-test-utils')
+const { runNodeCli, writeJsonFile, writeTextFile, makeTempDir } = require('./cli-test-utils')
 
 describe('validator json contract (negative paths)', () => {
   it('returns structured json errors for incident validator', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const dir = makeTempDir('validator-contract-')
     const incidentPath = path.join(dir, 'incident.md')
     writeTextFile(incidentPath, '- Workflow run: <link>\n')
 
@@ -29,7 +28,7 @@ describe('validator json contract (negative paths)', () => {
   })
 
   it('returns structured json errors for incident payload validator', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const dir = makeTempDir('validator-contract-')
     const payloadPath = path.join(dir, 'incident-payload.json')
     writeJsonFile(payloadPath, {
       failureClass: 'selective_contract',
@@ -57,7 +56,7 @@ describe('validator json contract (negative paths)', () => {
   })
 
   it('returns structured json errors for suite baseline validator', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const dir = makeTempDir('validator-contract-')
     const recoPath = path.join(dir, 'reco.json')
     writeJsonFile(recoPath, {
       sourceSnapshot: '',
@@ -102,7 +101,7 @@ describe('validator json contract (negative paths)', () => {
   })
 
   it('returns structured json errors for validator guard comment validator', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const dir = makeTempDir('validator-contract-')
     const commentPath = path.join(dir, 'validator-guard-comment.md')
     writeTextFile(commentPath, [
       '### Validator Guard Comment',
@@ -131,7 +130,7 @@ describe('validator json contract (negative paths)', () => {
   })
 
   it('returns structured json errors for validator error-codes docs table validator', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const dir = makeTempDir('validator-contract-')
     const docsPath = path.join(dir, 'TESTING.md')
     writeTextFile(docsPath, '## Docs without markers\n')
 
@@ -170,7 +169,7 @@ describe('validator json contract (negative paths)', () => {
   })
 
   it('returns structured json errors for validator contracts summary validator', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const dir = makeTempDir('validator-contract-')
     const summaryPath = path.join(dir, 'validator-contracts-summary.json')
     writeTextFile(summaryPath, '{')
 

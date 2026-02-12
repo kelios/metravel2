@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeJsonFile, writeTextFile } = require('./cli-test-utils')
 const {
   parseFileArg,
   readTextFile,
@@ -16,11 +16,11 @@ describe('validation-utils', () => {
   })
 
   it('reads text and json files', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validation-utils-'))
+    const dir = makeTempDir('validation-utils-')
     const textPath = path.join(dir, 'note.txt')
     const jsonPath = path.join(dir, 'data.json')
-    fs.writeFileSync(textPath, 'hello', 'utf8')
-    fs.writeFileSync(jsonPath, JSON.stringify({ a: 1 }), 'utf8')
+    writeTextFile(textPath, 'hello')
+    writeJsonFile(jsonPath, { a: 1 })
 
     expect(readTextFile(textPath, 'text file')).toBe('hello')
     expect(readJsonFile(jsonPath, 'json file')).toEqual({ a: 1 })

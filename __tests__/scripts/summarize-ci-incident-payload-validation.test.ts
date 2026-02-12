@@ -1,7 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
+const { makeTempDir, runNodeCli, writeJsonFile, writeTextFile } = require('./cli-test-utils')
 const {
   parseArgs,
   readValidationFile,
@@ -22,7 +21,7 @@ describe('summarize-ci-incident-payload-validation', () => {
   })
 
   it('reads validation payload from file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-payload-summary-'))
+    const dir = makeTempDir('incident-payload-summary-')
     const payloadFile = path.join(dir, 'validation.json')
     writeJsonFile(payloadFile, {
       ok: false,
@@ -73,7 +72,7 @@ describe('summarize-ci-incident-payload-validation', () => {
   })
 
   it('appends summary to explicit step summary path', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-payload-summary-'))
+    const dir = makeTempDir('incident-payload-summary-')
     const stepSummaryPath = path.join(dir, 'summary.md')
     const appended = appendStepSummary({
       lines: ['### Incident Payload Validation', '- OK: true', ''],
@@ -86,7 +85,7 @@ describe('summarize-ci-incident-payload-validation', () => {
   })
 
   it('writes summary to GITHUB_STEP_SUMMARY in cli mode', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-payload-summary-'))
+    const dir = makeTempDir('incident-payload-summary-')
     const payloadPath = path.join(dir, 'validation.json')
     const stepSummaryPath = path.join(dir, 'step-summary.md')
 
@@ -117,11 +116,11 @@ describe('summarize-ci-incident-payload-validation', () => {
   })
 
   it('reports parse error in cli mode and writes it to step summary', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-payload-summary-'))
+    const dir = makeTempDir('incident-payload-summary-')
     const payloadPath = path.join(dir, 'validation-broken.json')
     const stepSummaryPath = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(payloadPath, '{"ok":false,', 'utf8')
+    writeTextFile(payloadPath, '{"ok":false,')
 
     const result = runNodeCli([
       'scripts/summarize-ci-incident-payload-validation.js',
@@ -140,7 +139,7 @@ describe('summarize-ci-incident-payload-validation', () => {
   })
 
   it('reports missing file in cli mode and writes it to step summary', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-payload-summary-'))
+    const dir = makeTempDir('incident-payload-summary-')
     const payloadPath = path.join(dir, 'missing-validation.json')
     const stepSummaryPath = path.join(dir, 'step-summary.md')
 

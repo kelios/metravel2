@@ -7,6 +7,8 @@ const {
   buildSummaryMarkdown,
   decideExecutionFromMatches,
 } = require('@/scripts/run-schema-contract-tests-if-needed')
+const fs = require('fs')
+const path = require('path')
 
 describe('run-schema-contract-tests-if-needed', () => {
   it('parses args with defaults and overrides', () => {
@@ -99,5 +101,15 @@ describe('run-schema-contract-tests-if-needed', () => {
       '__tests__/scripts/validate-selective-decisions.test.ts',
       '__tests__/scripts/guard-quality-schema-change.test.ts',
     ])
+  })
+
+  it('keeps targeted schema tests list unique', () => {
+    const unique = new Set(SCHEMA_CONTRACT_TESTS)
+    expect(unique.size).toBe(SCHEMA_CONTRACT_TESTS.length)
+  })
+
+  it('keeps targeted schema tests paths resolvable in repository', () => {
+    const missing = SCHEMA_CONTRACT_TESTS.filter((file) => !fs.existsSync(path.resolve(process.cwd(), file)))
+    expect(missing).toEqual([])
   })
 })

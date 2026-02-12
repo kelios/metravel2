@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { writeJsonFile, makeTempDir } = require('./cli-test-utils')
 const {
   INCIDENT_PAYLOAD_SCHEMA_VERSION,
   parseArgs,
@@ -333,15 +333,15 @@ describe('publish-ci-incident-snippet', () => {
   })
 
   it('publishes incident snippet to step summary using snapshot values', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-'))
+    const dir = makeTempDir('ci-incident-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const stepSummaryFile = path.join(dir, 'step-summary.md')
     const outputFile = path.join(dir, 'incident.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       failureClass: 'smoke_only',
       recommendationId: 'QG-004',
-    }), 'utf8')
+    })
 
     const result = publishIncidentSnippet({
       summaryFile,
@@ -379,14 +379,14 @@ describe('publish-ci-incident-snippet', () => {
   })
 
   it('uses validator artifact id for validator_contract failures', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-'))
+    const dir = makeTempDir('ci-incident-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       failureClass: 'validator_contract',
       recommendationId: 'QG-008',
-    }), 'utf8')
+    })
 
     const result = publishIncidentSnippet({
       summaryFile,
@@ -415,14 +415,14 @@ describe('publish-ci-incident-snippet', () => {
   })
 
   it('uses runtime artifact url for config_contract failures', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-'))
+    const dir = makeTempDir('ci-incident-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       failureClass: 'config_contract',
       recommendationId: 'QG-009',
-    }), 'utf8')
+    })
 
     const result = publishIncidentSnippet({
       summaryFile,
@@ -448,14 +448,14 @@ describe('publish-ci-incident-snippet', () => {
   })
 
   it('uses artifact id to build selective artifact url when explicit url is absent', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-'))
+    const dir = makeTempDir('ci-incident-')
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       failureClass: 'selective_contract',
       recommendationId: 'QG-007',
-    }), 'utf8')
+    })
 
     publishIncidentSnippet({
       summaryFile,

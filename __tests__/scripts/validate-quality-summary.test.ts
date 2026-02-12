@@ -1,9 +1,49 @@
 const {
   validate,
   SUPPORTED_SCHEMA_VERSION,
+  REQUIRED_STRING_FIELDS,
+  REQUIRED_BOOLEAN_FIELDS,
+  REQUIRED_NUMBER_FIELDS,
+  OPTIONAL_FIELDS,
 } = require('@/scripts/validate-quality-summary');
 
 describe('validate-quality-summary schema checks', () => {
+  it('keeps schema field contracts stable', () => {
+    expect(REQUIRED_STRING_FIELDS).toEqual([
+      'failureClass',
+      'lintJobResult',
+      'smokeJobResult',
+    ]);
+    expect(REQUIRED_BOOLEAN_FIELDS).toEqual([
+      'overallOk',
+      'lintOk',
+      'smokeOk',
+      'smokeDurationOverBudget',
+      'budgetBlocking',
+    ]);
+    expect(REQUIRED_NUMBER_FIELDS).toEqual([
+      'smokeDurationSeconds',
+      'smokeDurationBudgetSeconds',
+    ]);
+    expect(OPTIONAL_FIELDS).toEqual([
+      'recommendationId',
+      'inconsistencies',
+      'smokeSuiteFiles',
+      'smokeSuiteBaselineProvided',
+      'smokeSuiteAddedFiles',
+      'smokeSuiteRemovedFiles',
+      'selectiveDecisions',
+      'selectiveDecisionWarnings',
+      'selectiveDecisionsAggregateIssue',
+      'runtimeConfigDiagnosticsOk',
+      'runtimeConfigDiagnosticsWarnings',
+      'runtimeConfigDiagnosticsIssue',
+      'validatorContractsSummaryValidationOk',
+      'validatorContractsSummaryValidationWarnings',
+      'validatorContractsSummaryValidationIssue',
+    ]);
+  });
+
   const basePayload = {
     schemaVersion: SUPPORTED_SCHEMA_VERSION,
     overallOk: true,

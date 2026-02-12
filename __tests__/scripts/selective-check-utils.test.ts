@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir } = require('./cli-test-utils')
 const {
   parseChangedFiles,
   getMatchedFiles,
@@ -72,7 +72,7 @@ describe('selective-check-utils', () => {
   })
 
   it('appends summary to file path', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'selective-utils-'))
+    const dir = makeTempDir('selective-utils-')
     const summaryPath = path.join(dir, 'summary.md')
     const appended = appendStepSummary('hello', summaryPath)
     expect(appended).toBe(true)

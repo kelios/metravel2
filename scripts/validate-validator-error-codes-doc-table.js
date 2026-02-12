@@ -3,12 +3,14 @@ const { buildResult, emitResult } = require('./validator-output')
 const { ERROR_CODES } = require('./validator-error-codes')
 const { buildErrorCodesTable } = require('./summarize-validator-error-codes-doc-table')
 
+const DEFAULT_DOCS_FILE = 'docs/TESTING.md'
 const TABLE_START_MARKER = '<!-- validator-error-codes-table:start -->'
 const TABLE_END_MARKER = '<!-- validator-error-codes-table:end -->'
+const UPDATE_COMMAND = 'yarn validator:error-codes:docs:update'
 
 const parseArgs = (argv) => {
   const args = {
-    ...parseFileArg(argv, 'docs/TESTING.md'),
+    ...parseFileArg(argv, DEFAULT_DOCS_FILE),
     output: 'text',
   }
   if (argv.includes('--json')) {
@@ -49,7 +51,7 @@ const validateDetailed = (docsText) => {
     errors.push({
       code: ERROR_CODES.errorCodesDoc.OUTDATED_TABLE,
       field: 'docs-table-content',
-      message: 'Validator error-codes table in docs/TESTING.md is outdated. Run: yarn validator:error-codes:docs:update',
+      message: `Validator error-codes table in ${DEFAULT_DOCS_FILE} is outdated. Run: ${UPDATE_COMMAND}`,
     })
   }
 
@@ -84,8 +86,10 @@ if (require.main === module) {
 }
 
 module.exports = {
+  DEFAULT_DOCS_FILE,
   TABLE_START_MARKER,
   TABLE_END_MARKER,
+  UPDATE_COMMAND,
   parseArgs,
   extractTableBlock,
   validate,

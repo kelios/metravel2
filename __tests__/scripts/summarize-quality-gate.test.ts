@@ -1,7 +1,6 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
-import { runNodeCli, writeJsonFile } from './cli-test-utils';
+import { makeTempDir, runNodeCli, writeJsonFile } from './cli-test-utils';
 
 const scriptPath = path.resolve(process.cwd(), 'scripts/summarize-quality-gate.js');
 const quickMapSnippet = 'QG quick map: QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract | QG-008 validator_contract | QG-009 config_contract';
@@ -40,7 +39,7 @@ describe('summarize-quality-gate script', () => {
   let runtimeConfigDiagnosticsPath: string;
 
   beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-gate-'));
+    tempDir = makeTempDir('quality-gate-');
     eslintPassPath = path.join(tempDir, 'eslint-pass.json');
     eslintFailPath = path.join(tempDir, 'eslint-fail.json');
     jestPassPath = path.join(tempDir, 'jest-pass.json');

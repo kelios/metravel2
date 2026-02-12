@@ -4,10 +4,17 @@ const {
   validate,
   validateDetailed,
   MARKER,
+  ALLOWED_STATUSES,
+  REQUIRED_LABELS,
 } = require('@/scripts/validate-validator-guard-comment')
 const { ERROR_CODES } = require('@/scripts/validator-error-codes')
 
 describe('validate-validator-guard-comment', () => {
+  it('keeps guard comment field contract stable', () => {
+    expect(ALLOWED_STATUSES).toEqual(['PASS', 'FAIL'])
+    expect(REQUIRED_LABELS).toEqual(['Status', 'Reason', 'Workflow run', 'Guard artifact'])
+  })
+
   it('parses args with defaults and --json', () => {
     expect(parseArgs([])).toEqual({
       file: 'test-results/validator-guard-comment-publish.md',

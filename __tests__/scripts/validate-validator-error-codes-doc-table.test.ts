@@ -1,6 +1,8 @@
 const {
+  DEFAULT_DOCS_FILE,
   TABLE_START_MARKER,
   TABLE_END_MARKER,
+  UPDATE_COMMAND,
   parseArgs,
   extractTableBlock,
   validate,
@@ -10,9 +12,17 @@ const { buildErrorCodesTable } = require('@/scripts/summarize-validator-error-co
 const { ERROR_CODES } = require('@/scripts/validator-error-codes')
 
 describe('validate-validator-error-codes-doc-table', () => {
+  it('keeps docs table contract constants stable', () => {
+    expect(DEFAULT_DOCS_FILE).toBe('docs/TESTING.md')
+    expect(TABLE_START_MARKER).toBe('<!-- validator-error-codes-table:start -->')
+    expect(TABLE_END_MARKER).toBe('<!-- validator-error-codes-table:end -->')
+    expect(UPDATE_COMMAND).toBe('yarn validator:error-codes:docs:update')
+    expect(buildErrorCodesTable(ERROR_CODES)).toContain('| Namespace | Key | Code |')
+  })
+
   it('parses args with defaults and --json', () => {
     expect(parseArgs([])).toEqual({
-      file: 'docs/TESTING.md',
+      file: DEFAULT_DOCS_FILE,
       output: 'text',
     })
     expect(parseArgs(['--file', 'tmp/TESTING.md', '--json'])).toEqual({

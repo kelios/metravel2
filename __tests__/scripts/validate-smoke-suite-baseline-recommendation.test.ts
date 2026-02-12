@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeJsonFile } = require('./cli-test-utils')
 const {
   parseArgs,
   readRecommendation,
@@ -90,7 +90,7 @@ describe('validate-smoke-suite-baseline-recommendation', () => {
   })
 
   it('reads recommendation file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-suite-reco-'))
+    const dir = makeTempDir('validate-suite-reco-')
     const filePath = path.join(dir, 'recommendation.json')
     const payload = {
       sourceSnapshot: 'test-results/quality-summary.json',
@@ -99,7 +99,7 @@ describe('validate-smoke-suite-baseline-recommendation', () => {
       baselineValue: '["__tests__/a.test.ts"]',
       ghCommand: "gh variable set SMOKE_SUITE_FILES_BASELINE --body '[\"__tests__/a.test.ts\"]'",
     }
-    fs.writeFileSync(filePath, JSON.stringify(payload), 'utf8')
+    writeJsonFile(filePath, payload)
     expect(readRecommendation(filePath)).toEqual(payload)
     fs.rmSync(dir, { recursive: true, force: true })
   })

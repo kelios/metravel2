@@ -1,25 +1,12 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
-
-const runNode = (args) => {
-  const result = spawnSync(process.execPath, args, {
-    cwd: process.cwd(),
-    encoding: 'utf8',
-  })
-  return {
-    status: result.status ?? 1,
-    stdout: String(result.stdout || ''),
-    stderr: String(result.stderr || ''),
-  }
-}
+const { makeTempDir, runNodeCli, writeJsonFile } = require('./cli-test-utils')
 
 describe('validate-selective-decision script', () => {
   it('passes for valid selective decision file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-selective-'))
+    const dir = makeTempDir('validate-selective-')
     const filePath = path.join(dir, 'decision.json')
-    fs.writeFileSync(filePath, JSON.stringify({
+    writeJsonFile(filePath, {
       contractVersion: 1,
       check: 'validator-contract-checks',
       decision: 'skip',
@@ -30,9 +17,9 @@ describe('validate-selective-decision script', () => {
       matchedFiles: [],
       dryRun: true,
       targetedTests: 7,
-    }), 'utf8')
+    })
 
-    const result = runNode(['scripts/validate-selective-decision.js', '--file', filePath])
+    const result = runNodeCli(['scripts/validate-selective-decision.js', '--file', filePath])
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('selective decision validation passed.')
 
@@ -40,11 +27,11 @@ describe('validate-selective-decision script', () => {
   })
 
   it('fails for malformed selective decision file', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-selective-'))
+    const dir = makeTempDir('validate-selective-')
     const filePath = path.join(dir, 'decision.json')
-    fs.writeFileSync(filePath, JSON.stringify({ contractVersion: 2 }), 'utf8')
+    writeJsonFile(filePath, { contractVersion: 2 })
 
-    const result = runNode(['scripts/validate-selective-decision.js', '--file', filePath])
+    const result = runNodeCli(['scripts/validate-selective-decision.js', '--file', filePath])
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('selective decision validation failed:')
 

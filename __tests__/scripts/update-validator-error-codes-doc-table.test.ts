@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeTextFile } = require('./cli-test-utils')
 const { parseArgs, updateTableBlock } = require('@/scripts/update-validator-error-codes-doc-table')
 const {
   TABLE_START_MARKER,
@@ -36,19 +36,19 @@ describe('update-validator-error-codes-doc-table', () => {
   })
 
   it('updates file content through script main flow', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'update-error-codes-table-'))
+    const dir = makeTempDir('update-error-codes-table-')
     const docsPath = path.join(dir, 'TESTING.md')
-    fs.writeFileSync(docsPath, [
+    writeTextFile(docsPath, [
       '# Title',
       TABLE_START_MARKER,
       '| old | old | old |',
       TABLE_END_MARKER,
       '',
-    ].join('\n'), 'utf8')
+    ].join('\n'))
 
     const before = fs.readFileSync(docsPath, 'utf8')
     const after = updateTableBlock(before)
-    fs.writeFileSync(docsPath, after, 'utf8')
+    writeTextFile(docsPath, after)
 
     const content = fs.readFileSync(docsPath, 'utf8')
     expect(content).toContain('| Namespace | Key | Code |')

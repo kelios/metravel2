@@ -4,8 +4,8 @@ const {
   recommendBaseline,
 } = require('@/scripts/recommend-smoke-baseline');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
+const { makeTempDir, writeJsonFile } = require('./cli-test-utils');
 
 describe('recommend-smoke-baseline script helpers', () => {
   it('computes duration seconds from jest report testResults', () => {
@@ -28,7 +28,7 @@ describe('recommend-smoke-baseline script helpers', () => {
   });
 
   it('recommends baseline from most recent reports within limit', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'smoke-baseline-'));
+    const dir = makeTempDir('smoke-baseline-');
     const fileA = path.join(dir, 'a.json');
     const fileB = path.join(dir, 'b.json');
     const fileC = path.join(dir, 'c.json');
@@ -37,9 +37,9 @@ describe('recommend-smoke-baseline script helpers', () => {
       testResults: [{ startTime: 0, endTime: seconds * 1000 }],
     });
 
-    fs.writeFileSync(fileA, JSON.stringify(mkReport(10)), 'utf8');
-    fs.writeFileSync(fileB, JSON.stringify(mkReport(20)), 'utf8');
-    fs.writeFileSync(fileC, JSON.stringify(mkReport(30)), 'utf8');
+    writeJsonFile(fileA, mkReport(10));
+    writeJsonFile(fileB, mkReport(20));
+    writeJsonFile(fileC, mkReport(30));
 
     const now = Date.now() / 1000;
     fs.utimesSync(fileA, now - 30, now - 30);

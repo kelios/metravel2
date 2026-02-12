@@ -1,6 +1,6 @@
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
+const { makeTempDir, writeTextFile } = require('./cli-test-utils')
 const {
   parseArgs,
   extractLineValue,
@@ -201,16 +201,16 @@ describe('validate-ci-incident-snippet', () => {
   })
 
   it('reads and validates file content', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-incident-'))
+    const dir = makeTempDir('validate-incident-')
     const filePath = path.join(dir, 'incident.md')
-    fs.writeFileSync(filePath, [
+    writeTextFile(filePath, [
       '### CI Smoke Incident',
       '- Workflow run: https://example.com/run/1',
       '- Branch / PR: https://example.com/pull/42',
       '- Failure Class: mixed',
       '- Recommendation ID: QG-005',
       '',
-    ].join('\n'), 'utf8')
+    ].join('\n'))
 
     const content = fs.readFileSync(filePath, 'utf8')
     expect(validate(content)).toEqual([])

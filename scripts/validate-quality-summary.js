@@ -231,5 +231,9 @@ if (require.main === module) {
 
 module.exports = {
   SUPPORTED_SCHEMA_VERSION,
+  REQUIRED_STRING_FIELDS,
+  REQUIRED_BOOLEAN_FIELDS,
+  REQUIRED_NUMBER_FIELDS,
+  OPTIONAL_FIELDS,
   validate,
 }

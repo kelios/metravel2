@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { execFileSync } from 'child_process';
 
@@ -40,4 +41,8 @@ export const writeJsonFile = (filePath: string, payload: unknown) => {
 export const writeTextFile = (filePath: string, content: string) => {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content, 'utf8');
+};
+
+export const makeTempDir = (prefix: string) => {
+  return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 };
