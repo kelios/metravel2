@@ -30,6 +30,7 @@ interface RouteState {
   swapStartEnd: () => void;
   clearRoute: () => void;
   clearRouteAndSetMode: (mode: 'radius' | 'route') => void;
+  forceRebuild: () => void;
   
   setRoute: (route: RouteData | null) => void;
   setBuilding: (isBuilding: boolean) => void;
@@ -177,6 +178,17 @@ export const useRouteStore = create<RouteState>()(
           route: null,
           error: null,
           isBuilding: false,
+        });
+      },
+
+      forceRebuild: () => {
+        const points = get().points;
+        if (points.length < 2) return;
+        // Create new point array references to trigger useRouting re-computation
+        set({
+          points: points.map(p => ({ ...p })),
+          route: null,
+          error: null,
         });
       },
 

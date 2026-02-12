@@ -85,7 +85,7 @@ export const useLeafletIcons = (L: any) => {
         iconSize: [34, 46],
         // Anchor внизу по центру ("носик" пина)
         iconAnchor: [17, 42],
-        popupAnchor: [0, -44],
+        popupAnchor: [10, 5],
       });
     };
 

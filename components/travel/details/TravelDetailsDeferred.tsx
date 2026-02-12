@@ -169,11 +169,16 @@ export const TravelDeferredSections: React.FC<{
       return
     }
     // Map section: next idle after content
-    rIC(() => setCanRenderMap(true), 600)
+    const cancelMap = rIC(() => setCanRenderMap(true), 600)
     // Sidebar (near/popular lists): after map
-    rIC(() => setCanRenderSidebar(true), 1000)
+    const cancelSidebar = rIC(() => setCanRenderSidebar(true), 1000)
     // CommentsSection chunk is ~247ms to parse — load it last.
-    rIC(() => setCanRenderComments(true), 1500)
+    const cancelComments = rIC(() => setCanRenderComments(true), 1500)
+    return () => {
+      cancelMap()
+      cancelSidebar()
+      cancelComments()
+    }
   }, [canRenderHeavy])
 
   useEffect(() => {
@@ -238,7 +243,9 @@ export const TravelDeferredSections: React.FC<{
         {...(Platform.OS === 'web' ? { 'data-section-key': 'comments' } : {})}
       >
         {canRenderComments && travel?.id ? (
-          <CommentsSection travelId={travel.id} />
+          <Suspense fallback={<DeferredCommentsPlaceholder />}>
+            <CommentsSection travelId={travel.id} />
+          </Suspense>
         ) : (
           <DeferredCommentsPlaceholder />
         )}

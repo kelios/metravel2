@@ -11,6 +11,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { CommentsSkeleton } from '@/components/travel/TravelDetailSkeletons';
 import { sendAnalyticsEvent } from '@/utils/analytics';
+import { devWarn } from '@/utils/logger';
 import { usePathname, useRouter } from 'expo-router';
 import { CommentItem } from './CommentItem';
 import { CommentForm } from './CommentForm';
@@ -70,6 +71,78 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     }
   }, [refetchComments, refetchThread]);
 
+  const { topLevel, replies, allComments } = useMemo(() => {
+    const _topLevel: TravelComment[] = [];
+    const _replies: { [key: number]: TravelComment[] } = {};
+    const _allComments: { [key: number]: TravelComment } = {};
+
+    // Сначала индексируем все комментарии по ID
+    comments.forEach((comment) => {
+      _allComments[comment.id] = comment;
+    });
+
+    comments.forEach((comment) => {
+      // Coerce sub_thread to number — some backends return string IDs.
+      const rawParent = comment.sub_thread;
+      const parentId = typeof rawParent === 'string' ? Number(rawParent) : rawParent;
+      const isReply =
+        typeof parentId === 'number' &&
+        !Number.isNaN(parentId) &&
+        parentId > 0 &&
+        parentId !== comment.id &&
+        !!_allComments[parentId];
+
+      if (isReply) {
+        if (!_replies[parentId]) {
+          _replies[parentId] = [];
+        }
+        _replies[parentId].push(comment);
+        return;
+      }
+
+      _topLevel.push(comment);
+    });
+
+    // ⚠️ ВАЖНО: Если topLevel пустой, но есть комментарии - это баг!
+    if (_topLevel.length === 0 && comments.length > 0) {
+      if (!didWarnAllSubThread.current) {
+        console.warn('⚠️ BUG: All comments have sub_thread! Showing them anyway.');
+        didWarnAllSubThread.current = true;
+      }
+      return { topLevel: comments, replies: {} as { [key: number]: TravelComment[] }, allComments: _allComments };
+    }
+
+    return { topLevel: _topLevel, replies: _replies, allComments: _allComments };
+  }, [comments]);
+
+  // Walk up the sub_thread chain to find the top-level ancestor comment ID.
+  const findTopLevelAncestor = useCallback((commentId: number): number | null => {
+    const visited = new Set<number>();
+    let current = allComments[commentId];
+    if (!current) return commentId; // fallback: treat the id itself as top-level
+
+    while (current) {
+      if (visited.has(current.id)) break;
+      visited.add(current.id);
+
+      const rawParent = current.sub_thread;
+      const parentId = typeof rawParent === 'string' ? Number(rawParent) : rawParent;
+      if (
+        typeof parentId !== 'number' ||
+        Number.isNaN(parentId) ||
+        parentId <= 0 ||
+        parentId === current.id ||
+        !allComments[parentId]
+      ) {
+        // `current` is a top-level comment
+        return current.id;
+      }
+      current = allComments[parentId];
+    }
+
+    return commentId;
+  }, [allComments]);
+
   const handleSubmitComment = useCallback(
     (text: string) => {
       if (editComment) {
@@ -98,6 +171,16 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
           },
           {
             onSuccess: () => {
+              // Auto-expand the thread that contains the reply so it's visible.
+              const topLevelId = findTopLevelAncestor(replyTo.id);
+              if (topLevelId != null) {
+                setExpandedThreads((prev) => {
+                  if (prev.has(topLevelId)) return prev;
+                  const next = new Set(prev);
+                  next.add(topLevelId);
+                  return next;
+                });
+              }
               setReplyTo(null);
             },
           }
@@ -111,7 +194,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
         ...(mainThread?.id ? { thread_id: mainThread.id } : { travel_id: travelId }),
       });
     },
-    [travelId, mainThread?.id, replyTo, editComment, createComment, updateComment, replyToComment]
+    [travelId, mainThread?.id, replyTo, editComment, createComment, updateComment, replyToComment, findTopLevelAncestor]
   );
 
   const handleReply = useCallback((comment: TravelComment) => {
@@ -132,49 +215,6 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     setEditComment(null);
   }, []);
 
-  const organizeComments = (comments: TravelComment[]) => {
-    const topLevel: TravelComment[] = [];
-    const replies: { [key: number]: TravelComment[] } = {};
-    const allComments: { [key: number]: TravelComment } = {};
-
-    // Сначала индексируем все комментарии по ID
-    comments.forEach((comment) => {
-      allComments[comment.id] = comment;
-    });
-
-    comments.forEach((comment) => {
-      const parentId = comment.sub_thread;
-      const isReply =
-        typeof parentId === 'number' &&
-        parentId > 0 &&
-        parentId !== comment.id &&
-        !!allComments[parentId];
-
-      if (isReply) {
-        if (!replies[parentId]) {
-          replies[parentId] = [];
-        }
-        replies[parentId].push(comment);
-        return;
-      }
-
-      topLevel.push(comment);
-    });
-
-    // ⚠️ ВАЖНО: Если topLevel пустой, но есть комментарии - это баг!
-    if (topLevel.length === 0 && comments.length > 0) {
-      if (!didWarnAllSubThread.current) {
-        console.warn('⚠️ BUG: All comments have sub_thread! Showing them anyway.');
-        didWarnAllSubThread.current = true;
-      }
-      return { topLevel: comments, replies: {}, allComments };
-    }
-
-    return { topLevel, replies, allComments };
-  };
-
-  const { topLevel, replies, allComments } = organizeComments(comments);
-
   // Функция для получения полной цепочки родительских комментариев
   const getParentChain = useCallback((commentId: number): TravelComment[] => {
     const chain: TravelComment[] = [];
@@ -187,11 +227,15 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
       }
       visited.add(currentComment.id);
 
-      if (currentComment.sub_thread === currentComment.id) {
+      const parentId = typeof currentComment.sub_thread === 'string'
+        ? Number(currentComment.sub_thread)
+        : currentComment.sub_thread;
+
+      if (parentId === currentComment.id) {
         break;
       }
 
-      const parentComment = allComments[currentComment.sub_thread];
+      const parentComment = allComments[parentId];
       if (parentComment) {
         chain.unshift(parentComment); // Добавляем в начало
         currentComment = parentComment;
@@ -288,7 +332,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
   // Show error but still allow creating comments
   const hasError = !!error;
   if (hasError) {
-    console.error('Comments error:', { threadError, commentsError, mainThread, travelId });
+    devWarn('Comments error:', { threadError, commentsError, mainThread, travelId });
   }
 
   return (
@@ -417,7 +461,8 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
                     {isExpanded && (
                       <View style={styles.repliesContainer}>
                         {replies[comment.id].map((reply) => {
-                          const hasParentChain = reply.sub_thread && reply.sub_thread !== comment.id;
+                          const replyParent = typeof reply.sub_thread === 'string' ? Number(reply.sub_thread) : reply.sub_thread;
+                          const hasParentChain = replyParent && replyParent !== comment.id;
 
                           return (
                             <View key={reply.id}>

@@ -99,9 +99,13 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
         setReady(true);
       }
     };
-    rIC(kick, 500);
+    const cancelRIC = rIC(kick, 500);
     const t = setTimeout(kick, 1000);
-    return () => clearTimeout(t);
+    return () => {
+      done = true;
+      cancelRIC();
+      clearTimeout(t);
+    };
   }, [when]);
   return ready ? <>{children}</> : null;
 };

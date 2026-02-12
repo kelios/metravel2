@@ -253,10 +253,7 @@ export function useMapScreenController() {
       routingError,
       onBuildRoute: () => {
         try {
-          // если в режиме route недостаточно точек, buildRouteTo сам должен быть безопасным
-          // (логика в useRouteController)
-          // здесь просто делегируем
-          buildRouteToStable?.({});
+          useRouteStore.getState().forceRebuild();
         } catch {
           // noop
         }

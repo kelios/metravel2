@@ -58,6 +58,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
     routePoints,
     onRemoveRoutePoint,
     onClearRoute,
+    swapStartEnd,
     routeHintDismissed,
     onRouteHintDismiss,
     onAddressSelect,
@@ -148,6 +149,7 @@ const FiltersPanel: React.FC<FiltersPanelProps> = ({
         routePoints={routePoints}
         onRemoveRoutePoint={safeRemoveRoutePoint}
         onClearRoute={onClearRoute}
+        swapStartEnd={swapStartEnd}
         onAddressSelect={onAddressSelect}
         onAddressClear={onAddressClear}
         userLocation={userLocation}

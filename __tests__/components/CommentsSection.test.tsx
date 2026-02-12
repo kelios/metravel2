@@ -438,5 +438,60 @@ describe('CommentsSection', () => {
       expect(screen.getByText('Показать ответы (1)')).toBeTruthy();
       expect(screen.queryByText('Reply to comment 1')).toBeNull();
     });
+
+    it('should show replies when clicking "Показать ответы"', () => {
+      mockUseTravelComments.mockReturnValue({
+        data: [
+          {
+            id: 1, thread: 1, sub_thread: null, user: 1,
+            text: 'Top level comment',
+            created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
+            likes_count: 0,
+          },
+          {
+            id: 2, thread: 1, sub_thread: 1, user: 2,
+            text: 'Reply to comment 1',
+            created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
+            likes_count: 0,
+          },
+        ],
+        isLoading: false, error: null, refetch: jest.fn(),
+      } as any);
+
+      render(<CommentsSection travelId={123} />, { wrapper });
+
+      fireEvent.press(screen.getByText('Показать ответы (1)'));
+
+      expect(screen.getByText('Reply to comment 1')).toBeTruthy();
+      expect(screen.getByText('Свернуть ответы (1)')).toBeTruthy();
+    });
+
+    it('should handle string sub_thread from backend', () => {
+      mockUseTravelComments.mockReturnValue({
+        data: [
+          {
+            id: 10, thread: 1, sub_thread: null, user: 1,
+            text: 'Parent comment',
+            created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
+            likes_count: 0,
+          },
+          {
+            id: 20, thread: 1, sub_thread: '10' as any, user: 2,
+            text: 'Reply with string sub_thread',
+            created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
+            likes_count: 0,
+          },
+        ],
+        isLoading: false, error: null, refetch: jest.fn(),
+      } as any);
+
+      render(<CommentsSection travelId={123} />, { wrapper });
+
+      expect(screen.getByText('Показать ответы (1)')).toBeTruthy();
+
+      fireEvent.press(screen.getByText('Показать ответы (1)'));
+
+      expect(screen.getByText('Reply with string sub_thread')).toBeTruthy();
+    });
   });
 });

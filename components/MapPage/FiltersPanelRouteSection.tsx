@@ -57,6 +57,7 @@ interface FiltersPanelRouteSectionProps {
   routePoints?: RoutePoint[];
   onRemoveRoutePoint?: (id: string) => void;
   onClearRoute?: () => void;
+  swapStartEnd?: () => void;
   onAddressSelect?: (address: string, coords: LatLng, isStart: boolean) => void;
   onAddressClear?: (isStart: boolean) => void;
 }
@@ -78,6 +79,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
   routePoints = [],
   onRemoveRoutePoint,
   onClearRoute,
+  swapStartEnd,
   onAddressSelect,
   onAddressClear,
 }) => {
@@ -179,6 +181,7 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
           endAddress={endAddress}
           onAddressSelect={onAddressSelect}
           onAddressClear={onAddressClear}
+          onSwap={swapStartEnd}
           onClear={onClearRoute}
           compact
         />
@@ -203,36 +206,6 @@ const FiltersPanelRouteSection: React.FC<FiltersPanelRouteSectionProps> = ({
         <View style={styles.routePointsList} testID="route-points-list">
           {routePoints.map((p, index) => {
             const label = String(p?.address || '').trim() || `Точка ${index + 1}`;
-            const canRemove = typeof onRemoveRoutePoint === 'function' && Boolean(p?.id);
-            return (
-              <View key={String(p?.id ?? index)} style={styles.routePointRow}>
-                <View style={styles.routePointPill} testID={`route-point-pill-${String(p?.id ?? index)}`}>
-                  <Text style={styles.routePointPillText} numberOfLines={1}>
-                    {label}
-                  </Text>
-                </View>
-                <IconButton
-                  icon={<MapIcon name="close" size={18} color={colors.textOnDark} />}
-                  label={`Удалить точку: ${label}`}
-                  size="sm"
-                  disabled={!canRemove}
-                  onPress={() => {
-                    if (!canRemove) return;
-                    onRemoveRoutePoint?.(String(p.id));
-                  }}
-                  style={[styles.routePointRemoveBtn, !canRemove && styles.routePointRemoveBtnDisabled]}
-                  testID={`route-point-remove-${String(p?.id ?? index)}`}
-                />
-              </View>
-            );
-          })}
-        </View>
-      )}
-
-      {mode === 'route' && routePoints.length > 2 && (
-        <View style={styles.routePointsList} testID="route-points-list">
-          {routePoints.slice(1, -1).map((p, index) => {
-            const label = String(p?.address || '').trim() || `Точка ${index + 2}`;
             const canRemove = typeof onRemoveRoutePoint === 'function' && Boolean(p?.id);
             return (
               <View key={String(p?.id ?? index)} style={styles.routePointRow}>

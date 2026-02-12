@@ -230,10 +230,17 @@ const OptimizedLCPHeroInner: React.FC<{
           {/* Reserve space inside to prevent micro shifts while image decodes */}
           <div aria-hidden="true" style={{ width: '100%', height: 0, paddingTop: `${ratioInv}%` }} />
           <div
+            aria-hidden="true"
             style={{
               position: 'absolute',
-              inset: 0,
-              backgroundColor: colors.surfaceMuted,
+              inset: '-5%',
+              width: '110%',
+              height: '110%',
+              backgroundImage: `url("${srcWithRetry}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(20px)',
+              zIndex: 0,
             }}
           />
           <img
@@ -572,7 +579,7 @@ function TravelHeroSectionInner({
                   showDots={isMobile}
                   autoPlay={false}
                   preloadCount={0}
-                  blurBackground={false}
+                  blurBackground
                   aspectRatio={aspectRatio as number}
                   mobileHeightPercent={0.7}
                   onFirstImageLoad={handleSliderImageLoad}
@@ -615,7 +622,7 @@ function TravelHeroSectionInner({
               showDots={isMobile}
               autoPlay={false}
               preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
-              blurBackground={Platform.OS !== 'web'}
+              blurBackground
               aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.7}
               onFirstImageLoad={onFirstImageLoad}
