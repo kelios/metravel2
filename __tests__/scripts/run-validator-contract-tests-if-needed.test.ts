@@ -37,6 +37,8 @@ describe('run-validator-contract-tests-if-needed', () => {
     expect(shouldRunForChangedFiles(['scripts/validate-ci-incident-payload.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/summarize-ci-incident-payload-validation.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/summarize-jest-smoke.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/summarize-validator-guard.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/render-validator-guard-comment.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/summary-utils.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['__tests__/scripts/guard-validator-contract-json.test.ts'])).toBe(true)
     expect(shouldRunForChangedFiles(['__tests__/scripts/validator-json-contract.test.ts'])).toBe(true)
@@ -99,6 +101,8 @@ describe('run-validator-contract-tests-if-needed', () => {
       '__tests__/scripts/summary-utils.test.ts',
       '__tests__/scripts/summarize-eslint.test.ts',
       '__tests__/scripts/summarize-jest-smoke.test.ts',
+      '__tests__/scripts/summarize-validator-guard.test.ts',
+      '__tests__/scripts/render-validator-guard-comment.test.ts',
       '__tests__/scripts/validator-output.test.ts',
       '__tests__/scripts/validator-error-codes.test.ts',
       '__tests__/scripts/validate-pr-ci-exception.test.ts',

@@ -207,9 +207,29 @@ jobs:
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
+          mkdir -p test-results
           CHANGED_FILES_CONTENT="$(cat changed_files.txt 2>/dev/null || true)"
           export CHANGED_FILES="$CHANGED_FILES_CONTENT"
-          node scripts/guard-validator-contract-change.js
+          set +e
+          node scripts/guard-validator-contract-change.js --json > test-results/validator-guard.json
+          STATUS=$?
+          set -e
+          if [ "$STATUS" -ne 0 ]; then
+            cat test-results/validator-guard.json
+            exit "$STATUS"
+          fi
+
+      - name: Upload validator guard snapshot (PR)
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-guard
+          path: test-results/validator-guard.json
+          if-no-files-found: ignore
+
+      - name: Publish validator guard summary (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: node scripts/summarize-validator-guard.js --file test-results/validator-guard.json
 
       - name: Download lint report
         uses: actions/download-artifact@v4
@@ -315,12 +335,120 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload quality summary snapshot
+        id: quality_summary_upload
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: quality-summary
           path: test-results/quality-summary.json
           if-no-files-found: ignore
+
+      - name: Render validator guard comment preview (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          QUALITY_SUMMARY_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
+          if [ -n "${{ steps.quality_summary_upload.outputs.artifact-id }}" ]; then
+            QUALITY_SUMMARY_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.quality_summary_upload.outputs.artifact-id }}"
+          fi
+          node scripts/render-validator-guard-comment.js --file test-results/validator-guard.json --output-file test-results/validator-guard-comment.md --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --artifact-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts" --quality-summary-url "$QUALITY_SUMMARY_URL" --json
+
+      - name: Upload validator guard comment preview (PR)
+        id: validator_guard_comment_upload
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-guard-comment
+          path: test-results/validator-guard-comment.md
+          if-no-files-found: ignore
+
+      - name: Render validator guard comment publish body (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          QUALITY_SUMMARY_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
+          if [ -n "${{ steps.quality_summary_upload.outputs.artifact-id }}" ]; then
+            QUALITY_SUMMARY_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.quality_summary_upload.outputs.artifact-id }}"
+          fi
+          COMMENT_ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
+          if [ -n "${{ steps.validator_guard_comment_upload.outputs.artifact-id }}" ]; then
+            COMMENT_ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.validator_guard_comment_upload.outputs.artifact-id }}"
+          fi
+          node scripts/render-validator-guard-comment.js --file test-results/validator-guard.json --output-file test-results/validator-guard-comment-publish.md --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --artifact-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts" --quality-summary-url "$QUALITY_SUMMARY_URL" --comment-artifact-url "$COMMENT_ARTIFACT_URL" --json
+
+      - name: Publish/update validator guard PR comment
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const guardPath = 'test-results/validator-guard.json';
+            if (!fs.existsSync(guardPath)) {
+              core.info('validator-guard.json is missing; skipping PR comment lifecycle');
+              return;
+            }
+            let guardPayload = null;
+            try {
+              guardPayload = JSON.parse(fs.readFileSync(guardPath, 'utf8'));
+            } catch (error) {
+              core.warning(`Failed to parse validator-guard.json: ${String(error)}`);
+              return;
+            }
+            const isOk = Boolean(guardPayload?.ok);
+            const marker = '<!-- validator-guard-comment -->';
+            const previewPath = 'test-results/validator-guard-comment-publish.md';
+            const fallbackBody = `${marker}\n### Validator Guard Comment\n\n- Status: FAIL\n- Reason: Unable to load generated guard comment preview.\n- Workflow run: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}\n- Guard artifact: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}#artifacts\n`;
+            const previewBody = fs.existsSync(previewPath)
+              ? fs.readFileSync(previewPath, 'utf8')
+              : fallbackBody;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) =>
+              comment?.user?.type === 'Bot' &&
+              String(comment?.body || '').includes(marker)
+            );
+
+            if (!isOk && existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body: previewBody,
+              });
+              core.info(`Updated validator guard comment: ${existing.id}`);
+              return;
+            }
+
+            if (!isOk && !existing) {
+              const created = await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number,
+                body: previewBody,
+              });
+              core.info(`Created validator guard comment: ${created.data.id}`);
+              return;
+            }
+
+            if (isOk && existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body: previewBody,
+              });
+              core.info(`Resolved validator guard comment: ${existing.id}`);
+              return;
+            }
+
+            core.info('Guard is passing and no managed comment exists; nothing to update.');
 
       - name: Publish incident snippet (PR, when gate failed)
         if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')

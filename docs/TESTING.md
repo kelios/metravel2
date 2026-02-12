@@ -177,6 +177,14 @@ Jobs:
   - In PR runs, validates downloaded selective decision artifacts before publishing summary (missing artifacts are reported as summary warnings).
   - In PR runs, builds and validates a single selective decisions aggregate before calling `scripts/summarize-quality-gate.js`.
   - In PR runs, uploads aggregate selective decisions snapshot as `selective-decisions` artifact (`test-results/selective-decisions.json`).
+  - In PR runs, guard validator contract step also emits machine-readable `validator-guard` artifact (`test-results/validator-guard.json`) via `scripts/guard-validator-contract-change.js --json`.
+  - In PR runs, quality-summary also renders a markdown comment preview from guard payload and uploads `validator-guard-comment` artifact (`test-results/validator-guard-comment.md`).
+  - In PR runs, CI manages a marker-based PR comment lifecycle for validator guard:
+    - when `ok=false`: creates or updates comment from `validator-guard-comment.md`
+    - when `ok=true`: updates existing marker comment into resolved/pass status
+    - comment includes direct links to workflow run and artifacts
+    - quality-summary link uses artifact-id URL when available (falls back to run `#artifacts`)
+    - best-effort and non-blocking (`continue-on-error`).
   - For failed PR gates, also prints a ready-to-copy incident snippet into job summary via `scripts/publish-ci-incident-snippet.js`.
   - Validates incident snippet structure and required auto fields via `scripts/validate-ci-incident-snippet.js`.
   - Uploads `ci-incident-snippet` artifact (`test-results/ci-incident-snippet.md`) for incident/audit trail.
@@ -507,6 +515,8 @@ node scripts/summarize-quality-gate.js test-results/eslint-results.json test-res
   - `scripts/summarize-jest-smoke.js`
   - `scripts/summarize-quality-gate.js`
   - `scripts/summarize-ci-incident-payload-validation.js`
+  - `scripts/summarize-validator-guard.js`
+  - `scripts/render-validator-guard-comment.js`
 - Regression requirement:
   - summary script changes should include/refresh CLI integration tests in `__tests__/scripts/summarize-*.test.ts`.
   - changes to `scripts/summary-utils.js` should include `__tests__/scripts/summary-utils.test.ts`.
@@ -523,6 +533,10 @@ Guard machine-readable mode:
 
 ```bash
 CHANGED_FILES="scripts/summarize-jest-smoke.js" node scripts/guard-validator-contract-change.js --json
+node scripts/summarize-validator-guard.js --file test-results/validator-guard.json
+node scripts/render-validator-guard-comment.js --file test-results/validator-guard.json --output-file test-results/validator-guard-comment.md
+# optional links for triage context
+node scripts/render-validator-guard-comment.js --file test-results/validator-guard.json --output-file test-results/validator-guard-comment.md --run-url "https://github.com/org/repo/actions/runs/123" --artifact-url "https://github.com/org/repo/actions/runs/123#artifacts" --quality-summary-url "https://github.com/org/repo/actions/runs/123#artifacts"
 ```
 
 ### PR Exception format

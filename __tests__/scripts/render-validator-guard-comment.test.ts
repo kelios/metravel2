@@ -1,0 +1,132 @@
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+const { spawnSync } = require('child_process')
+const {
+  parseArgs,
+  buildCommentMarkdown,
+  COMMENT_MARKER,
+} = require('@/scripts/render-validator-guard-comment')
+
+describe('render-validator-guard-comment', () => {
+  it('parses args with defaults and overrides', () => {
+    expect(parseArgs([])).toEqual({
+      file: 'test-results/validator-guard.json',
+      outputFile: 'test-results/validator-guard-comment.md',
+      runUrl: '',
+      artifactUrl: '',
+      qualitySummaryUrl: '',
+      commentArtifactUrl: '',
+      output: 'text',
+    })
+    expect(parseArgs(['--file', 'a.json', '--output-file', 'b.md', '--run-url', 'https://example.com/run/1', '--artifact-url', 'https://example.com/artifacts/2', '--quality-summary-url', 'https://example.com/artifacts/quality-summary', '--comment-artifact-url', 'https://example.com/artifacts/comment', '--json'])).toEqual({
+      file: 'a.json',
+      outputFile: 'b.md',
+      runUrl: 'https://example.com/run/1',
+      artifactUrl: 'https://example.com/artifacts/2',
+      qualitySummaryUrl: 'https://example.com/artifacts/quality-summary',
+      commentArtifactUrl: 'https://example.com/artifacts/comment',
+      output: 'json',
+    })
+  })
+
+  it('builds markdown for failing guard payload', () => {
+    const markdown = buildCommentMarkdown({
+      file: 'test-results/validator-guard.json',
+      payload: {
+        ok: false,
+        reason: 'Guarded files changed without companions.',
+        touchedFiles: ['scripts/summarize-jest-smoke.js'],
+        missing: ['__tests__/scripts/summarize-jest-smoke.test.ts'],
+        hints: ['Expected summary companion test for scripts/summarize-jest-smoke.js: __tests__/scripts/summarize-jest-smoke.test.ts'],
+      },
+      missing: false,
+      parseError: '',
+      runUrl: 'https://github.com/org/repo/actions/runs/123',
+      artifactUrl: 'https://github.com/org/repo/actions/runs/123#artifacts',
+      qualitySummaryUrl: 'https://github.com/org/repo/actions/runs/123#artifacts',
+      commentArtifactUrl: 'https://github.com/org/repo/actions/runs/123/artifacts/789',
+    })
+    expect(markdown).toContain(COMMENT_MARKER)
+    expect(markdown).toContain('Status: FAIL')
+    expect(markdown).toContain('Workflow run: https://github.com/org/repo/actions/runs/123')
+    expect(markdown).toContain('Guard artifact: https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(markdown).toContain('Quality summary artifact: https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(markdown).toContain('Guard comment artifact: https://github.com/org/repo/actions/runs/123/artifacts/789')
+    expect(markdown).toContain('Missing required files')
+    expect(markdown).toContain('Expected summary companion test')
+  })
+
+  it('builds markdown for passing guard payload', () => {
+    const markdown = buildCommentMarkdown({
+      file: 'test-results/validator-guard.json',
+      payload: {
+        ok: true,
+        reason: 'Guard checks passed.',
+        touchedFiles: [],
+        missing: [],
+        hints: [],
+      },
+      missing: false,
+      parseError: '',
+      runUrl: 'https://github.com/org/repo/actions/runs/123',
+      artifactUrl: 'https://github.com/org/repo/actions/runs/123#artifacts',
+      qualitySummaryUrl: 'https://github.com/org/repo/actions/runs/123#artifacts',
+      commentArtifactUrl: 'https://github.com/org/repo/actions/runs/123/artifacts/789',
+    })
+    expect(markdown).toContain('Status: PASS')
+    expect(markdown).toContain('Workflow run: https://github.com/org/repo/actions/runs/123')
+    expect(markdown).toContain('Guard artifact: https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(markdown).toContain('Quality summary artifact: https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(markdown).toContain('Guard comment artifact: https://github.com/org/repo/actions/runs/123/artifacts/789')
+    expect(markdown).not.toContain('Missing required files')
+  })
+
+  it('writes markdown file and returns json payload in cli mode', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'render-validator-guard-'))
+    const inputFile = path.join(dir, 'validator-guard.json')
+    const outputFile = path.join(dir, 'validator-guard-comment.md')
+
+    fs.writeFileSync(inputFile, JSON.stringify({
+      contractVersion: 1,
+      ok: false,
+      reason: 'Guard failed',
+      touchedFiles: ['scripts/summarize-jest-smoke.js'],
+      missing: ['__tests__/scripts/summarize-jest-smoke.test.ts'],
+      hints: ['Expected summary companion test for scripts/summarize-jest-smoke.js: __tests__/scripts/summarize-jest-smoke.test.ts'],
+    }), 'utf8')
+
+    const result = spawnSync(process.execPath, [
+      'scripts/render-validator-guard-comment.js',
+      '--file',
+      inputFile,
+      '--output-file',
+      outputFile,
+      '--run-url',
+      'https://github.com/org/repo/actions/runs/123',
+      '--artifact-url',
+      'https://github.com/org/repo/actions/runs/123#artifacts',
+      '--quality-summary-url',
+      'https://github.com/org/repo/actions/runs/123#artifacts',
+      '--comment-artifact-url',
+      'https://github.com/org/repo/actions/runs/123/artifacts/789',
+      '--json',
+    ], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+    })
+
+    expect(result.status).toBe(0)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.outputFile).toBe(outputFile)
+    expect(payload.markdown).toContain(COMMENT_MARKER)
+    expect(payload.markdown).toContain('Validator Guard Comment')
+    expect(payload.markdown).toContain('Workflow run: https://github.com/org/repo/actions/runs/123')
+    expect(payload.markdown).toContain('Quality summary artifact: https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(payload.markdown).toContain('Guard comment artifact: https://github.com/org/repo/actions/runs/123/artifacts/789')
+    const markdown = fs.readFileSync(outputFile, 'utf8')
+    expect(markdown).toContain('Missing required files')
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+})
