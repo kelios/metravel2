@@ -62,6 +62,7 @@ describe('validate-ci-incident-payload', () => {
       'none',
       'selective_decisions',
       'validator_contracts',
+      'runtime_config_diagnostics',
     ])
   })
 
@@ -94,7 +95,7 @@ describe('validate-ci-incident-payload', () => {
     payload.validatorArtifactUrl = ''
     payload.runtimeArtifactSource = 'fallback'
     payload.runtimeArtifactUrl = ''
-    payload.primaryArtifactKind = 'none'
+    payload.primaryArtifactKind = 'runtime_config_diagnostics'
     payload.markdown = [
       '### CI Smoke Incident',
       '- Failure Class: config_contract',
@@ -114,7 +115,7 @@ describe('validate-ci-incident-payload', () => {
     payload.validatorArtifactUrl = ''
     payload.runtimeArtifactSource = 'none'
     payload.runtimeArtifactUrl = ''
-    payload.primaryArtifactKind = 'none'
+    payload.primaryArtifactKind = 'runtime_config_diagnostics'
     payload.markdown = [
       '### CI Smoke Incident',
       '- Failure Class: config_contract',

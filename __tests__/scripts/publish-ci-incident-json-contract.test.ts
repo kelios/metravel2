@@ -127,7 +127,7 @@ describe('publish incident json contract', () => {
     expect(payload.recommendationId).toBe('QG-009')
     expect(payload.runtimeArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123#artifacts')
     expect(payload.runtimeArtifactSource).toBe('explicit')
-    expect(payload.primaryArtifactKind).toBe('none')
+    expect(payload.primaryArtifactKind).toBe('runtime_config_diagnostics')
     expect(payload.markdown).toContain('Runtime config diagnostics artifact')
 
     fs.rmSync(dir, { recursive: true, force: true })

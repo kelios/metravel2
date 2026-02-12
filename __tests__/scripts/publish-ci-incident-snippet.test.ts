@@ -210,6 +210,7 @@ describe('publish-ci-incident-snippet', () => {
   it('derives primary artifact kind from failure class', () => {
     expect(derivePrimaryArtifactKind('selective_contract')).toBe('selective_decisions')
     expect(derivePrimaryArtifactKind('validator_contract')).toBe('validator_contracts')
+    expect(derivePrimaryArtifactKind('config_contract')).toBe('runtime_config_diagnostics')
     expect(derivePrimaryArtifactKind('smoke_only')).toBe('none')
   })
 
@@ -442,7 +443,7 @@ describe('publish-ci-incident-snippet', () => {
     expect(markdown).toContain('- Runtime config diagnostics artifact: https://github.com/org/repo/actions/runs/123#artifacts')
     expect(result.runtimeArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123#artifacts')
     expect(result.runtimeArtifactSource).toBe('explicit')
-    expect(result.primaryArtifactKind).toBe('none')
+    expect(result.primaryArtifactKind).toBe('runtime_config_diagnostics')
     fs.rmSync(dir, { recursive: true, force: true })
   })
 

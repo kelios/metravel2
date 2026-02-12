@@ -19,7 +19,7 @@ const ALLOWED_FAILURE_CLASSES = new Set([
 ])
 
 const ALLOWED_ARTIFACT_SOURCES = new Set(['explicit', 'run_id', 'fallback', 'none'])
-const ALLOWED_PRIMARY_ARTIFACT_KINDS = new Set(['none', 'selective_decisions', 'validator_contracts'])
+const ALLOWED_PRIMARY_ARTIFACT_KINDS = new Set(['none', 'selective_decisions', 'validator_contracts', 'runtime_config_diagnostics'])
 
 const parseArgs = (argv) => {
   const args = {
@@ -79,7 +79,7 @@ const validateDetailed = (payload) => {
     errors.push({
       code: ERROR_CODES.incidentPayload.INVALID_PRIMARY_ARTIFACT_KIND,
       field: 'primaryArtifactKind',
-      message: 'Field "primaryArtifactKind" must be one of: none, selective_decisions, validator_contracts.',
+      message: 'Field "primaryArtifactKind" must be one of: none, selective_decisions, validator_contracts, runtime_config_diagnostics.',
     })
   }
 
@@ -180,9 +180,17 @@ const validateDetailed = (payload) => {
       message: 'Validator contract incidents must use primaryArtifactKind "validator_contracts".',
     })
   }
+  if (failureClass === 'config_contract' && primaryArtifactKind !== 'runtime_config_diagnostics') {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_PRIMARY_ARTIFACT_KIND,
+      field: 'primaryArtifactKind',
+      message: 'Config contract incidents must use primaryArtifactKind "runtime_config_diagnostics".',
+    })
+  }
   if (
     failureClass !== 'selective_contract'
     && failureClass !== 'validator_contract'
+    && failureClass !== 'config_contract'
     && primaryArtifactKind !== 'none'
   ) {
     errors.push({

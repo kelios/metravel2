@@ -186,6 +186,7 @@ describe('ci incident pipeline integration', () => {
     expect(validatePayload(published)).toEqual([])
     expect(published.runtimeArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123#artifacts')
     expect(published.runtimeArtifactSource).toBe('explicit')
+    expect(published.primaryArtifactKind).toBe('runtime_config_diagnostics')
 
     fs.rmSync(dir, { recursive: true, force: true })
   })
