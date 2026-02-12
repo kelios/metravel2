@@ -25,25 +25,26 @@ const collectFiles = (dir) => {
   return out
 }
 
-describe('temp dir policy', () => {
-  it('keeps mkdtempSync usage only in cli-test-utils helper', () => {
+describe('cli runner policy', () => {
+  it('keeps spawnSync/execFileSync usage only in cli-test-utils helper', () => {
     const files = collectFiles(scriptsTestsDir)
     const forbidden = []
-    const needle = 'mkdtemp' + 'Sync('
+    const spawnNeedle = 'spawn' + 'Sync('
+    const execNeedle = 'execFile' + 'Sync('
 
     for (const filePath of files) {
       const rel = path.relative(scriptsTestsDir, filePath).replace(/\\/g, '/')
       if (allowedFiles.has(rel)) continue
 
       const content = fs.readFileSync(filePath, 'utf8')
-      if (content.includes(needle)) {
+      if (content.includes(spawnNeedle) || content.includes(execNeedle)) {
         forbidden.push(rel)
       }
     }
 
     ensure(
       forbidden.length === 0,
-      `Found forbidden mkdtempSync usage in: [${forbidden.join(', ')}]. Use makeTempDir from __tests__/scripts/cli-test-utils.ts.`,
+      `Found forbidden direct CLI process calls in: [${forbidden.join(', ')}]. Use runNodeCli from __tests__/scripts/cli-test-utils.ts.`,
     )
   })
 })
