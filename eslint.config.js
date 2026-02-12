@@ -139,6 +139,14 @@ module.exports = [
     }
   },
   {
+    files: ["utils/runtimeConfigContract.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      }
+    }
+  },
+  {
     files: [
       "**/__tests__/**/*.{js,jsx,ts,tsx}",
       "**/?(*.)+(spec|test).{js,jsx,ts,tsx}",
