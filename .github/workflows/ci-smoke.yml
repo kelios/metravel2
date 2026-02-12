@@ -97,6 +97,41 @@ jobs:
           path: test-results/validator-selective-decision.json
           if-no-files-found: ignore
 
+  runtime-config-diagnostics:
+    # Early gate: validate critical runtime env configuration contract before lint/smoke.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.19.4'
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Validate runtime config diagnostics
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL || 'https://example.test' }}
+          EXPO_PUBLIC_ORS_API_KEY: ${{ vars.EXPO_PUBLIC_ORS_API_KEY || vars.ROUTE_SERVICE_KEY || 'ci-placeholder-routing-key' }}
+        run: |
+          mkdir -p test-results
+          node scripts/runtime-config-diagnostics.js --json > test-results/runtime-config-diagnostics.json
+
+      - name: Upload runtime config diagnostics report
+        id: runtime_config_diagnostics_upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-config-diagnostics
+          path: test-results/runtime-config-diagnostics.json
+          if-no-files-found: ignore
+
   # Gating job: static analysis must pass for merge.
   # Always publishes a JSON artifact + markdown summary for fast diagnosis.
   lint:
@@ -179,6 +214,7 @@ jobs:
     needs:
       - schema-contract-checks
       - validator-contract-checks
+      - runtime-config-diagnostics
       - lint
       - smoke-critical
 
@@ -236,6 +272,13 @@ jobs:
         with:
           name: eslint-results
           path: test-results/lint
+          if-no-artifact-found: ignore
+
+      - name: Download runtime config diagnostics report
+        uses: actions/download-artifact@v4
+        with:
+          name: runtime-config-diagnostics
+          path: test-results/runtime-config
           if-no-artifact-found: ignore
 
       - name: Download smoke report
@@ -338,11 +381,12 @@ jobs:
         run: |
           EXTRA_DECISION_ARGS=""
           EXTRA_VALIDATOR_ARGS=""
+          EXTRA_RUNTIME_ARGS="--runtime-config-diagnostics-file test-results/runtime-config/runtime-config-diagnostics.json"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             EXTRA_DECISION_ARGS="--selective-decisions-file test-results/selective-decisions.json"
             EXTRA_VALIDATOR_ARGS="--validator-contracts-summary-validation-file test-results/validator-contracts-summary-validation.json"
           fi
-          node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json $EXTRA_DECISION_ARGS $EXTRA_VALIDATOR_ARGS
+          node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json $EXTRA_RUNTIME_ARGS $EXTRA_DECISION_ARGS $EXTRA_VALIDATOR_ARGS
 
       - name: Validate quality summary snapshot
         if: always()
@@ -579,20 +623,20 @@ jobs:
             core.info('Guard is passing and no managed comment exists; nothing to update.');
 
       - name: Publish incident snippet (PR, when gate failed)
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract' || steps.quality_failure_class.outputs.failure_class == 'config_contract')
         env:
           LINT_RESULT: ${{ needs.lint.result }}
           SMOKE_RESULT: ${{ needs.smoke-critical.result }}
         run: |
           ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
-          node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes" --artifact-url "$ARTIFACT_URL" --artifact-id "${{ steps.selective_decisions_upload.outputs.artifact-id }}" --validator-artifact-url "$ARTIFACT_URL" --validator-artifact-id "${{ steps.validator_contracts_summary_validation_upload.outputs.artifact-id }}" --json > test-results/ci-incident-payload.json
+          node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes" --artifact-url "$ARTIFACT_URL" --artifact-id "${{ steps.selective_decisions_upload.outputs.artifact-id }}" --validator-artifact-url "$ARTIFACT_URL" --validator-artifact-id "${{ steps.validator_contracts_summary_validation_upload.outputs.artifact-id }}" --runtime-artifact-url "$ARTIFACT_URL" --json > test-results/ci-incident-payload.json
 
       - name: Validate incident snippet (PR, when gate failed)
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract' || steps.quality_failure_class.outputs.failure_class == 'config_contract')
         run: node scripts/validate-ci-incident-snippet.js --file test-results/ci-incident-snippet.md
 
       - name: Validate and summarize incident payload (PR, when gate failed)
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract' || steps.quality_failure_class.outputs.failure_class == 'config_contract')
         run: |
           set +e
           node scripts/validate-ci-incident-payload.js --file test-results/ci-incident-payload.json --json > test-results/ci-incident-payload-validation.json
@@ -606,7 +650,7 @@ jobs:
           fi
 
       - name: Upload incident snippet artifact
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract' || steps.quality_failure_class.outputs.failure_class == 'config_contract')
         uses: actions/upload-artifact@v4
         with:
           name: ci-incident-snippet
@@ -614,7 +658,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload incident payload artifact
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract' || steps.quality_failure_class.outputs.failure_class == 'config_contract')
         uses: actions/upload-artifact@v4
         with:
           name: ci-incident-payload
@@ -622,7 +666,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload incident payload validation artifact
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract' || steps.quality_failure_class.outputs.failure_class == 'config_contract')
         uses: actions/upload-artifact@v4
         with:
           name: ci-incident-payload-validation

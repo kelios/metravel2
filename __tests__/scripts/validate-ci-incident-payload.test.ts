@@ -84,6 +84,48 @@ describe('validate-ci-incident-payload', () => {
     expect(validate(payload)).toEqual([])
   })
 
+  it('passes for config_contract payload with no contract artifacts', () => {
+    const payload = validPayload()
+    payload.failureClass = 'config_contract'
+    payload.recommendationId = 'QG-009'
+    payload.artifactSource = 'none'
+    payload.artifactUrl = ''
+    payload.validatorArtifactSource = 'none'
+    payload.validatorArtifactUrl = ''
+    payload.runtimeArtifactSource = 'fallback'
+    payload.runtimeArtifactUrl = ''
+    payload.primaryArtifactKind = 'none'
+    payload.markdown = [
+      '### CI Smoke Incident',
+      '- Failure Class: config_contract',
+      '- Recommendation ID: QG-009',
+      '',
+    ].join('\n')
+    expect(validate(payload)).toEqual([])
+  })
+
+  it('fails for config_contract payload when runtime artifact source is missing', () => {
+    const payload = validPayload()
+    payload.failureClass = 'config_contract'
+    payload.recommendationId = 'QG-009'
+    payload.artifactSource = 'none'
+    payload.artifactUrl = ''
+    payload.validatorArtifactSource = 'none'
+    payload.validatorArtifactUrl = ''
+    payload.runtimeArtifactSource = 'none'
+    payload.runtimeArtifactUrl = ''
+    payload.primaryArtifactKind = 'none'
+    payload.markdown = [
+      '### CI Smoke Incident',
+      '- Failure Class: config_contract',
+      '- Recommendation ID: QG-009',
+      '',
+    ].join('\n')
+
+    const errors = validateDetailed(payload)
+    expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_SOURCE')).toBe(true)
+  })
+
   it('fails when validator contract source/url are inconsistent', () => {
     const payload = validPayload()
     payload.failureClass = 'validator_contract'

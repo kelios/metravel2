@@ -38,6 +38,9 @@ describe('validate-quality-summary schema checks', () => {
     ],
     selectiveDecisionWarnings: [],
     selectiveDecisionsAggregateIssue: false,
+    runtimeConfigDiagnosticsOk: true,
+    runtimeConfigDiagnosticsWarnings: [],
+    runtimeConfigDiagnosticsIssue: false,
     validatorContractsSummaryValidationOk: true,
     validatorContractsSummaryValidationWarnings: [],
     validatorContractsSummaryValidationIssue: false,
@@ -78,6 +81,9 @@ describe('validate-quality-summary schema checks', () => {
       }],
       selectiveDecisionWarnings: [1],
       selectiveDecisionsAggregateIssue: 'yes',
+      runtimeConfigDiagnosticsOk: 'yes',
+      runtimeConfigDiagnosticsWarnings: [1],
+      runtimeConfigDiagnosticsIssue: 'yes',
       validatorContractsSummaryValidationOk: 'yes',
       validatorContractsSummaryValidationWarnings: [1],
       validatorContractsSummaryValidationIssue: 'yes',
@@ -92,6 +98,9 @@ describe('validate-quality-summary schema checks', () => {
     expect(errors.join('\n')).toContain('smokeSuiteRemovedFiles');
     expect(errors.join('\n')).toContain('selectiveDecisionWarnings');
     expect(errors.join('\n')).toContain('selectiveDecisionsAggregateIssue');
+    expect(errors.join('\n')).toContain('runtimeConfigDiagnosticsOk');
+    expect(errors.join('\n')).toContain('runtimeConfigDiagnosticsWarnings');
+    expect(errors.join('\n')).toContain('runtimeConfigDiagnosticsIssue');
     expect(errors.join('\n')).toContain('validatorContractsSummaryValidationOk');
     expect(errors.join('\n')).toContain('validatorContractsSummaryValidationWarnings');
     expect(errors.join('\n')).toContain('validatorContractsSummaryValidationIssue');

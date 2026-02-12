@@ -10,9 +10,11 @@ const {
   resolveArtifactUrl,
   resolveArtifactSource,
   resolveValidatorArtifactSource,
+  resolveRuntimeArtifactSource,
   derivePrimaryArtifactKind,
   normalizeFollowUp,
   normalizeValidatorFollowUp,
+  normalizeRuntimeFollowUp,
   renderIncidentPayload,
   publishIncidentSnippet,
 } = require('@/scripts/publish-ci-incident-snippet')
@@ -34,6 +36,8 @@ describe('publish-ci-incident-snippet', () => {
       artifactId: '',
       validatorArtifactUrl: '',
       validatorArtifactId: '',
+      runtimeArtifactUrl: '',
+      runtimeArtifactId: '',
     })
 
     expect(parseArgs(['--summary-file', 'a.json', '--workflow-run', 'run-url', '--branch-pr', 'pr-url'])).toEqual({
@@ -51,6 +55,8 @@ describe('publish-ci-incident-snippet', () => {
       artifactId: '',
       validatorArtifactUrl: '',
       validatorArtifactId: '',
+      runtimeArtifactUrl: '',
+      runtimeArtifactId: '',
     })
     expect(parseArgs(['--artifact-url', 'https://example.com/artifacts'])).toEqual({
       summaryFile: 'test-results/quality-summary.json',
@@ -67,6 +73,8 @@ describe('publish-ci-incident-snippet', () => {
       artifactId: '',
       validatorArtifactUrl: '',
       validatorArtifactId: '',
+      runtimeArtifactUrl: '',
+      runtimeArtifactId: '',
     })
     expect(parseArgs(['--artifact-id', '123'])).toEqual({
       summaryFile: 'test-results/quality-summary.json',
@@ -83,6 +91,8 @@ describe('publish-ci-incident-snippet', () => {
       artifactId: '123',
       validatorArtifactUrl: '',
       validatorArtifactId: '',
+      runtimeArtifactUrl: '',
+      runtimeArtifactId: '',
     })
   })
 
@@ -102,6 +112,8 @@ describe('publish-ci-incident-snippet', () => {
       artifactId: '',
       validatorArtifactUrl: '',
       validatorArtifactId: '',
+      runtimeArtifactUrl: '',
+      runtimeArtifactId: '',
     })
   })
 
@@ -228,6 +240,33 @@ describe('publish-ci-incident-snippet', () => {
     })).toBe('none')
   })
 
+  it('resolves runtime artifact source classification', () => {
+    expect(resolveRuntimeArtifactSource({
+      failureClass: 'config_contract',
+      artifactUrl: 'https://example.com/custom',
+      workflowRun: 'https://github.com/org/repo/actions/runs/123',
+      artifactId: '111',
+    })).toBe('explicit')
+    expect(resolveRuntimeArtifactSource({
+      failureClass: 'config_contract',
+      artifactUrl: '',
+      workflowRun: 'https://github.com/org/repo/actions/runs/123',
+      artifactId: '111',
+    })).toBe('run_id')
+    expect(resolveRuntimeArtifactSource({
+      failureClass: 'config_contract',
+      artifactUrl: '',
+      workflowRun: '',
+      artifactId: '',
+    })).toBe('fallback')
+    expect(resolveRuntimeArtifactSource({
+      failureClass: 'smoke_only',
+      artifactUrl: '',
+      workflowRun: '',
+      artifactId: '',
+    })).toBe('none')
+  })
+
   it('normalizes follow-up for validator contract failures', () => {
     expect(normalizeValidatorFollowUp({
       failureClass: 'validator_contract',
@@ -240,6 +279,24 @@ describe('publish-ci-incident-snippet', () => {
       artifactUrl: 'https://github.com/org/repo/actions/runs/1#artifacts',
     })).toContain('https://github.com/org/repo/actions/runs/1#artifacts')
     expect(normalizeValidatorFollowUp({
+      failureClass: 'smoke_only',
+      followUp: 'yes',
+      artifactUrl: '',
+    })).toBe('yes')
+  })
+
+  it('normalizes follow-up for config contract failures', () => {
+    expect(normalizeRuntimeFollowUp({
+      failureClass: 'config_contract',
+      followUp: 'yes',
+      artifactUrl: '',
+    })).toContain('runtime-config-diagnostics artifact')
+    expect(normalizeRuntimeFollowUp({
+      failureClass: 'config_contract',
+      followUp: 'yes',
+      artifactUrl: 'https://github.com/org/repo/actions/runs/1#artifacts',
+    })).toContain('https://github.com/org/repo/actions/runs/1#artifacts')
+    expect(normalizeRuntimeFollowUp({
       failureClass: 'smoke_only',
       followUp: 'yes',
       artifactUrl: '',
@@ -268,6 +325,8 @@ describe('publish-ci-incident-snippet', () => {
       artifactSource: 'none',
       validatorArtifactUrl: '',
       validatorArtifactSource: 'none',
+      runtimeArtifactUrl: '',
+      runtimeArtifactSource: 'none',
       primaryArtifactKind: 'none',
     })
   })
@@ -306,6 +365,8 @@ describe('publish-ci-incident-snippet', () => {
     expect(result.artifactSource).toBe('none')
     expect(result.validatorArtifactUrl).toBe('')
     expect(result.validatorArtifactSource).toBe('none')
+    expect(result.runtimeArtifactUrl).toBe('')
+    expect(result.runtimeArtifactSource).toBe('none')
     expect(result.primaryArtifactKind).toBe('none')
     const markdown = fs.readFileSync(stepSummaryFile, 'utf8')
     expect(markdown).toContain('### CI Smoke Incident')
@@ -345,8 +406,43 @@ describe('publish-ci-incident-snippet', () => {
     expect(markdown).toContain('- Validator contracts artifact: https://github.com/org/repo/actions/runs/123/artifacts/789')
     expect(result.validatorArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123/artifacts/789')
     expect(result.validatorArtifactSource).toBe('run_id')
+    expect(result.runtimeArtifactUrl).toBe('')
+    expect(result.runtimeArtifactSource).toBe('none')
     expect(result.schemaVersion).toBe(INCIDENT_PAYLOAD_SCHEMA_VERSION)
     expect(result.primaryArtifactKind).toBe('validator_contracts')
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('uses runtime artifact url for config_contract failures', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-'))
+    const summaryFile = path.join(dir, 'quality-summary.json')
+    const outputFile = path.join(dir, 'incident.md')
+
+    fs.writeFileSync(summaryFile, JSON.stringify({
+      failureClass: 'config_contract',
+      recommendationId: 'QG-009',
+    }), 'utf8')
+
+    const result = publishIncidentSnippet({
+      summaryFile,
+      outputFile,
+      workflowRun: 'https://github.com/org/repo/actions/runs/123',
+      branchPr: 'https://github.com/org/repo/pull/42',
+      impact: 'Merge blocked',
+      owner: 'CI Team',
+      eta: '2026-02-12 12:00 UTC',
+      immediateAction: 'Reran failed workflow',
+      followUp: 'yes',
+      runtimeArtifactUrl: 'https://github.com/org/repo/actions/runs/123#artifacts',
+      lintResult: 'success',
+      smokeResult: 'success',
+    })
+
+    const markdown = fs.readFileSync(outputFile, 'utf8')
+    expect(markdown).toContain('- Runtime config diagnostics artifact: https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(result.runtimeArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(result.runtimeArtifactSource).toBe('explicit')
+    expect(result.primaryArtifactKind).toBe('none')
     fs.rmSync(dir, { recursive: true, force: true })
   })
 

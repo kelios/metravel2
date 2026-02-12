@@ -15,6 +15,8 @@ const ToastLazy = React.lazy(() => import('@/components/ui/ToastHost'));
 import { DESIGN_TOKENS } from "@/constants/designSystem"; 
 import { useResponsive } from "@/hooks/useResponsive"; 
 import { createOptimizedQueryClient } from "@/utils/reactQueryConfig";
+import { getRuntimeConfigDiagnostics } from "@/utils/runtimeConfigDiagnostics";
+import { devError, devWarn } from "@/utils/logger";
 import { ThemeProvider, useThemedColors, getThemedColors } from "@/hooks/useTheme";
 
 if (__DEV__) {
@@ -50,6 +52,19 @@ if (!isWeb) {
 }
 
 export default function RootLayout() {
+    useEffect(() => {
+        if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') return;
+        const diagnostics = getRuntimeConfigDiagnostics();
+        for (const diagnostic of diagnostics) {
+            const line = `[Config:${diagnostic.code}] ${diagnostic.message}`;
+            if (diagnostic.severity === 'error') {
+                devError(line);
+            } else {
+                devWarn(line);
+            }
+        }
+    }, []);
+
     useEffect(() => {
         if (!isWeb) SplashScreen.hideAsync().catch((error) => {
             // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки скрытия splash screen

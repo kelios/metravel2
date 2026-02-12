@@ -378,7 +378,8 @@ export const useRouting = (
             const directDistance = calculateDirectDistance(routePointsRef.current)
             setState({
                 loading: false,
-                error: 'Для пешего/веломаршрута нужен ключ OpenRouteService (EXPO_PUBLIC_ORS_API_KEY)',
+                error:
+                    'Для пешего/веломаршрута нужен ключ OpenRouteService (EXPO_PUBLIC_ORS_API_KEY или EXPO_PUBLIC_ROUTE_SERVICE_KEY)',
                 distance: directDistance,
                 duration: estimateDurationSeconds(directDistance, transportMode),
                 coords: routePointsRef.current,

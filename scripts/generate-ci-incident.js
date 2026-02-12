@@ -29,9 +29,9 @@ const valueOrPlaceholder = (value, placeholder) => {
 const buildIncidentMarkdown = (params = {}) => {
   const failureClass = valueOrPlaceholder(
     params.failureClass,
-    '<infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget|selective_contract|validator_contract>'
+    '<infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget|selective_contract|validator_contract|config_contract>'
   )
-  const recommendationId = valueOrPlaceholder(params.recommendationId, '<QG-001..QG-008>')
+  const recommendationId = valueOrPlaceholder(params.recommendationId, '<QG-001..QG-009>')
   const workflowRun = valueOrPlaceholder(params.workflowRun, '<link>')
   const branchOrPr = valueOrPlaceholder(params.branchOrPr, '<branch-or-pr-link>')
   const impact = valueOrPlaceholder(params.impact, '<what is blocked / affected>')
@@ -41,6 +41,7 @@ const buildIncidentMarkdown = (params = {}) => {
   const followUp = valueOrPlaceholder(params.followUp, '<yes/no + short note>')
   const selectiveArtifact = String(params.selectiveArtifact || '').trim()
   const validatorArtifact = String(params.validatorArtifact || '').trim()
+  const runtimeArtifact = String(params.runtimeArtifact || '').trim()
   const dateUtc = valueOrPlaceholder(params.dateUtc, nowUtc())
 
   return [
@@ -57,6 +58,7 @@ const buildIncidentMarkdown = (params = {}) => {
     `- Follow-up required: ${followUp}`,
     ...(selectiveArtifact ? [`- Selective decisions artifact: ${selectiveArtifact}`] : []),
     ...(validatorArtifact ? [`- Validator contracts artifact: ${validatorArtifact}`] : []),
+    ...(runtimeArtifact ? [`- Runtime config diagnostics artifact: ${runtimeArtifact}`] : []),
     '',
   ].join('\n')
 }
@@ -76,6 +78,7 @@ const main = () => {
     followUp: args['follow-up'],
     selectiveArtifact: args['artifact-url'],
     validatorArtifact: args['validator-artifact-url'],
+    runtimeArtifact: args['runtime-artifact-url'],
   })
 
   process.stdout.write(markdown)

@@ -50,6 +50,8 @@ describe('publish incident json contract', () => {
     expect(payload.artifactSource).toBe('run_id')
     expect(payload.validatorArtifactUrl).toBe('')
     expect(payload.validatorArtifactSource).toBe('none')
+    expect(payload.runtimeArtifactUrl).toBe('')
+    expect(payload.runtimeArtifactSource).toBe('none')
     expect(payload.primaryArtifactKind).toBe('selective_decisions')
     expect(payload.markdown).toContain('Selective decisions artifact')
 
@@ -87,8 +89,46 @@ describe('publish incident json contract', () => {
     expect(payload.recommendationId).toBe('QG-008')
     expect(payload.validatorArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123/artifacts/789')
     expect(payload.validatorArtifactSource).toBe('run_id')
+    expect(payload.runtimeArtifactUrl).toBe('')
+    expect(payload.runtimeArtifactSource).toBe('none')
     expect(payload.primaryArtifactKind).toBe('validator_contracts')
     expect(payload.markdown).toContain('Validator contracts artifact')
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('emits runtime artifact fields for config contract', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-incident-json-'))
+    const summaryFile = path.join(dir, 'quality-summary.json')
+    const outputFile = path.join(dir, 'incident.md')
+    fs.writeFileSync(summaryFile, JSON.stringify({
+      failureClass: 'config_contract',
+      recommendationId: 'QG-009',
+    }), 'utf8')
+
+    const result = runNode([
+      'scripts/publish-ci-incident-snippet.js',
+      '--summary-file',
+      summaryFile,
+      '--output-file',
+      outputFile,
+      '--workflow-run',
+      'https://github.com/org/repo/actions/runs/123',
+      '--branch-pr',
+      'https://github.com/org/repo/pull/42',
+      '--runtime-artifact-url',
+      'https://github.com/org/repo/actions/runs/123#artifacts',
+      '--json',
+    ])
+
+    expect(result.status).toBe(0)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.failureClass).toBe('config_contract')
+    expect(payload.recommendationId).toBe('QG-009')
+    expect(payload.runtimeArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(payload.runtimeArtifactSource).toBe('explicit')
+    expect(payload.primaryArtifactKind).toBe('none')
+    expect(payload.markdown).toContain('Runtime config diagnostics artifact')
 
     fs.rmSync(dir, { recursive: true, force: true })
   })

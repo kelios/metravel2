@@ -1,6 +1,7 @@
 const CI_WORKFLOW_CONTRACT_SUMMARY_MAX_ITEMS = 5
 
 const CI_SMOKE_WORKFLOW_ARTIFACT_NAMES = Object.freeze([
+  'runtime-config-diagnostics',
   'selective-decisions',
   'validator-contracts-summary-validation',
   'quality-summary',
@@ -11,6 +12,7 @@ const CI_SMOKE_WORKFLOW_ARTIFACT_NAMES = Object.freeze([
 ])
 
 const CI_SMOKE_WORKFLOW_STEP_IDS = Object.freeze([
+  'runtime_config_diagnostics_upload',
   'selective_decisions_upload',
   'validator_contracts_summary_validation_upload',
   'quality_summary_upload',
@@ -25,6 +27,7 @@ const CI_SMOKE_WORKFLOW_ARTIFACT_OUTPUT_REFS = Object.freeze([
 ])
 
 const CI_SMOKE_WORKFLOW_ARTIFACT_PATHS = Object.freeze([
+  'path: test-results/runtime-config-diagnostics.json',
   'path: test-results/ci-incident-snippet.md',
   'path: test-results/ci-incident-payload.json',
   'path: test-results/ci-incident-payload-validation.json',

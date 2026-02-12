@@ -145,4 +145,48 @@ describe('ci incident pipeline integration', () => {
     expect(errors.join('\n')).toContain('artifactUrl')
     fs.rmSync(dir, { recursive: true, force: true })
   })
+
+  it('adds runtime diagnostics follow-up/artifact for config_contract failures', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-pipeline-'))
+    const summaryFile = path.join(dir, 'quality-summary.json')
+    const outputFile = path.join(dir, 'ci-incident-snippet.md')
+
+    fs.writeFileSync(summaryFile, JSON.stringify({
+      overallOk: false,
+      failureClass: 'config_contract',
+      recommendationId: 'QG-009',
+      lintOk: true,
+      smokeOk: true,
+      runtimeConfigDiagnosticsIssue: true,
+    }), 'utf8')
+
+    const published = publishIncidentSnippet({
+      summaryFile,
+      outputFile,
+      workflowRun: 'https://github.com/org/repo/actions/runs/123',
+      branchPr: 'https://github.com/org/repo/pull/42',
+      impact: '<fill>',
+      owner: '<fill>',
+      eta: '<fill>',
+      immediateAction: 'Initial triage started',
+      followUp: 'yes',
+      runtimeArtifactUrl: 'https://github.com/org/repo/actions/runs/123#artifacts',
+      lintResult: 'success',
+      smokeResult: 'success',
+    })
+
+    const incident = fs.readFileSync(outputFile, 'utf8')
+    expect(incident).toContain('- Failure Class: config_contract')
+    expect(incident).toContain('- Recommendation ID: QG-009')
+    expect(incident).toContain('runtime-config-diagnostics artifact')
+    expect(incident).toContain('- Runtime config diagnostics artifact: https://github.com/org/repo/actions/runs/123#artifacts')
+
+    const errors = validate(incident)
+    expect(errors).toEqual([])
+    expect(validatePayload(published)).toEqual([])
+    expect(published.runtimeArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123#artifacts')
+    expect(published.runtimeArtifactSource).toBe('explicit')
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
 })

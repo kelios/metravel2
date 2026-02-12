@@ -15,6 +15,9 @@ const OPTIONAL_FIELDS = [
   'selectiveDecisions',
   'selectiveDecisionWarnings',
   'selectiveDecisionsAggregateIssue',
+  'runtimeConfigDiagnosticsOk',
+  'runtimeConfigDiagnosticsWarnings',
+  'runtimeConfigDiagnosticsIssue',
   'validatorContractsSummaryValidationOk',
   'validatorContractsSummaryValidationWarnings',
   'validatorContractsSummaryValidationIssue',
@@ -136,6 +139,27 @@ const validate = (payload) => {
   }
   if ('selectiveDecisionsAggregateIssue' in payload && typeof payload.selectiveDecisionsAggregateIssue !== 'boolean') {
     errors.push('Field "selectiveDecisionsAggregateIssue" must be a boolean when provided.')
+  }
+  if (
+    'runtimeConfigDiagnosticsOk' in payload
+    && payload.runtimeConfigDiagnosticsOk !== null
+    && typeof payload.runtimeConfigDiagnosticsOk !== 'boolean'
+  ) {
+    errors.push('Field "runtimeConfigDiagnosticsOk" must be boolean or null when provided.')
+  }
+  if ('runtimeConfigDiagnosticsWarnings' in payload) {
+    if (
+      !Array.isArray(payload.runtimeConfigDiagnosticsWarnings)
+      || payload.runtimeConfigDiagnosticsWarnings.some((v) => typeof v !== 'string')
+    ) {
+      errors.push('Field "runtimeConfigDiagnosticsWarnings" must be an array of strings when provided.')
+    }
+  }
+  if (
+    'runtimeConfigDiagnosticsIssue' in payload
+    && typeof payload.runtimeConfigDiagnosticsIssue !== 'boolean'
+  ) {
+    errors.push('Field "runtimeConfigDiagnosticsIssue" must be a boolean when provided.')
   }
   if (
     'validatorContractsSummaryValidationOk' in payload

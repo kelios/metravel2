@@ -20,6 +20,8 @@ const parseArgs = (argv) => {
     artifactId: '',
     validatorArtifactUrl: '',
     validatorArtifactId: '',
+    runtimeArtifactUrl: '',
+    runtimeArtifactId: '',
   }
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -93,6 +95,16 @@ const parseArgs = (argv) => {
       i += 1
       continue
     }
+    if (token === '--runtime-artifact-url' && argv[i + 1]) {
+      out.runtimeArtifactUrl = argv[i + 1]
+      i += 1
+      continue
+    }
+    if (token === '--runtime-artifact-id' && argv[i + 1]) {
+      out.runtimeArtifactId = argv[i + 1]
+      i += 1
+      continue
+    }
   }
 
   return out
@@ -160,6 +172,19 @@ const resolveValidatorArtifactSource = ({ failureClass, artifactUrl, workflowRun
   return 'none'
 }
 
+const resolveRuntimeArtifactSource = ({ failureClass, artifactUrl, workflowRun, artifactId }) => {
+  const explicit = String(artifactUrl || '').trim()
+  if (explicit) return 'explicit'
+
+  const runUrl = String(workflowRun || '').trim()
+  const id = String(artifactId || '').trim()
+  if (runUrl && id && /^https:\/\/github\.com\/.+\/actions\/runs\/\d+$/.test(runUrl) && /^\d+$/.test(id)) {
+    return 'run_id'
+  }
+  if (failureClass === 'config_contract') return 'fallback'
+  return 'none'
+}
+
 const derivePrimaryArtifactKind = (failureClass) => {
   if (failureClass === 'selective_contract') return 'selective_decisions'
   if (failureClass === 'validator_contract') return 'validator_contracts'
@@ -192,6 +217,19 @@ const normalizeValidatorFollowUp = ({ failureClass, followUp, artifactUrl }) => 
   return `${base}; inspect validator-contracts-summary-validation artifact (${artifactRef})`
 }
 
+const normalizeRuntimeFollowUp = ({ failureClass, followUp, artifactUrl }) => {
+  const base = String(followUp || '').trim() || 'yes'
+  if (failureClass !== 'config_contract') {
+    return base
+  }
+  if (/runtime-config-diagnostics/i.test(base) || /runtime config diagnostics artifact/i.test(base)) {
+    return base
+  }
+  const artifactRef = String(artifactUrl || '').trim()
+    || 'test-results/runtime-config-diagnostics.json'
+  return `${base}; inspect runtime-config-diagnostics artifact (${artifactRef})`
+}
+
 const appendStepSummary = (markdown, stepSummaryPath) => {
   const summaryPath = stepSummaryPath || process.env.GITHUB_STEP_SUMMARY
   if (!summaryPath) return false
@@ -219,6 +257,8 @@ const renderIncidentPayload = ({
   artifactSource = 'none',
   validatorArtifactUrl = '',
   validatorArtifactSource = 'none',
+  runtimeArtifactUrl = '',
+  runtimeArtifactSource = 'none',
   primaryArtifactKind = 'none',
 }) => {
   return {
@@ -233,6 +273,8 @@ const renderIncidentPayload = ({
     artifactSource,
     validatorArtifactUrl,
     validatorArtifactSource,
+    runtimeArtifactUrl,
+    runtimeArtifactSource,
     primaryArtifactKind,
   }
 }
@@ -251,6 +293,8 @@ const publishIncidentSnippet = ({
   artifactId,
   validatorArtifactUrl,
   validatorArtifactId,
+  runtimeArtifactUrl,
+  runtimeArtifactId,
   lintResult = String(process.env.LINT_RESULT || '').trim(),
   smokeResult = String(process.env.SMOKE_RESULT || '').trim(),
   stepSummaryPath,
@@ -280,6 +324,17 @@ const publishIncidentSnippet = ({
     workflowRun,
     artifactId: validatorArtifactId,
   })
+  const resolvedRuntimeArtifactUrl = resolveArtifactUrl({
+    workflowRun,
+    artifactUrl: runtimeArtifactUrl,
+    artifactId: runtimeArtifactId,
+  })
+  const runtimeArtifactSource = resolveRuntimeArtifactSource({
+    failureClass,
+    artifactUrl: runtimeArtifactUrl,
+    workflowRun,
+    artifactId: runtimeArtifactId,
+  })
   const resolvedFollowUp = normalizeFollowUp({
     failureClass,
     followUp,
@@ -289,6 +344,11 @@ const publishIncidentSnippet = ({
     failureClass,
     followUp: resolvedFollowUp,
     artifactUrl: resolvedValidatorArtifactUrl,
+  })
+  const finalFollowUp = normalizeRuntimeFollowUp({
+    failureClass,
+    followUp: normalizedFollowUp,
+    artifactUrl: resolvedRuntimeArtifactUrl,
   })
   const primaryArtifactKind = derivePrimaryArtifactKind(failureClass)
 
@@ -301,9 +361,10 @@ const publishIncidentSnippet = ({
     owner,
     eta,
     immediateAction,
-    followUp: normalizedFollowUp,
+    followUp: finalFollowUp,
     selectiveArtifact: resolvedArtifactUrl,
     validatorArtifact: resolvedValidatorArtifactUrl,
+    runtimeArtifact: failureClass === 'config_contract' ? resolvedRuntimeArtifactUrl : '',
   })
 
   const writtenOutputFile = writeIncidentFile(outputFile, markdown)
@@ -320,6 +381,8 @@ const publishIncidentSnippet = ({
     artifactSource,
     validatorArtifactUrl: resolvedValidatorArtifactUrl,
     validatorArtifactSource,
+    runtimeArtifactUrl: failureClass === 'config_contract' ? resolvedRuntimeArtifactUrl : '',
+    runtimeArtifactSource: failureClass === 'config_contract' ? runtimeArtifactSource : 'none',
     primaryArtifactKind,
   })
 }
@@ -351,9 +414,11 @@ module.exports = {
   resolveArtifactUrl,
   resolveArtifactSource,
   resolveValidatorArtifactSource,
+  resolveRuntimeArtifactSource,
   derivePrimaryArtifactKind,
   normalizeFollowUp,
   normalizeValidatorFollowUp,
+  normalizeRuntimeFollowUp,
   appendStepSummary,
   writeIncidentFile,
   renderIncidentPayload,

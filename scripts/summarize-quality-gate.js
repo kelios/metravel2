@@ -23,6 +23,7 @@ const selectiveDecisionsFileArg = getFlagValue('--selective-decisions-file')
 const schemaDecisionPathArg = getFlagValue('--schema-decision-file')
 const validatorDecisionPathArg = getFlagValue('--validator-decision-file')
 const validatorContractsSummaryValidationFileArg = getFlagValue('--validator-contracts-summary-validation-file')
+const runtimeConfigDiagnosticsFileArg = getFlagValue('--runtime-config-diagnostics-file')
 const lintJobResult = String(process.env.LINT_JOB_RESULT || '').trim().toLowerCase()
 const smokeJobResult = String(process.env.SMOKE_JOB_RESULT || '').trim().toLowerCase()
 const smokeDurationBudgetSeconds = Number(process.env.SMOKE_DURATION_BUDGET_SECONDS || 0)
@@ -180,6 +181,59 @@ const readValidatorContractsSummaryValidation = (rawPath) => {
   }
 }
 
+const readRuntimeConfigDiagnostics = (rawPath) => {
+  if (!rawPath) {
+    return {
+      payload: null,
+      warnings: [],
+      issue: false,
+    }
+  }
+
+  const resolved = path.resolve(process.cwd(), rawPath)
+  if (!fs.existsSync(resolved)) {
+    return {
+      payload: null,
+      warnings: [`runtime-config-diagnostics: file not found (${rawPath}).`],
+      issue: true,
+    }
+  }
+
+  const payload = readJson(resolved)
+  if (!payload) {
+    return {
+      payload: null,
+      warnings: [`runtime-config-diagnostics: cannot parse JSON (${rawPath}).`],
+      issue: true,
+    }
+  }
+
+  const schemaVersion = Number(payload?.schemaVersion)
+  const ok = typeof payload?.ok === 'boolean' ? payload.ok : null
+  const errorCount = Number(payload?.errorCount)
+  const warningCount = Number(payload?.warningCount)
+  const diagnostics = payload?.diagnostics
+  const validContract = schemaVersion === 1
+    && ok !== null
+    && Number.isFinite(errorCount)
+    && Number.isFinite(warningCount)
+    && Array.isArray(diagnostics)
+
+  if (!validContract) {
+    return {
+      payload,
+      warnings: ['runtime-config-diagnostics: invalid diagnostics contract payload.'],
+      issue: true,
+    }
+  }
+
+  return {
+    payload,
+    warnings: [],
+    issue: !ok,
+  }
+}
+
 const eslint = readJson(eslintPath)
 const jest = readJson(jestPath)
 
@@ -282,18 +336,21 @@ if (selectiveDecisionsFileArg) {
 const validatorContractsSummaryValidation = readValidatorContractsSummaryValidation(
   validatorContractsSummaryValidationFileArg
 )
+const runtimeConfigDiagnostics = readRuntimeConfigDiagnostics(runtimeConfigDiagnosticsFileArg)
 
 const overallOk = eslintOk
   && jestOk
   && inconsistencies.length === 0
   && !budgetBlocking
   && !selectiveDecisionsAggregateIssue
+  && !runtimeConfigDiagnostics.issue
   && !validatorContractsSummaryValidation.issue
 
 const getFailureClass = () => {
   if (overallOk) return 'pass'
   if (inconsistencies.length > 0) return 'inconsistent_state'
   if (eslint === null || jest === null) return 'infra_artifact'
+  if (runtimeConfigDiagnostics.issue && eslintOk && jestOk && !budgetBlocking) return 'config_contract'
   if (validatorContractsSummaryValidation.issue && eslintOk && jestOk && !budgetBlocking) return 'validator_contract'
   if (selectiveDecisionsAggregateIssue && eslintOk && jestOk && !budgetBlocking) return 'selective_contract'
   if (budgetBlocking && eslintOk && jestOk) return 'performance_budget'
@@ -312,9 +369,10 @@ const recommendationByClass = {
   performance_budget: 'QG-006',
   selective_contract: 'QG-007',
   validator_contract: 'QG-008',
+  config_contract: 'QG-009',
 }
 const recommendationQuickMap =
-  'QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract | QG-008 validator_contract'
+  'QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract | QG-008 validator_contract | QG-009 config_contract'
 const recommendationAnchorByClass = {
   infra_artifact: 'qg-001',
   inconsistent_state: 'qg-002',
@@ -324,6 +382,7 @@ const recommendationAnchorByClass = {
   performance_budget: 'qg-006',
   selective_contract: 'qg-007',
   validator_contract: 'qg-008',
+  config_contract: 'qg-009',
 }
 const recommendationId = recommendationByClass[failureClass] || 'QG-000'
 const recommendationAnchor = recommendationAnchorByClass[failureClass] || 'troubleshooting-by-failure-class'
@@ -350,6 +409,9 @@ const qualitySnapshot = {
   selectiveDecisions,
   selectiveDecisionWarnings,
   selectiveDecisionsAggregateIssue,
+  runtimeConfigDiagnosticsOk: runtimeConfigDiagnostics.payload?.ok ?? null,
+  runtimeConfigDiagnosticsWarnings: runtimeConfigDiagnostics.warnings,
+  runtimeConfigDiagnosticsIssue: runtimeConfigDiagnostics.issue,
   validatorContractsSummaryValidationOk: validatorContractsSummaryValidation.payload?.ok ?? null,
   validatorContractsSummaryValidationWarnings: validatorContractsSummaryValidation.warnings,
   validatorContractsSummaryValidationIssue: validatorContractsSummaryValidation.issue,
@@ -458,6 +520,23 @@ if (validatorContractsSummaryValidationFileArg) {
   }
 }
 
+if (runtimeConfigDiagnosticsFileArg) {
+  print('')
+  print('### Runtime Config Diagnostics')
+  if (!runtimeConfigDiagnostics.payload) {
+    print('- Runtime config diagnostics: unavailable')
+  } else {
+    const status = runtimeConfigDiagnostics.payload.ok ? 'pass' : 'fail'
+    const errorCount = Number(runtimeConfigDiagnostics.payload.errorCount || 0)
+    const warningCount = Number(runtimeConfigDiagnostics.payload.warningCount || 0)
+    print(`- Runtime config diagnostics: ${status} (errors: ${errorCount}, warnings: ${warningCount})`)
+  }
+  if (runtimeConfigDiagnostics.warnings.length > 0) {
+    print('- Runtime config diagnostics warnings:')
+    runtimeConfigDiagnostics.warnings.forEach((warning) => print(`  - ${warning}`))
+  }
+}
+
 if (inconsistencies.length > 0) {
   print('')
   print('### Consistency Checks')
@@ -498,6 +577,9 @@ if (!overallOk) {
   if (selectiveDecisionsAggregateIssue) {
     print('- Fix selective decisions aggregate contract and re-run quality summary.')
   }
+  if (runtimeConfigDiagnostics.issue) {
+    print('- Fix runtime config diagnostics contract/issues and re-run quality summary.')
+  }
   if (validatorContractsSummaryValidation.issue) {
     print('- Fix validator contracts summary validation issues and re-run quality summary.')
   }
@@ -526,6 +608,10 @@ if (!overallOk) {
   if (!hasReproCommands && selectiveDecisionsAggregateIssue) {
     print('- `node scripts/collect-selective-decisions.js --schema-file test-results/selective/schema/schema-selective-decision.json --validator-file test-results/selective/validator/validator-selective-decision.json --output-file test-results/selective-decisions.json`')
     print('- `node scripts/validate-selective-decisions.js --file test-results/selective-decisions.json`')
+  }
+  if (!hasReproCommands && runtimeConfigDiagnostics.issue) {
+    print('- `yarn config:diagnostics:json`')
+    print('- `yarn config:diagnostics:strict`')
   }
   if (!hasReproCommands && validatorContractsSummaryValidation.issue) {
     print('- `yarn validator:contracts:summary`')

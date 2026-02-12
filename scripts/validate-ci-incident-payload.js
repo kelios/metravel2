@@ -15,6 +15,7 @@ const ALLOWED_FAILURE_CLASSES = new Set([
   'performance_budget',
   'selective_contract',
   'validator_contract',
+  'config_contract',
 ])
 
 const ALLOWED_ARTIFACT_SOURCES = new Set(['explicit', 'run_id', 'fallback', 'none'])
@@ -221,6 +222,45 @@ const validateDetailed = (payload) => {
       code: ERROR_CODES.incidentPayload.INCONSISTENT_MARKDOWN_VALIDATOR_ARTIFACT,
       field: 'markdown',
       message: 'Markdown must not include validator contracts artifact line when "validatorArtifactUrl" is empty.',
+    })
+  }
+
+  const runtimeArtifactSource = String(payload.runtimeArtifactSource || '').trim()
+  if (runtimeArtifactSource && !ALLOWED_ARTIFACT_SOURCES.has(runtimeArtifactSource)) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INVALID_ARTIFACT_SOURCE,
+      field: 'runtimeArtifactSource',
+      message: 'Field "runtimeArtifactSource" must be one of: explicit, run_id, fallback, none.',
+    })
+  }
+
+  const runtimeArtifactUrl = String(payload.runtimeArtifactUrl || '').trim()
+  if ((runtimeArtifactSource === 'none' || !runtimeArtifactSource) && runtimeArtifactUrl) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_ARTIFACT_URL,
+      field: 'runtimeArtifactUrl',
+      message: 'Field "runtimeArtifactUrl" must be empty when runtimeArtifactSource is "none" or empty.',
+    })
+  }
+  if ((runtimeArtifactSource === 'explicit' || runtimeArtifactSource === 'run_id') && !runtimeArtifactUrl) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_ARTIFACT_URL,
+      field: 'runtimeArtifactUrl',
+      message: 'Field "runtimeArtifactUrl" must be non-empty when runtimeArtifactSource is "explicit" or "run_id".',
+    })
+  }
+  if (runtimeArtifactSource === 'fallback' && failureClass !== 'config_contract') {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_ARTIFACT_SOURCE,
+      field: 'runtimeArtifactSource',
+      message: 'Field "runtimeArtifactSource" value "fallback" is allowed only for config_contract failures.',
+    })
+  }
+  if (failureClass === 'config_contract' && (runtimeArtifactSource === 'none' || !runtimeArtifactSource)) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_ARTIFACT_SOURCE,
+      field: 'runtimeArtifactSource',
+      message: 'Config contract incidents must use runtimeArtifactSource explicit, run_id, or fallback.',
     })
   }
 

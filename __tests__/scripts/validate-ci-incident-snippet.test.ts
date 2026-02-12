@@ -88,6 +88,21 @@ describe('validate-ci-incident-snippet', () => {
     expect(validate(markdown)).toEqual([])
   })
 
+  it('accepts config_contract failure class', () => {
+    const markdown = [
+      '### CI Smoke Incident',
+      '- Date (UTC): 2026-02-11 20:10',
+      '- Workflow run: https://example.com/run/1',
+      '- Branch / PR: https://example.com/pull/42',
+      '- Failure Class: config_contract',
+      '- Recommendation ID: QG-009',
+      '- Follow-up required: yes',
+      '',
+    ].join('\n')
+
+    expect(validate(markdown)).toEqual([])
+  })
+
   it('fails selective_contract incidents when selective reference is missing', () => {
     const markdown = [
       '### CI Smoke Incident',

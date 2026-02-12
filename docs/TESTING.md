@@ -162,6 +162,9 @@ Jobs:
   - fail-safe: if changed-files input is unavailable, forced `run` is used to avoid false `skip`
   - publishes `validator-selective-decision` artifact (`test-results/validator-selective-decision.json`)
   - validates artifact schema via `scripts/validate-selective-decision.js`
+- `runtime-config-diagnostics` (gating):
+  - validates runtime env contract via `yarn config:diagnostics:json`
+  - uploads `runtime-config-diagnostics` artifact (`test-results/runtime-config-diagnostics.json`)
 - PR jobs that need changed files use shared helper:
   - `scripts/collect-changed-files.js` (`BASE_SHA` + `HEAD_SHA` -> `changed_files.txt`)
   - selective runners consume `changed_files.txt` via `scripts/changed-files-utils.js` (with `CHANGED_FILES` env fallback)
@@ -206,6 +209,7 @@ Jobs:
   - In PR runs, quality-summary emits `validator-error-codes-policy-validation` snapshot (`test-results/validator-error-codes-policy-validation.json`) and summary via `scripts/summarize-validator-error-codes-policy-validation.js`.
   - In PR runs, quality-summary also emits an aggregate validator contracts summary + snapshot via `scripts/summarize-validator-contracts.js` (`test-results/validator-contracts-summary.json`).
   - In PR runs, quality-summary validates aggregate summary schema via `scripts/validate-validator-contracts-summary.js` and emits `validator-contracts-summary-validation` snapshot (`test-results/validator-contracts-summary-validation.json`) + summary via `scripts/summarize-validator-contracts-summary-validation.js`.
+  - quality-summary also consumes runtime diagnostics snapshot via `--runtime-config-diagnostics-file test-results/runtime-config/runtime-config-diagnostics.json`.
   - Local helper commands:
     - `yarn validator:error-codes:docs:check`
     - `yarn validator:error-codes:docs:update`
@@ -215,6 +219,9 @@ Jobs:
     - `yarn ci:workflow:contract:validate`
     - `yarn ci:workflow:contract:validate:json`
     - `yarn ci:workflow:contract:summarize`
+    - `yarn config:diagnostics`
+    - `yarn config:diagnostics:json`
+    - `yarn config:diagnostics:strict`
   - In PR runs, CI manages a marker-based PR comment lifecycle for validator guard:
     - when `ok=false`: creates or updates comment from `validator-guard-comment.md`
     - when `ok=true`: updates existing marker comment into resolved/pass status
@@ -514,10 +521,10 @@ Use this template in PR comment, issue, or incident log when escalation is trigg
 - Date (UTC): YYYY-MM-DD HH:MM
 - Workflow run: <link>
 - Branch / PR: <branch-or-pr-link>
-- Failure Class: <infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget|selective_contract|validator_contract>
+- Failure Class: <infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget|selective_contract|validator_contract|config_contract>
   - For aggregate selective-decision contract issues use `selective_contract`.
   - For validator aggregate-summary contract issues use `validator_contract`.
-- Recommendation ID: <QG-001..QG-008>
+- Recommendation ID: <QG-001..QG-009>
 - Impact: <what is blocked / affected>
 - Owner: <person-or-team>
 - ETA: <expected resolution time>
@@ -525,6 +532,7 @@ Use this template in PR comment, issue, or incident log when escalation is trigg
 - Follow-up required: <yes/no + short note>
 - Selective decisions artifact: <optional artifact URL; recommended for selective_contract>
 - Validator contracts artifact: <optional artifact URL; recommended for validator_contract>
+- Runtime config diagnostics artifact: <optional artifact URL; recommended for config_contract>
 ```
 
 Generator helper:
@@ -558,6 +566,12 @@ LINT_RESULT=success SMOKE_RESULT=success yarn ci:incident:publish -- \
   --branch-pr "https://github.com/org/repo/pull/42" \
   --validator-artifact-id "789"
 
+# Optional for config_contract: pass runtime diagnostics artifact url/id
+LINT_RESULT=success SMOKE_RESULT=success yarn ci:incident:publish -- \
+  --workflow-run "https://github.com/org/repo/actions/runs/123" \
+  --branch-pr "https://github.com/org/repo/pull/42" \
+  --runtime-artifact-url "https://github.com/org/repo/actions/runs/123#artifacts"
+
 # Publish and print machine-readable payload (JSON)
 LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish:json -- \
   --workflow-run "https://github.com/org/repo/actions/runs/123" \
@@ -576,6 +590,8 @@ yarn ci:incident:payload:validate
 # - artifactSource: explicit | run_id | fallback | none
 # - validatorArtifactUrl: validator-contract artifact link (if available)
 # - validatorArtifactSource: explicit | run_id | fallback | none
+# - runtimeArtifactUrl: runtime-config diagnostics artifact link (if available)
+# - runtimeArtifactSource: explicit | run_id | fallback | none
 # - primaryArtifactKind: none | selective_decisions | validator_contracts
 
 # Incident payload schema checklist:
@@ -786,6 +802,18 @@ Template snippet:
   - Re-run locally:
     - `yarn validator:contracts:summary`
     - `yarn validator:contracts:summary:validate`
+
+<a id="qg-009"></a>
+- `config_contract` (`QG-009`)
+  - Meaning: runtime config diagnostics report failed/missing while lint+smoke are otherwise green.
+  - Check:
+    - `test-results/runtime-config/runtime-config-diagnostics.json` (downloaded in `quality-summary`)
+    - `test-results/runtime-config-diagnostics.json` (uploaded by `runtime-config-diagnostics` job)
+    - `scripts/runtime-config-diagnostics.js`
+    - shared diagnostics contract: `utils/runtimeConfigContract.js`
+  - Re-run locally:
+    - `yarn config:diagnostics:json`
+    - `yarn config:diagnostics:strict`
 
 ## Known peer dependency warnings
 

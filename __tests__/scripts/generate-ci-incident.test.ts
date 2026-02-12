@@ -42,9 +42,10 @@ describe('generate-ci-incident script', () => {
   it('uses placeholders when values are not provided', () => {
     const md = buildIncidentMarkdown({});
     expect(md).toContain('- Workflow run: <link>');
-    expect(md).toContain('- Recommendation ID: <QG-001..QG-008>');
+    expect(md).toContain('- Recommendation ID: <QG-001..QG-009>');
     expect(md).toContain('selective_contract');
     expect(md).toContain('validator_contract');
+    expect(md).toContain('config_contract');
     expect(md).toContain('- Owner: <person-or-team>');
   });
 });

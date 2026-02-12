@@ -11,6 +11,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { createMapPopupComponent } from './Map/createMapPopupComponent';
 import { useBottomSheetStore } from '@/stores/bottomSheetStore';
+import { getRoutingConfigDiagnostics, resolveRoutingApiKey } from '@/utils/routingApiKey';
+import { devWarn } from '@/utils/logger';
 import type { Coordinates, MapMode, MapProps, Point } from './Map/types';
 import { strToLatLng } from './Map/utils';
 
@@ -37,10 +39,7 @@ const isTestEnv =
   (process as any).env &&
   (process as any).env.NODE_ENV === 'test';
 
-const ORS_API_KEY = String(
-  process.env.EXPO_PUBLIC_ORS_API_KEY ?? (process.env as any).ORS_API_KEY ?? ''
-)
-  .trim() || undefined;
+const ORS_API_KEY = resolveRoutingApiKey();
 
 type Props = MapProps;
 
@@ -116,6 +115,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+
+  useEffect(() => {
+    if (isTestEnv) return;
+    const diagnostics = getRoutingConfigDiagnostics();
+    for (const diagnostic of diagnostics) {
+      devWarn(`[Map][Config:${diagnostic.code}] ${diagnostic.message}`);
+    }
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;

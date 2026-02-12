@@ -16,6 +16,7 @@ const ALLOWED_FAILURE_CLASSES = new Set([
   'performance_budget',
   'selective_contract',
   'validator_contract',
+  'config_contract',
 ])
 
 const parseArgs = (argv) => {
