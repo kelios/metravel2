@@ -54,6 +54,7 @@ describe('targeted test list policy', () => {
       ...selectiveRunnerTests,
       'targeted-test-list-contract-utils.test.ts',
       'targeted-test-list-policy.test.ts',
+      'targeted-test-list-policy-utils.test.ts',
     ].sort()
     const unexpected = helperConsumers.filter((file) => !allowedConsumers.includes(file))
     const missing = allowedConsumers.filter((file) => !helperConsumers.includes(file))
