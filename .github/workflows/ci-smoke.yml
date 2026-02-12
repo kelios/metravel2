@@ -292,6 +292,41 @@ jobs:
           path: test-results/selective-decisions.json
           if-no-files-found: ignore
 
+      - name: Publish validator contracts aggregate summary (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          node scripts/summarize-validator-contracts.js --json-output test-results/validator-contracts-summary.json
+
+      - name: Upload validator contracts aggregate summary snapshot (PR)
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-contracts-summary
+          path: test-results/validator-contracts-summary.json
+          if-no-files-found: ignore
+
+      - name: Validate validator contracts aggregate summary (PR)
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          mkdir -p test-results
+          set +e
+          node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json --json > test-results/validator-contracts-summary-validation.json
+          STATUS=$?
+          set -e
+          node scripts/summarize-validator-contracts-summary-validation.js --file test-results/validator-contracts-summary-validation.json
+          if [ "$STATUS" -ne 0 ]; then
+            exit "$STATUS"
+          fi
+
+      - name: Upload validator contracts aggregate summary validation snapshot (PR)
+        id: validator_contracts_summary_validation_upload
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validator-contracts-summary-validation
+          path: test-results/validator-contracts-summary-validation.json
+          if-no-files-found: ignore
+
       - name: Publish quality summary
         env:
           LINT_JOB_RESULT: ${{ needs.lint.result }}
@@ -302,10 +337,12 @@ jobs:
           SMOKE_DURATION_BUDGET_STRICT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         run: |
           EXTRA_DECISION_ARGS=""
+          EXTRA_VALIDATOR_ARGS=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             EXTRA_DECISION_ARGS="--selective-decisions-file test-results/selective-decisions.json"
+            EXTRA_VALIDATOR_ARGS="--validator-contracts-summary-validation-file test-results/validator-contracts-summary-validation.json"
           fi
-          node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json $EXTRA_DECISION_ARGS
+          node scripts/summarize-quality-gate.js test-results/lint/eslint-results.json test-results/smoke/jest-smoke-results.json --fail-on-missing --json-output test-results/quality-summary.json $EXTRA_DECISION_ARGS $EXTRA_VALIDATOR_ARGS
 
       - name: Validate quality summary snapshot
         if: always()
@@ -437,40 +474,6 @@ jobs:
           path: test-results/validator-error-codes-policy-validation.json
           if-no-files-found: ignore
 
-      - name: Publish validator contracts aggregate summary (PR)
-        if: always() && github.event_name == 'pull_request'
-        run: |
-          node scripts/summarize-validator-contracts.js --json-output test-results/validator-contracts-summary.json
-
-      - name: Upload validator contracts aggregate summary snapshot (PR)
-        if: always() && github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: validator-contracts-summary
-          path: test-results/validator-contracts-summary.json
-          if-no-files-found: ignore
-
-      - name: Validate validator contracts aggregate summary (PR)
-        if: always() && github.event_name == 'pull_request'
-        run: |
-          mkdir -p test-results
-          set +e
-          node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json --json > test-results/validator-contracts-summary-validation.json
-          STATUS=$?
-          set -e
-          node scripts/summarize-validator-contracts-summary-validation.js --file test-results/validator-contracts-summary-validation.json
-          if [ "$STATUS" -ne 0 ]; then
-            exit "$STATUS"
-          fi
-
-      - name: Upload validator contracts aggregate summary validation snapshot (PR)
-        if: always() && github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: validator-contracts-summary-validation
-          path: test-results/validator-contracts-summary-validation.json
-          if-no-files-found: ignore
-
       - name: Publish/update validator guard PR comment
         if: always() && github.event_name == 'pull_request'
         continue-on-error: true
@@ -552,20 +555,20 @@ jobs:
             core.info('Guard is passing and no managed comment exists; nothing to update.');
 
       - name: Publish incident snippet (PR, when gate failed)
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
         env:
           LINT_RESULT: ${{ needs.lint.result }}
           SMOKE_RESULT: ${{ needs.smoke-critical.result }}
         run: |
           ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
-          node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes" --artifact-url "$ARTIFACT_URL" --artifact-id "${{ steps.selective_decisions_upload.outputs.artifact-id }}" --json > test-results/ci-incident-payload.json
+          node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes" --artifact-url "$ARTIFACT_URL" --artifact-id "${{ steps.selective_decisions_upload.outputs.artifact-id }}" --validator-artifact-url "$ARTIFACT_URL" --validator-artifact-id "${{ steps.validator_contracts_summary_validation_upload.outputs.artifact-id }}" --json > test-results/ci-incident-payload.json
 
       - name: Validate incident snippet (PR, when gate failed)
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
         run: node scripts/validate-ci-incident-snippet.js --file test-results/ci-incident-snippet.md
 
       - name: Validate and summarize incident payload (PR, when gate failed)
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
         run: |
           set +e
           node scripts/validate-ci-incident-payload.js --file test-results/ci-incident-payload.json --json > test-results/ci-incident-payload-validation.json
@@ -579,7 +582,7 @@ jobs:
           fi
 
       - name: Upload incident snippet artifact
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
         uses: actions/upload-artifact@v4
         with:
           name: ci-incident-snippet
@@ -587,11 +590,19 @@ jobs:
           if-no-files-found: ignore
 
       - name: Upload incident payload artifact
-        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
         uses: actions/upload-artifact@v4
         with:
           name: ci-incident-payload
           path: test-results/ci-incident-payload.json
+          if-no-files-found: ignore
+
+      - name: Upload incident payload validation artifact
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract' || steps.quality_failure_class.outputs.failure_class == 'validator_contract')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-incident-payload-validation
+          path: test-results/ci-incident-payload-validation.json
           if-no-files-found: ignore
 
       - name: Validate PR CI exception block

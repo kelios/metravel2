@@ -5,6 +5,7 @@ const {
 const { ERROR_CODES } = require('./validator-error-codes')
 const { buildResult, emitResult } = require('./validator-output')
 
+const SUPPORTED_SCHEMA_VERSION = 1
 const ALLOWED_FAILURE_CLASSES = new Set([
   'infra_artifact',
   'inconsistent_state',
@@ -13,9 +14,11 @@ const ALLOWED_FAILURE_CLASSES = new Set([
   'mixed',
   'performance_budget',
   'selective_contract',
+  'validator_contract',
 ])
 
 const ALLOWED_ARTIFACT_SOURCES = new Set(['explicit', 'run_id', 'fallback', 'none'])
+const ALLOWED_PRIMARY_ARTIFACT_KINDS = new Set(['none', 'selective_decisions', 'validator_contracts'])
 
 const parseArgs = (argv) => {
   const args = {
@@ -43,6 +46,15 @@ const validateDetailed = (payload) => {
     return errors
   }
 
+  const schemaVersion = payload.schemaVersion
+  if (!Number.isInteger(schemaVersion) || schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INVALID_SCHEMA_VERSION,
+      field: 'schemaVersion',
+      message: `Field "schemaVersion" must be integer ${SUPPORTED_SCHEMA_VERSION}.`,
+    })
+  }
+
   const failureClass = String(payload.failureClass || '').trim()
   if (!ALLOWED_FAILURE_CLASSES.has(failureClass)) {
     errors.push({
@@ -58,6 +70,15 @@ const validateDetailed = (payload) => {
       code: ERROR_CODES.incidentPayload.INVALID_RECOMMENDATION_ID,
       field: 'recommendationId',
       message: 'Field "recommendationId" must be a concrete QG id (e.g., QG-004).',
+    })
+  }
+
+  const primaryArtifactKind = String(payload.primaryArtifactKind || '').trim()
+  if (!ALLOWED_PRIMARY_ARTIFACT_KINDS.has(primaryArtifactKind)) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INVALID_PRIMARY_ARTIFACT_KIND,
+      field: 'primaryArtifactKind',
+      message: 'Field "primaryArtifactKind" must be one of: none, selective_decisions, validator_contracts.',
     })
   }
 
@@ -102,6 +123,73 @@ const validateDetailed = (payload) => {
       message: 'Selective contract incidents must use artifactSource explicit, run_id, or fallback.',
     })
   }
+  if (failureClass === 'selective_contract' && primaryArtifactKind !== 'selective_decisions') {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_PRIMARY_ARTIFACT_KIND,
+      field: 'primaryArtifactKind',
+      message: 'Selective contract incidents must use primaryArtifactKind "selective_decisions".',
+    })
+  }
+
+  const validatorArtifactSource = String(payload.validatorArtifactSource || '').trim()
+  if (validatorArtifactSource && !ALLOWED_ARTIFACT_SOURCES.has(validatorArtifactSource)) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INVALID_ARTIFACT_SOURCE,
+      field: 'validatorArtifactSource',
+      message: 'Field "validatorArtifactSource" must be one of: explicit, run_id, fallback, none.',
+    })
+  }
+
+  const validatorArtifactUrl = String(payload.validatorArtifactUrl || '').trim()
+  if ((validatorArtifactSource === 'none' || !validatorArtifactSource) && validatorArtifactUrl) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_VALIDATOR_ARTIFACT_URL,
+      field: 'validatorArtifactUrl',
+      message: 'Field "validatorArtifactUrl" must be empty when validatorArtifactSource is "none" or empty.',
+    })
+  }
+
+  if ((validatorArtifactSource === 'explicit' || validatorArtifactSource === 'run_id') && !validatorArtifactUrl) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_VALIDATOR_ARTIFACT_URL,
+      field: 'validatorArtifactUrl',
+      message: 'Field "validatorArtifactUrl" must be non-empty when validatorArtifactSource is "explicit" or "run_id".',
+    })
+  }
+
+  if (validatorArtifactSource === 'fallback' && failureClass !== 'validator_contract') {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_VALIDATOR_ARTIFACT_SOURCE,
+      field: 'validatorArtifactSource',
+      message: 'Field "validatorArtifactSource" value "fallback" is allowed only for validator_contract failures.',
+    })
+  }
+
+  if (failureClass === 'validator_contract' && (validatorArtifactSource === 'none' || !validatorArtifactSource)) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_VALIDATOR_ARTIFACT_SOURCE,
+      field: 'validatorArtifactSource',
+      message: 'Validator contract incidents must use validatorArtifactSource explicit, run_id, or fallback.',
+    })
+  }
+  if (failureClass === 'validator_contract' && primaryArtifactKind !== 'validator_contracts') {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_PRIMARY_ARTIFACT_KIND,
+      field: 'primaryArtifactKind',
+      message: 'Validator contract incidents must use primaryArtifactKind "validator_contracts".',
+    })
+  }
+  if (
+    failureClass !== 'selective_contract'
+    && failureClass !== 'validator_contract'
+    && primaryArtifactKind !== 'none'
+  ) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_PRIMARY_ARTIFACT_KIND,
+      field: 'primaryArtifactKind',
+      message: 'Non-contract incidents must use primaryArtifactKind "none".',
+    })
+  }
 
   const markdown = String(payload.markdown || '')
   const artifactLine = /^-\s*Selective decisions artifact:\s*(.+)\s*$/m.exec(markdown)?.[1]?.trim() || ''
@@ -117,6 +205,22 @@ const validateDetailed = (payload) => {
       code: ERROR_CODES.incidentPayload.INCONSISTENT_MARKDOWN_ARTIFACT,
       field: 'markdown',
       message: 'Markdown must not include selective decisions artifact line when "artifactUrl" is empty.',
+    })
+  }
+
+  const validatorArtifactLine = /^-\s*Validator contracts artifact:\s*(.+)\s*$/m.exec(markdown)?.[1]?.trim() || ''
+  if (validatorArtifactUrl && validatorArtifactLine !== validatorArtifactUrl) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_MARKDOWN_VALIDATOR_ARTIFACT,
+      field: 'markdown',
+      message: 'Markdown validator contracts artifact line must match "validatorArtifactUrl".',
+    })
+  }
+  if (!validatorArtifactUrl && validatorArtifactLine) {
+    errors.push({
+      code: ERROR_CODES.incidentPayload.INCONSISTENT_MARKDOWN_VALIDATOR_ARTIFACT,
+      field: 'markdown',
+      message: 'Markdown must not include validator contracts artifact line when "validatorArtifactUrl" is empty.',
     })
   }
 
@@ -151,8 +255,10 @@ if (require.main === module) {
 }
 
 module.exports = {
+  SUPPORTED_SCHEMA_VERSION,
   ALLOWED_FAILURE_CLASSES,
   ALLOWED_ARTIFACT_SOURCES,
+  ALLOWED_PRIMARY_ARTIFACT_KINDS,
   parseArgs,
   readIncidentPayload,
   validate,

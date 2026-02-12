@@ -15,6 +15,9 @@ const OPTIONAL_FIELDS = [
   'selectiveDecisions',
   'selectiveDecisionWarnings',
   'selectiveDecisionsAggregateIssue',
+  'validatorContractsSummaryValidationOk',
+  'validatorContractsSummaryValidationWarnings',
+  'validatorContractsSummaryValidationIssue',
 ]
 
 const validate = (payload) => {
@@ -133,6 +136,27 @@ const validate = (payload) => {
   }
   if ('selectiveDecisionsAggregateIssue' in payload && typeof payload.selectiveDecisionsAggregateIssue !== 'boolean') {
     errors.push('Field "selectiveDecisionsAggregateIssue" must be a boolean when provided.')
+  }
+  if (
+    'validatorContractsSummaryValidationOk' in payload
+    && payload.validatorContractsSummaryValidationOk !== null
+    && typeof payload.validatorContractsSummaryValidationOk !== 'boolean'
+  ) {
+    errors.push('Field "validatorContractsSummaryValidationOk" must be boolean or null when provided.')
+  }
+  if ('validatorContractsSummaryValidationWarnings' in payload) {
+    if (
+      !Array.isArray(payload.validatorContractsSummaryValidationWarnings)
+      || payload.validatorContractsSummaryValidationWarnings.some((v) => typeof v !== 'string')
+    ) {
+      errors.push('Field "validatorContractsSummaryValidationWarnings" must be an array of strings when provided.')
+    }
+  }
+  if (
+    'validatorContractsSummaryValidationIssue' in payload
+    && typeof payload.validatorContractsSummaryValidationIssue !== 'boolean'
+  ) {
+    errors.push('Field "validatorContractsSummaryValidationIssue" must be a boolean when provided.')
   }
 
   const knownFields = new Set([

@@ -38,6 +38,9 @@ describe('validate-quality-summary schema checks', () => {
     ],
     selectiveDecisionWarnings: [],
     selectiveDecisionsAggregateIssue: false,
+    validatorContractsSummaryValidationOk: true,
+    validatorContractsSummaryValidationWarnings: [],
+    validatorContractsSummaryValidationIssue: false,
   };
 
   it('passes for valid payload', () => {
@@ -75,6 +78,9 @@ describe('validate-quality-summary schema checks', () => {
       }],
       selectiveDecisionWarnings: [1],
       selectiveDecisionsAggregateIssue: 'yes',
+      validatorContractsSummaryValidationOk: 'yes',
+      validatorContractsSummaryValidationWarnings: [1],
+      validatorContractsSummaryValidationIssue: 'yes',
     };
     const errors = validate(payload);
     expect(errors.join('\n')).toContain('Unsupported schemaVersion');
@@ -86,6 +92,9 @@ describe('validate-quality-summary schema checks', () => {
     expect(errors.join('\n')).toContain('smokeSuiteRemovedFiles');
     expect(errors.join('\n')).toContain('selectiveDecisionWarnings');
     expect(errors.join('\n')).toContain('selectiveDecisionsAggregateIssue');
+    expect(errors.join('\n')).toContain('validatorContractsSummaryValidationOk');
+    expect(errors.join('\n')).toContain('validatorContractsSummaryValidationWarnings');
+    expect(errors.join('\n')).toContain('validatorContractsSummaryValidationIssue');
     expect(errors.join('\n')).toContain('selectiveDecisions[0].contractVersion');
     expect(errors.join('\n')).toContain('selectiveDecisions[0].decision');
   });

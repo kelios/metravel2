@@ -15,6 +15,7 @@ const ALLOWED_FAILURE_CLASSES = new Set([
   'mixed',
   'performance_budget',
   'selective_contract',
+  'validator_contract',
 ])
 
 const parseArgs = (argv) => {
@@ -96,6 +97,21 @@ const validateDetailed = (markdown) => {
         code: ERROR_CODES.incidentSnippet.MISSING_SELECTIVE_REFERENCE,
         field: 'selective decisions reference',
         message: 'Selective contract incidents must reference selective-decisions artifact in follow-up or dedicated artifact line.',
+      })
+    }
+  }
+
+  if (failureClass === 'validator_contract') {
+    const followUp = extractLineValue(markdown, 'Follow-up required')
+    const validatorArtifact = extractLineValue(markdown, 'Validator contracts artifact')
+    const hasFollowUpReference = /validator-contracts-summary-validation/i.test(followUp)
+      || /validator contracts artifact/i.test(followUp)
+    const hasArtifactReference = isHttpUrl(validatorArtifact)
+    if (!hasFollowUpReference && !hasArtifactReference) {
+      errors.push({
+        code: ERROR_CODES.incidentSnippet.MISSING_VALIDATOR_REFERENCE,
+        field: 'validator contracts reference',
+        message: 'Validator contract incidents must reference validator-contracts-summary-validation artifact in follow-up or dedicated artifact line.',
       })
     }
   }

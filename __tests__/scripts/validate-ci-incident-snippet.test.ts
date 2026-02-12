@@ -72,6 +72,22 @@ describe('validate-ci-incident-snippet', () => {
     expect(validate(markdown)).toEqual([])
   })
 
+  it('accepts validator_contract failure class with validator artifact reference', () => {
+    const markdown = [
+      '### CI Smoke Incident',
+      '- Date (UTC): 2026-02-11 20:10',
+      '- Workflow run: https://example.com/run/1',
+      '- Branch / PR: https://example.com/pull/42',
+      '- Failure Class: validator_contract',
+      '- Recommendation ID: QG-008',
+      '- Follow-up required: yes',
+      '- Validator contracts artifact: https://github.com/org/repo/actions/runs/123/artifacts/789',
+      '',
+    ].join('\n')
+
+    expect(validate(markdown)).toEqual([])
+  })
+
   it('fails selective_contract incidents when selective reference is missing', () => {
     const markdown = [
       '### CI Smoke Incident',
@@ -102,6 +118,22 @@ describe('validate-ci-incident-snippet', () => {
     ].join('\n')
 
     expect(validate(markdown)).toEqual([])
+  })
+
+  it('fails validator_contract incidents when validator reference is missing', () => {
+    const markdown = [
+      '### CI Smoke Incident',
+      '- Date (UTC): 2026-02-11 20:10',
+      '- Workflow run: https://example.com/run/1',
+      '- Branch / PR: https://example.com/pull/42',
+      '- Failure Class: validator_contract',
+      '- Recommendation ID: QG-008',
+      '- Follow-up required: yes',
+      '',
+    ].join('\n')
+
+    const errors = validateDetailed(markdown)
+    expect(errors.some((entry) => entry.code === 'INCIDENT_MISSING_VALIDATOR_REFERENCE')).toBe(true)
   })
 
   it('fails for placeholder/invalid required auto fields', () => {

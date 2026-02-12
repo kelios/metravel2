@@ -4,7 +4,7 @@ import path from 'path';
 import { execFileSync } from 'child_process';
 
 const scriptPath = path.resolve(process.cwd(), 'scripts/summarize-quality-gate.js');
-const quickMapSnippet = 'QG quick map: QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract';
+const quickMapSnippet = 'QG quick map: QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract | QG-008 validator_contract';
 
 type RunResult = {
   status: number;
@@ -50,6 +50,7 @@ describe('summarize-quality-gate script', () => {
   let schemaDecisionPath: string;
   let validatorDecisionPath: string;
   let selectiveDecisionsPath: string;
+  let validatorContractsSummaryValidationPath: string;
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'quality-gate-'));
@@ -63,6 +64,7 @@ describe('summarize-quality-gate script', () => {
     schemaDecisionPath = path.join(tempDir, 'schema-selective-decision.json');
     validatorDecisionPath = path.join(tempDir, 'validator-selective-decision.json');
     selectiveDecisionsPath = path.join(tempDir, 'selective-decisions.json');
+    validatorContractsSummaryValidationPath = path.join(tempDir, 'validator-contracts-summary-validation.json');
 
     writeJson(eslintPassPath, [{ filePath: '/tmp/a.ts', errorCount: 0, warningCount: 0 }]);
     writeJson(eslintFailPath, [{ filePath: '/tmp/a.ts', errorCount: 1, warningCount: 0 }]);
@@ -130,6 +132,12 @@ describe('summarize-quality-gate script', () => {
         JSON.parse(fs.readFileSync(validatorDecisionPath, 'utf8')),
       ],
       warnings: [],
+    });
+    writeJson(validatorContractsSummaryValidationPath, {
+      contractVersion: 1,
+      ok: true,
+      errorCount: 0,
+      errors: [],
     });
   });
 
@@ -203,8 +211,38 @@ describe('summarize-quality-gate script', () => {
     expect(snapshot.selectiveDecisions).toHaveLength(2);
     expect(snapshot.selectiveDecisionWarnings).toEqual([]);
     expect(snapshot.selectiveDecisionsAggregateIssue).toBe(false);
+    expect(snapshot.validatorContractsSummaryValidationOk).toBeNull();
+    expect(snapshot.validatorContractsSummaryValidationWarnings).toEqual([]);
+    expect(snapshot.validatorContractsSummaryValidationIssue).toBe(false);
     expect(result.stdout).toContain('### Selective Checks');
     expect(result.stdout).toContain('schema-contract-checks: run');
+  });
+
+  it('classifies failing validator contracts summary validation as validator_contract', () => {
+    writeJson(validatorContractsSummaryValidationPath, {
+      contractVersion: 1,
+      ok: false,
+      errorCount: 2,
+      errors: [
+        { code: 'VALIDATOR_CONTRACTS_SUMMARY_STATUS_MISMATCH' },
+      ],
+    });
+    const result = runSummary(
+      eslintPassPath,
+      jestPassPath,
+      [
+        '--fail-on-missing',
+        '--validator-contracts-summary-validation-file',
+        validatorContractsSummaryValidationPath,
+      ],
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('Failure Class: validator_contract');
+    expect(result.stdout).toContain('Recommendation ID: QG-008');
+    expect(result.stdout).toContain('docs/TESTING.md#qg-008 (QG-008)');
+    expect(result.stdout).toContain('### Validator Contracts');
+    expect(result.stdout).toContain('Fix validator contracts summary validation issues');
   });
 
   it('prints selective decision warnings when artifacts are missing', () => {

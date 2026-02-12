@@ -221,6 +221,8 @@ Jobs:
 | incidentSnippet | INVALID_FAILURE_CLASS | INCIDENT_INVALID_FAILURE_CLASS |
 | incidentSnippet | INVALID_RECOMMENDATION_ID | INCIDENT_INVALID_RECOMMENDATION_ID |
 | incidentSnippet | MISSING_SELECTIVE_REFERENCE | INCIDENT_MISSING_SELECTIVE_REFERENCE |
+| incidentSnippet | MISSING_VALIDATOR_REFERENCE | INCIDENT_MISSING_VALIDATOR_REFERENCE |
+| incidentPayload | INVALID_SCHEMA_VERSION | INCIDENT_PAYLOAD_INVALID_SCHEMA_VERSION |
 | incidentPayload | INVALID_PAYLOAD_OBJECT | INCIDENT_PAYLOAD_INVALID_PAYLOAD_OBJECT |
 | incidentPayload | INVALID_FAILURE_CLASS | INCIDENT_PAYLOAD_INVALID_FAILURE_CLASS |
 | incidentPayload | INVALID_RECOMMENDATION_ID | INCIDENT_PAYLOAD_INVALID_RECOMMENDATION_ID |
@@ -228,6 +230,11 @@ Jobs:
 | incidentPayload | INCONSISTENT_ARTIFACT_URL | INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_URL |
 | incidentPayload | INCONSISTENT_ARTIFACT_SOURCE | INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_SOURCE |
 | incidentPayload | INCONSISTENT_MARKDOWN_ARTIFACT | INCIDENT_PAYLOAD_INCONSISTENT_MARKDOWN_ARTIFACT |
+| incidentPayload | INCONSISTENT_VALIDATOR_ARTIFACT_URL | INCIDENT_PAYLOAD_INCONSISTENT_VALIDATOR_ARTIFACT_URL |
+| incidentPayload | INCONSISTENT_VALIDATOR_ARTIFACT_SOURCE | INCIDENT_PAYLOAD_INCONSISTENT_VALIDATOR_ARTIFACT_SOURCE |
+| incidentPayload | INCONSISTENT_MARKDOWN_VALIDATOR_ARTIFACT | INCIDENT_PAYLOAD_INCONSISTENT_MARKDOWN_VALIDATOR_ARTIFACT |
+| incidentPayload | INVALID_PRIMARY_ARTIFACT_KIND | INCIDENT_PAYLOAD_INVALID_PRIMARY_ARTIFACT_KIND |
+| incidentPayload | INCONSISTENT_PRIMARY_ARTIFACT_KIND | INCIDENT_PAYLOAD_INCONSISTENT_PRIMARY_ARTIFACT_KIND |
 | validatorGuardComment | MISSING_MARKER | VALIDATOR_GUARD_COMMENT_MISSING_MARKER |
 | validatorGuardComment | MISSING_HEADER | VALIDATOR_GUARD_COMMENT_MISSING_HEADER |
 | validatorGuardComment | INVALID_STATUS | VALIDATOR_GUARD_COMMENT_INVALID_STATUS |
@@ -264,6 +271,7 @@ Jobs:
   - For failed PR gates, also prints a ready-to-copy incident snippet into job summary via `scripts/publish-ci-incident-snippet.js`.
   - Validates incident snippet structure and required auto fields via `scripts/validate-ci-incident-snippet.js`.
   - Uploads `ci-incident-snippet` artifact (`test-results/ci-incident-snippet.md`) for incident/audit trail.
+  - Validates incident payload contract via `scripts/validate-ci-incident-payload.js` and uploads `ci-incident-payload-validation` artifact (`test-results/ci-incident-payload-validation.json`).
   - Includes `Smoke Composition` section (critical suite/test counts and suite files preview).
   - Also writes a machine-readable snapshot at `test-results/quality-summary.json` (for downstream CI steps).
   - Snapshot includes `schemaVersion` (current: `1`).
@@ -489,15 +497,17 @@ Use this template in PR comment, issue, or incident log when escalation is trigg
 - Date (UTC): YYYY-MM-DD HH:MM
 - Workflow run: <link>
 - Branch / PR: <branch-or-pr-link>
-- Failure Class: <infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget|selective_contract>
+- Failure Class: <infra_artifact|inconsistent_state|lint_only|smoke_only|mixed|performance_budget|selective_contract|validator_contract>
   - For aggregate selective-decision contract issues use `selective_contract`.
-- Recommendation ID: <QG-001..QG-007>
+  - For validator aggregate-summary contract issues use `validator_contract`.
+- Recommendation ID: <QG-001..QG-008>
 - Impact: <what is blocked / affected>
 - Owner: <person-or-team>
 - ETA: <expected resolution time>
 - Immediate action taken: <one-line summary>
 - Follow-up required: <yes/no + short note>
 - Selective decisions artifact: <optional artifact URL; recommended for selective_contract>
+- Validator contracts artifact: <optional artifact URL; recommended for validator_contract>
 ```
 
 Generator helper:
@@ -525,6 +535,12 @@ LINT_RESULT=success SMOKE_RESULT=success yarn ci:incident:publish -- \
   --branch-pr "https://github.com/org/repo/pull/42" \
   --artifact-id "456"
 
+# Optional for validator_contract: pass validator contracts artifact id/url
+LINT_RESULT=success SMOKE_RESULT=success yarn ci:incident:publish -- \
+  --workflow-run "https://github.com/org/repo/actions/runs/123" \
+  --branch-pr "https://github.com/org/repo/pull/42" \
+  --validator-artifact-id "789"
+
 # Publish and print machine-readable payload (JSON)
 LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish:json -- \
   --workflow-run "https://github.com/org/repo/actions/runs/123" \
@@ -538,8 +554,21 @@ LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish:json -- \
 yarn ci:incident:payload:validate
 
 # JSON payload fields for artifact provenance:
+# - schemaVersion: incident payload schema version (current: 1)
 # - artifactUrl: resolved artifact link (if available)
 # - artifactSource: explicit | run_id | fallback | none
+# - validatorArtifactUrl: validator-contract artifact link (if available)
+# - validatorArtifactSource: explicit | run_id | fallback | none
+# - primaryArtifactKind: none | selective_decisions | validator_contracts
+
+# Incident payload schema checklist:
+# 1) breaking shape/semantic change -> bump schemaVersion in publisher + validator
+# 2) keep validator compatible with current schemaVersion only
+# 3) update tests:
+#    - __tests__/scripts/publish-ci-incident-json-contract.test.ts
+#    - __tests__/scripts/validate-ci-incident-payload.test.ts
+# 4) refresh docs error-code table:
+#    yarn validator:error-codes:docs:update
 
 # Validate generated snippet file
 yarn ci:incident:validate
@@ -728,6 +757,18 @@ Template snippet:
   - Re-run locally:
     - `node scripts/collect-selective-decisions.js --schema-file test-results/selective/schema/schema-selective-decision.json --validator-file test-results/selective/validator/validator-selective-decision.json --output-file test-results/selective-decisions.json`
     - `node scripts/validate-selective-decisions.js --file test-results/selective-decisions.json`
+
+<a id="qg-008"></a>
+- `validator_contract` (`QG-008`)
+  - Meaning: validator contracts aggregate summary validation failed/missing while lint+smoke are otherwise green.
+  - Check:
+    - `test-results/validator-contracts-summary.json`
+    - `test-results/validator-contracts-summary-validation.json`
+    - `scripts/summarize-validator-contracts.js`
+    - `scripts/validate-validator-contracts-summary.js`
+  - Re-run locally:
+    - `yarn validator:contracts:summary`
+    - `yarn validator:contracts:summary:validate`
 
 ## Known peer dependency warnings
 

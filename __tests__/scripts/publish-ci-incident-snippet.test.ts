@@ -2,13 +2,17 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const {
+  INCIDENT_PAYLOAD_SCHEMA_VERSION,
   parseArgs,
   fallbackFailureClass,
   resolveFailureClass,
   resolveRecommendationId,
   resolveArtifactUrl,
   resolveArtifactSource,
+  resolveValidatorArtifactSource,
+  derivePrimaryArtifactKind,
   normalizeFollowUp,
+  normalizeValidatorFollowUp,
   renderIncidentPayload,
   publishIncidentSnippet,
 } = require('@/scripts/publish-ci-incident-snippet')
@@ -28,6 +32,8 @@ describe('publish-ci-incident-snippet', () => {
       followUp: 'yes',
       artifactUrl: '',
       artifactId: '',
+      validatorArtifactUrl: '',
+      validatorArtifactId: '',
     })
 
     expect(parseArgs(['--summary-file', 'a.json', '--workflow-run', 'run-url', '--branch-pr', 'pr-url'])).toEqual({
@@ -43,6 +49,8 @@ describe('publish-ci-incident-snippet', () => {
       followUp: 'yes',
       artifactUrl: '',
       artifactId: '',
+      validatorArtifactUrl: '',
+      validatorArtifactId: '',
     })
     expect(parseArgs(['--artifact-url', 'https://example.com/artifacts'])).toEqual({
       summaryFile: 'test-results/quality-summary.json',
@@ -57,6 +65,8 @@ describe('publish-ci-incident-snippet', () => {
       followUp: 'yes',
       artifactUrl: 'https://example.com/artifacts',
       artifactId: '',
+      validatorArtifactUrl: '',
+      validatorArtifactId: '',
     })
     expect(parseArgs(['--artifact-id', '123'])).toEqual({
       summaryFile: 'test-results/quality-summary.json',
@@ -71,6 +81,8 @@ describe('publish-ci-incident-snippet', () => {
       followUp: 'yes',
       artifactUrl: '',
       artifactId: '123',
+      validatorArtifactUrl: '',
+      validatorArtifactId: '',
     })
   })
 
@@ -88,6 +100,8 @@ describe('publish-ci-incident-snippet', () => {
       followUp: 'yes',
       artifactUrl: '',
       artifactId: '',
+      validatorArtifactUrl: '',
+      validatorArtifactId: '',
     })
   })
 
@@ -181,6 +195,57 @@ describe('publish-ci-incident-snippet', () => {
     })).toBe('none')
   })
 
+  it('derives primary artifact kind from failure class', () => {
+    expect(derivePrimaryArtifactKind('selective_contract')).toBe('selective_decisions')
+    expect(derivePrimaryArtifactKind('validator_contract')).toBe('validator_contracts')
+    expect(derivePrimaryArtifactKind('smoke_only')).toBe('none')
+  })
+
+  it('resolves validator artifact source classification', () => {
+    expect(resolveValidatorArtifactSource({
+      failureClass: 'validator_contract',
+      artifactUrl: 'https://example.com/custom',
+      workflowRun: 'https://github.com/org/repo/actions/runs/123',
+      artifactId: '789',
+    })).toBe('explicit')
+    expect(resolveValidatorArtifactSource({
+      failureClass: 'validator_contract',
+      artifactUrl: '',
+      workflowRun: 'https://github.com/org/repo/actions/runs/123',
+      artifactId: '789',
+    })).toBe('run_id')
+    expect(resolveValidatorArtifactSource({
+      failureClass: 'validator_contract',
+      artifactUrl: '',
+      workflowRun: '',
+      artifactId: '',
+    })).toBe('fallback')
+    expect(resolveValidatorArtifactSource({
+      failureClass: 'smoke_only',
+      artifactUrl: '',
+      workflowRun: '',
+      artifactId: '',
+    })).toBe('none')
+  })
+
+  it('normalizes follow-up for validator contract failures', () => {
+    expect(normalizeValidatorFollowUp({
+      failureClass: 'validator_contract',
+      followUp: 'yes',
+      artifactUrl: '',
+    })).toContain('validator-contracts-summary-validation artifact')
+    expect(normalizeValidatorFollowUp({
+      failureClass: 'validator_contract',
+      followUp: 'yes',
+      artifactUrl: 'https://github.com/org/repo/actions/runs/1#artifacts',
+    })).toContain('https://github.com/org/repo/actions/runs/1#artifacts')
+    expect(normalizeValidatorFollowUp({
+      failureClass: 'smoke_only',
+      followUp: 'yes',
+      artifactUrl: '',
+    })).toBe('yes')
+  })
+
   it('renders payload for machine consumers', () => {
     const payload = renderIncidentPayload({
       failureClass: 'smoke_only',
@@ -192,6 +257,7 @@ describe('publish-ci-incident-snippet', () => {
     })
 
     expect(payload).toEqual({
+      schemaVersion: INCIDENT_PAYLOAD_SCHEMA_VERSION,
       failureClass: 'smoke_only',
       recommendationId: 'QG-004',
       workflowRun: 'https://example.com/run/1',
@@ -200,6 +266,9 @@ describe('publish-ci-incident-snippet', () => {
       markdown: '### CI Smoke Incident',
       artifactUrl: '',
       artifactSource: 'none',
+      validatorArtifactUrl: '',
+      validatorArtifactSource: 'none',
+      primaryArtifactKind: 'none',
     })
   })
 
@@ -230,16 +299,54 @@ describe('publish-ci-incident-snippet', () => {
     })
 
     expect(result.failureClass).toBe('smoke_only')
+    expect(result.schemaVersion).toBe(INCIDENT_PAYLOAD_SCHEMA_VERSION)
     expect(result.recommendationId).toBe('QG-004')
     expect(result.outputFile).toBe(outputFile)
     expect(result.artifactUrl).toBe('')
     expect(result.artifactSource).toBe('none')
+    expect(result.validatorArtifactUrl).toBe('')
+    expect(result.validatorArtifactSource).toBe('none')
+    expect(result.primaryArtifactKind).toBe('none')
     const markdown = fs.readFileSync(stepSummaryFile, 'utf8')
     expect(markdown).toContain('### CI Smoke Incident')
     expect(markdown).toContain('- Failure Class: smoke_only')
     expect(markdown).toContain('- Recommendation ID: QG-004')
     expect(fs.readFileSync(outputFile, 'utf8')).toContain('### CI Smoke Incident')
 
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('uses validator artifact id for validator_contract failures', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-'))
+    const summaryFile = path.join(dir, 'quality-summary.json')
+    const outputFile = path.join(dir, 'incident.md')
+
+    fs.writeFileSync(summaryFile, JSON.stringify({
+      failureClass: 'validator_contract',
+      recommendationId: 'QG-008',
+    }), 'utf8')
+
+    const result = publishIncidentSnippet({
+      summaryFile,
+      outputFile,
+      workflowRun: 'https://github.com/org/repo/actions/runs/123',
+      branchPr: 'https://github.com/org/repo/pull/42',
+      impact: 'Merge blocked',
+      owner: 'CI Team',
+      eta: '2026-02-12 12:00 UTC',
+      immediateAction: 'Reran failed workflow',
+      followUp: 'yes',
+      validatorArtifactId: '789',
+      lintResult: 'success',
+      smokeResult: 'success',
+    })
+
+    const markdown = fs.readFileSync(outputFile, 'utf8')
+    expect(markdown).toContain('- Validator contracts artifact: https://github.com/org/repo/actions/runs/123/artifacts/789')
+    expect(result.validatorArtifactUrl).toBe('https://github.com/org/repo/actions/runs/123/artifacts/789')
+    expect(result.validatorArtifactSource).toBe('run_id')
+    expect(result.schemaVersion).toBe(INCIDENT_PAYLOAD_SCHEMA_VERSION)
+    expect(result.primaryArtifactKind).toBe('validator_contracts')
     fs.rmSync(dir, { recursive: true, force: true })
   })
 
@@ -286,6 +393,8 @@ describe('publish-ci-incident-snippet', () => {
     })))
     expect(result.artifactUrl).toBe('https://github.com/org/repo/actions/runs/123/artifacts/456')
     expect(result.artifactSource).toBe('run_id')
+    expect(result.schemaVersion).toBe(INCIDENT_PAYLOAD_SCHEMA_VERSION)
+    expect(result.primaryArtifactKind).toBe('selective_decisions')
     fs.rmSync(dir, { recursive: true, force: true })
   })
 })

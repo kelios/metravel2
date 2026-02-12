@@ -2,12 +2,15 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const {
+  SUPPORTED_SCHEMA_VERSION,
+  ALLOWED_PRIMARY_ARTIFACT_KINDS,
   parseArgs,
   validate,
   validateDetailed,
 } = require('@/scripts/validate-ci-incident-payload')
 
 const validPayload = () => ({
+  schemaVersion: SUPPORTED_SCHEMA_VERSION,
   failureClass: 'selective_contract',
   recommendationId: 'QG-007',
   workflowRun: 'https://github.com/org/repo/actions/runs/123',
@@ -22,6 +25,9 @@ const validPayload = () => ({
   ].join('\n'),
   artifactUrl: 'https://github.com/org/repo/actions/runs/123/artifacts/456',
   artifactSource: 'run_id',
+  validatorArtifactUrl: '',
+  validatorArtifactSource: 'none',
+  primaryArtifactKind: 'selective_decisions',
 })
 
 describe('validate-ci-incident-payload', () => {
@@ -44,10 +50,82 @@ describe('validate-ci-incident-payload', () => {
     expect(validate(validPayload())).toEqual([])
   })
 
+  it('fails when schemaVersion is unsupported', () => {
+    const payload = validPayload()
+    payload.schemaVersion = 999
+    const errors = validateDetailed(payload)
+    expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INVALID_SCHEMA_VERSION')).toBe(true)
+  })
+
+  it('keeps allowed primary artifact kinds stable', () => {
+    expect([...ALLOWED_PRIMARY_ARTIFACT_KINDS]).toEqual([
+      'none',
+      'selective_decisions',
+      'validator_contracts',
+    ])
+  })
+
+  it('passes for validator_contract payload without selective artifact', () => {
+    const payload = validPayload()
+    payload.failureClass = 'validator_contract'
+    payload.recommendationId = 'QG-008'
+    payload.artifactSource = 'none'
+    payload.artifactUrl = ''
+    payload.validatorArtifactSource = 'run_id'
+    payload.validatorArtifactUrl = 'https://github.com/org/repo/actions/runs/123/artifacts/789'
+    payload.primaryArtifactKind = 'validator_contracts'
+    payload.markdown = [
+      '### CI Smoke Incident',
+      '- Failure Class: validator_contract',
+      '- Recommendation ID: QG-008',
+      '- Validator contracts artifact: https://github.com/org/repo/actions/runs/123/artifacts/789',
+      '',
+    ].join('\n')
+    expect(validate(payload)).toEqual([])
+  })
+
+  it('fails when validator contract source/url are inconsistent', () => {
+    const payload = validPayload()
+    payload.failureClass = 'validator_contract'
+    payload.recommendationId = 'QG-008'
+    payload.artifactSource = 'none'
+    payload.artifactUrl = ''
+    payload.validatorArtifactSource = 'none'
+    payload.validatorArtifactUrl = ''
+    payload.primaryArtifactKind = 'validator_contracts'
+    payload.markdown = payload.markdown
+      .replace('selective_contract', 'validator_contract')
+      .replace('QG-007', 'QG-008')
+      .replace(/^- Selective decisions artifact:.*$/m, '')
+    const errors = validateDetailed(payload)
+    expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INCONSISTENT_VALIDATOR_ARTIFACT_SOURCE')).toBe(true)
+  })
+
+  it('fails when markdown validator artifact line does not match validatorArtifactUrl', () => {
+    const payload = validPayload()
+    payload.failureClass = 'validator_contract'
+    payload.recommendationId = 'QG-008'
+    payload.artifactSource = 'none'
+    payload.artifactUrl = ''
+    payload.validatorArtifactSource = 'run_id'
+    payload.validatorArtifactUrl = 'https://github.com/org/repo/actions/runs/123/artifacts/789'
+    payload.primaryArtifactKind = 'validator_contracts'
+    payload.markdown = [
+      '### CI Smoke Incident',
+      '- Failure Class: validator_contract',
+      '- Recommendation ID: QG-008',
+      '- Validator contracts artifact: https://github.com/org/repo/actions/runs/123/artifacts/999',
+      '',
+    ].join('\n')
+    const errors = validateDetailed(payload)
+    expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INCONSISTENT_MARKDOWN_VALIDATOR_ARTIFACT')).toBe(true)
+  })
+
   it('fails when selective contract uses artifactSource none', () => {
     const payload = validPayload()
     payload.artifactSource = 'none'
     payload.artifactUrl = ''
+    payload.primaryArtifactKind = 'selective_decisions'
     payload.markdown = payload.markdown.replace(/^- Selective decisions artifact:.*$/m, '')
     const errors = validateDetailed(payload)
     expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_SOURCE')).toBe(true)
@@ -57,6 +135,7 @@ describe('validate-ci-incident-payload', () => {
     const payload = validPayload()
     payload.artifactSource = 'run_id'
     payload.artifactUrl = ''
+    payload.primaryArtifactKind = 'selective_decisions'
     payload.markdown = payload.markdown.replace(/^- Selective decisions artifact:.*$/m, '')
     const errors = validateDetailed(payload)
     expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_URL')).toBe(true)
@@ -70,6 +149,20 @@ describe('validate-ci-incident-payload', () => {
     )
     const errors = validateDetailed(payload)
     expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INCONSISTENT_MARKDOWN_ARTIFACT')).toBe(true)
+  })
+
+  it('fails when primaryArtifactKind is inconsistent with failure class', () => {
+    const payload = validPayload()
+    payload.primaryArtifactKind = 'validator_contracts'
+    const errors = validateDetailed(payload)
+    expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INCONSISTENT_PRIMARY_ARTIFACT_KIND')).toBe(true)
+  })
+
+  it('fails when primaryArtifactKind is invalid', () => {
+    const payload = validPayload()
+    payload.primaryArtifactKind = 'unknown'
+    const errors = validateDetailed(payload)
+    expect(errors.some((entry) => entry.code === 'INCIDENT_PAYLOAD_INVALID_PRIMARY_ARTIFACT_KIND')).toBe(true)
   })
 
   it('reads and validates payload file', () => {

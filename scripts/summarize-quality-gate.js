@@ -22,6 +22,7 @@ const jsonOutputPathArg = getFlagValue('--json-output')
 const selectiveDecisionsFileArg = getFlagValue('--selective-decisions-file')
 const schemaDecisionPathArg = getFlagValue('--schema-decision-file')
 const validatorDecisionPathArg = getFlagValue('--validator-decision-file')
+const validatorContractsSummaryValidationFileArg = getFlagValue('--validator-contracts-summary-validation-file')
 const lintJobResult = String(process.env.LINT_JOB_RESULT || '').trim().toLowerCase()
 const smokeJobResult = String(process.env.SMOKE_JOB_RESULT || '').trim().toLowerCase()
 const smokeDurationBudgetSeconds = Number(process.env.SMOKE_DURATION_BUDGET_SECONDS || 0)
@@ -128,6 +129,57 @@ const readSelectiveDecisionsAggregate = (rawPath) => {
   }
 }
 
+const readValidatorContractsSummaryValidation = (rawPath) => {
+  if (!rawPath) {
+    return {
+      payload: null,
+      warnings: [],
+      issue: false,
+    }
+  }
+
+  const resolved = path.resolve(process.cwd(), rawPath)
+  if (!fs.existsSync(resolved)) {
+    return {
+      payload: null,
+      warnings: [`validator-contracts-summary-validation: file not found (${rawPath}).`],
+      issue: true,
+    }
+  }
+
+  const payload = readJson(resolved)
+  if (!payload) {
+    return {
+      payload: null,
+      warnings: [`validator-contracts-summary-validation: cannot parse JSON (${rawPath}).`],
+      issue: true,
+    }
+  }
+
+  const contractVersion = Number(payload?.contractVersion)
+  const ok = typeof payload?.ok === 'boolean' ? payload.ok : null
+  const errorCount = Number(payload?.errorCount)
+  const errorsArray = payload?.errors
+  const validContract = contractVersion === 1
+    && ok !== null
+    && Number.isFinite(errorCount)
+    && Array.isArray(errorsArray)
+
+  if (!validContract) {
+    return {
+      payload,
+      warnings: ['validator-contracts-summary-validation: invalid validator-output contract payload.'],
+      issue: true,
+    }
+  }
+
+  return {
+    payload,
+    warnings: [],
+    issue: !ok,
+  }
+}
+
 const eslint = readJson(eslintPath)
 const jest = readJson(jestPath)
 
@@ -227,17 +279,22 @@ if (selectiveDecisionsFileArg) {
   selectiveDecisions = selectiveDecisionReads.map((item) => item.decision).filter(Boolean)
   selectiveDecisionWarnings = selectiveDecisionReads.map((item) => item.warning).filter(Boolean)
 }
+const validatorContractsSummaryValidation = readValidatorContractsSummaryValidation(
+  validatorContractsSummaryValidationFileArg
+)
 
 const overallOk = eslintOk
   && jestOk
   && inconsistencies.length === 0
   && !budgetBlocking
   && !selectiveDecisionsAggregateIssue
+  && !validatorContractsSummaryValidation.issue
 
 const getFailureClass = () => {
   if (overallOk) return 'pass'
   if (inconsistencies.length > 0) return 'inconsistent_state'
   if (eslint === null || jest === null) return 'infra_artifact'
+  if (validatorContractsSummaryValidation.issue && eslintOk && jestOk && !budgetBlocking) return 'validator_contract'
   if (selectiveDecisionsAggregateIssue && eslintOk && jestOk && !budgetBlocking) return 'selective_contract'
   if (budgetBlocking && eslintOk && jestOk) return 'performance_budget'
   if (!eslintOk && jestOk) return 'lint_only'
@@ -254,9 +311,10 @@ const recommendationByClass = {
   mixed: 'QG-005',
   performance_budget: 'QG-006',
   selective_contract: 'QG-007',
+  validator_contract: 'QG-008',
 }
 const recommendationQuickMap =
-  'QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract'
+  'QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract | QG-008 validator_contract'
 const recommendationAnchorByClass = {
   infra_artifact: 'qg-001',
   inconsistent_state: 'qg-002',
@@ -265,6 +323,7 @@ const recommendationAnchorByClass = {
   mixed: 'qg-005',
   performance_budget: 'qg-006',
   selective_contract: 'qg-007',
+  validator_contract: 'qg-008',
 }
 const recommendationId = recommendationByClass[failureClass] || 'QG-000'
 const recommendationAnchor = recommendationAnchorByClass[failureClass] || 'troubleshooting-by-failure-class'
@@ -291,6 +350,9 @@ const qualitySnapshot = {
   selectiveDecisions,
   selectiveDecisionWarnings,
   selectiveDecisionsAggregateIssue,
+  validatorContractsSummaryValidationOk: validatorContractsSummaryValidation.payload?.ok ?? null,
+  validatorContractsSummaryValidationWarnings: validatorContractsSummaryValidation.warnings,
+  validatorContractsSummaryValidationIssue: validatorContractsSummaryValidation.issue,
 }
 
 print('## Quality Gate Summary')
@@ -380,6 +442,22 @@ if (selectiveDecisionWarnings.length > 0) {
   selectiveDecisionWarnings.forEach((warning) => print(`  - ${warning}`))
 }
 
+if (validatorContractsSummaryValidationFileArg) {
+  print('')
+  print('### Validator Contracts')
+  if (!validatorContractsSummaryValidation.payload) {
+    print('- Validator contracts summary validation: unavailable')
+  } else {
+    const status = validatorContractsSummaryValidation.payload.ok ? 'pass' : 'fail'
+    const errorCount = Number(validatorContractsSummaryValidation.payload.errorCount || 0)
+    print(`- Validator contracts summary validation: ${status} (errors: ${errorCount})`)
+  }
+  if (validatorContractsSummaryValidation.warnings.length > 0) {
+    print('- Validator contracts warnings:')
+    validatorContractsSummaryValidation.warnings.forEach((warning) => print(`  - ${warning}`))
+  }
+}
+
 if (inconsistencies.length > 0) {
   print('')
   print('### Consistency Checks')
@@ -420,6 +498,9 @@ if (!overallOk) {
   if (selectiveDecisionsAggregateIssue) {
     print('- Fix selective decisions aggregate contract and re-run quality summary.')
   }
+  if (validatorContractsSummaryValidation.issue) {
+    print('- Fix validator contracts summary validation issues and re-run quality summary.')
+  }
 
   print('')
   print('### How to Reproduce Locally')
@@ -445,6 +526,10 @@ if (!overallOk) {
   if (!hasReproCommands && selectiveDecisionsAggregateIssue) {
     print('- `node scripts/collect-selective-decisions.js --schema-file test-results/selective/schema/schema-selective-decision.json --validator-file test-results/selective/validator/validator-selective-decision.json --output-file test-results/selective-decisions.json`')
     print('- `node scripts/validate-selective-decisions.js --file test-results/selective-decisions.json`')
+  }
+  if (!hasReproCommands && validatorContractsSummaryValidation.issue) {
+    print('- `yarn validator:contracts:summary`')
+    print('- `yarn validator:contracts:summary:validate`')
   }
 }
 

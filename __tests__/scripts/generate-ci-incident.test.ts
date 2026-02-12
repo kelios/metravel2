@@ -28,6 +28,7 @@ describe('generate-ci-incident script', () => {
       immediateAction: 'Reran failed workflow',
       followUp: 'yes - add artifact diagnostics',
       selectiveArtifact: 'https://example.com/run/1#artifacts',
+      validatorArtifact: 'https://example.com/run/1/artifacts/789',
     });
 
     expect(md).toContain('### CI Smoke Incident');
@@ -35,13 +36,15 @@ describe('generate-ci-incident script', () => {
     expect(md).toContain('- Recommendation ID: QG-002');
     expect(md).toContain('- Owner: CI Team');
     expect(md).toContain('- Selective decisions artifact: https://example.com/run/1#artifacts');
+    expect(md).toContain('- Validator contracts artifact: https://example.com/run/1/artifacts/789');
   });
 
   it('uses placeholders when values are not provided', () => {
     const md = buildIncidentMarkdown({});
     expect(md).toContain('- Workflow run: <link>');
-    expect(md).toContain('- Recommendation ID: <QG-001..QG-007>');
+    expect(md).toContain('- Recommendation ID: <QG-001..QG-008>');
     expect(md).toContain('selective_contract');
+    expect(md).toContain('validator_contract');
     expect(md).toContain('- Owner: <person-or-team>');
   });
 });
