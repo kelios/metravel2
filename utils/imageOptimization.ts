@@ -25,6 +25,29 @@ export interface ResponsiveImageSource {
 const optimizedUrlCache = new Map<string, string>();
 const MAX_CACHE_SIZE = 400;
 
+const isPrivateOrLocalHost = (host: string): boolean => {
+  const h = String(host || '').trim().toLowerCase();
+  if (!h) return false;
+  if (h === 'localhost' || h === '127.0.0.1') return true;
+  if (/^10\./.test(h)) return true;
+  if (/^192\.168\./.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
+  return false;
+};
+
+const getPublicApiOrigin = (): string | null => {
+  try {
+    const raw = String(process.env.EXPO_PUBLIC_API_URL || '').trim();
+    if (!raw) return null;
+    const base = raw.replace(/\/api\/?$/i, '');
+    const parsed = new URL(base);
+    if (!parsed.origin) return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+};
+
 export function clearImageOptimizationCache(): void {
   optimizedUrlCache.clear()
 }
@@ -76,17 +99,6 @@ export function optimizeImageUrl(
       return optimizedUrlCache.get(cacheKey);
     }
 
-    const isPrivateOrLocalHost = (host: string): boolean => {
-      const h = String(host || '').trim().toLowerCase();
-      if (!h) return false;
-      if (h === 'localhost' || h === '127.0.0.1') return true;
-      // Private IPv4 ranges
-      if (/^10\./.test(h)) return true;
-      if (/^192\.168\./.test(h)) return true;
-      if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
-      return false;
-    };
-
     // Force HTTPS for security and performance (but keep HTTP for local/private dev hosts)
     let secureUrl = originalUrl;
     if (/^http:\/\//i.test(originalUrl)) {
@@ -118,6 +130,18 @@ export function optimizeImageUrl(
           : undefined;
       const base = typeof origin === 'string' && origin.length > 0 ? origin : 'https://metravel.by';
       url = new URL(secureUrl, base);
+    }
+
+    // If backend returned a private host URL in production web context,
+    // remap it to the configured public API origin to avoid long timeouts.
+    if (Platform.OS === 'web' && isPrivateOrLocalHost(String(url.hostname || ''))) {
+      const publicApiOrigin = getPublicApiOrigin();
+      if (publicApiOrigin) {
+        const publicParsed = new URL(publicApiOrigin);
+        if (publicParsed.hostname && !isPrivateOrLocalHost(publicParsed.hostname)) {
+          url = new URL(`${url.pathname}${url.search}`, publicApiOrigin);
+        }
+      }
     }
 
     const isAllowedTransformHost = (() => {
@@ -583,6 +607,20 @@ export function buildVersionedImageUrl(
     }
     
     const imageUrl = new URL(url, baseUrl);
+
+    // Normalize private-host absolute URLs to the configured public API origin on web.
+    if (Platform.OS === 'web' && isPrivateOrLocalHost(String(imageUrl.hostname || ''))) {
+      const publicApiOrigin = getPublicApiOrigin();
+      if (publicApiOrigin) {
+        const publicParsed = new URL(publicApiOrigin);
+        if (publicParsed.hostname && !isPrivateOrLocalHost(publicParsed.hostname)) {
+          const normalized = new URL(`${imageUrl.pathname}${imageUrl.search}`, publicApiOrigin);
+          imageUrl.protocol = normalized.protocol;
+          imageUrl.hostname = normalized.hostname;
+          imageUrl.port = normalized.port;
+        }
+      }
+    }
     
     // Добавляем версионирование для кэша
     if (updatedAt) {

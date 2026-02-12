@@ -384,7 +384,7 @@ function TravelHeroSectionInner({
   }, [travel])
 
   // Keep hero LCP source aligned with Slider first frame to avoid visible swap flicker.
-  const firstRaw = travel?.gallery?.[0] || travel?.travel_image_thumb_url
+  const firstRaw = travel?.travel_image_thumb_url || travel?.gallery?.[0]
   const firstImg = useMemo(() => {
     if (!firstRaw) return null
     if (typeof firstRaw === 'string') return { url: firstRaw }
@@ -572,7 +572,7 @@ function TravelHeroSectionInner({
                   showDots={isMobile}
                   autoPlay={false}
                   preloadCount={0}
-                  blurBackground
+                  blurBackground={false}
                   aspectRatio={aspectRatio as number}
                   mobileHeightPercent={0.7}
                   onFirstImageLoad={handleSliderImageLoad}
@@ -615,7 +615,7 @@ function TravelHeroSectionInner({
               showDots={isMobile}
               autoPlay={false}
               preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
-              blurBackground
+              blurBackground={Platform.OS !== 'web'}
               aspectRatio={aspectRatio as number}
               mobileHeightPercent={0.7}
               onFirstImageLoad={onFirstImageLoad}

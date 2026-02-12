@@ -83,6 +83,9 @@ const normalizeImgTags = (html: string): string =>
     out = out.replace(/\bwidth="[^"]*"/i, "").replace(/\bheight="[^"]*"/i, "");
     if (w && h) out = out.replace(/>$/, ` width="${w}" height="${h}">`);
     out = out.replace(/\bdecoding="[^"]*"/i, "").replace(/\bfetchpriority="[^"]*"/i, "");
+    if (!/\balt\s*=/i.test(out)) {
+      out = out.replace(/>$/, ` alt="">`);
+    }
     out = out.replace(/>$/, ` decoding="async" fetchpriority="low">`);
     return out;
   });

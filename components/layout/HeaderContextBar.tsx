@@ -214,8 +214,8 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.xs,
   },
   backButton: {
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -226,12 +226,12 @@ const createStyles = (colors: ThemedColors) => StyleSheet.create({
     color: colors.text,
   },
   mobileRightSpacer: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
   },
   mobileSectionsButton: {
-    minWidth: 40,
-    minHeight: 40,
+    minWidth: 48,
+    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.72,

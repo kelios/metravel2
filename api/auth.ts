@@ -18,11 +18,18 @@ const webOriginApi =
     Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
         ? `${window.location.origin}/api`
         : '';
+const isWebLocalHost =
+    Platform.OS === 'web' &&
+    typeof window !== 'undefined' &&
+    typeof window.location?.hostname === 'string' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const rawApiUrl: string =
     Platform.OS === 'web'
-        ? (isE2E
-            ? (webOriginApi || envApiUrl || '')
-            : (envApiUrl || ''))
+        ? (isWebLocalHost && webOriginApi
+            ? webOriginApi
+            : (isE2E
+                ? (webOriginApi || envApiUrl || '')
+                : (envApiUrl || '')))
         : (envApiUrl || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : ''));
 if (!rawApiUrl) {
     throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');

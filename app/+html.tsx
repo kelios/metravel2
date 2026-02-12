@@ -147,7 +147,10 @@ const getTravelHeroPreloadScript = () => String.raw`
         }
       }
     }
-    var apiOrigin = normalizeApiOrigin(apiBaseEnv) || ((window.location && window.location.origin) || '');
+    var sameOriginApiHost = isPrivateHost(host);
+    var apiOrigin = sameOriginApiHost
+      ? ((window.location && window.location.origin) || '')
+      : (normalizeApiOrigin(apiBaseEnv) || ((window.location && window.location.origin) || ''));
     if (!apiOrigin) return;
     var endpoint = isId
       ? apiOrigin + '/api/travels/' + encodeURIComponent(slug) + '/'
@@ -189,6 +192,31 @@ const getTravelHeroPreloadScript = () => String.raw`
     function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id, explicitDpr) {
       try {
         var resolved = new URL(rawUrl, window.location.origin);
+
+        // If backend returns private-host images, remap to public API origin
+        // to avoid slow/unreachable requests in prod-like environments.
+        var rh = (resolved.hostname || '').toLowerCase();
+        var isPrivateResolvedHost =
+          rh === 'localhost' ||
+          rh === '127.0.0.1' ||
+          /^10\./.test(rh) ||
+          /^192\.168\./.test(rh) ||
+          /^172\.(1[6-9]|2\d|3[0-1])\./.test(rh);
+        if (isPrivateResolvedHost && apiOrigin) {
+          try {
+            var publicApi = new URL(apiOrigin);
+            var ph = (publicApi.hostname || '').toLowerCase();
+            var isPrivatePublicApi =
+              ph === 'localhost' ||
+              ph === '127.0.0.1' ||
+              /^10\./.test(ph) ||
+              /^192\.168\./.test(ph) ||
+              /^172\.(1[6-9]|2\d|3[0-1])\./.test(ph);
+            if (!isPrivatePublicApi) {
+              resolved = new URL(resolved.pathname + resolved.search, publicApi.origin);
+            }
+          } catch (_e0) {}
+        }
 
         // Force HTTPS for non-local hosts (matches optimizeImageUrl)
         if (resolved.protocol === 'http:') {
@@ -249,7 +277,9 @@ const getTravelHeroPreloadScript = () => String.raw`
         try { if (controller) controller.abort(); } catch (_e) {}
       }, 8000);
 
-      fetch(endpoint, {
+      try { window.__metravelTravelPreloadPending = true; } catch (_e) {}
+
+      var preloadPromise = fetch(endpoint, {
         method: 'GET',
         credentials: 'omit',
         signal: controller ? controller.signal : undefined
@@ -333,8 +363,11 @@ const getTravelHeroPreloadScript = () => String.raw`
         link.crossOrigin = 'anonymous';
         document.head.appendChild(link);
       }).catch(function(){}).finally(function(){
+        try { window.__metravelTravelPreloadPending = false; } catch (_e) {}
         clearTimeout(timeout);
       });
+
+      try { window.__metravelTravelPreloadPromise = preloadPromise; } catch (_e) {}
     }
 
     // Run immediately to start fetching API data for LCP image as soon as possible
@@ -352,9 +385,13 @@ export default function Root({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru" suppressHydrationWarning>
     <head>
-      <meta charSet="utf-8" />
-      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
+	      <meta charSet="utf-8" />
+	      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+	      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
+	      <meta
+	        name="description"
+	        content="MeTravel: маршруты, заметки и фото путешествий в одном месте."
+	      />
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorDark} media="(prefers-color-scheme: dark)" />
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorLight} media="(prefers-color-scheme: light)" />
 	      <meta name="color-scheme" content="light dark" />
@@ -423,6 +460,23 @@ export default function Root({ children }: { children: React.ReactNode }) {
               color: rgba(47, 59, 54, 0.92);
               text-wrap: balance;
             }
+            #metravel-shell .travel-lock {
+              display: none;
+              width: min(860px, 94vw);
+              font-size: clamp(20px, 2.6vw, 28px);
+              line-height: 1.3;
+              font-weight: 600;
+              color: rgba(47, 59, 54, 0.92);
+              text-wrap: balance;
+            }
+            html.route-travel #metravel-shell .brand,
+            html.route-travel #metravel-shell .tagline,
+            html.route-travel #metravel-shell .lcp-lock {
+              display: none;
+            }
+            html.route-travel #metravel-shell .travel-lock {
+              display: block;
+            }
             #metravel-shell .hero,
             #metravel-shell .bar,
             #metravel-shell .card {
@@ -464,6 +518,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
               #metravel-shell .brand { font-size: clamp(24px, 8vw, 34px); }
               #metravel-shell .tagline { font-size: 15px; }
               #metravel-shell .lcp-lock { font-size: 21px; line-height: 1.32; }
+              #metravel-shell .travel-lock { font-size: 21px; line-height: 1.32; }
               #metravel-shell .hero { min-height: 36vh; }
               #metravel-shell .row { grid-template-columns: 1fr; }
             }
@@ -471,7 +526,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
               0% { transform: translateX(-100%); }
               100% { transform: translateX(100%); }
             }
-            html.rnw-styles-ready #metravel-shell {
+            html.rnw-styles-ready.app-hydrated #metravel-shell {
               opacity: 0;
               visibility: hidden;
             }
@@ -490,11 +545,11 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <script
         dangerouslySetInnerHTML={{ __html: getEntryPreloadScript() }}
       />
-      <script
-        dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;function mark(){if(done)return;done=true;try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}root.classList.add('rnw-styles-ready')}if(document.getElementById('react-native-stylesheet')){mark();return}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true}return false}catch(_){return false}}if(hasReadyLink()){mark();return}hard=setTimeout(mark,520);poll=setInterval(function(){if(hasReadyLink())mark()},50)}catch(_){}})();`,
-        }}
-      />
+	      <script
+	        dangerouslySetInnerHTML={{
+	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;var shellTimeout=0;var path='';try{path=String(window.location&&window.location.pathname||'')}catch(_){}var isTravel=/^\/travels?(\/|$)/.test(path);var minDelay=isTravel?1600:500;var started=Date.now();function clearTimers(){try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}}function finish(){if(done)return;done=true;clearTimers();root.classList.add('rnw-styles-ready')}function mark(){if(done)return;var wait=minDelay-(Date.now()-started);if(wait>0){setTimeout(mark,wait);return}if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true}return false}catch(_){return false}}if(hasReadyLink()){mark()}else{hard=setTimeout(mark,isTravel?1800:700);poll=setInterval(function(){if(hasReadyLink())mark()},50)}shellTimeout=setTimeout(function(){try{root.classList.add('app-hydrated')}catch(_){}} ,10000)}catch(_){}})();`,
+	        }}
+	      />
 
       <ScrollViewStyleReset />
 
@@ -510,6 +565,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
         <div className="brand">MeTravel</div>
         <div className="tagline">Собираем путешествие и подготавливаем страницы без рывков.</div>
         <div className="lcp-lock">Читай поездки других путешественников, сохраняй лучшие маршруты и собирай свои.</div>
+        <div className="travel-lock">Загружаем страницу путешествия.</div>
         <div className="hero" />
         <div className="bar title" />
         <div className="bar sub" />

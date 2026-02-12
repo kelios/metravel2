@@ -20,7 +20,9 @@ const isWebLocalHost =
 
 const rawApiUrl: string =
     Platform.OS === 'web'
-        ? ((isE2E || isLocalApi) && isWebLocalHost && webOriginApi ? webOriginApi : (envApiUrl || ''))
+        ? (isWebLocalHost && webOriginApi
+            ? webOriginApi
+            : ((isE2E || isLocalApi) && webOriginApi ? webOriginApi : (envApiUrl || '')))
         : (envApiUrl || (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : ''));
 
 if (!rawApiUrl) {

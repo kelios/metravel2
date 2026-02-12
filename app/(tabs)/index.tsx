@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { usePathname } from 'expo-router';
-import { useIsFocused } from '@react-navigation/native';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
@@ -15,7 +14,6 @@ const Home = lazy(() => import('@/components/home/Home'));
 
 function HomeScreen() {
     const pathname = usePathname();
-    const isFocused = useIsFocused();
     const colors = useThemedColors();
     const { isHydrated: isResponsiveHydrated = true } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -27,23 +25,19 @@ function HomeScreen() {
     const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
     useEffect(() => { if (Platform.OS === 'web') setHydrated(true); }, []);
 
-    // On web, only check the real URL after hydration to avoid SSR/client mismatch.
+    // On web, only check the real browser URL after hydration.
+    // Do not fallback to router focus/pathname: it can briefly report "/" while
+    // navigating to /travels/* and cause Home to flash over travel details.
     const isHomePath = useMemo(() => {
         if (Platform.OS !== 'web') return true;
         if (!hydrated) return false; // SSR & first client render: unknown → false
-        // After hydration: use window.location as source of truth
+
         if (typeof window !== 'undefined') {
             const loc = String(window.location?.pathname ?? '').trim();
             if (loc === '' || loc === '/' || loc === '/index') return true;
         }
-        // Fallback: if focused and expo-router says home path, trust it
-        // (covers SPA back-navigation where window.location may lag)
-        if (isFocused) {
-            const p = String(pathname ?? '').trim();
-            return p === '' || p === '/' || p === '/index';
-        }
         return false;
-    }, [hydrated, pathname, isFocused]);
+    }, [hydrated]);
 
     const canMountContent = hydrated && isResponsiveHydrated;
 
@@ -55,8 +49,8 @@ function HomeScreen() {
 
     const shouldRenderSeo = useMemo(() => {
         if (Platform.OS !== 'web') return false;
-        return isFocused && isHomePath;
-    }, [isFocused, isHomePath]);
+        return isHomePath;
+    }, [isHomePath]);
 
     const title = 'Твоя книга путешествий | Metravel';
     const description = 'Добавляй поездки, фото и заметки — и собирай красивую книгу в PDF для печати.';

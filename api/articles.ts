@@ -5,11 +5,22 @@ import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { Platform } from 'react-native';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
+const isWebLocalHost =
+  Platform.OS === 'web' &&
+  typeof window !== 'undefined' &&
+  typeof window.location?.hostname === 'string' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const webOriginApi =
+  Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
+    ? `${window.location.origin}/api`
+    : '';
 
 const rawApiUrl: string =
-  (Platform.OS === 'web' && isLocalApi && typeof window !== 'undefined' && window.location?.origin
-    ? `${window.location.origin}/api`
-    : process.env.EXPO_PUBLIC_API_URL) ||
+  (Platform.OS === 'web' && isWebLocalHost && webOriginApi
+    ? webOriginApi
+    : (Platform.OS === 'web' && isLocalApi && webOriginApi
+        ? webOriginApi
+        : process.env.EXPO_PUBLIC_API_URL)) ||
   (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');
 if (!rawApiUrl) {
   throw new Error('EXPO_PUBLIC_API_URL is not defined. Please set this environment variable.');

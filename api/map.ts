@@ -186,7 +186,13 @@ const webOriginApi =
   Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin
     ? `${window.location.origin}/api`
     : '';
+const isWebLocalHost =
+  Platform.OS === 'web' &&
+  typeof window !== 'undefined' &&
+  typeof window.location?.hostname === 'string' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 const rawApiUrl: string =
+  (Platform.OS === 'web' && isWebLocalHost && webOriginApi ? webOriginApi : '') ||
   envApiUrl ||
   (Platform.OS === 'web' && (isE2E || isLocalApi) && webOriginApi ? webOriginApi : '') ||
   (process.env.NODE_ENV === 'test' ? 'https://example.test/api' : '');

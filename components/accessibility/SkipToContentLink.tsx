@@ -8,7 +8,6 @@
 import React, { useMemo } from 'react';
 import { Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { useThemedColors } from '@/hooks/useTheme';
 
 interface SkipToContentLinkProps {
   targetId?: string;
@@ -19,14 +18,13 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
   targetId = 'main-content',
   label = 'Skip to main content',
 }) => {
-  const colors = useThemedColors();
   const linkStyle = useMemo(
     () => ({
       position: 'absolute',
       top: '-40px',
       left: 0,
-      background: colors.primaryDark,
-      color: colors.textInverse,
+      background: '#111111',
+      color: '#ffffff',
       padding: `${DESIGN_TOKENS.spacing.xs}px ${DESIGN_TOKENS.spacing.sm}px`,
       textDecoration: 'none',
       zIndex: DESIGN_TOKENS.zIndex.fixed,
@@ -35,10 +33,7 @@ export const SkipToContentLink: React.FC<SkipToContentLinkProps> = ({
       fontWeight: DESIGN_TOKENS.typography.weights.semibold,
       transition: `top ${DESIGN_TOKENS.animations.duration.normal}ms ${DESIGN_TOKENS.animations.easing.default}`,
     }),
-    [
-      colors.primaryDark,
-      colors.textInverse,
-    ]
+    []
   );
 
   if (Platform.OS !== 'web') {

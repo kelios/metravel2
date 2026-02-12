@@ -43,6 +43,41 @@ function consumePreloadedTravel(slug: string, isId: boolean, idNum: number): Tra
   }
 }
 
+async function waitForTravelPreload(slug: string, isId: boolean, idNum: number): Promise<Travel | undefined> {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return undefined;
+
+  const immediate = consumePreloadedTravel(slug, isId, idNum);
+  if (immediate) return immediate;
+
+  const pending = Boolean((window as any).__metravelTravelPreloadPending);
+  const promise: Promise<any> | undefined = (window as any).__metravelTravelPreloadPromise;
+  if (!pending && !promise) return undefined;
+
+  const timeoutMs = 2500;
+  const start = Date.now();
+
+  if (promise && typeof promise.then === 'function') {
+    try {
+      await Promise.race([
+        promise,
+        new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+      ]);
+    } catch {
+      // noop
+    }
+    return consumePreloadedTravel(slug, isId, idNum);
+  }
+
+  while (Date.now() - start < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const retry = consumePreloadedTravel(slug, isId, idNum);
+    if (retry) return retry;
+    if (!(window as any).__metravelTravelPreloadPending) break;
+  }
+
+  return consumePreloadedTravel(slug, isId, idNum);
+}
+
 export function useTravelDetails(): UseTravelDetailsReturn {
   const { param } = useLocalSearchParams();
   const slug = Array.isArray(param) ? param[0] : (param ?? '');
@@ -64,20 +99,10 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     queryKey: queryKeys.travel(cacheKey),
     enabled: !isMissingParam,
     queryFn: async ({ signal } = {} as any) => {
-      // Try to consume preloaded data from the inline script (avoids double API fetch).
-      // The inline script in +html.tsx fires a fetch() before React mounts. If React
-      // hydrates before that fetch completes, the preload won't be available yet.
-      // Wait briefly (up to 150ms in 30ms steps) to give the preload a chance to land.
-      const preloaded = consumePreloadedTravel(normalizedSlug, isId, idNum);
+      // Try to reuse preload from +html.tsx and wait shortly for its in-flight request.
+      // This avoids duplicate travel-details fetches on first paint (critical for LCP).
+      const preloaded = await waitForTravelPreload(normalizedSlug, isId, idNum);
       if (preloaded) return preloaded;
-
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        for (let i = 0; i < 5; i++) {
-          await new Promise((r) => setTimeout(r, 30));
-          const retry = consumePreloadedTravel(normalizedSlug, isId, idNum);
-          if (retry) return retry;
-        }
-      }
 
       return isId
         ? fetchTravel(idNum, { signal })

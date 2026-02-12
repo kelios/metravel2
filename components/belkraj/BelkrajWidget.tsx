@@ -67,6 +67,9 @@ function BelkrajWidget({
                 ifr.style.height = `${targetHeight}px`; // ключевой момент: задаём высоту самому iframe
                 ifr.style.display = 'block';
                 ifr.setAttribute('scrolling', 'yes');   // на всякий случай для старых движков
+                if (!ifr.getAttribute('title')) {
+                    ifr.setAttribute('title', 'Belkraj partner offers');
+                }
             }
         });
         mo.observe(el, { childList: true, subtree: true });
