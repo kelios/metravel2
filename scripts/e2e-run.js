@@ -4,6 +4,9 @@ const { spawn } = require('node:child_process');
 const path = require('node:path');
 
 const rootDir = path.join(__dirname, '..');
+if (process.env.FORCE_COLOR && process.env.NO_COLOR) {
+  delete process.env.NO_COLOR;
+}
 
 const playwrightBin =
   process.platform === 'win32'
@@ -23,10 +26,15 @@ function hasAnyArg(args, names) {
 
 function runPlaywright(args) {
   return new Promise((resolve, reject) => {
+    const childEnv = { ...process.env };
+    if (childEnv.FORCE_COLOR && childEnv.NO_COLOR) {
+      delete childEnv.NO_COLOR;
+    }
+
     const child = spawn(playwrightBin, args, {
       cwd: rootDir,
       stdio: 'inherit',
-      env: process.env,
+      env: childEnv,
     });
     child.on('exit', (code) => {
       if (code === 0) resolve();

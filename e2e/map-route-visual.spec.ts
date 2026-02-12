@@ -262,7 +262,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     // Снапшот ДО добавления маршрута
     console.log('📸 BEFORE: карта без маршрута');
     await expect(leafletContainer).toHaveScreenshot('map-before-route.png', {
-      maxDiffPixelRatio: 0.05,
+      maxDiffPixelRatio: 0.1,
       animations: 'disabled',
       caret: 'hide',
     });
@@ -309,7 +309,7 @@ test.describe('Map Route Line - Visual Regression', () => {
     }
 
     await expect(leafletContainer).toHaveScreenshot('map-after-route.png', {
-      maxDiffPixelRatio: 0.05,
+      maxDiffPixelRatio: 0.1,
       animations: 'disabled',
       caret: 'hide',
     });

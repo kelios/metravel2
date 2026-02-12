@@ -5,6 +5,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const rootDir = path.join(__dirname, '..');
+if (process.env.FORCE_COLOR && process.env.NO_COLOR) {
+  delete process.env.NO_COLOR;
+}
 const distIndex = path.join(rootDir, 'dist', 'index.html');
 const distJsDir = path.join(rootDir, 'dist', '_expo', 'static', 'js', 'web');
 const distMetaPath = path.join(rootDir, 'dist', '.e2e-build-meta.json');
@@ -86,6 +89,14 @@ function killProcessTree(child) {
       // ignore
     }
   }, 5000).unref();
+}
+
+function sanitizedEnv(baseEnv) {
+  const nextEnv = { ...baseEnv };
+  if (nextEnv.FORCE_COLOR && nextEnv.NO_COLOR) {
+    delete nextEnv.NO_COLOR;
+  }
+  return nextEnv;
 }
 
 async function main() {
@@ -178,7 +189,7 @@ async function main() {
     const build = spawn(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build:web'], {
       cwd: rootDir,
       stdio: 'inherit',
-      env: process.env,
+      env: sanitizedEnv(process.env),
     });
 
     try {
@@ -202,7 +213,7 @@ async function main() {
   const server = spawn(process.execPath, [path.join(__dirname, 'serve-web-build.js')], {
     cwd: rootDir,
     stdio: 'inherit',
-    env: process.env,
+    env: sanitizedEnv(process.env),
   });
 
   const shutdown = () => {
