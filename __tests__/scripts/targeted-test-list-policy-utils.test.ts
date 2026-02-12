@@ -2,6 +2,7 @@ const {
   validateSelectiveRunnerPolicyContent,
   buildScopeUnexpectedMessage,
 } = require('./targeted-test-list-policy-utils')
+const exported = require('./targeted-test-list-policy-utils')
 
 const validFixture = `
 const {
@@ -18,6 +19,15 @@ describe('fixture', () => {
 `
 
 describe('targeted-test-list-policy-utils', () => {
+  it('keeps exported policy-utils API stable', () => {
+    expect(Object.keys(exported).sort()).toEqual([
+      'buildScopeUnexpectedMessage',
+      'ensureContains',
+      'ensureNotContains',
+      'validateSelectiveRunnerPolicyContent',
+    ])
+  })
+
   it('passes for policy-compliant fixture', () => {
     expect(() => validateSelectiveRunnerPolicyContent({
       file: 'fixture.test.ts',

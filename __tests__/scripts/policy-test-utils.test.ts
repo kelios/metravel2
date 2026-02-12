@@ -6,10 +6,25 @@ const {
   collectFilesRecursive,
   toPosixRelative,
   readTextFile,
+  readScriptsTestFile,
+  findDuplicates,
   buildForbiddenUsageMessage,
 } = require('./policy-test-utils')
+const exported = require('./policy-test-utils')
 
 describe('policy-test-utils', () => {
+  it('keeps exported policy-test-utils API stable', () => {
+    expect(Object.keys(exported).sort()).toEqual([
+      'buildForbiddenUsageMessage',
+      'collectFilesRecursive',
+      'ensure',
+      'findDuplicates',
+      'readScriptsTestFile',
+      'readTextFile',
+      'toPosixRelative',
+    ])
+  })
+
   it('ensure passes when condition is true', () => {
     expect(() => ensure(true, 'should not throw')).not.toThrow()
   })
@@ -42,6 +57,11 @@ describe('policy-test-utils', () => {
     expect(readTextFile(file)).toBe('hello-policy')
   })
 
+  it('readScriptsTestFile reads file from __tests__/scripts by default', () => {
+    const content = readScriptsTestFile('policy-test-utils.js')
+    expect(content).toContain('const fs = require(\'fs\')')
+  })
+
   it('buildForbiddenUsageMessage formats context and remediation', () => {
     const message = buildForbiddenUsageMessage({
       subject: 'mkdtempSync usage',
@@ -50,5 +70,10 @@ describe('policy-test-utils', () => {
     })
     expect(message).toContain('Found forbidden mkdtempSync usage in: [a.test.ts, b.test.ts].')
     expect(message).toContain('Use makeTempDir from __tests__/scripts/cli-test-utils.ts.')
+  })
+
+  it('findDuplicates returns only repeated values', () => {
+    expect(findDuplicates(['a', 'b', 'a', 'c', 'b', 'd'])).toEqual(['a', 'b'])
+    expect(findDuplicates(['x', 'y', 'z'])).toEqual([])
   })
 })

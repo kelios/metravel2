@@ -1,30 +1,33 @@
-const path = require('path')
-const { readTextFile, ensure } = require('./policy-test-utils')
+const { readScriptsTestFile, ensure } = require('./policy-test-utils')
+const {
+  policyUtilsRequirePattern,
+  builderImportPattern,
+  builderCallPattern,
+} = require('./policy-message-format-governance-patterns')
 
-const scriptsTestsDir = path.resolve(process.cwd(), '__tests__', 'scripts')
 const requiredFiles = [
   'temp-dir-policy.test.ts',
   'cli-runner-policy.test.ts',
 ]
-
-const readScriptsTestFile = (file) => {
-  return readTextFile(path.join(scriptsTestsDir, file))
-}
+// Governance update rule:
+// 1) Keep regex definitions in `policy-message-format-governance-patterns.js`.
+// 2) When regex rules change, update/add fixture cases in `policy-message-format-governance-patterns.test.ts`.
+// 3) Keep this suite focused on real-file enforcement against those shared patterns.
 
 describe('policy message format governance', () => {
   it('keeps key policy suites using shared forbidden-usage message builder', () => {
     for (const file of requiredFiles) {
       const content = readScriptsTestFile(file)
       ensure(
-        content.includes("require('./policy-test-utils')"),
+        policyUtilsRequirePattern.test(content),
         `${file}: missing policy-test-utils import; builder must come from shared utils.`,
       )
       ensure(
-        content.includes('buildForbiddenUsageMessage,'),
+        builderImportPattern.test(content),
         `${file}: missing buildForbiddenUsageMessage import from policy-test-utils.`,
       )
       ensure(
-        content.includes('buildForbiddenUsageMessage('),
+        builderCallPattern.test(content),
         `${file}: missing buildForbiddenUsageMessage( usage; keep shared message formatting for policy diagnostics.`,
       )
     }

@@ -28,6 +28,20 @@ const readTextFile = (filePath) => {
   return fs.readFileSync(filePath, 'utf8')
 }
 
+const readScriptsTestFile = (file, scriptsTestsDir = path.resolve(process.cwd(), '__tests__', 'scripts')) => {
+  return readTextFile(path.join(scriptsTestsDir, file))
+}
+
+const findDuplicates = (items) => {
+  const counts = new Map()
+  for (const item of items) {
+    counts.set(item, (counts.get(item) || 0) + 1)
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([item]) => item)
+}
+
 const buildForbiddenUsageMessage = ({ subject, forbidden, remediation }) => {
   return [
     `Found forbidden ${subject} in: [${forbidden.join(', ')}].`,
@@ -40,5 +54,7 @@ module.exports = {
   collectFilesRecursive,
   toPosixRelative,
   readTextFile,
+  readScriptsTestFile,
+  findDuplicates,
   buildForbiddenUsageMessage,
 }

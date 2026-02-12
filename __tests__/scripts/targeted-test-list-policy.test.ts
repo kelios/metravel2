@@ -1,6 +1,6 @@
 const fs = require('fs')
 const path = require('path')
-const { ensure, readTextFile } = require('./policy-test-utils')
+const { ensure, readScriptsTestFile } = require('./policy-test-utils')
 const {
   validateSelectiveRunnerPolicyContent,
   buildScopeUnexpectedMessage,
@@ -15,6 +15,10 @@ const {
 
 const scriptsTestsDir = path.resolve(process.cwd(), '__tests__', 'scripts')
 const helperFile = 'targeted-test-list-contract-utils.js'
+// Governance update rule:
+// 1) When adding new targeted policy suites, keep naming aligned with TARGETED_POLICY_SUITE_PATTERN.
+// 2) When adding new selective runner suites, keep naming aligned with SELECTIVE_RUNNER_TEST_PATTERN.
+// 3) Scope check is subset-based: only unexpected helper consumers are failures.
 const listScriptTests = () => fs.readdirSync(scriptsTestsDir)
 
 const getSelectiveRunnerTestFiles = () => {
@@ -32,10 +36,6 @@ const getHelperImportingTestFiles = () => {
 
 const getAllowedHelperConsumerFiles = () => {
   return getAllowedHelperConsumerFilesFromList(listScriptTests())
-}
-
-const readScriptsTestFile = (file) => {
-  return readTextFile(path.join(scriptsTestsDir, file))
 }
 
 describe('targeted test list policy', () => {

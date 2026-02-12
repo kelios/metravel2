@@ -5,8 +5,19 @@ const {
   getSelectiveRunnerTestFilesFromList,
   getAllowedHelperConsumerFilesFromList,
 } = require('./targeted-test-list-policy-index-utils')
+const exported = require('./targeted-test-list-policy-index-utils')
 
 describe('targeted-test-list-policy-index-utils', () => {
+  it('keeps exported index-utils API stable', () => {
+    expect(Object.keys(exported).sort()).toEqual([
+      'CONTRACT_UTILS_SUITE_FILE',
+      'SELECTIVE_RUNNER_TEST_PATTERN',
+      'TARGETED_POLICY_SUITE_PATTERN',
+      'getAllowedHelperConsumerFilesFromList',
+      'getSelectiveRunnerTestFilesFromList',
+    ])
+  })
+
   it('keeps naming contract constants stable', () => {
     expect(String(SELECTIVE_RUNNER_TEST_PATTERN)).toBe('/^run-.*-contract-tests-if-needed\\.test\\.ts$/')
     expect(String(TARGETED_POLICY_SUITE_PATTERN)).toBe('/^targeted-test-list-policy.*\\.test\\.ts$/')

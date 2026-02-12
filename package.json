@@ -17,6 +17,7 @@
     "e2e:ui": "playwright test --ui",
     "test": "jest --watchAll",
     "test:run": "jest --passWithNoTests --runInBand",
+    "test:governance": "jest --runInBand --watchAll=false __tests__/scripts/cli-runner-policy.test.ts __tests__/scripts/governance-docs-parity.test.ts __tests__/scripts/governance-rule-enforcement-parity.test.ts __tests__/scripts/governance-script-parity.test.ts __tests__/scripts/policy-helpers-contract-matrix.test.ts __tests__/scripts/policy-message-format-governance-patterns.test.ts __tests__/scripts/policy-message-format-governance.test.ts __tests__/scripts/policy-test-utils.test.ts __tests__/scripts/targeted-test-list-contract-utils.test.ts __tests__/scripts/targeted-test-list-policy-index-utils.test.ts __tests__/scripts/targeted-test-list-policy-utils.test.ts __tests__/scripts/targeted-test-list-policy.test.ts __tests__/scripts/temp-dir-policy.test.ts",
     "test:run:mem": "NODE_OPTIONS=--max-old-space-size=8192 jest --passWithNoTests --runInBand",
     "test:smoke:critical": "node scripts/run-smoke-critical.js",
     "test:smoke:critical:ci": "node scripts/run-smoke-critical.js --ci --output-file test-results/jest-smoke-results.json",
