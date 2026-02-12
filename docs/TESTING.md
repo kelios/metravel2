@@ -592,7 +592,7 @@ yarn ci:incident:payload:validate
 # - validatorArtifactSource: explicit | run_id | fallback | none
 # - runtimeArtifactUrl: runtime-config diagnostics artifact link (if available)
 # - runtimeArtifactSource: explicit | run_id | fallback | none
-# - primaryArtifactKind: none | selective_decisions | validator_contracts
+# - primaryArtifactKind: none | selective_decisions | validator_contracts | runtime_config_diagnostics
 
 # Incident payload schema checklist:
 # 1) breaking shape/semantic change -> bump schemaVersion in publisher + validator

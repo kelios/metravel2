@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
+const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
 
 describe('summarize-eslint script', () => {
   it('prints and appends lint summary in cli mode', () => {
@@ -9,7 +9,7 @@ describe('summarize-eslint script', () => {
     const inputFile = path.join(dir, 'eslint-results.json')
     const stepSummary = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(inputFile, JSON.stringify([
+    writeJsonFile(inputFile, [
       {
         filePath: `${process.cwd()}/src/a.ts`,
         errorCount: 1,
@@ -20,12 +20,10 @@ describe('summarize-eslint script', () => {
         errorCount: 0,
         warningCount: 2,
       },
-    ]), 'utf8')
+    ])
 
-    const result = spawnSync(process.execPath, ['scripts/summarize-eslint.js', inputFile], {
-      cwd: process.cwd(),
-      env: { ...process.env, GITHUB_STEP_SUMMARY: stepSummary },
-      encoding: 'utf8',
+    const result = runNodeCli(['scripts/summarize-eslint.js', inputFile], {
+      GITHUB_STEP_SUMMARY: stepSummary,
     })
 
     expect(result.status).toBe(0)

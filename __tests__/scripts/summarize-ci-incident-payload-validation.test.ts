@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
+const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
 const {
   parseArgs,
   readValidationFile,
@@ -24,14 +24,14 @@ describe('summarize-ci-incident-payload-validation', () => {
   it('reads validation payload from file', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'incident-payload-summary-'))
     const payloadFile = path.join(dir, 'validation.json')
-    fs.writeFileSync(payloadFile, JSON.stringify({
+    writeJsonFile(payloadFile, {
       ok: false,
       errorCount: 2,
       file: 'test-results/ci-incident-payload.json',
       errors: [
         { code: 'INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_URL', message: 'artifactUrl mismatch' },
       ],
-    }), 'utf8')
+    })
 
     const result = readValidationFile(payloadFile)
     expect(result.ok).toBe(true)
@@ -90,26 +90,21 @@ describe('summarize-ci-incident-payload-validation', () => {
     const payloadPath = path.join(dir, 'validation.json')
     const stepSummaryPath = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(payloadPath, JSON.stringify({
+    writeJsonFile(payloadPath, {
       ok: false,
       errorCount: 1,
       file: 'test-results/ci-incident-payload.json',
       errors: [
         { code: 'INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_URL', message: 'artifactUrl mismatch' },
       ],
-    }), 'utf8')
+    })
 
-    const result = spawnSync(process.execPath, [
+    const result = runNodeCli([
       'scripts/summarize-ci-incident-payload-validation.js',
       '--file',
       payloadPath,
     ], {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        GITHUB_STEP_SUMMARY: stepSummaryPath,
-      },
-      encoding: 'utf8',
+      GITHUB_STEP_SUMMARY: stepSummaryPath,
     })
 
     expect(result.status).toBe(0)
@@ -128,17 +123,12 @@ describe('summarize-ci-incident-payload-validation', () => {
 
     fs.writeFileSync(payloadPath, '{"ok":false,', 'utf8')
 
-    const result = spawnSync(process.execPath, [
+    const result = runNodeCli([
       'scripts/summarize-ci-incident-payload-validation.js',
       '--file',
       payloadPath,
     ], {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        GITHUB_STEP_SUMMARY: stepSummaryPath,
-      },
-      encoding: 'utf8',
+      GITHUB_STEP_SUMMARY: stepSummaryPath,
     })
 
     expect(result.status).toBe(0)
@@ -154,17 +144,12 @@ describe('summarize-ci-incident-payload-validation', () => {
     const payloadPath = path.join(dir, 'missing-validation.json')
     const stepSummaryPath = path.join(dir, 'step-summary.md')
 
-    const result = spawnSync(process.execPath, [
+    const result = runNodeCli([
       'scripts/summarize-ci-incident-payload-validation.js',
       '--file',
       payloadPath,
     ], {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        GITHUB_STEP_SUMMARY: stepSummaryPath,
-      },
-      encoding: 'utf8',
+      GITHUB_STEP_SUMMARY: stepSummaryPath,
     })
 
     expect(result.status).toBe(0)

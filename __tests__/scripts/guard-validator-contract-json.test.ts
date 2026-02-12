@@ -1,21 +1,8 @@
-const { spawnSync } = require('child_process')
-
-const runNode = (args, env = {}) => {
-  const result = spawnSync(process.execPath, args, {
-    cwd: process.cwd(),
-    env: { ...process.env, ...env },
-    encoding: 'utf8',
-  })
-  return {
-    status: result.status ?? 1,
-    stdout: String(result.stdout || ''),
-    stderr: String(result.stderr || ''),
-  }
-}
+const { runNodeCli } = require('./cli-test-utils')
 
 describe('guard-validator-contract json mode', () => {
   it('emits machine-readable json payload for failing guard result', () => {
-    const result = runNode(
+    const result = runNodeCli(
       ['scripts/guard-validator-contract-change.js', '--json'],
       { CHANGED_FILES: 'scripts/summarize-jest-smoke.js\n' },
     )
@@ -29,7 +16,7 @@ describe('guard-validator-contract json mode', () => {
   })
 
   it('emits machine-readable json payload for passing guard result', () => {
-    const result = runNode(
+    const result = runNodeCli(
       ['scripts/guard-validator-contract-change.js', '--json'],
       {
         CHANGED_FILES: [

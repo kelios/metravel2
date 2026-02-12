@@ -1,21 +1,8 @@
-const { spawnSync } = require('child_process')
-
-const runNode = (args, env = {}) => {
-  const result = spawnSync(process.execPath, args, {
-    cwd: process.cwd(),
-    env: { ...process.env, ...env },
-    encoding: 'utf8',
-  })
-  return {
-    status: result.status ?? 1,
-    stdout: String(result.stdout || ''),
-    stderr: String(result.stderr || ''),
-  }
-}
+const { runNodeCli } = require('./cli-test-utils')
 
 describe('selective runner json contract', () => {
   it('emits run decision for validator selective runner with matched files', () => {
-    const result = runNode(
+    const result = runNodeCli(
       ['scripts/run-validator-contract-tests-if-needed.js', '--dry-run', '--json'],
       { CHANGED_FILES: 'scripts/validator-output.js\nREADME.md\n' },
     )
@@ -31,7 +18,7 @@ describe('selective runner json contract', () => {
   })
 
   it('emits skip decision for schema selective runner with no matches', () => {
-    const result = runNode(
+    const result = runNodeCli(
       ['scripts/run-schema-contract-tests-if-needed.js', '--dry-run', '--json'],
       { CHANGED_FILES: 'README.md\n' },
     )
@@ -47,7 +34,7 @@ describe('selective runner json contract', () => {
   })
 
   it('emits forced run decision when changed-files input is unavailable', () => {
-    const result = runNode(
+    const result = runNodeCli(
       ['scripts/run-schema-contract-tests-if-needed.js', '--dry-run', '--json'],
       { CHANGED_FILES: '' },
     )
@@ -62,7 +49,7 @@ describe('selective runner json contract', () => {
   })
 
   it('rejects json output without dry-run', () => {
-    const result = runNode([
+    const result = runNodeCli([
       'scripts/run-validator-contract-tests-if-needed.js',
       '--json',
     ])

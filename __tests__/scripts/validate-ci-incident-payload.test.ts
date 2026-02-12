@@ -1,6 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const { writeJsonFile } = require('./cli-test-utils')
 const {
   SUPPORTED_SCHEMA_VERSION,
   ALLOWED_PRIMARY_ARTIFACT_KINDS,
@@ -211,7 +212,7 @@ describe('validate-ci-incident-payload', () => {
   it('reads and validates payload file', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validate-incident-payload-'))
     const payloadPath = path.join(dir, 'payload.json')
-    fs.writeFileSync(payloadPath, JSON.stringify(validPayload()), 'utf8')
+    writeJsonFile(payloadPath, validPayload())
     const loaded = JSON.parse(fs.readFileSync(payloadPath, 'utf8'))
     expect(validate(loaded)).toEqual([])
     fs.rmSync(dir, { recursive: true, force: true })

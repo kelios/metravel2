@@ -1,6 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const { writeJsonFile } = require('./cli-test-utils')
 const { publishIncidentSnippet } = require('@/scripts/publish-ci-incident-snippet')
 const { validate } = require('@/scripts/validate-ci-incident-snippet')
 const { validate: validatePayload } = require('@/scripts/validate-ci-incident-payload')
@@ -12,14 +13,14 @@ describe('ci incident pipeline integration', () => {
     const outputFile = path.join(dir, 'ci-incident-snippet.md')
     const stepSummaryFile = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       overallOk: false,
       failureClass: 'inconsistent_state',
       recommendationId: 'QG-002',
       lintOk: true,
       smokeOk: true,
       inconsistencies: ['Lint job failed but report is clean'],
-    }), 'utf8')
+    })
 
     const published = publishIncidentSnippet({
       summaryFile,
@@ -59,14 +60,14 @@ describe('ci incident pipeline integration', () => {
     const outputFile = path.join(dir, 'ci-incident-snippet.md')
     const stepSummaryFile = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       overallOk: false,
       failureClass: 'selective_contract',
       recommendationId: 'QG-007',
       lintOk: true,
       smokeOk: true,
       selectiveDecisionsAggregateIssue: true,
-    }), 'utf8')
+    })
 
     const published = publishIncidentSnippet({
       summaryFile,
@@ -105,14 +106,14 @@ describe('ci incident pipeline integration', () => {
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'ci-incident-snippet.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       overallOk: false,
       failureClass: 'selective_contract',
       recommendationId: 'QG-007',
       lintOk: true,
       smokeOk: true,
       selectiveDecisionsAggregateIssue: true,
-    }), 'utf8')
+    })
 
     const published = publishIncidentSnippet({
       summaryFile,
@@ -151,14 +152,14 @@ describe('ci incident pipeline integration', () => {
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'ci-incident-snippet.md')
 
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       overallOk: false,
       failureClass: 'config_contract',
       recommendationId: 'QG-009',
       lintOk: true,
       smokeOk: true,
       runtimeConfigDiagnosticsIssue: true,
-    }), 'utf8')
+    })
 
     const published = publishIncidentSnippet({
       summaryFile,

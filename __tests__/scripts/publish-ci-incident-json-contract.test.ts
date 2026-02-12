@@ -1,32 +1,19 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
-
-const runNode = (args, env = {}) => {
-  const result = spawnSync(process.execPath, args, {
-    cwd: process.cwd(),
-    env: { ...process.env, ...env },
-    encoding: 'utf8',
-  })
-  return {
-    status: result.status ?? 1,
-    stdout: String(result.stdout || ''),
-    stderr: String(result.stderr || ''),
-  }
-}
+const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
 
 describe('publish incident json contract', () => {
   it('emits artifactUrl and artifactSource in json output for selective contract', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-incident-json-'))
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       failureClass: 'selective_contract',
       recommendationId: 'QG-007',
-    }), 'utf8')
+    })
 
-    const result = runNode([
+    const result = runNodeCli([
       'scripts/publish-ci-incident-snippet.js',
       '--summary-file',
       summaryFile,
@@ -62,12 +49,12 @@ describe('publish incident json contract', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-incident-json-'))
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       failureClass: 'validator_contract',
       recommendationId: 'QG-008',
-    }), 'utf8')
+    })
 
-    const result = runNode([
+    const result = runNodeCli([
       'scripts/publish-ci-incident-snippet.js',
       '--summary-file',
       summaryFile,
@@ -101,12 +88,12 @@ describe('publish incident json contract', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'publish-incident-json-'))
     const summaryFile = path.join(dir, 'quality-summary.json')
     const outputFile = path.join(dir, 'incident.md')
-    fs.writeFileSync(summaryFile, JSON.stringify({
+    writeJsonFile(summaryFile, {
       failureClass: 'config_contract',
       recommendationId: 'QG-009',
-    }), 'utf8')
+    })
 
-    const result = runNode([
+    const result = runNodeCli([
       'scripts/publish-ci-incident-snippet.js',
       '--summary-file',
       summaryFile,

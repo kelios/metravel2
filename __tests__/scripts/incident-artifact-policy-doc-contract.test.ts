@@ -19,6 +19,6 @@ describe('incident artifact policy docs contract', () => {
     expect(section).toContain('- Selective decisions artifact: <optional artifact URL; recommended for selective_contract>')
     expect(section).toContain('- Validator contracts artifact: <optional artifact URL; recommended for validator_contract>')
     expect(section).toContain('- Runtime config diagnostics artifact: <optional artifact URL; recommended for config_contract>')
+    expect(markdown).toContain('# - primaryArtifactKind: none | selective_decisions | validator_contracts | runtime_config_diagnostics')
   })
 })
-

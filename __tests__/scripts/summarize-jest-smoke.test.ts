@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
+const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
 
 describe('summarize-jest-smoke script', () => {
   it('prints and appends smoke summary in cli mode', () => {
@@ -9,7 +9,7 @@ describe('summarize-jest-smoke script', () => {
     const inputFile = path.join(dir, 'jest-smoke-results.json')
     const stepSummary = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(inputFile, JSON.stringify({
+    writeJsonFile(inputFile, {
       numTotalTestSuites: 2,
       numPassedTestSuites: 1,
       numFailedTestSuites: 1,
@@ -20,12 +20,10 @@ describe('summarize-jest-smoke script', () => {
         { name: `${process.cwd()}/a.test.ts`, status: 'passed', startTime: 1000, endTime: 1600 },
         { name: `${process.cwd()}/b.test.ts`, status: 'failed', startTime: 1700, endTime: 2600 },
       ],
-    }), 'utf8')
+    })
 
-    const result = spawnSync(process.execPath, ['scripts/summarize-jest-smoke.js', inputFile], {
-      cwd: process.cwd(),
-      env: { ...process.env, GITHUB_STEP_SUMMARY: stepSummary },
-      encoding: 'utf8',
+    const result = runNodeCli(['scripts/summarize-jest-smoke.js', inputFile], {
+      GITHUB_STEP_SUMMARY: stepSummary,
     })
 
     expect(result.status).toBe(0)
@@ -43,10 +41,8 @@ describe('summarize-jest-smoke script', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'summarize-jest-smoke-'))
     const missing = path.join(dir, 'missing.json')
     const stepSummary = path.join(dir, 'step-summary.md')
-    const result = spawnSync(process.execPath, ['scripts/summarize-jest-smoke.js', missing], {
-      cwd: process.cwd(),
-      env: { ...process.env, GITHUB_STEP_SUMMARY: stepSummary },
-      encoding: 'utf8',
+    const result = runNodeCli(['scripts/summarize-jest-smoke.js', missing], {
+      GITHUB_STEP_SUMMARY: stepSummary,
     })
 
     expect(result.status).toBe(0)

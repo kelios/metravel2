@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
+const { runNodeCli, writeTextFile } = require('./cli-test-utils')
 const {
   parseArgs,
   validate,
@@ -9,19 +9,6 @@ const {
 } = require('@/scripts/validate-ci-smoke-workflow-contract')
 
 const workflowPath = path.resolve(process.cwd(), '.github', 'workflows', 'ci-smoke.yml')
-
-const runNode = (args) => {
-  const result = spawnSync(process.execPath, args, {
-    cwd: process.cwd(),
-    env: { ...process.env },
-    encoding: 'utf8',
-  })
-  return {
-    status: result.status ?? 1,
-    stdout: String(result.stdout || ''),
-    stderr: String(result.stderr || ''),
-  }
-}
 
 describe('validate-ci-smoke-workflow-contract', () => {
   it('parses default and override file args', () => {
@@ -66,7 +53,7 @@ describe('validate-ci-smoke-workflow-contract', () => {
   })
 
   it('emits json payload contract from cli', () => {
-    const result = runNode(['scripts/validate-ci-smoke-workflow-contract.js', '--json'])
+    const result = runNodeCli(['scripts/validate-ci-smoke-workflow-contract.js', '--json'])
     expect(result.status).toBe(0)
 
     const payload = JSON.parse(result.stdout)
@@ -88,9 +75,9 @@ describe('validate-ci-smoke-workflow-contract', () => {
     const file = path.join(dir, 'ci-smoke.yml')
     const workflow = fs.readFileSync(workflowPath, 'utf8')
     const brokenWorkflow = workflow.replace('name: quality-summary', 'name: quality-aggregate-broken')
-    fs.writeFileSync(file, brokenWorkflow, 'utf8')
+    writeTextFile(file, brokenWorkflow)
 
-    const result = runNode([
+    const result = runNodeCli([
       'scripts/validate-ci-smoke-workflow-contract.js',
       '--file',
       file,

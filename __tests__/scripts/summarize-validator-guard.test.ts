@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
+const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
 const {
   parseArgs,
   buildSummaryLines,
@@ -44,7 +44,7 @@ describe('summarize-validator-guard', () => {
     const payloadPath = path.join(dir, 'validator-guard.json')
     const stepSummaryPath = path.join(dir, 'step-summary.md')
 
-    fs.writeFileSync(payloadPath, JSON.stringify({
+    writeJsonFile(payloadPath, {
       contractVersion: 1,
       ok: false,
       reason: 'Guard failed',
@@ -53,16 +53,14 @@ describe('summarize-validator-guard', () => {
       hintCount: 1,
       missing: ['__tests__/scripts/summarize-jest-smoke.test.ts'],
       hints: ['Expected summary companion test for scripts/summarize-jest-smoke.js: __tests__/scripts/summarize-jest-smoke.test.ts'],
-    }), 'utf8')
+    })
 
-    const result = spawnSync(process.execPath, [
+    const result = runNodeCli([
       'scripts/summarize-validator-guard.js',
       '--file',
       payloadPath,
     ], {
-      cwd: process.cwd(),
-      env: { ...process.env, GITHUB_STEP_SUMMARY: stepSummaryPath },
-      encoding: 'utf8',
+      GITHUB_STEP_SUMMARY: stepSummaryPath,
     })
 
     expect(result.status).toBe(0)

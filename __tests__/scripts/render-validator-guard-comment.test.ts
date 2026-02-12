@@ -1,7 +1,7 @@
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { spawnSync } = require('child_process')
+const { runNodeCli, writeJsonFile } = require('./cli-test-utils')
 const {
   parseArgs,
   buildCommentMarkdown,
@@ -87,16 +87,16 @@ describe('render-validator-guard-comment', () => {
     const inputFile = path.join(dir, 'validator-guard.json')
     const outputFile = path.join(dir, 'validator-guard-comment.md')
 
-    fs.writeFileSync(inputFile, JSON.stringify({
+    writeJsonFile(inputFile, {
       contractVersion: 1,
       ok: false,
       reason: 'Guard failed',
       touchedFiles: ['scripts/summarize-jest-smoke.js'],
       missing: ['__tests__/scripts/summarize-jest-smoke.test.ts'],
       hints: ['Expected summary companion test for scripts/summarize-jest-smoke.js: __tests__/scripts/summarize-jest-smoke.test.ts'],
-    }), 'utf8')
+    })
 
-    const result = spawnSync(process.execPath, [
+    const result = runNodeCli([
       'scripts/render-validator-guard-comment.js',
       '--file',
       inputFile,
@@ -111,10 +111,7 @@ describe('render-validator-guard-comment', () => {
       '--comment-artifact-url',
       'https://github.com/org/repo/actions/runs/123/artifacts/789',
       '--json',
-    ], {
-      cwd: process.cwd(),
-      encoding: 'utf8',
-    })
+    ])
 
     expect(result.status).toBe(0)
     const payload = JSON.parse(result.stdout)

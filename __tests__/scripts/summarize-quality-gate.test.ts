@@ -1,7 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { execFileSync } from 'child_process';
+import { runNodeCli, writeJsonFile } from './cli-test-utils';
 
 const scriptPath = path.resolve(process.cwd(), 'scripts/summarize-quality-gate.js');
 const quickMapSnippet = 'QG quick map: QG-001 infra_artifact | QG-002 inconsistent_state | QG-003 lint_only | QG-004 smoke_only | QG-005 mixed | QG-006 performance_budget | QG-007 selective_contract | QG-008 validator_contract | QG-009 config_contract';
@@ -17,25 +17,11 @@ const runSummary = (
   extraArgs: string[] = [],
   env: Record<string, string> = {},
 ): RunResult => {
-  try {
-    const stdout = execFileSync(
-      process.execPath,
-      [scriptPath, eslintPath, jestPath, ...extraArgs],
-      {
-        encoding: 'utf8',
-        env: { ...process.env, ...env },
-      },
-    );
-    return { status: 0, stdout };
-  } catch (error) {
-    const failed = error as { status?: number; stdout?: string };
-    return { status: failed.status ?? 1, stdout: String(failed.stdout ?? '') };
-  }
-};
-
-const writeJson = (filePath: string, payload: unknown) => {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(payload), 'utf8');
+  const result = runNodeCli([scriptPath, eslintPath, jestPath, ...extraArgs], env);
+  return {
+    status: result.status,
+    stdout: result.stdout,
+  };
 };
 
 describe('summarize-quality-gate script', () => {
@@ -68,9 +54,9 @@ describe('summarize-quality-gate script', () => {
     validatorContractsSummaryValidationPath = path.join(tempDir, 'validator-contracts-summary-validation.json');
     runtimeConfigDiagnosticsPath = path.join(tempDir, 'runtime-config-diagnostics.json');
 
-    writeJson(eslintPassPath, [{ filePath: '/tmp/a.ts', errorCount: 0, warningCount: 0 }]);
-    writeJson(eslintFailPath, [{ filePath: '/tmp/a.ts', errorCount: 1, warningCount: 0 }]);
-    writeJson(jestPassPath, {
+    writeJsonFile(eslintPassPath, [{ filePath: '/tmp/a.ts', errorCount: 0, warningCount: 0 }]);
+    writeJsonFile(eslintFailPath, [{ filePath: '/tmp/a.ts', errorCount: 1, warningCount: 0 }]);
+    writeJsonFile(jestPassPath, {
       numTotalTestSuites: 2,
       numFailedTestSuites: 0,
       numTotalTests: 10,
@@ -88,13 +74,13 @@ describe('summarize-quality-gate script', () => {
         },
       ],
     });
-    writeJson(jestFailPath, {
+    writeJsonFile(jestFailPath, {
       numTotalTestSuites: 2,
       numFailedTestSuites: 1,
       numTotalTests: 10,
       numFailedTests: 2,
     });
-    writeJson(jestSlowPath, {
+    writeJsonFile(jestSlowPath, {
       numTotalTestSuites: 1,
       numFailedTestSuites: 0,
       numTotalTests: 1,
@@ -103,7 +89,7 @@ describe('summarize-quality-gate script', () => {
         { startTime: 0, endTime: 25_000 },
       ],
     });
-    writeJson(schemaDecisionPath, {
+    writeJsonFile(schemaDecisionPath, {
       contractVersion: 1,
       check: 'schema-contract-checks',
       decision: 'run',
@@ -115,7 +101,7 @@ describe('summarize-quality-gate script', () => {
       dryRun: true,
       targetedTests: 3,
     });
-    writeJson(validatorDecisionPath, {
+    writeJsonFile(validatorDecisionPath, {
       contractVersion: 1,
       check: 'validator-contract-checks',
       decision: 'skip',
@@ -127,7 +113,7 @@ describe('summarize-quality-gate script', () => {
       dryRun: true,
       targetedTests: 7,
     });
-    writeJson(selectiveDecisionsPath, {
+    writeJsonFile(selectiveDecisionsPath, {
       schemaVersion: 1,
       decisions: [
         JSON.parse(fs.readFileSync(schemaDecisionPath, 'utf8')),
@@ -135,13 +121,13 @@ describe('summarize-quality-gate script', () => {
       ],
       warnings: [],
     });
-    writeJson(validatorContractsSummaryValidationPath, {
+    writeJsonFile(validatorContractsSummaryValidationPath, {
       contractVersion: 1,
       ok: true,
       errorCount: 0,
       errors: [],
     });
-    writeJson(runtimeConfigDiagnosticsPath, {
+    writeJsonFile(runtimeConfigDiagnosticsPath, {
       schemaVersion: 1,
       ok: true,
       errorCount: 0,
@@ -231,7 +217,7 @@ describe('summarize-quality-gate script', () => {
   });
 
   it('classifies failing validator contracts summary validation as validator_contract', () => {
-    writeJson(validatorContractsSummaryValidationPath, {
+    writeJsonFile(validatorContractsSummaryValidationPath, {
       contractVersion: 1,
       ok: false,
       errorCount: 2,
@@ -258,7 +244,7 @@ describe('summarize-quality-gate script', () => {
   });
 
   it('classifies failing runtime config diagnostics as config_contract', () => {
-    writeJson(runtimeConfigDiagnosticsPath, {
+    writeJsonFile(runtimeConfigDiagnosticsPath, {
       schemaVersion: 1,
       ok: false,
       errorCount: 1,
@@ -303,7 +289,7 @@ describe('summarize-quality-gate script', () => {
   });
 
   it('prints selective decision warnings from aggregate file', () => {
-    writeJson(selectiveDecisionsPath, {
+    writeJsonFile(selectiveDecisionsPath, {
       schemaVersion: 1,
       decisions: [],
       warnings: ['schema-contract-checks: decision file not found (x.json).'],
@@ -323,7 +309,7 @@ describe('summarize-quality-gate script', () => {
   });
 
   it('classifies invalid selective decisions aggregate as selective_contract', () => {
-    writeJson(selectiveDecisionsPath, {
+    writeJsonFile(selectiveDecisionsPath, {
       schemaVersion: 2,
       decisions: [],
       warnings: [],
