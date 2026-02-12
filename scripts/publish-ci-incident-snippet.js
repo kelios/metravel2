@@ -188,6 +188,7 @@ const resolveRuntimeArtifactSource = ({ failureClass, artifactUrl, workflowRun, 
 const derivePrimaryArtifactKind = (failureClass) => {
   if (failureClass === 'selective_contract') return 'selective_decisions'
   if (failureClass === 'validator_contract') return 'validator_contracts'
+  if (failureClass === 'config_contract') return 'runtime_config_diagnostics'
   return 'none'
 }
 
