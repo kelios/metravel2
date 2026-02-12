@@ -429,10 +429,6 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
   }
 
   if (!L || !rl || !siteMarkerIcon) {
-    if (__DEV__) {
-      console.info('[MapClientSide] Placeholder: L=%s rl=%s icon=%s data=%d',
-        !!L, !!rl, !!siteMarkerIcon, travelData.length);
-    }
     return renderPlaceholder();
   }
 
