@@ -2,13 +2,20 @@ const fs = require('fs')
 const path = require('path')
 const { ensure, readTextFile } = require('./policy-test-utils')
 const { validateSelectiveRunnerPolicyContent } = require('./targeted-test-list-policy-utils')
+const {
+  SELECTIVE_RUNNER_TEST_PATTERN,
+  TARGETED_POLICY_SUITE_PATTERN,
+  CONTRACT_UTILS_SUITE_FILE,
+  getSelectiveRunnerTestFilesFromList,
+  getAllowedHelperConsumerFilesFromList,
+} = require('./targeted-test-list-policy-index-utils')
 
 const scriptsTestsDir = path.resolve(process.cwd(), '__tests__', 'scripts')
 const helperFile = 'targeted-test-list-contract-utils.js'
-const selectiveRunnerTestPattern = /^run-.*-contract-tests-if-needed\.test\.ts$/
+const listScriptTests = () => fs.readdirSync(scriptsTestsDir)
 
 const getSelectiveRunnerTestFiles = () => {
-  return fs.readdirSync(scriptsTestsDir).filter((file) => selectiveRunnerTestPattern.test(file))
+  return getSelectiveRunnerTestFilesFromList(listScriptTests())
 }
 
 const getHelperImportingTestFiles = () => {
@@ -18,6 +25,10 @@ const getHelperImportingTestFiles = () => {
     const content = readScriptsTestFile(file)
     return content.includes("require('./targeted-test-list-contract-utils')")
   })
+}
+
+const getAllowedHelperConsumerFiles = () => {
+  return getAllowedHelperConsumerFilesFromList(listScriptTests())
 }
 
 const readScriptsTestFile = (file) => {
@@ -49,18 +60,41 @@ describe('targeted test list policy', () => {
 
   it('keeps helper imports scoped to intended suites', () => {
     const selectiveRunnerTests = getSelectiveRunnerTestFiles()
-    const helperConsumers = getHelperImportingTestFiles().sort()
-    const allowedConsumers = [
-      ...selectiveRunnerTests,
-      'targeted-test-list-contract-utils.test.ts',
-      'targeted-test-list-policy.test.ts',
-      'targeted-test-list-policy-utils.test.ts',
-    ].sort()
-    const unexpected = helperConsumers.filter((file) => !allowedConsumers.includes(file))
-    const missing = allowedConsumers.filter((file) => !helperConsumers.includes(file))
     ensure(
-      unexpected.length === 0 && missing.length === 0,
-      `Helper import scope mismatch. Unexpected: [${unexpected.join(', ')}]. Missing: [${missing.join(', ')}].`,
+      selectiveRunnerTests.length > 0,
+      `No selective runner suites found for pattern ${String(SELECTIVE_RUNNER_TEST_PATTERN)}.`,
     )
+    const helperConsumers = getHelperImportingTestFiles().sort()
+    const allowedConsumers = getAllowedHelperConsumerFiles().sort()
+    ensure(
+      allowedConsumers.length > 0,
+      'No allowed helper consumers found. Check naming contract for selective/policy test suites.',
+    )
+    const unexpected = helperConsumers.filter((file) => !allowedConsumers.includes(file))
+    ensure(
+      unexpected.length === 0,
+      `Helper import scope mismatch. Unexpected: [${unexpected.join(', ')}].`,
+    )
+  })
+
+  it('keeps allowed helper consumer match set aligned with naming contracts', () => {
+    const selectiveRunnerTests = getSelectiveRunnerTestFiles().sort()
+    const allowedConsumers = getAllowedHelperConsumerFiles().sort()
+    ensure(
+      selectiveRunnerTests.length > 0,
+      `No selective runner suites found for pattern ${String(SELECTIVE_RUNNER_TEST_PATTERN)}.`,
+    )
+    ensure(
+      allowedConsumers.length > 0,
+      'No allowed helper consumers found. Check naming contract for selective/policy test suites.',
+    )
+
+    const expected = [
+      ...selectiveRunnerTests,
+      ...listScriptTests().filter((file) => TARGETED_POLICY_SUITE_PATTERN.test(file)).sort(),
+      CONTRACT_UTILS_SUITE_FILE,
+    ].sort()
+    const uniqueExpected = [...new Set(expected)].sort()
+    expect(allowedConsumers).toEqual(uniqueExpected)
   })
 })
