@@ -1,6 +1,6 @@
 // app/about/index.tsx
 import { useCallback, useMemo, useRef, useState, memo } from 'react';
-import { KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { AboutHeader } from '@/components/about/AboutHeader';
@@ -15,6 +15,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useAboutStyles } from '@/components/about/aboutStyles';
 import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
+import { openExternalUrl } from '@/utils/externalLinks';
 
 const EMAIL = 'metraveldev@gmail.com';
 const MAIL_SUBJECT = 'Info metravel.by';
@@ -96,31 +97,33 @@ function AboutAndContactScreen() {
 
   const sendMail = useCallback(() => {
     const url = `mailto:${EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT)}&body=${encodeURIComponent(MAIL_BODY)}`;
-    Linking.canOpenURL(url)
-      .then((supported: boolean) => supported && Linking.openURL(url))
-      .catch((error) => {
-        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки отправки почты
+    void openExternalUrl(url, {
+      allowedProtocols: ['mailto:'],
+      onError: (error) => {
         if (__DEV__) {
           console.warn('[about] Ошибка отправки почты:', error);
         }
-      });
+      },
+    });
   }, []);
 
   const openYoutube = useCallback(() => {
-    Linking.openURL(YT_URL).catch((error) => {
-      // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки открытия YouTube
-      if (__DEV__) {
-        console.warn('[about] Ошибка открытия YouTube:', error);
-      }
+    void openExternalUrl(YT_URL, {
+      onError: (error) => {
+        if (__DEV__) {
+          console.warn('[about] Ошибка открытия YouTube:', error);
+        }
+      },
     });
   }, []);
 
   const openUrl = useCallback((url: string) => {
-    Linking.openURL(url).catch((error) => {
-      // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки открытия URL
-      if (__DEV__) {
-        console.warn('[about] Ошибка открытия URL:', error);
-      }
+    void openExternalUrl(url, {
+      onError: (error) => {
+        if (__DEV__) {
+          console.warn('[about] Ошибка открытия URL:', error);
+        }
+      },
     });
   }, []);
 

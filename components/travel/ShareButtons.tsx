@@ -8,7 +8,6 @@ import React, { useCallback, useState, useMemo, lazy, Suspense } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
-import * as Linking from 'expo-linking';
 import type { Travel } from '@/types/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import { useSingleTravelExport } from '@/components/travel/hooks/useSingleTravelExport';
@@ -18,6 +17,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
+import { normalizeExternalUrl, openExternalUrl } from '@/utils/externalLinks';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
@@ -95,13 +95,11 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     const telegramUrl = `https://t.me/share/url?url=${urlEncoded}&text=${text}`;
 
     try {
-      const canOpen = await Linking.canOpenURL(telegramUrl);
-      if (canOpen) {
-        await Linking.openURL(telegramUrl);
-      } else {
-        // Fallback: открываем в браузере
-        if (Platform.OS === 'web') {
-          window.open(telegramUrl, '_blank', 'noopener,noreferrer');
+      const opened = await openExternalUrl(telegramUrl);
+      if (!opened && Platform.OS === 'web') {
+        const safeUrl = normalizeExternalUrl(telegramUrl);
+        if (safeUrl) {
+          window.open(safeUrl, '_blank', 'noopener,noreferrer');
         }
       }
     } catch (error) {
@@ -115,11 +113,12 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     if (Platform.OS === 'web') {
       window.open(vkUrl, '_blank', 'width=600,height=400,noopener,noreferrer');
     } else {
-      Linking.openURL(vkUrl).catch((error) => {
-        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
-        if (__DEV__) {
-          console.warn('[ShareButtons] Не удалось открыть VK:', error);
-        }
+      void openExternalUrl(vkUrl, {
+        onError: (error) => {
+          if (__DEV__) {
+            console.warn('[ShareButtons] Не удалось открыть VK:', error);
+          }
+        },
       });
     }
   }, [shareUrl, shareTitle]);
@@ -130,12 +129,11 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     const whatsappUrl = `https://wa.me/?text=${text}`;
 
     try {
-      const canOpen = await Linking.canOpenURL(whatsappUrl);
-      if (canOpen) {
-        await Linking.openURL(whatsappUrl);
-      } else {
-        if (Platform.OS === 'web') {
-          window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      const opened = await openExternalUrl(whatsappUrl);
+      if (!opened && Platform.OS === 'web') {
+        const safeUrl = normalizeExternalUrl(whatsappUrl);
+        if (safeUrl) {
+          window.open(safeUrl, '_blank', 'noopener,noreferrer');
         }
       }
     } catch (error) {

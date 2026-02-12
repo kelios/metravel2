@@ -4,6 +4,7 @@ import AboutScreen from '@/app/(tabs)/about';
 import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import { sendFeedback } from '@/api/misc';
+import { openExternalUrl } from '@/utils/externalLinks';
 
 jest.mock('@react-navigation/native', () => ({
   useIsFocused: jest.fn(),
@@ -18,22 +19,15 @@ jest.mock('@/api/misc', () => ({
   sendFeedback: jest.fn(),
 }));
 
+jest.mock('@/utils/externalLinks', () => ({
+  openExternalUrl: jest.fn(() => Promise.resolve(true)),
+}));
+
 jest.mock('@/components/seo/InstantSEO', () => () => null);
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ width: 1200, isPhone: false, isLargePhone: false }),
 }));
-
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Linking: {
-      openURL: jest.fn(() => Promise.resolve()),
-      canOpenURL: jest.fn(() => Promise.resolve(true)),
-    },
-  };
-});
 
 jest.mock('@/hooks/useResponsive', () => ({
   useResponsive: () => ({ width: 1200, isPhone: false, isLargePhone: false }),
@@ -58,6 +52,7 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
 const mockUseIsFocused = useIsFocused as jest.MockedFunction<typeof useIsFocused>;
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 const mockSendFeedback = sendFeedback as jest.MockedFunction<typeof sendFeedback>;
+const mockOpenExternalUrl = openExternalUrl as jest.MockedFunction<typeof openExternalUrl>;
 
 describe('AboutScreen', () => {
   beforeEach(() => {
@@ -112,9 +107,8 @@ describe('AboutScreen', () => {
     const instaButton = getByText('@metravelby');
     fireEvent.press(instaButton);
 
-    const { Linking } = require('react-native');
     await waitFor(() => {
-      expect(Linking.openURL).toHaveBeenCalledWith('https://instagram.com/metravelby');
+      expect(mockOpenExternalUrl).toHaveBeenCalledWith('https://instagram.com/metravelby', expect.any(Object));
     });
   });
 });

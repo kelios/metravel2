@@ -1,11 +1,12 @@
 import React, { memo, useMemo } from "react";
-import { View, Text, StyleSheet, Pressable, Linking, Platform } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
 import { ResponsiveContainer } from "@/components/layout";
 import { useRouter, type Href } from "expo-router";
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from "@/hooks/useTheme";
 import { DESIGN_TOKENS } from "@/constants/designSystem";
 import { globalFocusStyles } from "@/styles/globalFocus";
+import { openExternalUrl } from '@/utils/externalLinks';
 
 type FooterDesktopProps = {
   testID?: string;
@@ -20,11 +21,12 @@ type LinkItem = {
 };
 
 
-const openURL = (url: string) => Linking.openURL(url).catch((error) => {
-  // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
-  if (__DEV__) {
-    console.warn('[FooterDesktop] Не удалось открыть URL:', error);
-  }
+const openURL = (url: string) => openExternalUrl(url, {
+  onError: (error) => {
+    if (__DEV__) {
+      console.warn('[FooterDesktop] Не удалось открыть URL:', error);
+    }
+  },
 });
 
 function FooterDesktop({ testID }: FooterDesktopProps) {

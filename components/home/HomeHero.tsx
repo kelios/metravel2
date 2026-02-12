@@ -1,5 +1,5 @@
 import { useMemo, memo } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { useAuth } from '@/context/AuthContext';
@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { buildLoginHref } from '@/utils/authNavigation';
 import { queueAnalyticsEvent } from '@/utils/analytics';
+import { openExternalUrl } from '@/utils/externalLinks';
 
 interface HomeHeroProps {
   travelsCount?: number;
@@ -44,7 +45,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const handleOpenArticle = () => {
     queueAnalyticsEvent('HomeClick_TrainArticle');
-    Linking.openURL(articleUrl);
+    void openExternalUrl(articleUrl);
   };
 
   const primaryButtonLabel = useMemo(() => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Linking, Share, Alert, ActionSheetIOS } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Share, Alert, ActionSheetIOS } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import * as Clipboard from 'expo-clipboard';
 import type { ImportedPoint } from '@/types/userPoints';
@@ -9,6 +9,7 @@ import IconButton from '@/components/ui/IconButton';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { showToast } from '@/utils/toast';
+import { normalizeExternalUrl, openExternalUrl as openSafeExternalUrl } from '@/utils/externalLinks';
 
 interface PointCardProps {
   point: ImportedPoint;
@@ -181,14 +182,17 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     };
   }, [hasCoords, point.latitude, point.longitude]);
 
-  const openExternalUrl = React.useCallback(async (url: string) => {
+  const openExternalLink = React.useCallback(async (url: string) => {
+    const safeUrl = normalizeExternalUrl(url);
+    if (!safeUrl) return;
+
     try {
       if (Platform.OS === 'web') {
-        window.open(url, '_blank', 'noopener,noreferrer');
+        window.open(safeUrl, '_blank', 'noopener,noreferrer');
         return;
       }
 
-      await Linking.openURL(url);
+      await openSafeExternalUrl(safeUrl);
     } catch {
       // ignore
     }
@@ -198,7 +202,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     if (!mapUrls) return;
 
     if (Platform.OS === 'web') {
-      await openExternalUrl(mapUrls.google);
+      await openExternalLink(mapUrls.google);
       return;
     }
 
@@ -209,21 +213,21 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
           cancelButtonIndex: 3,
         },
         (buttonIndex) => {
-          if (buttonIndex === 0) void openExternalUrl(mapUrls.google);
-          if (buttonIndex === 1) void openExternalUrl(mapUrls.yandex);
-          if (buttonIndex === 2) void openExternalUrl(mapUrls.osm);
+          if (buttonIndex === 0) void openExternalLink(mapUrls.google);
+          if (buttonIndex === 1) void openExternalLink(mapUrls.yandex);
+          if (buttonIndex === 2) void openExternalLink(mapUrls.osm);
         }
       );
       return;
     }
 
     Alert.alert('Открыть в картах', undefined, [
-      { text: 'Google Maps', onPress: () => void openExternalUrl(mapUrls.google) },
-      { text: 'Яндекс.Карты', onPress: () => void openExternalUrl(mapUrls.yandex) },
-      { text: 'OpenStreetMap', onPress: () => void openExternalUrl(mapUrls.osm) },
+      { text: 'Google Maps', onPress: () => void openExternalLink(mapUrls.google) },
+      { text: 'Яндекс.Карты', onPress: () => void openExternalLink(mapUrls.yandex) },
+      { text: 'OpenStreetMap', onPress: () => void openExternalLink(mapUrls.osm) },
       { text: 'Отмена', style: 'cancel' },
     ]);
-  }, [mapUrls, openExternalUrl]);
+  }, [mapUrls, openExternalLink]);
 
   const shareToTelegram = React.useCallback(async () => {
     if (!hasCoords) return;
@@ -246,7 +250,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         // noop
       }
 
-      await Linking.openURL(tg);
+      await openSafeExternalUrl(tg);
     } catch {
       // ignore
     }
@@ -376,7 +380,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
                   <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
                   <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
                   {mapUrls ? (
-                    <ActionButton label="Открыть в картах" icon="navigation" onActivate={() => void openExternalUrl(mapUrls.google)} />
+                    <ActionButton label="Открыть в картах" icon="navigation" onActivate={() => void openExternalLink(mapUrls.google)} />
                   ) : null}
                 </>
               ) : (

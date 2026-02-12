@@ -1,9 +1,10 @@
 // components/travel/StableContent.tsx
 import React, { memo, Suspense, useEffect, useMemo, useState } from "react";
-import { View, StyleSheet, Linking, Platform, Text, Pressable } from "react-native";
+import { View, StyleSheet, Platform, Text, Pressable } from "react-native";
 import type { TDefaultRendererProps } from "react-native-render-html";
 import { sanitizeRichText } from '@/utils/sanitizeRichText';
 import { useThemedColors } from '@/hooks/useTheme';
+import { openExternalUrl } from '@/utils/externalLinks';
 
 type LazyInstagramProps = { url: string };
 
@@ -590,7 +591,9 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
 
         if (isYouTube(src)) {
           if (Platform.OS !== "web") {
-            const open = () => Linking.openURL(src).catch(() => {});
+            const open = () => {
+              void openExternalUrl(src);
+            };
             return (
               <Pressable onPress={open} style={styles.ytStub}>
                 <Text style={styles.ytStubText}>Смотреть на YouTube</Text>
@@ -719,11 +722,12 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
   const handleLinkPress = (_: any, href?: string) => {
     if (!href) return;
     if (/^https?:\/\//i.test(href)) {
-      Linking.openURL(href).catch((error) => {
-        // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
-        if (__DEV__) {
-          console.warn('[StableContent] Не удалось открыть URL:', error);
-        }
+      void openExternalUrl(href, {
+        onError: (error) => {
+          if (__DEV__) {
+            console.warn('[StableContent] Не удалось открыть URL:', error);
+          }
+        },
       });
     } else if (href.startsWith("/") && Platform.OS === "web") {
       window.location.assign(href);

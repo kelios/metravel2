@@ -3,7 +3,6 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  Linking,
   Platform,
   Pressable,
   Text,
@@ -36,6 +35,7 @@ import {
   CategoryDictionaryItem,
 } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
+import { normalizeExternalUrl, openExternalUrl as openSafeExternalUrl } from '@/utils/externalLinks';
 
 type Point = {
   id: string;
@@ -183,15 +183,22 @@ const stripCountryFromCategoryIds = (
 
 const openExternal = async (url: string) => {
   if (!url) return;
+  const safeUrl = normalizeExternalUrl(url);
+  if (!safeUrl) return;
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(safeUrl, '_blank', 'noopener,noreferrer');
     return;
   }
   try {
-    const can = await Linking.canOpenURL(url);
-    if (can) await Linking.openURL(url);
+    await openSafeExternalUrl(safeUrl, {
+      onError: (error) => {
+        if (__DEV__) {
+          const { devWarn } = require('@/utils/logger');
+          devWarn('Error opening URL:', error);
+        }
+      },
+    });
   } catch (error) {
-    // ✅ FIX-009: Логируем ошибки открытия ссылок (не критично)
     if (__DEV__) {
       const { devWarn } = require('@/utils/logger');
       devWarn('Error opening URL:', error);
@@ -590,15 +597,18 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
       `tg://share?text=${encodeURIComponent(`${text}\n${mapUrl}`)}`,
     ];
 
-    for (const deeplink of tgDeepLinks) {
-      try {
-        const can = await Linking.canOpenURL(deeplink);
-        if (can) {
-          await Linking.openURL(deeplink);
-          return;
+    if (Platform.OS !== 'web') {
+      for (const deeplink of tgDeepLinks) {
+        try {
+          const opened = await openSafeExternalUrl(deeplink, {
+            allowedProtocols: ['http:', 'https:', 'tg:'],
+          });
+          if (opened) {
+            return;
+          }
+        } catch {
+          // ignore deep link failures
         }
-      } catch {
-        // ignore deep link failures
       }
     }
 

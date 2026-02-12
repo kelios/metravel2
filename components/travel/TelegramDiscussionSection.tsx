@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import * as Linking from 'expo-linking';
 import type { Travel } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
+import { normalizeExternalUrl, openExternalUrl } from '@/utils/externalLinks';
 
 interface TelegramDiscussionSectionProps {
   travel: Travel;
@@ -21,17 +21,20 @@ function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
   const handleOpen = useCallback(() => {
     if (!baseUrl) return;
 
-    const url = baseUrl;
+    const url = normalizeExternalUrl(baseUrl);
+    if (!url) return;
 
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined') {
         window.open(url, '_blank', 'noopener,noreferrer');
       }
     } else {
-      Linking.openURL(url).catch((error) => {
-        if (__DEV__) {
-          console.warn('[TelegramDiscussionSection] Не удалось открыть Telegram:', error);
-        }
+      void openExternalUrl(url, {
+        onError: (error) => {
+          if (__DEV__) {
+            console.warn('[TelegramDiscussionSection] Не удалось открыть Telegram:', error);
+          }
+        },
       });
     }
   }, [baseUrl]);

@@ -41,6 +41,10 @@ export const getSafeExternalUrl = (
     return isAllowedProtocol(normalized, allowedProtocols) ? normalized : '';
   }
 
+  if (!allowRelative && (/^\.\.?\//.test(trimmed) || trimmed.startsWith('/'))) {
+    return '';
+  }
+
   if (allowRelative && (/^\.\.?\//.test(trimmed) || trimmed.startsWith('/'))) {
     if (baseUrl) {
       try {

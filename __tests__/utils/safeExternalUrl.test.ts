@@ -18,6 +18,11 @@ describe('getSafeExternalUrl', () => {
     expect(getSafeExternalUrl('/map', { baseUrl: 'https://metravel.by' })).toBe('https://metravel.by/map');
   });
 
+  it('rejects relative URLs when relative links are disabled', () => {
+    expect(getSafeExternalUrl('/map', { allowRelative: false })).toBe('');
+    expect(getSafeExternalUrl('./map', { allowRelative: false })).toBe('');
+  });
+
   it('blocks protocol-relative URLs unless allowed', () => {
     expect(getSafeExternalUrl('//evil.example')).toBe('');
     expect(getSafeExternalUrl('//metravel.by', { allowProtocolRelative: true })).toBe('https://metravel.by');

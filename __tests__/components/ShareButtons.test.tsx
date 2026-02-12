@@ -3,8 +3,8 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import ShareButtons from '@/components/travel/ShareButtons';
 import * as Clipboard from 'expo-clipboard';
-import * as Linking from 'expo-linking';
 import type { Travel } from '@/types/types';
+import { openExternalUrl } from '@/utils/externalLinks';
 
 // Mock expo-router
 jest.mock('expo-router', () => ({
@@ -21,10 +21,9 @@ jest.mock('expo-clipboard', () => ({
   setStringAsync: jest.fn(() => Promise.resolve()),
 }));
 
-// Mock expo-linking
-jest.mock('expo-linking', () => ({
-  canOpenURL: jest.fn(() => Promise.resolve(true)),
-  openURL: jest.fn(() => Promise.resolve()),
+jest.mock('@/utils/externalLinks', () => ({
+  normalizeExternalUrl: jest.fn((url: string) => url),
+  openExternalUrl: jest.fn(() => Promise.resolve(true)),
 }));
 
 // Mock showToast
@@ -133,9 +132,7 @@ describe('ShareButtons', () => {
     fireEvent.press(telegramButton);
 
     await waitFor(() => {
-      expect(Linking.openURL).toHaveBeenCalledWith(
-        expect.stringContaining('t.me/share/url')
-      );
+      expect(openExternalUrl).toHaveBeenCalledWith(expect.stringContaining('t.me/share/url'));
     });
   });
 
@@ -190,4 +187,3 @@ describe('ShareButtons', () => {
     jest.useRealTimers();
   });
 });
-
