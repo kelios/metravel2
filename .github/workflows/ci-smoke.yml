@@ -329,11 +329,25 @@ jobs:
           SMOKE_RESULT: ${{ needs.smoke-critical.result }}
         run: |
           ARTIFACT_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts"
-          node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes" --artifact-url "$ARTIFACT_URL" --artifact-id "${{ steps.selective_decisions_upload.outputs.artifact-id }}"
+          node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --output-file test-results/ci-incident-snippet.md --workflow-run "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" --branch-pr "${{ github.event.pull_request.html_url }}" --impact "<fill>" --owner "<fill>" --eta "<fill>" --immediate-action "Initial triage started" --follow-up "yes" --artifact-url "$ARTIFACT_URL" --artifact-id "${{ steps.selective_decisions_upload.outputs.artifact-id }}" --json > test-results/ci-incident-payload.json
 
       - name: Validate incident snippet (PR, when gate failed)
         if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
         run: node scripts/validate-ci-incident-snippet.js --file test-results/ci-incident-snippet.md
+
+      - name: Validate and summarize incident payload (PR, when gate failed)
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
+        run: |
+          set +e
+          node scripts/validate-ci-incident-payload.js --file test-results/ci-incident-payload.json --json > test-results/ci-incident-payload-validation.json
+          STATUS=$?
+          set -e
+
+          node scripts/summarize-ci-incident-payload-validation.js --file test-results/ci-incident-payload-validation.json
+
+          if [ "$STATUS" -ne 0 ]; then
+            exit "$STATUS"
+          fi
 
       - name: Upload incident snippet artifact
         if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
@@ -341,6 +355,14 @@ jobs:
         with:
           name: ci-incident-snippet
           path: test-results/ci-incident-snippet.md
+          if-no-files-found: ignore
+
+      - name: Upload incident payload artifact
+        if: always() && github.event_name == 'pull_request' && (needs.lint.result != 'success' || needs.smoke-critical.result != 'success' || steps.quality_failure_class.outputs.failure_class == 'selective_contract')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-incident-payload
+          path: test-results/ci-incident-payload.json
           if-no-files-found: ignore
 
       - name: Validate PR CI exception block

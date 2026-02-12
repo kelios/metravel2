@@ -19,47 +19,52 @@ function HomeScreen() {
     const colors = useThemedColors();
     const { isHydrated: isResponsiveHydrated = true } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
+
+    // On web, start as false so SSR and first client render both produce the
+    // same neutral output (empty container). This prevents hydration mismatch
+    // when the URL is /travels/* but the index tab renders during SSR with
+    // pathname='/'. After useEffect fires we know window.location is available.
     const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
     useEffect(() => { if (Platform.OS === 'web') setHydrated(true); }, []);
+
+    // On web, only check the real URL after hydration to avoid SSR/client mismatch.
+    const isHomePath = useMemo(() => {
+        if (Platform.OS !== 'web') return true;
+        if (!hydrated) return false; // SSR & first client render: unknown → false
+        // After hydration: use window.location as source of truth
+        if (typeof window !== 'undefined') {
+            const loc = String(window.location?.pathname ?? '').trim();
+            if (loc === '' || loc === '/' || loc === '/index') return true;
+        }
+        // Fallback: if focused and expo-router says home path, trust it
+        // (covers SPA back-navigation where window.location may lag)
+        if (isFocused) {
+            const p = String(pathname ?? '').trim();
+            return p === '' || p === '/' || p === '/index';
+        }
+        return false;
+    }, [hydrated, pathname, isFocused]);
+
     const canMountContent = hydrated && isResponsiveHydrated;
 
-    const effectivePathname = useMemo(() => {
-        if (Platform.OS !== 'web') return pathname;
-        if (typeof window === 'undefined') return pathname;
-        const p = String(window.location?.pathname ?? '').trim();
-        return p !== '' ? p : pathname;
-    }, [pathname]);
-
     const canonical = useMemo(() => {
-        const raw = String(effectivePathname ?? '').trim();
+        const raw = String(pathname ?? '').trim();
         const normalized = raw === '' || raw === '/' ? '/' : raw.startsWith('/') ? raw : `/${raw}`;
         return buildCanonicalUrl(normalized);
-    }, [effectivePathname]);
+    }, [pathname]);
 
     const shouldRenderSeo = useMemo(() => {
         if (Platform.OS !== 'web') return false;
-        if (!isFocused) return false;
-        const p = String(effectivePathname ?? '').trim();
-        return p === '' || p === '/' || p === '/index';
-    }, [effectivePathname, isFocused]);
-
-    const shouldRenderHomeContent = useMemo(() => {
-        if (Platform.OS !== 'web') return true;
-        // When the screen is focused, always render — this avoids blank page
-        // after navigating back from travel details (window.location.pathname
-        // can be stale during SPA transitions).
-        if (isFocused) return true;
-        // When NOT focused, use pathname to avoid flash of home content
-        // when directly navigating to /travels/* etc.
-        const p = String(effectivePathname ?? '').trim();
-        return p === '' || p === '/' || p === '/index';
-    }, [effectivePathname, isFocused]);
+        return isFocused && isHomePath;
+    }, [isFocused, isHomePath]);
 
     const title = 'Твоя книга путешествий | Metravel';
     const description = 'Добавляй поездки, фото и заметки — и собирай красивую книгу в PDF для печати.';
 
-    if (!shouldRenderHomeContent) {
-        return <View style={styles.container} />;
+    // Before hydration or when URL is not home: render nothing.
+    // null avoids any visible DOM footprint from this tab.
+    if (!isHomePath) {
+        return null;
     }
 
     return (

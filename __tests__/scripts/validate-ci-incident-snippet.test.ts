@@ -72,6 +72,38 @@ describe('validate-ci-incident-snippet', () => {
     expect(validate(markdown)).toEqual([])
   })
 
+  it('fails selective_contract incidents when selective reference is missing', () => {
+    const markdown = [
+      '### CI Smoke Incident',
+      '- Date (UTC): 2026-02-11 20:10',
+      '- Workflow run: https://example.com/run/1',
+      '- Branch / PR: https://example.com/pull/42',
+      '- Failure Class: selective_contract',
+      '- Recommendation ID: QG-007',
+      '- Follow-up required: yes',
+      '',
+    ].join('\n')
+
+    const errors = validateDetailed(markdown)
+    expect(errors.some((entry) => entry.code === 'INCIDENT_MISSING_SELECTIVE_REFERENCE')).toBe(true)
+  })
+
+  it('accepts selective_contract incidents when artifact line is present', () => {
+    const markdown = [
+      '### CI Smoke Incident',
+      '- Date (UTC): 2026-02-11 20:10',
+      '- Workflow run: https://example.com/run/1',
+      '- Branch / PR: https://example.com/pull/42',
+      '- Failure Class: selective_contract',
+      '- Recommendation ID: QG-007',
+      '- Follow-up required: yes',
+      '- Selective decisions artifact: https://github.com/org/repo/actions/runs/123/artifacts/456',
+      '',
+    ].join('\n')
+
+    expect(validate(markdown)).toEqual([])
+  })
+
   it('fails for placeholder/invalid required auto fields', () => {
     const markdown = [
       '### CI Smoke Incident',

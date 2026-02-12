@@ -42,7 +42,10 @@ const buildWeservProxyUrl = (src: string) => {
     // Avoid double-wrapping an already-proxied URL.
     if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) return normalized;
     const withoutScheme = trimmed.replace(/^https?:\/\//i, '');
-    return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=1200&q=70&fit=inside`;
+    // Use smaller width on mobile to save bandwidth (~30-40% savings)
+    const isMobileViewport = Platform.OS === 'web' && typeof window !== 'undefined' && (window.innerWidth || 0) <= 768;
+    const w = isMobileViewport ? 800 : 1200;
+    return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=${w}&q=70&output=webp&fit=inside`;
   } catch {
     return null;
   }
@@ -66,8 +69,9 @@ const normalizeImgTags = (html: string): string =>
     }
     const styleMatch = tag.match(/\bstyle="([^"]*)"/i);
     const style = styleMatch?.[1] ?? "";
-    const ensured = ["display:block", "height:auto", "margin:0 auto"].reduce(
-      (acc, rule) => (acc.includes(rule) ? acc : acc ? `${acc};${rule}` : rule),
+    const aspectRule = w && h ? `aspect-ratio:${w}/${h}` : "";
+    const ensured = ["display:block", "height:auto", "margin:0 auto", aspectRule].filter(Boolean).reduce(
+      (acc, rule) => (acc.includes(rule!) ? acc : acc ? `${acc};${rule}` : rule!),
       style
     );
     let out = tag.replace(styleMatch ? styleMatch[0] : "", "").replace(/>$/, ` style="${ensured}">`);

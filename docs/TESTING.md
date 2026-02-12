@@ -446,6 +446,13 @@ LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish:json -- \
   --workflow-run "https://github.com/org/repo/actions/runs/123" \
   --branch-pr "https://github.com/org/repo/pull/42"
 
+# Save JSON payload and validate cross-field consistency
+LINT_RESULT=failure SMOKE_RESULT=success yarn ci:incident:publish:json -- \
+  --workflow-run "https://github.com/org/repo/actions/runs/123" \
+  --branch-pr "https://github.com/org/repo/pull/42" \
+  > test-results/ci-incident-payload.json
+yarn ci:incident:payload:validate
+
 # JSON payload fields for artifact provenance:
 # - artifactUrl: resolved artifact link (if available)
 # - artifactSource: explicit | run_id | fallback | none
@@ -455,6 +462,30 @@ yarn ci:incident:validate
 
 # machine-readable validation result
 yarn ci:incident:validate:json
+
+# machine-readable payload validation result
+yarn ci:incident:payload:validate:json
+
+# render a short human-readable summary from payload validation json
+node scripts/summarize-ci-incident-payload-validation.js --file test-results/ci-incident-payload-validation.json
+```
+
+Expected `Incident Payload Validation` summary snippets:
+
+```md
+# OK payload
+### Incident Payload Validation
+- OK: true
+- Error count: 0
+- File: test-results/ci-incident-payload.json
+
+# Missing validation file
+### Incident Payload Validation
+- Result file not found: `test-results/ci-incident-payload-validation.json`
+
+# Parse error in validation file
+### Incident Payload Validation
+- Failed to parse `test-results/ci-incident-payload-validation.json`: <parse error>
 ```
 
 Local reproduction:
@@ -465,6 +496,33 @@ yarn test:smoke:critical:ci
 node scripts/summarize-eslint.js test-results/eslint-results.json
 node scripts/summarize-jest-smoke.js test-results/jest-smoke-results.json
 node scripts/summarize-quality-gate.js test-results/eslint-results.json test-results/jest-smoke-results.json --fail-on-missing
+```
+
+### Summary Infrastructure
+
+- Shared helper for CI summaries:
+  - `scripts/summary-utils.js`
+- Scripts expected to use this helper:
+  - `scripts/summarize-eslint.js`
+  - `scripts/summarize-jest-smoke.js`
+  - `scripts/summarize-quality-gate.js`
+  - `scripts/summarize-ci-incident-payload-validation.js`
+- Regression requirement:
+  - summary script changes should include/refresh CLI integration tests in `__tests__/scripts/summarize-*.test.ts`.
+  - changes to `scripts/summary-utils.js` should include `__tests__/scripts/summary-utils.test.ts`.
+  - guard requirement: if `scripts/summarize-*.js` changes, include matching
+    `__tests__/scripts/summarize-<name>.test.ts` and `docs/TESTING.md`
+    (or explicit `validator-guard: skip - <reason>` override in PR body).
+    - guard failure output includes explicit expected test path hint for each changed summary script.
+  - guard requirement: if `scripts/summary-utils.js` changes, include
+    `__tests__/scripts/summary-utils.test.ts`,
+    `__tests__/scripts/run-validator-contract-tests-if-needed.test.ts`,
+    and `docs/TESTING.md` (or explicit `validator-guard: skip - <reason>` override in PR body).
+
+Guard machine-readable mode:
+
+```bash
+CHANGED_FILES="scripts/summarize-jest-smoke.js" node scripts/guard-validator-contract-change.js --json
 ```
 
 ### PR Exception format
@@ -497,6 +555,7 @@ Validator JSON contract:
 - Error code prefixes:
   - `PR_...` for PR exception validator
   - `INCIDENT_...` for incident snippet validator
+  - `INCIDENT_PAYLOAD_...` for incident JSON payload validator
   - `SUITE_...` for smoke suite baseline recommendation validator
 
 Template snippet:

@@ -257,7 +257,6 @@ export default function TravelDetailsContainer() {
     readyDesc,
     canonicalUrl,
     readyImage,
-    firstImg,
     jsonLd,
   } = useMemo(() => {
     const title = travel?.name ? `${travel.name} | MeTravel` : "MeTravel";
@@ -283,7 +282,6 @@ export default function TravelDetailsContainer() {
       readyDesc: desc,
       canonicalUrl: canonical,
       readyImage: firstUrl,
-      firstImg: firstUrl ? { url: firstUrl } : null,
       jsonLd: structuredData,
     };
   }, [travel, slug]);

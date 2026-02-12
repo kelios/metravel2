@@ -34,6 +34,11 @@ describe('run-validator-contract-tests-if-needed', () => {
   it('detects relevant changed files for validator contract checks', () => {
     expect(shouldRunForChangedFiles(['scripts/validator-output.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/validate-pr-ci-exception.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/validate-ci-incident-payload.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/summarize-ci-incident-payload-validation.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/summarize-jest-smoke.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/summary-utils.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['__tests__/scripts/guard-validator-contract-json.test.ts'])).toBe(true)
     expect(shouldRunForChangedFiles(['__tests__/scripts/validator-json-contract.test.ts'])).toBe(true)
     expect(shouldRunForChangedFiles(['README.md'])).toBe(false)
   })
@@ -90,11 +95,18 @@ describe('run-validator-contract-tests-if-needed', () => {
   it('keeps targeted validator test list stable', () => {
     expect(VALIDATOR_CONTRACT_TESTS).toEqual([
       '__tests__/scripts/validator-json-contract.test.ts',
+      '__tests__/scripts/summarize-quality-gate.test.ts',
+      '__tests__/scripts/summary-utils.test.ts',
+      '__tests__/scripts/summarize-eslint.test.ts',
+      '__tests__/scripts/summarize-jest-smoke.test.ts',
       '__tests__/scripts/validator-output.test.ts',
       '__tests__/scripts/validator-error-codes.test.ts',
       '__tests__/scripts/validate-pr-ci-exception.test.ts',
       '__tests__/scripts/validate-ci-incident-snippet.test.ts',
+      '__tests__/scripts/validate-ci-incident-payload.test.ts',
+      '__tests__/scripts/summarize-ci-incident-payload-validation.test.ts',
       '__tests__/scripts/validate-smoke-suite-baseline-recommendation.test.ts',
+      '__tests__/scripts/guard-validator-contract-json.test.ts',
       '__tests__/scripts/guard-validator-contract-change.test.ts',
     ])
   })

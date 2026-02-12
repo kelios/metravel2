@@ -1,6 +1,11 @@
 const fs = require('fs')
 const path = require('path')
 const {
+  readJsonFileWithStatus,
+  emitLines,
+  appendLinesToStepSummary,
+} = require('./summary-utils')
+const {
   validateSelectiveDecision,
   validateSelectiveDecisionsAggregate,
 } = require('./selective-decision-contract')
@@ -29,23 +34,17 @@ const jestPath = path.resolve(process.cwd(), jestPathArg)
 const cwd = process.cwd()
 
 const appendStepSummary = (markdown) => {
-  const summaryPath = process.env.GITHUB_STEP_SUMMARY
-  if (!summaryPath) return
-  fs.appendFileSync(summaryPath, `${markdown}\n`)
+  appendLinesToStepSummary({ lines: [markdown] })
 }
 
 const print = (markdown) => {
-  process.stdout.write(`${markdown}\n`)
+  emitLines([markdown])
   appendStepSummary(markdown)
 }
 
 const readJson = (filePath) => {
-  if (!fs.existsSync(filePath)) return null
-  try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'))
-  } catch {
-    return null
-  }
+  const result = readJsonFileWithStatus(filePath)
+  return result.payload
 }
 
 const readSelectiveDecision = (rawPath, label) => {

@@ -86,6 +86,20 @@ const validateDetailed = (markdown) => {
     })
   }
 
+  if (failureClass === 'selective_contract') {
+    const followUp = extractLineValue(markdown, 'Follow-up required')
+    const selectiveArtifact = extractLineValue(markdown, 'Selective decisions artifact')
+    const hasFollowUpReference = /selective-decisions artifact/i.test(followUp)
+    const hasArtifactReference = Boolean(selectiveArtifact) && !isPlaceholder(selectiveArtifact)
+    if (!hasFollowUpReference && !hasArtifactReference) {
+      errors.push({
+        code: ERROR_CODES.incidentSnippet.MISSING_SELECTIVE_REFERENCE,
+        field: 'selective decisions reference',
+        message: 'Selective contract incidents must reference selective-decisions artifact in follow-up or dedicated artifact line.',
+      })
+    }
+  }
+
   return errors
 }
 

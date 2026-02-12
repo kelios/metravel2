@@ -3,6 +3,7 @@ const os = require('os')
 const path = require('path')
 const { publishIncidentSnippet } = require('@/scripts/publish-ci-incident-snippet')
 const { validate } = require('@/scripts/validate-ci-incident-snippet')
+const { validate: validatePayload } = require('@/scripts/validate-ci-incident-payload')
 
 describe('ci incident pipeline integration', () => {
   it('publishes and validates incident snippet from quality-summary fixture', () => {
@@ -45,6 +46,7 @@ describe('ci incident pipeline integration', () => {
 
     const errors = validate(incident)
     expect(errors).toEqual([])
+    expect(validatePayload(published)).toEqual([])
 
     const stepSummary = fs.readFileSync(stepSummaryFile, 'utf8')
     expect(stepSummary).toContain('### CI Smoke Incident')
@@ -93,7 +95,54 @@ describe('ci incident pipeline integration', () => {
 
     const errors = validate(incident)
     expect(errors).toEqual([])
+    expect(validatePayload(published)).toEqual([])
 
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('fails payload validation on inconsistent artifact metadata', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ci-incident-pipeline-'))
+    const summaryFile = path.join(dir, 'quality-summary.json')
+    const outputFile = path.join(dir, 'ci-incident-snippet.md')
+
+    fs.writeFileSync(summaryFile, JSON.stringify({
+      overallOk: false,
+      failureClass: 'selective_contract',
+      recommendationId: 'QG-007',
+      lintOk: true,
+      smokeOk: true,
+      selectiveDecisionsAggregateIssue: true,
+    }), 'utf8')
+
+    const published = publishIncidentSnippet({
+      summaryFile,
+      outputFile,
+      workflowRun: 'https://github.com/org/repo/actions/runs/123',
+      branchPr: 'https://github.com/org/repo/pull/42',
+      impact: '<fill>',
+      owner: '<fill>',
+      eta: '<fill>',
+      immediateAction: 'Initial triage started',
+      followUp: 'yes',
+      artifactId: '456',
+      lintResult: 'success',
+      smokeResult: 'success',
+    })
+
+    expect(validatePayload(published)).toEqual([])
+
+    const corrupted = {
+      ...published,
+      artifactSource: 'run_id',
+      artifactUrl: '',
+      markdown: String(published.markdown || '').replace(
+        /^-\s*Selective decisions artifact:.*$/m,
+        ''
+      ),
+    }
+
+    const errors = validatePayload(corrupted)
+    expect(errors.join('\n')).toContain('artifactUrl')
     fs.rmSync(dir, { recursive: true, force: true })
   })
 })

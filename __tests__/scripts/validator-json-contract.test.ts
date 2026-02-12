@@ -41,6 +41,34 @@ describe('validator json contract (negative paths)', () => {
     fs.rmSync(dir, { recursive: true, force: true })
   })
 
+  it('returns structured json errors for incident payload validator', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const payloadPath = path.join(dir, 'incident-payload.json')
+    fs.writeFileSync(payloadPath, JSON.stringify({
+      failureClass: 'selective_contract',
+      recommendationId: 'QG-007',
+      artifactSource: 'none',
+      artifactUrl: '',
+      markdown: '### CI Smoke Incident\n',
+    }), 'utf8')
+
+    const result = runNode([
+      'scripts/validate-ci-incident-payload.js',
+      '--file',
+      payloadPath,
+      '--json',
+    ])
+
+    expect(result.status).toBe(1)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.contractVersion).toBe(1)
+    expect(payload.ok).toBe(false)
+    expect(payload.errorCount).toBeGreaterThan(0)
+    expect(payload.errors.some((e) => e.code === 'INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_SOURCE')).toBe(true)
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
   it('returns structured json errors for suite baseline validator', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
     const recoPath = path.join(dir, 'reco.json')

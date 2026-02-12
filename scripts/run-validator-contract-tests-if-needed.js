@@ -13,21 +13,32 @@ const { buildSelectiveDecision, emitSelectiveDecision } = require('./selective-r
 
 const VALIDATOR_CONTRACT_TESTS = [
   '__tests__/scripts/validator-json-contract.test.ts',
+  '__tests__/scripts/summarize-quality-gate.test.ts',
+  '__tests__/scripts/summary-utils.test.ts',
+  '__tests__/scripts/summarize-eslint.test.ts',
+  '__tests__/scripts/summarize-jest-smoke.test.ts',
   '__tests__/scripts/validator-output.test.ts',
   '__tests__/scripts/validator-error-codes.test.ts',
   '__tests__/scripts/validate-pr-ci-exception.test.ts',
   '__tests__/scripts/validate-ci-incident-snippet.test.ts',
+  '__tests__/scripts/validate-ci-incident-payload.test.ts',
+  '__tests__/scripts/summarize-ci-incident-payload-validation.test.ts',
   '__tests__/scripts/validate-smoke-suite-baseline-recommendation.test.ts',
+  '__tests__/scripts/guard-validator-contract-json.test.ts',
   '__tests__/scripts/guard-validator-contract-change.test.ts',
 ]
 
 const RELEVANT_CATEGORIES = [
   { name: 'validator', pattern: /^scripts\/validator-/ },
   { name: 'validators', pattern: /^scripts\/validate-.*\.js$/ },
+  { name: 'summaries', pattern: /^scripts\/summarize-.*\.js$/ },
+  { name: 'shared', pattern: /^scripts\/summary-utils\.js$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/validator-.*\.test\.ts$/ },
   { name: 'tests', pattern: /^__tests__\/scripts\/validate-.*\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/summarize-.*\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/summary-utils\.test\.ts$/ },
   { name: 'guards', pattern: /^scripts\/guard-validator-contract-change\.js$/ },
-  { name: 'tests', pattern: /^__tests__\/scripts\/guard-validator-contract-change\.test\.ts$/ },
+  { name: 'tests', pattern: /^__tests__\/scripts\/guard-validator-contract-.*\.test\.ts$/ },
   { name: 'shared', pattern: /^scripts\/validation-utils\.js$/ },
   { name: 'docs', pattern: /^docs\/TESTING\.md$/ },
   { name: 'workflow', pattern: /^\.github\/workflows\/ci-smoke\.yml$/ },

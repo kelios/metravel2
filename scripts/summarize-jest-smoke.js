@@ -1,37 +1,36 @@
-const fs = require('fs')
-const path = require('path')
+const {
+  readJsonFileWithStatus,
+  emitLines,
+  appendLinesToStepSummary,
+} = require('./summary-utils')
 
 const inputPath = process.argv[2] || 'jest-smoke-results.json'
-const resolvedPath = path.resolve(process.cwd(), inputPath)
-
-const appendStepSummary = (markdown) => {
-  const summaryPath = process.env.GITHUB_STEP_SUMMARY
-  if (!summaryPath) return
-  fs.appendFileSync(summaryPath, `${markdown}\n`)
+const printLines = (lines) => {
+  emitLines(lines)
+  appendLinesToStepSummary({ lines })
 }
 
-const print = (markdown) => {
-  process.stdout.write(`${markdown}\n`)
-  appendStepSummary(markdown)
-}
+const smokeResults = readJsonFileWithStatus(inputPath)
 
-if (!fs.existsSync(resolvedPath)) {
-  print('## CI Smoke Summary')
-  print('')
-  print(`- Result file not found: \`${inputPath}\``)
+if (smokeResults.missing) {
+  printLines([
+    '## CI Smoke Summary',
+    '',
+    `- Result file not found: \`${inputPath}\``,
+  ])
   process.exit(0)
 }
 
-let payload
-try {
-  payload = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'))
-} catch (error) {
-  print('## CI Smoke Summary')
-  print('')
-  print(`- Failed to parse \`${inputPath}\`: ${error instanceof Error ? error.message : String(error)}`)
+if (smokeResults.parseError) {
+  printLines([
+    '## CI Smoke Summary',
+    '',
+    `- Failed to parse \`${inputPath}\`: ${smokeResults.parseError}`,
+  ])
   process.exit(0)
 }
 
+const payload = smokeResults.payload
 const totalSuites = Number(payload?.numTotalTestSuites ?? 0)
 const passedSuites = Number(payload?.numPassedTestSuites ?? 0)
 const failedSuites = Number(payload?.numFailedTestSuites ?? 0)
@@ -50,13 +49,17 @@ const failedFiles = Array.isArray(payload?.testResults)
       .filter(Boolean)
   : []
 
-print('## CI Smoke Summary')
-print('')
-print(`- Suites: ${passedSuites}/${totalSuites} passed (${failedSuites} failed)`)
-print(`- Tests: ${passedTests}/${totalTests} passed (${failedTests} failed)`)
-print(`- Duration: ${durationSec}s`)
+const lines = [
+  '## CI Smoke Summary',
+  '',
+  `- Suites: ${passedSuites}/${totalSuites} passed (${failedSuites} failed)`,
+  `- Tests: ${passedTests}/${totalTests} passed (${failedTests} failed)`,
+  `- Duration: ${durationSec}s`,
+]
 
 if (failedFiles.length > 0) {
-  print('- Failed suites:')
-  failedFiles.forEach((file) => print(`  - \`${file}\``))
+  lines.push('- Failed suites:')
+  failedFiles.forEach((file) => lines.push(`  - \`${file}\``))
 }
+
+printLines(lines)

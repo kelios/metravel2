@@ -146,6 +146,20 @@ describe('summarize-quality-gate script', () => {
     expect(result.stdout).not.toContain('Failure Class:');
   });
 
+  it('writes summary lines to GITHUB_STEP_SUMMARY', () => {
+    const stepSummaryPath = path.join(tempDir, 'step-summary.md');
+    const result = runSummary(
+      eslintPassPath,
+      jestPassPath,
+      ['--fail-on-missing'],
+      { GITHUB_STEP_SUMMARY: stepSummaryPath },
+    );
+    expect(result.status).toBe(0);
+    const markdown = fs.readFileSync(stepSummaryPath, 'utf8');
+    expect(markdown).toContain('## Quality Gate Summary');
+    expect(markdown).toContain('Overall Quality Gate: PASS');
+  });
+
   it('prints suite drift when baseline files are provided', () => {
     const result = runSummary(
       eslintPassPath,
