@@ -137,4 +137,25 @@ describe('run-validator-contract-tests-if-needed', () => {
       '__tests__/scripts/guard-validator-contract-change.test.ts',
     ])
   })
+
+  it('keeps validator targeted tests in stable execution order blocks', () => {
+    const index = (file) => VALIDATOR_CONTRACT_TESTS.indexOf(file)
+
+    const validatorCoreStart = index('__tests__/scripts/validator-json-contract.test.ts')
+    const summaryBlockStart = index('__tests__/scripts/summarize-quality-gate.test.ts')
+    const validationBlockStart = index('__tests__/scripts/validate-pr-ci-exception.test.ts')
+    const incidentBlockStart = index('__tests__/scripts/validate-ci-incident-snippet.test.ts')
+    const guardBlockStart = index('__tests__/scripts/guard-validator-contract-json.test.ts')
+
+    expect(validatorCoreStart).toBe(0)
+    expect(summaryBlockStart).toBeGreaterThan(validatorCoreStart)
+    expect(validationBlockStart).toBeGreaterThan(summaryBlockStart)
+    expect(incidentBlockStart).toBeGreaterThan(validationBlockStart)
+    expect(guardBlockStart).toBeGreaterThan(incidentBlockStart)
+
+    expect(VALIDATOR_CONTRACT_TESTS.slice(-2)).toEqual([
+      '__tests__/scripts/guard-validator-contract-json.test.ts',
+      '__tests__/scripts/guard-validator-contract-change.test.ts',
+    ])
+  })
 })

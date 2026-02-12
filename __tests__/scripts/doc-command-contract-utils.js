@@ -3,6 +3,7 @@ const path = require('path')
 
 const docsPath = path.resolve(process.cwd(), 'docs', 'TESTING.md')
 const packageJsonPath = path.resolve(process.cwd(), 'package.json')
+const DEFAULT_DOC_COMMAND_TEMPLATE = (command) => `- \`yarn ${command}\``
 
 const readDocsAndScripts = () => {
   const markdown = fs.readFileSync(docsPath, 'utf8')
@@ -35,6 +36,7 @@ const assertDocCommandsSync = ({
   expectedCommands,
   scopeStart,
   scopeEnd,
+  commandTemplate = DEFAULT_DOC_COMMAND_TEMPLATE,
 }) => {
   const { markdown, scripts } = readDocsAndScripts()
   const scopedMarkdown = getDocsScope({
@@ -46,11 +48,12 @@ const assertDocCommandsSync = ({
   expectedCommands.forEach((command) => {
     expect(typeof scripts[command]).toBe('string')
     expect(scripts[command].length).toBeGreaterThan(0)
-    expect(scopedMarkdown).toContain(`- \`yarn ${command}\``)
+    expect(scopedMarkdown).toContain(commandTemplate(command))
   })
 }
 
 module.exports = {
+  DEFAULT_DOC_COMMAND_TEMPLATE,
   assertDocCommandsSync,
   getDocsScope,
 }
