@@ -2,10 +2,10 @@ const {
   parseFileArg,
   readTextFile,
   extractMarkdownLineValue,
-  isPlaceholderValue,
 } = require('./validation-utils')
 const { ERROR_CODES } = require('./validator-error-codes')
 const { buildResult, emitResult } = require('./validator-output')
+const { isConcreteValue, isHttpUrl } = require('./validation-rules')
 
 const ALLOWED_FAILURE_CLASSES = new Set([
   'infra_artifact',
@@ -37,7 +37,7 @@ const extractLineValue = (markdown, label) => {
 }
 
 const isPlaceholder = (value) => {
-  return isPlaceholderValue(value)
+  return !isConcreteValue(value)
 }
 
 const validateDetailed = (markdown) => {
@@ -51,20 +51,20 @@ const validateDetailed = (markdown) => {
   }
 
   const workflowRun = extractLineValue(markdown, 'Workflow run')
-  if (isPlaceholder(workflowRun)) {
+  if (!isHttpUrl(workflowRun)) {
     errors.push({
       code: ERROR_CODES.incidentSnippet.INVALID_WORKFLOW_RUN,
       field: 'Workflow run',
-      message: 'Field "Workflow run" must be a concrete value.',
+      message: 'Field "Workflow run" must be a valid URL.',
     })
   }
 
   const branchPr = extractLineValue(markdown, 'Branch / PR')
-  if (isPlaceholder(branchPr)) {
+  if (!isHttpUrl(branchPr)) {
     errors.push({
       code: ERROR_CODES.incidentSnippet.INVALID_BRANCH_PR,
       field: 'Branch / PR',
-      message: 'Field "Branch / PR" must be a concrete value.',
+      message: 'Field "Branch / PR" must be a valid URL.',
     })
   }
 
@@ -90,7 +90,7 @@ const validateDetailed = (markdown) => {
     const followUp = extractLineValue(markdown, 'Follow-up required')
     const selectiveArtifact = extractLineValue(markdown, 'Selective decisions artifact')
     const hasFollowUpReference = /selective-decisions artifact/i.test(followUp)
-    const hasArtifactReference = Boolean(selectiveArtifact) && !isPlaceholder(selectiveArtifact)
+    const hasArtifactReference = isHttpUrl(selectiveArtifact)
     if (!hasFollowUpReference && !hasArtifactReference) {
       errors.push({
         code: ERROR_CODES.incidentSnippet.MISSING_SELECTIVE_REFERENCE,

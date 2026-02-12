@@ -179,12 +179,69 @@ Jobs:
   - In PR runs, uploads aggregate selective decisions snapshot as `selective-decisions` artifact (`test-results/selective-decisions.json`).
   - In PR runs, guard validator contract step also emits machine-readable `validator-guard` artifact (`test-results/validator-guard.json`) via `scripts/guard-validator-contract-change.js --json`.
   - In PR runs, quality-summary also renders a markdown comment preview from guard payload and uploads `validator-guard-comment` artifact (`test-results/validator-guard-comment.md`).
+  - In PR runs, quality-summary validates publish-body markdown contract via `scripts/validate-validator-guard-comment.js` before PR comment upsert.
+  - Shared URL/placeholder checks for validator comment and incident validators are centralized in `scripts/validation-rules.js`.
+  - Validator comment validation also emits machine-readable snapshot `test-results/validator-guard-comment-validation.json` and summary section via `scripts/summarize-validator-guard-comment-validation.js`.
+  - End-to-end consistency for validator comment validation payload and summary is covered by `__tests__/scripts/validator-guard-comment-validation-pipeline.test.ts`.
+  - Validator comment error codes are standardized in `scripts/validator-error-codes.js` under `ERROR_CODES.validatorGuardComment`.
+  - CI contract guard includes `__tests__/scripts/validator-error-codes-centralization.test.ts` to prevent new literal validation error-code strings in `scripts/validate-*.js`.
+  - CI contract guard enforces namespace prefix policy via `__tests__/scripts/validator-error-codes-prefix-policy.test.ts`.
+  - CI contract guard also enforces unique `ERROR_CODES` values via `__tests__/scripts/validator-error-codes-uniqueness.test.ts`.
+  - Validator error-codes docs table consistency is enforced via `scripts/validate-validator-error-codes-doc-table.js` and `__tests__/scripts/validate-validator-error-codes-doc-table.test.ts`.
+  - In PR runs, quality-summary emits `validator-error-codes-doc-table-validation` snapshot (`test-results/validator-error-codes-doc-table-validation.json`) and summary via `scripts/summarize-validator-error-codes-doc-table-validation.js`.
+  - Local helper commands:
+    - `yarn validator:error-codes:docs:check`
+    - `yarn validator:error-codes:docs:update`
   - In PR runs, CI manages a marker-based PR comment lifecycle for validator guard:
     - when `ok=false`: creates or updates comment from `validator-guard-comment.md`
     - when `ok=true`: updates existing marker comment into resolved/pass status
+    - fallback comment body reuses shared template from `scripts/validator-guard-comment-template.js`
+    - fallback + rendered publish paths are integration-checked in `__tests__/scripts/validator-guard-comment-pipeline.test.ts`
     - comment includes direct links to workflow run and artifacts
     - quality-summary link uses artifact-id URL when available (falls back to run `#artifacts`)
+    - validator-guard-comment link uses uploaded artifact-id URL when available (falls back to run `#artifacts`)
     - best-effort and non-blocking (`continue-on-error`).
+
+### Validator Error Codes Table
+
+<!-- validator-error-codes-table:start -->
+| Namespace | Key | Code |
+| --- | --- | --- |
+| prCiException | EXCEPTION_REQUIRED | PR_EXCEPTION_REQUIRED |
+| prCiException | REQUIRED_FIELD_PLACEHOLDER | PR_REQUIRED_FIELD_PLACEHOLDER |
+| incidentSnippet | MISSING_HEADER | INCIDENT_MISSING_HEADER |
+| incidentSnippet | INVALID_WORKFLOW_RUN | INCIDENT_INVALID_WORKFLOW_RUN |
+| incidentSnippet | INVALID_BRANCH_PR | INCIDENT_INVALID_BRANCH_PR |
+| incidentSnippet | INVALID_FAILURE_CLASS | INCIDENT_INVALID_FAILURE_CLASS |
+| incidentSnippet | INVALID_RECOMMENDATION_ID | INCIDENT_INVALID_RECOMMENDATION_ID |
+| incidentSnippet | MISSING_SELECTIVE_REFERENCE | INCIDENT_MISSING_SELECTIVE_REFERENCE |
+| incidentPayload | INVALID_PAYLOAD_OBJECT | INCIDENT_PAYLOAD_INVALID_PAYLOAD_OBJECT |
+| incidentPayload | INVALID_FAILURE_CLASS | INCIDENT_PAYLOAD_INVALID_FAILURE_CLASS |
+| incidentPayload | INVALID_RECOMMENDATION_ID | INCIDENT_PAYLOAD_INVALID_RECOMMENDATION_ID |
+| incidentPayload | INVALID_ARTIFACT_SOURCE | INCIDENT_PAYLOAD_INVALID_ARTIFACT_SOURCE |
+| incidentPayload | INCONSISTENT_ARTIFACT_URL | INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_URL |
+| incidentPayload | INCONSISTENT_ARTIFACT_SOURCE | INCIDENT_PAYLOAD_INCONSISTENT_ARTIFACT_SOURCE |
+| incidentPayload | INCONSISTENT_MARKDOWN_ARTIFACT | INCIDENT_PAYLOAD_INCONSISTENT_MARKDOWN_ARTIFACT |
+| validatorGuardComment | MISSING_MARKER | VALIDATOR_GUARD_COMMENT_MISSING_MARKER |
+| validatorGuardComment | MISSING_HEADER | VALIDATOR_GUARD_COMMENT_MISSING_HEADER |
+| validatorGuardComment | INVALID_STATUS | VALIDATOR_GUARD_COMMENT_INVALID_STATUS |
+| validatorGuardComment | INVALID_REASON | VALIDATOR_GUARD_COMMENT_INVALID_REASON |
+| validatorGuardComment | INVALID_WORKFLOW_RUN | VALIDATOR_GUARD_COMMENT_INVALID_WORKFLOW_RUN |
+| validatorGuardComment | INVALID_GUARD_ARTIFACT | VALIDATOR_GUARD_COMMENT_INVALID_GUARD_ARTIFACT |
+| errorCodesDoc | MISSING_MARKERS | ERROR_CODES_DOC_MISSING_MARKERS |
+| errorCodesDoc | OUTDATED_TABLE | ERROR_CODES_DOC_OUTDATED_TABLE |
+| suiteBaselineRecommendation | INVALID_PAYLOAD_OBJECT | SUITE_INVALID_PAYLOAD_OBJECT |
+| suiteBaselineRecommendation | INVALID_SOURCE_SNAPSHOT | SUITE_INVALID_SOURCE_SNAPSHOT |
+| suiteBaselineRecommendation | INVALID_SUITE_COUNT | SUITE_INVALID_SUITE_COUNT |
+| suiteBaselineRecommendation | INVALID_FORMAT | SUITE_INVALID_FORMAT |
+| suiteBaselineRecommendation | INVALID_BASELINE_VALUE_EMPTY | SUITE_INVALID_BASELINE_VALUE_EMPTY |
+| suiteBaselineRecommendation | INVALID_BASELINE_VALUE_JSON_ARRAY | SUITE_INVALID_BASELINE_VALUE_JSON_ARRAY |
+| suiteBaselineRecommendation | INVALID_BASELINE_VALUE_JSON_PARSE | SUITE_INVALID_BASELINE_VALUE_JSON_PARSE |
+| suiteBaselineRecommendation | INVALID_BASELINE_VALUE_CSV | SUITE_INVALID_BASELINE_VALUE_CSV |
+| suiteBaselineRecommendation | INVALID_GH_COMMAND_EMPTY | SUITE_INVALID_GH_COMMAND_EMPTY |
+| suiteBaselineRecommendation | INVALID_GH_COMMAND_CONTENT | SUITE_INVALID_GH_COMMAND_CONTENT |
+<!-- validator-error-codes-table:end -->
+
   - For failed PR gates, also prints a ready-to-copy incident snippet into job summary via `scripts/publish-ci-incident-snippet.js`.
   - Validates incident snippet structure and required auto fields via `scripts/validate-ci-incident-snippet.js`.
   - Uploads `ci-incident-snippet` artifact (`test-results/ci-incident-snippet.md`) for incident/audit trail.

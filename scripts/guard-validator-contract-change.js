@@ -9,6 +9,11 @@ const CONTRACT_FILES = [
   'scripts/validator-error-codes.js',
   'scripts/validator-output.js',
   'scripts/summary-utils.js',
+  'scripts/validation-rules.js',
+  'scripts/validate-validator-guard-comment.js',
+  'scripts/validate-validator-error-codes-doc-table.js',
+  'scripts/update-validator-error-codes-doc-table.js',
+  'scripts/validator-guard-comment-template.js',
 ]
 const SUMMARY_SCRIPT_PATTERN = /^scripts\/summarize-.*\.js$/
 const CONTRACT_PATTERNS = [
@@ -26,6 +31,21 @@ const REQUIRED_TESTS_BY_CONTRACT_FILE = {
   'scripts/summary-utils.js': [
     '__tests__/scripts/summary-utils.test.ts',
     '__tests__/scripts/run-validator-contract-tests-if-needed.test.ts',
+  ],
+  'scripts/validation-rules.js': [
+    '__tests__/scripts/validation-rules.test.ts',
+  ],
+  'scripts/validate-validator-guard-comment.js': [
+    '__tests__/scripts/validate-validator-guard-comment.test.ts',
+  ],
+  'scripts/validate-validator-error-codes-doc-table.js': [
+    '__tests__/scripts/validate-validator-error-codes-doc-table.test.ts',
+  ],
+  'scripts/update-validator-error-codes-doc-table.js': [
+    '__tests__/scripts/update-validator-error-codes-doc-table.test.ts',
+  ],
+  'scripts/validator-guard-comment-template.js': [
+    '__tests__/scripts/validator-guard-comment-template.test.ts',
   ],
 }
 

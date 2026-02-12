@@ -129,4 +129,36 @@ describe('render-validator-guard-comment', () => {
 
     fs.rmSync(dir, { recursive: true, force: true })
   })
+
+  it('includes comment artifact link when input file is missing', () => {
+    const markdown = buildCommentMarkdown({
+      file: 'test-results/missing-validator-guard.json',
+      payload: null,
+      missing: true,
+      parseError: '',
+      runUrl: 'https://github.com/org/repo/actions/runs/123',
+      artifactUrl: 'https://github.com/org/repo/actions/runs/123#artifacts',
+      qualitySummaryUrl: 'https://github.com/org/repo/actions/runs/123/artifacts/456',
+      commentArtifactUrl: 'https://github.com/org/repo/actions/runs/123/artifacts/789',
+    })
+
+    expect(markdown).toContain('Result file not found')
+    expect(markdown).toContain('Guard comment artifact: https://github.com/org/repo/actions/runs/123/artifacts/789')
+  })
+
+  it('includes comment artifact link when input JSON is invalid', () => {
+    const markdown = buildCommentMarkdown({
+      file: 'test-results/validator-guard.json',
+      payload: null,
+      missing: false,
+      parseError: 'Unexpected token',
+      runUrl: 'https://github.com/org/repo/actions/runs/123',
+      artifactUrl: 'https://github.com/org/repo/actions/runs/123#artifacts',
+      qualitySummaryUrl: 'https://github.com/org/repo/actions/runs/123/artifacts/456',
+      commentArtifactUrl: 'https://github.com/org/repo/actions/runs/123/artifacts/789',
+    })
+
+    expect(markdown).toContain('Failed to parse')
+    expect(markdown).toContain('Guard comment artifact: https://github.com/org/repo/actions/runs/123/artifacts/789')
+  })
 })

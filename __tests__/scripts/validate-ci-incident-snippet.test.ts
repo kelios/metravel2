@@ -122,6 +122,22 @@ describe('validate-ci-incident-snippet', () => {
     expect(errors.join('\n')).toContain('Recommendation ID')
   })
 
+  it('fails when workflow and branch fields are not valid URLs', () => {
+    const markdown = [
+      '### CI Smoke Incident',
+      '- Date (UTC): 2026-02-11 20:10',
+      '- Workflow run: run-123',
+      '- Branch / PR: pull-42',
+      '- Failure Class: smoke_only',
+      '- Recommendation ID: QG-004',
+      '',
+    ].join('\n')
+
+    const errors = validate(markdown).join('\n')
+    expect(errors).toContain('Workflow run')
+    expect(errors).toContain('Branch / PR')
+  })
+
   it('returns machine-readable detailed errors', () => {
     const markdown = [
       '- Workflow run: <link>',

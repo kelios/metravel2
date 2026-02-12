@@ -34,13 +34,18 @@ describe('run-validator-contract-tests-if-needed', () => {
   it('detects relevant changed files for validator contract checks', () => {
     expect(shouldRunForChangedFiles(['scripts/validator-output.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/validate-pr-ci-exception.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/validate-validator-guard-comment.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/validate-ci-incident-payload.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/summarize-ci-incident-payload-validation.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/summarize-jest-smoke.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/summarize-validator-guard.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/render-validator-guard-comment.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['scripts/summary-utils.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/validation-rules.js'])).toBe(true)
+    expect(shouldRunForChangedFiles(['scripts/update-validator-error-codes-doc-table.js'])).toBe(true)
     expect(shouldRunForChangedFiles(['__tests__/scripts/guard-validator-contract-json.test.ts'])).toBe(true)
+    expect(shouldRunForChangedFiles(['__tests__/scripts/validation-rules.test.ts'])).toBe(true)
+    expect(shouldRunForChangedFiles(['__tests__/scripts/update-validator-error-codes-doc-table.test.ts'])).toBe(true)
     expect(shouldRunForChangedFiles(['__tests__/scripts/validator-json-contract.test.ts'])).toBe(true)
     expect(shouldRunForChangedFiles(['README.md'])).toBe(false)
   })
@@ -97,15 +102,28 @@ describe('run-validator-contract-tests-if-needed', () => {
   it('keeps targeted validator test list stable', () => {
     expect(VALIDATOR_CONTRACT_TESTS).toEqual([
       '__tests__/scripts/validator-json-contract.test.ts',
+      '__tests__/scripts/validator-error-codes-centralization.test.ts',
+      '__tests__/scripts/validator-error-codes-prefix-policy.test.ts',
+      '__tests__/scripts/validator-error-codes-uniqueness.test.ts',
       '__tests__/scripts/summarize-quality-gate.test.ts',
       '__tests__/scripts/summary-utils.test.ts',
+      '__tests__/scripts/validation-rules.test.ts',
       '__tests__/scripts/summarize-eslint.test.ts',
       '__tests__/scripts/summarize-jest-smoke.test.ts',
       '__tests__/scripts/summarize-validator-guard.test.ts',
+      '__tests__/scripts/summarize-validator-guard-comment-validation.test.ts',
+      '__tests__/scripts/summarize-validator-error-codes-doc-table.test.ts',
+      '__tests__/scripts/summarize-validator-error-codes-doc-table-validation.test.ts',
+      '__tests__/scripts/validator-guard-comment-validation-pipeline.test.ts',
       '__tests__/scripts/render-validator-guard-comment.test.ts',
+      '__tests__/scripts/validator-guard-comment-template.test.ts',
+      '__tests__/scripts/validator-guard-comment-pipeline.test.ts',
       '__tests__/scripts/validator-output.test.ts',
       '__tests__/scripts/validator-error-codes.test.ts',
       '__tests__/scripts/validate-pr-ci-exception.test.ts',
+      '__tests__/scripts/validate-validator-guard-comment.test.ts',
+      '__tests__/scripts/validate-validator-error-codes-doc-table.test.ts',
+      '__tests__/scripts/update-validator-error-codes-doc-table.test.ts',
       '__tests__/scripts/validate-ci-incident-snippet.test.ts',
       '__tests__/scripts/validate-ci-incident-payload.test.ts',
       '__tests__/scripts/summarize-ci-incident-payload-validation.test.ts',

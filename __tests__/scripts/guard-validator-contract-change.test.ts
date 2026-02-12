@@ -63,6 +63,116 @@ describe('guard-validator-contract-change', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('fails when validation-rules changes without companions', () => {
+    const result = evaluateGuard({
+      changedFiles: ['scripts/validation-rules.js'],
+      prBody: '',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.missing).toContain('__tests__/scripts/validation-rules.test.ts')
+    expect(result.missing).toContain('docs/TESTING.md')
+  })
+
+  it('passes when validation-rules changes include companions', () => {
+    const result = evaluateGuard({
+      changedFiles: [
+        'scripts/validation-rules.js',
+        '__tests__/scripts/validation-rules.test.ts',
+        'docs/TESTING.md',
+      ],
+      prBody: '',
+    })
+    expect(result.ok).toBe(true)
+  })
+
+  it('fails when validator guard comment validator changes without companions', () => {
+    const result = evaluateGuard({
+      changedFiles: ['scripts/validate-validator-guard-comment.js'],
+      prBody: '',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.missing).toContain('__tests__/scripts/validate-validator-guard-comment.test.ts')
+    expect(result.missing).toContain('docs/TESTING.md')
+  })
+
+  it('passes when validator guard comment validator changes include companions', () => {
+    const result = evaluateGuard({
+      changedFiles: [
+        'scripts/validate-validator-guard-comment.js',
+        '__tests__/scripts/validate-validator-guard-comment.test.ts',
+        'docs/TESTING.md',
+      ],
+      prBody: '',
+    })
+    expect(result.ok).toBe(true)
+  })
+
+  it('fails when validator error-codes docs-table validator changes without companions', () => {
+    const result = evaluateGuard({
+      changedFiles: ['scripts/validate-validator-error-codes-doc-table.js'],
+      prBody: '',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.missing).toContain('__tests__/scripts/validate-validator-error-codes-doc-table.test.ts')
+    expect(result.missing).toContain('docs/TESTING.md')
+  })
+
+  it('passes when validator error-codes docs-table validator changes include companions', () => {
+    const result = evaluateGuard({
+      changedFiles: [
+        'scripts/validate-validator-error-codes-doc-table.js',
+        '__tests__/scripts/validate-validator-error-codes-doc-table.test.ts',
+        'docs/TESTING.md',
+      ],
+      prBody: '',
+    })
+    expect(result.ok).toBe(true)
+  })
+
+  it('fails when validator error-codes docs-table updater changes without companions', () => {
+    const result = evaluateGuard({
+      changedFiles: ['scripts/update-validator-error-codes-doc-table.js'],
+      prBody: '',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.missing).toContain('__tests__/scripts/update-validator-error-codes-doc-table.test.ts')
+    expect(result.missing).toContain('docs/TESTING.md')
+  })
+
+  it('passes when validator error-codes docs-table updater changes include companions', () => {
+    const result = evaluateGuard({
+      changedFiles: [
+        'scripts/update-validator-error-codes-doc-table.js',
+        '__tests__/scripts/update-validator-error-codes-doc-table.test.ts',
+        'docs/TESTING.md',
+      ],
+      prBody: '',
+    })
+    expect(result.ok).toBe(true)
+  })
+
+  it('fails when validator guard comment template changes without companions', () => {
+    const result = evaluateGuard({
+      changedFiles: ['scripts/validator-guard-comment-template.js'],
+      prBody: '',
+    })
+    expect(result.ok).toBe(false)
+    expect(result.missing).toContain('__tests__/scripts/validator-guard-comment-template.test.ts')
+    expect(result.missing).toContain('docs/TESTING.md')
+  })
+
+  it('passes when validator guard comment template changes include companions', () => {
+    const result = evaluateGuard({
+      changedFiles: [
+        'scripts/validator-guard-comment-template.js',
+        '__tests__/scripts/validator-guard-comment-template.test.ts',
+        'docs/TESTING.md',
+      ],
+      prBody: '',
+    })
+    expect(result.ok).toBe(true)
+  })
+
   it('fails when summarize script changes without required companions', () => {
     const result = evaluateGuard({
       changedFiles: ['scripts/summarize-jest-smoke.js'],

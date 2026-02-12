@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { readJsonFileWithStatus } = require('./summary-utils')
-const COMMENT_MARKER = '<!-- validator-guard-comment -->'
+const { COMMENT_MARKER } = require('./validator-guard-comment-template')
 
 const parseArgs = (argv) => {
   const args = {

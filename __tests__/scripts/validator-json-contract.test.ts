@@ -113,4 +113,55 @@ describe('validator json contract (negative paths)', () => {
     expect(payload.errorCount).toBeGreaterThan(0)
     expect(payload.errors.some((e) => e.code === 'PR_EXCEPTION_REQUIRED')).toBe(true)
   })
+
+  it('returns structured json errors for validator guard comment validator', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const commentPath = path.join(dir, 'validator-guard-comment.md')
+    fs.writeFileSync(commentPath, [
+      '### Validator Guard Comment',
+      '- Status: UNKNOWN',
+      '- Reason: <fill>',
+      '- Workflow run: not-a-url',
+      '- Guard artifact: <link>',
+      '',
+    ].join('\n'), 'utf8')
+
+    const result = runNode([
+      'scripts/validate-validator-guard-comment.js',
+      '--file',
+      commentPath,
+      '--json',
+    ])
+
+    expect(result.status).toBe(1)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.contractVersion).toBe(1)
+    expect(payload.ok).toBe(false)
+    expect(payload.errorCount).toBeGreaterThan(0)
+    expect(payload.errors.some((e) => e.code === 'VALIDATOR_GUARD_COMMENT_INVALID_STATUS')).toBe(true)
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('returns structured json errors for validator error-codes docs table validator', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'validator-contract-'))
+    const docsPath = path.join(dir, 'TESTING.md')
+    fs.writeFileSync(docsPath, '## Docs without markers\n', 'utf8')
+
+    const result = runNode([
+      'scripts/validate-validator-error-codes-doc-table.js',
+      '--file',
+      docsPath,
+      '--json',
+    ])
+
+    expect(result.status).toBe(1)
+    const payload = JSON.parse(result.stdout)
+    expect(payload.contractVersion).toBe(1)
+    expect(payload.ok).toBe(false)
+    expect(payload.errorCount).toBeGreaterThan(0)
+    expect(payload.errors.some((e) => e.code === 'ERROR_CODES_DOC_MISSING_MARKERS')).toBe(true)
+
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
 })
