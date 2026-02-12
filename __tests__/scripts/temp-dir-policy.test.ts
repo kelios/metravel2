@@ -1,41 +1,27 @@
-const fs = require('fs')
 const path = require('path')
+const {
+  ensure,
+  collectFilesRecursive,
+  toPosixRelative,
+  readTextFile,
+} = require('./policy-test-utils')
 
 const scriptsTestsDir = path.resolve(process.cwd(), '__tests__', 'scripts')
 const allowedFiles = new Set([
   'cli-test-utils.ts',
 ])
 
-const ensure = (condition, message) => {
-  if (!condition) {
-    throw new Error(message)
-  }
-}
-
-const collectFiles = (dir) => {
-  const out = []
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const abs = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      out.push(...collectFiles(abs))
-      continue
-    }
-    out.push(abs)
-  }
-  return out
-}
-
 describe('temp dir policy', () => {
   it('keeps mkdtempSync usage only in cli-test-utils helper', () => {
-    const files = collectFiles(scriptsTestsDir)
+    const files = collectFilesRecursive(scriptsTestsDir)
     const forbidden = []
     const needle = 'mkdtemp' + 'Sync('
 
     for (const filePath of files) {
-      const rel = path.relative(scriptsTestsDir, filePath).replace(/\\/g, '/')
+      const rel = toPosixRelative(scriptsTestsDir, filePath)
       if (allowedFiles.has(rel)) continue
 
-      const content = fs.readFileSync(filePath, 'utf8')
+      const content = readTextFile(filePath)
       if (content.includes(needle)) {
         forbidden.push(rel)
       }
