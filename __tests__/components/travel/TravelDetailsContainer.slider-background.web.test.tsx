@@ -69,7 +69,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     jest.useRealTimers()
   })
 
-  it('passes blurBackground=true to Slider when renderSlider=true', async () => {
+  it('passes blurBackground=false to Slider on web after hero image swap', async () => {
     const travel: any = {
       id: 1,
       name: 'Demo travel',
@@ -142,7 +142,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     const lastArgs = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]
     const lastProps = (lastArgs as any)?.[0]
     expect(lastProps).toBeTruthy()
-    expect(lastProps.blurBackground).toBe(true)
+    expect(lastProps.blurBackground).toBe(false)
   })
 
   it('marks hero section as gallery anchor on web', async () => {
