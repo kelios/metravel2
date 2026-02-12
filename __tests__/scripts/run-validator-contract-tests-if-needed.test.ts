@@ -7,8 +7,10 @@ const {
   buildSummaryMarkdown,
   decideExecutionFromMatches,
 } = require('@/scripts/run-validator-contract-tests-if-needed')
-const fs = require('fs')
-const path = require('path')
+const {
+  expectTargetedTestsListUnique,
+  expectTargetedTestsListResolvable,
+} = require('./targeted-test-list-contract-utils')
 
 describe('run-validator-contract-tests-if-needed', () => {
   it('parses args with defaults and overrides', () => {
@@ -162,12 +164,10 @@ describe('run-validator-contract-tests-if-needed', () => {
   })
 
   it('keeps targeted validator tests list unique', () => {
-    const unique = new Set(VALIDATOR_CONTRACT_TESTS)
-    expect(unique.size).toBe(VALIDATOR_CONTRACT_TESTS.length)
+    expectTargetedTestsListUnique(VALIDATOR_CONTRACT_TESTS)
   })
 
   it('keeps targeted validator tests paths resolvable in repository', () => {
-    const missing = VALIDATOR_CONTRACT_TESTS.filter((file) => !fs.existsSync(path.resolve(process.cwd(), file)))
-    expect(missing).toEqual([])
+    expectTargetedTestsListResolvable(VALIDATOR_CONTRACT_TESTS)
   })
 })
