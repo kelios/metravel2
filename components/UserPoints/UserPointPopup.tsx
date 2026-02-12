@@ -12,6 +12,7 @@ import type { ImportedPoint } from '@/types/userPoints';
 import { showToast } from '@/utils/toast';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import Feather from '@expo/vector-icons/Feather';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 interface UserPointPopupProps {
   /**
@@ -120,23 +121,14 @@ export const UserPointPopup: React.FC<UserPointPopupProps> = ({
       const text = point.name || coordsText;
       const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
       const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-
-      if (typeof window !== 'undefined') {
-        window.open(tgUrl, '_blank', 'noopener,noreferrer');
-      }
+      void openExternalUrlInNewTab(tgUrl);
     } catch {
       // noop
     }
   }, [coordsText, point.name]);
 
   const openExternalMap = useCallback((mapUrl: string) => {
-    try {
-      if (typeof window !== 'undefined') {
-        window.open(mapUrl, '_blank', 'noopener,noreferrer');
-      }
-    } catch {
-      // noop
-    }
+    void openExternalUrlInNewTab(mapUrl);
   }, []);
 
   const mapLinks = useMemo(() => [

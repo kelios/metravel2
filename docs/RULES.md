@@ -74,6 +74,24 @@ npx serve dist/prod -l 3000 -s
 - Add new components only when no existing component can be reasonably extended or composed.
 - When adding buttons, icons, or small UI primitives, prefer existing `components/ui` primitives (`Button`, `IconButton`, `Chip`) over custom one-offs.
 
+### External link policy
+
+- Do not call `window.open(...)` directly in feature code.
+- Do not call `Linking.openURL(...)` directly outside `utils/externalLinks.ts`.
+- Use centralized helpers:
+  - `openExternalUrl(...)` for standard external navigation.
+  - `openExternalUrlInNewTab(...)` for web new-tab flows.
+  - `openWebWindow(...)` only for low-level infrastructure cases (single chokepoint).
+- CI enforcement:
+  - `yarn guard:external-links`
+- Allowlist expansion policy:
+  - expanding guard allowlists is exceptional and must be temporary;
+  - every allowlist expansion PR must include:
+    - concrete business/technical reason,
+    - risk statement,
+    - rollback/removal plan,
+    - owner and target removal date.
+
 ### Images and placeholders
 
 - Show a placeholder when `imageUrl` is missing or image load fails.

@@ -6,6 +6,15 @@ const tsPlugin = require("@typescript-eslint/eslint-plugin");
 const reactHooks = require("eslint-plugin-react-hooks");
 const reactPlugin = require("eslint-plugin-react");
 
+const linkingOpenUrlGuard = [
+  "error",
+  {
+    selector:
+      "CallExpression[callee.type='MemberExpression'][callee.object.name='Linking'][callee.property.name='openURL']",
+    message: "Use '@/utils/externalLinks.openExternalUrl' instead of direct Linking.openURL.",
+  },
+];
+
 const baseIgnores = [
   "node_modules/",
   ".expo/",
@@ -48,6 +57,7 @@ module.exports = [
     rules: {
       "no-unused-vars": "warn",
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+      "no-restricted-syntax": linkingOpenUrlGuard,
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn"
     }
@@ -73,6 +83,7 @@ module.exports = [
     rules: {
       "no-undef": "off",
       "no-console": ["warn", { allow: ["warn", "error", "info"] }],
+      "no-restricted-syntax": linkingOpenUrlGuard,
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
         "error",
@@ -82,6 +93,12 @@ module.exports = [
           caughtErrorsIgnorePattern: "^_"
         }
       ]
+    }
+  },
+  {
+    files: ["utils/externalLinks.ts"],
+    rules: {
+      "no-restricted-syntax": "off"
     }
   },
   {

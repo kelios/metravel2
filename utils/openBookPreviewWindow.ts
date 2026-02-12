@@ -1,3 +1,5 @@
+import { openWebWindow } from '@/utils/externalLinks';
+
 export function openBookPreviewWindow(html: string): void {
   if (typeof window === 'undefined') return;
 
@@ -6,7 +8,7 @@ export function openBookPreviewWindow(html: string): void {
   try {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
+    const win = openWebWindow(url);
 
     // Освобождаем Blob URL после открытия (с задержкой, чтобы браузер успел загрузить)
     setTimeout(() => {
@@ -21,13 +23,8 @@ export function openBookPreviewWindow(html: string): void {
     }
   } catch {
     // Fallback: document.write для старых браузеров
-    const win = window.open('about:blank', '_blank');
+    const win = openWebWindow('about:blank');
     if (!win) return;
-    try {
-      win.opener = null;
-    } catch {
-      // ignore
-    }
     try {
       win.document.open();
       win.document.write(html);

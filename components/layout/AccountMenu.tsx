@@ -13,6 +13,7 @@ import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { buildLoginHref } from '@/utils/authNavigation';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 function AccountMenu() {
   const { isAuthenticated, username, logout, userId, userAvatar, profileRefreshToken } = useAuth();
@@ -210,11 +211,11 @@ function AccountMenu() {
       
       // На вебе открываем все ссылки в новой вкладке
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        const url =
-          path.startsWith('http') || path.startsWith('https')
-            ? path
-            : `${window.location.origin}${path}`;
-        window.open(url, '_blank', 'noopener');
+        void openExternalUrlInNewTab(path, {
+          allowRelative: true,
+          baseUrl: window.location.origin,
+          windowFeatures: 'noopener',
+        });
       } else {
         // На мобильных используем роутер
         router.push(path as any);

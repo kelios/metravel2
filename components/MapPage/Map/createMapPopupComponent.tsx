@@ -8,6 +8,7 @@ import { userPointsApi } from '@/api/userPoints';
 import { useQueryClient } from '@tanstack/react-query';
 import { PointStatus } from '@/types/userPoints';
 import { DESIGN_COLORS } from '@/constants/designSystem';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 type UseMap = () => any;
 
@@ -62,13 +63,7 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
     const handleOpenArticle = useCallback(() => {
       const url = String(point.articleUrl || point.urlTravel || '').trim();
       if (!url) return;
-      try {
-        if (typeof window !== 'undefined') {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(url);
     }, [point.articleUrl, point.urlTravel]);
 
     const handleCopyCoord = useCallback(async () => {
@@ -86,39 +81,21 @@ export const createMapPopupComponent = ({ useMap, userLocation }: CreatePopupCom
       if (!coord) return;
       const url = buildGoogleMapsUrl(coord);
       if (!url) return;
-      try {
-        if (typeof window !== 'undefined') {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(url);
     }, [coord]);
 
     const handleOpenOrganicMaps = useCallback(() => {
       if (!coord) return;
       const url = buildOrganicMapsUrl(coord);
       if (!url) return;
-      try {
-        if (typeof window !== 'undefined') {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(url);
     }, [coord]);
 
     const handleShareTelegram = useCallback(() => {
       if (!coord) return;
       const telegramUrl = buildTelegramShareUrl(coord);
       if (!telegramUrl) return;
-      try {
-        if (typeof window !== 'undefined') {
-          window.open(telegramUrl, '_blank', 'noopener,noreferrer');
-        }
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(telegramUrl);
     }, [coord]);
 
     const normalizedCoord = useMemo(() => {

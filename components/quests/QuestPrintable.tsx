@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import type { QuestStep } from './QuestWizard';
+import { openBookPreviewWindow } from '@/utils/openBookPreviewWindow';
 
 type PrintableProps = {
     title: string;
@@ -211,11 +212,7 @@ export function generatePrintableQuest({ title, steps, intro, questUrl }: Printa
 </body>
 </html>`;
 
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-        printWindow.document.write(html);
-        printWindow.document.close();
-    }
+    openBookPreviewWindow(html);
 }
 
 function escHtml(str: string): string {

@@ -12,6 +12,7 @@ import { showToast } from '@/utils/toast';
 import { userPointsApi } from '@/api/userPoints';
 import { PointStatus } from '@/types/userPoints';
 import { fetchFilters } from '@/api/misc';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import {
   CategoryDictionaryItem,
   createCategoryNameToIdsMap,
@@ -647,13 +648,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     const handleOpenArticle = useCallback(() => {
       const url = String(point.articleUrl || point.urlTravel || '').trim();
       if (!url) return;
-      try {
-        if (typeof window !== 'undefined') {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(url);
     }, [point.articleUrl, point.urlTravel]);
 
     const handleCopyCoord = useCallback(async () => {
@@ -671,26 +666,14 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       if (!coord) return;
       const url = buildGoogleMapsUrl(coord);
       if (!url) return;
-      try {
-        if (typeof window !== 'undefined') {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(url);
     }, [coord]);
 
     const handleOpenOrganicMaps = useCallback(() => {
       if (!coord) return;
       const url = buildOrganicMapsUrl(coord);
       if (!url) return;
-      try {
-        if (typeof window !== 'undefined') {
-          window.open(url, '_blank', 'noopener,noreferrer');
-        }
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(url);
     }, [coord]);
 
     const handleShareTelegram = useCallback(() => {
@@ -698,13 +681,7 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
       const mapUrl = buildGoogleMapsUrl(coord);
       const text = `Координаты: ${coord}`;
       const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(mapUrl)}&text=${encodeURIComponent(text)}`;
-      try {
-        if (typeof window !== 'undefined') {
-          window.open(telegramUrl, '_blank', 'noopener,noreferrer');
-        }
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(telegramUrl);
     }, [coord]);
 
     const handleAddPoint = useCallback(async () => {

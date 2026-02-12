@@ -17,6 +17,7 @@ import { formatViewCount } from "@/components/travel/utils/travelHelpers";
 import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants';
 import TravelListItemCountriesList from './TravelListItemCountriesList';
 import { createTravelListItemStyles } from './travelListItemStyles';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
@@ -661,9 +662,10 @@ return (
 
                       if (hasModifier) {
                         e.preventDefault();
-                        if (typeof window !== 'undefined') {
-                          window.open(navigationUrl, '_blank', 'noopener,noreferrer');
-                        }
+                        void openExternalUrlInNewTab(navigationUrl, {
+                          allowRelative: true,
+                          baseUrl: typeof window !== 'undefined' ? window.location.origin : '',
+                        });
                         return;
                       }
 

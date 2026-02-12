@@ -19,6 +19,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
 import type { UpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 import type { TravelFormData } from '@/types/types';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 interface UpsertTravelViewProps {
   controller: UpsertTravelController;
@@ -187,11 +188,10 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     const path = `/travels/${encodeURIComponent(String(id))}`;
 
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      try {
-        window.open(`${window.location.origin}${path}`, '_blank', 'noopener,noreferrer');
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(path, {
+        allowRelative: true,
+        baseUrl: window.location.origin,
+      });
       return;
     }
 

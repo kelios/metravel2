@@ -5,7 +5,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 ## Development
 
 - `docs/DEVELOPMENT.md` — local setup and day-to-day workflow
-- `docs/RULES.md` — rules (UI, images, tokens, release checks)
+- `docs/RULES.md` — rules (UI, images, tokens, release checks, external-link policy and guard allowlist policy)
 
 ## Testing
 
@@ -17,6 +17,7 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 
 - `docs/RELEASE.md` — release steps
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist
+- `docs/EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — PR summary and validation runbook for external-link governance package
 - `docs/PRODUCTION_READINESS_REPORT.md` — high-level readiness notes
 
 ## Product / Web
@@ -58,4 +59,3 @@ Source of truth: `docs/` (see `docs/RULES.md`).
 - `docs/MAP_PAGE_QUICK_START.md` — быстрый старт с чек-листами
 - `docs/MAP_PAGE_ARCHITECTURE.md` — визуальные диаграммы (Mermaid)
 - `docs/MAP_PAGE_PRESENTATION.md` — презентация для стейкхолдеров
-

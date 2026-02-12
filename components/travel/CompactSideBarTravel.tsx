@@ -1053,10 +1053,3 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
   fallback: { paddingVertical: 40, alignItems: "center" },
 });
-  const navigateInternalUrl = useCallback(
-    (url: string) => {
-      if (!url || !url.startsWith('/')) return;
-      router.push(url as any);
-    },
-    [router]
-  );

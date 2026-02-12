@@ -35,7 +35,7 @@ import {
   CategoryDictionaryItem,
 } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
-import { normalizeExternalUrl, openExternalUrl as openSafeExternalUrl } from '@/utils/externalLinks';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 type Point = {
   id: string;
@@ -183,14 +183,8 @@ const stripCountryFromCategoryIds = (
 
 const openExternal = async (url: string) => {
   if (!url) return;
-  const safeUrl = normalizeExternalUrl(url);
-  if (!safeUrl) return;
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    window.open(safeUrl, '_blank', 'noopener,noreferrer');
-    return;
-  }
   try {
-    await openSafeExternalUrl(safeUrl, {
+    await openExternalUrlInNewTab(url, {
       onError: (error) => {
         if (__DEV__) {
           const { devWarn } = require('@/utils/logger');

@@ -5,7 +5,9 @@
 ## Validation
 
 - [ ] `yarn lint`
+- [ ] `yarn guard:external-links`
 - [ ] `yarn test:smoke:critical`
+- [ ] If any guard allowlist was expanded, documented reason + risk + owner + removal date in PR body.
 - [ ] If `quality-summary.json` schema changed, followed `docs/TESTING.md` schema change checklist.
 - [ ] If schema guard override was used, added `schema-guard: skip - <reason>` in PR body and documented risk.
 - [ ] If validator contract guard override was used, added `validator-guard: skip - <reason>` in PR body and documented risk.

@@ -34,6 +34,9 @@ npm run android
 ## Useful scripts
 
 - `npm run lint` — ESLint.
+- `npm run guard:external-links` — runs both external-link guards.
+- `npm run guard:no-direct-linking-openurl` — blocks direct `Linking.openURL` usage outside centralized helper.
+- `npm run guard:no-direct-window-open` — blocks direct `window.open` usage outside centralized helper.
 - `npm run format` — Prettier.
 - `npm run clean` — Expo start with clear cache.
 - `npm run reset` — Expo reset cache.

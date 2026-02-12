@@ -9,7 +9,7 @@ import IconButton from '@/components/ui/IconButton';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { showToast } from '@/utils/toast';
-import { normalizeExternalUrl, openExternalUrl as openSafeExternalUrl } from '@/utils/externalLinks';
+import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 interface PointCardProps {
   point: ImportedPoint;
@@ -183,16 +183,13 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   }, [hasCoords, point.latitude, point.longitude]);
 
   const openExternalLink = React.useCallback(async (url: string) => {
-    const safeUrl = normalizeExternalUrl(url);
-    if (!safeUrl) return;
-
     try {
       if (Platform.OS === 'web') {
-        window.open(safeUrl, '_blank', 'noopener,noreferrer');
+        await openExternalUrlInNewTab(url);
         return;
       }
 
-      await openSafeExternalUrl(safeUrl);
+      await openExternalUrl(url);
     } catch {
       // ignore
     }
@@ -238,7 +235,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
 
     try {
       if (Platform.OS === 'web') {
-        window.open(tg, '_blank', 'noopener,noreferrer');
+        await openExternalUrlInNewTab(tg);
         return;
       }
 
@@ -250,7 +247,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         // noop
       }
 
-      await openSafeExternalUrl(tg);
+      await openExternalUrl(tg);
     } catch {
       // ignore
     }

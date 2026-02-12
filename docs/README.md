@@ -9,10 +9,12 @@
 ## Important docs
 
 - `RULES.md` — development and UI rules.
+  - Canonical external-link policy (`window.open` / `Linking.openURL` / guard allowlist) lives here.
 - `DEVELOPMENT.md` — local setup and day-to-day dev workflow.
 - `TESTING.md` — Jest + Playwright.
 - `RELEASE.md` — release/deploy checklist.
 - `PRODUCTION_CHECKLIST.md` — production release checklist.
+- `EXTERNAL_LINK_GOVERNANCE_PR_SUMMARY.md` — PR-ready summary for external-link governance changes.
 - `INDEX.md` — docs entrypoint.
 - `SEO_MIGRATION.md` — SEO/meta architecture guide.
 - `MAPS_CONFIGURATION.md` — maps stack and routing key.

@@ -10,6 +10,14 @@
 - This repo uses Yarn v1 (`packageManager: yarn@1.22.x`). Prefer `yarn ...`.
 - `npm run ...` usually works too, but examples below use Yarn.
 
+## Canonical policy reference
+
+- External link/open governance policy is defined in `docs/RULES.md` (`External link policy` section).
+- In test/review/release workflows, treat `docs/RULES.md` as canonical for:
+  - `window.open` usage rules,
+  - `Linking.openURL` usage rules,
+  - allowlist expansion requirements.
+
 ## Node.js version
 
 - React Native `0.81.5` requires Node `>= 20.19.4`.

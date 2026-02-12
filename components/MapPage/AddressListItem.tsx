@@ -18,7 +18,7 @@ import PlaceListCard from '@/components/places/PlaceListCard';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import { normalizeExternalUrl, openExternalUrl as openSafeExternalUrl } from '@/utils/externalLinks';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { showToast } from '@/utils/toast';
@@ -71,14 +71,8 @@ const buildOsmUrl = (coord?: string) => {
 };
 
 const openExternal = async (url?: string) => {
-    const safeUrl = normalizeExternalUrl(url ?? '');
-    if (!safeUrl) return;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.open(safeUrl, '_blank', 'noopener,noreferrer');
-        return;
-    }
     try {
-        const opened = await openSafeExternalUrl(safeUrl);
+        const opened = await openExternalUrlInNewTab(url ?? '');
         if (!opened) {
           await showToast({ type: 'info', text1: 'Не удалось открыть ссылку', position: 'bottom' });
         }

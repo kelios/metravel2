@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import ShareButtons from '@/components/travel/ShareButtons';
 import * as Clipboard from 'expo-clipboard';
 import type { Travel } from '@/types/types';
-import { openExternalUrl } from '@/utils/externalLinks';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 // Mock expo-router
 jest.mock('expo-router', () => ({
@@ -22,8 +22,7 @@ jest.mock('expo-clipboard', () => ({
 }));
 
 jest.mock('@/utils/externalLinks', () => ({
-  normalizeExternalUrl: jest.fn((url: string) => url),
-  openExternalUrl: jest.fn(() => Promise.resolve(true)),
+  openExternalUrlInNewTab: jest.fn(() => Promise.resolve(true)),
 }));
 
 // Mock showToast
@@ -132,7 +131,7 @@ describe('ShareButtons', () => {
     fireEvent.press(telegramButton);
 
     await waitFor(() => {
-      expect(openExternalUrl).toHaveBeenCalledWith(expect.stringContaining('t.me/share/url'));
+      expect(openExternalUrlInNewTab).toHaveBeenCalledWith(expect.stringContaining('t.me/share/url'));
     });
   });
 

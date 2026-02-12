@@ -46,6 +46,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
+import { openExternalUrl } from '@/utils/externalLinks';
 
 const QuestFullMap = lazy(() => import("@/components/quests/QuestFullMap"));
 
@@ -163,7 +164,14 @@ const StepCard = memo((props: StepCardProps) => {
     const openCandidates = async (cands: Array<string | undefined>) => {
         for (const url of cands) {
             if (!url) continue;
-            try { const ok = await Linking.canOpenURL(url); if (ok) { await Linking.openURL(url); return; } } catch { /* ignore failed link open */ }
+            try {
+                const opened = await openExternalUrl(url, {
+                    allowedProtocols: ['http:', 'https:', 'geo:', 'om:', 'organicmaps:', 'mapsme:'],
+                });
+                if (opened) return;
+            } catch {
+                /* ignore failed link open */
+            }
         }
         notify('Не удалось открыть карты. Проверьте, что установлено нужное приложение.');
     };
@@ -734,7 +742,7 @@ export function QuestWizard({ title, steps, finale, intro, storageKey = 'quest_p
                                                         <>
                                                             {posterUri ? <Image source={{ uri: posterUri }} style={StyleSheet.absoluteFillObject as any} resizeMode="cover" /> : null}
                                                             {videoUri && (
-                                                                <Pressable onPress={() => Linking.openURL(videoUri)} style={styles.openExternBtn} hitSlop={8}>
+                                                                <Pressable onPress={() => void openExternalUrl(videoUri)} style={styles.openExternBtn} hitSlop={8}>
                                                                     <Text style={styles.openExternText}>Открыть видео</Text>
                                                                 </Pressable>
                                                             )}

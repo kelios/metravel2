@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import type { Travel } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
-import { normalizeExternalUrl, openExternalUrl } from '@/utils/externalLinks';
+import { normalizeExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 interface TelegramDiscussionSectionProps {
   travel: Travel;
@@ -24,19 +24,13 @@ function TelegramDiscussionSection({ travel }: TelegramDiscussionSectionProps) {
     const url = normalizeExternalUrl(baseUrl);
     if (!url) return;
 
-    if (Platform.OS === 'web') {
-      if (typeof window !== 'undefined') {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
-    } else {
-      void openExternalUrl(url, {
-        onError: (error) => {
-          if (__DEV__) {
-            console.warn('[TelegramDiscussionSection] Не удалось открыть Telegram:', error);
-          }
-        },
-      });
-    }
+    void openExternalUrlInNewTab(url, {
+      onError: (error) => {
+        if (__DEV__) {
+          console.warn('[TelegramDiscussionSection] Не удалось открыть Telegram:', error);
+        }
+      },
+    });
   }, [baseUrl]);
 
   const hasUrl = Boolean(baseUrl);

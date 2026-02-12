@@ -180,7 +180,11 @@ describe('openBookPreviewWindow', () => {
     openBookPreviewWindow('<html></html>')
 
     expect(mockCreateObjectURL).toHaveBeenCalled()
-    expect(mockWindow.open).toHaveBeenCalledWith('blob:http://localhost/mock-blob-url', '_blank')
+    expect(mockWindow.open).toHaveBeenCalledWith(
+      'blob:http://localhost/mock-blob-url',
+      '_blank',
+      'noopener,noreferrer'
+    )
   })
 
   it('opens Blob URL in a new window', () => {
@@ -194,7 +198,11 @@ describe('openBookPreviewWindow', () => {
     openBookPreviewWindow(html)
 
     expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
-    expect(open).toHaveBeenCalledWith('blob:http://localhost/mock-blob-url', '_blank')
+    expect(open).toHaveBeenCalledWith(
+      'blob:http://localhost/mock-blob-url',
+      '_blank',
+      'noopener,noreferrer'
+    )
   })
 
   it('falls back to document.write when Blob URL fails', () => {
@@ -220,7 +228,7 @@ describe('openBookPreviewWindow', () => {
     const html = '<html><body>Fallback</body></html>'
     openBookPreviewWindow(html)
 
-    expect(mockWindow.open).toHaveBeenCalledWith('about:blank', '_blank')
+    expect(mockWindow.open).toHaveBeenCalledWith('about:blank', '_blank', 'noopener,noreferrer')
     expect(write).toHaveBeenCalledWith(html)
   })
 })

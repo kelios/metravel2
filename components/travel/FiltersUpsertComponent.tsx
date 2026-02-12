@@ -7,7 +7,6 @@ import {
     StyleSheet,
     ActivityIndicator,
     Platform,
-    Linking,
 } from 'react-native';
 import { Button } from '@/ui/paper';
 import ButtonBase from '@/components/ui/Button';
@@ -19,6 +18,7 @@ import { TravelFormData, TravelFilters, Travel } from '@/types/types';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme'; // ✅ РЕДИЗАЙН: Темная тема
 import { useResponsive } from '@/hooks/useResponsive';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 const MultiSelectFieldAny: any = MultiSelectField;
 
@@ -192,15 +192,15 @@ const FiltersUpsertComponent: React.FC<FiltersComponentProps> = ({
         const slug = form?.slug;
         if (!slug) return;
         const url = `/travels/${slug}`;
-        if (Platform.OS === 'web') {
-            window.open(url, '_blank', 'noopener,noreferrer');
-        } else {
-            Linking.openURL(`https://metravel.by${url}`).catch((error) => {
+        void openExternalUrlInNewTab(url, {
+            allowRelative: true,
+            baseUrl: 'https://metravel.by',
+            onError: (error) => {
                 if (__DEV__) {
                     console.warn('[FiltersUpsertComponent] Не удалось открыть URL:', error);
                 }
-            });
-        }
+            },
+        });
     }, [form?.slug]);
 
     // Memoized handlers for MultiSelectFields

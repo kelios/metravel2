@@ -23,6 +23,7 @@ import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 interface UserPointsMapProps {
   /**
@@ -441,18 +442,14 @@ const PointMarkerWeb = React.memo(
         const text = String((point as any)?.name ?? '') || coordsText;
         const url = `https://www.google.com/maps?q=${encodeURIComponent(coordsText)}`;
         const tg = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-        window.open(tg, '_blank', 'noopener,noreferrer');
+        void openExternalUrlInNewTab(tg);
       } catch {
         // noop
       }
     }, [coordsText, point]);
 
     const openExternalMap = React.useCallback((url: string) => {
-      try {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      } catch {
-        // noop
-      }
+      void openExternalUrlInNewTab(url);
     }, []);
 
     const colorLabel = React.useMemo(() => String((point as any)?.color ?? '').trim(), [point]);

@@ -3,6 +3,10 @@
   ```bash
   npm run release:check
   ```
+- [ ] **Policy guards (external links)**
+  ```bash
+  npm run guard:external-links
+  ```
 - [ ] **Testing**
   ```bash
   npm run test:coverage  # Цель: > 60%

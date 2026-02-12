@@ -11,7 +11,7 @@ const packageJsonPath = path.resolve(repoRoot, 'package.json')
 // 2) Keep package.json scripts.test:governance explicitly listing the same scope.
 // 3) Keep scripts.test:governance file list unique and sorted.
 // 4) Update scope pattern and script list together when adding/removing governance suites.
-const governanceScopePattern = /^(cli-runner-policy\.test\.ts|temp-dir-policy\.test\.ts|governance-docs-parity\.test\.ts|governance-rule-enforcement-parity\.test\.ts|governance-script-parity\.test\.ts|policy-(helpers-contract-matrix|message-format-governance(?:-patterns)?|test-utils)\.test\.ts|targeted-test-list-.*\.test\.ts)$/
+const governanceScopePattern = /^(cli-runner-policy\.test\.ts|external-links-docs-policy-parity\.test\.ts|external-links-guard-script-contract\.test\.ts|temp-dir-policy\.test\.ts|governance-docs-parity\.test\.ts|governance-rule-enforcement-parity\.test\.ts|governance-script-parity\.test\.ts|guard-no-direct-linking-openurl\.test\.ts|guard-no-direct-window-open\.test\.ts|policy-(helpers-contract-matrix|message-format-governance(?:-patterns)?|test-utils)\.test\.ts|targeted-test-list-.*\.test\.ts)$/
 
 const parseGovernanceScriptFiles = (scriptValue) => {
   return scriptValue

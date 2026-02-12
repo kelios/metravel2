@@ -17,7 +17,7 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { showToast } from '@/utils/toast';
-import { normalizeExternalUrl, openExternalUrl } from '@/utils/externalLinks';
+import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 
 const BookSettingsModalLazy = lazy(() => import('@/components/export/BookSettingsModal'));
 
@@ -95,13 +95,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     const telegramUrl = `https://t.me/share/url?url=${urlEncoded}&text=${text}`;
 
     try {
-      const opened = await openExternalUrl(telegramUrl);
-      if (!opened && Platform.OS === 'web') {
-        const safeUrl = normalizeExternalUrl(telegramUrl);
-        if (safeUrl) {
-          window.open(safeUrl, '_blank', 'noopener,noreferrer');
-        }
-      }
+      await openExternalUrlInNewTab(telegramUrl);
     } catch (error) {
       console.error('Error sharing to Telegram:', error);
     }
@@ -110,17 +104,14 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
   // Поделиться в VK
   const handleShareVK = useCallback(() => {
     const vkUrl = `https://vk.com/share.php?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(shareTitle)}`;
-    if (Platform.OS === 'web') {
-      window.open(vkUrl, '_blank', 'width=600,height=400,noopener,noreferrer');
-    } else {
-      void openExternalUrl(vkUrl, {
-        onError: (error) => {
-          if (__DEV__) {
-            console.warn('[ShareButtons] Не удалось открыть VK:', error);
-          }
-        },
-      });
-    }
+    void openExternalUrlInNewTab(vkUrl, {
+      windowFeatures: 'width=600,height=400,noopener,noreferrer',
+      onError: (error) => {
+        if (__DEV__) {
+          console.warn('[ShareButtons] Не удалось открыть VK:', error);
+        }
+      },
+    });
   }, [shareUrl, shareTitle]);
 
   // Поделиться в WhatsApp
@@ -129,13 +120,7 @@ function ShareButtons({ travel, url, variant = 'default' }: ShareButtonsProps) {
     const whatsappUrl = `https://wa.me/?text=${text}`;
 
     try {
-      const opened = await openExternalUrl(whatsappUrl);
-      if (!opened && Platform.OS === 'web') {
-        const safeUrl = normalizeExternalUrl(whatsappUrl);
-        if (safeUrl) {
-          window.open(safeUrl, '_blank', 'noopener,noreferrer');
-        }
-      }
+      await openExternalUrlInNewTab(whatsappUrl);
     } catch (error) {
       console.error('Error sharing to WhatsApp:', error);
     }

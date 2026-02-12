@@ -19,6 +19,9 @@ It runs:
 - `npm run test:run`
 - `npm run build:web`
 
+Notes:
+- `npm run lint` includes `npm run guard:external-links`.
+
 ## Web build
 
 ```bash
