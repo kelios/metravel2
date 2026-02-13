@@ -424,9 +424,10 @@ async function limitCacheSize(cacheName, maxSize) {
     const cache = await caches.open(cacheName);
     const keys = await cache.keys();
     
-    if (keys.length > maxSize) {
-      await cache.delete(keys[0]);
-      limitCacheSize(cacheName, maxSize);
+    let i = 0;
+    while (keys.length - i > maxSize) {
+      await cache.delete(keys[i]);
+      i++;
     }
   } catch (error) {
     console.info('SW: Cache size limit error', error);

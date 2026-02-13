@@ -1,12 +1,13 @@
 # Production Audit Report — metravel.by
 
-**Date:** 2026-02-13 (v3)  
+**Date:** 2026-02-13 (v4)  
 **Auditor:** Automated (Cascade)  
-**Target:** https://metravel.by
+**Target:** https://metravel.by  
+**Note:** Production site was unreachable from audit network (connection timeout to 178.172.137.129:443). This audit is code-level; Lighthouse scores are from v3 session.
 
 ---
 
-## 1. PERFORMANCE (Lighthouse)
+## 1. PERFORMANCE (Lighthouse — from v3 session)
 
 ### Desktop — Home (`/`)
 | Metric | Value | Score | Status |
@@ -57,6 +58,7 @@
 |-------|--------|----------|
 | **Unused JS ~2.0 MB** (`__common` ×2 + `entry` ×2 chunks) | LCP blocked, main thread | P1 |
 | **LCP 12.2s / 17.5s (mobile)** | Primarily blocked by bundle size | P1 |
+| **SW recursive limitCacheSize** | Potential stack overflow for large caches | P2 — **FIXED v4** |
 | **Legacy JS polyfills** — 8 KB waste | Minor | P3 |
 | **Third-party cookie issues** (Yandex Metrika) | Best Practices score penalty (desktop) | P3 |
 
@@ -237,6 +239,36 @@
   - Increased `worker_connections` from 1024 to 2048 + `multi_accept on`
 - **Impact:** Faster static file serving; cached API responses reduce TTFB for LCP preload
 
+## 6b. FIXES APPLIED (This Audit — v4)
+
+### P1 — Critical
+
+#### 6b.1 Fallback og:image + og:locale in Static HTML (SEO)
+- **File:** `app/+html.tsx`
+- **Problem:** Static HTML had no `og:image` or `og:locale` fallback — social crawlers (Facebook, Telegram, Twitter) saw no image preview and no locale hint before React hydration
+- **Fix:** Added `<meta property="og:locale" content="ru_RU" />`, `<meta property="og:image" content="https://metravel.by/assets/icons/logo_yellow.png" />`, and `<meta name="twitter:site" content="@metravel_by" />`
+- **Impact:** Social sharing previews now show logo image and correct locale even before JS executes
+
+### P2 — Important
+
+#### 6b.2 Nginx Proxy Cache Resilience
+- **File:** `nginx/nginx.conf`
+- **Problem:** Travel API proxy cache had no stale-serving or lock — backend downtime = 5xx to users; thundering herd on cache miss
+- **Fix:** Added `proxy_cache_lock on`, `proxy_cache_lock_timeout 5s`, `proxy_cache_use_stale error timeout updating http_500 http_502 http_503 http_504`
+- **Impact:** Backend outages serve stale cached data instead of errors; only 1 request per cache key hits backend on miss
+
+#### 6b.3 manifest.json theme_color Mismatch
+- **File:** `public/manifest.json`
+- **Problem:** `theme_color` was `#0066cc` (blue) but app uses `#7a9d8f` (muted green) — causes PWA splash screen and browser chrome color mismatch
+- **Fix:** Changed to `#7a9d8f` to match the actual primary color
+- **Impact:** PWA install and browser chrome now show correct brand color
+
+#### 6b.4 Service Worker limitCacheSize Stack Overflow Fix
+- **File:** `public/sw.js`
+- **Problem:** `limitCacheSize()` used recursion — if cache had 200+ entries over limit, could cause stack overflow
+- **Fix:** Replaced recursive call with iterative `while` loop
+- **Impact:** Prevents potential SW crash when cache grows large
+
 ### Previously Applied (Not Yet Deployed)
 
 #### Semantic HTML Headings
@@ -264,6 +296,7 @@
 | **Gallery images without alt** | P2 | Backend `gallery[].caption` or fallback to travel name |
 | **Soft 404 for unknown URLs** | P2 | Return proper 404 status for non-existent routes |
 | **Heading order on travel page** | P2 | RN Web renders `<h3>` without `<h2>` — needs component restructuring |
+| **CSP header duplication in nginx** | P3 | Extract to `include` snippet — maintenance only, no runtime impact |
 | **Legacy JS polyfills** (8 KB) | P3 | Configure Babel browserslist to drop IE11 |
 | **Third-party cookies** (Yandex) | P3 | Cannot fix — Yandex Metrika behavior |
 | **Touch target size** (back button) | P3 | React Navigation default — override with custom header |
@@ -272,8 +305,9 @@
 
 ## 8. VERIFICATION
 
-- **Tests:** ✅ All targeted tests pass (seo, html.analytics, NavigationArrows)
-- **No regressions** introduced by fixes
+- **Tests (v3):** ✅ All targeted tests pass (seo, html.analytics, NavigationArrows)
+- **Tests (v4):** ✅ 58 test suites, 481 tests — all pass, zero failures
+- **No regressions** introduced by any fixes
 
 ---
 
@@ -291,7 +325,7 @@
 
 The primary blocker is **bundle size** (~2.0 MB unused JS). To reach the target:
 
-1. **Deploy all pending fixes** — H1 headings, travel SEO, slider perf, SW v3.3.0, nginx optimizations
+1. **Deploy all pending fixes** — H1 headings, travel SEO, slider perf, SW v3.3.0, nginx optimizations, v4 SEO/cache fixes
 2. **Code-split heavy routes** — `/map`, `/quests`, `/export` chunks must not load on home/search
 3. **Lazy-load Leaflet** — only on map page (currently ~400 KB in common chunk)
 4. **Tree-shake react-native-web** — eliminate unused RN components from bundle

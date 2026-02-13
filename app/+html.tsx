@@ -403,6 +403,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
           React Helmet will override them client-side with page-specific values. */}
       <meta name="description" content="Metravel — сервис для путешественников. Добавляй поездки, фото и заметки, делись маршрутами и собирай красивую книгу путешествий в PDF." />
       <link rel="canonical" href="https://metravel.by/" />
+      <meta property="og:locale" content="ru_RU" />
+      <meta property="og:image" content="https://metravel.by/assets/icons/logo_yellow.png" />
+      <meta name="twitter:site" content="@metravel_by" />
 
       {!isProduction && <meta name="robots" content="noindex,nofollow" />}
 
