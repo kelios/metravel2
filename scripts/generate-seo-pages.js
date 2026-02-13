@@ -131,10 +131,22 @@ async function fetchTravelDetail(id) {
 // ---------------------------------------------------------------------------
 
 /**
- * Replace the default meta tags in the base index.html with page-specific ones.
+ * Replace or insert a tag in the HTML.
+ * If the regex matches, replace it; otherwise insert the tag before </head>.
+ */
+function replaceOrInsert(html, regex, tag) {
+  if (regex.test(html)) {
+    return html.replace(regex, tag);
+  }
+  return html.replace('</head>', `${tag}\n</head>`);
+}
+
+/**
+ * Inject page-specific meta tags into the base HTML.
  *
- * Strategy: the base HTML already contains react-helmet `data-rh="true"` tags
- * with default values. We replace them with the correct per-page values.
+ * Uses replace-or-insert so that tags are correctly added even when the
+ * base HTML from Expo static export does not contain OG / canonical /
+ * Twitter placeholders.
  */
 function injectMeta(baseHtml, { title, description, canonical, image, ogType = 'website', robots }) {
   let html = baseHtml;
@@ -146,64 +158,88 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
   );
 
   // --- meta description ---
-  html = html.replace(
+  html = replaceOrInsert(
+    html,
     /<meta[^>]*name="description"[^>]*\/?>/i,
     `<meta data-rh="true" name="description" content="${escapeAttr(description)}"/>`
   );
 
   // --- canonical ---
-  html = html.replace(
+  html = replaceOrInsert(
+    html,
     /<link[^>]*rel="canonical"[^>]*\/?>/i,
     `<link data-rh="true" rel="canonical" href="${escapeAttr(canonical)}"/>`
   );
 
   // --- og:type ---
-  html = html.replace(
+  html = replaceOrInsert(
+    html,
     /<meta[^>]*property="og:type"[^>]*\/?>/i,
     `<meta data-rh="true" property="og:type" content="${escapeAttr(ogType)}"/>`
   );
 
   // --- og:title ---
-  html = html.replace(
+  html = replaceOrInsert(
+    html,
     /<meta[^>]*property="og:title"[^>]*\/?>/i,
     `<meta data-rh="true" property="og:title" content="${escapeAttr(title)}"/>`
   );
 
   // --- og:description ---
-  html = html.replace(
+  html = replaceOrInsert(
+    html,
     /<meta[^>]*property="og:description"[^>]*\/?>/i,
     `<meta data-rh="true" property="og:description" content="${escapeAttr(description)}"/>`
   );
 
   // --- og:url ---
-  html = html.replace(
+  html = replaceOrInsert(
+    html,
     /<meta[^>]*property="og:url"[^>]*\/?>/i,
     `<meta data-rh="true" property="og:url" content="${escapeAttr(canonical)}"/>`
   );
 
   // --- og:image ---
   if (image) {
-    html = html.replace(
+    html = replaceOrInsert(
+      html,
       /<meta[^>]*property="og:image"[^>]*\/?>/i,
       `<meta data-rh="true" property="og:image" content="${escapeAttr(image)}"/>`
     );
   }
 
+  // --- og:site_name ---
+  html = replaceOrInsert(
+    html,
+    /<meta[^>]*property="og:site_name"[^>]*\/?>/i,
+    `<meta data-rh="true" property="og:site_name" content="MeTravel"/>`
+  );
+
+  // --- twitter:card ---
+  html = replaceOrInsert(
+    html,
+    /<meta[^>]*name="twitter:card"[^>]*\/?>/i,
+    `<meta data-rh="true" name="twitter:card" content="summary_large_image"/>`
+  );
+
   // --- twitter:title ---
-  html = html.replace(
+  html = replaceOrInsert(
+    html,
     /<meta[^>]*name="twitter:title"[^>]*\/?>/i,
     `<meta data-rh="true" name="twitter:title" content="${escapeAttr(title)}"/>`
   );
 
   // --- twitter:description ---
-  html = html.replace(
+  html = replaceOrInsert(
+    html,
     /<meta[^>]*name="twitter:description"[^>]*\/?>/i,
     `<meta data-rh="true" name="twitter:description" content="${escapeAttr(description)}"/>`
   );
 
   // --- twitter:image ---
   if (image) {
-    html = html.replace(
+    html = replaceOrInsert(
+      html,
       /<meta[^>]*name="twitter:image"[^>]*\/?>/i,
       `<meta data-rh="true" name="twitter:image" content="${escapeAttr(image)}"/>`
     );
@@ -211,18 +247,11 @@ function injectMeta(baseHtml, { title, description, canonical, image, ogType = '
 
   // --- robots (optional, for noindex pages) ---
   if (robots) {
-    // Insert robots meta if not present
-    if (/<meta[^>]*name="robots"[^>]*\/?>/i.test(html)) {
-      html = html.replace(
-        /<meta[^>]*name="robots"[^>]*\/?>/i,
-        `<meta data-rh="true" name="robots" content="${escapeAttr(robots)}"/>`
-      );
-    } else {
-      html = html.replace(
-        '</head>',
-        `<meta data-rh="true" name="robots" content="${escapeAttr(robots)}"/>\n</head>`
-      );
-    }
+    html = replaceOrInsert(
+      html,
+      /<meta[^>]*name="robots"[^>]*\/?>/i,
+      `<meta data-rh="true" name="robots" content="${escapeAttr(robots)}"/>`
+    );
   }
 
   return html;
