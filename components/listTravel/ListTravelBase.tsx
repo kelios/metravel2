@@ -257,7 +257,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   cardsContainerMobile: {
     // Reserve space for the fixed mobile footer/dock so the last card is not covered.
     // Uses tabBarHeight as a stable dock height across platforms.
-    paddingBottom: LAYOUT.tabBarHeight + DESIGN_TOKENS.spacing.xl,
+    paddingBottom: (LAYOUT?.tabBarHeight ?? 56) + DESIGN_TOKENS.spacing.xl,
     minHeight: 720,
   },
   // ✅ CARDS GRID: Flexbox layout for both platforms

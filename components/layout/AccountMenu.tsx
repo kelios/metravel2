@@ -235,7 +235,8 @@ function AccountMenu() {
     router.push(`/user/${userId}` as any);
   }, [userId]);
 
-  const anchorLabel = isAuthenticated && username ? username : 'Аккаунт';
+  const displayName = isAuthenticated && username ? username : 'Гость';
+  const anchorLabel = `Открыть меню аккаунта ${displayName}`;
 
   const navLinks = useMemo(
     () => [
@@ -308,7 +309,7 @@ function AccountMenu() {
           </View>
 
           <Text style={[styles.anchorText, { color: colors.text }]} numberOfLines={1}>
-            {isAuthenticated && username ? username : 'Гость'}
+            {displayName}
           </Text>
 
           <View style={styles.chevronSlot}>
