@@ -733,6 +733,37 @@ test.describe('Travel Comments', () => {
     test('should be able to delete any comment', async ({ page }) => {
       await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
       await page.waitForSelector(tid('travel-details-page'), { timeout: 30_000 });
+
+      // checkAuthentication runs via requestIdleCallback (deferred on web).
+      // Nudge it by dispatching a storage event on secure_userToken, which
+      // triggers the cross-tab sync listener and forces re-check.
+      await page.evaluate(() => {
+        const token = window.localStorage.getItem('secure_userToken') || '';
+        window.dispatchEvent(
+          new StorageEvent('storage', { key: 'secure_userToken', newValue: token })
+        );
+      });
+
+      // Wait for auth to propagate — the comment-actions-trigger appears once
+      // isSuperuser is true and the comment re-renders.
+      const authResolved = await page.locator('[data-testid="comment-actions-trigger"]')
+        .first()
+        .waitFor({ state: 'visible', timeout: 15_000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (!authResolved) {
+        // Fallback: reload to give checkAuthentication another full pass.
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForSelector(tid('travel-details-page'), { timeout: 30_000 });
+        await page.evaluate(() => {
+          const token = window.localStorage.getItem('secure_userToken') || '';
+          window.dispatchEvent(
+            new StorageEvent('storage', { key: 'secure_userToken', newValue: token })
+          );
+        });
+        await page.waitForTimeout(3_000);
+      }
       
       // Find any comment
       const firstComment = page.locator('[data-testid="comment-item"]').first();
