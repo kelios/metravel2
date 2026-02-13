@@ -270,6 +270,31 @@ test.describe('Travel Comments', () => {
 
     await page.route('**/api/travels/by-slug/**', routeHandler);
     await page.route('**/travels/by-slug/**', routeHandler);
+
+    // Mock user profile API to prevent 401 responses from invalidating auth state.
+    // Without this, checkAuthentication fetches the profile with a fake token,
+    // the proxy returns 401, and invalidateAuthState clears localStorage.
+    await page.route(/.*\/api\/user\/\d+\/profile\/?$/, async (route: any) => {
+      const req = route.request();
+      if (String(req.method() || 'GET').toUpperCase() !== 'GET') return route.continue();
+      const { isAuthed, isAdmin, userId } = parseAuth(req);
+      if (!isAuthed) return route.fulfill({ status: 401, contentType: 'application/json', body: JSON.stringify({ detail: 'Unauthorized' }) });
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: userId,
+          first_name: isAdmin ? 'E2E' : 'Test',
+          last_name: isAdmin ? 'Admin' : 'User',
+          avatar: null,
+          youtube: '',
+          instagram: '',
+          twitter: '',
+          vk: '',
+          user: userId,
+        }),
+      });
+    });
   });
 
   test.describe('Unauthenticated users', () => {
@@ -733,37 +758,6 @@ test.describe('Travel Comments', () => {
     test('should be able to delete any comment', async ({ page }) => {
       await page.goto(`/travels/${slug}`, { waitUntil: 'domcontentloaded' });
       await page.waitForSelector(tid('travel-details-page'), { timeout: 30_000 });
-
-      // checkAuthentication runs via requestIdleCallback (deferred on web).
-      // Nudge it by dispatching a storage event on secure_userToken, which
-      // triggers the cross-tab sync listener and forces re-check.
-      await page.evaluate(() => {
-        const token = window.localStorage.getItem('secure_userToken') || '';
-        window.dispatchEvent(
-          new StorageEvent('storage', { key: 'secure_userToken', newValue: token })
-        );
-      });
-
-      // Wait for auth to propagate — the comment-actions-trigger appears once
-      // isSuperuser is true and the comment re-renders.
-      const authResolved = await page.locator('[data-testid="comment-actions-trigger"]')
-        .first()
-        .waitFor({ state: 'visible', timeout: 15_000 })
-        .then(() => true)
-        .catch(() => false);
-
-      if (!authResolved) {
-        // Fallback: reload to give checkAuthentication another full pass.
-        await page.reload({ waitUntil: 'domcontentloaded' });
-        await page.waitForSelector(tid('travel-details-page'), { timeout: 30_000 });
-        await page.evaluate(() => {
-          const token = window.localStorage.getItem('secure_userToken') || '';
-          window.dispatchEvent(
-            new StorageEvent('storage', { key: 'secure_userToken', newValue: token })
-          );
-        });
-        await page.waitForTimeout(3_000);
-      }
       
       // Find any comment
       const firstComment = page.locator('[data-testid="comment-item"]').first();
