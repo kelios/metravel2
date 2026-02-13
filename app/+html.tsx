@@ -313,10 +313,10 @@ const getTravelHeroPreloadScript = () => String.raw`
         if (existingLcp && existingLcp.complete && existingLcp.naturalWidth > 0) return;
 
         var isMobile = (window.innerWidth || 0) < 768;
-        var quality = isMobile ? 40 : 55;
+        var quality = isMobile ? 35 : 45;
 
-        // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [640, 860]
-        var widths = isMobile ? [320, 400] : [640, 860];
+        // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [480, 720]
+        var widths = isMobile ? [320, 400] : [480, 720];
 
         // Build srcSet entries — dpr must match TravelDetailsHero.tsx buildResponsiveImageProps
         var srcSetDpr = isMobile ? 1 : 1.5;
@@ -350,7 +350,7 @@ const getTravelHeroPreloadScript = () => String.raw`
         link.href = preloadHref;
 
         // Exact match with TravelDetailsHero.tsx sizes
-        var sizesAttr = isMobile ? '100vw' : '(max-width: 1024px) 92vw, 860px';
+        var sizesAttr = isMobile ? '100vw' : '(max-width: 1024px) 92vw, 720px';
 
         if (srcSetParts.length > 0) {
           link.setAttribute('imagesrcset', srcSetParts.join(', '));
@@ -409,7 +409,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
           images.weserv.nl preconnect deferred to when content images actually load. */}
       <link rel="preconnect" href="https://metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
-      <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
       
       {/* Icons */}
       <link rel="icon" href="/favicon.ico" sizes="any" type="image/x-icon" />

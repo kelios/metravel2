@@ -5,11 +5,12 @@
  * (e.g. on component unmount to prevent state updates after unmount).
  */
 export const rIC = (cb: () => void, timeout = 300): (() => void) => {
-  if (typeof (window as any)?.requestIdleCallback === 'function') {
-    const id = (window as any).requestIdleCallback(cb, { timeout })
+  const g: any = typeof globalThis !== 'undefined' ? (globalThis as any) : undefined
+  if (typeof g?.requestIdleCallback === 'function') {
+    const id = g.requestIdleCallback(cb, { timeout })
     return () => {
-      if (typeof (window as any)?.cancelIdleCallback === 'function') {
-        ;(window as any).cancelIdleCallback(id)
+      if (typeof g?.cancelIdleCallback === 'function') {
+        g.cancelIdleCallback(id)
       }
     }
   } else {

@@ -20,14 +20,9 @@ interface TravelDescriptionProps {
 
 /**
  * Оптимизированное описание путешествия:
- * - На web сразу монтируем HTML (как и раньше), но заранее правим медиа:
- *    • первой картинке поднимаем приоритет (LCP);
- *    • всем img/iframe прописываем размеры/ленивую загрузку (CLS↓).
- * - На native парсинг откладывается до конца взаимодействий.
- * - Есть форсажный таймер — через 2s в любом случае монтируем.
+ * - На web сразу монтируем HTML; медиа-оптимизация (LCP, CLS, lazy, YouTube lite) — в StableContent.
+ * - На native парсинг откладывается до конца взаимодействий (InteractionManager + 2s форсаж).
  */
-
-const LCP_INDEX = 0; // первая картинка из контента — кандидат в LCP
 
 const TravelDescription: React.FC<TravelDescriptionProps> = ({
                                                                  htmlContent,
@@ -58,171 +53,24 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
     const [canParseHtml, setCanParseHtml] = useState(Platform.OS === "web");
 
     useEffect(() => {
+        if (Platform.OS === "web") return;
+
         let cancelled = false;
-        let timeoutId: any = null;
+        const task = InteractionManager.runAfterInteractions(() => {
+            if (!cancelled) setCanParseHtml(true);
+        });
 
-        if (Platform.OS !== "web") {
-            const task = InteractionManager.runAfterInteractions(() => {
-                if (!cancelled) setCanParseHtml(true);
-            });
+        // Форсаж: если что-то пойдёт не так — смонтировать через 2s
+        const timeoutId = setTimeout(() => {
+            if (!cancelled) setCanParseHtml(true);
+        }, 2000);
 
-            // Форсаж: если что-то пойдёт не так — смонтировать через 2s
-            timeoutId = setTimeout(() => {
-                if (!cancelled) setCanParseHtml(true);
-            }, 2000);
-
-            return () => {
-                cancelled = true;
-                task.cancel();
-                if (timeoutId) clearTimeout(timeoutId);
-            };
-        } else {
-            // На web всё уже true; но оставим форсаж на всякий
-            timeoutId = setTimeout(() => {
-                if (!cancelled) setCanParseHtml(true);
-            }, 2000);
-            return () => {
-                cancelled = true;
-                if (timeoutId) clearTimeout(timeoutId);
-            };
-        }
-    }, [htmlContent]);
-
-    // --- HTML подготовка: поднимаем приоритет LCP и фиксируем медиа ---
-    const { preparedHtml } = useMemo(() => {
-        if (!htmlContent) return { preparedHtml: htmlContent };
-
-        // Небольшой парсер по регуляркам (достаточно для наших задач).
-        // 1) Соберём все <img ...>
-        const imgRegex = /<img\b[^>]*?>/gi;
-
-        let idx = 0;
-
-        let out = htmlContent
-          // Видео-облегчалки: YouTube iframe -> постер с кнопкой; iframe по клику (web)
-          .replace(
-            /<iframe\b[^>]*?(youtube\.com|youtu\.be)[^>]*><\/iframe>/gi,
-            (tag) => {
-                // Пытаемся вытащить id
-                const srcMatch = tag.match(/src="([^"]+)"/i);
-                const src = srcMatch ? srcMatch[1] : "";
-                const idMatch =
-                  src.match(/[?&]v=([a-z0-9_-]{6,})/i) ||
-                  src.match(/youtu\.be\/([a-z0-9_-]{6,})/i);
-                const vid = idMatch ? idMatch[1] : "";
-                if (!vid) return tag; // не распознали — оставляем как есть
-
-                // Легковесный виджет: картинка-превью (не дергает раскладку) + кнопка
-                const poster = `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
-                // Резервируем место ~16:9, можно поправить через style
-                return `
-<div class="yt-lite" data-yt="${vid}" style="position:relative;aspect-ratio:16/9;background:var(--color-backgroundTertiary);overflow:hidden;border-radius:8px">
-  <img src="${poster}" alt="YouTube preview" width="1280" height="720" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover" />
-  <div role="button" tabindex="0" aria-label="Смотреть видео"
-       style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:transparent;cursor:pointer">
-    <span style="width:68px;height:48px;background:var(--color-overlay);clip-path:polygon(20% 10%, 20% 90%, 85% 50%);"></span>
-  </div>
-</div>`;
-            }
-          )
-          // 1.5) Optimize weserv.nl proxied images: reduce w=1600 to w=800, add quality & webp
-          .replace(
-            /images\.weserv\.nl\/\?url=([^&"]+)&w=1600&fit=inside/g,
-            'images.weserv.nl/?url=$1&w=800&q=70&output=webp&fit=inside'
-          )
-          // 2) Каждой картинке: width/height (если есть), height:auto, lazy (кроме LCP), fetchpriority
-          .replace(imgRegex, (tag) => {
-              // src
-              const srcMatch = tag.match(/\bsrc="([^"]+)"/i);
-              const src = srcMatch?.[1] ?? "";
-
-              // width/height из атрибутов (WordPress обычно проставляет)
-              const wMatch = tag.match(/\bwidth="(\d+)"/i);
-              const hMatch = tag.match(/\bheight="(\d+)"/i);
-              const w = wMatch ? parseInt(wMatch[1], 10) : undefined;
-              const h = hMatch ? parseInt(hMatch[1], 10) : undefined;
-
-              // если нет размеров — попробуем выдернуть из имени файла ...-1200x800.jpg
-              let ww = w, hh = h;
-              if (!ww || !hh) {
-                  const wh = src.match(/[-_](\d{2,5})x(\d{2,5})\.(jpg|jpeg|png|webp|avif)(\?|$)/i);
-                  if (wh) {
-                      ww = ww || parseInt(wh[1], 10);
-                      hh = hh || parseInt(wh[2], 10);
-                  }
-              }
-
-              // базовые атрибуты
-              // стили
-              const styleMatch = tag.match(/\bstyle="([^"]*)"/i);
-              const style = styleMatch?.[1] ?? "";
-              const aspectRatioStyle = ww && hh ? `aspect-ratio:${ww}/${hh};` : "";
-              const baseResponsiveStyle = `max-width:100%;height:auto;display:block;object-fit:contain;${aspectRatioStyle}`;
-              const styleWithResponsiveDefaults = style
-                ? `${style};${baseResponsiveStyle}`
-                : baseResponsiveStyle;
-
-              // LCP — первая картинка в документе: high priority, не lazy
-              const isLcp = idx === LCP_INDEX;
-
-              const patched = tag
-                // добавим/заменим style (height:auto)
-                .replace(styleMatch ? styleMatch[0] : "", "")
-                .replace(/>$/, ` style="${styleWithResponsiveDefaults}">`)
-                // установим размеры (если вычислили)
-                .replace(/\bwidth="[^"]*"/i, "")
-                .replace(/\bheight="[^"]*"/i, "")
-                .replace(/>$/, ww && hh ? ` width="${ww}" height="${hh}">` : ">")
-                // loading/decoding/fetchpriority
-                .replace(/\bloading="[^"]*"/i, "")
-                .replace(/\bdecoding="[^"]*"/i, "")
-                .replace(/\bfetchpriority="[^"]*"/i, "")
-                .replace(
-                  />$/,
-                  isLcp
-                    ? ` fetchpriority="high" decoding="async">`
-                    : ` loading="lazy" decoding="async" fetchpriority="low">`
-                );
-
-              idx += 1;
-              return patched;
-          });
-
-        return { preparedHtml: out };
-    }, [htmlContent]);
-
-    // Навесим делегат на легкий YouTube (загрузить iframe по клику) — только web
-    useEffect(() => {
-        if (Platform.OS !== "web") return;
-
-        const handler = (e: any) => {
-            const root = (e.target as HTMLElement)?.closest?.(".yt-lite") as HTMLElement | null;
-            if (!root) return;
-            const vid = root.getAttribute("data-yt");
-            if (!vid) return;
-
-            // Создаем iframe только по клику
-            const iframe = document.createElement("iframe");
-            iframe.width = "560";
-            iframe.height = "315";
-            iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
-            iframe.title = "YouTube video";
-            iframe.allow =
-              "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-            iframe.allowFullscreen = true;
-            iframe.style.position = "absolute";
-            iframe.style.inset = "0";
-            iframe.style.width = "100%";
-            iframe.style.height = "100%";
-            root.innerHTML = "";
-            root.appendChild(iframe);
-        };
-
-        document.addEventListener("click", handler, { passive: true });
         return () => {
-            document.removeEventListener("click", handler as any);
+            cancelled = true;
+            task.cancel();
+            clearTimeout(timeoutId);
         };
-    }, []);
+    }, [htmlContent]);
 
     const styles = useMemo(() => StyleSheet.create({
         // ✅ РЕДИЗАЙН: Улучшенный контейнер с современными стилями
@@ -310,7 +158,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
           {isEmptyHtml ? (
             <Text style={styles.placeholder}>Описание скоро появится</Text>
           ) : canParseHtml ? (
-            <StableContent html={preparedHtml} contentWidth={contentWidth} />
+            <StableContent html={htmlContent} contentWidth={contentWidth} />
           ) : (
             <Text style={styles.placeholder}>Загружаем описание…</Text>
           )}

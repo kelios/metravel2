@@ -31,6 +31,7 @@ import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { Icon } from './TravelDetailsIcons'
+import { useTdTrace } from '@/hooks/useTdTrace'
 
 const Slider: React.FC<any> = withLazy(() => import('@/components/travel/Slider'))
 const QuickFacts = withLazy(() => import('@/components/travel/QuickFacts'))
@@ -115,13 +116,13 @@ const OptimizedLCPHeroInner: React.FC<{
     img.id
   )
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9
-  const lcpMaxWidth = isMobile ? 400 : 860
-  const lcpWidths = isMobile ? [320, 400] : [640, 860]
+  const lcpMaxWidth = isMobile ? 400 : 720
+  const lcpWidths = isMobile ? [320, 400] : [480, 720]
   const targetWidth =
     typeof window !== 'undefined'
       ? Math.min(window.innerWidth || lcpMaxWidth, lcpMaxWidth)
       : lcpMaxWidth
-  const lcpQuality = isMobile ? 40 : 55
+  const lcpQuality = isMobile ? 35 : 45
 
   const responsive = buildResponsiveImageProps(baseSrc, {
     maxWidth: targetWidth,
@@ -132,7 +133,7 @@ const OptimizedLCPHeroInner: React.FC<{
     dpr: isMobile ? 1 : 1.5,
     sizes: isMobile
       ? '100vw'
-      : '(max-width: 1024px) 92vw, 860px',
+      : '(max-width: 1024px) 92vw, 720px',
   })
 
   useEffect(() => {
@@ -316,31 +317,7 @@ function TravelHeroSectionInner({
   const [heroContainerWidth, setHeroContainerWidth] = useState<number | null>(null)
   const [extrasReady, setExtrasReady] = useState(!deferExtras || Platform.OS !== 'web')
 
-  const tdTraceEnabled =
-    Platform.OS === 'web' &&
-    typeof window !== 'undefined' &&
-    (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as any).__METRAVEL_TD_TRACE === true)
-
-  const tdTrace = useCallback(
-    (event: string, data?: any) => {
-      if (!tdTraceEnabled) return
-      try {
-        const perf = (window as any).performance
-        const now = typeof perf?.now === 'function' ? perf.now() : Date.now()
-        const base =
-          (window as any).__METRAVEL_TD_TRACE_START ??
-          (typeof perf?.now === 'function' ? perf.now() : now)
-        ;(window as any).__METRAVEL_TD_TRACE_START = base
-        const delta = Math.round(now - base)
-        // eslint-disable-next-line no-console
-        console.log(`[TD] +${delta}ms ${event}`, data ?? '')
-        if (typeof perf?.mark === 'function') perf.mark(`TD:${event}`)
-      } catch {
-        // noop
-      }
-    },
-    [tdTraceEnabled]
-  )
+  const tdTrace = useTdTrace()
 
   const { isAuthenticated } = useAuth()
   const { requireAuth } = useRequireAuth({ intent: 'favorite' })

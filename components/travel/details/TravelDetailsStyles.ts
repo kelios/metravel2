@@ -746,10 +746,6 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     ...Platform.select({
       web: {
         cursor: "pointer",
-        transition: "all 0.2s ease",
-        ":hover": {
-          backgroundColor: colors.primaryDark,
-        } as any,
       },
     }),
   },

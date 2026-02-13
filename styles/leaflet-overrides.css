@@ -7,15 +7,18 @@
   background-image: none !important;
 }
 
-/* ✅ FIX: Global img reset in app/+html.tsx breaks Leaflet tiles (tiles become scaled "cubes"). */
+/* ✅ FIX: Global critical CSS sets `img{width:100%;max-width:100%;height:auto}` (no !important).
+   Leaflet's inline styles (width:256px;height:256px) win by specificity — no width/height
+   override needed here. Only neutralise max-width/object-fit which could shrink/distort tiles.
+   Do NOT add width/height !important — that overrides Leaflet's precise tile sizing and
+   causes gray gaps between tiles (subpixel rounding when browser computes 'auto'). */
 .leaflet-container .leaflet-tile-pane img,
 .leaflet-container img.leaflet-tile,
 .leaflet-container .leaflet-tile {
-  width: auto !important;
-  height: auto !important;
   max-width: none !important;
   max-height: none !important;
   object-fit: none !important;
+  image-rendering: auto !important;
 }
 
 .leaflet-container img.leaflet-marker-icon,

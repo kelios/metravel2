@@ -194,14 +194,13 @@ export function useAccessibilityPreferences() {
       setPrefersHighContrast(e.matches);
     };
 
-    if (contrastQuery.media !== '(prefers-contrast: more)') {
-      // Браузер не поддерживает prefers-contrast
+    if (contrastQuery.media === '(prefers-contrast: more)') {
       contrastQuery.addEventListener('change', handleContrast);
     }
 
     return () => {
       reducedMotionQuery.removeEventListener('change', handleReducedMotion);
-      if (contrastQuery.media !== '(prefers-contrast: more)') {
+      if (contrastQuery.media === '(prefers-contrast: more)') {
         contrastQuery.removeEventListener('change', handleContrast);
       }
     };

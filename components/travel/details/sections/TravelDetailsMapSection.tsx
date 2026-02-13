@@ -12,6 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { AnchorsMap } from '../TravelDetailsTypes'
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
+import { isWebAutomation } from '@/utils/isWebAutomation'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 const EXCURSION_CONTAINER_STYLE = { marginTop: 12, minHeight: 600 } as const
@@ -135,9 +136,6 @@ export const TravelDetailsMapSection: React.FC<{
   const styles = useTravelDetailsStyles()
   const { width } = useWindowDimensions()
   const hasMapData = (travel.coordsMeTravel?.length ?? 0) > 0
-
-  const isWebAutomation =
-    Platform.OS === 'web' && typeof navigator !== 'undefined' && Boolean((navigator as any).webdriver)
 
   // Simplified lazy loading (replaces 30+ lines with 5 lines!)
   const { shouldRender, elementRef, isLoading } = useMapLazyLoad({

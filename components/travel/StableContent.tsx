@@ -40,13 +40,21 @@ const buildWeservProxyUrl = (src: string) => {
     if (trimmed.startsWith('data:')) return trimmed;
     // Normalize HTML entities often present in rich text src attributes.
     const normalized = trimmed.replace(/&amp;/g, '&');
-    // Avoid double-wrapping an already-proxied URL.
-    if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) return normalized;
-    const withoutScheme = trimmed.replace(/^https?:\/\//i, '');
     // Use smaller width on mobile to save bandwidth (~30-40% savings)
     const isMobileViewport = Platform.OS === 'web' && typeof window !== 'undefined' && (window.innerWidth || 0) <= 768;
-    const w = isMobileViewport ? 800 : 1200;
-    return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=${w}&q=70&output=webp&fit=inside`;
+    const targetW = isMobileViewport ? 600 : 800;
+    // If already a weserv.nl URL, re-optimize params (backend may use w=1600 which is too large)
+    if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) {
+      try {
+        const u = new URL(normalized);
+        u.searchParams.set('w', String(targetW));
+        u.searchParams.set('q', '60');
+        if (!u.searchParams.has('output')) u.searchParams.set('output', 'webp');
+        return u.toString();
+      } catch { return normalized; }
+    }
+    const withoutScheme = trimmed.replace(/^https?:\/\//i, '');
+    return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=${targetW}&q=60&output=webp&fit=inside`;
   } catch {
     return null;
   }
@@ -55,8 +63,9 @@ const buildWeservProxyUrl = (src: string) => {
 const stripDangerousTags = (html: string) =>
   html.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<style[\s\S]*?<\/style>/gi, "");
 
-const normalizeImgTags = (html: string): string =>
-  html.replace(/<img\b[^>]*?>/gi, (tag) => {
+const normalizeImgTags = (html: string): string => {
+  let imgIdx = 0;
+  return html.replace(/<img\b[^>]*?>/gi, (tag) => {
     const src = tag.match(/\bsrc="([^"]+)"/i)?.[1] ?? "";
     const optimizedSrc = src ? buildWeservProxyUrl(src) || src : src;
     let w = tag.match(/\bwidth="(\d+)"/i)?.[1];
@@ -81,14 +90,25 @@ const normalizeImgTags = (html: string): string =>
       .replace(/\bsrcset="[^"]*"/i, '')
       .replace(/\bsizes="[^"]*"/i, '');
     out = out.replace(/\bwidth="[^"]*"/i, "").replace(/\bheight="[^"]*"/i, "");
-    if (w && h) out = out.replace(/>$/, ` width="${w}" height="${h}">`);
-    out = out.replace(/\bdecoding="[^"]*"/i, "").replace(/\bfetchpriority="[^"]*"/i, "");
+    // Always set width/height to prevent CLS; use 800x450 (16:9) as fallback
+    const finalW = w || 800;
+    const finalH = h || 450;
+    out = out.replace(/>$/, ` width="${finalW}" height="${finalH}">`);
+    out = out.replace(/\bdecoding="[^"]*"/i, "").replace(/\bfetchpriority="[^"]*"/i, "").replace(/\bloading="[^"]*"/i, "");
     if (!/\balt\s*=/i.test(out)) {
       out = out.replace(/>$/, ` alt="">`);
     }
-    out = out.replace(/>$/, ` decoding="async" fetchpriority="low">`);
+    const isLcp = imgIdx === 0;
+    out = out.replace(
+      />$/,
+      isLcp
+        ? ` fetchpriority="high" decoding="async">`
+        : ` loading="lazy" decoding="async" fetchpriority="low">`
+    );
+    imgIdx += 1;
     return out;
   });
+};
 
 const replaceYouTubeIframes = (html: string): string =>
   html.replace(/<iframe\b[^>]*src="([^"]+)"[^>]*><\/iframe>/gi, (full, src: string) => {
@@ -199,7 +219,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
-  padding: DESIGN_TOKENS.spacing.smpx 0 24px;
+  padding: ${DESIGN_TOKENS.spacing.sm}px 0 24px;
 }
 .${WEB_RICH_TEXT_CLASS} p {
   margin: 0 0 1.25em;
@@ -242,7 +262,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   max-height: 55vh;
   object-fit: cover;
   border-radius: 22px;
-  margin: DESIGN_TOKENS.spacing.xxs2px 0 26px;
+  margin: ${DESIGN_TOKENS.spacing.xxs + 2}px 0 26px;
   box-shadow: ${colors.boxShadows.card};
   border: 6px solid ${colors.borderLight};
   background: ${colors.surfaceMuted};
@@ -268,8 +288,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} .image-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: DESIGN_TOKENS.spacing.xxs0px;
-  margin: DESIGN_TOKENS.spacing.xxs8px 0;
+  gap: ${DESIGN_TOKENS.spacing.xs}px;
+  margin: ${DESIGN_TOKENS.spacing.xs + 8}px 0;
 }
 .${WEB_RICH_TEXT_CLASS} .image-strip img {
   width: 100%;
@@ -294,7 +314,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   border-radius: 18px;
   padding: 0;
   overflow: hidden;
-  margin: DESIGN_TOKENS.spacing.xxs4px 0;
+  margin: ${DESIGN_TOKENS.spacing.xs + 4}px 0;
   box-shadow: ${colors.boxShadows.card};
 }
 .${WEB_RICH_TEXT_CLASS}::after {
@@ -308,7 +328,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  margin: DESIGN_TOKENS.spacing.xxs4px auto !important;
+  margin: ${DESIGN_TOKENS.spacing.xs + 4}px auto !important;
   border-radius: 18px !important;
   overflow: hidden !important;
   box-shadow: ${colors.boxShadows.card};
@@ -364,7 +384,7 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   }
   .${WEB_RICH_TEXT_CLASS} img {
     border-width: 4px;
-    margin: DESIGN_TOKENS.spacing.lgpx 0 22px;
+    margin: ${DESIGN_TOKENS.spacing.lg}px 0 22px;
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.14);
   }
 }

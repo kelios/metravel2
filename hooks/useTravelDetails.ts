@@ -10,6 +10,7 @@ import { fetchTravel, fetchTravelBySlug, normalizeTravelItem } from '@/api/trave
 import type { Travel } from '@/types/types';
 import { Platform } from 'react-native';
 import { queryKeys } from '@/queryKeys';
+import { isWebAutomation } from '@/utils/isWebAutomation';
 
 export interface UseTravelDetailsReturn {
   travel: Travel | undefined;
@@ -89,11 +90,6 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     .split('%23')[0];
   const isMissingParam = normalizedSlug.length === 0;
   const cacheKey = isId ? idNum : normalizedSlug;
-
-  const isWebAutomation =
-    Platform.OS === 'web' &&
-    typeof navigator !== 'undefined' &&
-    Boolean((navigator as any).webdriver);
 
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
     queryKey: queryKeys.travel(cacheKey),

@@ -4,7 +4,6 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
 } from "react";
@@ -18,6 +17,7 @@ import {
   View,
 } from "react-native";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -36,8 +36,9 @@ import { useTravelDetailsStyles } from "@/components/travel/details/TravelDetail
 import { withLazy } from "@/components/travel/details/TravelDetailsLazy";
 
 /* ✅ PHASE 2: Accessibility (WCAG AAA) */
-import { useAccessibilityAnnounce, useReducedMotion } from "@/hooks/useKeyboardNavigation";
+import { useAccessibilityAnnounce } from "@/hooks/useKeyboardNavigation";
 import { useThemedColors } from "@/hooks/useTheme";
+import { useTdTrace } from '@/hooks/useTdTrace';
 import { rIC } from '@/utils/rIC';
 
 /* -------------------- helpers -------------------- */
@@ -54,18 +55,6 @@ const TravelDeferredSections = withLazy(() =>
     default: m.TravelDeferredSections,
   }))
 );
-
-/* -------------------- SuspenseList shim -------------------- */
-const SList: React.FC<{
-  children: React.ReactNode;
-  revealOrder?: "forwards" | "backwards" | "together";
-  tail?: "collapsed" | "hidden";
-}> = (props) => {
-  const Experimental = (React as any).unstable_SuspenseList || (React as any).SuspenseList;
-  return Experimental ? <Experimental {...props} /> : <>{props.children}</>;
-};
-
-
 
 /* -------------------- utils (используются из импортов) -------------------- */
 // ✅ SECURITY: Функции перемещены в utils/travelDetailsSecure.ts:
@@ -85,27 +74,17 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
     if (Platform.OS === 'web') {
       // Use rIC so the browser can finish painting the LCP hero image and run
       // any pending layout work before we mount heavy deferred sections.
-      // The 300 ms timeout is a safety net — on fast machines rIC fires much
+      // The 600 ms timeout is a safety net — on fast machines rIC fires much
       // sooner, but we never block the paint for more than one idle period.
       let cancelled = false;
       const kick = () => { if (!cancelled) setReady(true); };
-      const cancelRIC = rIC(kick, 300);
+      const cancelRIC = rIC(kick, 600);
       return () => { cancelled = true; cancelRIC(); };
     }
-    let done = false;
-    const kick = () => {
-      if (!done) {
-        done = true;
-        setReady(true);
-      }
-    };
+    let cancelled = false;
+    const kick = () => { if (!cancelled) setReady(true); };
     const cancelRIC = rIC(kick, 500);
-    const t = setTimeout(kick, 1000);
-    return () => {
-      done = true;
-      cancelRIC();
-      clearTimeout(t);
-    };
+    return () => { cancelled = true; cancelRIC(); };
   }, [when]);
   return ready ? <>{children}</> : null;
 };
@@ -115,10 +94,9 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 export default function TravelDetailsContainer() {
   const { isMobile, width: responsiveWidth } = useResponsive();
   const screenWidth = responsiveWidth;
-  // Fallback to true if hook is unavailable (e.g., static render) while preserving hook order
-  const useIsFocusedSafe = useIsFocused ?? (() => true);
-  const isFocused = useIsFocusedSafe();
+  const isFocused = useIsFocused();
   const navigation = useNavigation();
+  const router = useRouter();
   const [, startTransition] = useTransition();
 
   const isWebAutomation =
@@ -128,8 +106,6 @@ export default function TravelDetailsContainer() {
 
   /* ✅ PHASE 2: Accessibility Hooks */
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce();
-  // Note: useReducedMotion hook will be used in future for animation handling
-  useReducedMotion();
   const themedColors = useThemedColors();
   const styles = useTravelDetailsStyles();
 
@@ -137,38 +113,7 @@ export default function TravelDetailsContainer() {
   // Keep skeleton mounted briefly and fade it out (no layout collapse).
   const [skeletonPhase, setSkeletonPhase] = useState<'loading' | 'fading' | 'hidden'>('loading')
 
-  const tdTraceEnabled =
-    Platform.OS === 'web' &&
-    typeof window !== 'undefined' &&
-    (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as any).__METRAVEL_TD_TRACE === true)
-
-  const tdTraceStartRef = useRef<number | null>(null)
-
-  const tdTrace = useCallback(
-    (event: string, data?: any) => {
-      if (!tdTraceEnabled) return
-      try {
-        const perf = (window as any).performance
-        const now = typeof perf?.now === 'function' ? perf.now() : Date.now()
-
-        const start =
-          tdTraceStartRef.current ??
-          (typeof perf?.now === 'function' ? perf.now() : now)
-        tdTraceStartRef.current = start
-
-        const delta = Math.round(now - start)
-        // eslint-disable-next-line no-console
-        console.log(`[TD] +${delta}ms ${event}`, data ?? '')
-
-        if (typeof perf?.mark === 'function') {
-          perf.mark(`TD:${event}`)
-        }
-      } catch {
-        // noop
-      }
-    },
-    [tdTraceEnabled]
-  )
+  const tdTrace = useTdTrace()
 
   // ✅ АРХИТЕКТУРА: Использование кастомных хуков
   const travelDetails = useTravelDetails({
@@ -446,13 +391,21 @@ export default function TravelDetailsContainer() {
       <>
         {seoBlock}
         <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+          <View style={styles.errorContainer} role="alert">
             <Text style={styles.errorTitle}>
               Путешествие не найдено
             </Text>
             <Text style={styles.errorText}>
               В ссылке отсутствует идентификатор путешествия.
             </Text>
+            <TouchableOpacity
+              onPress={() => router.replace('/')}
+              style={styles.errorButton}
+              accessibilityRole="button"
+              accessibilityLabel="На главную"
+            >
+              <Text style={styles.errorButtonText}>На главную</Text>
+            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </>
@@ -464,7 +417,7 @@ export default function TravelDetailsContainer() {
       <>
         {seoBlock}
         <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.mainContainer, styles.mainContainerMobile]}>
+          <View style={styles.errorContainer} role="alert">
             <Text style={styles.errorTitle}>
               Не удалось загрузить путешествие
             </Text>
@@ -501,7 +454,7 @@ export default function TravelDetailsContainer() {
       testID="travel-details-page"
       id="travel-main-content"
       role="main"
-      aria-label={`Travel details for ${travel?.name || 'travel'}`}
+      aria-label={`Детали путешествия: ${travel?.name || 'путешествие'}`}
       style={wrapperStyle}
     >
       <SafeAreaView style={styles.safeArea}>
@@ -572,7 +525,7 @@ export default function TravelDetailsContainer() {
             contentContainerStyle={[styles.scrollContent]}
             keyboardShouldPersistTaps="handled"
             onScroll={scrollEventHandler}
-            scrollEventThrottle={Platform.OS === 'web' ? 32 : 48}
+            scrollEventThrottle={Platform.OS === 'web' ? 64 : 48}
             style={scrollViewStyle}
             nestedScrollEnabled
             onContentSizeChange={handleContentSizeChange}
@@ -584,7 +537,7 @@ export default function TravelDetailsContainer() {
                 collapsable={false}
               >
                 {travel ? (
-                  <SList revealOrder="forwards" tail="collapsed">
+                  <>
                     <View collapsable={false}>
                       <TravelHeroSection
                         travel={travel}
@@ -625,7 +578,7 @@ export default function TravelDetailsContainer() {
                         />
                       </Suspense>
                     </Defer>
-                  </SList>
+                  </>
                 ) : (
                   // Underlay can be empty; skeleton overlay above provides the visual.
                   <View />

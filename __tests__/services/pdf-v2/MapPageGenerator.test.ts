@@ -6,6 +6,12 @@ import type { PageContext } from '@/services/pdf-export/generators/v2/types';
 import type { BookSettings } from '@/components/export/BookSettingsModal';
 import type { TravelForBook } from '@/types/pdf-export';
 
+// QR code generation is CPU/timer heavy and can become flaky under global fake-timers leaks.
+// Mock it to keep this suite deterministic and fast.
+jest.mock('qrcode', () => ({
+  toDataURL: jest.fn(() => Promise.resolve('data:image/png;base64,mock-qr')),
+}));
+
 // Мокируем generateLeafletRouteSnapshot
 jest.mock('@/utils/mapImageGenerator', () => ({
   generateLeafletRouteSnapshot: jest.fn().mockResolvedValue('data:image/png;base64,mockimage'),
@@ -265,4 +271,3 @@ describe('MapPageGenerator', () => {
     });
   });
 });
-

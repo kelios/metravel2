@@ -49,7 +49,7 @@ function ensureTilePreconnect(): void {
 function getLeafletOverridesCSS(): string {
   return [
     '.leaflet-container{background-color:var(--color-backgroundTertiary)!important;background-image:none!important}',
-    '.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-tile,.leaflet-container .leaflet-tile{width:auto!important;height:auto!important;max-width:none!important;max-height:none!important;object-fit:none!important}',
+    '.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-tile,.leaflet-container .leaflet-tile{max-width:none!important;max-height:none!important;object-fit:none!important;image-rendering:auto!important}',
     '.leaflet-container img.leaflet-marker-icon,.leaflet-container img.leaflet-marker-shadow{max-width:none!important;max-height:none!important;object-fit:none!important}',
     '.leaflet-container svg{max-width:none!important;max-height:none!important}',
     '.leaflet-control-container{contain:none!important}',

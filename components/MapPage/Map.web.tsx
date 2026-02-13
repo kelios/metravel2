@@ -745,6 +745,41 @@ const MapPageComponent: React.FC<Props> = (props) => {
     };
   }, []);
 
+  // invalidateSize on browser tab visibility change and bfcache restore.
+  // When the user switches browser tabs or navigates away and back (bfcache),
+  // Leaflet may render tiles with gray gaps because it missed container size changes.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof document === 'undefined') return;
+
+    const invalidate = () => {
+      const map = mapRef.current;
+      if (!map) return;
+      requestAnimationFrame(() => {
+        try {
+          map.invalidateSize?.({ animate: false } as any);
+        } catch {
+          // noop
+        }
+      });
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') invalidate();
+    };
+
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) invalidate();
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pageshow', onPageShow);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, []);
+
   const renderLoader = useCallback(
     (_message: string) => (
       <View style={[styles.loader, { position: 'relative', overflow: 'hidden' }] as any}>

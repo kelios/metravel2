@@ -24,6 +24,7 @@ import { createLeafletLayer } from '@/utils/mapWebLayers';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { isWebAutomation } from '@/utils/isWebAutomation';
 
 interface UserPointsMapProps {
   /**
@@ -889,11 +890,6 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const loadingStyles = React.useMemo(() => createLoadingStyles(colors), [colors]);
 
-  const isWebAutomation =
-    Platform.OS === 'web' &&
-    typeof navigator !== 'undefined' &&
-    Boolean((navigator as any).webdriver);
-
   const [mapInstance, setMapInstance] = React.useState<any>(null);
   const mapRef = React.useRef<any>(null);
   const baseLayerFallbackIndexRef = React.useRef(0);
@@ -1302,7 +1298,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     } catch {
       // noop
     }
-  }, [activePointId, isWebAutomation, mapInstance, safePoints]);
+  }, [activePointId, mapInstance, safePoints]);
 
   React.useEffect(() => {
     const id = Number(activePointId);
@@ -1339,7 +1335,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
     } catch {
       // noop
     }
-  }, [activePointId, isWebAutomation, mapInstance, mods?.L, safePoints]);
+  }, [activePointId, mapInstance, mods?.L, safePoints]);
 
   const center = React.useMemo(() => {
     if (effectiveCenterOverride) return effectiveCenterOverride;
@@ -1369,7 +1365,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
         }
       }
     },
-    [isWebAutomation]
+    []
   );
 
   const handleWhenReady = React.useCallback(() => {

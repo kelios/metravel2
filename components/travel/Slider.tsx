@@ -198,8 +198,8 @@ const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: n
       // Web: use CSS-pixel width directly (dpr=1) to avoid double-scaling.
       // getOptimalImageSize multiplies by devicePixelRatio which is redundant
       // when we pass dpr=1 to optimizeImageUrl (it would multiply again).
-      const cappedWidth = Math.min(containerWidth, 860);
-      const quality = isFirst ? 55 : 40;
+      const cappedWidth = Math.min(containerWidth, 720);
+      const quality = isFirst ? 45 : 35;
       return (
         optimizeImageUrl(versionedUrl, {
           width: cappedWidth,
@@ -823,7 +823,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onScroll={onScroll}
-            scrollEventThrottle={isWeb ? 64 : 16}
+            scrollEventThrottle={isWeb ? 100 : 16}
             renderItem={renderItem}
             initialNumToRender={isTestEnv ? images.length : (isWeb ? 1 : 2)}
             windowSize={isTestEnv ? images.length : (isWeb ? 3 : 5)}

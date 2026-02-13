@@ -1,4 +1,4 @@
-import React, { Suspense, memo, useCallback, useEffect, useState } from 'react'
+import React, { Suspense, memo, useEffect, useState } from 'react'
 import { Animated, InteractionManager, Platform, Text, View } from 'react-native'
 import type { Travel } from '@/types/types'
 import {
@@ -11,6 +11,7 @@ import type { AnchorsMap } from './TravelDetailsTypes'
 import { useTravelDetailsStyles } from './TravelDetailsStyles'
 import { withLazy } from './TravelDetailsLazy'
 import { rIC } from '@/utils/rIC'
+import { useTdTrace } from '@/hooks/useTdTrace'
 
 const TravelDetailsContentSection = withLazy(() =>
   import('./sections/TravelDetailsContentSection').then((m) => ({
@@ -42,12 +43,17 @@ const CommentsSection = withLazy(() =>
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
 
+const PLACEHOLDER_MT_12 = { marginTop: 12 } as const
+const PLACEHOLDER_MT_8 = { marginTop: 8 } as const
+const PLACEHOLDER_MIN_H_160 = { minHeight: 160 } as const
+const PLACEHOLDER_MIN_H_56 = { minHeight: 56 } as const
+
 const DeferredMapPlaceholder = () => {
   const styles = useTravelDetailsStyles()
   return (
     <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
       <Text style={styles.sectionHeaderText}>Карта маршрута</Text>
-      <View style={{ marginTop: 12 }}>
+      <View style={PLACEHOLDER_MT_12}>
         <MapSkeleton />
       </View>
     </View>
@@ -60,13 +66,13 @@ const DeferredSidebarPlaceholder = () => {
     <>
       <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
         <Text style={styles.sectionHeaderText}>Рядом можно посмотреть</Text>
-        <View style={{ marginTop: 8 }}>
+        <View style={PLACEHOLDER_MT_8}>
           <TravelListSkeleton count={3} />
         </View>
       </View>
       <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
         <Text style={styles.sectionHeaderText}>Популярные маршруты</Text>
-        <View style={{ marginTop: 8 }}>
+        <View style={PLACEHOLDER_MT_8}>
           <TravelListSkeleton count={3} />
         </View>
       </View>
@@ -79,7 +85,7 @@ const DeferredCommentsPlaceholder = () => {
   return (
     <View style={[styles.sectionContainer, styles.contentStable, styles.webDeferredSection]}>
       <Text style={styles.sectionHeaderText}>Комментарии</Text>
-      <View style={{ marginTop: 8 }}>
+      <View style={PLACEHOLDER_MT_8}>
         <CommentsSkeleton />
       </View>
     </View>
@@ -108,31 +114,7 @@ export const TravelDeferredSections: React.FC<{
   const [canRenderSidebar, setCanRenderSidebar] = useState(false)
   const [canRenderComments, setCanRenderComments] = useState(false)
 
-  const tdTraceEnabled =
-    Platform.OS === 'web' &&
-    typeof window !== 'undefined' &&
-    (process.env.EXPO_PUBLIC_TD_TRACE === '1' || (window as any).__METRAVEL_TD_TRACE === true)
-
-  const tdTrace = useCallback(
-    (event: string, data?: any) => {
-      if (!tdTraceEnabled) return
-      try {
-        const perf = (window as any).performance
-        const now = typeof perf?.now === 'function' ? perf.now() : Date.now()
-        const base =
-          (window as any).__METRAVEL_TD_TRACE_START ??
-          (typeof perf?.now === 'function' ? perf.now() : now)
-        ;(window as any).__METRAVEL_TD_TRACE_START = base
-        const delta = Math.round(now - base)
-        // eslint-disable-next-line no-console
-        console.log(`[TD] +${delta}ms ${event}`, data ?? '')
-        if (typeof perf?.mark === 'function') perf.mark(`TD:${event}`)
-      } catch {
-        // noop
-      }
-    },
-    [tdTraceEnabled]
-  )
+  const tdTrace = useTdTrace()
 
   useEffect(() => {
     tdTrace('deferred:mount', { travelId: travel?.id })
@@ -167,11 +149,11 @@ export const TravelDeferredSections: React.FC<{
       return
     }
     // Map section: next idle after content
-    const cancelMap = rIC(() => setCanRenderMap(true), 600)
+    const cancelMap = rIC(() => setCanRenderMap(true), 1200)
     // Sidebar (near/popular lists): after map
-    const cancelSidebar = rIC(() => setCanRenderSidebar(true), 1000)
+    const cancelSidebar = rIC(() => setCanRenderSidebar(true), 2500)
     // CommentsSection chunk is ~247ms to parse — load it last.
-    const cancelComments = rIC(() => setCanRenderComments(true), 1500)
+    const cancelComments = rIC(() => setCanRenderComments(true), 4000)
     return () => {
       cancelMap()
       cancelSidebar()
@@ -248,7 +230,7 @@ export const TravelDeferredSections: React.FC<{
         )}
       </View>
 
-      <TravelEngagementSection travel={travel} isMobile={isMobile} />
+      <TravelDetailsFooterSection travel={travel} isMobile={isMobile} />
     </>
   )
 })
@@ -265,8 +247,8 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel })
       >
         <Text style={styles.sectionHeaderText}>Автор</Text>
         <Text style={styles.sectionSubtitle}>Профиль, соцсети и другие путешествия автора</Text>
-        <View style={{ marginTop: 12 }}>
-          <Suspense fallback={<View style={{ minHeight: 160 }} />}>
+        <View style={PLACEHOLDER_MT_12}>
+          <Suspense fallback={<View style={PLACEHOLDER_MIN_H_160} />}>
             <AuthorCard travel={travel} />
           </Suspense>
         </View>
@@ -278,7 +260,7 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel })
         accessibilityLabel="Поделиться маршрутом"
         style={[styles.sectionContainer, styles.contentStable, styles.shareButtonsContainer]}
       >
-        <Suspense fallback={<View style={{ minHeight: 56 }} />}>
+        <Suspense fallback={<View style={PLACEHOLDER_MIN_H_56} />}>
           <ShareButtons travel={travel} />
         </Suspense>
       </View>
@@ -286,6 +268,4 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel })
   )
 })
 
-export const TravelEngagementSection: React.FC<{ travel: Travel; isMobile: boolean }> = (props) => {
-  return <TravelDetailsFooterSection {...props} />
-}
+export const TravelEngagementSection = TravelDetailsFooterSection
