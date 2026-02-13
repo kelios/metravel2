@@ -70,7 +70,7 @@ function SearchScreen() {
     }, [canMountContent, isFocused]);
 
     const title = 'Поиск путешествий | Metravel';
-    const description = 'Найдите путешествия по фильтрам и сохраните лучшие идеи в свою книгу.';
+    const description = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты, сохраняйте лучшие идеи и собирайте свою книгу путешествий.';
 
     const styles = useMemo(() => StyleSheet.create({
         container: {

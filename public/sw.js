@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3.1.0';
+const CACHE_VERSION = 'v3.2.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -171,6 +171,12 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate' || request.destination === 'document') {
     event.respondWith(networkFirstDocument(request));
+    return;
+  }
+
+  // manifest.json must always be network-first to avoid serving stale 404
+  if (url.pathname === '/manifest.json') {
+    event.respondWith(networkFirst(request));
     return;
   }
 

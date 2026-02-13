@@ -22,6 +22,8 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
                 source={require('../../assets/icons/logo_yellow_60x60.png')}
                 style={[styles.logo, isMobile && styles.logoMobile]}
                 resizeMode="contain"
+                accessibilityLabel="MeTravel логотип"
+                alt="MeTravel логотип"
             />
             {!isMobile && (
                 <View style={styles.logoTextRow}>
