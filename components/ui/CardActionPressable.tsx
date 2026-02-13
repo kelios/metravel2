@@ -53,6 +53,11 @@ const CardActionPressable = ({
     const ariaSelected = resolvedState?.selected;
     const ariaExpanded = resolvedState?.expanded;
     const ariaBusy = resolvedState?.busy;
+    // aria-selected is only valid on tab, option, gridcell, row, treeitem roles.
+    // For button/radio roles, use aria-pressed/aria-checked instead.
+    const rolesAllowingSelected = new Set(['tab', 'option', 'gridcell', 'row', 'treeitem']);
+    const canUseAriaSelected = rolesAllowingSelected.has(accessibilityRole);
+    const ariaPressed = !canUseAriaSelected && accessibilityRole === 'button' && ariaSelected !== undefined ? ariaSelected : undefined;
     return (
       <View
         style={resolvedStyle}
@@ -65,7 +70,8 @@ const CardActionPressable = ({
           title: title ?? accessibilityLabel,
           'aria-disabled': disabled || undefined,
           'aria-checked': ariaChecked !== undefined ? ariaChecked : undefined,
-          'aria-selected': ariaSelected !== undefined ? ariaSelected : undefined,
+          'aria-selected': canUseAriaSelected && ariaSelected !== undefined ? ariaSelected : undefined,
+          'aria-pressed': ariaPressed,
           'aria-expanded': ariaExpanded !== undefined ? ariaExpanded : undefined,
           'aria-busy': ariaBusy !== undefined ? ariaBusy : undefined,
           'data-card-action': 'true',

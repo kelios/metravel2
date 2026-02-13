@@ -125,6 +125,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
           key={key}
           position={CoordinateConverter.toLeaflet(coords)}
           icon={icon}
+          title={point.address || 'Место на карте'}
+          alt={point.address || 'Место на карте'}
           ref={(marker: any) => {
             try {
               if (typeof onMarkerInstance === 'function') {

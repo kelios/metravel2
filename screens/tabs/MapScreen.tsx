@@ -293,7 +293,7 @@ export default function MapScreen() {
             {isMobile && (
                 <View style={styles.dragHandle} />
             )}
-            <View style={styles.tabsSegment}>
+            <View style={styles.tabsSegment} accessibilityRole="tablist" aria-label="Панель карты">
                 <Pressable
                     testID="map-panel-tab-filters"
                     style={({ pressed }) => [
