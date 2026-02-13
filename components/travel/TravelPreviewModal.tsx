@@ -5,6 +5,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { TravelFormData } from '@/types/types';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { getCountryLabel } from '@/services/pdf-export/utils/pluralize';
 
 interface TravelPreviewModalProps {
     visible: boolean;
@@ -65,7 +66,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
             ? ((formData as any).countries as string[]).length
             : 0;
         if (countriesCount > 0) {
-            result.push(`${countriesCount} ${countriesCount === 1 ? 'страна' : 'страны'}`);
+            result.push(`${countriesCount} ${getCountryLabel(countriesCount)}`);
         }
 
         return result;

@@ -250,7 +250,7 @@ const getTravelHeroPreloadScript = () => String.raw`
           if (actualWidth) proxy.searchParams.set('w', String(actualWidth));
           if (quality) proxy.searchParams.set('q', String(quality));
           proxy.searchParams.set('output', preferredFormat);
-          proxy.searchParams.set('fit', 'cover');
+          proxy.searchParams.set('fit', 'inside');
           return proxy.toString();
         }
 
@@ -263,7 +263,7 @@ const getTravelHeroPreloadScript = () => String.raw`
         } else {
           resolved.searchParams.set('f', preferredFormat);
         }
-        resolved.searchParams.set('fit', 'cover');
+        resolved.searchParams.set('fit', 'contain');
 
         return resolved.toString();
       } catch (_e) {
@@ -312,7 +312,7 @@ const getTravelHeroPreloadScript = () => String.raw`
         var existingLcp = document.querySelector('img[data-lcp]');
         if (existingLcp && existingLcp.complete && existingLcp.naturalWidth > 0) return;
 
-        var isMobile = (window.innerWidth || 0) <= 540;
+        var isMobile = (window.innerWidth || 0) < 768;
         var quality = isMobile ? 40 : 55;
 
         // Match TravelDetailsHero.tsx: lcpWidths = isMobile ? [320, 400] : [640, 860]
@@ -407,6 +407,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 
       {/* Resource hints - only the 2 most critical origins (dns-prefetch removed: preconnect implies it).
           images.weserv.nl preconnect deferred to when content images actually load. */}
+      <link rel="preconnect" href="https://metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://cdn.metravel.by" crossOrigin="anonymous" />
       <link rel="preconnect" href="https://api.metravel.by" crossOrigin="anonymous" />
       
@@ -547,7 +548,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
 	      <script
 	        dangerouslySetInnerHTML={{
-	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;var shellTimeout=0;var path='';try{path=String(window.location&&window.location.pathname||'')}catch(_){}var isTravel=/^\/travels?(\/|$)/.test(path);var minDelay=isTravel?1600:500;var started=Date.now();function clearTimers(){try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}}function finish(){if(done)return;done=true;clearTimers();root.classList.add('rnw-styles-ready')}function mark(){if(done)return;var wait=minDelay-(Date.now()-started);if(wait>0){setTimeout(mark,wait);return}if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true}return false}catch(_){return false}}if(hasReadyLink()){mark()}else{hard=setTimeout(mark,isTravel?1800:700);poll=setInterval(function(){if(hasReadyLink())mark()},50)}shellTimeout=setTimeout(function(){try{root.classList.add('app-hydrated')}catch(_){}} ,10000)}catch(_){}})();`,
+	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;var shellTimeout=0;var path='';try{path=String(window.location&&window.location.pathname||'')}catch(_){}var isTravel=/^\/travels?(\/|$)/.test(path);var minDelay=isTravel?800:500;var started=Date.now();function clearTimers(){try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}}function finish(){if(done)return;done=true;clearTimers();root.classList.add('rnw-styles-ready')}function mark(){if(done)return;var wait=minDelay-(Date.now()-started);if(wait>0){setTimeout(mark,wait);return}if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true}return false}catch(_){return false}}if(hasReadyLink()){mark()}else{hard=setTimeout(mark,isTravel?1000:700);poll=setInterval(function(){if(hasReadyLink())mark()},50)}shellTimeout=setTimeout(function(){try{root.classList.add('app-hydrated')}catch(_){}} ,10000)}catch(_){}})();`,
 	        }}
 	      />
 

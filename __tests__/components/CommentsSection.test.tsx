@@ -403,12 +403,14 @@ describe('CommentsSection', () => {
     });
 
     it('should organize comments into top-level and replies', () => {
+      // Sub-thread model: comment 1 has sub_thread=100 (a thread ID).
+      // Comment 2 lives in thread 100, so it's a reply to comment 1.
       mockUseTravelComments.mockReturnValue({
         data: [
           {
             id: 1,
             thread: 1,
-            sub_thread: null,
+            sub_thread: 100,
             user: 1,
             text: 'Top level comment',
             created_at: '2024-01-01T00:00:00Z',
@@ -417,8 +419,8 @@ describe('CommentsSection', () => {
           },
           {
             id: 2,
-            thread: 1,
-            sub_thread: 1,
+            thread: 100,
+            sub_thread: null,
             user: 2,
             text: 'Reply to comment 1',
             created_at: '2024-01-01T00:00:00Z',
@@ -443,13 +445,13 @@ describe('CommentsSection', () => {
       mockUseTravelComments.mockReturnValue({
         data: [
           {
-            id: 1, thread: 1, sub_thread: null, user: 1,
+            id: 1, thread: 1, sub_thread: 100, user: 1,
             text: 'Top level comment',
             created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
             likes_count: 0,
           },
           {
-            id: 2, thread: 1, sub_thread: 1, user: 2,
+            id: 2, thread: 100, sub_thread: null, user: 2,
             text: 'Reply to comment 1',
             created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
             likes_count: 0,
@@ -467,16 +469,18 @@ describe('CommentsSection', () => {
     });
 
     it('should handle string sub_thread from backend', () => {
+      // sub_thread can arrive as a string from some backends.
+      // Comment 10 has sub_thread='200' (string), replies live in thread 200.
       mockUseTravelComments.mockReturnValue({
         data: [
           {
-            id: 10, thread: 1, sub_thread: null, user: 1,
+            id: 10, thread: 1, sub_thread: '200' as any, user: 1,
             text: 'Parent comment',
             created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
             likes_count: 0,
           },
           {
-            id: 20, thread: 1, sub_thread: '10' as any, user: 2,
+            id: 20, thread: 200, sub_thread: null, user: 2,
             text: 'Reply with string sub_thread',
             created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z',
             likes_count: 0,

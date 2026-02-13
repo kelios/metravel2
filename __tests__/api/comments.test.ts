@@ -155,6 +155,56 @@ describe('Comments API', () => {
 
       expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?travel_id=123');
     });
+
+    it('should recursively fetch sub-thread comments', async () => {
+      // Root comment has sub_thread=50 pointing to a sub-thread
+      const rootComments: TravelComment[] = [
+        {
+          id: 1, thread: 9, sub_thread: 50, user: 1,
+          text: 'Root', created_at: null, updated_at: null, likes_count: 0,
+        },
+      ];
+      const subThreadComments: TravelComment[] = [
+        {
+          id: 2, thread: 50, sub_thread: null, user: 2,
+          text: 'Reply', created_at: null, updated_at: null, likes_count: 0,
+        },
+      ];
+
+      mockedApiClient.get
+        .mockResolvedValueOnce(rootComments)   // thread_id=9
+        .mockResolvedValueOnce(subThreadComments); // thread_id=50
+
+      const result = await commentsApi.getTravelComments({ travelId: 123, threadId: 9 });
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=9');
+      expect(mockedApiClient.get).toHaveBeenCalledWith('/travel-comments/?thread_id=50');
+      expect(result).toHaveLength(2);
+      expect(result[0].text).toBe('Root');
+      expect(result[1].text).toBe('Reply');
+    });
+
+    it('should handle nested sub-threads (reply to a reply)', async () => {
+      const root: TravelComment[] = [
+        { id: 1, thread: 9, sub_thread: 50, user: 1, text: 'A', created_at: null, updated_at: null, likes_count: 0 },
+      ];
+      const level1: TravelComment[] = [
+        { id: 2, thread: 50, sub_thread: 60, user: 2, text: 'B', created_at: null, updated_at: null, likes_count: 0 },
+      ];
+      const level2: TravelComment[] = [
+        { id: 3, thread: 60, sub_thread: null, user: 3, text: 'C', created_at: null, updated_at: null, likes_count: 0 },
+      ];
+
+      mockedApiClient.get
+        .mockResolvedValueOnce(root)
+        .mockResolvedValueOnce(level1)
+        .mockResolvedValueOnce(level2);
+
+      const result = await commentsApi.getTravelComments({ travelId: 123, threadId: 9 });
+
+      expect(result).toHaveLength(3);
+      expect(result.map((c: TravelComment) => c.text)).toEqual(['A', 'B', 'C']);
+    });
   });
 
   describe('createComment', () => {

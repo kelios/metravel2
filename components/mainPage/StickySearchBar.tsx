@@ -14,6 +14,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
 
 interface StickySearchBarProps {
   search: string;
@@ -141,7 +142,7 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     }),
   },
   inputMobile: {
-    fontSize: 13,
+    fontSize: 16,
   },
   clearButton: {
     padding: spacing.xs,
@@ -187,31 +188,6 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
     borderWidth: 1,
     borderColor: colors.border,
   },
-  primaryActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    height: Platform.select({ default: 40, web: 44 }),
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.surface,
-    ...Platform.select({
-      web: {
-        cursor: 'pointer',
-      },
-    }),
-  },
-  primaryActionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primaryText,
-  },
-  primaryActionRowMobile: {
-    paddingTop: spacing.xs,
-    alignItems: 'flex-start',
-  },
   actionsMobile: {
     flexShrink: 0,
     justifyContent: 'flex-start',
@@ -230,13 +206,12 @@ const useStyles = (colors: ReturnType<typeof useThemedColors>) => useMemo(() => 
       web: {
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        // @ts-ignore
-        ':hover': {
-          backgroundColor: colors.primarySoft,
-          borderColor: colors.primary,
-        },
       },
     }),
+  },
+  actionButtonHovered: {
+    backgroundColor: colors.primarySoft,
+    borderColor: colors.primary,
   },
   actionButtonMobile: {
     width: 40,
@@ -314,6 +289,8 @@ function StickySearchBar({
   const searchIconSize = isMobile ? 16 : 18;
   const actionIconSize = isMobile ? 18 : 20;
   const filterIconSize = isMobile ? 14 : 16;
+  const isMac = Platform.OS === 'web' && typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+  const shortcutLabel = isMac ? '⌘K' : 'Ctrl+K';
 
   // UX УЛУЧШЕНИЕ: Показываем счетчик только если есть результаты
   const showResultsCount = resultsCount !== undefined && resultsCount > 0 && !isMobile;
@@ -380,7 +357,7 @@ function StickySearchBar({
             {...Platform.select({
               web: {
                 // @ts-ignore
-                'aria-label': 'Поиск путешествий. Нажмите Ctrl+K для быстрого доступа',
+                'aria-label': `Поиск путешествий. Нажмите ${shortcutLabel} для быстрого доступа`,
               },
             })}
           />
@@ -395,7 +372,7 @@ function StickySearchBar({
           )}
           {!isMobile && Platform.OS === 'web' && (
             <View style={styles.shortcutHint}>
-              <Text style={styles.shortcutText}>Ctrl+K</Text>
+              <Text style={styles.shortcutText}>{shortcutLabel}</Text>
             </View>
           )}
           </View>
@@ -413,11 +390,7 @@ function StickySearchBar({
             >
               <Text style={styles.resultsText} testID="results-count-text">
                 Найдено: {resultsCount ?? 0}{' '}
-                {resultsCount === 1
-                  ? 'путешествие'
-                  : (resultsCount ?? 0) < 5
-                    ? 'путешествия'
-                    : 'путешествий'}
+                {getTravelLabel(resultsCount ?? 0)}
               </Text>
             </View>
           )}
@@ -427,11 +400,12 @@ function StickySearchBar({
             <Pressable
               testID="toggle-recommendations-button"
               onPress={onToggleRecommendations}
-              style={[
+              style={({ hovered }: any) => [
                 styles.actionButton,
                 isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
                 isMobile ? styles.actionButtonMobile : null,
                 isRecommendationsVisible && styles.actionButtonActive,
+                !isRecommendationsVisible && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
               ]}
               accessibilityLabel={isRecommendationsVisible ? "Скрыть рекомендации" : "Показать рекомендации"}
               accessibilityState={{ selected: !!isRecommendationsVisible }}
@@ -449,11 +423,12 @@ function StickySearchBar({
             <Pressable
               testID="filters-button"
               onPress={onFiltersPress}
-              style={[
+              style={({ hovered }: any) => [
                 styles.actionButton,
                 isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
                 isMobile ? styles.actionButtonMobile : null,
                 hasActiveFilters && styles.actionButtonActive,
+                !hasActiveFilters && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
               ]}
               accessibilityLabel="Открыть фильтры"
               accessibilityHint={hasActiveFilters ? `Активно фильтров: ${activeFiltersCount ?? 0}` : undefined}

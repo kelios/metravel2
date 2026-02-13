@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import { DESIGN_COLORS } from '@/constants/designSystem';
+import { ensureLeafletCss as ensureLeafletCssOverrides } from '@/utils/ensureLeafletCss';
 
 interface UseLeafletLoaderOptions {
   /**
@@ -276,6 +277,8 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
     ensureLeafletCss().catch(() => {
       // noop: map can still attempt to render; error will be handled during JS load.
     });
+    // Also inject leaflet-overrides (tile sizing fixes for global img rules).
+    try { ensureLeafletCssOverrides(); } catch { /* noop */ }
   }, [enabled]);
 
   // Schedule loading with idle callback or timeout

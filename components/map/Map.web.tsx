@@ -890,6 +890,19 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
           } catch {
             // noop
           }
+          // Tiles may not render when the map is mounted into a container that
+          // was just made visible (e.g. tab switch). invalidateSize forces
+          // Leaflet to recalculate the viewport and request the correct tiles.
+          try {
+            requestAnimationFrame(() => {
+              try { map.invalidateSize(true); } catch { /* noop */ }
+            });
+            setTimeout(() => {
+              try { map.invalidateSize(true); } catch { /* noop */ }
+            }, 200);
+          } catch {
+            // noop
+          }
         }}
       >
         <TileLayerC

@@ -137,7 +137,7 @@ export const createSearchAndFilterBarStyles = (colors: ReturnType<typeof useThem
       }),
     },
     inputMobile: {
-      fontSize: 14,
+      fontSize: 16,
       paddingVertical: 1,
       lineHeight: 20,
     },

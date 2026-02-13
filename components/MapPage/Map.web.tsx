@@ -1049,6 +1049,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
           key={mapInstanceKeyRef.current}
           zoomControl={false}
           preferCanvas={false}
+          tap={true}
+          tapTolerance={30}
         >
           {/* Ensure custom pane exists before any route Polyline tries to target it */}
           {typeof Pane === 'function' ? (

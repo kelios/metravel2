@@ -95,10 +95,45 @@ export const commentsApi = {
     threadId?: number | null;
   }): Promise<TravelComment[]> => {
     const { travelId, threadId } = params;
+
+    let rootComments: TravelComment[];
     if (typeof threadId === 'number' && threadId > 0) {
-      return await commentsApi.getComments(threadId);
+      rootComments = await commentsApi.getComments(threadId);
+    } else {
+      rootComments = await commentsApi.getCommentsByTravel(travelId);
     }
-    return await commentsApi.getCommentsByTravel(travelId);
+
+    // The backend uses a sub-thread model: a comment's `sub_thread` field
+    // points to a *thread* ID that contains its replies, NOT a parent comment
+    // ID.  We must fetch those sub-threads to display the full conversation.
+    const fetched = new Set<number>(typeof threadId === 'number' ? [threadId] : []);
+    const allComments = [...rootComments];
+    const queue: number[] = [];
+
+    for (const c of rootComments) {
+      if (typeof c.sub_thread === 'number' && c.sub_thread > 0 && !fetched.has(c.sub_thread)) {
+        queue.push(c.sub_thread);
+        fetched.add(c.sub_thread);
+      }
+    }
+
+    while (queue.length > 0) {
+      const batch = queue.splice(0, 5); // fetch up to 5 sub-threads in parallel
+      const results = await Promise.all(
+        batch.map((stId) => commentsApi.getComments(stId).catch(() => [] as TravelComment[]))
+      );
+      for (const subComments of results) {
+        for (const c of subComments) {
+          allComments.push(c);
+          if (typeof c.sub_thread === 'number' && c.sub_thread > 0 && !fetched.has(c.sub_thread)) {
+            queue.push(c.sub_thread);
+            fetched.add(c.sub_thread);
+          }
+        }
+      }
+    }
+
+    return allComments;
   },
 
   getComment: async (commentId: number): Promise<TravelComment> => {

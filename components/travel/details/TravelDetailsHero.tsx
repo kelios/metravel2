@@ -104,6 +104,7 @@ const OptimizedLCPHeroInner: React.FC<{
   isMobile?: boolean
 }> = ({ img, alt, onLoad, height, isMobile }) => {
   const [loadError, setLoadError] = useState(false)
+  const [mainLoaded, setMainLoaded] = useState(false)
   const [overrideSrc, setOverrideSrc] = useState<string | null>(null)
   const [didTryApiPrefix, setDidTryApiPrefix] = useState(false)
   const imgRef = useRef<HTMLImageElement | null>(null)
@@ -236,7 +237,7 @@ const OptimizedLCPHeroInner: React.FC<{
               inset: '-5%',
               width: '110%',
               height: '110%',
-              backgroundImage: `url("${srcWithRetry}")`,
+              backgroundImage: mainLoaded ? `url("${srcWithRetry}")` : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               filter: 'blur(20px)',
@@ -260,14 +261,17 @@ const OptimizedLCPHeroInner: React.FC<{
               objectFit: 'contain',
             }}
             loading="eager"
-            decoding="auto"
+            decoding="sync"
             // @ts-ignore
             fetchPriority="high"
             // @ts-ignore
             ref={imgRef as any}
             referrerPolicy="no-referrer-when-downgrade"
             data-lcp
-            onLoad={onLoad as any}
+            onLoad={() => {
+              setMainLoaded(true)
+              onLoad?.()
+            }}
             onError={() => {
               if (!didTryApiPrefix) {
                 const fallback = buildApiPrefixedUrl(srcWithRetry)

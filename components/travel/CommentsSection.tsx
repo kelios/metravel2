@@ -71,28 +71,32 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     }
   }, [refetchComments, refetchThread]);
 
-  const { topLevel, replies, allComments } = useMemo(() => {
+  const { topLevel, replies, allComments, subThreadToParent } = useMemo(() => {
     const _topLevel: TravelComment[] = [];
     const _replies: { [key: number]: TravelComment[] } = {};
     const _allComments: { [key: number]: TravelComment } = {};
 
-    // Сначала индексируем все комментарии по ID
+    // Index all comments by ID
     comments.forEach((comment) => {
       _allComments[comment.id] = comment;
     });
 
+    // Build a map: subThreadId → parentCommentId.
+    // The backend sub-thread model: if comment A has sub_thread=63,
+    // then all comments with thread=63 are replies to comment A.
+    const subThreadToParent: { [threadId: number]: number } = {};
     comments.forEach((comment) => {
-      // Coerce sub_thread to number — some backends return string IDs.
-      const rawParent = comment.sub_thread;
-      const parentId = typeof rawParent === 'string' ? Number(rawParent) : rawParent;
-      const isReply =
-        typeof parentId === 'number' &&
-        !Number.isNaN(parentId) &&
-        parentId > 0 &&
-        parentId !== comment.id &&
-        !!_allComments[parentId];
+      const st = typeof comment.sub_thread === 'string' ? Number(comment.sub_thread) : comment.sub_thread;
+      if (typeof st === 'number' && !Number.isNaN(st) && st > 0) {
+        subThreadToParent[st] = comment.id;
+      }
+    });
 
-      if (isReply) {
+    comments.forEach((comment) => {
+      // A comment is a reply if its `thread` field maps to a parent comment
+      // via the subThreadToParent map.
+      const parentId = subThreadToParent[comment.thread];
+      if (typeof parentId === 'number' && parentId !== comment.id && !!_allComments[parentId]) {
         if (!_replies[parentId]) {
           _replies[parentId] = [];
         }
@@ -106,42 +110,39 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     // ⚠️ ВАЖНО: Если topLevel пустой, но есть комментарии - это баг!
     if (_topLevel.length === 0 && comments.length > 0) {
       if (!didWarnAllSubThread.current) {
-        console.warn('⚠️ BUG: All comments have sub_thread! Showing them anyway.');
+        console.warn('⚠️ BUG: All comments ended up as replies! Showing them anyway.');
         didWarnAllSubThread.current = true;
       }
-      return { topLevel: comments, replies: {} as { [key: number]: TravelComment[] }, allComments: _allComments };
+      return { topLevel: comments, replies: {} as { [key: number]: TravelComment[] }, allComments: _allComments, subThreadToParent };
     }
 
-    return { topLevel: _topLevel, replies: _replies, allComments: _allComments };
+    return { topLevel: _topLevel, replies: _replies, allComments: _allComments, subThreadToParent };
   }, [comments]);
 
-  // Walk up the sub_thread chain to find the top-level ancestor comment ID.
+  // Walk up the sub-thread chain to find the top-level ancestor comment ID.
   const findTopLevelAncestor = useCallback((commentId: number): number | null => {
     const visited = new Set<number>();
     let current = allComments[commentId];
-    if (!current) return commentId; // fallback: treat the id itself as top-level
+    if (!current) return commentId;
 
     while (current) {
       if (visited.has(current.id)) break;
       visited.add(current.id);
 
-      const rawParent = current.sub_thread;
-      const parentId = typeof rawParent === 'string' ? Number(rawParent) : rawParent;
+      // Find parent: the comment whose sub_thread equals current's thread
+      const parentId = subThreadToParent[current.thread];
       if (
         typeof parentId !== 'number' ||
-        Number.isNaN(parentId) ||
-        parentId <= 0 ||
         parentId === current.id ||
         !allComments[parentId]
       ) {
-        // `current` is a top-level comment
         return current.id;
       }
       current = allComments[parentId];
     }
 
     return commentId;
-  }, [allComments]);
+  }, [allComments, subThreadToParent]);
 
   const handleSubmitComment = useCallback(
     (text: string) => {
@@ -221,23 +222,20 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     const visited = new Set<number>();
     let currentComment = allComments[commentId];
 
-    while (currentComment && currentComment.sub_thread) {
+    while (currentComment) {
       if (visited.has(currentComment.id)) {
         break;
       }
       visited.add(currentComment.id);
 
-      const parentId = typeof currentComment.sub_thread === 'string'
-        ? Number(currentComment.sub_thread)
-        : currentComment.sub_thread;
-
-      if (parentId === currentComment.id) {
+      const parentId = subThreadToParent[currentComment.thread];
+      if (typeof parentId !== 'number' || parentId === currentComment.id) {
         break;
       }
 
       const parentComment = allComments[parentId];
       if (parentComment) {
-        chain.unshift(parentComment); // Добавляем в начало
+        chain.unshift(parentComment);
         currentComment = parentComment;
       } else {
         break;
@@ -245,11 +243,11 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
     }
 
     return chain;
-  }, [allComments]);
+  }, [allComments, subThreadToParent]);
 
   // Функция для рендеринга комментария с его родительской цепочкой
   const renderCommentWithParents = useCallback((comment: TravelComment, showParents: boolean = false) => {
-    if (!showParents || !comment.sub_thread) {
+    if (!showParents) {
       return null;
     }
 
@@ -461,8 +459,8 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
                     {isExpanded && (
                       <View style={styles.repliesContainer}>
                         {replies[comment.id].map((reply) => {
-                          const replyParent = typeof reply.sub_thread === 'string' ? Number(reply.sub_thread) : reply.sub_thread;
-                          const hasParentChain = replyParent && replyParent !== comment.id;
+                          const parentChain = getParentChain(reply.id);
+                          const hasParentChain = parentChain.length > 1;
 
                           return (
                             <View key={reply.id}>
@@ -472,7 +470,7 @@ export function CommentsSection({ travelId }: CommentsSectionProps) {
                                 comment={reply}
                                 onReply={isAuthenticated ? handleReply : undefined}
                                 onEdit={isAuthenticated ? handleEdit : undefined}
-                                level={hasParentChain ? getParentChain(reply.id).length : 1}
+                                level={hasParentChain ? parentChain.length : 1}
                               />
 
                               {replies[reply.id] && replies[reply.id].length > 0 && (

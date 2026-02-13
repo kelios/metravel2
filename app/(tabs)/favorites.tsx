@@ -13,6 +13,8 @@ import { globalFocusStyles } from '@/styles/globalFocus';
 import { confirmAction } from '@/utils/confirmAction';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { useResponsive } from '@/hooks/useResponsive';
+import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
+import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
 import { useThemedColors } from '@/hooks/useTheme';
 import { buildLoginHref } from '@/utils/authNavigation';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -101,22 +103,19 @@ export default function FavoritesScreen() {
             paddingHorizontal: 16,
             paddingBottom: 24,
             paddingTop: 12,
-            rowGap: 14,
         },
-        gridRow: {
-            justifyContent: 'space-between',
-            gap: 14,
+        cardsGrid: {
+            width: '100%',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: 'flex-start',
+            alignItems: 'flex-start',
         },
         gridItem: {
-            flex: 1,
-            minWidth: 0,
-            paddingTop: 12,
             position: 'relative',
         },
         card: {
             width: '100%',
-            minWidth: 0,
-            maxWidth: '100%',
             marginRight: 0,
         },
         cardWrap: {
@@ -190,12 +189,24 @@ export default function FavoritesScreen() {
         return cleanedTitle || title; // Возвращаем оригинал если что-то пошло не так
     }, []);
 
-    const horizontalPadding = 16;
-    const columnGap = 14;
-    const minCardWidth = 320;
-    const availableWidth = Math.max(0, (width || 0) - horizontalPadding * 2);
-    const computedColumns = Math.max(1, Math.floor((availableWidth + columnGap) / (minCardWidth + columnGap)));
-    const numColumns = Math.min(computedColumns, 3);
+    const { isPhone, isLargePhone, isTablet: isTabletSize, isDesktop: isDesktopSize, isPortrait } = useResponsive();
+    const isMobileDevice = isPhone || isLargePhone || (isTabletSize && isPortrait);
+    const isCardsSingleColumn = (width || 0) < BREAKPOINTS.MOBILE;
+
+    const gapSize = (width || 0) < BREAKPOINTS.XS ? 6
+        : (width || 0) < BREAKPOINTS.SM ? 8
+        : (width || 0) < BREAKPOINTS.MOBILE ? 10
+        : (width || 0) < BREAKPOINTS.TABLET ? 12
+        : (width || 0) < BREAKPOINTS.DESKTOP ? 14
+        : 16;
+
+    const numColumns = (() => {
+        if (isCardsSingleColumn) return 1;
+        const effectiveWidth = isDesktopSize ? (width || 0) - 0 : (width || 0);
+        if (isMobileDevice) return calculateColumns(width || 0, isPortrait ? 'portrait' : 'landscape');
+        if (!isTabletSize || !isPortrait) return calculateColumns(effectiveWidth, 'landscape');
+        return calculateColumns(effectiveWidth, 'portrait');
+    })();
 
     const data = useMemo(() => (Array.isArray(favorites) ? favorites : []), [favorites]);
 
@@ -328,48 +339,56 @@ export default function FavoritesScreen() {
 
             {Platform.OS === 'web' ? (
                 <ScrollView
-                    contentContainerStyle={[styles.listContent, numColumns > 1 && { flexDirection: 'row', flexWrap: 'wrap' }]}
+                    contentContainerStyle={styles.listContent}
                 >
-                    {data.map((item: any, index: number) => {
-                        const gap = 14;
-                        const columnIndex = numColumns > 0 ? index % numColumns : 0;
-                        const isFirstColumn = numColumns <= 1 || columnIndex === 0;
-                        const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
-                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
-                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
+                    <View style={[styles.cardsGrid, { gap: gapSize, rowGap: gapSize, columnGap: gapSize }]}>
+                        {data.map((item: any, index: number) => {
+                            const cols = Math.max(1, numColumns);
+                            const calcWidth = cols > 1
+                                ? `calc((100% - ${(cols - 1) * gapSize}px) / ${cols})`
+                                : '100%';
 
-                        return (
-                        <View key={`${item.type || 'travel'}-${item.id}`} style={[styles.gridItem, numColumns > 1 ? { paddingLeft, paddingRight, width: `${100 / numColumns}%` } : null]}>
-                            <TabTravelCard
-                                item={{
-                                    id: item.id,
-                                    title: cleanTitle(item.title, item.country ?? item.countryName),
-                                    imageUrl: item.imageUrl,
-                                    city: item.city ?? null,
-                                    country: item.country ?? item.countryName ?? null,
-                                }}
-                                badge={{
-                                    icon: 'heart',
-                                    backgroundColor: colors.danger,
-                                    iconColor: colors.textOnDark,
-                                }}
-                                onPress={() => handleOpen(item.url)}
-                                layout="grid"
-                                style={styles.card}
-                            />
-
-                            <Pressable
-                                style={[styles.removeButton, globalFocusStyles.focusable]}
-                                onPress={() => removeFavorite?.(item.id, item.type)}
-                                accessibilityRole="button"
-                                accessibilityLabel="Удалить из избранного"
-                                {...Platform.select({ web: { cursor: 'pointer' } })}
+                            return (
+                            <View
+                                key={`${item.type || 'travel'}-${item.id}`}
+                                style={[
+                                    styles.gridItem,
+                                    isCardsSingleColumn
+                                        ? { flex: 1, width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%' }
+                                        : { flexGrow: 0, flexShrink: 0, flexBasis: calcWidth, width: calcWidth, maxWidth: calcWidth, minWidth: 0 },
+                                ]}
                             >
-                                <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
-                            </Pressable>
-                        </View>
-                        );
-                    })}
+                                <TabTravelCard
+                                    item={{
+                                        id: item.id,
+                                        title: cleanTitle(item.title, item.country ?? item.countryName),
+                                        imageUrl: item.imageUrl,
+                                        city: item.city ?? null,
+                                        country: item.country ?? item.countryName ?? null,
+                                    }}
+                                    badge={{
+                                        icon: 'heart',
+                                        backgroundColor: colors.danger,
+                                        iconColor: colors.textOnDark,
+                                    }}
+                                    onPress={() => handleOpen(item.url)}
+                                    layout="grid"
+                                    style={styles.card}
+                                />
+
+                                <Pressable
+                                    style={[styles.removeButton, globalFocusStyles.focusable]}
+                                    onPress={() => removeFavorite?.(item.id, item.type)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Удалить из избранного"
+                                    {...Platform.select({ web: { cursor: 'pointer' } })}
+                                >
+                                    <Feather name="trash-2" size={16} color={colors.textOnPrimary} />
+                                </Pressable>
+                            </View>
+                            );
+                        })}
+                    </View>
                 </ScrollView>
             ) : (
                 <FlashList
@@ -380,15 +399,14 @@ export default function FavoritesScreen() {
                     contentContainerStyle={styles.listContent}
                     drawDistance={500}
                     renderItem={({ item, index }: { item: any; index: number }) => {
-                        const gap = 14;
                         const columnIndex = numColumns > 0 ? index % numColumns : 0;
                         const isFirstColumn = numColumns <= 1 || columnIndex === 0;
                         const isLastColumn = numColumns <= 1 || columnIndex === numColumns - 1;
-                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gap / 2) : 0;
-                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gap / 2) : 0;
+                        const paddingLeft = numColumns > 1 ? (isFirstColumn ? 0 : gapSize / 2) : 0;
+                        const paddingRight = numColumns > 1 ? (isLastColumn ? 0 : gapSize / 2) : 0;
 
                         return (
-                        <View style={[styles.gridItem, numColumns > 1 ? { paddingLeft, paddingRight } : null]}>
+                        <View style={[styles.gridItem, { flex: 1, paddingLeft, paddingRight, paddingBottom: gapSize }]}>
                             <TabTravelCard
                                 item={{
                                     id: item.id,

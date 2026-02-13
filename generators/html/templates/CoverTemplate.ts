@@ -1,6 +1,8 @@
 // src/generators/html/templates/CoverTemplate.ts
 // ✅ АРХИТЕКТУРА: Шаблон обложки для PDF
 
+import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
+
 export interface CoverTemplateData {
   title: string;
   subtitle?: string;
@@ -57,7 +59,7 @@ export function generateCoverTemplate(data: CoverTemplateData): string {
           <div>
             <div style="font-size: 32pt; font-weight: 800; color: rgb(255,159,90); margin-bottom: 3mm;">${travelCount}</div>
             <div style="font-size: 12pt; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.1em;">
-              ${travelCount === 1 ? 'путешествие' : travelCount < 5 ? 'путешествия' : 'путешествий'}
+              ${getTravelLabel(travelCount)}
             </div>
           </div>
           ${yearRange ? `

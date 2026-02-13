@@ -505,12 +505,15 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
     containerWebFull: {
       width: '100%',
       maxWidth: '100%',
-      height: '100%',
+      height: '100vh' as any,
       borderRadius: 0,
       position: 'relative',
       top: 0,
-      maxHeight: 'none' as any,
+      maxHeight: '100vh' as any,
       boxShadow: 'none' as any,
+      display: 'flex' as any,
+      flexDirection: 'column' as any,
+      overflowY: 'hidden' as any,
     },
     containerCompact: {
       padding: spacing.md,
@@ -715,6 +718,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
     },
     scrollView: {
       flex: 1,
+      ...Platform.select({
+        web: {
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        } as any,
+      }),
     },
     scrollContent: {
       flexGrow: 1,

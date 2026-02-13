@@ -21,8 +21,8 @@ export function formatDays(days?: number | null): string {
  * Склонение «путешествие»: «1 путешествие», «3 путешествия», «5 путешествий»
  */
 export function getTravelLabel(count: number): string {
-  if (count === 1) return 'путешествие';
-  if (count < 5) return 'путешествия';
+  if (count % 10 === 1 && count % 100 !== 11) return 'путешествие';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'путешествия';
   return 'путешествий';
 }
 
@@ -30,8 +30,8 @@ export function getTravelLabel(count: number): string {
  * Склонение «фотография»: «1 фотография», «3 фотографии», «5 фотографий»
  */
 export function getPhotoLabel(count: number): string {
-  if (count === 1) return 'фотография';
-  if (count >= 2 && count <= 4) return 'фотографии';
+  if (count % 10 === 1 && count % 100 !== 11) return 'фотография';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'фотографии';
   return 'фотографий';
 }
 
@@ -39,8 +39,8 @@ export function getPhotoLabel(count: number): string {
  * Склонение «страна»: «1 страна», «3 страны», «5 стран»
  */
 export function getCountryLabel(count: number): string {
-  if (count === 1) return 'страна';
-  if (count < 5) return 'страны';
+  if (count % 10 === 1 && count % 100 !== 11) return 'страна';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'страны';
   return 'стран';
 }
 
@@ -48,7 +48,7 @@ export function getCountryLabel(count: number): string {
  * Склонение «локация»: «1 локация», «3 локации», «5 локаций»
  */
 export function getLocationLabel(count: number): string {
-  if (count === 1) return 'локация';
-  if (count >= 2 && count <= 4) return 'локации';
+  if (count % 10 === 1 && count % 100 !== 11) return 'локация';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'локации';
   return 'локаций';
 }

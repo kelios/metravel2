@@ -314,16 +314,78 @@ const WebMapComponent = ({
         lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 
     const markerIcon = useMemo(() => {
-        if (!L) return null;
-        return new (L as any).Icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
-            iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
+        if (!L || typeof L.divIcon !== 'function') return null;
+        const bg = DESIGN_TOKENS.colors.mapPin;
+        const html = `
+          <div style="
+            position: relative;
+            width: 34px;
+            height: 46px;
+            box-sizing: border-box;
+            pointer-events: none;
+            user-select: none;
+          ">
+            <div style="
+              position: absolute;
+              top: 0;
+              left: 50%;
+              width: 26px;
+              height: 26px;
+              transform: translateX(-50%) rotate(-45deg);
+              transform-origin: 50% 50%;
+              background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 55%), ${bg};
+              border: none;
+              outline: none;
+              border-radius: 50% 50% 50% 0;
+              box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+              box-sizing: border-box;
+            "></div>
+            <div style="
+              position: absolute;
+              top: 9px;
+              left: 50%;
+              width: 10px;
+              height: 10px;
+              margin-left: -5px;
+              background: rgba(255,255,255,0.96);
+              border-radius: 50%;
+              z-index: 1;
+              box-sizing: border-box;
+            "></div>
+            <div style="
+              position: absolute;
+              top: 11px;
+              left: 50%;
+              width: 6px;
+              height: 6px;
+              margin-left: -3px;
+              background: ${bg};
+              border-radius: 50%;
+              z-index: 2;
+              box-sizing: border-box;
+            "></div>
+            <div style="
+              position: absolute;
+              top: 4px;
+              left: 50%;
+              width: 10px;
+              height: 6px;
+              margin-left: -5px;
+              background: rgba(255,255,255,0.35);
+              border-radius: 999px;
+              transform: rotate(-20deg);
+              z-index: 3;
+              filter: blur(0.2px);
+              box-sizing: border-box;
+            "></div>
+          </div>
+        `;
+        return L.divIcon({
+            className: 'metravel-pin-marker',
+            html,
+            iconSize: [34, 46],
+            iconAnchor: [17, 42],
             popupAnchor: [0, -41],
-            shadowSize: [41, 41],
-            shadowAnchor: [12, 41],
         });
     }, [L]);
 

@@ -17,6 +17,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import SubscribeButton from '@/components/ui/SubscribeButton';
+import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
 
 interface AuthorCardProps {
   travel: Travel;
@@ -291,7 +292,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
               <SafeView style={styles.statsRow}>
                 <Feather name="map" size={16} color={colors.textMuted} />
                 <Text style={[styles.statsText, { color: colors.textSecondary }]}>
-                  {travelsCount} {travelsCount === 1 ? 'путешествие' : travelsCount < 5 ? 'путешествия' : 'путешествий'}
+                  {travelsCount} {getTravelLabel(travelsCount)}
                 </Text>
               </SafeView>
             )}

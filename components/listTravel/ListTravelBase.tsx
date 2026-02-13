@@ -81,6 +81,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     width: '100%',
     borderRightWidth: 0,
     borderBottomWidth: 1,
+    ...(Platform.OS === 'web' ? ({
+      position: 'fixed' as any,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 9000,
+      maxHeight: '100vh',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      borderBottomWidth: 0,
+    } as any) : {}),
   },
   listContainer: {
     paddingHorizontal: DESIGN_TOKENS.spacing.lg,
