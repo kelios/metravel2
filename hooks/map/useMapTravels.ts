@@ -249,8 +249,12 @@ export function useMapTravels({
       return pages.flat();
     }
 
+    // In route mode, only show data when route is actually built;
+    // otherwise placeholderData keeps stale results from the previous query.
+    if (!enabledRoute) return [];
+
     return routeQuery.data ?? [];
-  }, [queryParams.mode, radiusQuery.data?.pages, routeQuery.data]);
+  }, [queryParams.mode, radiusQuery.data?.pages, routeQuery.data, enabledRoute]);
 
   const isLoading = queryParams.mode === 'radius' ? radiusQuery.isLoading : routeQuery.isLoading;
   const isFetching = queryParams.mode === 'radius' ? radiusQuery.isFetching : routeQuery.isFetching;
