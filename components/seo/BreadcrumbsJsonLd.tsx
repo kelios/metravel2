@@ -27,15 +27,16 @@ export default function BreadcrumbsJsonLd({ model: modelProp, pathname: pathname
   const model = modelProp ?? hookModel;
 
   const itemListElement = useMemo(() => {
-    if (!model.showBreadcrumbs || model.items.length === 0) return null;
-    const items = [{ label: 'Главная', path: '/' }, ...model.items];
+    const modelItems = model?.items ?? [];
+    if (!model?.showBreadcrumbs || modelItems.length === 0) return null;
+    const items = [{ label: 'Главная', path: '/' }, ...modelItems];
     return items.map((item, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       name: item.label,
       item: toAbsoluteUrl(item.path),
     }));
-  }, [model.items, model.showBreadcrumbs]);
+  }, [model?.items, model?.showBreadcrumbs]);
 
   if (!itemListElement) return null;
 

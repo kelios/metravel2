@@ -117,7 +117,7 @@ function ChatView({
     );
 
     const listItems = useMemo((): ChatListItem[] => {
-        const sorted = [...messages].sort((a, b) => {
+        const sorted = [...(messages || [])].sort((a, b) => {
             const da = a.created_at ? new Date(a.created_at).getTime() : 0;
             const db = b.created_at ? new Date(b.created_at).getTime() : 0;
             return db - da;

@@ -388,10 +388,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      <meta charSet="utf-8" />
 	      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
 	      <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=5" />
-	      <meta
-	        name="description"
-	        content="MeTravel: маршруты, заметки и фото путешествий в одном месте."
-	      />
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorDark} media="(prefers-color-scheme: dark)" />
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorLight} media="(prefers-color-scheme: light)" />
 	      <meta name="color-scheme" content="light dark" />
@@ -404,6 +400,46 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
       
       {!isProduction && <meta name="robots" content="noindex,nofollow" />}
+
+      {/* Schema.org structured data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [
+              {
+                '@type': 'Organization',
+                '@id': 'https://metravel.by/#organization',
+                name: 'MeTravel',
+                url: 'https://metravel.by',
+                logo: {
+                  '@type': 'ImageObject',
+                  url: 'https://metravel.by/assets/icons/logo_yellow.png',
+                },
+                sameAs: [],
+              },
+              {
+                '@type': 'WebSite',
+                '@id': 'https://metravel.by/#website',
+                url: 'https://metravel.by',
+                name: 'MeTravel',
+                description: 'Маршруты, заметки и фото путешествий по Беларуси',
+                publisher: { '@id': 'https://metravel.by/#organization' },
+                inLanguage: 'ru',
+                potentialAction: {
+                  '@type': 'SearchAction',
+                  target: {
+                    '@type': 'EntryPoint',
+                    urlTemplate: 'https://metravel.by/search?q={search_term_string}',
+                  },
+                  'query-input': 'required name=search_term_string',
+                },
+              },
+            ],
+          }),
+        }}
+      />
 
       {/* Resource hints - only the 2 most critical origins (dns-prefetch removed: preconnect implies it).
           images.weserv.nl preconnect deferred to when content images actually load. */}

@@ -354,8 +354,8 @@ export default function FavoritesScreen() {
                                 style={[
                                     styles.gridItem,
                                     isCardsSingleColumn
-                                        ? { flex: 1, width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%' }
-                                        : { flexGrow: 0, flexShrink: 0, flexBasis: calcWidth, width: calcWidth, maxWidth: calcWidth, minWidth: 0 },
+                                        ? { flex: 1, width: '100%', maxWidth: '100%', minWidth: 0, flexBasis: '100%' as any }
+                                        : { flexGrow: 0, flexShrink: 0, flexBasis: calcWidth as any, width: calcWidth as any, maxWidth: calcWidth as any, minWidth: 0 },
                                 ]}
                             >
                                 <TabTravelCard

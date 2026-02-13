@@ -203,7 +203,8 @@ export const updateUserStats = async (updates: Partial<UserStats>) => {
 const checkAndAwardBadges = async (stats: UserStats) => {
   try {
     const badgesData = await AsyncStorage.getItem(STORAGE_KEY_BADGES);
-    const earnedBadges: string[] = badgesData ? JSON.parse(badgesData) : [];
+    const rawBadges = badgesData ? JSON.parse(badgesData) : [];
+    const earnedBadges: string[] = Array.isArray(rawBadges) ? rawBadges : [];
 
     const newBadges: string[] = [];
 

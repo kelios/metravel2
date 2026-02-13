@@ -35,7 +35,7 @@ import {
   CategoryDictionaryItem,
 } from '@/utils/userPointsCategories';
 import { getPointCategoryIds, getPointCategoryNames } from '@/utils/travelPointMeta';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks';
 
 type Point = {
   id: string;
@@ -594,7 +594,7 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, travelName, onPo
     if (Platform.OS !== 'web') {
       for (const deeplink of tgDeepLinks) {
         try {
-          const opened = await openSafeExternalUrl(deeplink, {
+          const opened = await openExternalUrl(deeplink, {
             allowedProtocols: ['http:', 'https:', 'tg:'],
           });
           if (opened) {

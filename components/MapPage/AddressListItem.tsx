@@ -18,7 +18,7 @@ import PlaceListCard from '@/components/places/PlaceListCard';
 import Feather from '@expo/vector-icons/Feather';
 import { useResponsive } from '@/hooks/useResponsive';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
-import { openExternalUrlInNewTab } from '@/utils/externalLinks';
+import { openExternalUrlInNewTab, openExternalUrl } from '@/utils/externalLinks';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { getDistanceInfo } from '@/utils/distanceCalculator';
 import { showToast } from '@/utils/toast';
@@ -225,7 +225,7 @@ const AddressListItem: React.FC<Props> = ({
         if (Platform.OS !== 'web') {
           for (const dl of deeplinks) {
               try {
-                  const opened = await openSafeExternalUrl(dl, { allowedProtocols: ['http:', 'https:', 'tg:'] });
+                  const opened = await openExternalUrl(dl, { allowedProtocols: ['http:', 'https:', 'tg:'] });
                   if (opened) {
                       return;
                   }

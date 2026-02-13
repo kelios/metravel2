@@ -186,7 +186,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             const data = await AsyncStorage.getItem(key);
             if (data) {
                 const parsed = safeJsonParseString(data, []);
-                set({ favorites: cleanupInvalidFavorites(parsed) });
+                set({ favorites: cleanupInvalidFavorites(Array.isArray(parsed) ? parsed : []) });
             }
         } catch (error) {
             devError('Ошибка загрузки избранного:', error);
@@ -200,7 +200,7 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
             const raw = await AsyncStorage.getItem(key);
             if (raw) {
                 const parsed = safeJsonParseString(raw, []);
-                const normalized = parsed.map((item: any) => ({
+                const normalized = (Array.isArray(parsed) ? parsed : []).filter(Boolean).map((item: any) => ({
                     ...item,
                     country: item.country ?? item.countryName ?? undefined,
                 }));

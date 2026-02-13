@@ -169,7 +169,7 @@ function ConsentBanner() {
             variant="outline"
             size="sm"
             style={[styles.button, { borderColor: colors.border, borderWidth: 1, backgroundColor: 'transparent' }]}
-            accessibilityLabel="Только необходимые"
+            accessibilityLabel="Отклонить"
           />
           <Button
             label="Принять"
@@ -177,7 +177,7 @@ function ConsentBanner() {
             variant="primary"
             size="sm"
             style={[styles.button, { backgroundColor: colors.primary }]}
-            accessibilityLabel="Принять всё"
+            accessibilityLabel="Принять"
           />
         </View>
       </View>

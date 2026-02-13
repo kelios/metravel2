@@ -107,10 +107,10 @@ export const commentsApi = {
     // points to a *thread* ID that contains its replies, NOT a parent comment
     // ID.  We must fetch those sub-threads to display the full conversation.
     const fetched = new Set<number>(typeof threadId === 'number' ? [threadId] : []);
-    const allComments = [...rootComments];
+    const allComments = [...(rootComments || [])];
     const queue: number[] = [];
 
-    for (const c of rootComments) {
+    for (const c of (rootComments || [])) {
       if (typeof c.sub_thread === 'number' && c.sub_thread > 0 && !fetched.has(c.sub_thread)) {
         queue.push(c.sub_thread);
         fetched.add(c.sub_thread);

@@ -268,7 +268,8 @@ function AccountMenu() {
           onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
           onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
           accessibilityRole="button"
-          accessibilityLabel={`Открыть меню аккаунта ${anchorLabel}`}
+          accessibilityLabel={anchorLabel}
+          accessibilityHint="Открыть меню аккаунта"
           accessibilityState={{ expanded: visible }}
           style={({ pressed }) => [
             styles.anchor,

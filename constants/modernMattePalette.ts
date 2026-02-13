@@ -53,25 +53,25 @@ export const MODERN_MATTE_PALETTE = {
   // ==========================================
   // ФУНКЦИОНАЛЬНЫЕ ЦВЕТА (мягкие, не агрессивные)
   // ==========================================
-  success: '#7a9d8a', // Матовый приглушенный зеленый
-  successDark: '#6a8d7a',
+  success: '#527d66', // Матовый приглушенный зеленый (WCAG AA: 4.57:1)
+  successDark: '#426d56',
   successLight: '#f0f5f2',
-  successSoft: 'rgba(122, 157, 138, 0.08)',
+  successSoft: 'rgba(82, 125, 102, 0.08)',
   
-  warning: '#b5a88a', // Матовый бежевый
-  warningDark: '#a5987a',
+  warning: '#7d7250', // Матовый бежевый (WCAG AA: 4.66:1)
+  warningDark: '#6d6240',
   warningLight: '#f5f3f0',
-  warningSoft: 'rgba(181, 168, 138, 0.08)',
+  warningSoft: 'rgba(125, 114, 80, 0.08)',
   
-  danger: '#b89090', // Матовый приглушенный розовый
-  dangerDark: '#a88080',
+  danger: '#9a6363', // Матовый приглушенный розовый (WCAG AA: 4.72:1)
+  dangerDark: '#8a5353',
   dangerLight: '#f5f0f0',
-  dangerSoft: 'rgba(184, 144, 144, 0.08)',
+  dangerSoft: 'rgba(154, 99, 99, 0.08)',
   
-  info: '#8a9db0', // Матовый серо-голубой
-  infoDark: '#7a8da0',
+  info: '#557588', // Матовый серо-голубой (WCAG AA: 4.78:1)
+  infoDark: '#456578',
   infoLight: '#f0f3f5',
-  infoSoft: 'rgba(138, 157, 176, 0.08)',
+  infoSoft: 'rgba(85, 117, 136, 0.08)',
   
   // ==========================================
   // ГРАНИЦЫ (мягкие, матовые, с лучшей четкостью)

@@ -28,7 +28,7 @@ export const useRecommendationsStore = create<RecommendationsState>((set, get) =
         if (isAuthenticated && userId) {
             return get().recommended;
         }
-        return [...favorites].sort((a, b) => b.addedAt - a.addedAt);
+        return [...(favorites || [])].sort((a, b) => b.addedAt - a.addedAt);
     },
 
     loadServerCached: async (userId) => {
@@ -38,7 +38,7 @@ export const useRecommendationsStore = create<RecommendationsState>((set, get) =
             const raw = await AsyncStorage.getItem(key);
             if (raw) {
                 const parsed = safeJsonParseString(raw, []);
-                const normalized = parsed.map((item: any) => ({
+                const normalized = (Array.isArray(parsed) ? parsed : []).filter(Boolean).map((item: any) => ({
                     ...item,
                     country: item.country ?? item.countryName ?? undefined,
                 }));
