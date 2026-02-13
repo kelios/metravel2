@@ -35,9 +35,12 @@ export function useListTravelExport(
   const pdfExport = usePdfExport(selected, pdfConfig);
 
   useEffect(() => {
-    if (!selected.length) return;
-    setSelected((prev) => prev.filter((travel) => travels.some((item) => item.id === travel.id)));
-  }, [travels, selected.length]);
+    setSelected((prev) => {
+      if (!prev.length) return prev;
+      const next = prev.filter((travel) => travels.some((item) => item.id === travel.id));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [travels]);
 
   const toggleSelect = useCallback((travel: Travel) => {
     setSelected((prev) =>

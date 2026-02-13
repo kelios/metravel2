@@ -15,6 +15,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
 
 const FilterCheckbox = memo(({ checked, checkboxStyle, checkboxCheckedStyle, checkColor }: {
   checked: boolean;
@@ -159,16 +160,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
   const resultsText = useMemo(() => {
     if (typeof resultsCount !== 'number') return '';
-    const count = resultsCount;
-    const mod10 = count % 10;
-    const mod100 = count % 100;
-    let noun = 'путешествий';
-    if (mod10 === 1 && mod100 !== 11) {
-      noun = 'путешествие';
-    } else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-      noun = 'путешествия';
-    }
-    return `Найдено ${count} ${noun}`;
+    return `Найдено ${resultsCount} ${getTravelLabel(resultsCount)}`;
   }, [resultsCount]);
 
   const showResultsBadge =
@@ -869,4 +861,4 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => {
   });
 };
 
-export default memo(ModernFilters);
+export default ModernFilters;

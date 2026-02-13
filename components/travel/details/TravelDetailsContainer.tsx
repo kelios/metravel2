@@ -621,7 +621,6 @@ export default function TravelDetailsContainer() {
                           anchors={anchors}
                           scrollY={scrollY}
                           viewportHeight={viewportHeight}
-                          scrollRef={scrollRef}
                           scrollToMapSection={scrollToMapSection}
                         />
                       </Suspense>

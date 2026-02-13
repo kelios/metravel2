@@ -93,7 +93,6 @@ export const TravelDeferredSections: React.FC<{
   anchors: AnchorsMap
   scrollY: Animated.Value
   viewportHeight: number
-  scrollRef: any
   scrollToMapSection: () => void
 }> = memo(({
   travel,
@@ -102,7 +101,6 @@ export const TravelDeferredSections: React.FC<{
   anchors,
   scrollY,
   viewportHeight,
-  scrollRef,
   scrollToMapSection,
 }) => {
   const [canRenderHeavy, setCanRenderHeavy] = useState(false)
@@ -201,7 +199,6 @@ export const TravelDeferredSections: React.FC<{
           isMobile={isMobile}
           anchors={anchors}
           forceOpenKey={forceOpenKey}
-          scrollRef={scrollRef}
         />
       </Suspense>
 

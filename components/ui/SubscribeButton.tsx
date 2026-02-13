@@ -55,8 +55,8 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, iconOnly }
     const originalHandlePress = handlePress;
     const animatedHandlePress = useCallback(() => {
         Animated.sequence([
-            Animated.timing(scaleAnim, { toValue: 0.95, duration: 75, useNativeDriver: true }),
-            Animated.timing(scaleAnim, { toValue: 1, duration: 75, useNativeDriver: true }),
+            Animated.timing(scaleAnim, { toValue: 0.95, duration: 75, useNativeDriver: Platform.OS !== 'web' }),
+            Animated.timing(scaleAnim, { toValue: 1, duration: 75, useNativeDriver: Platform.OS !== 'web' }),
         ]).start();
         originalHandlePress();
     }, [scaleAnim, originalHandlePress]);

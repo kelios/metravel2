@@ -31,19 +31,7 @@ import { useListTravelExport } from './hooks/useListTravelExport'
 import { calculateColumns } from './utils/listTravelHelpers'
 import { ExportBar } from './ExportBar'
 import { createStyles } from './listTravelStyles'
-
-// Simple delete function implementation
-const deleteTravel = async (id: string): Promise<void> => {
-    const raw = process.env.EXPO_PUBLIC_API_URL || '';
-    const trimmed = raw.replace(/\/+$/, '');
-    const normalized = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-    const response = await fetch(`${normalized}/travels/${id}/`, {
-        method: 'DELETE',
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to delete travel: ${response.statusText}`);
-    }
-};
+import { deleteTravel } from '@/api/travelsApi'
 
 const MemoizedTravelItem = memo(RenderTravelItem);
 

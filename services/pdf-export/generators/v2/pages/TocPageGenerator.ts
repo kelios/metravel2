@@ -3,6 +3,7 @@
 
 import { BasePageGenerator } from './PageGenerator';
 import type { PageContext } from '../types';
+import { getTravelLabel } from '../../../utils/pluralize';
 
 interface TravelSectionMeta {
   travel: any;
@@ -96,7 +97,7 @@ export class TocPageGenerator extends BasePageGenerator {
             font-size: ${typography.body.size};
             font-family: ${typography.bodyFont};
             margin: 0 0 10px 0;
-          ">${this.meta.length} ${this.getTravelLabel(this.meta.length)}</p>
+          ">${this.meta.length} ${getTravelLabel(this.meta.length)}</p>
         </div>
 
         <div style="
@@ -120,16 +121,4 @@ export class TocPageGenerator extends BasePageGenerator {
     `;
   }
 
-  /**
-   * Получает правильную форму слова "путешествие"
-   */
-  private getTravelLabel(count: number): string {
-    const forms = ['путешествие', 'путешествия', 'путешествий'];
-    const cases = [2, 0, 1, 1, 1, 2];
-    return forms[
-      count % 100 > 4 && count % 100 < 20
-        ? 2
-        : cases[Math.min(count % 10, 5)]
-    ];
-  }
 }

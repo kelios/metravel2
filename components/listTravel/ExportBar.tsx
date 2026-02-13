@@ -4,12 +4,7 @@ import UIButton from '@/components/ui/Button';
 import ProgressIndicator from '@/components/ui/ProgressIndicator';
 import { createStyles } from './listTravelStyles';
 import { useThemedColors } from '@/hooks/useTheme';
-
-const pluralizeTravels = (count: number) => {
-  if (count % 10 === 1 && count % 100 !== 11) return 'путешествие';
-  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'путешествия';
-  return 'путешествий';
-};
+import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
 
 export const ExportBar = memo(function ExportBar({
   isMobile,
@@ -41,7 +36,7 @@ export const ExportBar = memo(function ExportBar({
   const colors = useThemedColors();
   const resolvedStyles = useMemo(() => styles ?? createStyles(colors), [colors, styles]);
   const selectionText = selectedCount
-    ? `Выбрано ${selectedCount} ${pluralizeTravels(selectedCount)}`
+    ? `Выбрано ${selectedCount} ${getTravelLabel(selectedCount)}`
     : 'Выберите путешествия для экспорта';
 
   return (
@@ -78,7 +73,7 @@ export const ExportBar = memo(function ExportBar({
 
       <View style={[resolvedStyles.exportBarButtons, isMobile && resolvedStyles.exportBarButtonsMobile]}>
         <UIButton
-          label={isGenerating ? `Генерация... ${progress || 0}%` : isMobile ? 'Сохранить PDF' : 'Сохранить PDF'}
+          label={isGenerating ? `Генерация... ${progress || 0}%` : 'Сохранить PDF'}
           onPress={onSave}
           disabled={!hasSelection || isGenerating}
         />

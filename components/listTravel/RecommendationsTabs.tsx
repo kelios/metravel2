@@ -977,4 +977,4 @@ const createStyles = (
   },
 });
 
-export default memo(RecommendationsTabs);
+export default RecommendationsTabs;

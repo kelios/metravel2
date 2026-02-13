@@ -18,6 +18,15 @@ export function formatDays(days?: number | null): string {
 }
 
 /**
+ * Склонение «день»: возвращает только слово — «день», «дня», «дней»
+ */
+export function getDayLabel(count: number): string {
+  if (count % 10 === 1 && count % 100 !== 11) return 'день';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return 'дня';
+  return 'дней';
+}
+
+/**
  * Склонение «путешествие»: «1 путешествие», «3 путешествия», «5 путешествий»
  */
 export function getTravelLabel(count: number): string {

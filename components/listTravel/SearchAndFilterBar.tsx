@@ -11,6 +11,7 @@ import { METRICS } from '@/constants/layout';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createSearchAndFilterBarStyles } from './searchAndFilterBarStyles';
+import { getTravelLabel } from '@/services/pdf-export/utils/pluralize';
 
 const spacing = DESIGN_TOKENS.spacing;
 
@@ -53,11 +54,7 @@ function SearchAndFilterBar({
     const showResultsInfo = resultsCount !== undefined && hasActiveSearchOrFilters;
     const resultsNoun = useMemo(() => {
         if (resultsCount === undefined) return "";
-        const mod10 = resultsCount % 10;
-        const mod100 = resultsCount % 100;
-        if (mod10 === 1 && mod100 !== 11) return "путешествие";
-        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "путешествия";
-        return "путешествий";
+        return getTravelLabel(resultsCount);
     }, [resultsCount]);
 
     // Локальное состояние с синхронизацией от внешнего пропса

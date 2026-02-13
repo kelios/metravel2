@@ -30,6 +30,7 @@ import { useListTravelVisibility } from './hooks/useListTravelVisibility'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
 import { calculateColumns } from './utils/listTravelHelpers'
+import { deleteTravel } from '@/api/travelsApi'
 
 // ✅ ДИЗАЙН: Создание динамических стилей с useThemedColors
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
@@ -280,19 +281,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
   },
 });
-
-// Simple delete function implementation
-const deleteTravel = async (id: string): Promise<void> => {
-    const raw = process.env.EXPO_PUBLIC_API_URL || '';
-    const trimmed = raw.replace(/\/+$/, '');
-    const normalized = trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
-    const response = await fetch(`${normalized}/travels/${id}/`, {
-        method: 'DELETE',
-    });
-    if (!response.ok) {
-        throw new Error(`Failed to delete travel: ${response.statusText}`);
-    }
-};
 
 const MemoizedTravelItem = memo(RenderTravelItem);
 

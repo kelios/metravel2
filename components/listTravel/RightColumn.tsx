@@ -120,41 +120,8 @@ const RightColumn: React.FC<RightColumnProps> = memo(
    }) => {
     const localListRef = useRef<any>(null)
     const listRef = externalListRef ?? localListRef
-    const recommendationsOffsetRef = useRef(0)
-    const prevVisibilityRef = useRef(isRecommendationsVisible)
-
-    // ✅ CLS FIX P1: Remove auto-scroll to recommendations to prevent perceived layout shift
-    // Auto-scrolling can look like a "jump" and confuse users about layout stability
-    // const scrollToRecommendations = useCallback(() => {
-    //   const target = Math.max(recommendationsOffsetRef.current - 16, 0)
-    //   listRef.current?.scrollToOffset({ offset: target, animated: true })
-    //   shouldScrollRef.current = false
-    // }, [])
-
-    const handleRecommendationsLayout = useCallback((event: LayoutChangeEvent) => {
-      recommendationsOffsetRef.current = event.nativeEvent.layout.y
-      // ✅ CLS FIX P1: Remove auto-scroll logic to prevent layout shift perception
-      // if (shouldScrollRef.current) {
-      //   shouldScrollRef.current = false
-      //   scrollToRecommendations()
-      // }
-    }, []) // Removed scrollToRecommendations dependency
-
-    useEffect(() => {
-      // ✅ CLS FIX P1: Completely remove auto-scroll behavior when recommendations become visible
-      // This prevents any perceived "jumping" that could be mistaken for layout shift
-      // if (isRecommendationsVisible && !prevVisibilityRef.current) {
-      //   if (recommendationsOffsetRef.current > 0) {
-      //     scrollToRecommendations()
-      //   } else {
-      //     shouldScrollRef.current = true
-      //   }
-      // } else {
-      //   shouldScrollRef.current = false
-      // }
-
-      prevVisibilityRef.current = isRecommendationsVisible
-    }, [isRecommendationsVisible]) // Removed scrollToRecommendations dependency
+    const handleRecommendationsLayout = useCallback((_event: LayoutChangeEvent) => {
+    }, [])
 
     const webWidth = Platform.OS === 'web' ? Dimensions.get('window').width : 0
     const isWebMobile = Platform.OS === 'web' && (isMobile || webWidth <= 420)

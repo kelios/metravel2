@@ -5,6 +5,7 @@ import { BasePageGenerator } from './PageGenerator';
 import type { PageContext } from '../types';
 import { ImageProcessor } from '../processors/ImageProcessor';
 import type { TravelQuote } from '../../../quotes/travelQuotes';
+import { getTravelLabel } from '../../../utils/pluralize';
 
 /**
  * Генератор обложки книги
@@ -23,7 +24,7 @@ export class CoverPageGenerator extends BasePageGenerator {
 
     const travelCount = travels.length;
     const userName = travels[0]?.userName || 'Аноним';
-    const travelLabel = this.getTravelLabel(travelCount);
+    const travelLabel = getTravelLabel(travelCount);
     const yearRange = this.getYearRange(travels);
 
     // Обрабатываем изображение обложки
@@ -232,19 +233,6 @@ export class CoverPageGenerator extends BasePageGenerator {
     const min = years[0];
     const max = years[years.length - 1];
     return min === max ? String(min) : `${min}–${max}`;
-  }
-
-  /**
-   * Получает правильную форму слова "путешествие"
-   */
-  private getTravelLabel(count: number): string {
-    const forms = ['путешествие', 'путешествия', 'путешествий'];
-    const cases = [2, 0, 1, 1, 1, 2];
-    return forms[
-      count % 100 > 4 && count % 100 < 20
-        ? 2
-        : cases[Math.min(count % 10, 5)]
-    ];
   }
 
   /**

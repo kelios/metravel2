@@ -80,12 +80,12 @@ function FavoriteButton({
                 Animated.timing(pulseAnim, {
                     toValue: 1.3,
                     duration: 150,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
                 Animated.timing(pulseAnim, {
                     toValue: 1,
                     duration: 150,
-                    useNativeDriver: true,
+                    useNativeDriver: Platform.OS !== 'web',
                 }),
             ]).start();
         }

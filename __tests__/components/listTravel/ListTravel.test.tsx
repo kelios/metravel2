@@ -93,6 +93,7 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('@/api/travelsApi', () => ({
   fetchTravels: jest.fn(() => Promise.resolve({ data: [], total: 0, hasMore: false })),
+  deleteTravel: jest.fn(() => Promise.resolve(null)),
 }));
 
 jest.mock('@/api/misc', () => ({
@@ -216,7 +217,6 @@ describe('ListTravel', () => {
   });
 
   it('shows timeout error message when deleteTravel fails with timeout on web', async () => {
-    // Test the delete functionality directly by mocking the component's internal state
     const travelsApi: any = require('@/api/travelsApi');
     travelsApi.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 1, title: 'Test travel' }],
@@ -224,8 +224,7 @@ describe('ListTravel', () => {
       hasMore: false,
     });
 
-    const fetchMock = (global as any).fetch as jest.Mock;
-    fetchMock.mockRejectedValueOnce(new Error('timeout: request timeout'));
+    travelsApi.deleteTravel.mockRejectedValueOnce(new Error('timeout: request timeout'));
 
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
@@ -251,7 +250,6 @@ describe('ListTravel', () => {
   });
 
   it('shows access denied error message when deleteTravel fails with 403 on web', async () => {
-    // Test the delete functionality directly by mocking the component's internal state
     const travelsApi: any = require('@/api/travelsApi');
     travelsApi.fetchTravels.mockResolvedValueOnce({
       data: [{ id: 2, title: 'Another travel' }],
@@ -259,8 +257,7 @@ describe('ListTravel', () => {
       hasMore: false,
     });
 
-    const fetchMock = (global as any).fetch as jest.Mock;
-    fetchMock.mockRejectedValueOnce(new Error('403: access denied'));
+    travelsApi.deleteTravel.mockRejectedValueOnce(new Error('403: access denied'));
 
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
@@ -293,11 +290,10 @@ describe('ListTravel', () => {
       hasMore: false,
     });
 
+    travelsApi.deleteTravel.mockResolvedValueOnce(null);
+
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
-
-    const fetchMock = (global as any).fetch as jest.Mock;
-    fetchMock.mockResolvedValueOnce({ ok: true, statusText: 'OK' });
 
     const confirmSpy = (globalThis as any).confirm as jest.Mock;
     confirmSpy.mockReturnValueOnce(true);
@@ -309,11 +305,8 @@ describe('ListTravel', () => {
     });
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(fetchMock).toHaveBeenCalledWith(
-        expect.stringContaining('/api/travels/10/'),
-        expect.objectContaining({ method: 'DELETE' }),
-      );
+      expect(travelsApi.deleteTravel).toHaveBeenCalledTimes(1);
+      expect(travelsApi.deleteTravel).toHaveBeenCalledWith('10');
     });
 
     (Platform as any).OS = originalOS;

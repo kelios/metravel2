@@ -11,6 +11,7 @@ import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { withLazy } from '../TravelDetailsLazy'
 import { CollapsibleSection } from './CollapsibleSection'
 import { LazyYouTube } from './LazyYouTubeSection'
+import { getDayLabel } from '@/services/pdf-export/utils/pluralize'
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
 
@@ -30,8 +31,7 @@ export const TravelDetailsContentSection: React.FC<{
   isMobile: boolean
   forceOpenKey: string | null
   anchors: AnchorsMap
-  scrollRef: any
-}> = ({ travel, isMobile, anchors, forceOpenKey, scrollRef }) => {
+}> = ({ travel, isMobile, anchors, forceOpenKey }) => {
   const styles = useTravelDetailsStyles()
   type InsightKey = 'recommendation' | 'plus' | 'minus'
 
@@ -60,6 +60,13 @@ export const TravelDetailsContentSection: React.FC<{
       ].filter(Boolean) as Array<{ key: InsightKey; label: string; charCount: number }>,
     [hasRecommendation, hasPlus, hasMinus, travel.recommendation, travel.plus, travel.minus]
   )
+
+  const readingTimeLabel = useMemo(() => {
+    if (!travel.description) return ''
+    const wordCount = travel.description.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length
+    const minutes = Math.max(1, Math.ceil(wordCount / 200))
+    return ` · ~${minutes} мин чтения`
+  }, [travel.description])
 
   const shouldUseMobileInsights = isMobile && insightConfigs.length > 0
   const [mobileInsightKey, setMobileInsightKey] = useState<InsightKey | null>(() =>
@@ -102,67 +109,6 @@ export const TravelDetailsContentSection: React.FC<{
     [mobileInsightKey, shouldUseMobileInsights]
   )
 
-  const _scrollToTop = useCallback(() => {
-    try {
-      const scrollViewAny = scrollRef.current as any
-      const node: any =
-        (typeof scrollViewAny?.getScrollableNode === 'function' && scrollViewAny.getScrollableNode()) ||
-        scrollViewAny?._scrollNode ||
-        scrollViewAny?._innerViewNode ||
-        scrollViewAny?._nativeNode ||
-        scrollViewAny?._domNode ||
-        null
-
-      if (node) {
-        const before = Number(node.scrollTop ?? 0)
-        let didCall = false
-        try {
-          if (typeof node.scrollTo === 'function') {
-            node.scrollTo({ top: 0, behavior: 'smooth' })
-            didCall = true
-          }
-        } catch {
-          void 0
-        }
-
-        try {
-          const afterObj = Number(node.scrollTop ?? 0)
-          if (typeof node.scrollTo === 'function' && (!didCall || Math.abs(afterObj - before) < 1)) {
-            node.scrollTo(0, 0)
-            didCall = true
-          }
-        } catch {
-          void 0
-        }
-
-        try {
-          const afterNum = Number(node.scrollTop ?? 0)
-          if (!didCall || Math.abs(afterNum - before) < 1) {
-            node.scrollTop = 0
-          }
-        } catch {
-          void 0
-        }
-
-        return
-      }
-    } catch {
-      void 0
-    }
-
-    if (typeof window !== 'undefined') {
-      try {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-      } catch {
-        try {
-          window.scrollTo(0, 0)
-        } catch {
-          void 0
-        }
-      }
-    }
-  }, [scrollRef])
-
   return (
     <>
       {travel.description && (
@@ -185,25 +131,11 @@ export const TravelDetailsContentSection: React.FC<{
                 <View style={styles.descriptionIntroWrapper}>
                   <Text style={styles.descriptionIntroTitle}>Описание маршрута</Text>
                   <Text style={styles.descriptionIntroText}>
-                    {`${travel.number_days || 0} ${
-                      (() => {
-                        const n = travel.number_days || 0
-                        const mod10 = n % 10
-                        const mod100 = n % 100
-                        if (mod100 >= 11 && mod100 <= 14) return 'дней'
-                        if (mod10 === 1) return 'день'
-                        if (mod10 >= 2 && mod10 <= 4) return 'дня'
-                        return 'дней'
-                      })()
-                    }`}
+                    {`${travel.number_days || 0} ${getDayLabel(travel.number_days || 0)}`}
                     {travel.countryName ? ` · ${travel.countryName}` : ''}
                     {travel.monthName ? ` · лучший сезон: ${travel.monthName.toLowerCase()}` : ''}
                     {/* P2-2: Оценка времени чтения */}
-                    {travel.description ? (() => {
-                      const wordCount = travel.description.replace(/<[^>]*>/g, ' ').split(/\s+/).filter(Boolean).length
-                      const minutes = Math.max(1, Math.ceil(wordCount / 200))
-                      return ` · ~${minutes} мин чтения`
-                    })() : ''}
+                    {readingTimeLabel}
                   </Text>
                 </View>
 
