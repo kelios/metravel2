@@ -268,41 +268,41 @@ jobs:
         run: node scripts/summarize-validator-guard.js --file test-results/validator-guard.json
 
       - name: Download lint report
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: eslint-results
           path: test-results/lint
-          if-no-artifact-found: ignore
 
       - name: Download runtime config diagnostics report
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: runtime-config-diagnostics
           path: test-results/runtime-config
-          if-no-artifact-found: ignore
 
       - name: Download smoke report
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: jest-smoke-results
           path: test-results/smoke
-          if-no-artifact-found: ignore
 
       - name: Download schema selective decision
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: schema-selective-decision
           path: test-results/selective/schema
-          if-no-artifact-found: ignore
 
       - name: Download validator selective decision
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: validator-selective-decision
           path: test-results/selective/validator
-          if-no-artifact-found: ignore
 
       - name: Validate downloaded selective decisions (PR)
         if: github.event_name == 'pull_request'

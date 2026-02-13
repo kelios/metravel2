@@ -57,7 +57,7 @@ class MapErrorBoundary extends Component<Props, State> {
   /** Check if the error is a Metro module resolution failure (unrecoverable without reload). */
   private isModuleError(error: Error | null): boolean {
     const msg = String(error?.message ?? '');
-    return /requiring unknown module|cannot find module/i.test(msg);
+    return /requiring unknown module|cannot find module|loading module.*failed/i.test(msg);
   }
 
   handleReset = () => {

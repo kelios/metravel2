@@ -117,6 +117,8 @@ export const TravelDetailsSidebarSection: React.FC<{
         <View
           style={[styles.sectionContainer, styles.navigationArrowsContainer]}
           accessibilityLabel="Навигация по похожим маршрутам"
+          accessibilityRole="none"
+          role="navigation"
         >
           <Suspense fallback={null}>
             <NavigationArrows currentTravel={travel} relatedTravels={relatedTravels} />
