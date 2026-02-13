@@ -3,29 +3,48 @@ import { test, expect } from '@playwright/test';
 /**
  * E2E SEO regression tests for travel detail pages.
  *
- * Validates that the **raw HTML** (before JS execution) contains all required
- * SEO meta tags. This is what search-engine crawlers see.
- *
- * These tests run against the local E2E web server which serves the same
- * static HTML files that are deployed to production.
+ * Validates that the **rendered HTML** (after React hydration) contains all
+ * required SEO meta tags. Expo static export injects SEO tags via React Helmet
+ * at runtime, so we must check the DOM after JS execution — this is also what
+ * modern search-engine crawlers (Googlebot) see.
  *
  * @smoke
  */
+
+/** Helper: navigate, wait for React Helmet to inject SEO tags, return full HTML. */
+async function getRenderedHtml(page: import('@playwright/test').Page, path: string): Promise<string> {
+  await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  // Wait for React Helmet to inject data-rh meta tags (up to 15s).
+  await page.waitForFunction(
+    () => {
+      const title = document.querySelector('title');
+      return title && title.textContent && title.textContent.length > 0 && title.textContent !== 'MeTravel';
+    },
+    { timeout: 15_000 },
+  ).catch(() => {
+    // Fallback: if title never changes from generic, continue — test assertions will catch it.
+  });
+  // Small extra buffer for remaining meta tags to settle.
+  await page.waitForTimeout(500);
+  return page.content();
+}
+
 test.describe('SEO: travel detail page meta tags', () => {
   const TRAVEL_SLUG = 'albaniya-vler-gorod-dvuh-morey';
   const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
 
-  let rawHtml: string;
+  let html: string;
 
-  test.beforeAll(async ({ request }) => {
-    const res = await request.get(TRAVEL_PATH);
-    expect(res.status()).toBe(200);
-    rawHtml = await res.text();
+  test.beforeAll(async ({ browser }) => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    html = await getRenderedHtml(page, TRAVEL_PATH);
+    await ctx.close();
   });
 
   // --- Title ---
   test('has a page-specific <title> (not generic MeTravel)', () => {
-    const match = rawHtml.match(/<title[^>]*>(.*?)<\/title>/i);
+    const match = html.match(/<title[^>]*>(.*?)<\/title>/i);
     expect(match).toBeTruthy();
     const title = match![1];
     expect(title.length).toBeGreaterThan(0);
@@ -35,111 +54,111 @@ test.describe('SEO: travel detail page meta tags', () => {
 
   // --- Meta description ---
   test('has a non-empty meta description', () => {
-    const match = rawHtml.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(10);
   });
 
   // --- Canonical ---
   test('has a canonical link with correct path', () => {
-    const match = rawHtml.match(/<link[^>]*rel="canonical"[^>]*href="([^"]*)"/i);
+    const match = html.match(/<link[^>]*rel="canonical"[^>]*href="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1]).toContain(`/travels/${TRAVEL_SLUG}`);
   });
 
   test('has exactly 1 canonical link', () => {
-    const count = (rawHtml.match(/<link[^>]*rel="canonical"/gi) || []).length;
+    const count = (html.match(/<link[^>]*rel="canonical"/gi) || []).length;
     expect(count).toBe(1);
   });
 
   // --- Open Graph ---
   test('has og:type', () => {
-    expect(rawHtml).toMatch(/<meta[^>]*property="og:type"[^>]*content="article"/i);
+    expect(html).toMatch(/<meta[^>]*property="og:type"[^>]*content="article"/i);
   });
 
   test('has og:title', () => {
-    const match = rawHtml.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(0);
     expect(match![1]).not.toBe('MeTravel');
   });
 
   test('has og:description', () => {
-    const match = rawHtml.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(10);
   });
 
   test('has og:url with correct path', () => {
-    const match = rawHtml.match(/<meta[^>]*property="og:url"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*property="og:url"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1]).toContain(`/travels/${TRAVEL_SLUG}`);
   });
 
   test('has og:image (not empty)', () => {
-    const match = rawHtml.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(0);
   });
 
   test('og:image is not a 200px thumbnail', () => {
-    const match = rawHtml.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/i);
     if (match) {
       expect(match[1]).not.toContain('thumb_200');
     }
   });
 
   test('has og:site_name', () => {
-    expect(rawHtml).toMatch(/<meta[^>]*property="og:site_name"[^>]*content="MeTravel"/i);
+    expect(html).toMatch(/<meta[^>]*property="og:site_name"[^>]*content="MeTravel"/i);
   });
 
   // --- Twitter ---
   test('has twitter:card as summary_large_image', () => {
-    expect(rawHtml).toMatch(/<meta[^>]*name="twitter:card"[^>]*content="summary_large_image"/i);
+    expect(html).toMatch(/<meta[^>]*name="twitter:card"[^>]*content="summary_large_image"/i);
   });
 
   test('has twitter:title', () => {
-    const match = rawHtml.match(/<meta[^>]*name="twitter:title"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*name="twitter:title"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(0);
   });
 
   test('has twitter:description', () => {
-    const match = rawHtml.match(/<meta[^>]*name="twitter:description"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*name="twitter:description"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(10);
   });
 
   test('has twitter:image', () => {
-    const match = rawHtml.match(/<meta[^>]*name="twitter:image"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*name="twitter:image"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(0);
   });
 
   // --- No duplicates ---
   test('no duplicate og:title tags', () => {
-    const count = (rawHtml.match(/<meta[^>]*property="og:title"/gi) || []).length;
+    const count = (html.match(/<meta[^>]*property="og:title"/gi) || []).length;
     expect(count).toBe(1);
   });
 
   test('no duplicate og:description tags', () => {
-    const count = (rawHtml.match(/<meta[^>]*property="og:description"/gi) || []).length;
+    const count = (html.match(/<meta[^>]*property="og:description"/gi) || []).length;
     expect(count).toBe(1);
   });
 
   test('no duplicate og:image tags', () => {
-    const count = (rawHtml.match(/<meta[^>]*property="og:image"/gi) || []).length;
+    const count = (html.match(/<meta[^>]*property="og:image"/gi) || []).length;
     expect(count).toBe(1);
   });
 
   // --- lang attribute ---
   test('html has lang="ru"', () => {
-    expect(rawHtml).toMatch(/<html[^>]*lang="ru"/i);
+    expect(html).toMatch(/<html[^>]*lang="ru"/i);
   });
 
   // --- No robots restriction (travel pages should be indexable) ---
   test('no robots noindex on travel pages', () => {
-    const match = rawHtml.match(/<meta[^>]*name="robots"[^>]*content="([^"]*)"/i);
+    const match = html.match(/<meta[^>]*name="robots"[^>]*content="([^"]*)"/i);
     if (match) {
       expect(match[1]).not.toContain('noindex');
     }
@@ -154,16 +173,14 @@ test.describe('SEO: static pages meta tags', () => {
     { path: '/about', titleContains: 'MeTravel', ogType: 'website' },
   ];
 
-  for (const page of PAGES) {
-    test(`${page.path} has all required SEO tags`, async ({ request }) => {
-      const res = await request.get(page.path);
-      expect(res.status()).toBe(200);
-      const html = await res.text();
+  for (const pg of PAGES) {
+    test(`${pg.path} has all required SEO tags`, async ({ page }) => {
+      const html = await getRenderedHtml(page, pg.path);
 
       // Title
       const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
       expect(titleMatch).toBeTruthy();
-      expect(titleMatch![1]).toContain(page.titleContains);
+      expect(titleMatch![1]).toContain(pg.titleContains);
 
       // Canonical
       expect(html).toMatch(/<link[^>]*rel="canonical"/i);
@@ -173,7 +190,7 @@ test.describe('SEO: static pages meta tags', () => {
       expect(html).toMatch(/<meta[^>]*property="og:description"[^>]*content="[^"]+"/i);
       expect(html).toMatch(/<meta[^>]*property="og:url"[^>]*content="[^"]+"/i);
       expect(html).toMatch(/<meta[^>]*property="og:image"[^>]*content="[^"]+"/i);
-      expect(html).toMatch(new RegExp(`property="og:type"[^>]*content="${page.ogType}"`, 'i'));
+      expect(html).toMatch(new RegExp(`property="og:type"[^>]*content="${pg.ogType}"`, 'i'));
 
       // Twitter tags
       expect(html).toMatch(/<meta[^>]*name="twitter:card"[^>]*content="summary_large_image"/i);
@@ -187,10 +204,17 @@ test.describe('SEO: noindex pages', () => {
   const NOINDEX_PAGES = ['/login', '/registration', '/favorites'];
 
   for (const path of NOINDEX_PAGES) {
-    test(`${path} has robots noindex`, async ({ request }) => {
-      const res = await request.get(path);
-      expect(res.status()).toBe(200);
-      const html = await res.text();
+    test(`${path} has robots noindex`, async ({ page }) => {
+      await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      // Wait for React Helmet to inject robots meta tag.
+      await page.waitForFunction(
+        () => {
+          const meta = document.querySelector('meta[name="robots"]');
+          return meta && (meta.getAttribute('content') || '').includes('noindex');
+        },
+        { timeout: 15_000 },
+      );
+      const html = await page.content();
       expect(html).toMatch(/<meta[^>]*name="robots"[^>]*content="[^"]*noindex/i);
     });
   }

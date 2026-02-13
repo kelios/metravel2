@@ -142,7 +142,7 @@ function ConsentBanner() {
     <View
       style={[
         styles.wrapper,
-        { bottom: bottomOffset, pointerEvents: suspendForOverlay ? 'none' : 'box-none' },
+        { bottom: bottomOffset, pointerEvents: suspendForOverlay ? 'none' : 'none' },
         suspendForOverlay && styles.wrapperHidden,
       ]}
     >
@@ -150,7 +150,7 @@ function ConsentBanner() {
         testID="consent-banner"
         style={[
           styles.container,
-          { backgroundColor: colors.surface },
+          { backgroundColor: colors.surface, pointerEvents: 'auto' },
           !isMobile && styles.containerDesktop,
         ]}
       >

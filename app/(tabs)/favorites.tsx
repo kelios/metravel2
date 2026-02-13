@@ -210,9 +210,20 @@ export default function FavoritesScreen() {
 
     const data = useMemo(() => (Array.isArray(favorites) ? favorites : []), [favorites]);
 
+    const seoBlock = isFocused ? (
+        <InstantSEO
+            headKey="favorites"
+            title="Избранное | Metravel"
+            description="Ваши избранные путешествия"
+            canonical={canonical}
+            robots="noindex, nofollow"
+        />
+    ) : null;
+
     if (!authReady) {
         return (
             <SafeAreaView style={styles.container}>
+                {seoBlock}
                 <View style={styles.listContent}>
                     {Array.from({ length: 3 }).map((_, index) => (
                         <View key={index} style={styles.cardWrap}>
@@ -227,6 +238,7 @@ export default function FavoritesScreen() {
     if (!isAuthenticated) {
         return (
             <SafeAreaView style={styles.container}>
+                {seoBlock}
                 <EmptyState
                     icon="heart"
                     title="Войдите в аккаунт"
@@ -243,6 +255,7 @@ export default function FavoritesScreen() {
     if (isLoading) {
         return (
             <SafeAreaView style={styles.container}>
+                {seoBlock}
                 <View style={styles.header}>
                     <View style={styles.headerRow}>
                         <View style={styles.headerTitleBlock}>
@@ -275,6 +288,7 @@ export default function FavoritesScreen() {
     if (data.length === 0) {
         return (
             <SafeAreaView style={styles.container}>
+                {seoBlock}
                 <EmptyState
                     icon="heart"
                     title="Сохраняй маршруты, чтобы вернуться к ним позже"
@@ -295,15 +309,7 @@ export default function FavoritesScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            {isFocused && (
-                <InstantSEO
-                    headKey="favorites"
-                    title="Избранное | Metravel"
-                    description="Ваши избранные путешествия"
-                    canonical={canonical}
-                    robots="noindex, nofollow"
-                />
-            )}
+            {seoBlock}
             <View style={styles.header}>
                 <View style={styles.headerRow}>
                     <View style={styles.headerTitleBlock}>
