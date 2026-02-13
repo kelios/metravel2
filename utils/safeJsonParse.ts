@@ -25,7 +25,13 @@ export async function safeJsonParse<T = any>(
         }
 
         try {
-            return JSON.parse(text) as T;
+            const parsed = JSON.parse(text);
+            // JSON.parse("null") returns null without throwing.
+            // Return fallback so callers never receive null when they expect an array/object.
+            if (parsed == null && fallback !== undefined) {
+                return fallback;
+            }
+            return parsed as T;
         } catch (parseError) {
             if (__DEV__) {
                 devError('Ошибка парсинга JSON:', {
@@ -68,7 +74,13 @@ export function safeJsonParseString<T = any>(
             throw new Error('Пустая строка для парсинга');
         }
 
-        return JSON.parse(text) as T;
+        const parsed = JSON.parse(text);
+        // JSON.parse("null") returns null without throwing.
+        // Return fallback so callers never receive null when they expect an array/object.
+        if (parsed == null && fallback !== undefined) {
+            return fallback;
+        }
+        return parsed as T;
     } catch (error) {
         if (__DEV__) {
             devError('Ошибка парсинга JSON строки:', {

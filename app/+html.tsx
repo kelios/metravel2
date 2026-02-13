@@ -400,9 +400,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
       
       {/* Fallback SEO tags for static HTML (Googlebot sees these before React hydration).
-          React Helmet will override them client-side with page-specific values. */}
-      <meta name="description" content="Metravel — сервис для путешественников. Добавляй поездки, фото и заметки, делись маршрутами и собирай красивую книгу путешествий в PDF." />
-      <link rel="canonical" href="https://metravel.by/" />
+          NOTE: description and canonical are NOT duplicated here — React Helmet (data-rh="true")
+          injects them per-page at build time. The inline JS above fixes [param] canonical URLs.
+          Only tags that React Helmet does NOT inject on every page are kept as fallbacks. */}
       <meta property="og:locale" content="ru_RU" />
       <meta property="og:image" content="https://metravel.by/assets/icons/logo_yellow.png" />
       <meta name="twitter:site" content="@metravel_by" />

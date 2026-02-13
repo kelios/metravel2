@@ -17,7 +17,6 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsive } from '@/hooks/useResponsive'
 import {
   buildVersionedImageUrl,
-  getOptimalImageSize,
   getPreferredImageFormat,
   optimizeImageUrl,
 } from '@/utils/imageOptimization'
@@ -73,26 +72,13 @@ const buildUri = (
   const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id)
   const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit
 
-  if (containerWidth && img.width && img.height) {
-    const aspectRatio = img.width / img.height
-    const cappedWidth = Math.min(containerWidth, 1200)
-    const optimalSize = getOptimalImageSize(cappedWidth, containerHeight, aspectRatio)
-    const quality = isFirst ? 40 : 65
-
-    return (
-      optimizeImageUrl(versionedUrl, {
-        width: optimalSize.width,
-        format: PREFERRED_FORMAT,
-        quality,
-        fit: fitForUrl,
-        dpr: 1,
-      }) || versionedUrl
-    )
-  }
-
   if (containerWidth) {
-    const cappedWidth = Math.min(containerWidth, 1200)
-    const quality = isFirst ? 40 : 65
+    // Cap at 960 CSS-px — slider never exceeds ~945px on desktop.
+    // Use containerWidth directly (dpr=1) to avoid double-scaling
+    // (getOptimalImageSize multiplies by devicePixelRatio which is
+    // redundant when we already pass dpr:1 to optimizeImageUrl).
+    const cappedWidth = Math.min(containerWidth, 960)
+    const quality = isFirst ? 55 : 65
     return (
       optimizeImageUrl(versionedUrl, {
         width: cappedWidth,
@@ -402,9 +388,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     ({ item, index }: { item: SliderImage; index: number }) => {
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
-      // On mobile: only first slide is eager to avoid bandwidth competition
-      // On desktop: first 3 slides load eagerly
-      const isEager = isMobile ? index === 0 : index <= 2
+      // Only the visible (first) slide loads eagerly; hidden slides use lazy
+      // to avoid wasting bandwidth on off-screen images.
+      const isEager = index === 0
 
       return (
         <View style={[styles.slide, slideDimensions, styles.slideSnap]}>
@@ -508,9 +494,10 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             onScroll={handleScroll}
           >
             {images.map((item, index) => {
-              // On mobile: only render slides within ±2 of current index to reduce DOM size
-              // Other slides get an empty placeholder to preserve scroll position
-              if (isMobile && images.length > 5 && Math.abs(index - currentIndex) > 2) {
+              // Render slides within ±3 of current index to reduce DOM size.
+              // Other slides get an empty placeholder to preserve scroll position.
+              const renderWindow = isMobile ? 2 : 3
+              if (images.length > 5 && Math.abs(index - currentIndex) > renderWindow) {
                 return (
                   <View key={keyExtractor(item, index)} style={[styles.slide, slideDimensions, styles.slideSnap]} />
                 )
