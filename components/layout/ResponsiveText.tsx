@@ -1,12 +1,24 @@
 /**
  * ResponsiveText - текст с адаптивными размерами
  * Автоматически подстраивает размер шрифта под экран
+ *
+ * On web, h1–h4 variants render as actual HTML heading elements for SEO.
+ * On native, all variants render as plain Text.
  */
 
 import React from 'react';
-import { Text, TextStyle, StyleSheet } from 'react-native';
+import { Text, TextStyle, StyleSheet, Platform, StyleProp } from 'react-native';
 import { useResponsiveValue } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
+
+const isWeb = Platform.OS === 'web';
+
+const WEB_HEADING_TAG: Record<string, string | undefined> = {
+  h1: 'h1',
+  h2: 'h2',
+  h3: 'h3',
+  h4: 'h4',
+};
 
 const FONT_SIZE_CONFIGS = {
   h1: { smallPhone: 28, phone: 32, tablet: 40, desktop: 48, default: 32 },
@@ -41,7 +53,7 @@ const VARIANT_TEXT_STYLES: Record<string, TextStyle> = {
 interface ResponsiveTextProps {
   children: React.ReactNode;
   variant?: 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'caption' | 'small';
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
   testID?: string;
 }
@@ -57,14 +69,36 @@ export default function ResponsiveText({
   const fontSize = useResponsiveValue(FONT_SIZE_CONFIGS[variant] || FONT_SIZE_CONFIGS.body);
   const lineHeight = useResponsiveValue(LINE_HEIGHT_CONFIGS[variant] || LINE_HEIGHT_CONFIGS.body);
 
+  const tag = isWeb ? WEB_HEADING_TAG[variant] : undefined;
+
+  const mergedStyle: StyleProp<TextStyle> = [
+    styles.base,
+    { fontSize, lineHeight, color: colors.text },
+    VARIANT_TEXT_STYLES[variant] || VARIANT_TEXT_STYLES.body,
+    style,
+  ];
+
+  // On web, wrap heading text in a real HTML heading element for SEO.
+  // The outer heading resets browser defaults; the inner Text keeps RN styles.
+  if (tag) {
+    return React.createElement(
+      tag as any,
+      {
+        style: styles.headingReset,
+        'data-testid': testID,
+      },
+      <Text
+        style={mergedStyle}
+        numberOfLines={numberOfLines}
+      >
+        {children}
+      </Text>,
+    );
+  }
+
   return (
     <Text
-      style={[
-        styles.base,
-        { fontSize, lineHeight, color: colors.text },
-        VARIANT_TEXT_STYLES[variant] || VARIANT_TEXT_STYLES.body,
-        style,
-      ]}
+      style={mergedStyle}
       numberOfLines={numberOfLines}
       testID={testID}
     >
@@ -75,4 +109,10 @@ export default function ResponsiveText({
 
 const styles = StyleSheet.create({
   base: {},
+  headingReset: {
+    // Reset browser heading defaults so RN Text styles take full control
+    margin: 0,
+    padding: 0,
+    ...(isWeb ? { display: 'contents' as any } : {}),
+  },
 });

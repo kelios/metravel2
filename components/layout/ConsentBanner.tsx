@@ -55,7 +55,7 @@ function ConsentBanner() {
   const bottomOffset = useMemo(() => {
     if (!isMobile) return 12;
     // On mobile we keep it above the bottom tab bar and respect safe-area.
-    return (insets?.bottom || 0) + LAYOUT.tabBarHeight + 8;
+    return (insets?.bottom || 0) + (LAYOUT?.tabBarHeight ?? 56) + 8;
   }, [insets?.bottom, isMobile]);
 
   useEffect(() => {

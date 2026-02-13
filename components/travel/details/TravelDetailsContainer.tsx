@@ -26,7 +26,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useTravelDetails } from "@/hooks/travel-details";
 import InstantSEO from "@/components/seo/LazyInstantSEO";
 import { buildCanonicalUrl } from "@/utils/seo";
-import { createSafeJsonLd, stripHtml } from "@/utils/travelDetailsSecure";
+import { createSafeJsonLd, createBreadcrumbJsonLd, stripHtml } from "@/utils/travelDetailsSecure";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
 import { TravelDetailPageSkeleton } from '@/components/travel/TravelDetailPageSkeleton';
@@ -207,6 +207,7 @@ export default function TravelDetailsContainer() {
     canonicalUrl,
     readyImage,
     jsonLd,
+    breadcrumbLd,
   } = useMemo(() => {
     const title = travel?.name ? `${travel.name} | MeTravel` : "MeTravel";
     const desc = stripToDescription(travel?.description);
@@ -225,6 +226,7 @@ export default function TravelDetailsContainer() {
         : rawFirst.url
       : undefined;
     const structuredData = createSafeJsonLd(travel);
+    const breadcrumb = createBreadcrumbJsonLd(travel);
 
     return {
       readyTitle: title,
@@ -232,6 +234,7 @@ export default function TravelDetailsContainer() {
       canonicalUrl: canonical,
       readyImage: firstUrl,
       jsonLd: structuredData,
+      breadcrumbLd: breadcrumb,
     };
   }, [travel, slug]);
   // ✅ FIX: Синхронизируем title экрана с navigation options,
@@ -371,6 +374,14 @@ export default function TravelDetailsContainer() {
               type="application/ld+json"
               dangerouslySetInnerHTML={{
                 __html: JSON.stringify(jsonLd),
+              }}
+            />
+          )}
+          {breadcrumbLd && (
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify(breadcrumbLd),
               }}
             />
           )}

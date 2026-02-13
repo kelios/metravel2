@@ -8,7 +8,7 @@ const PANEL_WIDTH_DESKTOP = METRICS.baseUnit * 48; // 384px
 const PANEL_WIDTH_TABLET = METRICS.baseUnit * 42; // 336px
 const PANEL_GAP = METRICS.spacing.m; // 16px
 const TRANSITION_MS = 180;
-const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT.tabBarHeight;
+const WEB_MOBILE_FOOTER_RESERVE_HEIGHT = LAYOUT?.tabBarHeight ?? 56;
 
 export const getStyles = (
   isMobile: boolean,

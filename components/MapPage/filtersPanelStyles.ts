@@ -6,7 +6,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, windowWidth: number) => {
   const panelWidth = isMobile ? '100%' : Math.max(Math.min(windowWidth - 24, 480), 280);
   const windowHeight = Dimensions.get('window').height;
-  const bottomDockReserve = Platform.OS === 'web' && isMobile ? LAYOUT.tabBarHeight : 0;
+  const bottomDockReserve = Platform.OS === 'web' && isMobile ? (LAYOUT?.tabBarHeight ?? 56) : 0;
 
   return StyleSheet.create({
     card: {

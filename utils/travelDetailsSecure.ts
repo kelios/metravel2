@@ -174,6 +174,55 @@ export function createSafeJsonLd(
 }
 
 /**
+ * Create BreadcrumbList structured data for travel detail pages.
+ * Produces: Home > Поиск > [Travel Name]
+ */
+export function createBreadcrumbJsonLd(
+  travel: Travel | null | undefined
+): Record<string, any> | null {
+  if (!travel?.name) return null;
+
+  const cleanName = stripHtml(travel.name).slice(0, 200);
+  if (!cleanName) return null;
+
+  const travelUrl =
+    travel.slug && /^[a-z0-9-]+$/.test(travel.slug)
+      ? `https://metravel.by/travels/${encodeURIComponent(travel.slug)}`
+      : travel.id
+        ? `https://metravel.by/travels/${travel.id}`
+        : undefined;
+
+  const items: Record<string, any>[] = [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Главная",
+      item: "https://metravel.by/",
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Поиск",
+      item: "https://metravel.by/search",
+    },
+  ];
+
+  const lastItem: Record<string, any> = {
+    "@type": "ListItem",
+    position: 3,
+    name: cleanName,
+  };
+  if (travelUrl) lastItem.item = travelUrl;
+  items.push(lastItem);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items,
+  };
+}
+
+/**
  * Safely get first gallery image URL
  */
 function getFirstValidGalleryUrl(

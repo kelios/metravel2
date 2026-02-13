@@ -62,7 +62,9 @@ const WebMainImage = memo(function WebMainImage({
         borderRadius,
         display: 'block',
         opacity: hasBlurBehind ? (loaded ? 1 : 0) : 1,
-        transition: hasBlurBehind ? 'opacity 0.3s ease' : 'none',
+        transition: hasBlurBehind ? 'opacity 0.2s ease' : 'none',
+        willChange: hasBlurBehind ? 'opacity' : 'auto',
+        contain: 'layout',
       }}
       loading={loading}
       decoding="async"
@@ -272,11 +274,13 @@ function ImageCardMedia({
                       : 'none',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  filter: 'blur(20px)',
+                  filter: 'blur(16px)',
                   zIndex: 0,
                   borderRadius: resolvedBorderRadius,
                   opacity: webLoaded ? 1 : 0,
-                  transition: 'opacity 0.3s ease',
+                  contain: 'strict',
+                  willChange: 'opacity',
+                  backfaceVisibility: 'hidden',
                 }}
               />
             )}

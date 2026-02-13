@@ -823,7 +823,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onScroll={onScroll}
-            scrollEventThrottle={isWeb ? 100 : 16}
+            scrollEventThrottle={16}
             renderItem={renderItem}
             initialNumToRender={isTestEnv ? images.length : (isWeb ? 1 : 2)}
             windowSize={isTestEnv ? images.length : (isWeb ? 3 : 5)}
@@ -946,6 +946,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     overflow: 'hidden',
     borderRadius: 12,
     backgroundColor: "transparent",
+    ...Platform.select<any>({
+      web: { willChange: 'transform', contain: 'paint' },
+      default: {},
+    }),
   },
   clipMobile: {
     borderRadius: 16,
@@ -954,6 +958,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     flex: 1,
     position: "relative",
     backgroundColor: "transparent",
+    ...Platform.select<any>({
+      web: { contain: 'content', willChange: 'transform' },
+      default: {},
+    }),
   },
   blurBg: {
     ...StyleSheet.absoluteFillObject,
@@ -989,9 +997,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     ...Platform.select<any>({
       web: {
         cursor: "pointer",
-        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "background-color 0.2s ease, box-shadow 0.2s ease",
         boxShadow: colors.boxShadows.medium,
-        backdropFilter: "blur(16px)",
+        backdropFilter: "blur(12px)",
+        contain: "layout",
       },
       android: {
         elevation: 6,
@@ -1061,7 +1070,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     borderRadius: DOT_SIZE / 2,
     ...Platform.select({
       web: {
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "width 0.25s ease, opacity 0.25s ease",
       },
     }),
   },
