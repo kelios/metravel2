@@ -152,6 +152,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
           transportMode={transportMode}
           onPlaceSelect={onPlaceSelect}
           maxItems={3}
+          radiusKm={filterValue.radius ? Number(filterValue.radius) : undefined}
         />
       )}
     </ScrollView>

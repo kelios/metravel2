@@ -18,6 +18,7 @@ interface Props {
   transportMode?: 'car' | 'bike' | 'foot';
   onPlaceSelect: (place: any) => void;
   maxItems?: number;
+  radiusKm?: number;
 }
 
 export const QuickRecommendations: React.FC<Props> = React.memo(({
@@ -26,6 +27,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
   transportMode = 'car',
   onPlaceSelect,
   maxItems = 3,
+  radiusKm,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
@@ -60,23 +62,23 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
           rating,
         };
       })
-      .filter((item): item is NonNullable<typeof item> => item !== null);
+      .filter((item): item is NonNullable<typeof item> => {
+        if (item === null) return false;
+        // Фильтруем по радиусу поиска — показываем только места в пределах радиуса
+        if (radiusKm != null && item.distance > radiusKm) return false;
+        return true;
+      });
 
-    // Сортируем по рейтингу и расстоянию
-    // Сначала по рейтингу (если есть), потом по расстоянию
+    // Сортируем по расстоянию (ближайшие первыми), затем по рейтингу при равном расстоянии
     return placesWithDistance
       .sort((a, b) => {
-        // Если есть рейтинги, сначала сортируем по ним
-        if (a.rating > 0 || b.rating > 0) {
-          if (a.rating !== b.rating) {
-            return b.rating - a.rating;
-          }
-        }
-        // Потом по расстоянию
-        return a.distance - b.distance;
+        const distDiff = a.distance - b.distance;
+        if (Math.abs(distDiff) > 1) return distDiff;
+        // При примерно равном расстоянии — по рейтингу
+        return b.rating - a.rating;
       })
       .slice(0, maxItems);
-  }, [places, userLocation, transportMode, maxItems]);
+  }, [places, userLocation, transportMode, maxItems, radiusKm]);
 
   if (!topPlaces.length) {
     return null;
