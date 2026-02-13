@@ -13,9 +13,6 @@ jest.mock('@/styles/criticalCSS', () => ({
 jest.mock('@/utils/performance', () => ({
   initPerformanceMonitoring: jest.fn(),
 }))
-jest.mock('@/utils/advancedPerformanceOptimization', () => ({
-  optimizeCriticalPath: jest.fn(),
-}))
 
 jest.mock('@/components/travel/TravelDescription', () => ({
   __esModule: true,
@@ -50,8 +47,6 @@ const injectCriticalStyles = jest.requireMock('@/styles/criticalCSS')
   .injectCriticalStyles as jest.Mock
 const initPerformanceMonitoring = jest.requireMock('@/utils/performance')
   .initPerformanceMonitoring as jest.Mock
-const optimizeCriticalPath = jest.requireMock('@/utils/advancedPerformanceOptimization')
-  .optimizeCriticalPath as jest.Mock
 
 describe('useTravelDetailsPerformance', () => {
   const originalOS = Platform.OS
@@ -79,11 +74,9 @@ describe('useTravelDetailsPerformance', () => {
       jest.advanceTimersByTime(3000)
     })
 
-    // criticalCSS and advancedPerformanceOptimization are no longer imported at runtime —
-    // critical CSS is inlined in +html.tsx at build time.
+    // criticalCSS is inlined in +html.tsx at build time.
     expect(injectCriticalStyles).not.toHaveBeenCalled()
     expect(initPerformanceMonitoring).toHaveBeenCalled()
-    expect(optimizeCriticalPath).not.toHaveBeenCalled()
   })
 
   it('enables deferred loading once loading is complete', () => {

@@ -74,7 +74,6 @@ jest.mock('@/components/listTravel/ModernFilters', () => {
     default: () => React.createElement(Text, null, 'ModernFilters'),
   }
 });
-jest.mock('@/components/listTravel/SearchAndFilterBar', () => 'SearchAndFilterBar');
 jest.mock('@/components/listTravel/RenderTravelItem', () => {
   const React = require('react');
   const { View, Text } = require('react-native');

@@ -440,6 +440,14 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
       link.as = "image";
       link.href = safeHref;
       link.id = linkId;
+      try {
+        const resolved = new URL(safeHref, window.location.origin);
+        if (resolved.origin !== window.location.origin) {
+          link.crossOrigin = "anonymous";
+        }
+      } catch {
+        // noop
+      }
       document.head.appendChild(link);
     };
 

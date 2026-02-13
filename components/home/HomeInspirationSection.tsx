@@ -33,7 +33,7 @@ function HomeInspirationSection({
 }: HomeSectionProps) {
   const router = useRouter();
   const colors = useThemedColors();
-  const { isPhone, isLargePhone } = useResponsive();
+  const { isPhone, isLargePhone, width: viewportWidth } = useResponsive();
   const isMobile = isPhone || isLargePhone;
 
   const isWebDesktop = Platform.OS === 'web' && !isMobile;
@@ -271,7 +271,7 @@ function HomeInspirationSection({
                       styles.cardWrapperSingleColumn,
                     ]}
                   >
-                    <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} />
+                    <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} viewportWidth={viewportWidth} />
                   </View>
                 </React.Fragment>
               );
@@ -297,7 +297,7 @@ function HomeInspirationSection({
                         isMobile && styles.cardWrapperMobile,
                       ]}
                     >
-                      <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} />
+                      <RenderTravelItem item={item} index={index} isMobile={isMobile} hideAuthor={hideAuthor} viewportWidth={viewportWidth} />
                     </View>
                   );
                 })}

@@ -342,7 +342,7 @@ export default function FavoritesScreen() {
                     contentContainerStyle={styles.listContent}
                 >
                     <View style={[styles.cardsGrid, { gap: gapSize, rowGap: gapSize, columnGap: gapSize }]}>
-                        {data.map((item: any, index: number) => {
+                        {data.map((item: any) => {
                             const cols = Math.max(1, numColumns);
                             const calcWidth = cols > 1
                                 ? `calc((100% - ${(cols - 1) * gapSize}px) / ${cols})`

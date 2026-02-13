@@ -4,7 +4,6 @@ import { Platform, ViewStyle } from "react-native";
 import TravelListItem from "./TravelListItem";
 import AnimatedCard from "@/components/ui/AnimatedCard";
 import type { Travel } from "@/types/types";
-import { useResponsive } from '@/hooks/useResponsive';
  
 
 interface ContainerStyle extends ViewStyle {
@@ -26,6 +25,7 @@ type RenderTravelItemProps = {
     isSelected?: boolean;
     onToggle?: () => void;
     cardWidth?: string | number; // пока не используем для width, оставляем для совместимости пропсов
+    viewportWidth?: number;
     hideAuthor?: boolean;
 };
 
@@ -43,9 +43,9 @@ function RenderTravelItem({
                               isSelected = false,
                               onToggle,
                               cardWidth,
+                              viewportWidth = 0,
                               hideAuthor = false,
                           }: RenderTravelItemProps) {
-    const { width } = useResponsive();
 
     const cardWidthNumber = useMemo(() => {
         if (typeof cardWidth === 'number') return cardWidth;
@@ -89,7 +89,7 @@ function RenderTravelItem({
                 isSelected={isSelected}
                 onToggle={onToggle}
                 isMobile={isMobile}
-                viewportWidth={width}
+                viewportWidth={viewportWidth}
                 cardWidth={cardWidthNumber}
                 hideAuthor={hideAuthor}
             />
@@ -119,6 +119,7 @@ function areEqual(prev: RenderTravelItemProps, next: RenderTravelItemProps) {
     // 5. Очень редкие изменения
     if (prev.isFirst !== next.isFirst) return false;
     if (prev.isSingle !== next.isSingle) return false;
+    if (prev.viewportWidth !== next.viewportWidth) return false;
 
     return true;
 }

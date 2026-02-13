@@ -19,7 +19,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 export default function RouletteScreen() {
   const pathname = usePathname();
   const isFocused = useIsFocused();
-  const { isPhone, isLargePhone } = useResponsive();
+  const { isPhone, isLargePhone, width } = useResponsive();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -309,6 +309,7 @@ export default function RouletteScreen() {
                               isSelected={false}
                               onToggle={undefined}
                               cardWidth={280}
+                              viewportWidth={width}
                             />
                           </Animated.View>
                         ))}
@@ -336,6 +337,7 @@ export default function RouletteScreen() {
                           selectable={false}
                           isSelected={false}
                           onToggle={undefined}
+                          viewportWidth={width}
                         />
                       </View>
                     )}

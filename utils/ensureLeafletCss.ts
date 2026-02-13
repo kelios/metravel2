@@ -69,7 +69,7 @@ function getLeafletOverridesCSS(): string {
     '.leaflet-popup-close-button{width:32px!important;height:32px!important;border-radius:999px!important;margin:6px!important;color:var(--color-textMuted)!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}',
     '.leaflet-popup-close-button:hover{background:var(--color-backgroundTertiary)!important;color:var(--color-text)!important}',
     '.leaflet-control{z-index:800!important}',
-    '.leaflet-control-attribution{z-index:900!important;margin-bottom:84px!important;padding:2px 6px!important;border-radius:10px!important;font-size:11px!important;line-height:1.35!important;color:var(--color-textMuted)!important;background:rgba(255,255,255,0.88)!important}',
+    '.leaflet-control-attribution{z-index:900!important;margin-bottom:4px!important;padding:2px 6px!important;border-radius:10px!important;font-size:11px!important;line-height:1.35!important;color:var(--color-textMuted)!important;background:rgba(255,255,255,0.88)!important}',
     'html[data-theme="dark"] .leaflet-control-attribution{background:rgba(42,42,42,0.88)!important}',
     '.leaflet-control-attribution a{color:var(--color-textMuted)!important}',
     '@media(min-width:900px){.leaflet-bottom.leaflet-right{right:380px!important}}',

@@ -156,6 +156,14 @@ export function prefetchResource(href: string, as: 'image' | 'script' | 'style' 
   link.rel = 'prefetch'
   link.href = href
   link.as = as
+  try {
+    const resolved = new URL(href, window.location.origin)
+    if (resolved.origin !== window.location.origin) {
+      link.crossOrigin = 'anonymous'
+    }
+  } catch {
+    // noop
+  }
 
   document.head.appendChild(link)
 }

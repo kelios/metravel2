@@ -665,6 +665,7 @@ function ListTravelBase({
           onDeletePress={handleDeletePress}
           isFirst={index === 0}
           selectable={false}
+          viewportWidth={width}
         />
       ),
       [
@@ -672,6 +673,7 @@ function ListTravelBase({
         isMeTravel,
         isMobileDevice,
         isSuper,
+        width,
       ]
     );
 

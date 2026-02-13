@@ -437,6 +437,7 @@ function ListTravel({
           selectable={isExport}
           isSelected={isSelected(travel.id)}
           onToggle={() => toggleSelect(travel)}
+          viewportWidth={width}
         />
       ),
       [
@@ -447,6 +448,7 @@ function ListTravel({
         isSelected,
         isSuper,
         toggleSelect,
+        width,
       ]
     );
 

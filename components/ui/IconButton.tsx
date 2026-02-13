@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, Platform, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
@@ -77,6 +77,8 @@ function IconButton({
     );
   }
 
+  const [hovered, setHovered] = useState(false);
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -85,7 +87,9 @@ function IconButton({
       disabled={disabled}
       onPress={handlePress}
       testID={testID}
-      style={({ pressed, hovered }) => [
+      onHoverIn={Platform.OS === 'web' ? () => setHovered(true) : undefined}
+      onHoverOut={Platform.OS === 'web' ? () => setHovered(false) : undefined}
+      style={({ pressed }) => [
         styles.base,
         globalFocusStyles.focusable, // ✅ ИСПРАВЛЕНИЕ: Добавлен focus-индикатор
         {
@@ -103,17 +107,12 @@ function IconButton({
         !disabled && hovered && Platform.OS === 'web' && styles.hovered,
       ]}
     >
-      {({ hovered }) => (
-        <>
-          <View style={styles.icon}>{icon}</View>
-          {Platform.OS === 'web' && hovered && !disabled ? (
-            <View style={[styles.tooltip, { backgroundColor: colors.text }]}
-            >
-              <Text style={[styles.tooltipText, { color: colors.surface }]}>{label}</Text>
-            </View>
-          ) : null}
-        </>
-      )}
+      <View style={styles.icon}>{icon}</View>
+      {Platform.OS === 'web' && hovered && !disabled ? (
+        <View style={[styles.tooltip, { backgroundColor: colors.text }]}>
+          <Text style={[styles.tooltipText, { color: colors.surface }]}>{label}</Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }

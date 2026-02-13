@@ -543,8 +543,9 @@ export default function ProfileScreen() {
       currentUserId={userId}
       isSuperuser={isSuperuser}
       onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
+      viewportWidth={width}
     />
-  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel]);
+  ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, width]);
 
   const scrollViewStyle = useMemo(() => ({ flex: 1 } as const), []);
 
@@ -650,6 +651,7 @@ export default function ProfileScreen() {
                               currentUserId={userId}
                               isSuperuser={isSuperuser}
                               onDeletePress={activeTab === 'travels' ? handleDeleteMyTravel : undefined}
+                              viewportWidth={width}
                             />
                           </View>
                         );

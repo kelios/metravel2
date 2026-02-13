@@ -33,10 +33,6 @@ jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
   default: () => null,
 }));
 
-jest.mock('@/components/accessibility/KeyboardShortcutsHelp', () => ({
-  __esModule: true,
-  default: () => null,
-}));
 
 jest.mock('@/hooks/useKeyboardShortcuts', () => ({
   __esModule: true,

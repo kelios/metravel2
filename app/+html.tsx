@@ -399,7 +399,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      {/* Consolidated critical head script: title fallback + theme detection */}
       <script
         dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var p=(window.location&&window.location.pathname)||'';if(/^\/travels?(\/|$)/.test(p)){document.documentElement.classList.add('route-travel')}}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false})();`,
+          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false})();`,
         }}
       />
       
@@ -422,115 +422,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            #metravel-shell {
-              position: fixed;
-              inset: 0;
-              z-index: 9999;
-              background: linear-gradient(180deg, var(--color-background, #fdfcfb) 0%, var(--color-backgroundSecondary, #f9f8f6) 100%);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              transition: opacity 220ms ease, visibility 220ms ease;
-              opacity: 1;
-              visibility: visible;
-              pointer-events: none;
-            }
-            #metravel-shell .inner {
-              width: min(960px, calc(100vw - 32px));
-              display: grid;
-              gap: 14px;
-            }
-            #metravel-shell .brand {
-              font-size: clamp(28px, 5vw, 44px);
-              line-height: 1.05;
-              font-weight: 700;
-              letter-spacing: -0.02em;
-              color: var(--color-text, #2f3b36);
-            }
-            #metravel-shell .tagline {
-              font-size: clamp(15px, 2.3vw, 20px);
-              line-height: 1.35;
-              color: rgba(47, 59, 54, 0.72);
-              max-width: 48ch;
-            }
-            #metravel-shell .lcp-lock {
-              width: min(860px, 94vw);
-              font-size: clamp(20px, 2.6vw, 28px);
-              line-height: 1.3;
-              font-weight: 600;
-              color: rgba(47, 59, 54, 0.92);
-              text-wrap: balance;
-            }
-            #metravel-shell .travel-lock {
-              display: none;
-              width: min(860px, 94vw);
-              font-size: clamp(20px, 2.6vw, 28px);
-              line-height: 1.3;
-              font-weight: 600;
-              color: rgba(47, 59, 54, 0.92);
-              text-wrap: balance;
-            }
-            html.route-travel #metravel-shell .brand,
-            html.route-travel #metravel-shell .tagline,
-            html.route-travel #metravel-shell .lcp-lock {
-              display: none;
-            }
-            html.route-travel #metravel-shell .travel-lock {
-              display: block;
-            }
-            #metravel-shell .hero,
-            #metravel-shell .bar,
-            #metravel-shell .card {
-              position: relative;
-              overflow: hidden;
-              background: rgba(122, 157, 143, 0.12);
-            }
-            #metravel-shell .hero::after,
-            #metravel-shell .bar::after,
-            #metravel-shell .card::after {
-              content: '';
-              position: absolute;
-              inset: 0;
-              background: linear-gradient(90deg, transparent 0%, rgba(122, 157, 143, 0.14) 50%, transparent 100%);
-              animation: metravel-shell-shimmer 1.4s ease-in-out infinite;
-              will-change: transform;
-            }
-            #metravel-shell .hero {
-              border-radius: 16px;
-              min-height: clamp(220px, 46vh, 520px);
-            }
-            #metravel-shell .bar {
-              height: 20px;
-              border-radius: 10px;
-            }
-            #metravel-shell .bar.title { height: 34px; width: min(640px, 82vw); }
-            #metravel-shell .bar.sub { width: min(520px, 74vw); }
-            #metravel-shell .row {
-              margin-top: 8px;
-              display: grid;
-              grid-template-columns: repeat(3, minmax(0, 1fr));
-              gap: 12px;
-            }
-            #metravel-shell .card {
-              height: 128px;
-              border-radius: 12px;
-            }
-            @media (max-width: 768px) {
-              #metravel-shell .brand { font-size: clamp(24px, 8vw, 34px); }
-              #metravel-shell .tagline { font-size: 15px; }
-              #metravel-shell .lcp-lock { font-size: 21px; line-height: 1.32; }
-              #metravel-shell .travel-lock { font-size: 21px; line-height: 1.32; }
-              #metravel-shell .hero { min-height: 36vh; }
-              #metravel-shell .row { grid-template-columns: 1fr; }
-            }
-            @keyframes metravel-shell-shimmer {
-              0% { transform: translateX(-100%); }
-              100% { transform: translateX(100%); }
-            }
-            html.rnw-styles-ready.app-hydrated #metravel-shell {
-              opacity: 0;
-              visibility: hidden;
-            }
             html:not(.rnw-styles-ready) #root {
               visibility: hidden;
             }
@@ -548,7 +439,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       />
 	      <script
 	        dangerouslySetInnerHTML={{
-	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;var shellTimeout=0;var path='';try{path=String(window.location&&window.location.pathname||'')}catch(_){}var isTravel=/^\/travels?(\/|$)/.test(path);var minDelay=isTravel?800:500;var started=Date.now();function clearTimers(){try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}}function finish(){if(done)return;done=true;clearTimers();root.classList.add('rnw-styles-ready')}function mark(){if(done)return;var wait=minDelay-(Date.now()-started);if(wait>0){setTimeout(mark,wait);return}if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true}return false}catch(_){return false}}if(hasReadyLink()){mark()}else{hard=setTimeout(mark,isTravel?1000:700);poll=setInterval(function(){if(hasReadyLink())mark()},50)}shellTimeout=setTimeout(function(){try{root.classList.add('app-hydrated')}catch(_){}} ,10000)}catch(_){}})();`,
+	          __html: String.raw`(function(){try{if(typeof document==='undefined')return;var root=document.documentElement;var done=false;var poll=0;var hard=0;var path='';try{path=String(window.location&&window.location.pathname||'')}catch(_){}var isTravel=/^\/travels?(\/|$)/.test(path);var minDelay=isTravel?800:500;var started=Date.now();function clearTimers(){try{if(poll)clearInterval(poll)}catch(_){}try{if(hard)clearTimeout(hard)}catch(_){}}function finish(){if(done)return;done=true;clearTimers();root.classList.add('rnw-styles-ready')}function mark(){if(done)return;var wait=minDelay-(Date.now()-started);if(wait>0){setTimeout(mark,wait);return}if(typeof requestAnimationFrame==='function'){requestAnimationFrame(function(){requestAnimationFrame(finish)})}else{finish()}}function hasReadyLink(){try{var links=document.querySelectorAll('link[data-rnw-styles="1"]');if(!links||!links.length)return false;for(var i=0;i<links.length;i++){var l=links[i];if(!l)continue;if(l.getAttribute('data-loaded')==='1')return true}return false}catch(_){return false}}if(hasReadyLink()){mark()}else{hard=setTimeout(mark,isTravel?1000:700);poll=setInterval(function(){if(hasReadyLink())mark()},50)}}catch(_){}})();`,
 	        }}
 	      />
 
@@ -561,23 +452,6 @@ export default function Root({ children }: { children: React.ReactNode }) {
     </head>
 
     <body>
-    <div id="metravel-shell">
-      <div className="inner">
-        <div className="brand">MeTravel</div>
-        <div className="tagline">Собираем путешествие и подготавливаем страницы без рывков.</div>
-        <div className="lcp-lock">Читай поездки других путешественников, сохраняй лучшие маршруты и собирай свои.</div>
-        <div className="travel-lock">Загружаем страницу путешествия.</div>
-        <div className="hero" />
-        <div className="bar title" />
-        <div className="bar sub" />
-        <div className="bar sub" style={{ width: 'min(420px, 60vw)' }} />
-        <div className="row">
-          <div className="card" />
-          <div className="card" />
-          <div className="card" />
-        </div>
-      </div>
-    </div>
 
     {/* Travel hero preload — moved to body to avoid blocking head parsing on non-travel pages */}
     <script

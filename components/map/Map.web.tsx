@@ -373,6 +373,21 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
     };
   }, []);
 
+  // Invalidate map size when the root container resizes (e.g. tab switch, Suspense resolve)
+  useEffect(() => {
+    if (!isWeb) return;
+    const el = rootRef.current as HTMLElement | null;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    const ro = new ResizeObserver(() => {
+      const map = mapRef.current;
+      if (!map || typeof map.invalidateSize !== 'function') return;
+      try { map.invalidateSize(true); } catch { /* noop */ }
+    });
+    ro.observe(el);
+    return () => { ro.disconnect(); };
+  }, []);
+
   // очень лёгкая инициализация: грузим libs на idle, как только компонент смонтирован
   useEffect(() => {
     if (!isWeb) return;
@@ -900,6 +915,9 @@ const MapClientSideComponent: React.FC<MapClientSideProps> = ({
             setTimeout(() => {
               try { map.invalidateSize(true); } catch { /* noop */ }
             }, 200);
+            setTimeout(() => {
+              try { map.invalidateSize(true); } catch { /* noop */ }
+            }, 600);
           } catch {
             // noop
           }
@@ -933,8 +951,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
     minHeight: 400,
   },
   placeholderContainer: {
