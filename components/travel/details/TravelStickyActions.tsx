@@ -144,9 +144,8 @@ function TravelStickyActions({
     <RNAnimated.View
       style={[
         styles.container,
-        { transform: [{ translateY }] },
+        { transform: [{ translateY }], pointerEvents: 'box-none' },
       ]}
-      pointerEvents="box-none"
     >
       <View style={styles.bar}>
         <Pressable

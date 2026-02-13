@@ -527,13 +527,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         {Platform.OS === 'web' && shouldShowSideBlurPanels ? (
           <>
             <View
-              pointerEvents="none"
-              style={styles.edgeScrimLeft}
+              style={[styles.edgeScrimLeft, { pointerEvents: 'none' }]}
               testID={shouldShowSideBlurPanels ? `slider-side-blur-left-${currentIndex}` : undefined}
             />
             <View
-              pointerEvents="none"
-              style={styles.edgeScrimRight}
+              style={[styles.edgeScrimRight, { pointerEvents: 'none' }]}
               testID={shouldShowSideBlurPanels ? `slider-side-blur-right-${currentIndex}` : undefined}
             />
           </>
@@ -577,7 +575,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         ) : null}
 
         {images.length > 1 ? (
-          <View style={styles.counter} pointerEvents="none">
+          <View style={[styles.counter, { pointerEvents: 'none' }]}>
             <View style={styles.counterContainer}>
               <Text style={styles.counterText}>
                 {currentIndex + 1}/{images.length}

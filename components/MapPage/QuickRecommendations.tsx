@@ -84,43 +84,23 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
 
   const cards = topPlaces.map((place, index) => {
     const thumbUrl = place.travelImageThumbUrl || place.travel_image_thumb_url || null;
-    return (
-    <CardActionPressable
-      key={place.id ?? `place-${index}`}
-      style={({ pressed }) => [
-        styles.card,
-        Platform.OS === 'web' && styles.cardWeb,
-        pressed && styles.cardPressed,
-      ]}
-      onPress={() => onPlaceSelect(place)}
-      accessibilityLabel={`Открыть ${place.address || 'место'}`}
-    >
-      {thumbUrl ? (
-        <View style={styles.cardImage}>
-          <ImageCardMedia
-            src={thumbUrl}
-            alt={place.address || 'Место'}
-            fit="contain"
-            blurBackground
-            blurRadius={12}
-            loading="lazy"
-            priority="low"
-            style={StyleSheet.absoluteFillObject}
-          />
-        </View>
-      ) : (
-        <View style={[styles.cardImage, styles.cardImagePlaceholder]} />
-      )}
-      <View style={styles.cardBody}>
+    const categoryName = typeof place.categoryName === 'string'
+      ? place.categoryName.split(',')[0].trim()
+      : '';
+
+    const cardHeader = (
       <View style={styles.cardHeader}>
         <Text style={styles.placeName} numberOfLines={2}>{place.address}</Text>
-        {place.rating > 0 && (
+        {place.rating > 0 ? (
           <View style={styles.ratingBadge}>
             <MapIcon name="star" size={14} color={colors.warning} />
             <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
           </View>
-        )}
+        ) : null}
       </View>
+    );
+
+    const cardInfo = (
       <View style={styles.infoRow}>
         <View style={styles.infoBadge}>
           <MapIcon name="place" size={14} color={colors.primary} />
@@ -141,14 +121,47 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
           <Text style={styles.infoText}>{place.travelTimeText}</Text>
         </View>
       </View>
+    );
 
-      {place.categoryName && (
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText} numberOfLines={1}>{place.categoryName.split(',')[0].trim()}</Text>
-        </View>
-      )}
+    const cardCategory = categoryName ? (
+      <View style={styles.categoryBadge}>
+        <Text style={styles.categoryText} numberOfLines={1}>{categoryName}</Text>
       </View>
-    </CardActionPressable>
+    ) : null;
+
+    return (
+      <CardActionPressable
+        key={place.id ?? `place-${index}`}
+        style={({ pressed }) => [
+          styles.card,
+          Platform.OS === 'web' && styles.cardWeb,
+          pressed && styles.cardPressed,
+        ]}
+        onPress={() => onPlaceSelect(place)}
+        accessibilityLabel={`Открыть ${place.address || 'место'}`}
+      >
+        {thumbUrl ? (
+          <View style={styles.cardImage}>
+            <ImageCardMedia
+              src={thumbUrl}
+              alt={place.address || 'Место'}
+              fit="contain"
+              blurBackground
+              blurRadius={12}
+              loading="lazy"
+              priority="low"
+              style={StyleSheet.absoluteFillObject}
+            />
+          </View>
+        ) : (
+          <View style={[styles.cardImage, styles.cardImagePlaceholder]} />
+        )}
+        <View style={styles.cardBody}>
+          {cardHeader}
+          {cardInfo}
+          {cardCategory}
+        </View>
+      </CardActionPressable>
     );
   });
 

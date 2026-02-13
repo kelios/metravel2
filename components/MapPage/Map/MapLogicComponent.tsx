@@ -262,6 +262,9 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           const prefix = '<a href="https://leafletjs.com" target="_blank" rel="noopener noreferrer">Leaflet</a>';
           ac.setPrefix(prefix);
         }
+        if (ac && typeof ac.setPosition === 'function') {
+          ac.setPosition('bottomright');
+        }
       } catch {
         // noop
       }

@@ -1,4 +1,4 @@
-import { normalizeTravelPreview, resolveTravelUrl } from '@/app/(tabs)/subscriptions.helpers';
+import { normalizeTravelPreview, resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 
 describe('subscriptions.helpers', () => {
   describe('normalizeTravelPreview', () => {

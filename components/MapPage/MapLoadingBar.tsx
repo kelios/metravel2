@@ -53,8 +53,7 @@ export const MapLoadingBar: React.FC<MapLoadingBarProps> = React.memo(({ visible
 
   return (
     <Animated.View
-      style={[styles.container, { opacity }]}
-      pointerEvents="none"
+      style={[styles.container, { opacity, pointerEvents: 'none' }]}
     >
       <Animated.View
         style={[

@@ -592,13 +592,13 @@ function TravelHeroSectionInner({
               )}
               {!overlayUnmounted && (
                 <View
-                  pointerEvents="none"
                   style={{
                     position: 'absolute',
                     inset: 0,
                     zIndex: 5,
                     opacity: isOverlayFading ? 0 : 1,
                     transition: 'opacity 320ms ease',
+                    pointerEvents: 'none',
                   } as any}
                   collapsable={false}
                 >
@@ -636,7 +636,7 @@ function TravelHeroSectionInner({
 
           {/* P0-1: Видимый заголовок поверх hero-изображения */}
           {travel?.name ? (
-            <View style={styles.heroOverlay} pointerEvents="box-none">
+            <View style={[styles.heroOverlay, { pointerEvents: 'box-none' }]}>
               <Text
                 style={styles.heroTitle}
                 numberOfLines={2}

@@ -12,7 +12,13 @@ const LEGACY_ROUTING_API_KEY_SOURCES = new Set([
   'ROUTE_SERVICE_KEY',
 ])
 
-const isLocalHost = (host) => host === 'localhost' || host === '127.0.0.1' || host === '::1'
+const isLocalHost = (host) =>
+  host === 'localhost' ||
+  host === '127.0.0.1' ||
+  host === '::1' ||
+  /^192\.168\./.test(host) ||
+  /^10\./.test(host) ||
+  /^172\.(1[6-9]|2\d|3[01])\./.test(host)
 
 const resolveRoutingApiKeyWithSourceCore = (env = process.env) => {
   for (const key of ROUTING_API_KEY_CANDIDATES) {
@@ -41,8 +47,17 @@ const getRoutingConfigDiagnosticsCore = (env = process.env) => {
     .map((candidate) => ({ candidate, value: String(env[candidate] || '').trim() }))
     .filter((entry) => Boolean(entry.value))
 
-  const uniqueValues = Array.from(new Set(configured.map((entry) => entry.value)))
-  if (configured.length > 1 && uniqueValues.length > 1) {
+  // Only compare values that are explicitly provided in the env object.
+  // On web, Expo/Metro only injects EXPO_PUBLIC_* vars; non-prefixed vars
+  // (ORS_API_KEY, ROUTE_SERVICE_KEY) may leak from the shell during bundling
+  // with stale/different values, producing false-positive conflicts.
+  const expoPublicConfigured = configured.filter((entry) =>
+    entry.candidate.startsWith('EXPO_PUBLIC_')
+  )
+  const candidatesForConflict = expoPublicConfigured.length > 0 ? expoPublicConfigured : configured
+
+  const uniqueValues = Array.from(new Set(candidatesForConflict.map((entry) => entry.value)))
+  if (candidatesForConflict.length > 1 && uniqueValues.length > 1) {
     diagnostics.push({
       code: 'ROUTING_KEY_CONFLICT',
       message: `Multiple routing key env vars are set with different values. Active source: ${source}.`,

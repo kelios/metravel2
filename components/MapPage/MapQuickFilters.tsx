@@ -49,7 +49,7 @@ export const MapQuickFilters: React.FC<MapQuickFiltersProps> = React.memo(({
   if (!visible.length) return null;
 
   return (
-    <View style={styles.container} pointerEvents="box-none">
+    <View style={[styles.container, { pointerEvents: 'box-none' }]}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

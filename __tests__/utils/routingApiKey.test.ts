@@ -103,4 +103,27 @@ describe('getRoutingConfigDiagnostics', () => {
     });
     expect(diagnostics).toEqual([]);
   });
+
+  it('ignores non-EXPO_PUBLIC key conflicts when EXPO_PUBLIC keys are present', () => {
+    const diagnostics = getRoutingConfigDiagnostics({
+      EXPO_PUBLIC_ORS_API_KEY: 'correct-key',
+      ORS_API_KEY: 'stale-shell-key',
+      ROUTE_SERVICE_KEY: 'another-stale-key',
+    });
+    expect(diagnostics.some((d) => d.code === 'ROUTING_KEY_CONFLICT')).toBe(false);
+  });
+
+  it('still reports conflict between non-EXPO_PUBLIC keys when no EXPO_PUBLIC keys exist', () => {
+    const diagnostics = getRoutingConfigDiagnostics({
+      ORS_API_KEY: 'key-a',
+      ROUTE_SERVICE_KEY: 'key-b',
+    });
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'ROUTING_KEY_CONFLICT',
+        }),
+      ])
+    );
+  });
 });

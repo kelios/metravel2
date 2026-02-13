@@ -112,11 +112,9 @@ const MapBottomSheet = forwardRef<MapBottomSheetRef, MapBottomSheetProps>(
           styles.webRoot,
           isCollapsed ? styles.webRootCollapsed : null,
           isCollapsed && !peekContent ? styles.webRootHidden : null,
-          { bottom: bottomInset },
+          { bottom: bottomInset, pointerEvents: isCollapsed && !peekContent ? 'none' as const : 'auto' as const },
         ]}
         accessibilityLabel="Панель карты"
-        // Allow map touches to pass through when collapsed and no peek content
-        pointerEvents={isCollapsed && !peekContent ? 'none' : 'auto'}
       >
         {/* Drag handle — always visible as affordance */}
         <Pressable

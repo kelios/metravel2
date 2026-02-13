@@ -34,7 +34,7 @@ import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { confirmAction } from '@/utils/confirmAction';
 import { ApiError } from '@/api/client';
-import { normalizeTravelPreview, resolveTravelUrl, type TravelPreview } from '@/app/(tabs)/subscriptions.helpers';
+import { normalizeTravelPreview, resolveTravelUrl, type TravelPreview } from '@/utils/subscriptionsHelpers';
 
 type SubscriptionTab = 'subscriptions' | 'subscribers';
 type WebEnhancedViewStyle = ViewStyle & {

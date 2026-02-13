@@ -72,9 +72,9 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
           {
             width: `${100 / count}%` as any,
             left: pillLeft as any,
+            pointerEvents: 'none',
           },
         ]}
-        pointerEvents="none"
       />
       {options.map(({ key, label, icon, badge }) => {
         const active = value === key;

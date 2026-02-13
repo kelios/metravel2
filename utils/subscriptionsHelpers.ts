@@ -49,4 +49,3 @@ export const resolveTravelUrl = (travel: TravelPreview): string => {
   const key = String(travel.slug ?? travel.id).trim();
   return `/travels/${key || travel.id}`;
 };
-

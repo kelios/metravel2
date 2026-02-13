@@ -183,7 +183,7 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
   const hasTarget = targetRect !== null;
 
   return (
-    <View style={styles.overlay} pointerEvents="box-none">
+    <View style={[styles.overlay, { pointerEvents: 'box-none' }]}>
       {/* Semi-transparent backdrop */}
       <Pressable style={styles.backdrop} onPress={handleSkip} />
 
@@ -197,9 +197,9 @@ export const MapOnboarding: React.FC<MapOnboardingProps> = ({ onComplete }) => {
               left: targetRect!.left - 4,
               width: targetRect!.width + 8,
               height: targetRect!.height + 8,
+              pointerEvents: 'none',
             },
           ]}
-          pointerEvents="none"
         />
       )}
 

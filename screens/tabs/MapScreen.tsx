@@ -571,7 +571,7 @@ export default function MapScreen() {
             )}
 
             {(loading || !mapReady) && (
-                <View style={styles.loadingOverlay} pointerEvents="none" testID="map-loading-overlay">
+                <View style={[styles.loadingOverlay, { pointerEvents: 'none' }]} testID="map-loading-overlay">
                     <ActivityIndicator color={themedColors.primary} />
                 </View>
             )}

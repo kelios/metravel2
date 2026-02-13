@@ -183,7 +183,7 @@ html[data-theme="dark"] .leaflet-control-attribution {
 
 @media (min-width: 900px) {
   .leaflet-bottom.leaflet-right {
-    right: 380px !important;
+    right: 0 !important;
   }
 }
 

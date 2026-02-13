@@ -510,7 +510,6 @@ export default function TravelDetailsContainer() {
               Never unmount — use visibility/opacity to avoid CLS from DOM removal. */}
           {Platform.OS === 'web' && (
             <View
-              pointerEvents="none"
               collapsable={false}
               style={{
                 position: 'absolute',
@@ -520,6 +519,7 @@ export default function TravelDetailsContainer() {
                 visibility: skeletonPhase === 'hidden' ? 'hidden' : 'visible',
                 transition: 'opacity 200ms ease-out',
                 contain: 'strict',
+                pointerEvents: 'none',
               } as any}
               aria-hidden={skeletonPhase !== 'loading'}
             >

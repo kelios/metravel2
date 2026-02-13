@@ -72,7 +72,7 @@ function getLeafletOverridesCSS(): string {
     '.leaflet-control-attribution{z-index:900!important;margin-bottom:4px!important;padding:2px 6px!important;border-radius:10px!important;font-size:11px!important;line-height:1.35!important;color:var(--color-textMuted)!important;background:rgba(255,255,255,0.88)!important}',
     'html[data-theme="dark"] .leaflet-control-attribution{background:rgba(42,42,42,0.88)!important}',
     '.leaflet-control-attribution a{color:var(--color-textMuted)!important}',
-    '@media(min-width:900px){.leaflet-bottom.leaflet-right{right:380px!important}}',
+    '@media(min-width:900px){.leaflet-bottom.leaflet-right{right:0!important}}',
     '.leaflet-tooltip{z-index:650!important}',
     '@media(pointer:coarse){.leaflet-marker-icon{min-width:44px!important;min-height:44px!important}.leaflet-popup-close-button{width:44px!important;height:44px!important;font-size:24px!important}.leaflet-popup-content{max-height:60vh!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important}.leaflet-tooltip{pointer-events:none!important}}',
     '.leaflet-marker-icon,.leaflet-marker-shadow{touch-action:manipulation!important}',
