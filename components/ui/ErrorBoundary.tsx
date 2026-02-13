@@ -54,6 +54,9 @@ export default class ErrorBoundary extends Component<Props, State> {
         msg.includes('is not a function') ||
         msg.includes('is undefined') ||
         msg.includes('Requiring unknown module') ||
+        msg.includes('iterable') ||
+        msg.includes('is not iterable') ||
+        msg.includes('spread') ||
         /loading module.*failed/i.test(msg) ||
         /failed to fetch dynamically imported module/i.test(msg) ||
         /ChunkLoadError/i.test(msg) ||

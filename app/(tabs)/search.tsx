@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View, Platform } from 'react-native';
+import { StyleSheet, View, Platform, Text } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -70,7 +70,7 @@ function SearchScreen() {
     }, [canMountContent, isFocused]);
 
     const title = 'Поиск путешествий | Metravel';
-    const description = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты, сохраняйте лучшие идеи и собирайте свою книгу путешествий.';
+    const description = 'Ищите путешествия по странам, категориям и сложности. Фильтруйте маршруты и сохраняйте лучшие идеи в свою книгу путешествий.';
 
     const styles = useMemo(() => StyleSheet.create({
         container: {
@@ -83,6 +83,20 @@ function SearchScreen() {
             alignItems: 'center',
             padding: DESIGN_TOKENS.spacing.lg,
         },
+        srOnly: Platform.select({
+            web: {
+                position: 'absolute' as const,
+                width: 1,
+                height: 1,
+                padding: 0,
+                margin: -1,
+                overflow: 'hidden' as const,
+                clip: 'rect(0,0,0,0)',
+                whiteSpace: 'nowrap',
+                borderWidth: 0,
+            },
+            default: { display: 'none' as const },
+        }) as any,
     }), [colors]);
 
     return (
@@ -98,6 +112,16 @@ function SearchScreen() {
                 />
             )}
             <View style={styles.container} testID="search-container">
+                {Platform.OS === 'web' && (
+                    <Text
+                        role="heading"
+                        aria-level={1}
+                        style={styles.srOnly}
+                        accessibilityRole="header"
+                    >
+                        {title}
+                    </Text>
+                )}
                 <ErrorBoundary
                     fallback={
                         <View style={styles.errorContainer}>

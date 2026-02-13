@@ -161,6 +161,8 @@ describe('ErrorBoundary', () => {
       'Loading module https://metravel.by/_expo/static/js/web/Home-68ad15.js failed.',
       'Failed to fetch dynamically imported module: /chunk.js',
       'ChunkLoadError: Loading chunk 42 failed.',
+      'Spread syntax requires ...iterable not be null or undefined',
+      'someValue is not iterable',
     ];
 
     it.each(staleChunkMessages)(

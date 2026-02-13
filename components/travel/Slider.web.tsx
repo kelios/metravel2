@@ -607,6 +607,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       backgroundColor: 'transparent',
       position: 'relative',
       borderRadius: 12,
+      overflow: 'hidden',
       borderWidth: 0,
       borderColor: 'transparent',
       ...(Platform.OS === 'web'
