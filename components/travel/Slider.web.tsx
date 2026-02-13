@@ -419,7 +419,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         </View>
       )
     },
-    [blurBackground, fit, handleFirstImageLoad, images.length, isMobile, mergedImagePropsBase, slideDimensions, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, styles.slideSnap, uriMap]
+    [blurBackground, fit, handleFirstImageLoad, images.length, mergedImagePropsBase, slideDimensions, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, styles.slideSnap, uriMap]
   )
 
   // Minimal scroll handler — only update currentIndex when scroll settles.

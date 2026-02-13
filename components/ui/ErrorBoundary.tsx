@@ -53,7 +53,11 @@ export default class ErrorBoundary extends Component<Props, State> {
       const isModuleError =
         msg.includes('is not a function') ||
         msg.includes('is undefined') ||
-        msg.includes('Requiring unknown module');
+        msg.includes('Requiring unknown module') ||
+        /loading module.*failed/i.test(msg) ||
+        /failed to fetch dynamically imported module/i.test(msg) ||
+        /ChunkLoadError/i.test(msg) ||
+        (error?.name === 'AsyncRequireError');
       if (isModuleError) {
         (window as any).__metravelModuleReloadTriggered = true;
         const cleanup = async () => {
