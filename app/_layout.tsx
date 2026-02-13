@@ -54,6 +54,18 @@ if (!isWeb) {
 export default function RootLayout() {
     useEffect(() => {
         if (typeof process !== 'undefined' && process.env.NODE_ENV === 'test') return;
+        // On production web, Expo's bundler inlines individual process.env.EXPO_PUBLIC_*
+        // references but does NOT populate the process.env object. The diagnostics
+        // function reads env vars from the object, producing false positives
+        // (e.g. API_URL_MISSING) even though the app works correctly.
+        // Only run diagnostics in dev where process.env is fully available.
+        // NOTE: __DEV__ alone is not sufficient — the bundler may strip the guard
+        // but keep the body. Use a runtime hostname check as defense-in-depth.
+        if (!__DEV__) return;
+        if (isWeb && typeof window !== 'undefined') {
+            const h = window.location?.hostname;
+            if (h === 'metravel.by' || h === 'www.metravel.by') return;
+        }
         const diagnostics = getRuntimeConfigDiagnostics();
         for (const diagnostic of diagnostics) {
             const line = `[Config:${diagnostic.code}] ${diagnostic.message}`;

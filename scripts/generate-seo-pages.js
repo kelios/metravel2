@@ -529,7 +529,7 @@ async function main() {
     }
     console.log(`  📦 Got ${articles.length} articles`);
   } catch (err) {
-    console.error('❌ Failed to fetch articles:', err.message);
+    console.log('⚠️  Articles API not available (skipping):', err.message);
   }
 
   if (articles.length > 0) {
@@ -576,7 +576,16 @@ async function main() {
   console.log(`\n🎉 Done! Generated ${totalPages} SEO pages in ${DIST_DIR}`);
 }
 
-main().catch((err) => {
-  console.error('❌ Fatal error:', err);
-  process.exit(1);
-});
+// ---------------------------------------------------------------------------
+// Exports for testing (when required as a module, main() is NOT executed)
+// ---------------------------------------------------------------------------
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { replaceOrInsert, injectMeta, escapeAttr, stripHtml };
+}
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error('❌ Fatal error:', err);
+    process.exit(1);
+  });
+}

@@ -35,13 +35,10 @@ export const devWarn = (...args: any[]): void => {
 };
 
 /**
- * Логирует ошибку (всегда, но с дополнительной информацией в dev)
+ * Логирует ошибку только в режиме разработки
  */
 export const devError = (...args: any[]): void => {
   if (DEV) {
-    console.error(...args);
-  } else {
-    // В production логируем только критичные ошибки
     console.error(...args);
   }
 };

@@ -67,7 +67,7 @@ describe('logger dev/prod behaviour', () => {
     expect(console.error).toHaveBeenCalledWith('[PDF]', 'oops')
   })
 
-  it('logError logs via devError and sends to monitoring only in production', () => {
+  it('logError sends to monitoring in production but does not log to console via devError', () => {
     const prodModule = reloadLoggerWithEnv({ ...originalEnv, NODE_ENV: 'production' }, false)
 
     const monitoring = {
@@ -82,8 +82,18 @@ describe('logger dev/prod behaviour', () => {
     const err = new Error('boom')
     prodModule.logError(err, { foo: 'bar' })
 
-    expect(console.error).toHaveBeenCalledWith('Error:', err, { foo: 'bar' })
+    // devError is silent in production — no console.error call
+    expect(console.error).not.toHaveBeenCalled()
     expect(monitoring.captureException).toHaveBeenCalledWith(err, { foo: 'bar' })
+  })
+
+  it('logError logs to console via devError in development', () => {
+    const devModule = reloadLoggerWithEnv({ ...originalEnv, NODE_ENV: 'development' }, true)
+
+    const err = new Error('boom')
+    devModule.logError(err, { foo: 'bar' })
+
+    expect(console.error).toHaveBeenCalledWith('Error:', err, { foo: 'bar' })
   })
 
   it('logMessage logs to console in dev and sends error level to monitoring in prod only', () => {

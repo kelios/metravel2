@@ -74,6 +74,74 @@
   }
 })();
 
+// ✅ Polyfills for iOS Safari < 15.4 (structuredClone, Object.hasOwn, .at(), .findLast())
+// Without these, the bundle crashes with "X is not a function" on older iPhones.
+(function() {
+  if (typeof structuredClone === 'undefined') {
+    globalThis.structuredClone = function structuredClone(value) {
+      return JSON.parse(JSON.stringify(value));
+    };
+  }
+
+  if (typeof Object.hasOwn !== 'function') {
+    Object.hasOwn = function hasOwn(obj, prop) {
+      return Object.prototype.hasOwnProperty.call(obj, prop);
+    };
+  }
+
+  if (typeof Array.prototype.at !== 'function') {
+    Object.defineProperty(Array.prototype, 'at', {
+      value: function at(n) {
+        n = Math.trunc(n) || 0;
+        if (n < 0) n += this.length;
+        if (n < 0 || n >= this.length) return undefined;
+        return this[n];
+      },
+      writable: true,
+      configurable: true,
+    });
+  }
+
+  if (typeof String.prototype.at !== 'function') {
+    Object.defineProperty(String.prototype, 'at', {
+      value: function at(n) {
+        n = Math.trunc(n) || 0;
+        if (n < 0) n += this.length;
+        if (n < 0 || n >= this.length) return undefined;
+        return this[n];
+      },
+      writable: true,
+      configurable: true,
+    });
+  }
+
+  if (typeof Array.prototype.findLast !== 'function') {
+    Object.defineProperty(Array.prototype, 'findLast', {
+      value: function findLast(predicate, thisArg) {
+        for (var i = this.length - 1; i >= 0; i--) {
+          if (predicate.call(thisArg, this[i], i, this)) return this[i];
+        }
+        return undefined;
+      },
+      writable: true,
+      configurable: true,
+    });
+  }
+
+  if (typeof Array.prototype.findLastIndex !== 'function') {
+    Object.defineProperty(Array.prototype, 'findLastIndex', {
+      value: function findLastIndex(predicate, thisArg) {
+        for (var i = this.length - 1; i >= 0; i--) {
+          if (predicate.call(thisArg, this[i], i, this)) return i;
+        }
+        return -1;
+      },
+      writable: true,
+      configurable: true,
+    });
+  }
+})();
+
 // Import gesture handler at the very top for proper initialization
 if (typeof navigator !== 'undefined' && navigator.product === 'ReactNative') {
   require('react-native-gesture-handler');
