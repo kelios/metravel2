@@ -396,10 +396,10 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      <meta name="theme-color" content={DESIGN_COLORS.themeColorLight} media="(prefers-color-scheme: light)" />
 	      <meta name="color-scheme" content="light dark" />
 
-	      {/* Consolidated critical head script: title fallback + theme detection */}
+	      {/* Consolidated critical head script: title fallback + theme detection + canonical fix */}
       <script
         dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false})();`,
+          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false;try{var p=window.location.pathname||'';var o='https://metravel.by';var correctUrl=o+p;var cl=document.querySelector('link[rel="canonical"]');if(cl){var h=cl.getAttribute('href')||'';if(/\[|\%5B/.test(h)){cl.setAttribute('href',correctUrl)}}var ou=document.querySelector('meta[property="og:url"]');if(ou){var oc=ou.getAttribute('content')||'';if(/\[|\%5B/.test(oc)){ou.setAttribute('content',correctUrl)}}}catch(_){}})();`,
         }}
       />
       

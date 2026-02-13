@@ -37,6 +37,7 @@ function IconButton({
 }: IconButtonProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => getStyles(colors), [colors]);
+  const [hovered, setHovered] = useState(false);
   const dimension = size === 'sm' ? 36 : 42;
   const handlePress = disabled ? undefined : onPress
 
@@ -76,8 +77,6 @@ function IconButton({
       </Pressable>
     );
   }
-
-  const [hovered, setHovered] = useState(false);
 
   return (
     <Pressable
