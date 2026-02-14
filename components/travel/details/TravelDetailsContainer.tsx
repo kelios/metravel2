@@ -11,12 +11,11 @@ import {
   Animated,
   Platform,
   SafeAreaView,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { METRICS } from '@/constants/layout';
