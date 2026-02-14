@@ -11,26 +11,27 @@ import { test, expect } from '@playwright/test';
  * @smoke
  */
 
-/** Helper: navigate, wait for React Helmet to inject SEO tags, return full HTML. */
+/** Helper: navigate, wait for React Helmet + DOM patches to inject SEO tags, return full HTML. */
 async function getRenderedHtml(page: import('@playwright/test').Page, path: string): Promise<string> {
   await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  // Wait for React Helmet to inject data-rh meta tags (up to 15s).
+  // Wait for the page-specific title to appear (up to 20s).
   await page.waitForFunction(
     () => {
       const title = document.querySelector('title');
       return title && title.textContent && title.textContent.length > 0 && title.textContent !== 'MeTravel';
     },
-    { timeout: 15_000 },
+    { timeout: 20_000 },
   ).catch(() => {
     // Fallback: if title never changes from generic, continue — test assertions will catch it.
   });
-  // Small extra buffer for remaining meta tags to settle.
-  await page.waitForTimeout(500);
+  // TravelDetailsContainer patches og:title, description, and twitter:image via
+  // setTimeout at 50/300/800ms after data loads. Wait long enough for all patches.
+  await page.waitForTimeout(2000);
   return page.content();
 }
 
 test.describe('SEO: travel detail page meta tags', () => {
-  const TRAVEL_SLUG = 'albaniya-vler-gorod-dvuh-morey';
+  const TRAVEL_SLUG = 'tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
   const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
 
   let html: string;

@@ -237,26 +237,72 @@ export default function TravelDetailsContainer() {
       breadcrumbLd: breadcrumb,
     };
   }, [travel, slug]);
-  // ✅ FIX: Синхронизируем title экрана с navigation options,
-  // чтобы useDocumentTitle из expo-router устанавливал правильный document.title
-  // вместо пустой строки из HIDDEN = { title: '' }.
-  // Также устанавливаем document.title напрямую через rAF, т.к. useDocumentTitle
-  // из @react-navigation (родительский эффект) перезаписывает его пустой строкой
-  // ПОСЛЕ нашего дочернего эффекта в том же цикле рендера.
-  // rAF гарантирует, что наш document.title выставится после всех эффектов.
+  // ✅ FIX: Синхронизируем title экрана с navigation options.
+  // useDocumentTitle from @react-navigation overwrites document.title AFTER our
+  // effect via its own parent-level effect. A MutationObserver on <title> detects
+  // the overwrite and re-applies the correct value. We also patch og:title and
+  // other critical meta tags directly because react-helmet-async can lose the
+  // race on initial page loads with async data.
   useEffect(() => {
-    if (readyTitle) {
-      navigation.setOptions({ title: readyTitle });
-      if (Platform.OS === 'web' && typeof document !== 'undefined') {
-        const rafId = requestAnimationFrame(() => {
-          document.title = readyTitle;
-        });
-        return () => cancelAnimationFrame(rafId);
+    if (!readyTitle || readyTitle === 'MeTravel') return undefined;
+    navigation.setOptions({ title: readyTitle });
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return undefined;
+
+    const patchMeta = (sel: string, attr: string, val: string) => {
+      const all = document.querySelectorAll(sel);
+      // Remove duplicates — keep only the first, update it
+      for (let i = 1; i < all.length; i++) all[i].remove();
+      let el = all[0] ?? null;
+      if (!el) {
+        // Create the meta tag if Helmet never rendered it
+        el = document.createElement('meta');
+        const m = sel.match(/\[(\w+)="([^"]+)"\]/);
+        if (m) el.setAttribute(m[1], m[2]);
+        el.setAttribute('data-rh', 'true');
+        document.head.appendChild(el);
       }
+      if (el.getAttribute(attr) !== val) el.setAttribute(attr, val);
+    };
+    const applyAll = () => {
+      document.title = readyTitle;
+      patchMeta('meta[property="og:title"]', 'content', readyTitle);
+      patchMeta('meta[name="twitter:title"]', 'content', readyTitle);
+      if (readyDesc) {
+        patchMeta('meta[name="description"]', 'content', readyDesc);
+        patchMeta('meta[property="og:description"]', 'content', readyDesc);
+        patchMeta('meta[name="twitter:description"]', 'content', readyDesc);
+      }
+      if (readyImage) {
+        patchMeta('meta[property="og:image"]', 'content', readyImage);
+        patchMeta('meta[name="twitter:image"]', 'content', readyImage);
+      }
+    };
+
+    // Apply after a short delay to let Helmet commit its initial tags,
+    // then apply again after a longer delay to catch late overwrites.
+    const t1 = setTimeout(applyAll, 50);
+    const t2 = setTimeout(applyAll, 300);
+    const t3 = setTimeout(applyAll, 800);
+
+    // Watch <title> for overwrites by useDocumentTitle
+    const titleEl = document.querySelector('title');
+    let titleObs: MutationObserver | null = null;
+    if (titleEl) {
+      titleObs = new MutationObserver(() => {
+        if (document.title !== readyTitle) {
+          document.title = readyTitle;
+        }
+      });
+      titleObs.observe(titleEl, { childList: true, characterData: true, subtree: true });
     }
 
-    return undefined;
-  }, [navigation, readyTitle]);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      titleObs?.disconnect();
+    };
+  }, [navigation, readyTitle, readyDesc, readyImage]);
 
   const forceDeferMount = !!forceOpenKey;
 
