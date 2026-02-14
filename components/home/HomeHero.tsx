@@ -63,18 +63,35 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const styles = useMemo(() => StyleSheet.create({
     band: {
-      paddingVertical: 56,
+      paddingVertical: 72,
       backgroundColor: colors.background,
       width: '100%',
       alignSelf: 'stretch',
+      overflow: 'hidden',
+      ...Platform.select({
+        web: {
+          backgroundImage: `radial-gradient(ellipse 80% 60% at 70% 40%, ${colors.primarySoft} 0%, transparent 70%)`,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '100% 100%',
+        },
+      }),
     },
     bandMobile: {
-      paddingVertical: 40,
+      paddingVertical: 48,
+      ...Platform.select({
+        web: {
+          backgroundImage: `radial-gradient(ellipse 120% 50% at 50% 30%, ${colors.primarySoft} 0%, transparent 70%)`,
+        },
+      }),
     },
     content: {
       flex: 1,
-      gap: 24,
+      gap: 20,
       alignItems: 'flex-start',
+      justifyContent: 'center',
+    },
+    titleWrap: {
+      gap: 4,
     },
     title: {
       color: colors.text,
@@ -83,6 +100,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     subtitle: {
       color: colors.textMuted,
       maxWidth: 540,
+      lineHeight: 28,
     },
     hint: {
       fontSize: 15,
@@ -91,21 +109,22 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       marginTop: 8,
       paddingLeft: 16,
       borderLeftWidth: 3,
-      borderLeftColor: colors.primaryLight,
+      borderLeftColor: colors.primary,
     },
     buttonsContainer: {
-      marginTop: 32,
+      marginTop: 28,
       width: '100%',
     },
     primaryButton: {
-      paddingHorizontal: 24,
+      paddingHorizontal: 28,
       paddingVertical: 16,
       minHeight: 56,
+      borderRadius: DESIGN_TOKENS.radii.md,
       ...Platform.select({
         web: {
           flex: 1,
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-          transition: 'all 0.2s ease',
+          boxShadow: `${DESIGN_TOKENS.shadows.medium}, 0 0 0 0 ${colors.primarySoft}`,
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
@@ -113,7 +132,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       backgroundColor: colors.primaryDark,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.heavy,
+          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 0 24px ${colors.primaryAlpha30}`,
           transform: 'translateY(-2px)',
         },
       }),
@@ -122,19 +141,22 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       color: colors.textOnPrimary,
       fontSize: 16,
       fontWeight: '600',
-      letterSpacing: 0.1,
+      letterSpacing: 0.2,
     },
     secondaryButton: {
-      borderWidth: 2,
+      borderWidth: 1.5,
       borderColor: colors.border,
-      paddingHorizontal: 20,
+      paddingHorizontal: 24,
       paddingVertical: 14,
       gap: 8,
       minHeight: 56,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      backgroundColor: colors.surface,
       ...Platform.select({
         web: {
           flex: 1,
-          transition: 'all 0.2s ease',
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          backdropFilter: 'blur(8px)',
         },
       }),
     },
@@ -144,6 +166,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.light,
+          transform: 'translateY(-1px)',
         },
       }),
     },
@@ -157,6 +180,20 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
+      position: 'relative',
+    },
+    imageDecor: {
+      position: 'absolute',
+      width: 360,
+      height: 440,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      backgroundColor: colors.primaryLight,
+      opacity: 0.5,
+      ...Platform.select({
+        web: {
+          transform: 'rotate(3deg) translate(8px, 8px)',
+        },
+      }),
     },
     imagePlaceholder: {
       width: 320,
@@ -183,8 +220,17 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       borderRadius: DESIGN_TOKENS.radii.lg,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.modal,
-          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 8px 32px ${colors.primaryAlpha30}`,
+          transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease',
+          transform: 'rotate(-2deg)',
+        },
+      }),
+    },
+    bookImageHover: {
+      ...Platform.select({
+        web: {
+          transform: 'rotate(0deg) scale(1.03)',
+          boxShadow: `${DESIGN_TOKENS.shadows.modal}, 0 12px 40px ${colors.primaryAlpha40}`,
         },
       }),
     },
@@ -195,9 +241,11 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       <ResponsiveContainer maxWidth="xl" padding>
         <ResponsiveStack testID="home-hero-stack" direction="responsive" gap={60} align="center">
           <View style={styles.content}>
-            <ResponsiveText variant="h1" style={styles.title}>
-              Находи маршруты. Делись историями.
-            </ResponsiveText>
+            <View style={styles.titleWrap}>
+              <ResponsiveText variant="h1" style={styles.title}>
+                Находи маршруты.{isWeb ? '\n' : ' '}Делись историями.
+              </ResponsiveText>
+            </View>
 
             <ResponsiveText variant="h4" style={styles.subtitle}>
               Читай поездки других путешественников, сохраняй лучшие маршруты и собирай свои истории в книгу.
@@ -248,19 +296,27 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               onPress={handleOpenArticle}
               accessibilityRole="link"
               accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
-              style={styles.imageContainer}
+              style={({ hovered }) => [
+                styles.imageContainer,
+                isWeb && ({ cursor: 'pointer' } as any),
+              ]}
             >
-              <ImageCardMedia
-                source={require('../../assets/images/pdf.webp')}
-                width={320}
-                height={400}
-                borderRadius={DESIGN_TOKENS.radii.lg}
-                fit="cover"
-                alt="Пример книги путешествий"
-                loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
-                transition={300}
-                style={styles.bookImage}
-              />
+              {({ hovered }) => (
+                <>
+                  <View style={styles.imageDecor} />
+                  <ImageCardMedia
+                    source={require('../../assets/images/pdf.webp')}
+                    width={320}
+                    height={400}
+                    borderRadius={DESIGN_TOKENS.radii.lg}
+                    fit="cover"
+                    alt="Пример книги путешествий"
+                    loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
+                    transition={300}
+                    style={[styles.bookImage, hovered && styles.bookImageHover]}
+                  />
+                </>
+              )}
             </Pressable>
           )}
         </ResponsiveStack>

@@ -287,12 +287,8 @@ type SlideProps = {
   containerW: number;
   slideHeight: number;
   imagesLength: number;
-  colors: ReturnType<typeof useSliderTheme>['colors'];
   styles: ReturnType<typeof useSliderTheme>['styles'];
-  isMobile: boolean;
   blurBackground: boolean;
-  reduceMotion: boolean;
-  aspectRatio: number;
   imageProps?: any;
   onFirstImageLoad?: () => void;
   onImagePress?: (index: number) => void;
@@ -307,7 +303,6 @@ const Slide = memo(function Slide({
   containerW,
   slideHeight,
   imagesLength,
-  colors: _colors,
   styles,
   blurBackground,
   imageProps,
@@ -458,7 +453,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, [isMobile]);
 
   const [containerW, setContainerW] = useState(winW);
-  const [containerH, setContainerH] = useState<number | null>(null);
+  const containerWRef = useRef(winW);
   const listRef = useRef<FlatList<SliderImage>>(null);
 
   const indexRef = useRef(0);
@@ -466,13 +461,13 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   // ✅ УЛУЧШЕНИЕ: Состояние для текущего индекса (для счетчика)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
-  const [prefetchEnabled, setPrefetchEnabled] = useState(Platform.OS !== 'web');
+  const prefetchEnabledRef = useRef(Platform.OS !== 'web');
 
   useEffect(() => {
     setShowSwipeHint(images.length > 1);
     // On web we avoid auto-prefetch during initial load (hurts PSI/LCP by pulling extra gallery images).
     // Prefetch can still be enabled later on explicit user interaction.
-    setPrefetchEnabled(Platform.OS !== 'web');
+    prefetchEnabledRef.current = Platform.OS !== 'web';
   }, [images]);
 
   const dismissSwipeHint = useCallback(() => setShowSwipeHint(false), []);
@@ -508,26 +503,22 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [firstAR, images.length, insets.bottom, insets.top, isMobile, winH, mobileHeightPercent]
   );
 
-  // ✅ УЛУЧШЕНИЕ: Оптимизированные URL изображений с учетом размеров контейнера
-  // Теперь computeHeight доступен, так как определен выше
+  // Compute height directly — no separate state + effect to avoid double-render
+  const containerH = useMemo(() => computeHeight(containerW), [computeHeight, containerW]);
+
   const uriMap = useMemo(
     () =>
       images.map((img, idx) => {
         const base = buildUri(
           img,
           containerW,
-          containerH ?? computeHeight(containerW),
+          containerH,
           idx === 0
         );
         return base;
       }),
-    [images, containerW, containerH, computeHeight]
+    [images, containerW, containerH]
   );
-
-  // начальная высота по AR, потом обновляется при layout
-  useEffect(() => {
-    setContainerH(computeHeight(containerW));
-  }, [containerW, computeHeight]);
 
   // reduce motion из ОС
   useEffect(() => {
@@ -546,26 +537,25 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, []);
 
   // прогрев соседних изображений
-  const effectivePreload = prefetchEnabled ? preloadCount : 0;
+  const effectivePreload = prefetchEnabledRef.current ? preloadCount : 0;
 
   const warmNeighbors = useCallback(
     (idx: number) => {
-      if (!prefetchEnabled) return;
-      if (!effectivePreload) return;
-      for (let d = -effectivePreload; d <= effectivePreload; d++) {
+      if (!prefetchEnabledRef.current) return;
+      if (!preloadCount) return;
+      for (let d = -preloadCount; d <= preloadCount; d++) {
         if (d === 0) continue;
         const t = idx + d;
         if (t < 0 || t >= images.length) continue;
         const u = uriMap[t];
         prefetchImage(u).catch((error) => {
-          // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки прелоадинга изображений
           if (__DEV__) {
             console.warn('[Slider] Ошибка прелоадинга изображения:', error);
           }
         });
       }
     },
-    [prefetchEnabled, images.length, effectivePreload, uriMap]
+    [images.length, preloadCount, uriMap]
   );
 
   const setActiveIndex = useCallback(
@@ -706,14 +696,17 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const onLayout = useCallback(
     (e: LayoutChangeEvent) => {
       const w = e.nativeEvent.layout.width;
-      if (Math.abs(w - containerW) > 2) setContainerW(w);
+      if (Math.abs(w - containerWRef.current) > 2) {
+        containerWRef.current = w;
+        setContainerW(w);
+      }
     },
-    [containerW]
+    []
   );
 
   // прогреть стартовые (отложено для улучшения LCP)
   useEffect(() => {
-    if (!images.length || !prefetchEnabled) return;
+    if (!images.length || !prefetchEnabledRef.current) return;
 
     let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -726,7 +719,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [images.length, warmNeighbors, prefetchEnabled]);
+  }, [images.length, warmNeighbors]);
 
   const keyExtractor = useCallback((it: SliderImage) => String(it.id), []);
   const getItemLayout = useCallback(
@@ -770,12 +763,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           containerW={containerW}
           slideHeight={slideHeight}
           imagesLength={images.length}
-          colors={colors}
           styles={styles}
-          isMobile={isMobile}
           blurBackground={blurBackground}
-          reduceMotion={reduceMotion}
-          aspectRatio={aspectRatio}
           imageProps={imageProps}
           onFirstImageLoad={onFirstImageLoad}
           onImagePress={onImagePress}
@@ -786,18 +775,13 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [
       uriMap,
       blurBackground,
-      colors,
       containerW,
       containerH,
-      computeHeight,
       onFirstImageLoad,
       onImagePress,
       imageProps,
-      reduceMotion,
       images.length,
-      aspectRatio,
       styles,
-      isMobile,
       firstImagePreloaded,
     ]
   );
@@ -810,7 +794,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         onLayout={onLayout}
         style={[
           styles.wrapper,
-          { height: containerH ?? computeHeight(containerW) },
+          { height: containerH },
           isMobile && styles.wrapperMobile,
         ]}
       >
@@ -843,8 +827,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               dismissSwipeHint();
               if (Platform.OS !== 'web') return;
               // Enable neighbor prefetch only after explicit user interaction.
-              if (!prefetchEnabled && canPrefetchOnWeb) {
-                setPrefetchEnabled(true);
+              if (!prefetchEnabledRef.current && canPrefetchOnWeb) {
+                prefetchEnabledRef.current = true;
               }
             }}
             onScrollEndDrag={() => {

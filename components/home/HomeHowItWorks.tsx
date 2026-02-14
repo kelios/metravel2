@@ -65,17 +65,32 @@ function HomeHowItWorks() {
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: 64,
+      paddingVertical: 72,
       backgroundColor: colors.background,
+      ...Platform.select({
+        web: {
+          backgroundImage: `linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundSecondary} 50%, ${colors.background} 100%)`,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '100% 100%',
+        },
+      }),
     },
     header: {
-      marginBottom: 40,
+      marginBottom: 48,
       alignItems: 'center',
+      gap: 12,
     },
     title: {
       color: colors.text,
       textAlign: 'center',
       letterSpacing: -0.5,
+    },
+    headerSubtitle: {
+      fontSize: 16,
+      color: colors.textMuted,
+      textAlign: 'center',
+      lineHeight: 24,
+      maxWidth: 480,
     },
     stepWrapper: {
       flex: 1,
@@ -94,7 +109,7 @@ function HomeHowItWorks() {
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.card,
-          transition: 'all 0.3s ease',
+          transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
           touchAction: 'pan-y',
         } as any,
       }),
@@ -102,8 +117,9 @@ function HomeHowItWorks() {
     stepHover: {
       ...Platform.select({
         web: {
-          transform: 'translateY(-2px)',
+          transform: 'translateY(-4px)',
           boxShadow: DESIGN_TOKENS.shadows.hover,
+          borderColor: colors.primaryAlpha30,
         },
         default: {},
       }),
@@ -130,21 +146,21 @@ function HomeHowItWorks() {
       }),
     },
     numberBadge: {
-      width: 36,
-      height: 36,
+      width: 32,
+      height: 32,
       borderRadius: DESIGN_TOKENS.radii.full,
       backgroundColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center',
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.light,
+          boxShadow: `0 2px 8px ${colors.primaryAlpha30}`,
         },
       }),
     },
     numberText: {
       color: colors.textOnPrimary,
-      fontSize: 18,
+      fontSize: 15,
       fontWeight: '700',
     },
     stepTitle: {
@@ -153,12 +169,13 @@ function HomeHowItWorks() {
     },
     stepDescription: {
       color: colors.textMuted,
+      lineHeight: 22,
     },
     connector: {
       justifyContent: 'center',
       alignItems: 'center',
-      paddingHorizontal: 8,
-      opacity: 0.5,
+      paddingHorizontal: 4,
+      opacity: 0.4,
     },
   }), [colors]);
 
@@ -169,6 +186,9 @@ function HomeHowItWorks() {
           <ResponsiveText variant="h2" style={styles.title}>
             Как это работает
           </ResponsiveText>
+          <Text style={styles.headerSubtitle}>
+            Три простых шага от идеи до книги
+          </Text>
         </View>
 
         <ResponsiveStack

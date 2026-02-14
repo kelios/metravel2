@@ -39,7 +39,7 @@ function HomeTrustBlock() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingVertical: 40,
+      paddingVertical: 0,
       backgroundColor: colors.background,
     },
     card: {
@@ -48,10 +48,12 @@ function HomeTrustBlock() {
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: 16,
+      paddingVertical: 20,
+      paddingHorizontal: 24,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.card,
+          boxShadow: DESIGN_TOKENS.shadows.light,
+          backdropFilter: 'blur(8px)',
         },
       }),
     },
@@ -59,40 +61,63 @@ function HomeTrustBlock() {
       width: '100%',
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 16,
-      ...Platform.select({
-        web: {
-          rowGap: 16,
-          columnGap: 16,
-        },
-      }),
+      gap: 0,
     },
     itemsMobile: {
       flexDirection: 'column',
       flexWrap: 'nowrap',
+      gap: 16,
     },
     item: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       flexGrow: 1,
       flexBasis: 0,
       minWidth: 240,
-      paddingVertical: 6,
+      paddingVertical: 4,
+      paddingHorizontal: 12,
+      ...Platform.select({
+        web: {
+          borderRightWidth: 1,
+          borderRightColor: colors.borderLight,
+        },
+      }),
+    },
+    itemLast: {
+      ...Platform.select({
+        web: {
+          borderRightWidth: 0,
+        },
+      }),
     },
     itemMobile: {
       flexGrow: 0,
       flexBasis: 'auto',
       minWidth: 0,
       width: '100%',
+      paddingHorizontal: 0,
+      ...Platform.select({
+        web: {
+          borderRightWidth: 0,
+          borderTopWidth: 0,
+        },
+      }),
     },
     iconWrap: {
-      width: 34,
-      height: 34,
-      borderRadius: 10,
+      width: 40,
+      height: 40,
+      borderRadius: 12,
       backgroundColor: colors.primaryLight,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 12,
+      marginRight: 14,
+      ...Platform.select({
+        web: {
+          backgroundImage: `linear-gradient(135deg, ${colors.primarySoft} 0%, ${colors.primaryLight} 100%)`,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '100% 100%',
+        },
+      }),
     },
     textWrap: {
       flex: 1,
@@ -102,8 +127,9 @@ function HomeTrustBlock() {
       fontSize: 14,
       fontWeight: '700',
       color: colors.text,
-      marginBottom: 4,
+      marginBottom: 2,
       lineHeight: 18,
+      letterSpacing: -0.1,
     },
     subtitle: {
       fontSize: 13,
@@ -117,10 +143,10 @@ function HomeTrustBlock() {
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.card}>
           <View style={[styles.items, isMobile && styles.itemsMobile]}>
-            {ITEMS.map((item) => (
-              <View key={item.title} style={[styles.item, isMobile && styles.itemMobile]}>
+            {ITEMS.map((item, idx) => (
+              <View key={item.title} style={[styles.item, isMobile && styles.itemMobile, idx === ITEMS.length - 1 && styles.itemLast]}>
                 <View style={styles.iconWrap}>
-                  <Feather name={item.icon as any} size={18} color={colors.primary} />
+                  <Feather name={item.icon as any} size={20} color={colors.primary} />
                 </View>
                 <View style={styles.textWrap}>
                   <Text style={styles.title}>{item.title}</Text>

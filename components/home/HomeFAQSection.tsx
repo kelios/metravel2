@@ -49,53 +49,63 @@ function HomeFAQSection() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingVertical: 64,
+      paddingVertical: 72,
       backgroundColor: colors.background,
+    },
+    inner: {
+      maxWidth: 720,
+      alignSelf: 'center',
+      width: '100%',
     },
     header: {
       alignItems: 'center',
-      marginBottom: 32,
-      gap: 10,
+      marginBottom: 40,
+      gap: 12,
     },
     title: {
-      fontSize: 28,
+      fontSize: 32,
       fontWeight: '800',
       color: colors.text,
-      letterSpacing: -0.3,
+      letterSpacing: -0.5,
     },
     subtitle: {
       fontSize: 16,
-      lineHeight: 22,
+      lineHeight: 24,
       color: colors.textMuted,
       textAlign: 'center',
       maxWidth: 560,
     },
     list: {
-      gap: 12,
+      gap: 10,
     },
     item: {
       width: '100%',
-      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
       overflow: 'hidden',
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.card,
+          transition: 'border-color 0.25s ease, box-shadow 0.25s ease',
         },
       }),
     },
     itemOpen: {
-      borderColor: colors.border,
+      borderColor: colors.primaryAlpha30,
+      ...Platform.select({
+        web: {
+          boxShadow: `0 2px 12px ${colors.primaryAlpha30}`,
+        },
+      }),
     },
     itemHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingVertical: 16,
-      paddingHorizontal: 16,
-      minHeight: 48,
+      paddingVertical: 18,
+      paddingHorizontal: 20,
+      minHeight: 52,
       gap: 16,
       ...Platform.select({
         web: {
@@ -106,21 +116,33 @@ function HomeFAQSection() {
       }),
     },
     itemHeaderHover: {
-      backgroundColor: colors.primaryLight,
+      backgroundColor: colors.primarySoft,
     },
     question: {
       flex: 1,
       fontSize: 16,
-      fontWeight: '700',
+      fontWeight: '600',
       color: colors.text,
+      lineHeight: 22,
+    },
+    chevronWrap: {
+      width: 28,
+      height: 28,
+      borderRadius: DESIGN_TOKENS.radii.full,
+      backgroundColor: colors.backgroundSecondary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    chevronWrapOpen: {
+      backgroundColor: colors.primaryLight,
     },
     answerWrap: {
-      paddingHorizontal: 16,
-      paddingBottom: 16,
+      paddingHorizontal: 20,
+      paddingBottom: 20,
     },
     answer: {
       fontSize: 15,
-      lineHeight: 22,
+      lineHeight: 24,
       color: colors.textMuted,
     },
   }), [colors]);
@@ -133,38 +155,42 @@ function HomeFAQSection() {
           <Text style={styles.subtitle}>Короткие ответы на частые вопросы</Text>
         </View>
 
-        <View style={styles.list}>
-          {items.map((item, idx) => {
-            const isOpen = openIndex === idx;
-            return (
-              <View key={item.q} style={[styles.item, isOpen && styles.itemOpen]}>
-                <Pressable
-                  onPress={() => toggleItem(idx)}
-                  accessibilityRole="button"
-                  accessibilityLabel={item.q}
-                  accessibilityState={{ expanded: isOpen }}
-                  accessibilityHint={isOpen ? 'Свернуть ответ' : 'Развернуть ответ'}
-                  style={({ pressed, hovered }) => [
-                    styles.itemHeader,
-                    (pressed || hovered) && Platform.OS === 'web' ? styles.itemHeaderHover : null,
-                  ]}
-                >
-                  <Text style={styles.question}>{item.q}</Text>
-                  <Feather
-                    name={isOpen ? 'chevron-up' : 'chevron-down'}
-                    size={18}
-                    color={colors.textMuted}
-                  />
-                </Pressable>
+        <View style={styles.inner}>
+          <View style={styles.list}>
+            {items.map((item, idx) => {
+              const isOpen = openIndex === idx;
+              return (
+                <View key={item.q} style={[styles.item, isOpen && styles.itemOpen]}>
+                  <Pressable
+                    onPress={() => toggleItem(idx)}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.q}
+                    accessibilityState={{ expanded: isOpen }}
+                    accessibilityHint={isOpen ? 'Свернуть ответ' : 'Развернуть ответ'}
+                    style={({ pressed, hovered }) => [
+                      styles.itemHeader,
+                      (pressed || hovered) && Platform.OS === 'web' ? styles.itemHeaderHover : null,
+                    ]}
+                  >
+                    <Text style={styles.question}>{item.q}</Text>
+                    <View style={[styles.chevronWrap, isOpen && styles.chevronWrapOpen]}>
+                      <Feather
+                        name={isOpen ? 'chevron-up' : 'chevron-down'}
+                        size={16}
+                        color={isOpen ? colors.primary : colors.textMuted}
+                      />
+                    </View>
+                  </Pressable>
 
-                {isOpen ? (
-                  <View style={styles.answerWrap}>
-                    <Text style={styles.answer}>{item.a}</Text>
-                  </View>
-                ) : null}
-              </View>
-            );
-          })}
+                  {isOpen ? (
+                    <View style={styles.answerWrap}>
+                      <Text style={styles.answer}>{item.a}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
         </View>
       </ResponsiveContainer>
     </View>

@@ -61,6 +61,7 @@ const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(ma
 // Compute preferred format once at module level (never changes at runtime)
 const PREFERRED_FORMAT = Platform.OS === 'web' ? getPreferredImageFormat() : undefined
 const FIRST_SLIDE_URI_CACHE = new Map<string, string>()
+const FIRST_SLIDE_URI_CACHE_MAX = 50
 
 const buildUri = (
   img: SliderImage,
@@ -233,6 +234,10 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           const initial = buildUri(img, containerW, containerH, fit, true)
           firstSlideStableUriRef.current = initial
           if (firstSlideStableKey) {
+            if (FIRST_SLIDE_URI_CACHE.size >= FIRST_SLIDE_URI_CACHE_MAX) {
+              const oldest = FIRST_SLIDE_URI_CACHE.keys().next().value
+              if (oldest !== undefined) FIRST_SLIDE_URI_CACHE.delete(oldest)
+            }
             FIRST_SLIDE_URI_CACHE.set(firstSlideStableKey, initial)
           }
           return initial
@@ -394,32 +399,28 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
       return (
         <View style={[styles.slide, slideDimensions, styles.slideSnap]}>
-          <View style={styles.imageCardWrapper}>
-            <View style={styles.imageCardSurface}>
-              <ImageCardMedia
-                src={uri}
-                fit={fit}
-                blurBackground={blurBackground}
-                priority={isFirstSlide ? 'high' : (isEager ? 'normal' : 'low')}
-                loading={isEager ? 'eager' : 'lazy'}
-                prefetch={isFirstSlide}
-                transition={0}
-                style={styles.img}
-                alt={`Фотография путешествия ${index + 1} из ${images.length}`}
-                imageProps={{
-                  ...mergedImagePropsBase,
-                  testID: `slider-image-${index}`,
-                  accessibilityRole: 'image',
-                  accessibilityLabel: `Фотография путешествия ${index + 1} из ${images.length}`,
-                }}
-                onLoad={isFirstSlide ? handleFirstImageLoad : undefined}
-              />
-            </View>
-          </View>
+          <ImageCardMedia
+            src={uri}
+            fit={fit}
+            blurBackground={blurBackground}
+            priority={isFirstSlide ? 'high' : (isEager ? 'normal' : 'low')}
+            loading={isEager ? 'eager' : 'lazy'}
+            prefetch={isFirstSlide}
+            transition={0}
+            style={styles.img}
+            alt={`Фотография путешествия ${index + 1} из ${images.length}`}
+            imageProps={{
+              ...mergedImagePropsBase,
+              testID: `slider-image-${index}`,
+              accessibilityRole: 'image',
+              accessibilityLabel: `Фотография путешествия ${index + 1} из ${images.length}`,
+            }}
+            onLoad={isFirstSlide ? handleFirstImageLoad : undefined}
+          />
         </View>
       )
     },
-    [blurBackground, fit, handleFirstImageLoad, images.length, mergedImagePropsBase, slideDimensions, styles.imageCardSurface, styles.imageCardWrapper, styles.img, styles.slide, styles.slideSnap, uriMap]
+    [blurBackground, fit, handleFirstImageLoad, images.length, mergedImagePropsBase, slideDimensions, styles.img, styles.slide, styles.slideSnap, uriMap]
   )
 
   // Minimal scroll handler — only update currentIndex when scroll settles.
@@ -438,14 +439,19 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [containerW, enablePrefetch, setActiveIndex]
   )
 
-  // Keyboard navigation for accessibility
+  // Keyboard navigation for accessibility — use refs to avoid re-attaching on next/prev changes
+  const nextRef = useRef(next)
+  nextRef.current = next
+  const prevRef = useRef(prev)
+  prevRef.current = prev
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
-        prev()
+        prevRef.current()
       } else if (e.key === 'ArrowRight') {
-        next()
+        nextRef.current()
       }
     }
     // Only attach when slider is focused or hovered
@@ -459,7 +465,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return () => {
       parent.removeEventListener('keydown', handleKeyDown)
     }
-  }, [next, prev])
+  }, []) // stable — uses refs for next/prev
 
   if (!images.length) return null
 
@@ -645,28 +651,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     slideSnap: Platform.OS === 'web'
       ? ({ scrollSnapAlign: 'start', scrollSnapStop: 'always' } as any)
       : {},
-    imageCardWrapper: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 1,
-    },
-    imageCardSurface: {
-      width: '100%',
-      height: '100%',
-      alignSelf: 'center',
-      borderRadius: 0,
-      overflow: 'hidden',
-      backgroundColor: 'transparent',
-      borderWidth: 0,
-      borderColor: 'transparent',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
     img: {
       width: '100%',
       height: '100%',

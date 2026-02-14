@@ -99,10 +99,10 @@ function HomeInspirationSection({
       minWidth: 0,
     },
     title: {
-      fontSize: 36,
+      fontSize: 32,
       fontWeight: '800',
       color: colors.text,
-      lineHeight: 44,
+      lineHeight: 40,
       letterSpacing: -0.5,
     },
     titleMobile: {
@@ -332,7 +332,7 @@ function HomeInspirationSections() {
 
   const styles = useMemo(() => StyleSheet.create({
     band: {
-      paddingVertical: 72,
+      paddingVertical: 80,
       backgroundColor: colors.backgroundSecondary,
       width: '100%',
       alignSelf: 'stretch',
@@ -341,7 +341,7 @@ function HomeInspirationSections() {
       paddingVertical: 56,
     },
     container: {
-      gap: 72,
+      gap: 80,
       width: '100%',
       alignSelf: 'stretch',
     },

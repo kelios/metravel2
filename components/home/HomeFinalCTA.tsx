@@ -43,13 +43,15 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       width: '100%',
       alignSelf: 'stretch',
       paddingHorizontal: 0,
-      paddingVertical: 88,
+      paddingVertical: 96,
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',
+      overflow: 'hidden',
+      position: 'relative',
       ...Platform.select({
         web: {
-          backgroundImage: `linear-gradient(135deg, ${colors.primarySoft} 0%, ${colors.primaryLight} 100%)`,
+          backgroundImage: `radial-gradient(ellipse 80% 80% at 50% 50%, ${colors.primarySoft} 0%, ${colors.backgroundSecondary} 70%)`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: '100% 100%',
         },
@@ -61,7 +63,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     },
     content: {
       alignItems: 'center',
-      gap: 32,
+      gap: 28,
     },
     title: {
       fontSize: 40,
@@ -72,30 +74,32 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       letterSpacing: -0.5,
     },
     titleMobile: {
-      fontSize: 32,
-      lineHeight: 40,
+      fontSize: 28,
+      lineHeight: 36,
       letterSpacing: -0.3,
     },
     subtitle: {
-      fontSize: 20,
+      fontSize: 18,
       color: colors.textMuted,
-      lineHeight: 32,
+      lineHeight: 28,
       textAlign: 'center',
-      maxWidth: 560,
+      maxWidth: 520,
     },
     subtitleMobile: {
-      fontSize: 18,
-      lineHeight: 28,
+      fontSize: 16,
+      lineHeight: 24,
     },
     button: {
       paddingHorizontal: 40,
       paddingVertical: 20,
       minHeight: 60,
       minWidth: 300,
+      borderRadius: DESIGN_TOKENS.radii.md,
+      marginTop: 8,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-          transition: 'all 0.2s ease',
+          boxShadow: `${DESIGN_TOKENS.shadows.medium}, 0 0 0 0 ${colors.primarySoft}`,
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
@@ -103,8 +107,8 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       backgroundColor: colors.primaryDark,
       ...Platform.select({
         web: {
-          boxShadow: DESIGN_TOKENS.shadows.heavy,
-          transform: 'translateY(-2px)',
+          boxShadow: `${DESIGN_TOKENS.shadows.heavy}, 0 0 32px ${colors.primaryAlpha40}`,
+          transform: 'translateY(-3px)',
         },
       }),
     },
