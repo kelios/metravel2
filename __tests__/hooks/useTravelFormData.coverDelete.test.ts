@@ -1,4 +1,4 @@
-import { renderHook, waitFor, act, cleanup } from '@testing-library/react-native';
+import { renderHook, act, cleanup } from '@testing-library/react-native';
 
 import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { saveFormData } from '@/api/misc';
@@ -13,11 +13,12 @@ jest.mock('@/api/misc', () => ({
 
 describe('useTravelFormData – cover photo deletion + save', () => {
   beforeEach(() => {
-    jest.useRealTimers();
+    jest.useFakeTimers();
     jest.clearAllMocks();
   });
 
   afterEach(() => {
+    jest.runOnlyPendingTimers();
     jest.useRealTimers();
     cleanup();
   });
@@ -41,7 +42,10 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       { concurrentRoot: false },
     );
 
-    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+    // Advance past any initial timers
+    await act(async () => { jest.advanceTimersByTime(100); });
+
+    expect(result.current.isInitialLoading).toBe(false);
 
     // Simulate existing travel with a cover image
     act(() => {
@@ -69,7 +73,9 @@ describe('useTravelFormData – cover photo deletion + save', () => {
 
     // Now trigger manual save
     await act(async () => {
-      await result.current.handleManualSave();
+      const p = result.current.handleManualSave();
+      jest.advanceTimersByTime(100);
+      await p;
     });
 
     expect(saveFormData).toHaveBeenCalledTimes(1);
@@ -92,7 +98,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       { concurrentRoot: false },
     );
 
-    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+    await act(async () => { jest.advanceTimersByTime(100); });
 
     // Set up travel with cover, then delete it
     act(() => {
@@ -114,7 +120,9 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     });
 
     await act(async () => {
-      await result.current.handleManualSave();
+      const p = result.current.handleManualSave();
+      jest.advanceTimersByTime(100);
+      await p;
     });
 
     // After save, cover should still be null (not restored from old data)
@@ -136,7 +144,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       { concurrentRoot: false },
     );
 
-    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+    await act(async () => { jest.advanceTimersByTime(100); });
 
     // Set up travel with cover
     act(() => {
@@ -159,11 +167,13 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     });
 
     await act(async () => {
-      await result.current.handleManualSave();
+      const p = result.current.handleManualSave();
+      jest.advanceTimersByTime(100);
+      await p;
     });
 
     // Even though server returned old URL, local state should keep null
-    // because user explicitly deleted the cover
+    // because user explicitly deleted the cover.
     // NOTE: This test may FAIL if applySavedData restores the old URL from server response.
     // That would be the bug we're looking for.
     expect((result.current.formData as any).travel_image_thumb_url).toBeNull();
@@ -180,7 +190,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       { concurrentRoot: false },
     );
 
-    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+    await act(async () => { jest.advanceTimersByTime(100); });
 
     act(() => {
       result.current.setFormData({
@@ -203,7 +213,9 @@ describe('useTravelFormData – cover photo deletion + save', () => {
 
     let saveResult: any;
     await act(async () => {
-      saveResult = await result.current.handleManualSave();
+      const p = result.current.handleManualSave();
+      jest.advanceTimersByTime(100);
+      saveResult = await p;
     });
 
     // Save must succeed (return data, not undefined from error path)
@@ -222,7 +234,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       { concurrentRoot: false },
     );
 
-    await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
+    await act(async () => { jest.advanceTimersByTime(100); });
 
     // Set up travel with gallery
     act(() => {
@@ -246,7 +258,9 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     });
 
     await act(async () => {
-      await result.current.handleManualSave();
+      const p = result.current.handleManualSave();
+      jest.advanceTimersByTime(100);
+      await p;
     });
 
     expect(saveFormData).toHaveBeenCalledTimes(1);

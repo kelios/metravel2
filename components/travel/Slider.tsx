@@ -416,7 +416,7 @@ const Slide = memo(function Slide({
 
 // NOTE: avoid TS generics in forwardRef to prevent runtime parsing issues if the file is consumed untranspiled
 const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
-  const { colors, styles } = useSliderTheme();
+  const { styles } = useSliderTheme();
   const {
     images,
     showArrows = true,
@@ -535,9 +535,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       active = false;
     };
   }, []);
-
-  // прогрев соседних изображений
-  const effectivePreload = prefetchEnabledRef.current ? preloadCount : 0;
 
   const warmNeighbors = useCallback(
     (idx: number) => {
@@ -777,6 +774,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       blurBackground,
       containerW,
       containerH,
+      computeHeight,
       onFirstImageLoad,
       onImagePress,
       imageProps,

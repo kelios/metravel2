@@ -296,7 +296,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               onPress={handleOpenArticle}
               accessibilityRole="link"
               accessibilityLabel="Открыть статью о маршруте Харцер Хексенштиг"
-              style={({ hovered }) => [
+              style={[
                 styles.imageContainer,
                 isWeb && ({ cursor: 'pointer' } as any),
               ]}

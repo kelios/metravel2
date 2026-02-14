@@ -14,7 +14,6 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
 import { useYupForm } from '@/hooks/useYupForm';
-import { useIsFocused } from '@react-navigation/native';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -56,7 +55,6 @@ export default function RegisterForm() {
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const isFocused = useIsFocused();
     const pathname = usePathname();
     const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
     const canonical = buildCanonicalUrl(pathname || '/registration');
@@ -120,17 +118,15 @@ export default function RegisterForm() {
 
     return (
         <>
-            {isFocused && (
-                <InstantSEO
-                    headKey="register"
-                    title={title}
-                    description={description}
-                    canonical={canonical}
-                    image={buildOgImageUrl('/og-preview.jpg')}
-                    ogType="website"
-                    robots="noindex, nofollow"
-                />
-            )}
+            <InstantSEO
+                headKey="register"
+                title={title}
+                description={description}
+                canonical={canonical}
+                image={buildOgImageUrl('/og-preview.jpg')}
+                ogType="website"
+                robots="noindex, nofollow"
+            />
 
             <KeyboardAvoidingView
                 style={{ flex: 1, backgroundColor: colors.backgroundSecondary }}
