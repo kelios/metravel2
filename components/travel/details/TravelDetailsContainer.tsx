@@ -11,6 +11,7 @@ import {
   Animated,
   Platform,
   SafeAreaView,
+  ScrollView,
   Text,
   TouchableOpacity,
   View,
