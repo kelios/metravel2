@@ -292,6 +292,67 @@ const getTravelHeroPreloadScript = () => String.raw`
         // Cache API response globally so React Query can reuse it (avoids double fetch)
         try { window.__metravelTravelPreload = { data: data, slug: slug, isId: isId }; } catch (_e) {}
 
+        // ── SEO: patch meta tags BEFORE React hydration so crawlers see real data ──
+        try {
+          var siteOrigin = 'https://metravel.by';
+
+          function patchMeta(sel, attr, val) {
+            try {
+              var el = document.querySelector(sel);
+              if (el) { el.setAttribute(attr, val); }
+            } catch (_e2) {}
+          }
+
+          // Title
+          var travelName = data.name || data.title || '';
+          if (travelName) {
+            var fullTitle = travelName + ' | MeTravel';
+            try { document.title = fullTitle; } catch (_e2) {}
+            patchMeta('meta[property="og:title"]', 'content', fullTitle);
+            patchMeta('meta[name="twitter:title"]', 'content', fullTitle);
+            var titleEl = document.querySelector('title');
+            if (titleEl) titleEl.textContent = fullTitle;
+          }
+
+          // Description — strip HTML tags
+          var rawDesc = data.description || '';
+          if (rawDesc) {
+            var plainDesc = rawDesc.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 160);
+            if (plainDesc) {
+              patchMeta('meta[name="description"]', 'content', plainDesc);
+              patchMeta('meta[property="og:description"]', 'content', plainDesc);
+              patchMeta('meta[name="twitter:description"]', 'content', plainDesc);
+            }
+          }
+
+          // Image — must be absolute URL for Google/social crawlers
+          var ogImgUrl = data.travel_image_thumb_url || '';
+          if (!ogImgUrl && data.gallery && data.gallery.length) {
+            var gFirst = data.gallery[0];
+            ogImgUrl = typeof gFirst === 'string' ? gFirst : (gFirst && gFirst.url) || '';
+          }
+          if (ogImgUrl) {
+            // Make absolute
+            if (ogImgUrl.indexOf('http') !== 0) {
+              ogImgUrl = siteOrigin + (ogImgUrl.charAt(0) === '/' ? '' : '/') + ogImgUrl;
+            }
+            // Force HTTPS
+            ogImgUrl = ogImgUrl.replace(/^http:\/\//, 'https://');
+            patchMeta('meta[property="og:image"]', 'content', ogImgUrl);
+            patchMeta('meta[name="twitter:image"]', 'content', ogImgUrl);
+          }
+
+          // Canonical & og:url — fix [param] placeholder
+          var correctPath = '/travels/' + slug;
+          var correctUrl = siteOrigin + correctPath;
+          patchMeta('meta[property="og:url"]', 'content', correctUrl);
+          patchMeta('link[rel="canonical"]', 'href', correctUrl);
+
+          // og:type for travel pages
+          patchMeta('meta[property="og:type"]', 'content', 'article');
+        } catch (_e) {}
+        // ── end SEO patch ──
+
         var url = data.travel_image_thumb_url;
         var updatedAt = data.updated_at;
         var id = data.id;
