@@ -94,7 +94,6 @@ const Defer: React.FC<{ when: boolean; children: React.ReactNode }> = ({ when, c
 export default function TravelDetailsContainer() {
   const { isMobile, width: responsiveWidth } = useResponsive();
   const screenWidth = responsiveWidth;
-  const isFocused = useIsFocused();
   const navigation = useNavigation();
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -407,7 +406,7 @@ export default function TravelDetailsContainer() {
   // react-helmet-async has a race condition on direct page loads: if a Helmet instance
   // mounts late (after requestAnimationFrame), meta tags are committed as empty.
   // Rendering it here with fallback values ensures the Helmet instance is stable.
-  const seoBlock = isFocused ? (
+  const seoBlock = (
     <InstantSEO
       headKey={headKey}
       title={readyTitle}
@@ -440,7 +439,7 @@ export default function TravelDetailsContainer() {
         </>
       }
     />
-  ) : null;
+  );
 
   // NOTE: Skeleton gate is purely data-driven: show skeleton until `travel` is available.
   // Avoid delaying first paint with RAF, as it can increase CLS in perf audits.

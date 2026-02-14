@@ -85,13 +85,13 @@ test.describe('@smoke QA pending scenarios: 404, SEO, cookies, legal', () => {
       expect(canonical).toContain('registration');
     }
 
-    // Should not have noindex (registration is a public page)
+    // Registration is an auth page and should be noindex.
     const robots = await page
       .locator('meta[name="robots"]')
       .getAttribute('content')
       .catch(() => null);
     if (robots) {
-      expect(robots).not.toContain('noindex');
+      expect(robots).toContain('noindex');
     }
   });
 

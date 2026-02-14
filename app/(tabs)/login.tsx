@@ -138,17 +138,15 @@ export default function Login() {
     /* ---------- render ---------- */
     return (
         <>
-            {isFocused && (
-                <InstantSEO
-                    headKey="login"
-                    title={title}
-                    description={description}
-                    canonical={canonical}
-                    image={buildOgImageUrl('/og-preview.jpg')}
-                    ogType="website"
-                    robots="noindex, nofollow"
-                />
-            )}
+            <InstantSEO
+                headKey="login"
+                title={title}
+                description={description}
+                canonical={canonical}
+                image={buildOgImageUrl('/og-preview.jpg')}
+                ogType="website"
+                robots="noindex, nofollow"
+            />
 
             <KeyboardAvoidingView
                 style={styles.container}
