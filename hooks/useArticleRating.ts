@@ -41,16 +41,17 @@ export function useArticleRating({
     const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
 
     // Query для получения рейтинга
+    // Для авторизованных пользователей всегда делаем запрос, чтобы получить user_rating
     const ratingQuery = useQuery({
-        queryKey: ['articleRating', articleId],
+        queryKey: ['articleRating', articleId, isAuthenticated],
         queryFn: () => getArticleRating(articleId!),
         enabled: enabled && !!articleId && isAuthenticated,
-        staleTime: 5 * 60 * 1000,
-        initialData: initialRating !== null || initialUserRating !== null
+        staleTime: 30 * 1000, // 30 секунд — чтобы быстрее обновлять user_rating
+        placeholderData: (initialRating != null || initialUserRating != null)
             ? {
                 rating: initialRating ?? 0,
                 rating_count: initialCount,
-                user_rating: initialUserRating,
+                user_rating: initialUserRating ?? null,
             }
             : undefined,
     });
@@ -60,14 +61,14 @@ export function useArticleRating({
         mutationFn: (rating: number) => rateArticle({ articleId: articleId!, rating }),
         onMutate: async (newRating) => {
             setOptimisticRating(newRating);
-            await queryClient.cancelQueries({ queryKey: ['articleRating', articleId] });
-            const previousData = queryClient.getQueryData<ArticleRatingResponse>(['articleRating', articleId]);
+            await queryClient.cancelQueries({ queryKey: ['articleRating', articleId, isAuthenticated] });
+            const previousData = queryClient.getQueryData<ArticleRatingResponse>(['articleRating', articleId, isAuthenticated]);
             return { previousData };
         },
         onError: (_error, _newRating, context) => {
             setOptimisticRating(null);
             if (context?.previousData) {
-                queryClient.setQueryData(['articleRating', articleId], context.previousData);
+                queryClient.setQueryData(['articleRating', articleId, isAuthenticated], context.previousData);
             }
             showToast({
                 text1: 'Не удалось сохранить оценку',
@@ -76,8 +77,8 @@ export function useArticleRating({
         },
         onSuccess: (data) => {
             setOptimisticRating(null);
-            queryClient.setQueryData(['articleRating', articleId], data);
-            
+            queryClient.setQueryData(['articleRating', articleId, isAuthenticated], data);
+
             // Инвалидируем кэш статьи, если он есть
             queryClient.invalidateQueries({ queryKey: ['article', articleId] });
 

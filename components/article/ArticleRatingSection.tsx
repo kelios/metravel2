@@ -88,7 +88,7 @@ function ArticleRatingSection({
                 {canRate && (
                     <View style={styles.rateSection}>
                         <Text style={styles.rateLabel}>
-                            {userRating ? 'Ваша оценка:' : 'Оцените статью:'}
+                            {userRating != null && userRating > 0 ? 'Ваша оценка:' : 'Оцените статью:'}
                         </Text>
                         <StarRating
                             rating={userRating ?? 0}
@@ -103,7 +103,7 @@ function ArticleRatingSection({
                         {isSubmitting && (
                             <Text style={styles.savingText}>Сохранение...</Text>
                         )}
-                        {!!userRating && !isSubmitting && !isLoading && (
+                        {userRating != null && userRating > 0 && !isSubmitting && !isLoading && (
                             <Text style={styles.yourRatingText}>Ваша оценка: {userRating}</Text>
                         )}
                     </View>
