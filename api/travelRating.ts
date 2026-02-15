@@ -1,10 +1,17 @@
 // api/travelRating.ts
-// ✅ API для работы с рейтингом путешествий
+// API для работы с рейтингом путешествий
 
 import { apiClient } from '@/api/client';
 import { devError } from '@/utils/logger';
+import { useAuthStore } from '@/stores/authStore';
 
 export type TravelRatingResponse = {
+    rating: number;
+    rating_count: number;
+    user_rating: number | null;
+};
+
+export type TravelRatingRecordResponse = {
     id: number;
     user: number;
     travel: number;
@@ -29,9 +36,14 @@ export const rateTravel = async (params: RateTravelParams): Promise<TravelRating
     }
 
     try {
+        const userIdRaw = useAuthStore.getState().userId;
+        const userId = userIdRaw ? Number(userIdRaw) : null;
+
         const response = await apiClient.post<TravelRatingResponse>(
             '/travels/rating/',
-            { travel: travelId, rating }
+            userId && Number.isFinite(userId)
+                ? { user: userId, travel: travelId, rating }
+                : { travel: travelId, rating }
         );
         return response;
     } catch (error) {

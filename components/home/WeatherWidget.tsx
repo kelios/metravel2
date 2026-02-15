@@ -5,6 +5,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
+import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 
 // ✅ УЛУЧШЕНИЕ: Импорт CSS для предотвращения проблем с текстом на hover
 if (Platform.OS === 'web') {
@@ -33,6 +34,8 @@ function WeatherWidget({ points, countryName }: Props) {
     useEffect(() => {
         if (Platform.OS !== 'web' || !points?.length) return;
 
+        let isCancelled = false;
+
         const [latStr, lonStr] = points[0].coord.split(',').map((s) => s.trim());
         const lat = parseFloat(latStr);
         const lon = parseFloat(lonStr);
@@ -47,28 +50,37 @@ function WeatherWidget({ points, countryName }: Props) {
 
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto`;
 
-        fetch(url)
-          .then(res => res.json())
-          .then(data => {
-              const dates = data?.daily?.time ?? [];
-              const tempMax = data?.daily?.temperature_2m_max ?? [];
-              const tempMin = data?.daily?.temperature_2m_min ?? [];
-              const codes = data?.daily?.weather_code ?? [];
-              const forecastData: DailyForecast[] = dates.slice(0, 3).map((date: string, i: number) => ({
-                  date,
-                  temperatureMin: tempMin[i],
-                  temperatureMax: tempMax[i],
-                  condition: weatherDescriptions[codes[i]] ?? 'Неизвестно',
-                  icon: iconFromCode(codes[i]),
-              }));
+        void (async () => {
+          try {
+            const res = await fetchWithTimeout(url, undefined as any, 8000);
+            if (!res.ok) {
+              return;
+            }
+
+            const data = await res.json();
+            const dates = data?.daily?.time ?? [];
+            const tempMax = data?.daily?.temperature_2m_max ?? [];
+            const tempMin = data?.daily?.temperature_2m_min ?? [];
+            const codes = data?.daily?.weather_code ?? [];
+            const forecastData: DailyForecast[] = dates.slice(0, 3).map((date: string, i: number) => ({
+              date,
+              temperatureMin: tempMin[i],
+              temperatureMax: tempMax[i],
+              condition: weatherDescriptions[codes[i]] ?? 'Неизвестно',
+              icon: iconFromCode(codes[i]),
+            }));
+
+            if (!isCancelled) {
               setForecast(forecastData);
-          })
-          .catch((error) => {
-              // ✅ ИСПРАВЛЕНИЕ: Логируем ошибки вместо молчаливого игнорирования
-              if (__DEV__) {
-                  console.warn('[WeatherWidget] Ошибка загрузки прогноза погоды:', error);
-              }
-          });
+            }
+          } catch {
+            // Ignore weather failures (CORS/offline/adblock) to avoid polluting console.
+          }
+        })();
+
+        return () => {
+          isCancelled = true;
+        };
     }, [points, countryName]);
 
     if (Platform.OS !== 'web' || !forecast.length || !locationLabel) return null;

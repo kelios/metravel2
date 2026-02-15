@@ -184,7 +184,6 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
       // Must-have blocks (successful render)
       await expect(page.locator(tid('travel-details-page'))).toBeVisible();
       await expect(page.locator(tid('travel-details-scroll'))).toBeVisible();
-      await expect(page.locator(tid('travel-details-section-gallery'))).toHaveCount(1);
       await expect(page.locator(tid('travel-details-hero'))).toHaveCount(1);
       await expect(page.locator(tid('travel-details-quick-facts'))).toHaveCount(1);
       // Author block uses different testIDs: "travel-details-author" on desktop,
@@ -193,6 +192,10 @@ test.describe('@perf Render audit: main and travel details (responsive + perf)',
         `${tid('travel-details-author')}, ${tid('travel-details-author-mobile')}`
       );
       await expect(authorLocator.first()).toHaveCount(1, { timeout: 30_000 });
+
+      // Gallery can be absent depending on travel content. Assert it does not render duplicates.
+      const galleryCount = await page.locator(tid('travel-details-section-gallery')).count();
+      expect(galleryCount).toBeLessThanOrEqual(1);
 
       // At least one content marker should exist.
       // data-section-key is best-effort on web (setAttribute via refs) and can be flaky during hydration.

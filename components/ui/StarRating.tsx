@@ -15,6 +15,8 @@ type Props = {
     userRating?: number | null;
     /** Интерактивный режим — можно ставить оценки */
     interactive?: boolean;
+    /** Отключить взаимодействие (например, во время сохранения) */
+    disabled?: boolean;
     /** Callback при клике на звезду (для интерактивного режима) */
     onRate?: (rating: number) => void;
     /** Размер звёзд */
@@ -42,6 +44,7 @@ function StarRating({
     ratingCount = 0,
     userRating,
     interactive = false,
+    disabled = false,
     onRate,
     size = 'medium',
     showValue = true,
@@ -55,24 +58,26 @@ function StarRating({
 
     const config = SIZE_CONFIG[size];
     const displayRating = rating ?? 0;
-    const effectiveRating = hoverRating ?? (interactive && userRating ? userRating : displayRating);
+    const hasUserRating = userRating != null && userRating > 0;
+    const effectiveRating =
+        (Platform.OS === 'web' ? hoverRating : null) ?? (interactive && hasUserRating ? userRating! : displayRating);
 
     const styles = useMemo(() => createStyles(colors, config), [colors, config]);
 
     const handlePress = useCallback((starIndex: number) => {
-        if (!interactive || !onRate) return;
+        if (!interactive || disabled || !onRate) return;
         onRate(starIndex);
-    }, [interactive, onRate]);
+    }, [interactive, disabled, onRate]);
 
     const handleHoverIn = useCallback((starIndex: number) => {
-        if (!interactive) return;
+        if (!interactive || disabled) return;
         setHoverRating(starIndex);
-    }, [interactive]);
+    }, [interactive, disabled]);
 
     const handleHoverOut = useCallback(() => {
-        if (!interactive) return;
+        if (!interactive || disabled) return;
         setHoverRating(null);
-    }, [interactive]);
+    }, [interactive, disabled]);
 
     const formatRating = (value: number) => {
         if (value === 0) return '—';
@@ -106,7 +111,7 @@ function StarRating({
         const starValue = index + 1;
         const filled = effectiveRating >= starValue;
         const halfFilled = !filled && effectiveRating >= starValue - 0.5;
-        const isUserRated = userRating === starValue;
+        const isUserRated = hasUserRating && userRating === starValue;
 
         const starColor = filled || halfFilled ? colors.warning : colors.textMuted;
 
@@ -114,8 +119,12 @@ function StarRating({
         const wrapperProps = interactive
             ? {
                 onPress: () => handlePress(starValue),
-                onHoverIn: () => handleHoverIn(starValue),
-                onHoverOut: handleHoverOut,
+                ...(Platform.OS === 'web'
+                    ? {
+                        onHoverIn: () => handleHoverIn(starValue),
+                        onHoverOut: handleHoverOut,
+                    }
+                    : {}),
                 accessibilityRole: 'button' as const,
                 accessibilityLabel: `Оценить на ${starValue} из 5`,
                 accessibilityHint: 'Нажмите, чтобы поставить оценку',
@@ -128,6 +137,7 @@ function StarRating({
                 style={[
                     styles.starWrapper,
                     interactive && styles.starInteractive,
+                    disabled && styles.starDisabled,
                     isUserRated && styles.starUserRated,
                 ]}
                 testID={`${testID}-star-${starValue}`}
@@ -222,8 +232,14 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
                 transition: 'transform 0.15s ease, opacity 0.15s ease',
             } as any),
         },
+        starDisabled: {
+            ...(Platform.OS === 'web' && {
+                cursor: 'default',
+            } as any),
+            opacity: 0.55,
+        },
         starUserRated: {
-            transform: [{ scale: 1.1 }],
+            opacity: 1,
         },
         starContainer: {
             width: config.starSize,

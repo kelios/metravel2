@@ -32,6 +32,7 @@ function TravelRatingSection({
         rating,
         ratingCount,
         userRating,
+        isLoading,
         isSubmitting,
         canRate,
         handleRate,
@@ -99,12 +100,19 @@ function TravelRatingSection({
                             userRating={userRating}
                             interactive
                             onRate={handleRate}
+                            disabled={isSubmitting || isLoading}
                             size="large"
                             showValue={false}
                             showCount={false}
                         />
                         {isSubmitting && (
                             <Text style={styles.savingText}>Сохранение...</Text>
+                        )}
+                        {!isSubmitting && isLoading && (
+                            <Text style={styles.loadingText}>Загрузка...</Text>
+                        )}
+                        {!!userRating && !isSubmitting && !isLoading && (
+                            <Text style={styles.yourRatingText}>Ваша оценка: {userRating}</Text>
                         )}
                     </View>
                 )}
@@ -194,6 +202,11 @@ const createStyles = (colors: any) =>
         savingText: {
             fontSize: 12,
             color: colors.primary,
+            marginTop: 4,
+        },
+        loadingText: {
+            fontSize: 12,
+            color: colors.textMuted,
             marginTop: 4,
         },
         loginHint: {

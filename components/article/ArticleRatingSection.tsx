@@ -32,6 +32,7 @@ function ArticleRatingSection({
         rating,
         ratingCount,
         userRating,
+        isLoading,
         isSubmitting,
         canRate,
         handleRate,
@@ -94,12 +95,16 @@ function ArticleRatingSection({
                             userRating={userRating}
                             interactive
                             onRate={handleRate}
+                            disabled={isSubmitting || isLoading}
                             size="large"
                             showValue={false}
                             showCount={false}
                         />
                         {isSubmitting && (
                             <Text style={styles.savingText}>Сохранение...</Text>
+                        )}
+                        {!!userRating && !isSubmitting && !isLoading && (
+                            <Text style={styles.yourRatingText}>Ваша оценка: {userRating}</Text>
                         )}
                     </View>
                 )}
@@ -177,6 +182,11 @@ const createStyles = (colors: any) =>
             fontSize: 14,
             color: colors.textMuted,
             marginBottom: 8,
+        },
+        yourRatingText: {
+            fontSize: 12,
+            color: colors.textMuted,
+            marginTop: 4,
         },
         savingText: {
             fontSize: 12,
