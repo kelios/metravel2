@@ -68,3 +68,58 @@ export const getTravelRating = async (travelId: number): Promise<TravelRatingRes
     }
 };
 
+/**
+ * Получает рейтинг путешествия от текущего пользователя
+ * GET /api/travels/{travel_id}/rating/users/
+ * Возвращает объект с rating пользователя или null если не оценивал
+ */
+export const getUserTravelRating = async (travelId: number): Promise<number | null> => {
+    try {
+        const response = await apiClient.get<TravelRatingRecordResponse | TravelRatingRecordResponse[]>(
+            `/travels/${travelId}/rating/users/`
+        );
+
+        // API может вернуть массив или один объект
+        if (Array.isArray(response)) {
+            // Если массив — берём первый элемент (рейтинг текущего пользователя)
+            return response.length > 0 ? response[0].rating : null;
+        }
+
+        // Если один объект
+        if (response && typeof response.rating === 'number') {
+            return response.rating;
+        }
+
+        return null;
+    } catch (error: any) {
+        // 404 означает что пользователь ещё не оценивал
+        if (error?.status === 404) {
+            return null;
+        }
+        devError('Error fetching user travel rating:', error);
+        return null;
+    }
+};
+
+/**
+ * Получает полную информацию о рейтинге путешествия включая оценку пользователя
+ * Комбинирует getTravelRating и getUserTravelRating
+ */
+export const getTravelRatingWithUserRating = async (travelId: number): Promise<TravelRatingResponse> => {
+    try {
+        // Параллельно запрашиваем общий рейтинг и рейтинг пользователя
+        const [ratingResponse, userRating] = await Promise.all([
+            getTravelRating(travelId),
+            getUserTravelRating(travelId),
+        ]);
+
+        return {
+            ...ratingResponse,
+            user_rating: userRating,
+        };
+    } catch (error) {
+        devError('Error fetching travel rating with user rating:', error);
+        throw error;
+    }
+};
+

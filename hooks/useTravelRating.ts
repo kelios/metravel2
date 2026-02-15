@@ -3,7 +3,7 @@
 
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { rateTravel, getTravelRating, TravelRatingResponse } from '@/api/travelRating';
+import { rateTravel, getTravelRatingWithUserRating, TravelRatingResponse } from '@/api/travelRating';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
@@ -41,13 +41,14 @@ export function useTravelRating({
 
     const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
 
-    // Query для получения рейтинга (если нужно обновить с сервера)
+    // Query для получения рейтинга
+    // Для авторизованных пользователей запрашиваем также user_rating через /rating/users/
     const ratingQuery = useQuery({
-        queryKey: ['travelRating', travelId],
-        queryFn: () => getTravelRating(travelId!),
+        queryKey: ['travelRating', travelId, isAuthenticated],
+        queryFn: () => getTravelRatingWithUserRating(travelId!),
         enabled: enabled && !!travelId && isAuthenticated,
-        staleTime: 5 * 60 * 1000, // 5 минут
-        initialData: initialRating !== null || initialCount > 0 || initialUserRating != null
+        staleTime: 30 * 1000, // 30 секунд — чтобы быстрее обновлять user_rating
+        placeholderData: (initialRating != null || initialCount > 0 || initialUserRating != null)
             ? {
                 rating: initialRating ?? 0,
                 rating_count: initialCount,
@@ -64,10 +65,10 @@ export function useTravelRating({
             setOptimisticRating(newRating);
 
             // Отменяем исходящие запросы
-            await queryClient.cancelQueries({ queryKey: ['travelRating', travelId] });
+            await queryClient.cancelQueries({ queryKey: ['travelRating', travelId, isAuthenticated] });
 
             // Сохраняем предыдущее состояние
-            const previousData = queryClient.getQueryData<TravelRatingResponse>(['travelRating', travelId]);
+            const previousData = queryClient.getQueryData<TravelRatingResponse>(['travelRating', travelId, isAuthenticated]);
 
             // Обновляем кэш оптимистично
             if (previousData) {
@@ -81,7 +82,7 @@ export function useTravelRating({
                     ? previousData.rating_count + 1 
                     : previousData.rating_count;
 
-                queryClient.setQueryData(['travelRating', travelId], {
+                queryClient.setQueryData(['travelRating', travelId, isAuthenticated], {
                     ...previousData,
                     rating: newEffectiveRating,
                     rating_count: newEffectiveCount,
@@ -95,7 +96,7 @@ export function useTravelRating({
             // Откатываем к предыдущему состоянию
             setOptimisticRating(null);
             if (context?.previousData) {
-                queryClient.setQueryData(['travelRating', travelId], context.previousData);
+                queryClient.setQueryData(['travelRating', travelId, isAuthenticated], context.previousData);
             }
             showToast({
                 text1: 'Не удалось сохранить оценку',
@@ -105,7 +106,7 @@ export function useTravelRating({
         onSuccess: (data) => {
             // Обновляем кэш
             setOptimisticRating(null);
-            queryClient.setQueryData(['travelRating', travelId], data);
+            queryClient.setQueryData(['travelRating', travelId, isAuthenticated], data);
 
             // Инвалидируем кэш путешествия, чтобы обновить рейтинг в списках
             queryClient.invalidateQueries({ queryKey: queryKeys.travel(travelId!) });

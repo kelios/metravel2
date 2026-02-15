@@ -58,7 +58,7 @@ function TravelRatingSection({
                     showValue
                     showCount
                 />
-                {userRating && (
+                {userRating != null && userRating > 0 && (
                     <Text style={styles.yourRatingText}>
                         Ваша оценка: {userRating}
                     </Text>
@@ -93,7 +93,7 @@ function TravelRatingSection({
                     {canRate ? (
                         <>
                             <Text style={styles.rateLabel}>
-                                {userRating ? 'Ваша оценка' : 'Оцените'}
+                                {userRating != null && userRating > 0 ? `Ваша оценка: ${userRating}` : 'Оцените'}
                             </Text>
                             <StarRating
                                 rating={userRating ?? 0}
