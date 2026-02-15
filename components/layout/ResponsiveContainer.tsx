@@ -31,12 +31,14 @@ export default function ResponsiveContainer({
   style,
   testID,
 }: ResponsiveContainerProps) {
-  const { isSmallPhone, isPhone, isLargePhone, isTablet } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeDesktop } = useResponsive();
 
   const resolvedMaxWidth = useMemo(() => {
     if (typeof maxWidth === 'number') return maxWidth;
-    return METRICS.containers[maxWidth];
-  }, [maxWidth]);
+    const base = METRICS.containers[maxWidth];
+    if (isLargeDesktop && maxWidth === 'xl') return METRICS.containers.xxl;
+    return base;
+  }, [maxWidth, isLargeDesktop]);
 
   const resolvedPadding = useMemo(() => {
     if (!padding && !paddingHorizontal && !paddingVertical) return {};

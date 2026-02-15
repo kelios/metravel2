@@ -16,6 +16,7 @@ interface ResponsiveState {
   isTablet: boolean;
   isLargeTablet: boolean;
   isDesktop: boolean;
+  isLargeDesktop: boolean;
   isMobile: boolean;
   
   // Screen dimensions
@@ -263,6 +264,7 @@ export function useResponsive(): ResponsiveState {
   const isTablet = width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.largeTablet;
   const isLargeTablet = width >= METRICS.breakpoints.largeTablet && width < METRICS.breakpoints.desktop;
   const isDesktop = width >= METRICS.breakpoints.desktop;
+  const isLargeDesktop = width >= METRICS.breakpoints.largeDesktop;
   const isMobile = width < METRICS.breakpoints.tablet;
 
   const isAtLeast = useCallback((breakpoint: Breakpoint): boolean => {
@@ -287,6 +289,7 @@ export function useResponsive(): ResponsiveState {
       isTablet,
       isLargeTablet,
       isDesktop,
+      isLargeDesktop,
       isMobile,
 
       // Screen dimensions
@@ -313,6 +316,7 @@ export function useResponsive(): ResponsiveState {
       isAtMost,
       isBetween,
       isDesktop,
+      isLargeDesktop,
       isLargePhone,
       isLargeTablet,
       isMobile,
@@ -350,9 +354,10 @@ export function useResponsiveColumns(config: {
   tablet?: number;
   largeTablet?: number;
   desktop?: number;
+  largeDesktop?: number;
   default: number; // Make default required
 }): number {
-  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeTablet, isDesktop } = useResponsive();
+  const { isSmallPhone, isPhone, isLargePhone, isTablet, isLargeTablet, isDesktop, isLargeDesktop } = useResponsive();
 
   const defaults = {
     smallPhone: 1,
@@ -361,10 +366,12 @@ export function useResponsiveColumns(config: {
     tablet: 2,
     largeTablet: 3,
     desktop: 4,
+    largeDesktop: 4,
   };
 
   const columns = { ...defaults, ...config };
 
+  if (isLargeDesktop) return columns.largeDesktop ?? columns.desktop ?? columns.default;
   if (isDesktop) return columns.desktop ?? columns.default;
   if (isLargeTablet) return columns.largeTablet ?? columns.default;
   if (isTablet) return columns.tablet ?? columns.default;
@@ -412,6 +419,7 @@ export function useResponsiveValue<T>(values: {
   tablet?: T;
   largeTablet?: T;
   desktop?: T;
+  largeDesktop?: T;
   default: T; // Make default required
 }): T {
   const { 
@@ -420,9 +428,12 @@ export function useResponsiveValue<T>(values: {
     isLargePhone, 
     isTablet, 
     isLargeTablet, 
-    isDesktop 
+    isDesktop,
+    isLargeDesktop 
   } = useResponsive();
 
+  if (isLargeDesktop && values.largeDesktop !== undefined) return values.largeDesktop;
+  if (isLargeDesktop && values.desktop !== undefined) return values.desktop;
   if (isDesktop && values.desktop !== undefined) return values.desktop;
   if (isLargeTablet && values.largeTablet !== undefined) return values.largeTablet;
   if (isTablet && values.tablet !== undefined) return values.tablet;

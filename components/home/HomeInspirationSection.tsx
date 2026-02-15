@@ -42,6 +42,7 @@ function HomeInspirationSection({
     tablet: 2,
     largeTablet: 3,
     desktop: 3,
+    largeDesktop: 4,
     default: 1,
   });
 
@@ -66,8 +67,8 @@ function HomeInspirationSection({
       arr = Object.values(travelData).filter(item => item && typeof item === 'object');
     }
     
-    return arr.slice(0, isMobile ? 4 : 6);
-  }, [travelData, isMobile]);
+    return arr.slice(0, isMobile ? 4 : numColumns <= 3 ? 6 : 8);
+  }, [travelData, isMobile, numColumns]);
 
   const handleViewMore = useCallback(() => {
     sendAnalyticsEvent('HomeClick_ViewMore', { section: title });
