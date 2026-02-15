@@ -58,9 +58,18 @@ function StarRating({
 
     const config = SIZE_CONFIG[size];
     const displayRating = rating ?? 0;
-    const hasUserRating = userRating != null && userRating > 0;
+
+    const normalizedUserRating = useMemo(() => {
+        if (userRating == null) return null;
+        if (!Number.isFinite(userRating)) return null;
+        if (userRating <= 0) return null;
+        return Math.max(1, Math.min(5, Math.round(userRating)));
+    }, [userRating]);
+
+    const hasUserRating = normalizedUserRating != null;
     const effectiveRating =
-        (Platform.OS === 'web' ? hoverRating : null) ?? (interactive && hasUserRating ? userRating! : displayRating);
+        (Platform.OS === 'web' ? hoverRating : null) ??
+        (interactive && hasUserRating ? normalizedUserRating! : displayRating);
 
     const styles = useMemo(() => createStyles(colors, config), [colors, config]);
 
@@ -111,7 +120,7 @@ function StarRating({
         const starValue = index + 1;
         const filled = effectiveRating >= starValue;
         const halfFilled = !filled && effectiveRating >= starValue - 0.5;
-        const isUserRated = hasUserRating && userRating === starValue;
+        const isUserRated = hasUserRating && normalizedUserRating === starValue;
 
         const starColor = filled || halfFilled ? colors.warning : colors.textMuted;
 

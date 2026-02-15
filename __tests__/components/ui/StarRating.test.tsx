@@ -153,5 +153,48 @@ describe('StarRating', () => {
         rerender(<StarRating rating={4} size="large" testID="star-rating" />);
         expect(getByTestId('star-rating')).toBeTruthy();
     });
+
+    it('shows previously set userRating as selected when interactive (integer)', () => {
+        const { getByTestId } = render(
+            <StarRating
+                rating={5}
+                userRating={4}
+                interactive
+                onRate={jest.fn()}
+                showValue={false}
+                showCount={false}
+                testID="star-rating-user"
+            />
+        );
+
+        const star4 = getByTestId('star-rating-user-star-4');
+        const star3 = getByTestId('star-rating-user-star-3');
+
+        expect(star4.props.style).toEqual(
+            expect.arrayContaining([expect.objectContaining({ opacity: 1 })])
+        );
+        expect(star3.props.style).toEqual(
+            expect.arrayContaining([expect.not.objectContaining({ opacity: 1 })])
+        );
+    });
+
+    it('shows previously set userRating as selected when interactive (float like 5.0)', () => {
+        const { getByTestId } = render(
+            <StarRating
+                rating={5}
+                userRating={5.0}
+                interactive
+                onRate={jest.fn()}
+                showValue={false}
+                showCount={false}
+                testID="star-rating-user-float"
+            />
+        );
+
+        const star5 = getByTestId('star-rating-user-float-star-5');
+        expect(star5.props.style).toEqual(
+            expect.arrayContaining([expect.objectContaining({ opacity: 1 })])
+        );
+    });
 });
 
