@@ -208,8 +208,24 @@ export default function TravelDetailsContainer() {
     jsonLd,
     breadcrumbLd,
   } = useMemo(() => {
-    const title = travel?.name ? `${travel.name} | MeTravel` : "MeTravel";
-    const desc = stripToDescription(travel?.description);
+    const slugTitle =
+      typeof slug === 'string' && slug.trim().length > 0
+        ? slug
+            .split('-')
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .join(' ')
+        : '';
+    const title = travel?.name
+      ? `${travel.name} | MeTravel`
+      : slugTitle
+        ? `${slugTitle} | MeTravel`
+        : 'MeTravel';
+    const desc =
+      stripToDescription(travel?.description) ||
+      (slugTitle
+        ? `Путешествие ${slugTitle} на Metravel.`
+        : 'Путешествие на Metravel.');
     const canonical =
       typeof travel?.slug === "string" && travel.slug
         ? buildCanonicalUrl(`/travels/${travel.slug}`)
@@ -229,7 +245,7 @@ export default function TravelDetailsContainer() {
       ? firstUrl.startsWith("http")
         ? firstUrl.replace(/^http:\/\//, "https://")
         : buildOgImageUrl(firstUrl)
-      : undefined;
+      : buildOgImageUrl('/og-preview.jpg');
     const structuredData = createSafeJsonLd(travel);
     const breadcrumb = createBreadcrumbJsonLd(travel);
 

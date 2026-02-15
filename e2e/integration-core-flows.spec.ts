@@ -5,11 +5,12 @@ import { preacceptCookies } from './helpers/navigation';
 type ApiMatch = string | RegExp;
 
 const ensureApiProxy = async (page: any, label: string) => {
-  // Retry up to 3 times – the proxy may not be fully ready on first attempt.
+  // Retry until proxy is reachable and returns a successful status.
   let resp: any = null;
-  for (let attempt = 0; attempt < 3 && !resp; attempt++) {
+  for (let attempt = 0; attempt < 6; attempt++) {
     resp = await page.request.get('/api/travels/', { timeout: 10_000 }).catch(() => null);
-    if (!resp && attempt < 2) await page.waitForTimeout(1_000);
+    if (resp && resp.status() >= 200 && resp.status() < 400) break;
+    if (attempt < 5) await page.waitForTimeout(1_000);
   }
   expect(resp, `${label}: expected API proxy to respond to /api/travels/`).toBeTruthy();
   if (!resp) return;

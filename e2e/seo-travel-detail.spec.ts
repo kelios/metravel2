@@ -35,26 +35,16 @@ test.describe('SEO: travel detail page meta tags', () => {
   const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
 
   let html: string;
-  let hasResolvedTravelSeo = false;
 
   test.beforeAll(async ({ browser }) => {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     html = await getRenderedHtml(page, TRAVEL_PATH);
-    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
-    const ogTitleMatch = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/i);
-    hasResolvedTravelSeo = Boolean(
-      titleMatch?.[1] &&
-      titleMatch[1] !== 'MeTravel' &&
-      ogTitleMatch?.[1] &&
-      ogTitleMatch[1] !== 'MeTravel'
-    );
     await ctx.close();
   });
 
   // --- Title ---
   test('has a page-specific <title> (not generic MeTravel)', () => {
-    test.skip(!hasResolvedTravelSeo, 'Travel detail SEO data was not resolved in this environment');
     const match = html.match(/<title[^>]*>(.*?)<\/title>/i);
     expect(match).toBeTruthy();
     const title = match![1];
@@ -88,7 +78,6 @@ test.describe('SEO: travel detail page meta tags', () => {
   });
 
   test('has og:title', () => {
-    test.skip(!hasResolvedTravelSeo, 'Travel detail SEO data was not resolved in this environment');
     const match = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(0);
@@ -142,7 +131,6 @@ test.describe('SEO: travel detail page meta tags', () => {
   });
 
   test('has twitter:image', () => {
-    test.skip(!hasResolvedTravelSeo, 'Travel detail SEO data was not resolved in this environment');
     const match = html.match(/<meta[^>]*name="twitter:image"[^>]*content="([^"]*)"/i);
     expect(match).toBeTruthy();
     expect(match![1].length).toBeGreaterThan(0);
