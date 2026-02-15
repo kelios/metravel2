@@ -59,6 +59,26 @@ const grepForSuite: Record<string, RegExp | undefined> = {
   perf: /@perf/,
 };
 
+const hasPlaywrightCore = (() => {
+  try {
+    require.resolve('playwright-core');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+const reporter = process.env.CI
+  ? [
+      ['list'],
+      ...(hasPlaywrightCore ? [['html', { open: 'never' }] as const] : []),
+      ['json', { outputFile: 'e2e-results.json' }],
+    ]
+  : [
+      ['list'],
+      ...(hasPlaywrightCore ? [['html', { open: 'never' }] as const] : []),
+    ];
+
 export default defineConfig({
   globalTimeout: 3_600_000,
   testDir: './e2e',
@@ -96,9 +116,7 @@ export default defineConfig({
     timeout: 15_000,
   },
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI
-    ? [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'e2e-results.json' }]]
-    : [['list'], ['html', { open: 'never' }]],
+  reporter,
   use: {
     baseURL,
     storageState: 'e2e/.auth/storageState.json',
