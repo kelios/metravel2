@@ -40,6 +40,8 @@ export function useTravelRating({
     const queryClient = useQueryClient();
 
     const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
+    const [serverRating, setServerRating] = useState<number | null>(null);
+    const [serverCount, setServerCount] = useState<number | null>(null);
 
     // Query для получения оценки пользователя
     // Агрегатный рейтинг (rating, rating_count) приходит из travel detail response (initialRating/initialCount)
@@ -85,6 +87,10 @@ export function useTravelRating({
             setOptimisticRating(null);
             queryClient.setQueryData(['travelUserRating', travelId], data.user_rating ?? null);
 
+            // Сохраняем агрегатный рейтинг из ответа сервера
+            if (typeof data.rating === 'number') setServerRating(data.rating);
+            if (typeof data.rating_count === 'number') setServerCount(data.rating_count);
+
             // Инвалидируем кэш путешествия, чтобы обновить рейтинг в списках
             queryClient.invalidateQueries({ queryKey: queryKeys.travel(travelId!) });
 
@@ -111,8 +117,8 @@ export function useTravelRating({
     const resolvedUserRating = optimisticRating ?? fetchedUserRating ?? initialUserRating;
 
     // Вычисляем приблизительный новый рейтинг при оптимистичном обновлении
-    const baseRating = initialRating ?? 0;
-    const baseCount = initialCount;
+    const baseRating = serverRating ?? initialRating ?? 0;
+    const baseCount = serverCount ?? initialCount;
     const prevUserRating = fetchedUserRating ?? initialUserRating;
 
     const effectiveRating = optimisticRating !== null

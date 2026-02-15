@@ -3,7 +3,6 @@
 
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
@@ -34,10 +33,13 @@ type Props = {
 };
 
 const SIZE_CONFIG = {
-    small: { starSize: 12, fontSize: 11, gap: 2 },
-    medium: { starSize: 16, fontSize: 13, gap: 3 },
-    large: { starSize: 24, fontSize: 16, gap: 4 },
+    small: { starSize: 14, fontSize: 11, gap: 2 },
+    medium: { starSize: 18, fontSize: 13, gap: 3 },
+    large: { starSize: 26, fontSize: 16, gap: 4 },
 } as const;
+
+const STAR_FILLED = '★';
+const STAR_EMPTY = '☆';
 
 function StarRating({
     rating,
@@ -105,12 +107,7 @@ function StarRating({
 
         return (
             <View style={[styles.compactContainer, style]} testID={testID}>
-                <Feather
-                    name="star"
-                    size={config.starSize}
-                    color={colors.warning}
-                    style={styles.compactStar}
-                />
+                <Text style={styles.compactStarChar}>{STAR_FILLED}</Text>
                 <Text style={styles.compactText}>{formatRating(displayRating)}</Text>
             </View>
         );
@@ -121,8 +118,7 @@ function StarRating({
         const filled = effectiveRating >= starValue;
         const halfFilled = !filled && effectiveRating >= starValue - 0.5;
         const isUserRated = hasUserRating && normalizedUserRating === starValue;
-
-        const starColor = filled || halfFilled ? colors.warning : colors.textMuted;
+        const isActive = filled || halfFilled;
 
         const StarWrapper = interactive ? Pressable : View;
         const wrapperProps = interactive
@@ -152,29 +148,16 @@ function StarRating({
                 testID={`${testID}-star-${starValue}`}
                 {...wrapperProps}
             >
-                <View style={styles.starContainer}>
-                    <Feather
-                        name="star"
-                        size={config.starSize}
-                        color={colors.textMuted}
-                        style={StyleSheet.absoluteFill}
-                    />
-                    {/* Заполненная часть */}
-                    {(filled || halfFilled) && (
-                        <View
-                            style={[
-                                styles.starFilled,
-                                halfFilled && styles.starHalf,
-                            ]}
-                        >
-                            <Feather
-                                name="star"
-                                size={config.starSize}
-                                color={starColor}
-                            />
-                        </View>
-                    )}
-                </View>
+                <Text
+                    style={[
+                        styles.starChar,
+                        isActive ? styles.starCharFilled : styles.starCharEmpty,
+                        halfFilled && styles.starCharHalf,
+                    ]}
+                    selectable={false}
+                >
+                    {isActive ? STAR_FILLED : STAR_EMPTY}
+                </Text>
             </StarWrapper>
         );
     };
@@ -203,8 +186,15 @@ function StarRating({
     );
 }
 
-const createStyles = (colors: any, config: { starSize: number; fontSize: number; gap: number }) =>
-    StyleSheet.create({
+const STAR_COLOR_FILLED = '#e8a838';
+const STAR_COLOR_EMPTY = '#d4d0c8';
+const STAR_COLOR_EMPTY_DARK = '#5a5647';
+
+const createStyles = (colors: any, config: { starSize: number; fontSize: number; gap: number }) => {
+    const isDarkTheme = colors.text?.includes?.('e8e4') || colors.text?.includes?.('d4d0');
+    const emptyColor = isDarkTheme ? STAR_COLOR_EMPTY_DARK : STAR_COLOR_EMPTY;
+
+    return StyleSheet.create({
         container: {
             flexDirection: 'row',
             alignItems: 'center',
@@ -215,9 +205,12 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
             alignItems: 'center',
             gap: config.gap,
         },
-        compactStar: {
-            // Используем fill через opacity trick
-        },
+        compactStarChar: {
+            fontSize: config.starSize,
+            lineHeight: config.starSize + 2,
+            color: STAR_COLOR_FILLED,
+            includeFontPadding: false,
+        } as any,
         compactText: {
             fontSize: config.fontSize,
             fontWeight: '600',
@@ -234,36 +227,41 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
         starInteractive: {
             padding: 4,
             marginHorizontal: -2,
-            borderRadius: 4,
+            borderRadius: 6,
             ...(Platform.OS === 'web' && {
                 cursor: 'pointer',
-                transition: 'transform 0.15s ease, opacity 0.15s ease',
+                transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s ease',
             } as any),
         },
         starDisabled: {
             ...(Platform.OS === 'web' && {
                 cursor: 'default',
             } as any),
-            opacity: 0.55,
+            opacity: 0.45,
         },
         starUserRated: {
             opacity: 1,
         },
-        starContainer: {
-            width: config.starSize,
-            height: config.starSize,
-            position: 'relative',
-            opacity: 0.9,
+        starChar: {
+            fontSize: config.starSize,
+            lineHeight: config.starSize + 2,
+            textAlign: 'center',
+            includeFontPadding: false,
+            ...(Platform.OS === 'web' && {
+                userSelect: 'none',
+            } as any),
+        } as any,
+        starCharFilled: {
+            color: STAR_COLOR_FILLED,
+            ...(Platform.OS === 'web' && {
+                textShadow: '0 1px 2px rgba(232,168,56,0.3)',
+            } as any),
         },
-        starFilled: {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            overflow: 'hidden',
-            width: '100%',
+        starCharEmpty: {
+            color: emptyColor,
         },
-        starHalf: {
-            width: '50%',
+        starCharHalf: {
+            opacity: 0.7,
         },
         textContainer: {
             flexDirection: 'row',
@@ -280,6 +278,7 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
             color: colors.textMuted,
         },
     });
+};
 
 export default memo(StarRating);
 
