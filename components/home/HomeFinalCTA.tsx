@@ -38,6 +38,25 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     return 'Собрать книгу из историй';
   }, [isAuthenticated, travelsCount]);
 
+  // Button style kept as a plain object so RNW inlines it via the style
+  // attribute. StyleSheet.create classes injected at runtime by lazy-loaded
+  // components can be overridden by the postprocessed external CSS base reset
+  // (padding: 0px shorthand wins over longhand padding-top/bottom/left/right).
+  const buttonStyle = useMemo(() => ({
+    paddingHorizontal: 40,
+    paddingVertical: 20,
+    minHeight: 60,
+    minWidth: 300,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    marginTop: 8,
+    ...Platform.select({
+      web: {
+        boxShadow: `${DESIGN_TOKENS.shadows.medium}, 0 0 0 0 ${colors.primarySoft}`,
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      },
+    }),
+  }), [colors]);
+
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
@@ -89,20 +108,6 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       fontSize: 16,
       lineHeight: 24,
     },
-    button: {
-      paddingHorizontal: 40,
-      paddingVertical: 20,
-      minHeight: 60,
-      minWidth: 300,
-      borderRadius: DESIGN_TOKENS.radii.md,
-      marginTop: 8,
-      ...Platform.select({
-        web: {
-          boxShadow: `${DESIGN_TOKENS.shadows.medium}, 0 0 0 0 ${colors.primarySoft}`,
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        },
-      }),
-    },
     buttonHover: {
       backgroundColor: colors.primaryDark,
       ...Platform.select({
@@ -136,7 +141,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
             label={buttonLabel}
             variant="primary"
             size={isMobile ? 'md' : 'lg'}
-            style={styles.button}
+            style={buttonStyle}
             labelStyle={styles.buttonText}
             hoverStyle={styles.buttonHover}
             pressedStyle={styles.buttonHover}
