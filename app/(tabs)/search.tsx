@@ -1,5 +1,5 @@
 import { Suspense, lazy, memo, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View, Platform, Text } from 'react-native';
+import { StyleSheet, View, Platform } from 'react-native';
 import { usePathname } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 
@@ -113,14 +113,7 @@ function SearchScreen() {
             )}
             <View style={styles.container} testID="search-container">
                 {Platform.OS === 'web' && (
-                    <Text
-                        role="heading"
-                        aria-level={1}
-                        style={styles.srOnly}
-                        accessibilityRole="header"
-                    >
-                        {title}
-                    </Text>
+                    <h1 style={styles.srOnly as any}>{title}</h1>
                 )}
                 <ErrorBoundary
                     fallback={

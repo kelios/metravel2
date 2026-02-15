@@ -104,33 +104,8 @@ export default function RootLayout() {
         },
     }));
 
-    useEffect(() => {
-      if (!isWeb) return;
-      if (typeof window === 'undefined') return;
-      const metrikaId = (window as any).__metravelMetrikaId;
-      if (!metrikaId || typeof (window as any).ym !== 'function') return;
-      const url = window.location.href;
-      if ((window as any).__metravelLastTrackedUrl === url) return;
-      (window as any).__metravelLastTrackedUrl = url;
-      try {
-        (window as any).ym(metrikaId, 'hit', url, {
-          title: document.title,
-          referer: document.referrer,
-        });
-      } catch {
-        // noop
-      }
-      try {
-        if ((window as any).gtag && (window as any).__metravelGaId) {
-          (window as any).gtag('event', 'page_view', {
-            page_title: document.title,
-            page_location: url,
-          });
-        }
-      } catch {
-        // noop
-      }
-    }, [pathname]);
+    // Web analytics page-view tracking is handled centrally in getAnalyticsInlineScript().
+    // Keeping additional tracking here duplicates GA/Yandex events on route changes.
 
     // Single source of truth for width: useResponsive().
     // While web hydration is not complete we keep desktop layout to avoid mismatch.
@@ -438,9 +413,9 @@ function ThemedContent({
                               )}
 	                              <Head>
 	                                  <link rel="icon" href="/favicon.ico" />
-	                                  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-	                                  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-	                                  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+	                                  <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/logo_yellow_60x60.png" />
+	                                  <link rel="icon" type="image/png" sizes="32x32" href="/assets/icons/logo_yellow_60x60.png" />
+	                                  <link rel="icon" type="image/png" sizes="16x16" href="/assets/icons/logo_yellow_60x60.png" />
 	                              </Head>
 
                               {/* ✅ УЛУЧШЕНИЕ: Skip links для доступности */}

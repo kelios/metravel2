@@ -493,15 +493,18 @@ async function main() {
         ogType: 'article',
       });
 
-      // Write to extensionless route file: /travels/{slug-or-id}
-      // This matches nginx `try_files $uri /travels/[param].html;` in production.
+      // Write extensionless route file: /travels/{slug-or-id}
+      // (matches nginx `try_files $uri /travels/[param].html;` in production).
       const outPath = path.join(DIST_DIR, 'travels', routeKey);
       writeFileSafe(outPath, html);
+      // Keep directory index variant for trailing-slash/static hosting compatibility.
+      writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), html);
 
       // Also write to /travels/{id} when slug exists (id-based URLs still used by app)
       if (slug && id) {
         const idPath = path.join(DIST_DIR, 'travels', String(id));
         writeFileSafe(idPath, html);
+        writeFileSafe(path.join(DIST_DIR, 'travels', String(id), 'index.html'), html);
       }
 
       generated++;
@@ -568,6 +571,7 @@ async function main() {
       // Extensionless route file to match nginx `try_files $uri /article/[id].html;`
       const outPath = path.join(DIST_DIR, 'article', String(id));
       writeFileSafe(outPath, html);
+      writeFileSafe(path.join(DIST_DIR, 'article', String(id), 'index.html'), html);
       generated++;
     }
 

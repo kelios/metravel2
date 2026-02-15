@@ -303,6 +303,20 @@ const getTravelHeroPreloadScript = () => String.raw`
             } catch (_e2) {}
           }
 
+          function upsertJsonLd(id, payload) {
+            try {
+              if (!payload) return;
+              var el = document.getElementById(id);
+              if (!el) {
+                el = document.createElement('script');
+                el.type = 'application/ld+json';
+                el.id = id;
+                document.head.appendChild(el);
+              }
+              el.textContent = JSON.stringify(payload);
+            } catch (_e3) {}
+          }
+
           // Title
           var travelName = data.name || data.title || '';
           if (travelName) {
@@ -350,6 +364,33 @@ const getTravelHeroPreloadScript = () => String.raw`
 
           // og:type for travel pages
           patchMeta('meta[property="og:type"]', 'content', 'article');
+
+          // Breadcrumb structured data for travel pages
+          var breadcrumbName = travelName || 'Путешествие';
+          upsertJsonLd('travel-breadcrumb-jsonld', {
+            "@context": 'https://schema.org',
+            "@type": 'BreadcrumbList',
+            itemListElement: [
+              {
+                "@type": 'ListItem',
+                position: 1,
+                name: 'Главная',
+                item: siteOrigin + '/',
+              },
+              {
+                "@type": 'ListItem',
+                position: 2,
+                name: 'Путешествия',
+                item: siteOrigin + '/travelsby',
+              },
+              {
+                "@type": 'ListItem',
+                position: 3,
+                name: breadcrumbName,
+                item: correctUrl,
+              },
+            ],
+          });
         } catch (_e) {}
         // ── end SEO patch ──
 
@@ -504,6 +545,16 @@ export default function Root({ children }: { children: React.ReactNode }) {
                   },
                   'query-input': 'required name=search_term_string',
                 },
+              },
+              {
+                '@type': 'Service',
+                '@id': 'https://metravel.by/#service',
+                name: 'MeTravel',
+                serviceType: 'Платформа для поиска и публикации маршрутов путешествий',
+                url: 'https://metravel.by',
+                provider: { '@id': 'https://metravel.by/#organization' },
+                areaServed: 'Worldwide',
+                inLanguage: 'ru',
               },
             ],
           }),
