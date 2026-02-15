@@ -65,7 +65,9 @@ export const getAnalyticsInlineScript = (metrikaId: number, gaId: string) => {
       window.dataLayer.push(arguments);
     };
     window.gtag('js', new Date());
-    window.gtag('config', GA_ID, { transport_type: 'beacon' });
+    // We send page_view manually in trackPage() for SPA navigation,
+    // so disable GA automatic page_view to avoid duplicates.
+    window.gtag('config', GA_ID, { transport_type: 'beacon', send_page_view: false });
 
     var ga = document.createElement('script');
     ga.async = true;

@@ -427,7 +427,21 @@ export const attachLasyZanocujWfsOverlay = (
       bboxOrder: 'lonlat' | 'latlon';
     }
   ) => {
-    const base = def.url;
+    let base = def.url;
+
+    // Use nginx proxy for Polish Lasy WFS server to bypass CORS
+    const lasyDomain = 'mapserver.bdl.lasy.gov.pl';
+    if (base.includes(lasyDomain)) {
+      // In production, route through /proxy/wfs/lasy
+      // In development (localhost), use original URL (CORS issues may still occur)
+      const isProduction = typeof window !== 'undefined' &&
+        window.location.hostname !== 'localhost' &&
+        !window.location.hostname.startsWith('192.168.');
+      if (isProduction) {
+        base = '/proxy/wfs/lasy';
+      }
+    }
+
     const sep = base.includes('?') ? '&' : '?';
 
     const typeName = def.wfsParams?.typeName;

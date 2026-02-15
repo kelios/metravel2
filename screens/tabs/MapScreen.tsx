@@ -30,6 +30,9 @@ const LazyMapMobileLayout = lazy(() =>
     import('@/components/MapPage/MapMobileLayout').then((mod) => ({ default: mod.MapMobileLayout }))
 );
 
+const MAP_SEO_DESCRIPTION =
+    'Интерактивная карта путешествий Metravel: находите маршруты, достопримечательности и идеи поездок, фильтруйте точки и стройте свой путь.';
+
 export default function MapScreen() {
     const [hydrated, setHydrated] = useState(Platform.OS !== 'web');
     const {
@@ -257,7 +260,7 @@ export default function MapScreen() {
                     <InstantSEO
                         headKey="map"
                         title="Карта путешествий | MeTravel"
-                        description="Интерактивная карта с маршрутами и местами для путешествий"
+                        description={MAP_SEO_DESCRIPTION}
                         canonical={canonical}
                     />
                 )}
@@ -400,7 +403,7 @@ export default function MapScreen() {
                     <InstantSEO
                         headKey="map-error"
                         title="Карта путешествий | MeTravel"
-                        description="Интерактивная карта с маршрутами и местами для путешествий"
+                        description={MAP_SEO_DESCRIPTION}
                         canonical={canonical}
                     />
                 )}
@@ -422,7 +425,7 @@ export default function MapScreen() {
                 <InstantSEO
                     headKey="map"
                     title="Карта путешествий | MeTravel"
-                    description="Интерактивная карта с маршрутами и местами для путешествий"
+                    description={MAP_SEO_DESCRIPTION}
                     canonical={canonical}
                 />
             )}

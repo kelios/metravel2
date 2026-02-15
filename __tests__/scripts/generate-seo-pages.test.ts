@@ -223,6 +223,24 @@ describe('injectMeta (replace mode — tags exist in base HTML)', () => {
 // injectMeta — edge cases
 // ---------------------------------------------------------------------------
 describe('injectMeta edge cases', () => {
+  it('deduplicates duplicate og:image tags from base HTML', () => {
+    const baseWithDuplicateOgImage = [
+      '<!DOCTYPE html><html lang="ru"><head>',
+      '<title data-rh="true">MeTravel</title>',
+      '<meta data-rh="true" name="description" content="default desc"/>',
+      '<meta property="og:image" content="https://metravel.by/assets/icons/logo_yellow.png"/>',
+      '<meta property="og:image" content="https://metravel.by/old-duplicate.jpg"/>',
+      '</head><body><div id="root"></div></body></html>',
+    ].join('');
+
+    const result = injectMeta(baseWithDuplicateOgImage, SAMPLE_META);
+    const ogImageCount = (result.match(/property="og:image"/g) || []).length;
+
+    expect(ogImageCount).toBe(1);
+    expect(result).toContain(`property="og:image" content="${SAMPLE_META.image}"`);
+    expect(result).not.toContain('old-duplicate.jpg');
+  });
+
   it('skips og:image and twitter:image when image is undefined', () => {
     const result = injectMeta(MINIMAL_BASE, {
       title: 'No Image Page',

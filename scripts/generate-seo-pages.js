@@ -33,7 +33,6 @@ const DIST_DIR = path.resolve(getArg('dist', 'dist/prod'));
 const API_BASE = getArg('api', 'https://metravel.by').replace(/\/+$/, '');
 const SITE_URL = 'https://metravel.by';
 const OG_IMAGE = `${SITE_URL}/og-preview.jpg`;
-const DEFAULT_DESC = 'Добавляй поездки, фото и заметки — и собирай красивую книгу в PDF для печати.';
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 
 // ---------------------------------------------------------------------------
@@ -135,10 +134,11 @@ async function fetchTravelDetail(id) {
  * If the regex matches, replace it; otherwise insert the tag before </head>.
  */
 function replaceOrInsert(html, regex, tag) {
-  if (regex.test(html)) {
-    return html.replace(regex, tag);
-  }
-  return html.replace('</head>', `${tag}\n</head>`);
+  // Ensure uniqueness: remove all existing matches, then insert one canonical tag.
+  const flags = regex.flags.includes('g') ? regex.flags : `${regex.flags}g`;
+  const globalRegex = new RegExp(regex.source, flags);
+  const withoutMatches = html.replace(globalRegex, '');
+  return withoutMatches.replace('</head>', `${tag}\n</head>`);
 }
 
 /**
@@ -270,7 +270,8 @@ const STATIC_PAGES = [
   {
     route: '/',
     title: 'Твоя книга путешествий | Metravel',
-    description: DEFAULT_DESC,
+    description:
+      'Планируйте путешествия, публикуйте маршруты, добавляйте фото и заметки, сохраняйте избранное и собирайте красивую книгу поездок в PDF.',
   },
   {
     route: '/about',
@@ -280,12 +281,14 @@ const STATIC_PAGES = [
   {
     route: '/search',
     title: 'Поиск путешествий | MeTravel',
-    description: 'Ищи путешествия по странам, городам, категориям и датам. Находи вдохновение для следующей поездки.',
+    description:
+      'Ищите путешествия по странам, городам, категориям и датам, применяйте фильтры и быстро находите маршруты, вдохновение и советы для следующей поездки.',
   },
   {
     route: '/map',
     title: 'Карта путешествий | MeTravel',
-    description: 'Интерактивная карта с маршрутами и точками путешествий. Исследуй мир вместе с MeTravel.',
+    description:
+      'Изучайте интерактивную карту путешествий: находите маршруты, достопримечательности и точки интереса, включайте фильтры и стройте путь под свои планы.',
   },
   {
     route: '/articles',
@@ -493,18 +496,17 @@ async function main() {
         ogType: 'article',
       });
 
-      // Write extensionless route file: /travels/{slug-or-id}
-      // (matches nginx `try_files $uri /travels/[param].html;` in production).
-      const outPath = path.join(DIST_DIR, 'travels', routeKey);
-      writeFileSafe(outPath, html);
-      // Keep directory index variant for trailing-slash/static hosting compatibility.
+      // Write both explicit-file and directory-index variants.
+      // NOTE: we intentionally avoid writing an extensionless file because
+      // it conflicts with creating `${routeKey}/index.html` on POSIX filesystems.
+      writeFileSafe(path.join(DIST_DIR, 'travels', `${routeKey}.html`), html);
       writeFileSafe(path.join(DIST_DIR, 'travels', routeKey, 'index.html'), html);
 
       // Also write to /travels/{id} when slug exists (id-based URLs still used by app)
       if (slug && id) {
-        const idPath = path.join(DIST_DIR, 'travels', String(id));
-        writeFileSafe(idPath, html);
-        writeFileSafe(path.join(DIST_DIR, 'travels', String(id), 'index.html'), html);
+        const idStr = String(id);
+        writeFileSafe(path.join(DIST_DIR, 'travels', `${idStr}.html`), html);
+        writeFileSafe(path.join(DIST_DIR, 'travels', idStr, 'index.html'), html);
       }
 
       generated++;
@@ -568,10 +570,9 @@ async function main() {
         ogType: 'article',
       });
 
-      // Extensionless route file to match nginx `try_files $uri /article/[id].html;`
-      const outPath = path.join(DIST_DIR, 'article', String(id));
-      writeFileSafe(outPath, html);
-      writeFileSafe(path.join(DIST_DIR, 'article', String(id), 'index.html'), html);
+      const idStr = String(id);
+      writeFileSafe(path.join(DIST_DIR, 'article', `${idStr}.html`), html);
+      writeFileSafe(path.join(DIST_DIR, 'article', idStr, 'index.html'), html);
       generated++;
     }
 
