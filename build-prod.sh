@@ -74,16 +74,16 @@ clean_all
 
 build_env prod
 
-echo "🔍 Генерация SEO-страниц..."
+echo "Генерация SEO-страниц..."
 node scripts/generate-seo-pages.js --dist dist/prod --api https://metravel.by || {
   echo "⚠️  SEO-генерация не удалась, продолжаю деплой без неё..."
 }
 
-echo "� Постобработка билда..."
+echo "Постобработка билда..."
 node scripts/postprocess-rnw-styles.js dist/prod
 node scripts/stamp-sw-version.js dist/prod
 
-echo "�🔁 Старт деплоя ..."
+echo "старт деплоя ..."
 deploy_prod
 
 echo "🎉 Сборка завершена успешно!"
