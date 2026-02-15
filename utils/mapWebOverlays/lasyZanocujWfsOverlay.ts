@@ -635,6 +635,11 @@ export const attachLasyZanocujWfsOverlay = (
         const url = buildUrl(bbox, attempt);
         const res = await fetch(url, { method: 'GET', signal: abort.signal });
 
+        // Handle gateway errors (504, 502) as timeout — trigger backoff
+        if (res.status === 504 || res.status === 502) {
+          throw new Error(`Gateway timeout (${res.status}): upstream server too slow`);
+        }
+
         if (!res.ok) {
           const text = await res.text().catch(() => '');
           lastErrorText = text;
@@ -691,10 +696,10 @@ export const attachLasyZanocujWfsOverlay = (
       if (e?.name === 'AbortError') return;
       const msg = String(e?.message || '').toLowerCase();
       const isRateLimited = msg.includes('429') || msg.includes('too many requests');
-      const isTimeoutish = msg.includes('timeout') || msg.includes('too busy');
+      const isTimeoutish = msg.includes('timeout') || msg.includes('too busy') || msg.includes('504') || msg.includes('502') || msg.includes('gateway');
 
       if (isRateLimited || isTimeoutish) {
-        backoffMs = backoffMs ? Math.min(backoffMs * 2, 30000) : 2000;
+        backoffMs = backoffMs ? Math.min(backoffMs * 2, 60000) : 5000;
         nextAllowedAt = Date.now() + backoffMs;
       } else {
         nextAllowedAt = Date.now() + 2000;
