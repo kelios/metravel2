@@ -147,6 +147,19 @@ export const normalizeTravelItem = (input: unknown): Travel => {
         out.countUnicIpView = String(t.countUnicIpView ?? t.count_unic_ip_view ?? '0');
     }
 
+    // Нормализация полей рейтинга
+    if (typeof t.rating !== 'undefined') {
+        const ratingVal = Number(t.rating);
+        out.rating = Number.isFinite(ratingVal) && ratingVal > 0 ? ratingVal : null;
+    }
+    if (typeof t.rating_count !== 'undefined') {
+        out.rating_count = Number(t.rating_count) || 0;
+    }
+    if (typeof t.user_rating !== 'undefined') {
+        const userRatingVal = Number(t.user_rating);
+        out.user_rating = Number.isFinite(userRatingVal) && userRatingVal > 0 ? userRatingVal : null;
+    }
+
     // Нормализация URL изображений (относительные -> абсолютные)
     const normalizeImageUrl = (url: string | undefined): string => {
         if (!url) return '';

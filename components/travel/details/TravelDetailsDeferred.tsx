@@ -40,6 +40,10 @@ const CommentsSection = withLazy(() =>
   }))
 )
 
+const TravelRatingSection = withLazy(() =>
+  import('@/components/travel/TravelRatingSection')
+)
+
 const AuthorCard = withLazy(() => import('@/components/travel/AuthorCard'))
 const ShareButtons = withLazy(() => import('@/components/travel/ShareButtons'))
 
@@ -189,6 +193,9 @@ export const TravelDeferredSections: React.FC<{
         <MobileAuthorShareSection travel={travel} />
       )}
 
+      {/* Секция рейтинга путешествия */}
+      <TravelRatingWrapper travel={travel} />
+
       {canRenderMap ? (
         <Suspense fallback={<DeferredMapPlaceholder />}>
           <TravelDetailsMapSection
@@ -265,6 +272,30 @@ const MobileAuthorShareSection: React.FC<{ travel: Travel }> = memo(({ travel })
         </Suspense>
       </View>
     </>
+  )
+})
+
+const TravelRatingWrapper: React.FC<{ travel: Travel }> = memo(({ travel }) => {
+  const styles = useTravelDetailsStyles()
+
+  if (!travel?.id) return null
+
+  return (
+    <View
+      testID="travel-details-rating"
+      accessibilityRole="none"
+      accessibilityLabel="Рейтинг путешествия"
+      style={[styles.sectionContainer, styles.contentStable]}
+    >
+      <Suspense fallback={<View style={PLACEHOLDER_MIN_H_56} />}>
+        <TravelRatingSection
+          travelId={travel.id}
+          initialRating={travel.rating}
+          initialCount={travel.rating_count}
+          initialUserRating={travel.user_rating}
+        />
+      </Suspense>
+    </View>
   )
 })
 

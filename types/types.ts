@@ -31,6 +31,10 @@ export type Travel = {
     cityName: string
     countryName: string
     countUnicIpView: string
+    // Рейтинг путешествия
+    rating?: number | null
+    rating_count?: number
+    user_rating?: number | null
     // ✅ ИСПРАВЛЕНО: Поддержка обоих форматов для обратной совместимости
     gallery: GalleryItem[]
     travelAddress: TravelAddressItem[]

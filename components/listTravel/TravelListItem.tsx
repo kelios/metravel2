@@ -10,6 +10,7 @@ import { fetchTravel, fetchTravelBySlug } from "@/api/travelsApi";
 import { queryKeys } from "@/queryKeys";
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
 import CardActionPressable from "@/components/ui/CardActionPressable";
+import StarRating from "@/components/ui/StarRating";
 import { useThemedColors } from '@/hooks/useTheme';
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -474,14 +475,16 @@ const leftTopSlot = canEdit ? (
 
 // Проверяем, есть ли какая-либо информация для отображения в контентной области
 const hasContentInfo = useMemo(() => {
+  const hasRating = travel.rating != null && travel.rating > 0;
   return (
     (!hideAuthor && !!authorName) ||
     countries.length > 0 ||
     views > 0 ||
+    hasRating ||
     popularityFlags.isPopular ||
     popularityFlags.isNew
   );
-}, [hideAuthor, authorName, countries.length, popularityFlags.isPopular, popularityFlags.isNew, views]);
+}, [hideAuthor, authorName, countries.length, popularityFlags.isPopular, popularityFlags.isNew, views, travel.rating]);
 
 const contentSlotWithoutTitle = hasContentInfo ? (
   <>
@@ -503,7 +506,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
         },
       ]}
     >
-      {((!hideAuthor && !!authorName) || views > 0) && (
+      {((!hideAuthor && !!authorName) || views > 0 || (travel.rating != null && travel.rating > 0)) && (
         <View style={styles.metaInfoTopRow}>
           {!hideAuthor && !!authorName && (
             <View style={styles.metaBox}>
@@ -558,6 +561,20 @@ const contentSlotWithoutTitle = hasContentInfo ? (
               <Text style={styles.metaTxtViews} numberOfLines={1}>
                 {viewsFormatted}
               </Text>
+            </View>
+          )}
+
+          {/* Рейтинг путешествия */}
+          {travel.rating != null && travel.rating > 0 && (
+            <View style={styles.metaBoxViews} testID="rating-meta">
+              <StarRating
+                rating={travel.rating}
+                ratingCount={travel.rating_count}
+                size="small"
+                compact
+                showCount={false}
+                showValue={true}
+              />
             </View>
           )}
         </View>
@@ -703,7 +720,9 @@ function areEqual(prev: Props, next: Props) {
             a.name === b.name &&
             a.countryName === b.countryName &&
             a.userName === b.userName &&
-            a.countUnicIpView === b.countUnicIpView;
+            a.countUnicIpView === b.countUnicIpView &&
+            a.rating === b.rating &&
+            a.rating_count === b.rating_count;
         if (!sameCore) return false;
     }
 
