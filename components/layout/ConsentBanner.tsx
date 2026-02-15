@@ -142,7 +142,7 @@ function ConsentBanner() {
     <View
       style={[
         styles.wrapper,
-        { bottom: bottomOffset, pointerEvents: suspendForOverlay ? 'none' : 'none' },
+        { bottom: bottomOffset, pointerEvents: suspendForOverlay ? 'none' : 'box-none' },
         suspendForOverlay && styles.wrapperHidden,
       ]}
     >
