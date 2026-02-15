@@ -1,4 +1,4 @@
-import { rateTravel } from '@/api/travelRating';
+import { rateTravel, getUserTravelRating } from '@/api/travelRating';
 import { apiClient } from '@/api/client';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -50,5 +50,40 @@ describe('api/travelRating', () => {
       travel: 123,
       rating: 5,
     });
+  });
+
+  it('getUserTravelRating calls correct endpoint with userId', async () => {
+    useAuthStore.setState({ userId: '77' });
+
+    (apiClient.get as unknown as jest.Mock).mockResolvedValue({
+      id: 1,
+      user: 77,
+      travel: 50,
+      rating: 4,
+    });
+
+    const result = await getUserTravelRating(50);
+
+    expect(apiClient.get).toHaveBeenCalledWith('/travels/travel50/rating/users/77/');
+    expect(result).toBe(4);
+  });
+
+  it('getUserTravelRating returns null when no userId', async () => {
+    useAuthStore.setState({ userId: null });
+
+    const result = await getUserTravelRating(50);
+
+    expect(apiClient.get).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+
+  it('getUserTravelRating returns null on 404', async () => {
+    useAuthStore.setState({ userId: '77' });
+
+    (apiClient.get as unknown as jest.Mock).mockRejectedValue({ status: 404 });
+
+    const result = await getUserTravelRating(50);
+
+    expect(result).toBeNull();
   });
 });

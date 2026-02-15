@@ -53,39 +53,23 @@ export const rateTravel = async (params: RateTravelParams): Promise<TravelRating
 };
 
 /**
- * Получает рейтинг путешествия
- * GET /api/travels/{id}/rating/
- */
-export const getTravelRating = async (travelId: number): Promise<TravelRatingResponse> => {
-    try {
-        const response = await apiClient.get<TravelRatingResponse>(
-            `/travels/${travelId}/rating/`
-        );
-        return response;
-    } catch (error) {
-        devError('Error fetching travel rating:', error);
-        throw error;
-    }
-};
-
-/**
  * Получает рейтинг путешествия от текущего пользователя
- * GET /api/travels/{travel_id}/rating/users/
+ * GET /api/travels/travel{travel_id}/rating/users/{user_id}/
  * Возвращает объект с rating пользователя или null если не оценивал
  */
 export const getUserTravelRating = async (travelId: number): Promise<number | null> => {
     try {
-        const response = await apiClient.get<TravelRatingRecordResponse | TravelRatingRecordResponse[]>(
-            `/travels/${travelId}/rating/users/`
-        );
+        const userIdRaw = useAuthStore.getState().userId;
+        const userId = userIdRaw ? Number(userIdRaw) : null;
 
-        // API может вернуть массив или один объект
-        if (Array.isArray(response)) {
-            // Если массив — берём первый элемент (рейтинг текущего пользователя)
-            return response.length > 0 ? response[0].rating : null;
+        if (!userId || !Number.isFinite(userId)) {
+            return null;
         }
 
-        // Если один объект
+        const response = await apiClient.get<TravelRatingRecordResponse>(
+            `/travels/travel${travelId}/rating/users/${userId}/`
+        );
+
         if (response && typeof response.rating === 'number') {
             return response.rating;
         }
@@ -102,24 +86,11 @@ export const getUserTravelRating = async (travelId: number): Promise<number | nu
 };
 
 /**
- * Получает полную информацию о рейтинге путешествия включая оценку пользователя
- * Комбинирует getTravelRating и getUserTravelRating
+ * Получает оценку пользователя для путешествия.
+ * Агрегатный рейтинг (rating, rating_count) приходит из travel detail response,
+ * отдельного GET-эндпоинта для него нет.
  */
-export const getTravelRatingWithUserRating = async (travelId: number): Promise<TravelRatingResponse> => {
-    try {
-        // Параллельно запрашиваем общий рейтинг и рейтинг пользователя
-        const [ratingResponse, userRating] = await Promise.all([
-            getTravelRating(travelId),
-            getUserTravelRating(travelId),
-        ]);
-
-        return {
-            ...ratingResponse,
-            user_rating: userRating,
-        };
-    } catch (error) {
-        devError('Error fetching travel rating with user rating:', error);
-        throw error;
-    }
+export const fetchUserRatingForTravel = async (travelId: number): Promise<number | null> => {
+    return getUserTravelRating(travelId);
 };
 

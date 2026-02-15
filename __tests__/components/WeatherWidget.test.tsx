@@ -33,6 +33,7 @@ describe('WeatherWidget', () => {
   it('renders forecast for valid coordinates', async () => {
     const fetchMock = global.fetch as jest.Mock
     fetchMock.mockResolvedValue({
+      ok: true,
       json: () =>
         Promise.resolve({
           daily: {

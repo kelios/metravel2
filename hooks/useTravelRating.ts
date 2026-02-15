@@ -3,7 +3,7 @@
 
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { rateTravel, getTravelRatingWithUserRating, TravelRatingResponse } from '@/api/travelRating';
+import { rateTravel, getUserTravelRating } from '@/api/travelRating';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
@@ -41,20 +41,14 @@ export function useTravelRating({
 
     const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
 
-    // Query для получения рейтинга
-    // Для авторизованных пользователей запрашиваем также user_rating через /rating/users/
-    const ratingQuery = useQuery({
-        queryKey: ['travelRating', travelId, isAuthenticated],
-        queryFn: () => getTravelRatingWithUserRating(travelId!),
+    // Query для получения оценки пользователя
+    // Агрегатный рейтинг (rating, rating_count) приходит из travel detail response (initialRating/initialCount)
+    const userRatingQuery = useQuery({
+        queryKey: ['travelUserRating', travelId],
+        queryFn: () => getUserTravelRating(travelId!),
         enabled: enabled && !!travelId && isAuthenticated,
-        staleTime: 30 * 1000, // 30 секунд — чтобы быстрее обновлять user_rating
-        placeholderData: (initialRating != null || initialCount > 0 || initialUserRating != null)
-            ? {
-                rating: initialRating ?? 0,
-                rating_count: initialCount,
-                user_rating: initialUserRating ?? null,
-            }
-            : undefined,
+        staleTime: 30 * 1000,
+        placeholderData: initialUserRating,
     });
 
     // Mutation для отправки оценки
@@ -65,38 +59,21 @@ export function useTravelRating({
             setOptimisticRating(newRating);
 
             // Отменяем исходящие запросы
-            await queryClient.cancelQueries({ queryKey: ['travelRating', travelId, isAuthenticated] });
+            await queryClient.cancelQueries({ queryKey: ['travelUserRating', travelId] });
 
             // Сохраняем предыдущее состояние
-            const previousData = queryClient.getQueryData<TravelRatingResponse>(['travelRating', travelId, isAuthenticated]);
+            const previousUserRating = queryClient.getQueryData<number | null>(['travelUserRating', travelId]);
 
             // Обновляем кэш оптимистично
-            if (previousData) {
-                const newEffectiveRating = calculateNewRating(
-                    previousData.rating,
-                    previousData.rating_count,
-                    newRating,
-                    previousData.user_rating
-                );
-                const newEffectiveCount = previousData.user_rating === null 
-                    ? previousData.rating_count + 1 
-                    : previousData.rating_count;
+            queryClient.setQueryData(['travelUserRating', travelId], newRating);
 
-                queryClient.setQueryData(['travelRating', travelId, isAuthenticated], {
-                    ...previousData,
-                    rating: newEffectiveRating,
-                    rating_count: newEffectiveCount,
-                    user_rating: newRating,
-                });
-            }
-
-            return { previousData };
+            return { previousUserRating };
         },
         onError: (_error, _newRating, context) => {
             // Откатываем к предыдущему состоянию
             setOptimisticRating(null);
-            if (context?.previousData) {
-                queryClient.setQueryData(['travelRating', travelId, isAuthenticated], context.previousData);
+            if (context?.previousUserRating !== undefined) {
+                queryClient.setQueryData(['travelUserRating', travelId], context.previousUserRating);
             }
             showToast({
                 text1: 'Не удалось сохранить оценку',
@@ -104,9 +81,9 @@ export function useTravelRating({
             });
         },
         onSuccess: (data) => {
-            // Обновляем кэш
+            // Обновляем кэш user rating
             setOptimisticRating(null);
-            queryClient.setQueryData(['travelRating', travelId, isAuthenticated], data);
+            queryClient.setQueryData(['travelUserRating', travelId], data.user_rating ?? null);
 
             // Инвалидируем кэш путешествия, чтобы обновить рейтинг в списках
             queryClient.invalidateQueries({ queryKey: queryKeys.travel(travelId!) });
@@ -130,32 +107,31 @@ export function useTravelRating({
     }, [travelId, isAuthenticated, requireAuth, rateMutation]);
 
     // Определяем текущие значения (с учётом оптимистичного обновления)
-    const currentData = ratingQuery.data;
-    const effectiveUserRating = optimisticRating ?? currentData?.user_rating ?? initialUserRating;
+    const fetchedUserRating = userRatingQuery.data;
+    const resolvedUserRating = optimisticRating ?? fetchedUserRating ?? initialUserRating;
 
     // Вычисляем приблизительный новый рейтинг при оптимистичном обновлении
-    const effectiveRating = optimisticRating !== null && currentData
-        ? calculateNewRating(
-            currentData.rating,
-            currentData.rating_count,
-            optimisticRating,
-            currentData.user_rating
-        )
-        : currentData?.rating ?? initialRating;
+    const baseRating = initialRating ?? 0;
+    const baseCount = initialCount;
+    const prevUserRating = fetchedUserRating ?? initialUserRating;
 
-    const effectiveCount = optimisticRating !== null && currentData && currentData.user_rating === null
-        ? currentData.rating_count + 1
-        : currentData?.rating_count ?? initialCount;
+    const effectiveRating = optimisticRating !== null
+        ? calculateNewRating(baseRating, baseCount, optimisticRating, prevUserRating)
+        : baseRating;
+
+    const effectiveCount = optimisticRating !== null && prevUserRating === null
+        ? baseCount + 1
+        : baseCount;
 
     return {
-        rating: effectiveRating,
+        rating: effectiveRating || initialRating,
         ratingCount: effectiveCount,
-        userRating: effectiveUserRating,
-        isLoading: ratingQuery.isLoading,
+        userRating: resolvedUserRating,
+        isLoading: userRatingQuery.isLoading,
         isSubmitting: rateMutation.isPending,
         canRate: isAuthenticated,
         handleRate,
-        error: ratingQuery.error || rateMutation.error,
+        error: userRatingQuery.error || rateMutation.error,
     };
 }
 
