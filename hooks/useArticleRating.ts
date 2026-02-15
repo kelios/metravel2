@@ -1,23 +1,22 @@
-// hooks/useTravelRating.ts
-// ✅ Хук для управления рейтингом путешествия
+// hooks/useArticleRating.ts
+// ✅ Хук для управления рейтингом статьи
 
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { rateTravel, getTravelRating, TravelRatingResponse } from '@/api/travelRating';
+import { rateArticle, getArticleRating, ArticleRatingResponse } from '@/api/articleRating';
 import { useAuth } from '@/context/AuthContext';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { showToast } from '@/utils/toast';
-import { queryKeys } from '@/queryKeys';
 
-type UseTravelRatingOptions = {
-    travelId: number | undefined;
+type UseArticleRatingOptions = {
+    articleId: number | undefined;
     initialRating?: number | null;
     initialCount?: number;
     initialUserRating?: number | null;
     enabled?: boolean;
 };
 
-type UseTravelRatingReturn = {
+type UseArticleRatingReturn = {
     rating: number | null;
     ratingCount: number;
     userRating: number | null;
@@ -28,25 +27,25 @@ type UseTravelRatingReturn = {
     error: Error | null;
 };
 
-export function useTravelRating({
-    travelId,
+export function useArticleRating({
+    articleId,
     initialRating = null,
     initialCount = 0,
     initialUserRating = null,
     enabled = true,
-}: UseTravelRatingOptions): UseTravelRatingReturn {
+}: UseArticleRatingOptions): UseArticleRatingReturn {
     const { isAuthenticated } = useAuth();
     const { requireAuth } = useRequireAuth({ intent: 'rate' });
     const queryClient = useQueryClient();
 
     const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
 
-    // Query для получения рейтинга (если нужно обновить с сервера)
+    // Query для получения рейтинга
     const ratingQuery = useQuery({
-        queryKey: ['travelRating', travelId],
-        queryFn: () => getTravelRating(travelId!),
-        enabled: enabled && !!travelId && isAuthenticated,
-        staleTime: 5 * 60 * 1000, // 5 минут
+        queryKey: ['articleRating', articleId],
+        queryFn: () => getArticleRating(articleId!),
+        enabled: enabled && !!articleId && isAuthenticated,
+        staleTime: 5 * 60 * 1000,
         initialData: initialRating !== null || initialUserRating !== null
             ? {
                 rating: initialRating ?? 0,
@@ -58,44 +57,17 @@ export function useTravelRating({
 
     // Mutation для отправки оценки
     const rateMutation = useMutation({
-        mutationFn: (rating: number) => rateTravel({ travelId: travelId!, rating }),
+        mutationFn: (rating: number) => rateArticle({ articleId: articleId!, rating }),
         onMutate: async (newRating) => {
-            // Оптимистичное обновление
             setOptimisticRating(newRating);
-
-            // Отменяем исходящие запросы
-            await queryClient.cancelQueries({ queryKey: ['travelRating', travelId] });
-
-            // Сохраняем предыдущее состояние
-            const previousData = queryClient.getQueryData<TravelRatingResponse>(['travelRating', travelId]);
-
-            // Обновляем кэш оптимистично
-            if (previousData) {
-                const newEffectiveRating = calculateNewRating(
-                    previousData.rating,
-                    previousData.rating_count,
-                    newRating,
-                    previousData.user_rating
-                );
-                const newEffectiveCount = previousData.user_rating === null 
-                    ? previousData.rating_count + 1 
-                    : previousData.rating_count;
-
-                queryClient.setQueryData(['travelRating', travelId], {
-                    ...previousData,
-                    rating: newEffectiveRating,
-                    rating_count: newEffectiveCount,
-                    user_rating: newRating,
-                });
-            }
-
+            await queryClient.cancelQueries({ queryKey: ['articleRating', articleId] });
+            const previousData = queryClient.getQueryData<ArticleRatingResponse>(['articleRating', articleId]);
             return { previousData };
         },
         onError: (_error, _newRating, context) => {
-            // Откатываем к предыдущему состоянию
             setOptimisticRating(null);
             if (context?.previousData) {
-                queryClient.setQueryData(['travelRating', travelId], context.previousData);
+                queryClient.setQueryData(['articleRating', articleId], context.previousData);
             }
             showToast({
                 text1: 'Не удалось сохранить оценку',
@@ -103,12 +75,11 @@ export function useTravelRating({
             });
         },
         onSuccess: (data) => {
-            // Обновляем кэш
             setOptimisticRating(null);
-            queryClient.setQueryData(['travelRating', travelId], data);
-
-            // Инвалидируем кэш путешествия, чтобы обновить рейтинг в списках
-            queryClient.invalidateQueries({ queryKey: queryKeys.travel(travelId!) });
+            queryClient.setQueryData(['articleRating', articleId], data);
+            
+            // Инвалидируем кэш статьи, если он есть
+            queryClient.invalidateQueries({ queryKey: ['article', articleId] });
 
             showToast({
                 text1: 'Оценка сохранена',
@@ -118,7 +89,7 @@ export function useTravelRating({
     });
 
     const handleRate = useCallback((value: number) => {
-        if (!travelId) return;
+        if (!articleId) return;
 
         if (!isAuthenticated) {
             requireAuth();
@@ -126,13 +97,11 @@ export function useTravelRating({
         }
 
         rateMutation.mutate(value);
-    }, [travelId, isAuthenticated, requireAuth, rateMutation]);
+    }, [articleId, isAuthenticated, requireAuth, rateMutation]);
 
-    // Определяем текущие значения (с учётом оптимистичного обновления)
     const currentData = ratingQuery.data;
     const effectiveUserRating = optimisticRating ?? currentData?.user_rating ?? initialUserRating;
 
-    // Вычисляем приблизительный новый рейтинг при оптимистичном обновлении
     const effectiveRating = optimisticRating !== null && currentData
         ? calculateNewRating(
             currentData.rating,
@@ -158,9 +127,6 @@ export function useTravelRating({
     };
 }
 
-/**
- * Вычисляет приблизительный новый рейтинг при добавлении/изменении оценки
- */
 function calculateNewRating(
     currentRating: number,
     count: number,
@@ -182,4 +148,4 @@ function calculateNewRating(
     }
 }
 
-export default useTravelRating;
+export default useArticleRating;

@@ -129,6 +129,10 @@ export type Article = {
     article_image_thumb_url: string
     article_image_thumb_small_url: string
     article_type: ArticleType
+    // Рейтинг статьи
+    rating?: number | null
+    rating_count?: number
+    user_rating?: number | null
 }
 
 export type ArticleType = {

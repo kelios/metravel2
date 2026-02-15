@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { Article } from '@/types/types'
+import ArticleRatingSection from '@/components/article/ArticleRatingSection'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { Card, Title } from '@/ui/paper'
@@ -95,6 +96,12 @@ export default function ArticleDetails() {
                         />
                     ),
                   })}
+                  <ArticleRatingSection
+                      articleId={id}
+                      initialRating={article.rating}
+                      initialCount={article.rating_count}
+                      initialUserRating={article.user_rating}
+                  />
                 </Card.Content>
               </Card>
           )}

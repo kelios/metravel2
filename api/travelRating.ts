@@ -5,9 +5,10 @@ import { apiClient } from '@/api/client';
 import { devError } from '@/utils/logger';
 
 export type TravelRatingResponse = {
+    id: number;
+    user: number;
+    travel: number;
     rating: number;
-    rating_count: number;
-    user_rating: number | null;
 };
 
 export type RateTravelParams = {
@@ -17,7 +18,8 @@ export type RateTravelParams = {
 
 /**
  * Отправляет оценку путешествия
- * POST /api/travels/{id}/rating/
+ * POST /api/travels/rating/
+ * Тело: { travel: number, rating: number }
  */
 export const rateTravel = async (params: RateTravelParams): Promise<TravelRatingResponse> => {
     const { travelId, rating } = params;
@@ -28,8 +30,8 @@ export const rateTravel = async (params: RateTravelParams): Promise<TravelRating
 
     try {
         const response = await apiClient.post<TravelRatingResponse>(
-            `/travels/${travelId}/rating/`,
-            { rating }
+            '/travels/rating/',
+            { travel: travelId, rating }
         );
         return response;
     } catch (error) {

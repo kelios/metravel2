@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test } from './fixtures';
 
 test('debug login robots meta', async ({ page }) => {
   await page.goto('/login', { waitUntil: 'domcontentloaded' });
