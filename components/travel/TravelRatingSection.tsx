@@ -53,6 +53,7 @@ function TravelRatingSection({
                     userRating={userRating}
                     interactive={canRate}
                     onRate={handleRate}
+                    disabled={isSubmitting || isLoading}
                     size="medium"
                     showValue
                     showCount
@@ -68,8 +69,8 @@ function TravelRatingSection({
 
     return (
         <View style={styles.container} testID={testID}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Рейтинг путешествия</Text>
+            <View style={styles.headerRow}>
+                <Text style={styles.title}>Рейтинг</Text>
                 {ratingCount > 0 && (
                     <Text style={styles.countText}>
                         {ratingCount} {getCountLabel(ratingCount)}
@@ -77,8 +78,8 @@ function TravelRatingSection({
                 )}
             </View>
 
-            <View style={styles.ratingRow}>
-                <View style={styles.ratingDisplay}>
+            <View style={styles.contentRow}>
+                <View style={styles.summaryBox}>
                     <StarRating
                         rating={rating}
                         ratingCount={ratingCount}
@@ -88,40 +89,33 @@ function TravelRatingSection({
                     />
                 </View>
 
-                <View style={styles.divider} />
-
-                {canRate && (
-                    <View style={styles.rateSection}>
-                        <Text style={styles.rateLabel}>
-                            {userRating ? 'Ваша оценка' : 'Поставьте оценку'}
-                        </Text>
-                        <StarRating
-                            rating={userRating ?? 0}
-                            userRating={userRating}
-                            interactive
-                            onRate={handleRate}
-                            disabled={isSubmitting || isLoading}
-                            size="large"
-                            showValue={false}
-                            showCount={false}
-                        />
-                        {isSubmitting && (
-                            <Text style={styles.savingText}>Сохранение...</Text>
-                        )}
-                        {!isSubmitting && isLoading && (
-                            <Text style={styles.loadingText}>Загрузка...</Text>
-                        )}
-                        {!!userRating && !isSubmitting && !isLoading && (
-                            <Text style={styles.yourRatingText}>Ваша оценка: {userRating}</Text>
-                        )}
-                    </View>
-                )}
-
-                {!canRate && (
-                    <Text style={styles.loginHint}>
-                        Войдите, чтобы оценить
-                    </Text>
-                )}
+                <View style={styles.userBox}>
+                    {canRate ? (
+                        <>
+                            <Text style={styles.rateLabel}>
+                                {userRating ? 'Ваша оценка' : 'Оцените'}
+                            </Text>
+                            <StarRating
+                                rating={userRating ?? 0}
+                                userRating={userRating}
+                                interactive
+                                onRate={handleRate}
+                                disabled={isSubmitting || isLoading}
+                                size="large"
+                                showValue={false}
+                                showCount={false}
+                            />
+                            {isSubmitting && (
+                                <Text style={styles.savingText}>Сохранение...</Text>
+                            )}
+                            {!isSubmitting && isLoading && (
+                                <Text style={styles.loadingText}>Загрузка...</Text>
+                            )}
+                        </>
+                    ) : (
+                        <Text style={styles.loginHint}>Войдите, чтобы оценить</Text>
+                    )}
+                </View>
             </View>
         </View>
     );
@@ -158,14 +152,14 @@ const createStyles = (colors: any) =>
             gap: 12,
             flexWrap: 'wrap',
         },
-        header: {
+        headerRow: {
             flexDirection: 'row',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: 16,
+            marginBottom: 12,
         },
         title: {
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: '700',
             color: colors.text,
         },
@@ -173,33 +167,35 @@ const createStyles = (colors: any) =>
             fontSize: 14,
             color: colors.textMuted,
         },
-        ratingRow: {
+        contentRow: {
             flexDirection: 'row',
-            alignItems: 'flex-start',
+            alignItems: 'stretch',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: 16,
-        },
-        ratingDisplay: {
-            flexDirection: 'row',
-            alignItems: 'center',
             gap: 12,
         },
-        divider: {
-            width: 1,
-            alignSelf: 'stretch',
-            backgroundColor: colors.borderLight,
-            opacity: 0.6,
-            ...Platform.select({
-                web: {
-                    minHeight: 56,
-                } as any,
-                default: {
-                    minHeight: 48,
-                },
-            }),
+        summaryBox: {
+            flexGrow: 1,
+            flexShrink: 1,
+            minWidth: 160,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 12,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
         },
-        rateSection: {
+        userBox: {
+            flexGrow: 1,
+            flexShrink: 1,
+            minWidth: 200,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 12,
+            backgroundColor: colors.backgroundSecondary,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            alignItems: 'flex-start',
             gap: 8,
         },
         rateLabel: {

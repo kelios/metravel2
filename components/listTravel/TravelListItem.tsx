@@ -552,7 +552,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
           )}
 
           {views > 0 && (
-            <View style={styles.metaBoxViews} testID="views-meta">
+            <View style={[styles.metaBoxViews, styles.metaBoxViewsChip]} testID="views-meta">
               <Feather
                 name="eye"
                 size={Platform.select({ default: 10, web: 11 })}
@@ -566,7 +566,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
 
           {/* Рейтинг путешествия */}
           {travel.rating != null && travel.rating > 0 && (
-            <View style={styles.metaBoxViews} testID="rating-meta">
+            <View style={[styles.metaBoxViews, styles.metaBoxRatingChip]} testID="rating-meta">
               <StarRating
                 rating={travel.rating}
                 ratingCount={travel.rating_count}

@@ -47,11 +47,11 @@ export function useTravelRating({
         queryFn: () => getTravelRating(travelId!),
         enabled: enabled && !!travelId && isAuthenticated,
         staleTime: 5 * 60 * 1000, // 5 минут
-        initialData: initialRating !== null || initialUserRating !== null
+        initialData: initialRating !== null || initialCount > 0 || initialUserRating != null
             ? {
                 rating: initialRating ?? 0,
                 rating_count: initialCount,
-                user_rating: initialUserRating,
+                user_rating: initialUserRating ?? null,
             }
             : undefined,
     });

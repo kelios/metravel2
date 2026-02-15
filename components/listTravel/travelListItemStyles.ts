@@ -200,6 +200,22 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       flexShrink: 0,
     },
 
+    metaBoxViewsChip: {
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+      borderRadius: 999,
+      paddingVertical: 3,
+      paddingHorizontal: 8,
+    },
+
+    metaBoxRatingChip: {
+      marginLeft: 6,
+      paddingLeft: 10,
+      borderLeftWidth: 1,
+      borderLeftColor: colors.borderLight,
+    },
+
     metaTxt: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       color: colors.textSecondary,

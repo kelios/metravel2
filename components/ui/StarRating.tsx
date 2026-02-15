@@ -144,7 +144,6 @@ function StarRating({
                 {...wrapperProps}
             >
                 <View style={styles.starContainer}>
-                    {/* Базовая звезда (пустая) */}
                     <Feather
                         name="star"
                         size={config.starSize}
@@ -245,6 +244,7 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
             width: config.starSize,
             height: config.starSize,
             position: 'relative',
+            opacity: 0.9,
         },
         starFilled: {
             position: 'absolute',

@@ -12,7 +12,7 @@ import ArticleRatingSection from '@/components/article/ArticleRatingSection'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { Card, Title } from '@/ui/paper'
-import { fetchArticle } from '@/api/articles'
+import { apiClient } from '@/api/client'
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -35,13 +35,14 @@ export default function ArticleDetails() {
   useEffect(() => {
     if (!id) return
 
-    fetchArticle(id)
-        .then((articleData) => {
-          setArticle(articleData)
-        })
-        .catch((error) => {
-          console.error('Failed to fetch article data:', error)
-        })
+    apiClient
+      .get<Article>(`/articles/${id}/`)
+      .then((articleData) => {
+        setArticle(articleData)
+      })
+      .catch((error) => {
+        console.error('Failed to fetch article data:', error)
+      })
   }, [id])
 
   if (!article) {
