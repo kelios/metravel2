@@ -529,6 +529,8 @@ export const attachLasyZanocujWfsOverlay = (
       const version = def.wfsParams?.version || '2.0.0';
       const outputFormat = def.wfsParams?.outputFormat || 'GEOJSON';
       const srsName = def.wfsParams?.srsName || 'EPSG:4326';
+      const configBboxOrder: 'lonlat' | 'latlon' = def.wfsParams?.bboxOrder || 'lonlat';
+      const altBboxOrder: 'lonlat' | 'latlon' = configBboxOrder === 'latlon' ? 'lonlat' : 'latlon';
 
       const srsCandidates = (() => {
         const out = [srsName];
@@ -556,7 +558,7 @@ export const attachLasyZanocujWfsOverlay = (
         return [first, 'GML3'];
       })();
 
-      // Attempt list: prefer cached successful params, then config + one fallback.
+      // Attempt list: prefer cached successful params, then config bbox order, then fallback.
       const attempts: Array<{
         version: string;
         typeParam: 'typeNames' | 'typeName';
@@ -576,6 +578,7 @@ export const attachLasyZanocujWfsOverlay = (
         addAttempt(preferredAttempt);
       }
 
+      // Primary attempts: use configured bbox order first
       for (const srs of srsCandidates) {
         for (const fmt of formatsToTry) {
           addAttempt({
@@ -583,7 +586,7 @@ export const attachLasyZanocujWfsOverlay = (
             typeParam: 'typeNames',
             outputFormat: fmt,
             srsName: srs,
-            bboxOrder: 'lonlat',
+            bboxOrder: configBboxOrder,
           });
         }
       }
@@ -593,9 +596,10 @@ export const attachLasyZanocujWfsOverlay = (
         typeParam: 'typeName',
         outputFormat: formatsToTry[0] || outputFormatCandidates[0] || 'GEOJSON',
         srsName: srsCandidates[0] || srsName,
-        bboxOrder: 'lonlat',
+        bboxOrder: configBboxOrder,
       });
 
+      // Fallback attempts: try the opposite bbox order
       const fmt0 = formatsToTry[0] || outputFormatCandidates[0] || 'GEOJSON';
       if (srsCandidates.includes('EPSG:4326')) {
         addAttempt({
@@ -603,14 +607,14 @@ export const attachLasyZanocujWfsOverlay = (
           typeParam: 'typeNames',
           outputFormat: fmt0,
           srsName: 'EPSG:4326',
-          bboxOrder: 'latlon',
+          bboxOrder: altBboxOrder,
         });
         addAttempt({
           version,
           typeParam: 'typeName',
           outputFormat: fmt0,
           srsName: 'EPSG:4326',
-          bboxOrder: 'latlon',
+          bboxOrder: altBboxOrder,
         });
       }
 

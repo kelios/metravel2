@@ -188,6 +188,15 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
       // Preserve local preview images for cover/gallery while server hasn't produced permanent URLs yet.
       kf('travel_image_thumb_url', 'missingImageUrl');
       kf('travel_image_thumb_small_url', 'missingImageUrl');
+
+      // If user explicitly deleted cover (set to null) but server returned old URL, keep null.
+      if (currentDataSnapshot.travel_image_thumb_url == null && normalizedSavedData.travel_image_thumb_url != null) {
+        normalizedSavedData.travel_image_thumb_url = null as any;
+      }
+      if (currentDataSnapshot.travel_image_thumb_small_url == null && normalizedSavedData.travel_image_thumb_small_url != null) {
+        normalizedSavedData.travel_image_thumb_small_url = null as any;
+      }
+
       kf('gallery', 'emptyArray');
       kf('gallery', 'nilArray');
 

@@ -140,17 +140,19 @@ function ConsentBanner() {
 
   return (
     <View
+      pointerEvents="none"
       style={[
         styles.wrapper,
-        { bottom: bottomOffset, pointerEvents: suspendForOverlay ? 'none' : 'box-none' },
+        { bottom: bottomOffset },
         suspendForOverlay && styles.wrapperHidden,
       ]}
     >
       <View
+        pointerEvents="auto"
         testID="consent-banner"
         style={[
           styles.container,
-          { backgroundColor: colors.surface, pointerEvents: 'auto' },
+          { backgroundColor: colors.surface },
           !isMobile && styles.containerDesktop,
         ]}
       >
@@ -193,7 +195,6 @@ const styles = StyleSheet.create({
     bottom: 12,
     zIndex: 900,
     alignItems: 'flex-end',
-    pointerEvents: 'box-none',
   },
   wrapperHidden: {
     opacity: 0,

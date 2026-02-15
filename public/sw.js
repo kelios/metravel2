@@ -185,6 +185,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Proxy paths (e.g. /proxy/wfs/lasy) are reverse-proxied by nginx to
+  // external services. Let them pass through without SW interception so
+  // nginx cache headers and stale-serving work correctly.
+  if (url.pathname.startsWith('/proxy/')) {
+    return;
+  }
+
   if (request.destination === 'image') {
     event.respondWith(cacheFirst(request, IMAGE_CACHE, MAX_IMAGE_CACHE_SIZE));
     return;

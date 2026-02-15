@@ -26,6 +26,8 @@ export interface WebMapLayerDefinition {
     version?: string;
     outputFormat?: string;
     srsName?: string;
+    /** Axis order for bbox parameter: 'lonlat' (default) or 'latlon'. */
+    bboxOrder?: 'lonlat' | 'latlon';
   };
   opacity?: number;
   minZoom?: number;
@@ -108,6 +110,7 @@ export const WEB_MAP_OVERLAY_LAYERS: WebMapLayerDefinition[] = [
       version: process.env.EXPO_PUBLIC_LASY_WFS_VERSION || '2.0.0',
       outputFormat: process.env.EXPO_PUBLIC_LASY_WFS_OUTPUT || 'GEOJSON',
       srsName: process.env.EXPO_PUBLIC_LASY_WFS_SRS || 'EPSG:4326',
+      bboxOrder: 'latlon',
     },
     opacity: 0.8,
     zIndex: 450,
