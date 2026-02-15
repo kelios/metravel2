@@ -79,21 +79,21 @@ function TravelRatingSection({
 
             <View style={styles.ratingRow}>
                 <View style={styles.ratingDisplay}>
-                    <Text style={styles.ratingValue}>
-                        {rating ? rating.toFixed(1) : '—'}
-                    </Text>
                     <StarRating
                         rating={rating}
+                        ratingCount={ratingCount}
                         size="large"
-                        showValue={false}
+                        showValue
                         showCount={false}
                     />
                 </View>
 
+                <View style={styles.divider} />
+
                 {canRate && (
                     <View style={styles.rateSection}>
                         <Text style={styles.rateLabel}>
-                            {userRating ? 'Изменить оценку:' : 'Оцените путешествие:'}
+                            {userRating ? 'Ваша оценка' : 'Поставьте оценку'}
                         </Text>
                         <StarRating
                             rating={userRating ?? 0}
@@ -185,11 +185,19 @@ const createStyles = (colors: any) =>
             alignItems: 'center',
             gap: 12,
         },
-        ratingValue: {
-            fontSize: 36,
-            fontWeight: '800',
-            color: colors.text,
-            lineHeight: 42,
+        divider: {
+            width: 1,
+            alignSelf: 'stretch',
+            backgroundColor: colors.borderLight,
+            opacity: 0.6,
+            ...Platform.select({
+                web: {
+                    minHeight: 56,
+                } as any,
+                default: {
+                    minHeight: 48,
+                },
+            }),
         },
         rateSection: {
             gap: 8,
