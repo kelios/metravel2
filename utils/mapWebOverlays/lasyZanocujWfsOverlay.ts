@@ -14,6 +14,65 @@ const defaultOpts: Required<LasyZanocujWfsOverlayOptions> = {
   debounceMs: 700,
 };
 
+const STATIC_DATA_PATH = '/assets/data/lasy-zanocuj.json';
+
+const isProductionHost = () =>
+  typeof window !== 'undefined' &&
+  window.location.hostname !== 'localhost' &&
+  !window.location.hostname.startsWith('192.168.');
+
+let staticDataCache: any = null;
+let staticDataFailed = false;
+
+const fetchStaticData = async (signal?: AbortSignal): Promise<any> => {
+  if (staticDataCache) return staticDataCache;
+  if (staticDataFailed) return null;
+
+  try {
+    const res = await fetch(STATIC_DATA_PATH, { signal });
+    if (!res.ok) {
+      staticDataFailed = true;
+      return null;
+    }
+    const data = await res.json();
+    if (data?.type === 'FeatureCollection' && Array.isArray(data.features) && data.features.length > 0) {
+      staticDataCache = data;
+      return data;
+    }
+    staticDataFailed = true;
+    return null;
+  } catch {
+    staticDataFailed = true;
+    return null;
+  }
+};
+
+const featureIntersectsBBox = (feature: any, bbox: BBox): boolean => {
+  const geometry = feature?.geometry;
+  if (!geometry) return false;
+
+  const checkCoord = (coord: any): boolean => {
+    if (typeof coord[0] === 'number' && typeof coord[1] === 'number') {
+      const lng = coord[0];
+      const lat = coord[1];
+      return lng >= bbox.west && lng <= bbox.east && lat >= bbox.south && lat <= bbox.north;
+    }
+    if (Array.isArray(coord)) {
+      return coord.some(checkCoord);
+    }
+    return false;
+  };
+
+  return checkCoord(geometry.coordinates);
+};
+
+export const filterGeoJsonByBBox = (geojson: any, bbox: BBox): any => {
+  if (!geojson?.features) return null;
+  const filtered = geojson.features.filter((f: any) => featureIntersectsBBox(f, bbox));
+  if (filtered.length === 0) return null;
+  return { type: 'FeatureCollection', features: filtered };
+};
+
 const looksLikeOwsExceptionReport = (text: string) => {
   const t = (text || '').trim().slice(0, 400).toLowerCase();
   return t.includes('<ows:exceptionreport') || t.includes('exceptionreport') || t.includes('ows:exception');
@@ -507,6 +566,20 @@ export const attachLasyZanocujWfsOverlay = (
     geoLayer.addTo(layerGroup);
   };
 
+  const loadFromStaticData = async (bbox: BBox, signal?: AbortSignal): Promise<boolean> => {
+    const data = await fetchStaticData(signal);
+    if (!data) return false;
+
+    const filtered = filterGeoJsonByBBox(data, bbox);
+    if (!filtered) {
+      layerGroup.clearLayers();
+      return true;
+    }
+
+    renderGeoJson(filtered);
+    return true;
+  };
+
   const load = async () => {
     if (!map || !L) return;
     if (!def?.url) return;
@@ -526,6 +599,16 @@ export const attachLasyZanocujWfsOverlay = (
     isLoading = true;
 
     try {
+      // In production, prefer static pre-fetched data (avoids geo-blocked WFS server)
+      if (isProductionHost()) {
+        const ok = await loadFromStaticData(bbox, abort.signal);
+        if (ok) {
+          backoffMs = 0;
+          nextAllowedAt = Date.now() + 300;
+          return;
+        }
+        // Static data unavailable — fall through to live WFS
+      }
       const version = def.wfsParams?.version || '2.0.0';
       const outputFormat = def.wfsParams?.outputFormat || 'GEOJSON';
       const srsName = def.wfsParams?.srsName || 'EPSG:4326';

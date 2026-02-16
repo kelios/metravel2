@@ -1,4 +1,4 @@
-import { __wfsXmlToGeoJson } from '@/utils/mapWebOverlays/lasyZanocujWfsOverlay';
+import { __wfsXmlToGeoJson, filterGeoJsonByBBox } from '@/utils/mapWebOverlays/lasyZanocujWfsOverlay';
 
 describe('lasyZanocujWfsOverlay', () => {
   it('parses a minimal WFS GML FeatureCollection into GeoJSON', () => {
@@ -69,5 +69,52 @@ describe('lasyZanocujWfsOverlay', () => {
     expect(f.type).toBe('Feature');
     expect(f.geometry).toBeTruthy();
     expect(f.geometry.type).toBe('Polygon');
+  });
+});
+
+describe('filterGeoJsonByBBox', () => {
+  const makeFeature = (lng: number, lat: number) => ({
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[[lng, lat], [lng + 0.1, lat], [lng + 0.1, lat + 0.1], [lng, lat + 0.1], [lng, lat]]],
+    },
+    properties: { name: `Feature at ${lng},${lat}` },
+  });
+
+  const geojson = {
+    type: 'FeatureCollection',
+    features: [
+      makeFeature(19.0, 50.0),
+      makeFeature(21.0, 52.0),
+      makeFeature(15.0, 54.0),
+    ],
+  };
+
+  it('returns features that intersect the bbox', () => {
+    const bbox = { south: 49.5, west: 18.5, north: 50.5, east: 19.5 };
+    const result = filterGeoJsonByBBox(geojson, bbox);
+    expect(result).not.toBeNull();
+    expect(result.features).toHaveLength(1);
+    expect(result.features[0].properties.name).toBe('Feature at 19,50');
+  });
+
+  it('returns null when no features intersect', () => {
+    const bbox = { south: 40.0, west: 10.0, north: 41.0, east: 11.0 };
+    const result = filterGeoJsonByBBox(geojson, bbox);
+    expect(result).toBeNull();
+  });
+
+  it('returns multiple features when bbox is large', () => {
+    const bbox = { south: 49.0, west: 14.0, north: 55.0, east: 24.0 };
+    const result = filterGeoJsonByBBox(geojson, bbox);
+    expect(result).not.toBeNull();
+    expect(result.features).toHaveLength(3);
+  });
+
+  it('returns null for null/undefined input', () => {
+    const bbox = { south: 49.0, west: 14.0, north: 55.0, east: 24.0 };
+    expect(filterGeoJsonByBBox(null, bbox)).toBeNull();
+    expect(filterGeoJsonByBBox(undefined, bbox)).toBeNull();
   });
 });

@@ -16,84 +16,17 @@ import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsive } from '@/hooks/useResponsive'
+import type { SliderImage, SliderProps, SliderRef } from './sliderParts/types'
 import {
-  buildVersionedImageUrl,
-  getPreferredImageFormat,
-  optimizeImageUrl,
-} from '@/utils/imageOptimization'
+  clamp,
+  buildUriWeb as buildUri,
+  computeSliderHeight,
+  FIRST_SLIDE_URI_CACHE,
+  FIRST_SLIDE_URI_CACHE_MAX,
+  DEFAULT_AR,
+} from './sliderParts/utils'
 
-export interface SliderImage {
-  url: string
-  id: number | string
-  updated_at?: string
-  width?: number
-  height?: number
-}
-
-export interface SliderProps {
-  images: SliderImage[]
-  showArrows?: boolean
-  showDots?: boolean
-  hideArrowsOnMobile?: boolean
-  aspectRatio?: number
-  fit?: 'contain' | 'cover'
-  fullBleed?: boolean
-  autoPlay?: boolean
-  autoPlayInterval?: number
-  onIndexChanged?: (index: number) => void
-  imageProps?: any
-  preloadCount?: number
-  blurBackground?: boolean
-  onFirstImageLoad?: () => void
-  mobileHeightPercent?: number
-  firstImagePreloaded?: boolean
-}
-
-export interface SliderRef {
-  scrollTo: (index: number, animated?: boolean) => void
-  next: () => void
-  prev: () => void
-}
-
-const DEFAULT_AR = 16 / 9
-
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
-
-// Compute preferred format once at module level (never changes at runtime)
-const PREFERRED_FORMAT = Platform.OS === 'web' ? getPreferredImageFormat() : undefined
-const FIRST_SLIDE_URI_CACHE = new Map<string, string>()
-const FIRST_SLIDE_URI_CACHE_MAX = 50
-
-const buildUri = (
-  img: SliderImage,
-  containerWidth?: number,
-  containerHeight?: number,
-  fit: 'contain' | 'cover' = 'contain',
-  isFirst: boolean = false
-) => {
-  const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id)
-  const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit
-
-  if (containerWidth) {
-    // Cap at 960 CSS-px — slider never exceeds ~945px on desktop.
-    // Use containerWidth directly (dpr=1) to avoid double-scaling
-    // (getOptimalImageSize multiplies by devicePixelRatio which is
-    // redundant when we already pass dpr:1 to optimizeImageUrl).
-    const cappedWidth = Math.min(containerWidth, 960)
-    const quality = isFirst ? 55 : 65
-    return (
-      optimizeImageUrl(versionedUrl, {
-        width: cappedWidth,
-        format: PREFERRED_FORMAT,
-        quality,
-        fit: fitForUrl,
-        dpr: 1,
-      }) || versionedUrl
-    )
-  }
-
-  return versionedUrl
-}
+export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types'
 
 const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const colors = useThemedColors()
@@ -185,18 +118,16 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, [blurBackground, images])
 
   const computeHeight = useCallback(
-    (w: number) => {
-      if (!images.length) return 0
-      if (isMobile) {
-        const viewportH = Math.max(0, winH)
-        const targetH = viewportH * mobileHeightPercent
-        const safeMax = Math.max(targetH, viewportH - (insets.top || 0) - (insets.bottom || 0))
-        return clamp(targetH, 280, safeMax || targetH)
-      }
-      const targetH = winH * 0.7
-      const h = w / firstAR
-      return clamp(Math.max(h, targetH), 320, winH * 0.75)
-    },
+    (w: number) =>
+      computeSliderHeight(w, {
+        imagesLength: images.length,
+        isMobile,
+        winH,
+        insetsTop: insets.top || 0,
+        insetsBottom: insets.bottom || 0,
+        mobileHeightPercent,
+        firstAR,
+      }),
     [firstAR, images.length, insets.bottom, insets.top, isMobile, winH, mobileHeightPercent]
   )
 
@@ -221,8 +152,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const uriMap = useMemo(
     () =>
       images.map((img, idx) => {
-        // Keep first slide URI stable until first actual image load.
-        // This prevents src swaps while width/hydration settles on web.
         if (Platform.OS === 'web' && idx === 0 && firstSlideLockedRef.current) {
           if (firstSlideStableUriRef.current) return firstSlideStableUriRef.current
 
@@ -375,27 +304,20 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     enablePrefetch()
   }, [onFirstImageLoad, enablePrefetch])
 
-  // Memoize slide dimensions to avoid creating new style objects per slide
   const slideDimensions = useMemo(
     () => ({ width: containerW, height: containerH }),
     [containerW, containerH]
   )
 
-  // Memoize merged imageProps to avoid new object per slide
   const mergedImagePropsBase = useMemo(
     () => ({ ...(imageProps || {}), contentPosition: 'center' as const }),
     [imageProps]
   )
 
-  // Render all slides always — no placeholder logic.
-  // Browser's native loading="lazy" handles deferred image fetching.
-  // This eliminates React re-renders during scroll (no renderIndex dependency).
   const renderItem = useCallback(
     ({ item, index }: { item: SliderImage; index: number }) => {
       const uri = uriMap[index] ?? item.url
       const isFirstSlide = index === 0
-      // Only the visible (first) slide loads eagerly; hidden slides use lazy
-      // to avoid wasting bandwidth on off-screen images.
       const isEager = index === 0
 
       return (
@@ -424,8 +346,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [blurBackground, fit, handleFirstImageLoad, images.length, mergedImagePropsBase, slideDimensions, styles.img, styles.slide, styles.slideSnap, uriMap]
   )
 
-  // Minimal scroll handler — only update currentIndex when scroll settles.
-  // No React state updates during scroll animation = zero flicker.
   const handleScroll = useCallback(
     (e: any) => {
       enablePrefetch()
@@ -440,7 +360,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [containerW, enablePrefetch, setActiveIndex]
   )
 
-  // Keyboard navigation for accessibility — use refs to avoid re-attaching on next/prev changes
   const nextRef = useRef(next)
   nextRef.current = next
   const prevRef = useRef(prev)
@@ -455,7 +374,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         nextRef.current()
       }
     }
-    // Only attach when slider is focused or hovered
     const wrapper = scrollRef.current as any
     const node = wrapper?._nativeNode || wrapper?._domNode || wrapper
     if (!node || typeof node.addEventListener !== 'function') return
@@ -466,7 +384,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return () => {
       parent.removeEventListener('keydown', handleKeyDown)
     }
-  }, []) // stable — uses refs for next/prev
+  }, [])
 
   if (!images.length) return null
 
@@ -501,8 +419,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             onScroll={handleScroll}
           >
             {images.map((item, index) => {
-              // Render slides within ±3 of current index to reduce DOM size.
-              // Other slides get an empty placeholder to preserve scroll position.
               const renderWindow = isMobile ? 2 : 3
               if (images.length > 5 && Math.abs(index - currentIndex) > renderWindow) {
                 return (

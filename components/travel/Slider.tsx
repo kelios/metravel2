@@ -1,4 +1,3 @@
-// components/common/Slider.tsx
 import React, {
   memo,
   useCallback,
@@ -13,174 +12,38 @@ import {
   View,
   StyleSheet,
   FlatList,
-  TouchableOpacity,
   LayoutChangeEvent,
   Text,
   AppState,
   AccessibilityInfo,
   Platform,
 } from "react-native";
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { prefetchImage } from '@/components/ui/ImageCardMedia';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  interpolate,
-  Extrapolate,
-  type SharedValue,
 } from "react-native-reanimated";
-import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
-// ✅ УЛУЧШЕНИЕ: Импорт утилит для оптимизации изображений
-import { optimizeImageUrl, getOptimalImageSize, buildVersionedImageUrl } from "@/utils/imageOptimization";
-import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
+import type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
+import {
+  DEFAULT_AR,
+  MOBILE_HEIGHT_PERCENT,
+  clamp,
+  clampInt,
+  buildUriNative as buildUri,
+  computeSliderHeight,
+} from './sliderParts/utils';
+import Arrow from './sliderParts/Arrow';
+import Dot from './sliderParts/Dot';
+import Slide from './sliderParts/Slide';
 
-/* -------------------------------------------------------------------------- */
-/*                                  Types                                     */
-/* -------------------------------------------------------------------------- */
+// Re-export types for consumers that import from '@/components/travel/Slider'
+export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
 
-export interface SliderImage {
-  url: string;
-  id: number | string;
-  updated_at?: string;
-  width?: number;
-  height?: number;
-}
-
-export interface SliderProps {
-  images: SliderImage[];
-  showArrows?: boolean;
-  showDots?: boolean;
-  hideArrowsOnMobile?: boolean;
-  aspectRatio?: number;
-  autoPlay?: boolean;
-  autoPlayInterval?: number;
-  onIndexChanged?: (index: number) => void;
-  imageProps?: any;
-  preloadCount?: number;
-  blurBackground?: boolean;
-  onFirstImageLoad?: () => void;
-  mobileHeightPercent?: number;
-  onImagePress?: (index: number) => void;
-  /** When true, the first slide skips the loading shimmer (image already in browser cache). */
-  firstImagePreloaded?: boolean;
-}
-
-export interface SliderRef {
-  scrollTo: (index: number, animated?: boolean) => void;
-  next: () => void;
-  prev: () => void;
-}
-
-type LoadStatus = "loading" | "loaded" | "error";
-
-const Arrow = memo(function Arrow({
-  dir,
-  onPress,
-  isMobile,
-  hideArrowsOnMobile,
-  insets,
-  dismissSwipeHint,
-}: {
-  dir: "left" | "right";
-  onPress: () => void;
-  isMobile: boolean;
-  hideArrowsOnMobile?: boolean;
-  insets: { left: number; right: number };
-  dismissSwipeHint: () => void;
-}) {
-  const { colors, styles } = useSliderTheme();
-  const arrowOpacity = useSharedValue(1);
-  const arrowScale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: arrowOpacity.value,
-    transform: [{ scale: arrowScale.value }],
-  }));
-
-  const handlePressIn = useCallback(() => {
-    arrowOpacity.value = withSpring(0.7, { damping: 15 });
-    arrowScale.value = withSpring(0.95, { damping: 15 });
-  }, [arrowOpacity, arrowScale]);
-
-  const handlePressOut = useCallback(() => {
-    arrowOpacity.value = withSpring(1, { damping: 15 });
-    arrowScale.value = withSpring(1, { damping: 15 });
-  }, [arrowOpacity, arrowScale]);
-
-  const [isHovered, setIsHovered] = useState(false);
-
-  const handleHover = useCallback(
-    (hover: boolean) => {
-      if (Platform.OS === "web" && !isMobile) {
-        setIsHovered(hover);
-        if (hover) {
-          arrowOpacity.value = withSpring(1, { damping: 15 });
-          arrowScale.value = withSpring(1.1, { damping: 15 });
-        } else {
-          arrowOpacity.value = withSpring(1, { damping: 15 });
-          arrowScale.value = withSpring(1, { damping: 15 });
-        }
-      }
-    },
-    [arrowOpacity, arrowScale, isMobile]
-  );
-
-  const iconSize = isMobile ? 20 : 24;
-
-  if (isMobile && hideArrowsOnMobile) return null;
-
-  return (
-    <TouchableOpacity
-      onPress={() => {
-        dismissSwipeHint();
-        onPress();
-      }}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      // @ts-ignore - web-only props
-      onMouseEnter={() => handleHover(true)}
-      onMouseLeave={() => handleHover(false)}
-      accessibilityRole="button"
-      accessibilityLabel={dir === "left" ? "Previous slide" : "Next slide"}
-      hitSlop={12}
-      activeOpacity={0.8}
-      style={[
-        styles.navBtn,
-        isMobile ? styles.navBtnMobile : styles.navBtnDesktop,
-        dir === "left"
-          ? { left: NAV_BTN_OFFSET + 4 + (isMobile ? 8 : insets.left) }
-          : { right: NAV_BTN_OFFSET + 4 + (isMobile ? 8 : insets.right) },
-        Platform.OS === "web" && isHovered && styles.navBtnHover,
-      ]}
-    >
-      <Animated.View style={animatedStyle}>
-        <View style={styles.arrowIconContainer}>
-          <Feather
-            name={dir === "left" ? "chevron-left" : "chevron-right"}
-            size={iconSize}
-            color={colors.text}
-            style={styles.arrowIcon}
-          />
-        </View>
-      </Animated.View>
-    </TouchableOpacity>
-  );
-});
-
-/* -------------------------------------------------------------------------- */
-
-const DEFAULT_AR = 16 / 9;
-const DOT_SIZE = 6;
-const DOT_ACTIVE_SIZE = 24; // Увеличиваем для современного вида (широкая активная точка)
-const NAV_BTN_OFFSET = 16;
-// Мобильная высота: 60% высоты экрана (фиксировано)
-const MOBILE_HEIGHT_PERCENT = 0.6;
+/* --------------------------------- Theme ----------------------------------- */
 
 const useSliderTheme = () => {
   const colors = useThemedColors();
@@ -188,235 +51,10 @@ const useSliderTheme = () => {
   return { colors, styles };
 };
 
-const buildUri = (img: SliderImage, containerWidth?: number, containerHeight?: number, isFirst: boolean = false) => {
-  const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
-  const isWeb = Platform.OS === "web";
-
-  // ✅ УЛУЧШЕНИЕ: Оптимизация размера изображения для контейнера
-  if (containerWidth && img.width && img.height) {
-    if (isWeb) {
-      // Web: use CSS-pixel width directly (dpr=1) to avoid double-scaling.
-      // getOptimalImageSize multiplies by devicePixelRatio which is redundant
-      // when we pass dpr=1 to optimizeImageUrl (it would multiply again).
-      const cappedWidth = Math.min(containerWidth, 720);
-      const quality = isFirst ? 45 : 35;
-      return (
-        optimizeImageUrl(versionedUrl, {
-          width: cappedWidth,
-          quality,
-          fit: "contain",
-          dpr: 1,
-        }) || versionedUrl
-      );
-    }
-    // Native: use getOptimalImageSize which accounts for device DPR
-    const aspectRatio = img.width / img.height;
-    const optimalSize = getOptimalImageSize(containerWidth, containerHeight, aspectRatio);
-    const quality = isFirst ? 75 : 70;
-    return (
-      optimizeImageUrl(versionedUrl, {
-        width: optimalSize.width,
-        quality,
-        fit: "contain",
-      }) || versionedUrl
-    );
-  }
-
-  return versionedUrl;
-};
-const clamp = (v: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, v));
-
-const clampInt = (v: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, Math.round(v)));
-
-/* ------------------------------ Dot component ------------------------------ */
-
-const Dot = memo(function Dot({
-                                i,
-                                x,
-                                containerW,
-                                total,
-                                reduceMotion,
-                                dotStyle,
-}: {
-  i: number;
-  x: SharedValue<number>;
-  containerW: number;
-  total: number;
-  reduceMotion: boolean;
-  dotStyle: any;
-}) {
-  const style = useAnimatedStyle(() => {
-    const scrollPosition = x.value;
-    const currentIndex = scrollPosition / (containerW || 1);
-    
-    // Плавная интерполяция для активной точки
-    const inputRange = [i - 1, i, i + 1];
-    const outputRange = [DOT_SIZE, DOT_ACTIVE_SIZE, DOT_SIZE];
-    
-    const width = interpolate(
-      currentIndex,
-      inputRange,
-      outputRange,
-      Extrapolate.CLAMP
-    );
-    
-    const opacity = interpolate(
-      currentIndex,
-      inputRange,
-      [0.3, 1, 0.3],
-      Extrapolate.CLAMP
-    );
-    
-    return {
-      width: reduceMotion ? (Math.abs(currentIndex - i) < 0.5 ? DOT_ACTIVE_SIZE : DOT_SIZE) : width,
-      height: DOT_SIZE,
-      opacity: reduceMotion ? (Math.abs(currentIndex - i) < 0.5 ? 1 : 0.3) : opacity,
-      borderRadius: DOT_SIZE / 2,
-    };
-  }, [containerW, total, reduceMotion, i]);
-
-  return <Animated.View style={[dotStyle, style]} />;
-});
-
-type SlideProps = {
-  item: SliderImage;
-  index: number;
-  uri: string;
-  containerW: number;
-  slideHeight: number;
-  imagesLength: number;
-  styles: ReturnType<typeof useSliderTheme>['styles'];
-  blurBackground: boolean;
-  imageProps?: any;
-  onFirstImageLoad?: () => void;
-  onImagePress?: (index: number) => void;
-  /** When true, skip the loading shimmer (image already in browser cache). */
-  firstImagePreloaded?: boolean;
-};
-
-const Slide = memo(function Slide({
-  item,
-  index,
-  uri,
-  containerW,
-  slideHeight,
-  imagesLength,
-  styles,
-  blurBackground,
-  imageProps,
-  onFirstImageLoad,
-  onImagePress,
-  firstImagePreloaded,
-}: SlideProps) {
-  const [status, setStatus] = useState<LoadStatus>(
-    index === 0 && firstImagePreloaded ? 'loaded' : 'loading'
-  );
-  const firstLoadReportedRef = useRef(false);
-
-  const isFirstSlide = index === 0;
-  const mainPriority = isFirstSlide ? 'high' : 'low';
-
-  const mainFit: 'cover' | 'contain' = 'contain';
-
-  const handleLoadStart = useCallback(() => {
-    setStatus((prev) => (prev === 'loaded' ? prev : 'loading'));
-  }, []);
-
-  const handleLoad = useCallback(() => {
-    setStatus('loaded');
-    if (isFirstSlide && !firstLoadReportedRef.current) {
-      firstLoadReportedRef.current = true;
-      onFirstImageLoad?.();
-    }
-  }, [isFirstSlide, onFirstImageLoad]);
-
-  useEffect(() => {
-    // If first slide is already preloaded/cached, report readiness once on mount.
-    if (!isFirstSlide) return;
-    if (!firstImagePreloaded) return;
-    if (firstLoadReportedRef.current) return;
-    firstLoadReportedRef.current = true;
-    onFirstImageLoad?.();
-  }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad]);
-
-  const handleError = useCallback(() => {
-    setStatus('error');
-  }, []);
-
-  const handlePress = useCallback(() => {
-    onImagePress?.(index);
-  }, [onImagePress, index]);
-
-  const slideContent = (
-    <View style={[styles.slide, { width: containerW, height: slideHeight }]}>
-      {/* Flat background while loading */}
-      {status !== 'loaded' && status !== 'error' && (
-        <View style={styles.flatBackground} testID={`slider-flat-bg-${index}`} />
-      )}
-
-      {/* Main image with integrated blur background */}
-      {status === 'error' ? (
-        <View
-          style={styles.neutralPlaceholder}
-          testID={`slider-neutral-placeholder-${index}`}
-        />
-      ) : (
-        <ImageCardMedia
-          src={uri}
-          fit={mainFit}
-          blurBackground={blurBackground}
-          blurRadius={12}
-          priority={mainPriority as any}
-          loading={Platform.OS === 'web' ? (isFirstSlide ? 'eager' : 'lazy') : 'lazy'}
-          transition={0}
-          style={styles.img}
-          alt={
-            item.width && item.height
-              ? `Изображение ${index + 1} из ${imagesLength}`
-              : `Фотография путешествия ${index + 1} из ${imagesLength}`
-          }
-          imageProps={{
-            ...(imageProps || {}),
-            contentPosition: 'center',
-            testID: `slider-image-${index}`,
-            accessibilityIgnoresInvertColors: true,
-            accessibilityRole: 'image',
-            accessibilityLabel:
-              item.width && item.height
-                ? `Изображение ${index + 1} из ${imagesLength}`
-                : `Фотография путешествия ${index + 1} из ${imagesLength}`,
-            onLoadStart: handleLoadStart,
-          }}
-          onLoad={handleLoad}
-          onError={handleError}
-        />
-      )}
-
-      {/* Loading shimmer */}
-      {status === 'loading' && (
-        <ShimmerOverlay testID={`slider-loading-overlay-${index}`} />
-      )}
-    </View>
-  );
-
-  if (onImagePress) {
-    return (
-      <TouchableOpacity activeOpacity={0.9} onPress={handlePress} accessibilityRole="button" accessibilityLabel={`Открыть фото ${index + 1} на весь экран`}>
-        {slideContent}
-      </TouchableOpacity>
-    );
-  }
-
-  return slideContent;
-});
-
 /* --------------------------------- Slider ---------------------------------- */
 
-// NOTE: avoid TS generics in forwardRef to prevent runtime parsing issues if the file is consumed untranspiled
 const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
-  const { styles } = useSliderTheme();
+  const { colors, styles } = useSliderTheme();
   const {
     images,
     showArrows = true,
@@ -458,15 +96,12 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const indexRef = useRef(0);
   const [reduceMotion, setReduceMotion] = useState(false);
-  // ✅ УЛУЧШЕНИЕ: Состояние для текущего индекса (для счетчика)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showSwipeHint, setShowSwipeHint] = useState(images.length > 1);
   const prefetchEnabledRef = useRef(Platform.OS !== 'web');
 
   useEffect(() => {
     setShowSwipeHint(images.length > 1);
-    // On web we avoid auto-prefetch during initial load (hurts PSI/LCP by pulling extra gallery images).
-    // Prefetch can still be enabled later on explicit user interaction.
     prefetchEnabledRef.current = Platform.OS !== 'web';
   }, [images]);
 
@@ -477,50 +112,35 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return () => clearTimeout(timer);
   }, [showSwipeHint]);
 
-  // Сначала вычисляем firstAR, так как он нужен для computeHeight
   const firstAR = useMemo(() => {
     const f = images[0];
     return f?.width && f?.height ? f.width / f.height : aspectRatio;
   }, [images, aspectRatio]);
 
-  // Затем вычисляем computeHeight, так как он нужен для uriMap
   const computeHeight = useCallback(
-    (w: number) => {
-      if (!images.length) return 0;
-      if (isMobile) {
-        // На мобильных целимся в фиксированные 80% высоты viewport.
-        // Верхняя граница — не меньше самого target (чтобы не съедать высоту), даже если safe-area большая.
-        const viewportH = Math.max(0, winH);
-        const targetH = viewportH * mobileHeightPercent;
-        const safeMax = Math.max(targetH, viewportH - (insets.top || 0) - (insets.bottom || 0));
-        return clamp(targetH, 280, safeMax || targetH);
-      } else {
-        const targetH = winH * 0.7;
-        const h = w / firstAR;
-        return clamp(Math.max(h, targetH), 320, winH * 0.75);
-      }
-    },
+    (w: number) =>
+      computeSliderHeight(w, {
+        imagesLength: images.length,
+        isMobile,
+        winH,
+        insetsTop: insets.top || 0,
+        insetsBottom: insets.bottom || 0,
+        mobileHeightPercent,
+        firstAR,
+      }),
     [firstAR, images.length, insets.bottom, insets.top, isMobile, winH, mobileHeightPercent]
   );
 
-  // Compute height directly — no separate state + effect to avoid double-render
   const containerH = useMemo(() => computeHeight(containerW), [computeHeight, containerW]);
 
   const uriMap = useMemo(
     () =>
-      images.map((img, idx) => {
-        const base = buildUri(
-          img,
-          containerW,
-          containerH,
-          idx === 0
-        );
-        return base;
-      }),
+      images.map((img, idx) =>
+        buildUri(img, containerW, containerH, idx === 0)
+      ),
     [images, containerW, containerH]
   );
 
-  // reduce motion из ОС
   useEffect(() => {
     let active = true;
     AccessibilityInfo.isReduceMotionEnabled().then((v) => {
@@ -575,7 +195,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [containerW, images.length, setActiveIndex]
   );
 
-  // автоплей
   const appState = useRef(AppState.currentState);
   const pausedByAppState = useRef(false);
   const pausedByTouch = useRef(false);
@@ -604,7 +223,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     dismissSwipeHint();
     if (!images.length) return;
     const target = (indexRef.current + 1) % images.length;
-    // программный скролл
     listRef.current?.scrollToOffset({
       offset: target * containerW,
       animated: !reduceMotion,
@@ -620,7 +238,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     }, Math.max(2500, autoPlayInterval)) as unknown as number;
   }, [autoPlayInterval, canAutoplay, clearAutoplay, next]);
 
-  // жизненный цикл приложения
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => {
       const wasBg = appState.current.match(/inactive|background/);
@@ -644,7 +261,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return clearAutoplay;
   }, [scheduleAutoplay, clearAutoplay]);
 
-  // скролл синх
   const x = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
@@ -660,7 +276,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [setActiveIndexFromOffset]
   );
 
-  // imperative API
   const scrollTo = useCallback(
     (i: number, animated = !reduceMotion) => {
       const wrapped = clamp(i, 0, images.length - 1);
@@ -701,7 +316,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     []
   );
 
-  // прогреть стартовые (отложено для улучшения LCP)
   useEffect(() => {
     if (!images.length || !prefetchEnabledRef.current) return;
 
@@ -728,7 +342,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [containerW]
   );
 
-  // надёжный апдейт текущего индекса
   const setActiveIndexRef = useRef(setActiveIndex);
   setActiveIndexRef.current = setActiveIndex;
 
@@ -824,7 +437,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               clearAutoplay();
               dismissSwipeHint();
               if (Platform.OS !== 'web') return;
-              // Enable neighbor prefetch only after explicit user interaction.
               if (!prefetchEnabledRef.current && canPrefetchOnWeb) {
                 prefetchEnabledRef.current = true;
               }
@@ -848,6 +460,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               hideArrowsOnMobile={hideArrowsOnMobile}
               insets={insets}
               dismissSwipeHint={dismissSwipeHint}
+              colors={colors}
+              styles={styles}
             />
             <Arrow
               dir="right"
@@ -856,6 +470,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               hideArrowsOnMobile={hideArrowsOnMobile}
               insets={insets}
               dismissSwipeHint={dismissSwipeHint}
+              colors={colors}
+              styles={styles}
             />
           </>
         )}
@@ -895,6 +511,8 @@ const Slider = forwardRef(SliderComponent);
 export default memo(Slider);
 
 /* --------------------------------- Styles ---------------------------------- */
+
+const DOT_SIZE = 6;
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   StyleSheet.create<Record<string, any>>({
@@ -1001,7 +619,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     left: 0,
     right: 0,
     alignItems: "center",
-    zIndex: DESIGN_TOKENS.zIndex.fixed, // 300 - ниже navBtn
+    zIndex: DESIGN_TOKENS.zIndex.fixed,
   },
   dotsMobile: {
     bottom: 12,
@@ -1035,12 +653,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       },
     }),
   },
-  // ✅ УЛУЧШЕНИЕ: Счетчик изображений
   counter: {
     position: "absolute",
     top: 16,
     left: 16,
-    zIndex: DESIGN_TOKENS.zIndex.fixed, // 300
+    zIndex: DESIGN_TOKENS.zIndex.fixed,
     ...Platform.select({
       web: {
         top: 16,

@@ -4,13 +4,21 @@ import { usePathname, useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import Logo from './Logo';
 import { useAuth } from '@/context/AuthContext';
-import { useFavorites } from '@/context/FavoritesContext';
+import { useFavorites as _useFavorites } from '@/context/FavoritesContext';
 import { useFilters } from '@/context/FiltersProvider';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useResponsive } from '@/hooks/useResponsive'; 
 import { PRIMARY_HEADER_NAV_ITEMS } from '@/constants/headerNavigation';
+
+const useFavoritesSafe = (): { favorites: { length: number } } => {
+    try {
+        return _useFavorites();
+    } catch {
+        return { favorites: [] as any };
+    }
+};
 
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined;
@@ -35,7 +43,7 @@ function CustomHeader({ onHeightChange }: CustomHeaderProps) {
     const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
     const mobileMenuOpenedAtRef = useRef(0);
     const { isAuthenticated, username, logout, userAvatar, profileRefreshToken, userId } = useAuth();
-    const { favorites } = useFavorites();
+    const { favorites } = useFavoritesSafe();
     const { updateFilters } = useFilters();
     const [avatarLoadError, setAvatarLoadError] = useState(false);
     const lastHeightRef = useRef(0);

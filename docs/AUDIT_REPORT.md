@@ -318,7 +318,142 @@ The application is well-optimized at the code level with comprehensive caching, 
 
 ---
 
-**Last updated:** 2026-02-15  
-**SW Version:** Auto-stamped on build  
-**Audit Version:** v10  
-**Status:** ✅ Post-deploy audit complete — nginx optimizations applied, all code-level optimizations verified
+---
+
+## v11 — Post-Deploy Audit (2026-02-16)
+
+### Lighthouse Scores (live production)
+
+#### Desktop — Home (`/`)
+| Category | Score |
+|----------|-------|
+| Performance | **79** |
+| Accessibility | **98** |
+| Best Practices | **78** |
+| SEO | **100** |
+
+| Metric | Value | Score |
+|--------|-------|-------|
+| FCP | 1.1 s | 0.79 |
+| LCP | 3.0 s | 0.34 |
+| TBT | 50 ms | 1.0 |
+| CLS | 0.006 | 1.0 |
+| SI | 1.8 s | 0.71 |
+| TTI | 3.0 s | 0.81 |
+| TTFB | 170 ms | 1.0 |
+
+#### Mobile — Home (`/`)
+| Category | Score |
+|----------|-------|
+| Performance | **56** |
+| Accessibility | **98** |
+| Best Practices | **79** |
+| SEO | **100** |
+
+| Metric | Value | Score |
+|--------|-------|-------|
+| FCP | 3.5 s | 0.35 |
+| LCP | 12.0 s | 0.0 |
+| TBT | 350 ms | 0.73 |
+| CLS | 0.04 | 0.99 |
+| SI | 5.4 s | 0.56 |
+| TTI | 12.0 s | 0.16 |
+| TTFB | 160 ms | 1.0 |
+
+### Server & Infrastructure
+| Check | Result |
+|-------|--------|
+| TTFB (home) | 439 ms (curl) / 160-170 ms (Lighthouse) ✅ |
+| HTTP→HTTPS | 301 redirect ✅ |
+| www→non-www | 301 redirect ✅ |
+| HSTS | max-age=31536000; includeSubDomains; preload ✅ |
+| Brotli | Enabled (76 KiB → 20 KiB) ✅ |
+| Gzip | Enabled (76 KiB → 22 KiB) ✅ |
+| Static asset caching | max-age=31536000, immutable ✅ |
+| Image proxy cache | max-age=604800, stale-while-revalidate ✅ |
+| Sitemap | 200, 66 KiB ✅ |
+| Robots.txt | Valid, correct disallow rules ✅ |
+| CSP | Comprehensive policy ✅ |
+| X-Content-Type-Options | nosniff ✅ |
+| X-Frame-Options | SAMEORIGIN ✅ |
+| Referrer-Policy | strict-origin-when-cross-origin ✅ |
+| Permissions-Policy | Restrictive ✅ |
+
+### SEO
+| Check | Result |
+|-------|--------|
+| Lighthouse SEO | **100** (desktop & mobile) ✅ |
+| Title | "Твоя книга путешествий \| Metravel" (35 chars) ✅ |
+| Canonical | Valid ✅ |
+| robots.txt | Valid ✅ |
+| sitemap.xml | 200, accessible ✅ |
+| Structured data | Valid ✅ |
+
+### Analytics
+| Check | Result |
+|-------|--------|
+| GA4 (G-GBT9YNPXKB) | Sending page_view events ✅ |
+| Yandex Metrika (62803912) | Active, sending hits ✅ |
+| Duplicate page_view | Fixed in v10 (send_page_view:false) ✅ |
+
+### Critical Issues Found
+
+#### P0 — Site crash: `useFavorites is not a function` (ENTIRE SITE BROKEN)
+- **Symptom:** ErrorBoundary shown on every page load. Console: `TypeError: (0 , _r(...).useFavorites) is not a function`
+- **Root cause chain:**
+  1. After redeploy, old lazy-loaded chunk `CustomHeader-4aeab6db...js` no longer exists on server
+  2. **nginx** `/_expo/static/` location had **no `try_files`** directive → missing chunks fall through to SPA catch-all (`location /`) which serves `index.html` with **200 status** instead of 404
+  3. Browser receives HTML disguised as JS → Metro runtime executes it → module IDs don't match → `useFavorites` export is `undefined`
+  4. **Service Worker** `cacheFirstLongTerm()` caches the broken HTML-as-JS response forever (no content-type validation, no 404 handling)
+  5. Every subsequent page load serves the cached broken chunk → infinite crash loop
+- **Impact:** 100% of users with SW cache see a broken site. New users also affected because nginx serves HTML for missing .js files.
+
+### Fixes Applied (v11)
+
+#### 1. nginx: `/_expo/static/` — return 404 for missing chunks (P0)
+- **File:** `nginx/nginx.conf`
+- **Change:** Added `try_files $uri =404;` to `location ^~ /_expo/static/`
+- **Effect:** Missing chunk files now return proper 404 instead of HTML fallback. This prevents the browser from parsing HTML as JS.
+
+#### 2. Service Worker: bump version + validate cached chunks (P0)
+- **File:** `public/sw.js`
+- **Changes:**
+  - Bumped `CACHE_VERSION` from `v3.8.0` to `v3.9.0` → forces purge of all stale JS/dynamic caches on next SW activation
+  - `cacheFirstLongTerm()` now validates cached responses: rejects `text/html` content-type for `.js` requests
+  - `cacheFirstLongTerm()` now handles 404 responses: deletes stale cache entry and triggers `SW_UPDATED` reload
+  - `cacheFirstLongTerm()` validates fresh responses: rejects HTML-as-JS before caching
+- **Effect:** Stale/broken chunks are never served from SW cache. Users with old SW get auto-purged on next activation.
+
+#### 3. CustomHeader: resilient `useFavorites` wrapper (P0 defense-in-depth)
+- **File:** `components/layout/CustomHeader.tsx`
+- **Change:** Replaced direct `useFavorites()` call with `useFavoritesSafe()` wrapper that catches errors and returns fallback `{ favorites: [] }`
+- **Effect:** Even if module resolution fails, the header renders without crashing the entire app.
+
+#### 4. heading-order a11y fix (P1)
+- **Files:** `components/home/HomeHero.tsx`, `components/home/HomeHowItWorks.tsx`
+- **Changes:**
+  - `HomeHero.tsx`: Changed subtitle from `variant="h4"` to `variant="h2"` (h1 → h2, not h1 → h4). Added explicit `fontSize: 20, fontWeight: '400'` to preserve visual appearance.
+  - `HomeHowItWorks.tsx`: Changed step titles from `variant="h4"` to `variant="h3"` (section h2 → step h3). Added explicit `fontSize: 20` to preserve visual appearance.
+- **Effect:** Heading hierarchy is now h1 → h2 → h3 (no skipped levels), fixing Lighthouse a11y `heading-order` audit.
+
+### Remaining Issues (unchanged from v10)
+| Issue | Priority | Cause |
+|-------|----------|-------|
+| Bundle size ~4.7MB | P2 | RNW + Leaflet + Reanimated stack |
+| Mobile LCP 12s | P2 | Bundle blocks main thread under 4× throttling |
+| Unused JS ~2MB | P2 | Common chunk contains all shared modules |
+| Responsive images ~2MB savings | P3 | Images not using srcset/sizes properly |
+| Soft 404 (unknown URLs return 200) | P3 | SPA catch-all serves index.html for all routes |
+| Third-party cookies (Best Practices) | P3 | Yandex Metrika / GA4 |
+| Source maps missing | P3 | Intentionally disabled |
+
+### Validation
+- `npx jest --testPathPattern="CustomHeader|HomeHero|HomeHowItWorks"` — **27 tests passed** ✅
+- `npx eslint components/layout/CustomHeader.tsx components/home/HomeHero.tsx components/home/HomeHowItWorks.tsx` — **no errors** ✅
+
+---
+
+**Last updated:** 2026-02-16  
+**SW Version:** v3.9.0  
+**Audit Version:** v11  
+**Status:** ⚠️ P0 fix applied in code — requires redeploy (nginx reload + new build) to take effect on production

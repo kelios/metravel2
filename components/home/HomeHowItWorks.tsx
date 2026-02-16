@@ -165,6 +165,7 @@ function HomeHowItWorks() {
     },
     stepTitle: {
       color: colors.text,
+      fontSize: 20,
       letterSpacing: -0.2,
     },
     stepDescription: {
@@ -222,7 +223,7 @@ function HomeHowItWorks() {
                   </View>
                 </View>
 
-                <ResponsiveText variant="h4" style={styles.stepTitle}>
+                <ResponsiveText variant="h3" style={styles.stepTitle}>
                   {step.title}
                 </ResponsiveText>
                 <ResponsiveText variant="body" style={styles.stepDescription}>

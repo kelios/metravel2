@@ -100,7 +100,9 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     subtitle: {
       color: colors.textMuted,
       maxWidth: 540,
+      fontSize: 20,
       lineHeight: 28,
+      fontWeight: '400',
     },
     hint: {
       fontSize: 15,
@@ -247,7 +249,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
               </ResponsiveText>
             </View>
 
-            <ResponsiveText variant="h4" style={styles.subtitle}>
+            <ResponsiveText variant="h2" style={styles.subtitle}>
               Читай поездки других путешественников, сохраняй лучшие маршруты и собирай свои истории в книгу.
             </ResponsiveText>
 

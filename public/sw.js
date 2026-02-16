@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3.8.0';
+const CACHE_VERSION = 'v3.9.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -304,12 +304,42 @@ async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_J
     const cached = await cache.match(request);
 
     if (cached) {
-      return cached;
+      // Validate that the cached response is actual JS, not an HTML fallback
+      // (nginx SPA fallback can serve index.html with 200 for missing chunks).
+      const ct = cached.headers.get('content-type') || '';
+      if (ct.includes('text/html')) {
+        cache.delete(request);
+        // Fall through to network fetch below
+      } else {
+        return cached;
+      }
     }
 
     const response = await fetch(request);
 
+    // If the server returns 404 for a hashed chunk, the build has changed.
+    // Do NOT cache the 404 response — trigger a page reload instead.
+    if (response && response.status === 404) {
+      cache.delete(request);
+      // Notify clients to reload so they pick up the new HTML with correct chunk URLs.
+      self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+      });
+      return response;
+    }
+
     if (response && response.status === 200) {
+      // Verify the response is actually JS, not an HTML SPA fallback
+      const ct = response.headers.get('content-type') || '';
+      if (ct.includes('text/html') && request.url.endsWith('.js')) {
+        // Server returned HTML for a .js request — chunk doesn't exist.
+        // Trigger reload instead of caching broken response.
+        self.clients.matchAll({ type: 'window' }).then((clients) => {
+          clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+        });
+        return response;
+      }
+
       const responseToCache = response.clone();
       const headers = new Headers(responseToCache.headers);
       headers.append('sw-cache-date', Date.now().toString());
