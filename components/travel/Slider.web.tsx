@@ -365,15 +365,19 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const handleScroll = useCallback(
     (e: any) => {
       enablePrefetch()
-      const x = e?.nativeEvent?.contentOffset?.x ?? 0
 
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = setTimeout(() => {
-        const idx = Math.round((x || 0) / (containerW || 1))
+        // Read scrollLeft at idle time (not at event time) so containerW is current
+        const raw = scrollRef.current as any
+        const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
+        const x = node?.scrollLeft ?? 0
+        const cw = containerWRef.current || 1
+        const idx = Math.round(x / cw)
         setActiveIndex(idx)
       }, 80)
     },
-    [containerW, enablePrefetch, setActiveIndex]
+    [enablePrefetch, setActiveIndex]
   )
 
   const nextRef = useRef(next)
@@ -461,15 +465,25 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       snapToSlide(target)
     }
 
+    // Handle native scroll end for touch devices (scroll-snap finishes)
+    const onScrollEnd = () => {
+      const cw = containerWRef.current || 1
+      const idx = Math.round(node.scrollLeft / cw)
+      const target = clamp(idx, 0, Math.max(0, images.length - 1))
+      setActiveIndex(target)
+    }
+
     node.addEventListener('mousedown', onMouseDown)
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
     node.addEventListener('mouseleave', onMouseLeave)
+    node.addEventListener('scrollend', onScrollEnd)
     return () => {
       node.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
       node.removeEventListener('mouseleave', onMouseLeave)
+      node.removeEventListener('scrollend', onScrollEnd)
     }
   }, [images.length, setActiveIndex])
 
@@ -479,9 +493,10 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const navOffset = Math.max(44, 16 + navInset)
 
   return (
-    <View style={styles.sliderStack}>
+    <View style={styles.sliderStack} testID="slider-stack">
       <View
         ref={wrapperRef}
+        testID="slider-wrapper"
         onLayout={Platform.OS === 'web' ? undefined : onLayout}
         style={[
           styles.wrapper,
@@ -491,7 +506,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             : null,
         ]}
       >
-        <View style={styles.clip}>
+        <View style={styles.clip} testID="slider-clip">
           <ScrollView
             ref={scrollRef}
             horizontal
@@ -504,10 +519,11 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               enablePrefetch()
             }}
             onScroll={handleScroll}
+            testID="slider-scroll"
           >
             {images.map((item, index) => {
               const renderWindow = isMobile ? 2 : 3
-              if (images.length > 5 && Math.abs(index - currentIndex) > renderWindow) {
+              if (images.length > 5 && index !== 0 && Math.abs(index - currentIndex) > renderWindow) {
                 return (
                   <View key={keyExtractor(item, index)} style={[styles.slide, slideDimensions, styles.slideSnap]} />
                 )
@@ -639,6 +655,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
           scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch',
           willChange: 'scroll-position',
+          touchAction: 'pan-x pan-y',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollBehavior: 'smooth',
         } as any)
       : {},
     scrollContent: {

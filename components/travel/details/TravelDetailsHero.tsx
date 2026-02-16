@@ -613,19 +613,21 @@ function TravelHeroSectionInner({
 
           {/* P0-1: Видимый заголовок поверх hero-изображения */}
           {travel?.name ? (
-            <View style={[styles.heroOverlay, { pointerEvents: 'box-none' }]}>
-              <Text
-                style={styles.heroTitle}
-                numberOfLines={2}
-                accessibilityRole="header"
-              >
-                {travel.name}
-              </Text>
-              {heroMetaLine ? (
-                <Text style={styles.heroMeta} numberOfLines={1}>
-                  {heroMetaLine}
+            <View style={[styles.heroOverlay, { pointerEvents: 'none' }]}>
+              <View style={{ pointerEvents: 'auto' } as any}>
+                <Text
+                  style={styles.heroTitle}
+                  numberOfLines={2}
+                  accessibilityRole="header"
+                >
+                  {travel.name}
                 </Text>
-              ) : null}
+                {heroMetaLine ? (
+                  <Text style={styles.heroMeta} numberOfLines={1}>
+                    {heroMetaLine}
+                  </Text>
+                ) : null}
+              </View>
             </View>
           ) : null}
 
