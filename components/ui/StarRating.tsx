@@ -269,13 +269,12 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
             borderRadius: 6,
             ...(Platform.OS === 'web' && {
                 cursor: 'pointer',
-                transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+                transition: 'background-color 0.15s ease',
             } as any),
         },
         starHovered: {
             ...(Platform.OS === 'web' && {
-                backgroundColor: isDarkTheme ? 'rgba(232,168,56,0.1)' : 'rgba(232,168,56,0.08)',
-                transform: 'scale(1.1)',
+                backgroundColor: isDarkTheme ? 'rgba(232,168,56,0.1)' : 'rgba(232,168,56,0.06)',
             } as any),
         },
         starDisabled: {
@@ -298,10 +297,6 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
         } as any,
         starCharFilled: {
             color: STAR_COLOR_FILLED,
-            ...(Platform.OS === 'web' && {
-                textShadow: '0 1px 2px rgba(232,168,56,0.3)',
-                filter: 'drop-shadow(0 1px 1px rgba(232,168,56,0.2))',
-            } as any),
         },
         starCharEmpty: {
             color: emptyColor,
@@ -312,7 +307,6 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
         starCharHovered: {
             ...(Platform.OS === 'web' && {
                 color: STAR_COLOR_HOVER,
-                filter: 'drop-shadow(0 2px 3px rgba(244,184,77,0.4))',
             } as any),
         },
         textContainer: {

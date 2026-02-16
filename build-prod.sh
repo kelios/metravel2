@@ -80,7 +80,6 @@ node scripts/generate-seo-pages.js --dist dist/prod --api https://metravel.by ||
 }
 
 echo "Постобработка билда..."
-node scripts/postprocess-rnw-styles.js dist/prod
 node scripts/stamp-sw-version.js dist/prod
 
 echo "старт деплоя ..."

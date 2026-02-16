@@ -115,52 +115,40 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
+        paddingVertical: 10,
         paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-        borderRadius: 16,
+        borderRadius: DESIGN_TOKENS.radii.md,
         gap: DESIGN_TOKENS.spacing.sm,
         backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.borderLight,
         ...Platform.select({
           web: {
-            boxShadow: DESIGN_TOKENS.shadows.light,
-          },
-          ios: {
-            ...DESIGN_TOKENS.shadowsNative.light,
-          },
-          android: {
-            elevation: 2,
+            cursor: 'pointer' as any,
+            transition: 'background-color 0.2s ease' as any,
           },
         }),
     },
     toggleButtonPressed: {
-        backgroundColor: colors.surfaceLight,
+        backgroundColor: colors.backgroundSecondary,
     },
     toggleText: {
         fontSize: DESIGN_TOKENS.typography.sizes.md,
-        fontWeight: '600',
+        fontWeight: '500',
         color: colors.text,
     },
     toggleTextMobile: {
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
     },
     mapContainer: {
-        marginTop: DESIGN_TOKENS.spacing.lg,
+        marginTop: DESIGN_TOKENS.spacing.md,
         width: '100%',
         minHeight: 400,
-        borderRadius: 16,
+        borderRadius: DESIGN_TOKENS.radii.md,
         overflow: 'hidden',
         backgroundColor: colors.surface,
-        ...Platform.select({
-          web: {
-            boxShadow: DESIGN_TOKENS.shadows.light,
-          },
-          ios: {
-            ...DESIGN_TOKENS.shadowsNative.light,
-          },
-          android: {
-            elevation: 2,
-          },
-        }),
+        borderWidth: 1,
+        borderColor: colors.borderLight,
     },
     mapContainerMobile: {
         minHeight: 300,

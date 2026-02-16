@@ -261,10 +261,9 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   max-width: 100%;
   max-height: 55vh;
   object-fit: cover;
-  border-radius: 22px;
+  border-radius: 16px;
   margin: ${DESIGN_TOKENS.spacing.xxs + 2}px 0 26px;
-  box-shadow: ${colors.boxShadows.card};
-  border: 6px solid ${colors.borderLight};
+  border: 1px solid ${colors.borderLight};
   background: ${colors.surfaceMuted};
 }
 .${WEB_RICH_TEXT_CLASS} img + img,
@@ -294,7 +293,6 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} .image-strip img {
   width: 100%;
   margin: 0;
-  box-shadow: 0 15px 30px rgba(15, 23, 42, 0.15);
 }
 .${WEB_RICH_TEXT_CLASS} figure {
   margin: 0;
@@ -311,11 +309,10 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
 .${WEB_RICH_TEXT_CLASS} .yt-lite {
   display: block;
   max-width: 100%;
-  border-radius: 18px;
+  border-radius: ${DESIGN_TOKENS.radii.md}px;
   padding: 0;
   overflow: hidden;
   margin: ${DESIGN_TOKENS.spacing.xs + 4}px 0;
-  box-shadow: ${colors.boxShadows.card};
 }
 .${WEB_RICH_TEXT_CLASS}::after {
   content: "";
@@ -329,9 +326,8 @@ const getWebRichTextStyles = (colors: ReturnType<typeof useThemedColors>) => `
   max-width: 100% !important;
   min-width: 0 !important;
   margin: ${DESIGN_TOKENS.spacing.xs + 4}px auto !important;
-  border-radius: 18px !important;
+  border-radius: ${DESIGN_TOKENS.radii.md}px !important;
   overflow: hidden !important;
-  box-shadow: ${colors.boxShadows.card};
   position: relative;
   display: block;
 }
@@ -726,18 +722,17 @@ const StableContent: React.FC<StableContentProps> = memo(({ html, contentWidth }
         maxWidth: "100%",
         width: "100%",
         height: "auto",
-        borderRadius: 12,
+        borderRadius: DESIGN_TOKENS.radii.md,
         marginVertical: 12,
         display: "block",
         alignSelf: "stretch",
-        boxShadow: Platform.OS === "web" ? colors.boxShadows.light : undefined,
       },
 
       iframe: {
         width: "100%",
         height: Math.round(contentWidth * 0.5625),
         display: "block",
-        borderRadius: 12,
+        borderRadius: DESIGN_TOKENS.radii.md,
         overflow: "hidden",
         marginVertical: 14,
       },
@@ -945,7 +940,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     marginVertical: DESIGN_TOKENS.spacing.sm,
     aspectRatio: 16 / 9,
     backgroundColor: colors.backgroundSecondary,
-    borderRadius: 12,
+    borderRadius: DESIGN_TOKENS.radii.md,
     alignItems: 'center',
     justifyContent: 'center'
   },

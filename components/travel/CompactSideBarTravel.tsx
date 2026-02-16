@@ -597,7 +597,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   // ✅ РЕДИЗАЙН: Компактная карточка автора (оптимизация для отображения без скролла)
   card: {
     backgroundColor: colors.surface,
-    borderRadius: 16,
+    borderRadius: DESIGN_TOKENS.radii.md,
     padding: Platform.select({
       default: 14,
       web: 14,
@@ -606,20 +606,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       default: 10,
       web: 8,
     }),
-    shadowColor: colors.shadows.medium.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
     borderWidth: 1,
     borderColor: colors.borderLight,
     width: '100%',
     maxWidth: '100%',
     overflow: 'hidden' as const,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: colors.boxShadows.card,
-      transition: 'all 0.2s ease',
-    } as any : {}),
   },
   cardRow: { 
     flexDirection: "row", 
@@ -651,16 +642,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       default: 25,
       web: 22,
     }),
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.borderLight,
-    shadowColor: colors.shadows.light.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: colors.boxShadows.light,
-    } as any : {}),
   },
   avatarPlaceholder: {
     backgroundColor: colors.backgroundSecondary,
@@ -759,19 +742,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    shadowColor: colors.shadows.light.shadowColor,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer' as any,
-      transition: 'all 0.2s ease',
-      boxShadow: colors.boxShadows.light,
+      transition: 'background-color 0.15s ease',
     } as any : {}),
   },
   actionBtnPressed: {
-    transform: [{ scale: 0.95 }],
     opacity: 0.85,
     backgroundColor: colors.backgroundSecondary,
   },
@@ -917,26 +893,14 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   activeIndicatorActive: {
     backgroundColor: colors.primary,
     width: 4,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 0 8px rgba(122, 157, 143, 0.5)',
-    } as any : {}),
   },
   linkPressed: {
     backgroundColor: colors.primarySoft,
-    transform: [{ scale: 0.98 }],
   },
   linkActive: {
     backgroundColor: colors.primaryLight,
     borderLeftWidth: 0,
     borderLeftColor: "transparent",
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
-    ...(Platform.OS === 'web' ? {
-      boxShadow: '0 1px 4px rgba(122, 157, 143, 0.15)',
-    } as any : {}),
   },
   linkTxt: { 
     marginLeft: Platform.select({

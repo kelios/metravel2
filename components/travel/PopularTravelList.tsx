@@ -101,21 +101,11 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
           default: 24,
         }),
         backgroundColor: colors.surface,
-        borderRadius: 24,
+        borderRadius: DESIGN_TOKENS.radii.md,
         width: "100%",
-        shadowColor: colors.text,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 16,
-        elevation: 3,
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: colors.borderLight,
         minHeight: 200,
-        ...Platform.select({
-          web: {
-            transition: 'all 0.3s ease',
-          },
-        }),
       },
       embeddedSection: {
         marginTop: 0,
@@ -125,9 +115,6 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
         backgroundColor: 'transparent',
         borderRadius: 0,
         width: '100%',
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        elevation: 0,
         borderWidth: 0,
         borderColor: 'transparent',
         minHeight: 0,
@@ -154,19 +141,14 @@ const PopularTravelList: FC<PopularTravelListProps> = memo(
       },
       title: {
         fontSize: Platform.select({
-          web: 28,
-          default: 24,
+          web: 24,
+          default: 22,
         }),
-        fontWeight: "800",
+        fontWeight: "600",
         color: colors.text,
         marginBottom: DESIGN_TOKENS.spacing.xxs,
         textAlign: "center",
-        letterSpacing: -0.5,
-        ...Platform.select({
-          web: {
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-          },
-        }),
+        letterSpacing: -0.3,
       },
       flatListContent: {
         paddingBottom: DESIGN_TOKENS.spacing.xxs,

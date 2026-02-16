@@ -90,7 +90,7 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
                 web: 48,
                 default: 32
             }),
-            backgroundColor: colors.surface,
+            backgroundColor: 'transparent',
         },
 
         wrapperNoBoxMobile: {
@@ -117,15 +117,9 @@ const TravelDescription: React.FC<TravelDescriptionProps> = ({
         fixedHeightBlock: {
             borderWidth: 1,
             borderColor: colors.borderLight,
-            borderRadius: DESIGN_TOKENS.radii.lg,
+            borderRadius: DESIGN_TOKENS.radii.md,
             backgroundColor: colors.surface,
             overflow: "hidden",
-            ...Platform.select({
-                web: {
-                    boxShadow: colors.boxShadows.light,
-                } as any,
-                default: colors.shadows.light,
-            }),
         },
 
         scrollArea: {},

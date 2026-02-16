@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Feather from '@expo/vector-icons/Feather'
 
 import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsive } from '@/hooks/useResponsive'
 import {
@@ -612,20 +613,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       alignSelf: 'center',
       backgroundColor: 'transparent',
       position: 'relative',
-      borderRadius: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
       overflow: 'hidden',
       borderWidth: 0,
       borderColor: 'transparent',
-      ...(Platform.OS === 'web'
-        ? ({ boxShadow: colors.boxShadows.heavy } as any)
-        : null),
     },
     clip: {
       flex: 1,
       width: '100%',
       alignSelf: 'stretch',
       overflow: 'hidden',
-      borderRadius: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: 'transparent',
       position: 'relative',
     },
@@ -671,7 +669,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? ({
-            boxShadow: '0 10px 28px rgba(0,0,0,0.28)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
           } as any)
@@ -681,17 +678,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       justifyContent: 'center',
       alignItems: 'center',
     },
-    arrowIcon: {
-      ...(Platform.OS === 'web'
-        ? ({
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.65))',
-          } as any)
-        : {
-            textShadowColor: 'rgba(0,0,0,0.65)',
-            textShadowOffset: { width: 0, height: 1 },
-            textShadowRadius: 4,
-          }),
-    },
+    arrowIcon: {},
     edgeScrimLeft: {
       position: 'absolute',
       top: 0,

@@ -507,15 +507,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flex: 1,
     backgroundColor: colors.surface,
     padding: Platform.select({ default: DESIGN_TOKENS.spacing.md, web: DESIGN_TOKENS.spacing.lg }),
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      } as any,
-      default: colors.shadows.light,
-    }),
   },
   centerContainer: {
     flex: 1,
@@ -534,7 +528,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   title: {
     fontSize: Platform.select({ default: 20, web: 22 }),
-    fontWeight: DESIGN_TOKENS.typography.weights.bold,
+    fontWeight: DESIGN_TOKENS.typography.weights.semibold,
     color: colors.text,
     letterSpacing: -0.3,
   },

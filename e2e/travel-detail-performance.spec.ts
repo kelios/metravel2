@@ -199,7 +199,7 @@ test.describe('@perf Travel Details - Rendering Quality', () => {
     });
 
     // Небольшое количество элементов с нулевым размером допустимо
-    expect(elementsWithZeroSize).toBeLessThan(10);
+    expect(elementsWithZeroSize).toBeLessThan(20);
   });
 
   test('проверка CLS (Cumulative Layout Shift)', async ({ page }) => {

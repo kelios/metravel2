@@ -24,7 +24,7 @@ export const DescriptionSkeleton: React.FC = () => {
     descriptionContainer: {
       padding: DESIGN_TOKENS.spacing.lg,
       backgroundColor: colors.surface,
-      borderRadius: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
       width: '100%',
     },
   }), [colors.surface]);
@@ -42,7 +42,7 @@ export const DescriptionSkeleton: React.FC = () => {
 export const MapSkeleton: React.FC = () => {
   return (
     <View style={{ width: '100%', marginBottom: DESIGN_TOKENS.spacing.lg }}>
-      <SkeletonLoader width="100%" height={400} borderRadius={12} />
+      <SkeletonLoader width="100%" height={400} borderRadius={DESIGN_TOKENS.radii.md} />
     </View>
   );
 };
@@ -64,7 +64,7 @@ export const PointListSkeleton: React.FC = () => {
       width: '100%',
       maxWidth: 400,
       backgroundColor: colors.surface,
-      borderRadius: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
       padding: DESIGN_TOKENS.spacing.md,
       marginBottom: 12,
     },
@@ -80,7 +80,7 @@ export const PointListSkeleton: React.FC = () => {
     <View style={styles.pointListContainer}>
       {Array.from({ length: 3 }).map((_, index) => (
         <View key={index} style={styles.pointCard}>
-          <SkeletonLoader width="100%" height={200} borderRadius={12} style={styles.marginBottom} />
+          <SkeletonLoader width="100%" height={200} borderRadius={DESIGN_TOKENS.radii.md} style={styles.marginBottom} />
           <View style={styles.pointContent}>
             <SkeletonLoader width="80%" height={18} borderRadius={4} style={styles.marginBottom} />
             <SkeletonLoader width="60%" height={14} borderRadius={4} />
@@ -108,7 +108,7 @@ export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) 
       width: '100%',
       maxWidth: 300,
       backgroundColor: colors.surface,
-      borderRadius: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
       padding: DESIGN_TOKENS.spacing.md,
       marginBottom: 12,
     },
@@ -121,7 +121,7 @@ export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) 
     <View style={styles.travelListContainer}>
       {Array.from({ length: count }).map((_, index) => (
         <View key={index} style={styles.travelCard}>
-          <SkeletonLoader width="100%" height={160} borderRadius={12} style={styles.marginBottom} />
+          <SkeletonLoader width="100%" height={160} borderRadius={DESIGN_TOKENS.radii.md} style={styles.marginBottom} />
           <SkeletonLoader width="85%" height={18} borderRadius={4} style={styles.marginBottom} />
           <SkeletonLoader width="60%" height={14} borderRadius={4} />
         </View>
@@ -136,7 +136,7 @@ export const TravelListSkeleton: React.FC<{ count?: number }> = ({ count = 3 }) 
 export const VideoSkeleton: React.FC = () => {
   return (
     <View style={{ width: '100%', marginBottom: DESIGN_TOKENS.spacing.lg }}>
-      <SkeletonLoader width="100%" height={400} borderRadius={12} />
+      <SkeletonLoader width="100%" height={400} borderRadius={DESIGN_TOKENS.radii.md} />
     </View>
   );
 };
@@ -189,7 +189,7 @@ export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => 
     sectionContainer: {
       padding: DESIGN_TOKENS.spacing.lg,
       backgroundColor: colors.surface,
-      borderRadius: 12,
+      borderRadius: DESIGN_TOKENS.radii.md,
       width: '100%',
     },
   }), [colors.surface]);

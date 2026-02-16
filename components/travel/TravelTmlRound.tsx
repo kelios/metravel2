@@ -157,32 +157,22 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     // ✅ УЛУЧШЕНИЕ: Современная матовая карточка без границ, только тени
     card: {
         alignItems: "center",
-        borderRadius: DESIGN_TOKENS.radii.lg,
+        borderRadius: DESIGN_TOKENS.radii.md,
         backgroundColor: colors.surface,
         width: '100%',
         height: '100%',
-        ...colors.shadows.light,
-        // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
-        ...(Platform.OS === "android" ? { elevation: 3 } : null),
+        borderWidth: 1,
+        borderColor: colors.borderLight,
+        overflow: 'hidden',
         ...Platform.select({
             web: {
                 cursor: "pointer" as any,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                boxShadow: colors.boxShadows.card,
-                ':hover': {
-                    transform: 'translateY(-2px)',
-                    boxShadow: colors.boxShadows.hover,
-                } as any,
-                ':active': {
-                    transform: 'translateY(-1px)',
-                    boxShadow: colors.boxShadows.medium,
-                } as any,
+                transition: 'border-color 0.2s ease' as any,
             },
         }),
     },
     cardPressed: { 
-        opacity: 0.9,
-        transform: [{ scale: 0.97 }],
+        opacity: 0.92,
     },
     cardDisabled: {
         opacity: 0.5,
@@ -196,7 +186,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         width: '100%',
         overflow: "hidden",
         backgroundColor: colors.backgroundSecondary,
-        borderRadius: DESIGN_TOKENS.radii.lg,
+        borderRadius: DESIGN_TOKENS.radii.md,
     },
     image: { 
         width: "100%", 
@@ -204,10 +194,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         ...Platform.select({
             web: {
                 objectFit: 'cover' as any,
-                transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                ':hover': {
-                    transform: 'scale(1.08)',
-                } as any,
             },
         }),
     },
@@ -220,9 +206,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     placeholder: {
         width: '100%',
         height: '100%',
-        borderRadius: DESIGN_TOKENS.radii.lg,
-        borderWidth: 1,
-        borderColor: colors.borderLight,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        borderWidth: 0,
+        borderColor: 'transparent',
         backgroundColor: colors.backgroundSecondary,
     },
 

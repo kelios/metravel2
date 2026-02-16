@@ -905,28 +905,18 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     width: "100%",
     backgroundColor: "transparent",
     position: "relative",
-    borderRadius: 12,
+    borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 0,
     borderColor: "transparent",
-    ...Platform.select<any>({
-      web: {
-        boxShadow: colors.boxShadows.heavy,
-      },
-      android: {
-        elevation: 8,
-      },
-      ios: colors.shadows.medium,
-      native: colors.shadows.medium,
-    }),
   },
   wrapperMobile: {
-    borderRadius: 16,
+    borderRadius: DESIGN_TOKENS.radii.md,
     marginVertical: 8,
   },
   clip: {
     flex: 1,
     overflow: 'hidden',
-    borderRadius: 12,
+    borderRadius: DESIGN_TOKENS.radii.md,
     backgroundColor: "transparent",
     ...Platform.select<any>({
       web: { willChange: 'transform', contain: 'paint' },
@@ -934,7 +924,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     }),
   },
   clipMobile: {
-    borderRadius: 16,
+    borderRadius: DESIGN_TOKENS.radii.md,
   },
   slide: {
     flex: 1,
@@ -979,15 +969,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     ...Platform.select<any>({
       web: {
         cursor: "pointer",
-        transition: "background-color 0.2s ease, box-shadow 0.2s ease",
-        boxShadow: colors.boxShadows.medium,
+        transition: "background-color 0.2s ease",
         backdropFilter: "blur(12px)",
         contain: "layout",
       },
-      android: {
-        elevation: 6,
-      },
-      ios: colors.shadows.medium,
     }),
   },
   navBtnDesktop: {
@@ -1002,12 +987,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
   },
   navBtnHover: {
     backgroundColor: colors.surface,
-    ...Platform.select<any>({
-      web: {
-        boxShadow: colors.boxShadows.hover,
-      },
-      ios: colors.shadows.hover,
-    }),
   },
   arrowIconContainer: {
     width: "100%",

@@ -1,7 +1,6 @@
 // ✅ МИГРАЦИЯ: Прогресс-бар чтения с поддержкой useThemedColors
 import React, { useEffect, useRef, useMemo } from 'react';
 import { View, StyleSheet, Animated, Platform } from 'react-native';
-import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 
 interface ReadingProgressBarProps {
@@ -99,7 +98,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     ...Platform.select({
       web: {
         transition: 'width 0.15s ease-out',
-        boxShadow: DESIGN_TOKENS.shadows.light,
       },
     }),
   },

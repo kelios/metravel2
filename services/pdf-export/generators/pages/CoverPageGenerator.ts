@@ -201,9 +201,17 @@ export class CoverPageGenerator {
     return `
       <div style="
         position: absolute;
-        inset: 15mm;
-        border: 2px solid rgba(255,255,255,0.18);
-        border-radius: 16px;
+        inset: 14mm;
+        border: 1.5px solid rgba(255,255,255,0.15);
+        border-radius: 14px;
+        pointer-events: none;
+        z-index: 1;
+      "></div>
+      <div style="
+        position: absolute;
+        inset: 17mm;
+        border: 0.5px solid rgba(255,255,255,0.08);
+        border-radius: 10px;
         pointer-events: none;
         z-index: 1;
       "></div>
@@ -234,6 +242,13 @@ export class CoverPageGenerator {
     if (!safeTitle) return '';
     
     return `
+      <div style="
+        width: 40mm;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        border-radius: 999px;
+        margin: 0 auto 8mm auto;
+      "></div>
       <h1 style="
         color: ${color};
         font-size: 36pt;
@@ -256,12 +271,26 @@ export class CoverPageGenerator {
     const { typography } = this.theme;
     return `
       <div style="
-        font-size: 12pt;
-        color: ${textColor || 'rgba(255,255,255,0.85)'};
-        opacity: 0.85;
         margin-top: 10mm;
-        font-family: ${typography.bodyFont};
-      ">${this.escapeHtml(userName)}</div>
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4mm;
+      ">
+        <div style="
+          width: 20mm;
+          height: 1px;
+          background: rgba(255,255,255,0.3);
+        "></div>
+        <div style="
+          font-size: 12pt;
+          color: ${textColor || 'rgba(255,255,255,0.85)'};
+          opacity: 0.85;
+          font-family: ${typography.bodyFont};
+          letter-spacing: 0.04em;
+          font-weight: 500;
+        ">${this.escapeHtml(userName)}</div>
+      </div>
     `;
   }
 
@@ -291,12 +320,16 @@ export class CoverPageGenerator {
         font-style: italic;
         opacity: 0.85;
         color: ${textColor || 'rgba(255,255,255,0.85)'};
+        padding: 8px 14px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 8px;
+        border-left: 2px solid rgba(255,255,255,0.25);
       ">
-        <div style="font-size: 12pt; margin-bottom: 5mm;">
-          "${this.escapeHtml(quote.text)}"
+        <div style="font-size: 12pt; margin-bottom: 5mm; line-height: 1.5;">
+          \u00AB${this.escapeHtml(quote.text)}\u00BB
         </div>
-        <div style="font-size: 10pt; opacity: 0.7;">
-          — ${this.escapeHtml(quote.author)}
+        <div style="font-size: 10pt; opacity: 0.7; letter-spacing: 0.04em;">
+          \u2014 ${this.escapeHtml(quote.author)}
         </div>
       </div>
     `;

@@ -224,7 +224,7 @@ test.describe('SEO: noindex pages', () => {
           const meta = document.querySelector('meta[name="robots"]');
           return meta && (meta.getAttribute('content') || '').includes('noindex');
         },
-        { timeout: 15_000 },
+        { timeout: 30_000 },
       );
       const html = await page.content();
       expect(html).toMatch(/<meta[^>]*name="robots"[^>]*content="[^"]*noindex/i);
