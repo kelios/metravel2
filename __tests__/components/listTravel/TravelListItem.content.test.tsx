@@ -121,11 +121,10 @@ describe('TravelListItem content & metadata', () => {
     expect(getByTestId('views-meta')).toBeTruthy();
   });
 
-  it('renders countries list with +N when more than 2 countries are present', () => {
+  it('renders countries list with up to 2 countries joined inline', () => {
     const { getByText, queryByText } = renderItem({ countryName: 'USA, France, Germany' } as any);
-    expect(getByText('USA')).toBeTruthy();
-    expect(queryByText('France')).toBeNull();
-    expect(queryByText('+1')).toBeNull();
+    expect(getByText('USA, France')).toBeTruthy();
+    expect(queryByText('Germany')).toBeNull();
   });
 
   it('prefers travel.user name fields and allows navigating to author profile', () => {
@@ -142,7 +141,7 @@ describe('TravelListItem content & metadata', () => {
     expect(getByText('John Doe')).toBeTruthy();
   });
 
-  it('shows Popular/New badges based on views and created_at', () => {
+  it('shows Popular/New badge icons based on views and created_at', () => {
     const now = new Date();
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
     
@@ -151,8 +150,9 @@ describe('TravelListItem content & metadata', () => {
       created_at: twoDaysAgo.toISOString(),
     } as any);
     
-    expect(getByText('Популярное')).toBeTruthy();
-    expect(getByText('Новое')).toBeTruthy();
+    // Badges are now icon-only (trending-up for popular, star for new)
+    expect(getByText('trending-up')).toBeTruthy();
+    expect(getByText('star')).toBeTruthy();
   });
 
   // Регрессионные тесты для условного отображения контента
@@ -180,7 +180,8 @@ describe('TravelListItem content & metadata', () => {
         userIds: '', // Убираем ID автора
         created_at: new Date().toISOString() // Устанавливаем текущую дату для популярности
       } as any);
-      expect(getByText('Популярное')).toBeTruthy();
+      // Badge is now icon-only
+      expect(getByText('trending-up')).toBeTruthy();
     });
 
     it('renders content area when new badge exists', () => {
@@ -188,7 +189,8 @@ describe('TravelListItem content & metadata', () => {
       const { getByText } = renderItem({ 
         created_at: twoDaysAgo.toISOString() 
       } as any);
-      expect(getByText('Новое')).toBeTruthy();
+      // Badge is now icon-only
+      expect(getByText('star')).toBeTruthy();
     });
 
     it('does not render content area when no information exists', () => {
@@ -204,8 +206,8 @@ describe('TravelListItem content & metadata', () => {
       expect(queryByTestId('views-meta')).toBeNull(); // Content area shouldn't exist at all
       expect(queryByText('Россия')).toBeNull(); // Базовая страна
       expect(queryByText('Author')).toBeNull(); // Базовый автор
-      expect(queryByText('Популярное')).toBeNull();
-      expect(queryByText('Новое')).toBeNull();
+      expect(queryByText('trending-up')).toBeNull();
+      expect(queryByText('star')).toBeNull();
     });
 
     it('renders partial content when only some information exists', () => {
@@ -222,8 +224,8 @@ describe('TravelListItem content & metadata', () => {
       expect(getByText('John Doe')).toBeTruthy();
       // views-meta показывается всегда когда есть контентная область (даже с 0 просмотров)
       expect(queryByTestId('views-meta')).toBeNull(); // Should exist when content area is shown
-      expect(queryByText('Популярное')).toBeNull();
-      expect(queryByText('Новое')).toBeNull();
+      expect(queryByText('trending-up')).toBeNull();
+      expect(queryByText('star')).toBeNull();
       expect(queryByText('Россия')).toBeNull(); // Базовая страна отсутствует
     });
 

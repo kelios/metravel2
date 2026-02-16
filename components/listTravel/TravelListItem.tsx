@@ -10,7 +10,7 @@ import { fetchTravel, fetchTravelBySlug } from "@/api/travelsApi";
 import { queryKeys } from "@/queryKeys";
 import UnifiedTravelCard from "@/components/ui/UnifiedTravelCard";
 import CardActionPressable from "@/components/ui/CardActionPressable";
-import StarRating from "@/components/ui/StarRating";
+
 import { useThemedColors } from '@/hooks/useTheme';
 import { getResponsiveCardValues } from './enhancedTravelCardStyles';
 import { globalFocusStyles } from '@/styles/globalFocus';
@@ -23,7 +23,6 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 /** LQIP-плейсхолдер — чтобы не мигало чёрным на native */
 const PLACEHOLDER_BLURHASH = "LEHL6nWB2yk8pyo0adR*.7kCMdnj";
 const ENABLE_TRAVEL_DETAILS_PREFETCH = false;
-const AUTHOR_ICON_STYLE = { marginRight: 4 } as const;
 const EMPTY_STYLE = {} as const;
 
 // Простая эвристика для отбрасывания изображений с водяными знаками / стоковых доменов
@@ -487,115 +486,96 @@ const hasContentInfo = useMemo(() => {
 }, [hideAuthor, authorName, countries.length, popularityFlags.isPopular, popularityFlags.isNew, views, travel.rating]);
 
 const contentSlotWithoutTitle = hasContentInfo ? (
-  <>
-    <View style={styles.countrySlot}>
-      {countries.length > 0 ? (
-        <TravelListItemCountriesList
-          countries={countries}
-          styles={styles}
-          iconColor={tagIconColor}
-        />
-      ) : null}
-    </View>
-
-    <View
-      style={[
-        styles.metaRow,
-        Platform.OS === 'web' && typeof viewportWidth === 'number' && viewportWidth < 375 && {
-          alignItems: 'flex-start',
-        },
-      ]}
-    >
-      {((!hideAuthor && !!authorName) || views > 0 || (travel.rating != null && travel.rating > 0)) && (
-        <View style={styles.metaInfoTopRow}>
-          {!hideAuthor && !!authorName && (
-            <View style={styles.metaBox}>
-              <Feather
-                name="user"
-                size={Platform.select({ default: 10, web: 11 })}
-                color={colors.textMuted}
-                style={AUTHOR_ICON_STYLE}
-              />
-              {Platform.OS === 'web' ? (
-                <View
-                  {...({
-                    ...(authorUserId
-                      ? {
-                          role: 'button',
-                          tabIndex: 0,
-                          'aria-label': `Открыть профиль автора ${authorName || 'Аноним'}`,
-                        }
-                      : {}),
-                  } as any)}
-                  onClick={handleAuthorPress}
-                >
-                  <Text
-                    style={[
-                      styles.metaTxt,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {authorName || 'Аноним'}
-                  </Text>
-                </View>
-              ) : (
-                <Pressable
-                  onPress={handleAuthorPress}
-                  style={({ pressed }) => [pressed && authorUserId ? { opacity: 0.85 } : null]}
-                >
-                  <Text style={styles.metaTxt} numberOfLines={1}>
-                    {authorName || 'Аноним'}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          )}
-
-          {views > 0 && (
-            <View style={[styles.metaBoxViews, styles.metaBoxViewsChip]} testID="views-meta">
-              <Feather
-                name="eye"
-                size={Platform.select({ default: 10, web: 11 })}
-                color={colors.textMuted}
-              />
-              <Text style={styles.metaTxtViews} numberOfLines={1}>
-                {viewsFormatted}
-              </Text>
-            </View>
-          )}
-
-          {/* Рейтинг путешествия */}
-          {travel.rating != null && travel.rating > 0 && (
-            <View style={[styles.metaBoxViews, styles.metaBoxRatingChip]} testID="rating-meta">
-              <StarRating
-                rating={travel.rating}
-                ratingCount={travel.rating_count}
-                size="small"
-                compact
-                showCount={false}
-                showValue={true}
-              />
-            </View>
-          )}
-        </View>
+  <View style={styles.metaRow}>
+    <View style={styles.metaInfoTopRow}>
+      {countries.length > 0 && (
+        <>
+          <TravelListItemCountriesList
+            countries={countries}
+            styles={styles}
+            iconColor={tagIconColor}
+          />
+        </>
       )}
 
-      <View style={styles.metaBadgesRow}>
-        {popularityFlags.isPopular && (
-          <View style={[styles.statusBadge, styles.statusBadgePopular]}>
-            <Feather name="trending-up" size={Platform.select({ default: 10, web: 12 })} color={colors.accent} />
-            <Text style={[styles.statusBadgeText, styles.statusBadgeTextPopular]}>Популярное</Text>
+      {!hideAuthor && authorName && authorName.trim() !== '' && (
+        <>
+          {countries.length > 0 && <View style={styles.metaDot} />}
+          {Platform.OS === 'web' ? (
+            <View
+              {...({
+                ...(authorUserId
+                  ? {
+                      role: 'button',
+                      tabIndex: 0,
+                      'aria-label': `Открыть профиль автора ${authorName}`,
+                    }
+                  : {}),
+              } as any)}
+              onClick={handleAuthorPress}
+              style={{ flexShrink: 1, minWidth: 0 }}
+            >
+              <Text style={styles.metaTxt} numberOfLines={1}>
+                {authorName}
+              </Text>
+            </View>
+          ) : (
+            <Pressable
+              onPress={handleAuthorPress}
+              style={({ pressed }) => [{ flexShrink: 1, minWidth: 0 }, pressed && authorUserId ? { opacity: 0.85 } : null]}
+            >
+              <Text style={styles.metaTxt} numberOfLines={1}>
+                {authorName}
+              </Text>
+            </Pressable>
+          )}
+        </>
+      )}
+
+      {views > 0 && (
+        <>
+          {(countries.length > 0 || (!hideAuthor && authorName)) && <View style={styles.metaDot} />}
+          <View style={styles.metaBoxViews} testID="views-meta">
+            <Feather
+              name="eye"
+              size={Platform.select({ default: 10, web: 11 })}
+              color={colors.textMuted}
+            />
+            <Text style={styles.metaTxtViews} numberOfLines={1}>
+              {viewsFormatted}
+            </Text>
           </View>
-        )}
-        {popularityFlags.isNew && (
-          <View style={[styles.statusBadge, styles.statusBadgeNew]}>
-            <Feather name="star" size={Platform.select({ default: 10, web: 12 })} color={colors.success} />
-            <Text style={[styles.statusBadgeText, styles.statusBadgeTextNew]}>Новое</Text>
-          </View>
-        )}
-      </View>
+        </>
+      )}
     </View>
-  </>
+
+    <View style={styles.metaBadgesRow}>
+      {travel.rating != null && travel.rating > 0 && (
+        <View style={styles.metaRating} testID="rating-meta">
+          <Text style={styles.metaRatingStar}>★</Text>
+          <Text style={styles.metaRatingValue}>{travel.rating.toFixed(1)}</Text>
+        </View>
+      )}
+      {popularityFlags.isPopular && (
+        <View style={[styles.statusBadge, styles.statusBadgePopular]}>
+          <Feather 
+            name="trending-up" 
+            size={Platform.select({ default: 9, web: 10 })} 
+            color={Platform.OS === 'web' ? 'rgb(180, 83, 9)' : colors.accent} 
+          />
+        </View>
+      )}
+      {popularityFlags.isNew && (
+        <View style={[styles.statusBadge, styles.statusBadgeNew]}>
+          <Feather 
+            name="star" 
+            size={Platform.select({ default: 9, web: 10 })} 
+            color={Platform.OS === 'web' ? 'rgb(22, 163, 74)' : colors.success} 
+          />
+        </View>
+      )}
+    </View>
+  </View>
 ) : null;
 
 const unifiedCard = (

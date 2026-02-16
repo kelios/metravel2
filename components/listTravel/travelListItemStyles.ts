@@ -14,8 +14,7 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       width: '100%',
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
-      borderWidth: Platform.OS === 'web' ? 1 : 0,
-      borderColor: colors.border,
+      borderWidth: 0,
       overflow: 'hidden',
       ...(Platform.OS === 'web'
         ? ({
@@ -23,14 +22,24 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
             alignSelf: 'stretch',
           } as any)
         : null),
-      // Минимальные тени для глубины - разделены по платформам
+      // Мягкие тени для глубины
       ...Platform.select({
         web: {
-          boxShadow: colors.boxShadows.light,
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
         } as any,
-        ios: colors.shadows.light,
-        android: { elevation: 2 },
-        default: colors.shadows.light,
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 3,
+        },
+        android: { elevation: 1 },
+        default: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 3,
+        },
       }),
     },
 
@@ -113,12 +122,9 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       zIndex: 20,
     },
 
-    // Упрощенный контент
+    // Компактный контент под изображением
     contentBelow: {
-      // Компактный внутренний отступ и небольшой gap между элементами
-      paddingHorizontal: 4,
-      paddingVertical: 4,
-      gap: 4,
+      gap: 0,
       backgroundColor: colors.surface,
       width: '100%',
       minWidth: 0,
@@ -126,20 +132,17 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
         ? {
             paddingHorizontal: 12,
             paddingTop: 8,
-            paddingBottom: 16,
-            flex: 1,
+            paddingBottom: 10,
           }
-        : {}),
+        : {
+            paddingHorizontal: 4,
+            paddingVertical: 4,
+          }),
     },
 
     countrySlot: {
       width: '100%',
       minWidth: 0,
-      ...(Platform.OS === 'web'
-        ? ({
-            minHeight: 34,
-          } as any)
-        : ({ minHeight: 28 } as any)),
     },
 
     // Современная типографика
@@ -151,142 +154,172 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       marginBottom: 0,
     },
 
-    // Упрощенная мета-информация
+    // Компактная мета-информация — одна строка
     metaRow: {
-      flexDirection: 'column',
-      alignItems: 'stretch',
-      justifyContent: 'flex-start',
-      gap: Platform.OS === 'web' ? 6 : DESIGN_TOKENS.spacing.xs,
-    },
-
-    // Первая строка: пользователь + просмотры
-    metaInfoTopRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      width: '100%',
+      gap: 6,
       minHeight: Platform.OS === 'web' ? 18 : 20,
-      minWidth: 0,
     },
 
-    // Вторая строка: бейджи Популярное / Новое
+    // Левая часть: страна · автор · просмотры
+    metaInfoTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+      minWidth: 0,
+      flex: 1,
+      gap: 0,
+      flexWrap: 'nowrap',
+    },
+
+    // Правая часть: рейтинг + бейджи
     metaBadgesRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
-      marginTop: Platform.OS === 'web' ? 4 : DESIGN_TOKENS.spacing.xs * 0.5,
-      marginBottom: Platform.OS === 'web' ? 8 : 0,
-      flexWrap: Platform.OS === 'web' ? 'nowrap' : 'wrap',
-      overflow: Platform.OS === 'web' ? 'hidden' : 'visible',
-      // Чуть меньшая минимальная высота, чтобы панель была компактнее
-      minHeight: Platform.OS === 'web' ? 28 : 22,
+      gap: 4,
+      flexShrink: 0,
+    },
+
+    // Inline рейтинг (без чипа)
+    metaRating: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 2,
+      flexShrink: 0,
+    },
+
+    metaRatingStar: {
+      fontSize: Platform.OS === 'web' ? 11 : 10,
+      lineHeight: Platform.OS === 'web' ? 14 : 12,
+      color: '#e8a838',
+    },
+
+    metaRatingValue: {
+      fontSize: Platform.OS === 'web' ? 12 : 11,
+      lineHeight: Platform.OS === 'web' ? 14 : 14,
+      fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+      color: colors.textSecondary,
     },
 
     metaBox: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
-      flex: 1,
+      gap: 3,
+      flexShrink: 1,
       minWidth: 0,
     },
 
-    // Отдельный стиль для просмотров - абсолютно позиционированы
+    // Точка-разделитель между мета-элементами
+    metaDot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: colors.textMuted,
+      marginHorizontal: 4,
+      opacity: 0.5,
+      flexShrink: 0,
+    },
+
+    // Просмотры — без чипа, просто текст
     metaBoxViews: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
-      paddingHorizontal: DESIGN_TOKENS.spacing.xs,
-      paddingVertical: 2,
+      gap: 3,
       flexShrink: 0,
     },
 
     metaBoxViewsChip: {
-      backgroundColor: colors.backgroundSecondary,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
-      borderRadius: 999,
-      paddingVertical: 3,
-      paddingHorizontal: 8,
+      // Убираем чип-стиль, оставляем inline
     },
 
     metaBoxRatingChip: {
       marginLeft: 6,
-      paddingLeft: 10,
-      borderLeftWidth: 1,
-      borderLeftColor: colors.borderLight,
+      backgroundColor: Platform.OS === 'web'
+        ? 'rgba(232, 168, 56, 0.08)'
+        : colors.backgroundSecondary,
+      borderWidth: 1,
+      borderColor: Platform.OS === 'web'
+        ? 'rgba(232, 168, 56, 0.2)'
+        : colors.borderLight,
+      borderRadius: 999,
+      paddingVertical: 4,
+      paddingHorizontal: 10,
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: '0 1px 2px rgba(232, 168, 56, 0.12)',
+          } as any
+        : {}),
     },
 
     metaTxt: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.textSecondary,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      lineHeight: Platform.OS === 'web' ? 16 : 18,
-      flex: 1, // Занимаем доступное пространство в контейнере
-      minWidth: 0, // Важно для корректного обрезания текста
-      opacity: 1,
+      fontSize: Platform.OS === 'web' ? 12.5 : 12,
+      color: colors.textMuted,
+      fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
+      lineHeight: Platform.OS === 'web' ? 16 : 16,
+      minWidth: 0,
     },
 
-    // Отдельный стиль для текста просмотров - не обрезается
+    // Текст просмотров
     metaTxtViews: {
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.textSecondary,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
-      lineHeight: Platform.OS === 'web' ? 16 : 18,
-      opacity: 1,
+      fontSize: Platform.OS === 'web' ? 12.5 : 12,
+      color: colors.textMuted,
+      fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
+      lineHeight: Platform.OS === 'web' ? 16 : 16,
     },
 
-    // Упрощенные статус-бейджи (современные нейтральные pill-метки)
+    // Компактные статус-бейджи (иконки)
     statusBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: DESIGN_TOKENS.spacing.xs,
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingVertical: DESIGN_TOKENS.spacing.xs * 0.75,
-      borderRadius: DESIGN_TOKENS.radii.full,
-      borderWidth: 1,
-      backgroundColor: colors.backgroundSecondary,
-      borderColor: colors.border,
+      flexShrink: 0,
     },
 
-    statusBadgePopular: {},
+    statusBadgePopular: {
+    },
 
-    statusBadgeNew: {},
+    statusBadgeNew: {
+    },
 
     statusBadgeText: {
-      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      fontSize: Platform.OS === 'web' ? 10.5 : 10,
       fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
-      letterSpacing: -0.1,
-      color: colors.textSecondary,
+      letterSpacing: 0.3,
+      textTransform: 'uppercase' as any,
+      color: colors.textMuted,
     },
 
-    statusBadgeTextPopular: {},
+    statusBadgeTextPopular: {
+      color: Platform.OS === 'web' ? 'rgb(180, 83, 9)' : colors.textSecondary,
+    },
 
-    statusBadgeTextNew: {},
+    statusBadgeTextNew: {
+      color: Platform.OS === 'web' ? 'rgb(22, 163, 74)' : colors.textSecondary,
+    },
 
-    // Упрощенные теги стран
+    // Inline теги стран (без pill-фона)
     tags: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: DESIGN_TOKENS.spacing.xs,
+      alignItems: 'center',
+      gap: 3,
+      flexShrink: 1,
+      minWidth: 0,
     },
 
     tag: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.backgroundSecondary,
-      borderRadius: DESIGN_TOKENS.radii.sm,
-      paddingHorizontal: DESIGN_TOKENS.spacing.sm,
-      paddingVertical: Platform.OS === 'web' ? DESIGN_TOKENS.spacing.xxs : DESIGN_TOKENS.spacing.xs,
-      gap: DESIGN_TOKENS.spacing.xs,
+      gap: 3,
+      flexShrink: 1,
+      minWidth: 0,
     },
 
     tagTxt: {
-      fontSize:
-        Platform.OS === 'web'
-          ? DESIGN_TOKENS.typography.sizes.xs
-          : DESIGN_TOKENS.typography.sizes.sm,
-      color: colors.textSecondary,
-      fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
+      fontSize: Platform.OS === 'web' ? 12.5 : 12,
+      color: colors.textMuted,
+      fontWeight: DESIGN_TOKENS.typography.weights.regular as any,
+      lineHeight: Platform.OS === 'web' ? 16 : 16,
     },
 
     // Упрощенные чекбоксы

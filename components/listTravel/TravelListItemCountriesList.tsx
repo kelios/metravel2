@@ -20,14 +20,10 @@ const TravelListItemCountriesList = memo(function TravelListItemCountriesList({
 
   return (
     <View style={styles.tags}>
-      {countries.slice(0, 1).map((country) => (
-        <View key={country} style={styles.tag}>
-          <Feather name="map-pin" size={11} color={iconColor} style={ICON_STYLE} />
-          <Text style={styles.tagTxt} numberOfLines={1} ellipsizeMode="tail">
-            {country}
-          </Text>
-        </View>
-      ))}
+      <Feather name="map-pin" size={10} color={iconColor} style={ICON_STYLE} />
+      <Text style={styles.tagTxt} numberOfLines={1} ellipsizeMode="tail">
+        {countries.slice(0, 2).join(', ')}
+      </Text>
     </View>
   );
 });

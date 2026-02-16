@@ -110,7 +110,7 @@ describe('QuickFacts - Редизайн с темной темой', () => {
 
       // Проверяем что padding уменьшен (точное значение зависит от платформы)
       expect(paddingVertical).toBeLessThan(64); // было 64px (32+32)
-      expect(paddingVertical).toBeGreaterThanOrEqual(28); // теперь 28-40px
+      expect(paddingVertical).toBeGreaterThanOrEqual(20); // теперь 20-28px (compact inline strip)
     });
 
     it('должен использовать компактный gap между элементами', () => {

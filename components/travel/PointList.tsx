@@ -978,56 +978,40 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
   // ✅ ИСПРАВЛЕНИЕ: Современная кнопка переключения с улучшенной интерактивностью и единой палитрой
   toggle: {
-    backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
-    borderRadius: DESIGN_TOKENS.radii.md, // ✅ ИСПРАВЛЕНИЕ: Используем единый радиус
-    borderWidth: 1.5,
-    borderColor: colors.border, // ✅ ДИЗАЙН: Динамический цвет границы
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     marginBottom: DESIGN_TOKENS.spacing.md,
-    shadowColor: colors.shadows.medium.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 3,
-    minHeight: 48, // ✅ ИСПРАВЛЕНИЕ: Минимальная высота для touch-целей
+    minHeight: 48,
     ...Platform.select({
       web: {
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease',
         cursor: 'pointer' as any,
-        ':hover': {
-          borderColor: colors.primary, // ✅ ДИЗАЙН: Динамический цвет границы
-          shadowOpacity: 0.12,
-          shadowRadius: 14,
-          transform: 'translateY(-1px)',
-          backgroundColor: colors.primarySoft, // ✅ ДИЗАЙН: Динамический цвет фона
-        } as any,
-        ':active': {
-          transform: 'translateY(0)',
-        } as any,
       },
     }),
   },
   togglePressed: { 
-    backgroundColor: colors.primarySoft, // ✅ ДИЗАЙН: Динамический цвет фона
-    borderColor: colors.primary, // ✅ ДИЗАЙН: Динамический цвет границы
-    transform: [{ scale: 0.98 }],
+    backgroundColor: colors.backgroundSecondary,
+    borderColor: colors.border,
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: DESIGN_TOKENS.spacing.md,
-    paddingVertical: DESIGN_TOKENS.spacing.lg,
-    paddingHorizontal: DESIGN_TOKENS.spacing.xl,
+    gap: DESIGN_TOKENS.spacing.sm,
+    paddingVertical: DESIGN_TOKENS.spacing.md,
+    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
   },
   toggleText: { 
     fontSize: DESIGN_TOKENS.typography.sizes.md, 
-    fontWeight: '600', 
-    color: colors.text, // ✅ ДИЗАЙН: Динамический цвет текста
-    letterSpacing: -0.3,
+    fontWeight: '500', 
+    color: colors.text,
+    letterSpacing: -0.1,
   },
   toggleTextSm: { 
-    fontSize: DESIGN_TOKENS.typography.sizes.md,
-    letterSpacing: -0.2,
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    letterSpacing: 0,
   },
 
   // P2-5: Стили превью точек
@@ -1147,30 +1131,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
 
   // ✅ УЛУЧШЕНИЕ: Матовая карточка без границ, только тени
   card: {
-    backgroundColor: colors.surface, // ✅ ДИЗАЙН: Динамический цвет фона
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    backgroundColor: colors.surface,
+    borderRadius: DESIGN_TOKENS.radii.md,
     overflow: 'hidden',
-    shadowColor: colors.shadows.medium.shadowColor,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    // ✅ УЛУЧШЕНИЕ: Убрана граница, используется только тень
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     display: 'flex' as any,
     flexDirection: 'column' as any,
     ...Platform.select({
       web: {
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'border-color 0.2s ease',
         height: '100%',
-        boxShadow: DESIGN_TOKENS.shadows.card,
-        ':hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: DESIGN_TOKENS.shadows.hover,
-        } as any,
-        ':active': {
-          transform: 'translateY(-1px)',
-          boxShadow: DESIGN_TOKENS.shadows.medium,
-        } as any,
       },
     }),
   },

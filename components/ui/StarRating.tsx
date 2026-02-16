@@ -1,8 +1,9 @@
 // components/ui/StarRating.tsx
 // ✅ Компонент рейтинга звёздами с возможностью интерактивной оценки
+// 🎨 УЛУЧШЕНО: Добавлена анимация, лучший визуальный feedback, улучшенная доступность
 
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Platform, Animated } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 
 type Props = {
@@ -57,6 +58,10 @@ function StarRating({
 }: Props) {
     const colors = useThemedColors();
     const [hoverRating, setHoverRating] = useState<number | null>(null);
+    const [pressedStar, setPressedStar] = useState<number | null>(null);
+
+    // 🎨 Анимация для пульсации при взаимодействии
+    const [scaleAnims] = useState(() => [0, 1, 2, 3, 4].map(() => new Animated.Value(1)));
 
     const config = SIZE_CONFIG[size];
     const displayRating = rating ?? 0;
@@ -77,8 +82,25 @@ function StarRating({
 
     const handlePress = useCallback((starIndex: number) => {
         if (!interactive || disabled || !onRate) return;
+
+        // 🎨 Анимация нажатия
+        setPressedStar(starIndex);
+        const anim = scaleAnims[starIndex - 1];
+        Animated.sequence([
+            Animated.timing(anim, {
+                toValue: 1.3,
+                duration: 100,
+                useNativeDriver: true,
+            }),
+            Animated.timing(anim, {
+                toValue: 1,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+        ]).start(() => setPressedStar(null));
+
         onRate(starIndex);
-    }, [interactive, disabled, onRate]);
+    }, [interactive, disabled, onRate, scaleAnims]);
 
     const handleHoverIn = useCallback((starIndex: number) => {
         if (!interactive || disabled) return;
@@ -119,6 +141,8 @@ function StarRating({
         const halfFilled = !filled && effectiveRating >= starValue - 0.5;
         const isUserRated = hasUserRating && normalizedUserRating === starValue;
         const isActive = filled || halfFilled;
+        const isHovered = Platform.OS === 'web' && hoverRating === starValue;
+        const _isPulsing = pressedStar === starValue;
 
         const StarWrapper = interactive ? Pressable : View;
         const wrapperProps = interactive
@@ -133,8 +157,24 @@ function StarRating({
                 accessibilityRole: 'button' as const,
                 accessibilityLabel: `Оценить на ${starValue} из 5`,
                 accessibilityHint: 'Нажмите, чтобы поставить оценку',
+                accessibilityState: { selected: isUserRated },
             }
             : {};
+
+        // 🎨 Анимированная обертка для интерактивных звёзд
+        const StarContent = (
+            <Text
+                style={[
+                    styles.starChar,
+                    isActive ? styles.starCharFilled : styles.starCharEmpty,
+                    halfFilled && styles.starCharHalf,
+                    isHovered && styles.starCharHovered,
+                ]}
+                selectable={false}
+            >
+                {isActive ? STAR_FILLED : STAR_EMPTY}
+            </Text>
+        );
 
         return (
             <StarWrapper
@@ -144,20 +184,18 @@ function StarRating({
                     interactive && styles.starInteractive,
                     disabled && styles.starDisabled,
                     isUserRated && styles.starUserRated,
+                    isHovered && styles.starHovered,
                 ]}
                 testID={`${testID}-star-${starValue}`}
                 {...wrapperProps}
             >
-                <Text
-                    style={[
-                        styles.starChar,
-                        isActive ? styles.starCharFilled : styles.starCharEmpty,
-                        halfFilled && styles.starCharHalf,
-                    ]}
-                    selectable={false}
-                >
-                    {isActive ? STAR_FILLED : STAR_EMPTY}
-                </Text>
+                {interactive && !disabled ? (
+                    <Animated.View style={{ transform: [{ scale: scaleAnims[index] }] }}>
+                        {StarContent}
+                    </Animated.View>
+                ) : (
+                    StarContent
+                )}
             </StarWrapper>
         );
     };
@@ -188,7 +226,8 @@ function StarRating({
 
 const STAR_COLOR_FILLED = '#e8a838';
 const STAR_COLOR_EMPTY = '#d4d0c8';
-const STAR_COLOR_EMPTY_DARK = '#5a5647';
+const STAR_COLOR_EMPTY_DARK = '#6b6552'; // 🎨 Увеличен контраст для тёмной темы
+const STAR_COLOR_HOVER = '#f4b84d'; // 🎨 Цвет при hover
 
 const createStyles = (colors: any, config: { starSize: number; fontSize: number; gap: number }) => {
     const isDarkTheme = colors.text?.includes?.('e8e4') || colors.text?.includes?.('d4d0');
@@ -230,7 +269,13 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
             borderRadius: 6,
             ...(Platform.OS === 'web' && {
                 cursor: 'pointer',
-                transition: 'transform 0.2s cubic-bezier(0.4,0,0.2,1), color 0.2s ease',
+                transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+            } as any),
+        },
+        starHovered: {
+            ...(Platform.OS === 'web' && {
+                backgroundColor: isDarkTheme ? 'rgba(232,168,56,0.1)' : 'rgba(232,168,56,0.08)',
+                transform: 'scale(1.1)',
             } as any),
         },
         starDisabled: {
@@ -255,6 +300,7 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
             color: STAR_COLOR_FILLED,
             ...(Platform.OS === 'web' && {
                 textShadow: '0 1px 2px rgba(232,168,56,0.3)',
+                filter: 'drop-shadow(0 1px 1px rgba(232,168,56,0.2))',
             } as any),
         },
         starCharEmpty: {
@@ -262,6 +308,12 @@ const createStyles = (colors: any, config: { starSize: number; fontSize: number;
         },
         starCharHalf: {
             opacity: 0.7,
+        },
+        starCharHovered: {
+            ...(Platform.OS === 'web' && {
+                color: STAR_COLOR_HOVER,
+                filter: 'drop-shadow(0 2px 3px rgba(244,184,77,0.4))',
+            } as any),
         },
         textContainer: {
             flexDirection: 'row',

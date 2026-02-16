@@ -70,17 +70,11 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
     container: {
       width: '100%',
       backgroundColor: colors.surface,
-      borderRadius: DESIGN_TOKENS.radii.lg,
+      borderRadius: DESIGN_TOKENS.radii.md,
       padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
       marginBottom: DESIGN_TOKENS.spacing.xl,
       borderWidth: 1,
       borderColor: colors.borderLight,
-      ...Platform.select({
-        web: {
-          boxShadow: colors.boxShadows.light,
-        } as any,
-        default: colors.shadows.light,
-      }),
     },
     containerMobile: {
       padding: DESIGN_TOKENS.spacing.md,
@@ -119,14 +113,14 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
       paddingVertical: 12,
       paddingHorizontal: DESIGN_TOKENS.spacing.md,
       borderRadius: DESIGN_TOKENS.radii.pill,
-      backgroundColor: colors.primarySoft,
+      backgroundColor: colors.backgroundSecondary,
       minHeight: 44,
-      borderWidth: 1,
-      borderColor: colors.primaryAlpha30,
+      borderWidth: 0,
+      borderColor: 'transparent',
       ...(Platform.OS === 'web' ? {
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
-      } as any : colors.shadows.light),
+        transition: 'background-color 0.2s ease',
+      } as any : {}),
     },
     actionButtonMobile: {
       paddingVertical: 11,
@@ -161,8 +155,8 @@ function CTASection({ travel, onFavoriteToggle }: CTASectionProps) {
       minHeight: 44,
       ...(Platform.OS === 'web' ? {
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
-      } as any : colors.shadows.light),
+        transition: 'background-color 0.2s ease',
+      } as any : {}),
     },
     primaryButtonMobile: {
       paddingVertical: 11,

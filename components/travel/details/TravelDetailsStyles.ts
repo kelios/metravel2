@@ -47,7 +47,7 @@ export const COMPACT_TYPOGRAPHY = {
 } as const;
 
 /* -------------------- helpers -------------------- */
-const getShadowStyle = (colors: ThemedColors, shadowType: 'light' | 'medium' = 'light') => {
+const _getShadowStyle = (colors: ThemedColors, shadowType: 'light' | 'medium' = 'light') => {
   if (Platform.OS === 'web') {
     return { boxShadow: shadowType === 'light' ? colors.boxShadows.light : colors.boxShadows.card };
   }
@@ -109,11 +109,9 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   },
   sectionContainer: {
     marginBottom: Platform.select({
-      default: COMPACT_SPACING.section.desktop, // было lg (24px)
-      web: COMPACT_SPACING.section.desktop + 4, // было xxl (48px), теперь 22
+      default: COMPACT_SPACING.section.desktop + 8, // 32px — больше воздуха между секциями
+      web: COMPACT_SPACING.section.desktop + 16, // 40px — заметное разделение секций
     }),
-    // Horizontal gutters are applied once at the page level (contentWrapper).
-    // Keeping additional padding here makes mobile content look "squeezed".
     width: "100%",
   },
   
@@ -135,13 +133,14 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   },
   
   quickFactsContainer: {
-    marginBottom: DESIGN_TOKENS.spacing.md,
+    marginBottom: DESIGN_TOKENS.spacing.xs,
   },
 
   quickJumpWrapper: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginTop: DESIGN_TOKENS.spacing.md,
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    gap: 0,
   },
   quickJumpScroll: {
     flexGrow: 0,
@@ -152,33 +151,30 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   quickJumpChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: Platform.select({
-      default: 16,
-      web: 18,
+      default: 14,
+      web: 16,
     }),
     borderRadius: DESIGN_TOKENS.radii.pill,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface,
+    borderWidth: 0,
+    backgroundColor: colors.backgroundSecondary,
     marginRight: DESIGN_TOKENS.spacing.xs,
     marginBottom: DESIGN_TOKENS.spacing.xs,
     gap: 6,
     ...(Platform.OS === 'web' ? {
-      transition: 'all 0.2s ease',
+      transition: 'background-color 0.2s ease, color 0.2s ease',
       cursor: 'pointer',
     } as any : {}),
-    ...(getShadowStyle(colors, 'light') as any),
   },
   quickJumpChipPressed: {
     backgroundColor: colors.primarySoft,
-    borderColor: colors.primary,
   },
   quickJumpLabel: {
     fontSize: 13,
-    fontWeight: "600" as any,
-    color: colors.text,
-    letterSpacing: -0.1,
+    fontWeight: "500" as any,
+    color: colors.textMuted,
+    letterSpacing: 0,
   },
   
   descriptionIntroWrapper: {
@@ -204,17 +200,16 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   decisionSummaryBox: {
     marginBottom: DESIGN_TOKENS.spacing.xl,
     padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
-    borderColor: colors.borderAccent,
-    backgroundColor: colors.accentSoft,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundSecondary,
     ...(Platform.OS === 'web' ? {
-      transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+      transition: 'border-color 0.2s ease',
     } as any : {}),
-    ...(getShadowStyle(colors, 'light') as any),
   },
   decisionSummaryTitle: {
-    fontSize: Platform.select({ default: 22, web: 24 }),
+    fontSize: Platform.select({ default: 20, web: 22 }),
     fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
     color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.sm,
@@ -367,17 +362,16 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
       default: 16,
       web: 20,
     }),
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    backgroundColor: 'transparent',
+    borderRadius: DESIGN_TOKENS.radii.md,
     justifyContent: "space-between",
     borderWidth: 1,
     borderColor: colors.borderLight,
-    minHeight: 56,
+    minHeight: 52,
     ...(Platform.OS === 'web' ? {
-      transition: 'all 0.2s ease',
+      transition: 'background-color 0.2s ease, border-color 0.2s ease',
       cursor: 'pointer',
     } as any : {}),
-    ...(getShadowStyle(colors, 'light') as any),
   },
   sectionHeaderPositive: {
     backgroundColor: colors.successSoft,
@@ -392,18 +386,8 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     borderColor: colors.infoLight,
   },
   sectionHeaderActive: {
-    borderColor: colors.primaryAlpha40,
+    borderColor: colors.primaryAlpha30,
     backgroundColor: colors.primarySoft,
-    ...(Platform.OS === 'web' 
-      ? { boxShadow: `0 0 0 2px ${colors.primaryAlpha30}` } as any
-      : {
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.15,
-          shadowRadius: 8,
-          elevation: 3,
-        }
-    ),
   },
   sectionHeaderTitleWrap: {
     flexDirection: "row",
@@ -414,10 +398,10 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   },
   
   sectionHeaderIcon: {
-    width: Platform.select({ default: 36, web: 40 }),
-    height: Platform.select({ default: 36, web: 40 }),
-    borderRadius: Platform.select({ default: 10, web: 12 }),
-    backgroundColor: colors.primarySoft,
+    width: Platform.select({ default: 28, web: 30 }),
+    height: Platform.select({ default: 28, web: 30 }),
+    borderRadius: Platform.select({ default: 8, web: 8 }),
+    backgroundColor: 'transparent',
     justifyContent: "center",
     alignItems: "center",
   },
@@ -428,10 +412,10 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     flexShrink: 0,
   },
   sectionHeaderBadge: {
-    fontSize: 14,
-    fontWeight: DESIGN_TOKENS.typography.weights.semibold as any,
+    fontSize: 12,
+    fontWeight: DESIGN_TOKENS.typography.weights.medium as any,
     color: colors.textMuted,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: colors.backgroundSecondary,
     paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     paddingVertical: DESIGN_TOKENS.spacing.xxs,
     borderRadius: DESIGN_TOKENS.radii.pill,
@@ -440,32 +424,31 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
 
   sectionHeaderText: { 
     fontSize: Platform.select({
-      default: 20,
-      web: 22,
+      default: 18,
+      web: 20,
     }),
-    fontWeight: '700' as any,
+    fontWeight: '600' as any,
     color: colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
     lineHeight: Platform.select({
-      default: 26,
-      web: 28,
+      default: 24,
+      web: 26,
     }),
     flexShrink: 1,
   },
   sectionSubtitle: {
-    fontSize: Platform.select({ default: 14, web: 16 }),
+    fontSize: Platform.select({ default: 13, web: 14 }),
     color: colors.textMuted,
-    marginTop: DESIGN_TOKENS.spacing.sm,
-    lineHeight: Platform.select({ default: 22, web: 24 }),
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    lineHeight: Platform.select({ default: 20, web: 22 }),
   },
   sliderContainer: {
     width: "100%",
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderRadius: DESIGN_TOKENS.radii.xl,
     overflow: "hidden",
     marginBottom: 0,
     backgroundColor: "transparent",
     position: "relative" as any,
-    ...(getShadowStyle(colors, 'light') as any),
   },
 
   heroOverlay: {
@@ -474,23 +457,23 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     right: 0,
     bottom: 0,
     zIndex: 2,
-    paddingHorizontal: Platform.select({ default: 20, web: 28 }),
-    paddingBottom: Platform.select({ default: 20, web: 24 }),
-    paddingTop: Platform.select({ default: 56, web: 80 }),
+    paddingHorizontal: Platform.select({ default: 20, web: 32 }),
+    paddingBottom: Platform.select({ default: 24, web: 32 }),
+    paddingTop: Platform.select({ default: 72, web: 100 }),
     ...(Platform.OS === 'web' ? {
-      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.08) 80%, transparent 100%)',
+      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.45) 40%, rgba(0,0,0,0.12) 70%, transparent 100%)',
     } as any : {
       backgroundColor: 'rgba(0,0,0,0.35)',
     }),
   },
   heroTitle: {
-    fontSize: Platform.select({ default: 24, web: 30 }),
+    fontSize: Platform.select({ default: 26, web: 36 }),
     fontWeight: "800" as any,
     color: colors.textOnDark,
-    letterSpacing: -0.5,
-    lineHeight: Platform.select({ default: 30, web: 38 }),
+    letterSpacing: -0.6,
+    lineHeight: Platform.select({ default: 32, web: 44 }),
     ...(Platform.OS === 'web' ? {
-      textShadow: '0 2px 8px rgba(0,0,0,0.4)',
+      textShadow: '0 2px 16px rgba(0,0,0,0.5)',
     } as any : {
       textShadowColor: 'rgba(0,0,0,0.5)',
       textShadowOffset: { width: 0, height: 1 },
@@ -498,13 +481,13 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     }),
   },
   heroMeta: {
-    fontSize: Platform.select({ default: 14, web: 15 }),
+    fontSize: Platform.select({ default: 14, web: 16 }),
     fontWeight: "500" as any,
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 6,
-    letterSpacing: 0.2,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 8,
+    letterSpacing: 0.3,
     ...(Platform.OS === 'web' ? {
-      textShadow: '0 1px 4px rgba(0,0,0,0.35)',
+      textShadow: '0 1px 6px rgba(0,0,0,0.4)',
     } as any : {
       textShadowColor: 'rgba(0,0,0,0.4)',
       textShadowOffset: { width: 0, height: 1 },
@@ -513,22 +496,22 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
   },
   heroFavoriteBtn: {
     position: "absolute" as any,
-    top: Platform.select({ default: 12, web: 16 }),
-    right: Platform.select({ default: 12, web: 16 }),
+    top: Platform.select({ default: 14, web: 18 }),
+    right: Platform.select({ default: 14, web: 18 }),
     zIndex: 3,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: "center" as any,
     justifyContent: "center" as any,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.25)',
     ...(Platform.OS === 'web' ? {
       cursor: 'pointer',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      transition: 'all 0.25s ease',
+      backdropFilter: 'blur(16px)',
+      WebkitBackdropFilter: 'blur(16px)',
+      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     } as any : {}),
   },
   heroFavoriteBtnActive: {
@@ -583,37 +566,39 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
 
   descriptionContainer: {
     width: "100%",
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
     padding: Platform.select({
-      default: 18,
-      web: 24,
+      default: 0,
+      web: 0,
     }),
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...(Platform.OS === 'web' ? {
-      transition: 'border-color 0.2s ease',
-    } as any : {}),
-    ...(getShadowStyle(colors, 'light') as any),
+    paddingTop: Platform.select({
+      default: 4,
+      web: 8,
+    }),
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
 
   mobileInsightTabsWrapper: {
-    backgroundColor: colors.backgroundSecondary,
-    padding: DESIGN_TOKENS.spacing.lg,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: 'transparent',
+    padding: 0,
+    paddingTop: DESIGN_TOKENS.spacing.xs,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   mobileInsightLabel: {
     fontSize: DESIGN_TOKENS.typography.sizes.sm,
     fontWeight: "600",
     color: colors.text,
-    marginBottom: DESIGN_TOKENS.spacing.xs,
+    marginBottom: DESIGN_TOKENS.spacing.sm,
   },
   mobileInsightTabs: {
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
+    gap: 4,
   },
   mobileInsightChip: {
     flex: 1,
@@ -630,26 +615,26 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     borderBottomColor: colors.primary,
   },
   mobileInsightChipText: {
-    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontSize: 13,
     fontWeight: "500",
     color: colors.textMuted,
   },
   mobileInsightChipTextActive: {
-    color: colors.primaryText,
-    fontWeight: "700",
+    color: colors.text,
+    fontWeight: "600",
   },
   mobileInsightChipBadge: {
     fontSize: 10,
-    fontWeight: "600",
+    fontWeight: "500",
     color: colors.textMuted,
-    backgroundColor: colors.backgroundTertiary,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: 8,
     paddingHorizontal: 5,
     paddingVertical: 1,
     overflow: "hidden" as const,
   },
   mobileInsightChipBadgeActive: {
-    color: colors.primaryText,
+    color: colors.text,
     backgroundColor: colors.primarySoft,
   },
 

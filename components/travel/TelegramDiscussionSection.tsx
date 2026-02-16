@@ -79,23 +79,17 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   container: {
     width: '100%',
     backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderRadius: DESIGN_TOKENS.radii.md,
     padding: Platform.select({ default: DESIGN_TOKENS.spacing.lg, web: DESIGN_TOKENS.spacing.xl }),
     borderWidth: 1,
     borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      } as any,
-      default: colors.shadows.light,
-    }),
   },
   title: {
-    fontSize: Platform.select({ default: 18, web: 20 }),
-    fontWeight: '700',
+    fontSize: Platform.select({ default: 17, web: 18 }),
+    fontWeight: '600',
     color: colors.text,
     marginBottom: DESIGN_TOKENS.spacing.xs,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: 14,

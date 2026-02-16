@@ -388,14 +388,14 @@ function TravelHeroSectionInner({
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
-    // 70% высоты экрана для всех платформ
-    const target = winH * 0.7
-    if (Platform.OS === 'web' && !isMobile) return Math.max(320, Math.min(target, winH * 0.75))
-    if (!resolvedWidth) return isMobile ? Math.max(280, target) : Math.max(320, target)
+    // 55% высоты экрана — компактнее, но выразительно
+    const target = winH * 0.55
+    if (Platform.OS === 'web' && !isMobile) return Math.max(320, Math.min(target, winH * 0.6))
+    if (!resolvedWidth) return isMobile ? Math.max(260, target) : Math.max(320, target)
     if (isMobile) {
-      return Math.max(280, Math.min(target, winH * 0.75))
+      return Math.max(260, Math.min(target, winH * 0.6))
     }
-    return Math.max(320, Math.min(target, winH * 0.75))
+    return Math.max(320, Math.min(target, winH * 0.6))
   }, [isMobile, winH, resolvedWidth])
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []

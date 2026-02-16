@@ -391,19 +391,13 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   container: {
     width: '100%',
     backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
+    borderRadius: DESIGN_TOKENS.radii.md,
     padding: Platform.select({
       default: 20,
       web: 24,
     }),
     borderWidth: 1,
     borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      } as any,
-      default: DESIGN_TOKENS.shadowsNative.light,
-    }),
   },
   viewButtonInline: {
     marginLeft: 'auto',
@@ -483,14 +477,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       default: 28,
       web: 36,
     }),
-    borderWidth: 2.5,
-    borderColor: colors.primaryAlpha30,
-    ...Platform.select({
-      web: {
-        boxShadow: `0 0 0 3px ${colors.primarySoft}`,
-      } as any,
-      default: DESIGN_TOKENS.shadowsNative.light,
-    }),
+    borderWidth: 2,
+    borderColor: colors.borderLight,
   },
   avatarMobile: {
     width: 52,
@@ -527,33 +515,33 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     gap: DESIGN_TOKENS.spacing.xs,
   },
   socialChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: colors.primaryAlpha30,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 0,
+    borderColor: 'transparent',
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'all 0.15s ease' as any,
+        transition: 'background-color 0.15s ease' as any,
       },
     }),
   },
   socialChipPressed: {
-    backgroundColor: colors.primaryLight,
-    transform: [{ scale: 0.97 }],
+    backgroundColor: colors.backgroundTertiary,
+    transform: [{ scale: 0.98 }],
   },
   socialChipText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primaryText,
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textMuted,
   },
   authorName: {
-    fontSize: Platform.select({ default: 18, web: 20 }),
-    fontWeight: '700',
+    fontSize: Platform.select({ default: 17, web: 18 }),
+    fontWeight: '600',
     color: colors.text,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
   authorNameMobile: {
     fontSize: 17,
@@ -591,27 +579,21 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     alignItems: 'center',
     gap: DESIGN_TOKENS.spacing.sm,
     paddingVertical: Platform.select({
-      default: 12,
-      web: 14,
+      default: 10,
+      web: 12,
     }),
     paddingHorizontal: Platform.select({
-      default: 20,
-      web: 24,
+      default: 16,
+      web: 20,
     }),
     borderRadius: 999,
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 0,
+    borderColor: 'transparent',
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'all 0.2s ease' as any,
-        boxShadow: DESIGN_TOKENS.shadows.light,
-        ':hover': {
-          backgroundColor: colors.primary,
-          borderColor: colors.primary,
-          boxShadow: DESIGN_TOKENS.shadows.hover,
-        } as any,
+        transition: 'background-color 0.2s ease' as any,
       },
     }),
   },

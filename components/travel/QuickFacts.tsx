@@ -104,70 +104,53 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
     return null;
   }
 
+  const factItems: React.ReactNode[] = [];
+  const iconSize = Platform.select({ default: 14, web: 15 });
+  const iconColor = colors.textMuted;
+
+  if (whenLine) {
+    factItems.push(
+      <SafeView key="when" style={styles.factItem}>
+        <Feather name="calendar" size={iconSize} color={iconColor} />
+        <Text style={styles.factText}>{whenLine}</Text>
+      </SafeView>
+    );
+  }
+  if (daysText) {
+    factItems.push(
+      <SafeView key="days" style={styles.factItem}>
+        <Feather name="clock" size={iconSize} color={iconColor} />
+        <Text style={styles.factText}>{daysText}</Text>
+      </SafeView>
+    );
+  }
+  if (countryName) {
+    factItems.push(
+      <SafeView key="country" style={styles.factItem}>
+        <Feather name="map-pin" size={iconSize} color={iconColor} />
+        <Text style={styles.factText}>{countryName}</Text>
+      </SafeView>
+    );
+  }
+
   return (
     <SafeView 
       style={[
         styles.container,
         isMobile && styles.containerMobile,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.borderLight,
-        }
       ]}
       accessibilityLabel="Ключевая информация о путешествии"
     >
-      {/* Дата */}
-      {whenLine && (
-        <SafeView style={styles.factItem}>
-          <SafeView style={[styles.factIconWrap, { backgroundColor: colors.primarySoft }]}>
-            <Feather
-              name="calendar"
-              size={Platform.select({ default: 15, web: 16 })}
-              color={colors.primary}
-            />
-          </SafeView>
-          <Text style={[styles.factText, { color: colors.text }]}>{whenLine}</Text>
-        </SafeView>
-      )}
+      {factItems.map((item, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <Text style={styles.factDivider}>·</Text>}
+          {item}
+        </React.Fragment>
+      ))}
 
-      {/* Длительность */}
-      {daysText && (
-        <SafeView style={styles.factItem}>
-          <SafeView style={[styles.factIconWrap, { backgroundColor: colors.accentSoft }]}>
-            <Feather
-              name="clock"
-              size={Platform.select({ default: 15, web: 16 })}
-              color={colors.accent}
-            />
-          </SafeView>
-          <Text style={[styles.factText, { color: colors.text }]}>{daysText}</Text>
-        </SafeView>
-      )}
-
-      {/* Страна */}
-      {!!countryName && (
-        <SafeView style={styles.factItem}>
-          <SafeView style={[styles.factIconWrap, { backgroundColor: colors.successSoft }]}>
-            <Feather
-              name="map-pin"
-              size={Platform.select({ default: 15, web: 16 })}
-              color={colors.successDark}
-            />
-          </SafeView>
-          <Text style={[styles.factText, { color: colors.text }]}>{countryName}</Text>
-        </SafeView>
-      )}
-
-      {/* Категории */}
       {categories.length > 0 && (
         <SafeView style={[styles.factItem, styles.categoriesContainer]}>
-          <SafeView style={[styles.factIconWrap, { backgroundColor: colors.warningSoft }]}>
-            <Feather
-              name="tag"
-              size={Platform.select({ default: 15, web: 16 })}
-              color={colors.warningDark}
-            />
-          </SafeView>
+          <Feather name="tag" size={iconSize} color={iconColor} />
           <SafeView style={styles.categoriesWrap}>
             {categories.map((cat, index) => {
               const categoryRole = onCategoryPress ? 'button' : 'text';
@@ -178,19 +161,13 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
                 <Pressable
                   key={index}
                   onPress={() => onCategoryPress?.(cat)}
-                  style={[
-                    styles.categoryTag,
-                    {
-                      backgroundColor: colors.primarySoft,
-                      borderColor: colors.borderLight,
-                    }
-                  ]}
+                  style={styles.categoryTag}
                   disabled={!onCategoryPress}
                   accessibilityRole={categoryRole}
                   accessibilityLabel={categoryLabel}
                   {...(webA11yProps as any)}
                 >
-                <Text style={[styles.categoryText, { color: colors.primaryText }]}>{cat}</Text>
+                <Text style={styles.categoryText}>{cat}</Text>
                 </Pressable>
               );
             })}
@@ -207,92 +184,82 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: Platform.select({
-      default: 16,
-      web: 20,
+      default: 6,
+      web: 8,
     }),
     paddingVertical: Platform.select({
-      default: 18,
-      web: 20,
+      default: 12,
+      web: 14,
     }),
-    paddingHorizontal: Platform.select({
-      default: 16,
-      web: 20,
-    }),
-    backgroundColor: colors.surface,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...Platform.select({
-      web: {
-        boxShadow: colors.boxShadows.light,
-      } as any,
-      default: colors.shadows.light,
-    }),
+    paddingHorizontal: 0,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   containerMobile: {
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 0,
+    gap: 6,
   },
   factItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 2,
-  },
-  factIconWrap: {
-    width: Platform.select({ default: 32, web: 34 }),
-    height: Platform.select({ default: 32, web: 34 }),
-    borderRadius: Platform.select({ default: 8, web: 10 }),
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 0,
   },
   factText: {
     fontSize: Platform.select({
       default: 14,
       web: 15,
     }),
-    fontWeight: '600',
-    color: colors.text,
-    letterSpacing: -0.1,
+    fontWeight: '500',
+    color: colors.textMuted,
+    letterSpacing: 0,
+  },
+  factDivider: {
+    fontSize: Platform.select({ default: 16, web: 18 }),
+    color: colors.borderStrong,
+    marginHorizontal: Platform.select({ default: 4, web: 6 }),
+    lineHeight: Platform.select({ default: 18, web: 20 }),
   },
   categoriesContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
     minWidth: '100%',
-    marginTop: 4,
+    marginTop: 2,
   },
   categoriesWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
     flex: 1,
   },
   categoryTag: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.backgroundSecondary,
     paddingHorizontal: Platform.select({
-      default: 12,
-      web: 14,
+      default: 10,
+      web: 12,
     }),
     paddingVertical: Platform.select({
-      default: 5,
-      web: 6,
+      default: 4,
+      web: 5,
     }),
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.primaryAlpha30,
+    borderWidth: 0,
+    borderColor: 'transparent',
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'all 0.2s ease' as any,
+        transition: 'background-color 0.2s ease' as any,
       },
     }),
   },
   categoryText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primaryText,
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textMuted,
     letterSpacing: 0,
   },
 });

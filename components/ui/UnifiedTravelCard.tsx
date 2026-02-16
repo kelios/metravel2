@@ -22,6 +22,8 @@ type Props = {
   title: string;
   imageUrl?: string | null;
   metaText?: string | null;
+  rating?: number | null;
+  ratingCount?: number;
   onPress: () => void;
   onMediaPress?: () => void;
   mediaFit?: 'contain' | 'cover';
@@ -31,6 +33,7 @@ type Props = {
   leftTopSlot?: ReactNode;
   rightTopSlot?: ReactNode;
   bottomLeftSlot?: ReactNode;
+  bottomRightSlot?: ReactNode;
   containerOverlaySlot?: ReactNode;
   contentSlot?: ReactNode;
   mediaProps?: {
@@ -54,6 +57,8 @@ function UnifiedTravelCard({
   title,
   imageUrl,
   metaText,
+  rating: _rating,
+  ratingCount: _ratingCount,
   onPress,
   onMediaPress,
   mediaFit = 'contain',
@@ -63,6 +68,7 @@ function UnifiedTravelCard({
   leftTopSlot,
   rightTopSlot,
   bottomLeftSlot,
+  bottomRightSlot,
   containerOverlaySlot,
   contentSlot,
   mediaProps,
@@ -184,6 +190,12 @@ function UnifiedTravelCard({
           bottom: 10,
           zIndex: 10,
         },
+        bottomRightSlot: {
+          position: 'absolute',
+          right: 10,
+          bottom: 10,
+          zIndex: 10,
+        },
         badge: {
           position: 'absolute',
           top: 10,
@@ -198,10 +210,11 @@ function UnifiedTravelCard({
         },
         content: {
           paddingHorizontal: 12,
-          paddingVertical: 10,
+          paddingTop: 8,
+          paddingBottom: 10,
           backgroundColor: colors.surface,
-          gap: 8,
-          ...(isWeb ? { flex: 1 } : {}),
+          gap: 0,
+          ...(isWeb ? { flex: 0 } : {}),
         },
         title: {
           fontSize: 14,
@@ -355,6 +368,7 @@ function UnifiedTravelCard({
             </View>
           ) : null}
           {bottomLeftSlot ? <View style={styles.bottomLeftSlot}>{bottomLeftSlot}</View> : null}
+          {bottomRightSlot ? <View style={styles.bottomRightSlot}>{bottomRightSlot}</View> : null}
         </View>,
         contentSlot !== null ? (
           <View key="content" style={[styles.content, contentContainerStyle]}>

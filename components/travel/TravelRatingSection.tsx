@@ -1,8 +1,9 @@
 // components/travel/TravelRatingSection.tsx
 // ✅ Секция рейтинга на странице путешествия с возможностью оценки
+// 🎨 УЛУЧШЕНО: Анимация изменения рейтинга, улучшенная визуальная иерархия, success feedback
 
-import React, { memo, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Platform, Animated } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
 import { useTravelRating } from '@/hooks/useTravelRating';
@@ -28,6 +29,12 @@ function TravelRatingSection({
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    // 🎨 Анимация для изменения рейтинга
+    const ratingChangeAnim = useRef(new Animated.Value(1)).current;
+    const successPulseAnim = useRef(new Animated.Value(0)).current;
+    const [showSuccess, setShowSuccess] = useState(false);
+    const prevRatingRef = useRef<number | null>(null);
+
     const {
         rating,
         ratingCount,
@@ -43,6 +50,45 @@ function TravelRatingSection({
         initialUserRating,
         enabled: !!travelId,
     });
+
+    // 🎨 Анимация при изменении общего рейтинга
+    useEffect(() => {
+        if (prevRatingRef.current !== null && rating !== prevRatingRef.current && rating !== null) {
+            Animated.sequence([
+                Animated.timing(ratingChangeAnim, {
+                    toValue: 1.1,
+                    duration: 200,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(ratingChangeAnim, {
+                    toValue: 1,
+                    duration: 200,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        }
+        prevRatingRef.current = rating;
+    }, [rating, ratingChangeAnim]);
+
+    // 🎨 Success feedback после сохранения оценки
+    useEffect(() => {
+        if (!isSubmitting && userRating !== null && userRating > 0) {
+            setShowSuccess(true);
+            Animated.sequence([
+                Animated.timing(successPulseAnim, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                Animated.delay(2000),
+                Animated.timing(successPulseAnim, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+            ]).start(() => setShowSuccess(false));
+        }
+    }, [isSubmitting, userRating, successPulseAnim]);
 
     if (compact) {
         return (
@@ -79,7 +125,13 @@ function TravelRatingSection({
             </View>
 
             <View style={styles.contentRow}>
-                <View style={styles.summaryBox}>
+                <Animated.View
+                    style={[
+                        styles.summaryBox,
+                        { transform: [{ scale: ratingChangeAnim }] }
+                    ]}
+                >
+                    <Text style={styles.boxLabel}>Общий рейтинг</Text>
                     <StarRating
                         rating={rating}
                         ratingCount={ratingCount}
@@ -87,13 +139,13 @@ function TravelRatingSection({
                         showValue
                         showCount={false}
                     />
-                </View>
+                </Animated.View>
 
                 <View style={styles.userBox}>
                     {canRate ? (
                         <>
                             <Text style={styles.rateLabel}>
-                                {userRating != null && userRating > 0 ? `Ваша оценка: ${userRating}` : 'Оцените'}
+                                {userRating != null && userRating > 0 ? 'Ваша оценка' : 'Оцените маршрут'}
                             </Text>
                             <StarRating
                                 rating={userRating ?? 0}
@@ -106,10 +158,28 @@ function TravelRatingSection({
                                 showCount={false}
                             />
                             {isSubmitting && (
-                                <Text style={styles.savingText}>Сохранение...</Text>
+                                <View style={styles.statusRow}>
+                                    <View style={styles.spinner} />
+                                    <Text style={styles.savingText}>Сохранение...</Text>
+                                </View>
                             )}
-                            {!isSubmitting && isLoading && (
-                                <Text style={styles.loadingText}>Загрузка...</Text>
+                            {!isSubmitting && showSuccess && (
+                                <Animated.View
+                                    style={[
+                                        styles.successRow,
+                                        {
+                                            opacity: successPulseAnim,
+                                            transform: [{
+                                                translateY: successPulseAnim.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [10, 0],
+                                                })
+                                            }]
+                                        }
+                                    ]}
+                                >
+                                    <Text style={styles.successText}>✓ Спасибо за оценку!</Text>
+                                </Animated.View>
                             )}
                         </>
                     ) : (
@@ -135,16 +205,10 @@ const createStyles = (colors: any) =>
     StyleSheet.create({
         container: {
             backgroundColor: colors.surface,
-            borderRadius: 12,
+            borderRadius: DESIGN_TOKENS.radii.md,
             padding: 16,
             borderWidth: 1,
             borderColor: colors.borderLight,
-            ...Platform.select({
-                web: {
-                    boxShadow: DESIGN_TOKENS.shadows.card,
-                } as any,
-                default: {},
-            }),
         },
         compactContainer: {
             flexDirection: 'row',
@@ -160,7 +224,7 @@ const createStyles = (colors: any) =>
         },
         title: {
             fontSize: 16,
-            fontWeight: '700',
+            fontWeight: '600',
             color: colors.text,
         },
         countText: {
@@ -178,40 +242,73 @@ const createStyles = (colors: any) =>
             flexGrow: 1,
             flexShrink: 1,
             minWidth: 160,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 12,
+            paddingVertical: 14,
+            paddingHorizontal: 14,
+            borderRadius: DESIGN_TOKENS.radii.sm,
             backgroundColor: colors.backgroundSecondary,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
+            borderWidth: 0,
+            borderColor: 'transparent',
+            gap: 10,
+        },
+        boxLabel: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: colors.textMuted,
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
         },
         userBox: {
             flexGrow: 1,
             flexShrink: 1,
             minWidth: 200,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 12,
+            paddingVertical: 14,
+            paddingHorizontal: 14,
+            borderRadius: DESIGN_TOKENS.radii.sm,
             backgroundColor: colors.backgroundSecondary,
-            borderWidth: 1,
-            borderColor: colors.borderLight,
+            borderWidth: 0,
+            borderColor: 'transparent',
             alignItems: 'flex-start',
-            gap: 8,
+            gap: 10,
         },
         rateLabel: {
-            fontSize: 14,
+            fontSize: 12,
+            fontWeight: '600',
             color: colors.textMuted,
-            marginBottom: 4,
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+        },
+        statusRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 4,
+        },
+        spinner: {
+            width: 12,
+            height: 12,
+            borderRadius: 6,
+            borderWidth: 2,
+            borderColor: colors.primary,
+            borderTopColor: 'transparent',
+            ...Platform.select({
+                web: {
+                    animation: 'spin 1s linear infinite',
+                } as any,
+                default: {},
+            }),
         },
         savingText: {
-            fontSize: 12,
+            fontSize: 13,
             color: colors.primary,
+            fontWeight: '500',
+        },
+        successRow: {
             marginTop: 4,
         },
-        loadingText: {
-            fontSize: 12,
-            color: colors.textMuted,
-            marginTop: 4,
+        successText: {
+            fontSize: 13,
+            color: '#10b981',
+            fontWeight: '600',
         },
         loginHint: {
             fontSize: 14,
