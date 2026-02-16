@@ -60,6 +60,9 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const [currentIndex, setCurrentIndex] = useState(0)
   const prefetchEnabledRef = useRef(Platform.OS !== 'web')
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isDraggingRef = useRef(false)
+  const dragStartXRef = useRef(0)
+  const dragScrollLeftRef = useRef(0)
   const firstSlideStableKeyRef = useRef<string | null>(null)
   const firstSlideStableUriRef = useRef<string | null>(null)
   const firstSlideLockedRef = useRef(true)
@@ -235,7 +238,16 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const scrollTo = useCallback(
     (i: number, animated = true) => {
       const wrapped = clamp(i, 0, images.length - 1)
-      scrollRef.current?.scrollTo?.({ x: wrapped * containerW, y: 0, animated })
+      const raw = scrollRef.current as any
+      const node: HTMLElement | null =
+        raw?._nativeNode || raw?._domNode || raw
+      if (node && typeof node.scrollTo === 'function') {
+        node.scrollTo({
+          left: wrapped * containerW,
+          top: 0,
+          behavior: animated ? 'smooth' : 'instant',
+        })
+      }
       setActiveIndex(wrapped)
     },
     [containerW, images.length, setActiveIndex]
@@ -287,9 +299,13 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   }, [])
 
   useEffect(() => {
-    const x = indexRef.current * (containerW || 0)
-    if (!Number.isFinite(x) || x <= 0) return
-    scrollRef.current?.scrollTo?.({ x, y: 0, animated: false })
+    const left = indexRef.current * (containerW || 0)
+    if (!Number.isFinite(left) || left <= 0) return
+    const raw = scrollRef.current as any
+    const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
+    if (node && typeof node.scrollTo === 'function') {
+      node.scrollTo({ left, top: 0, behavior: 'instant' })
+    }
   }, [containerW])
 
   const keyExtractor = useCallback(
@@ -385,6 +401,77 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       parent.removeEventListener('keydown', handleKeyDown)
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw = scrollRef.current as any
+    const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
+    if (!node || typeof node.addEventListener !== 'function') return
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return
+      isDraggingRef.current = true
+      dragStartXRef.current = e.pageX
+      dragScrollLeftRef.current = node.scrollLeft
+      node.style.cursor = 'grabbing'
+      node.style.scrollSnapType = 'none'
+      node.style.userSelect = 'none'
+    }
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return
+      e.preventDefault()
+      const dx = e.pageX - dragStartXRef.current
+      node.scrollLeft = dragScrollLeftRef.current - dx
+    }
+    const snapToSlide = (targetIdx: number) => {
+      const cw = containerWRef.current || 1
+      // Set scroll position synchronously, then re-enable snap after
+      // the browser has painted the new position (double-rAF).
+      node.scrollLeft = targetIdx * cw
+      setActiveIndex(targetIdx)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          node.style.scrollSnapType = 'x mandatory'
+        })
+      })
+    }
+    const onMouseUp = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return
+      isDraggingRef.current = false
+      node.style.cursor = ''
+      node.style.userSelect = ''
+      const dx = e.pageX - dragStartXRef.current
+      const cw = containerWRef.current || 1
+      const cur = indexRef.current
+      const threshold = cw * 0.15
+      let target = cur
+      if (dx < -threshold) target = cur + 1
+      else if (dx > threshold) target = cur - 1
+      target = clamp(target, 0, Math.max(0, images.length - 1))
+      snapToSlide(target)
+    }
+    const onMouseLeave = () => {
+      if (!isDraggingRef.current) return
+      isDraggingRef.current = false
+      node.style.cursor = ''
+      node.style.userSelect = ''
+      const cw = containerWRef.current || 1
+      const idx = Math.round(node.scrollLeft / cw)
+      const target = clamp(idx, 0, Math.max(0, images.length - 1))
+      snapToSlide(target)
+    }
+
+    node.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    node.addEventListener('mouseleave', onMouseLeave)
+    return () => {
+      node.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+      node.removeEventListener('mouseleave', onMouseLeave)
+    }
+  }, [images.length, setActiveIndex])
 
   if (!images.length) return null
 
@@ -545,6 +632,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     scrollView: {
       flex: 1,
+      ...(Platform.OS === 'web' ? ({ cursor: 'grab' } as any) : {}),
     },
     scrollSnap: Platform.OS === 'web'
       ? ({
