@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import type { ImageContentFit } from 'expo-image';
 import type { ImageProps as ExpoImageProps } from 'expo-image';
@@ -39,12 +39,23 @@ const WebMainImage = memo(function WebMainImage({
   onLoad,
   onError,
 }: WebMainImageProps) {
+  const imgRef = useRef<HTMLImageElement>(null);
   const handleLoad = useCallback(() => {
     onLoad?.();
   }, [onLoad]);
 
+  // Handle race condition: image may already be cached/complete before
+  // React attaches the onLoad handler, so onLoad never fires.
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img && img.complete && img.naturalWidth > 0 && !loaded) {
+      handleLoad();
+    }
+  }, [src, loaded, handleLoad]);
+
   return (
     <img
+      ref={imgRef}
       src={src}
       alt={alt}
       width={width}

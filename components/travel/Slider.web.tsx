@@ -3,6 +3,7 @@ import React, {
   useCallback,
   useEffect,
   useImperativeHandle,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -51,6 +52,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const insets = useSafeAreaInsets()
   const { width: winW, height: winH, isPhone, isLargePhone } = useResponsive()
   const isMobile = isPhone || isLargePhone
+  const sliderInstanceId = useId()
 
   const [containerW, setContainerW] = useState(winW)
   const containerWRef = useRef(winW)
@@ -67,24 +69,34 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const firstSlideStableUriRef = useRef<string | null>(null)
   const firstSlideLockedRef = useRef(true)
 
+  const getWrapperNode = useCallback((): HTMLElement | null => {
+    const raw = wrapperRef.current as any
+    const node = (raw?._nativeNode || raw?._domNode || raw) as HTMLElement | null
+    if (node && typeof node.getBoundingClientRect === 'function') return node
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      return document.querySelector(
+        `[data-testid="slider-wrapper"][data-slider-instance="${sliderInstanceId}"]`
+      ) as HTMLElement | null
+    }
+    return null
+  }, [sliderInstanceId])
+
   const syncContainerWidthFromDom = useCallback(() => {
     if (Platform.OS !== 'web') return
-    const raw = wrapperRef.current as any
-    const node = raw?._nativeNode || raw?._domNode || raw
-    const w = node?.getBoundingClientRect?.()?.width
+    const node = getWrapperNode()
+    const w = node?.getBoundingClientRect?.()?.width ?? 0
     if (!Number.isFinite(w) || w <= 0) return
     if (Math.abs(containerWRef.current - w) > 4) {
       containerWRef.current = w
       setContainerW(w)
     }
-  }, [])
+  }, [getWrapperNode])
 
   useEffect(() => {
     if (Platform.OS !== 'web') return
     syncContainerWidthFromDom()
 
-    const raw = wrapperRef.current as any
-    const node = raw?._nativeNode || raw?._domNode || raw
+    const node = getWrapperNode()
     if (!node) return
 
     const canUseResizeObserver =
@@ -235,22 +247,43 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     [images.length, onIndexChanged, warmNeighbors]
   )
 
+  const getScrollNode = useCallback((): HTMLElement | null => {
+    const raw = scrollRef.current as any
+    const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
+    if (node && typeof node.scrollTo === 'function') return node
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      // Scope DOM fallback to the current slider instance.
+      return document.querySelector(
+        `[data-testid="slider-scroll"][data-slider-instance="${sliderInstanceId}"]`
+      ) as HTMLElement | null
+    }
+    return node && typeof node.scrollTo === 'function' ? node : null
+  }, [sliderInstanceId])
+
   const scrollTo = useCallback(
-    (i: number, animated = true) => {
+    (i: number, _animated = true) => {
       const wrapped = clamp(i, 0, images.length - 1)
-      const raw = scrollRef.current as any
-      const node: HTMLElement | null =
-        raw?._nativeNode || raw?._domNode || raw
-      if (node && typeof node.scrollTo === 'function') {
-        node.scrollTo({
-          left: wrapped * containerW,
-          top: 0,
-          behavior: animated ? 'smooth' : 'instant',
-        })
+      const node = getScrollNode()
+      if (node) {
+        const left = wrapped * containerW
+        if (Platform.OS === 'web') {
+          // scroll-snap-type blocks programmatic scrollTo in Chromium.
+          // Temporarily disable, scroll, then re-enable after paint.
+          // scrollSnapType is managed via DOM only (not in React styles)
+          // so React re-renders won't re-apply it.
+          node.style.scrollSnapType = 'none'
+          void node.offsetHeight
+          node.scrollTo({ left, top: 0, behavior: 'instant' })
+          requestAnimationFrame(() => {
+            node.style.scrollSnapType = 'x mandatory'
+          })
+        } else {
+          node.scrollTo({ left, top: 0, behavior: _animated ? 'smooth' : 'instant' })
+        }
       }
       setActiveIndex(wrapped)
     },
-    [containerW, images.length, setActiveIndex]
+    [containerW, getScrollNode, images.length, setActiveIndex]
   )
 
   const next = useCallback(() => {
@@ -301,12 +334,28 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   useEffect(() => {
     const left = indexRef.current * (containerW || 0)
     if (!Number.isFinite(left) || left <= 0) return
-    const raw = scrollRef.current as any
-    const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
-    if (node && typeof node.scrollTo === 'function') {
-      node.scrollTo({ left, top: 0, behavior: 'instant' })
+    const node = getScrollNode()
+    if (node) {
+      if (Platform.OS === 'web') {
+        node.style.scrollSnapType = 'none'
+        void node.offsetHeight
+        node.scrollTo({ left, top: 0, behavior: 'instant' })
+        requestAnimationFrame(() => {
+          node.style.scrollSnapType = 'x mandatory'
+        })
+      } else {
+        node.scrollTo({ left, top: 0, behavior: 'instant' })
+      }
     }
-  }, [containerW])
+  }, [containerW, getScrollNode])
+
+  // Apply scroll-snap-type via DOM (not React styles) so React re-renders
+  // don't re-apply it and interfere with programmatic scrollTo.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    const node = getScrollNode()
+    if (node) node.style.scrollSnapType = 'x mandatory'
+  }, [getScrollNode])
 
   const keyExtractor = useCallback(
     (it: SliderImage, index: number) =>
@@ -369,15 +418,14 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = setTimeout(() => {
         // Read scrollLeft at idle time (not at event time) so containerW is current
-        const raw = scrollRef.current as any
-        const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
+        const node = getScrollNode()
         const x = node?.scrollLeft ?? 0
         const cw = containerWRef.current || 1
         const idx = Math.round(x / cw)
         setActiveIndex(idx)
       }, 80)
     },
-    [enablePrefetch, setActiveIndex]
+    [enablePrefetch, getScrollNode, setActiveIndex]
   )
 
   const nextRef = useRef(next)
@@ -394,23 +442,21 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         nextRef.current()
       }
     }
-    const wrapper = scrollRef.current as any
-    const node = wrapper?._nativeNode || wrapper?._domNode || wrapper
-    if (!node || typeof node.addEventListener !== 'function') return
-    const parent = node.closest?.('[data-testid="slider-wrapper"]') || node.parentElement?.parentElement
+    const node = getScrollNode()
+    if (!node) return
+    const parent = (node.closest?.('[data-testid="slider-wrapper"]') || node.parentElement?.parentElement) as HTMLElement | null
     if (!parent) return
     parent.setAttribute('tabindex', '0')
-    parent.addEventListener('keydown', handleKeyDown)
+    parent.addEventListener('keydown', handleKeyDown as EventListener)
     return () => {
-      parent.removeEventListener('keydown', handleKeyDown)
+      parent.removeEventListener('keydown', handleKeyDown as EventListener)
     }
   }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const raw = scrollRef.current as any
-    const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
-    if (!node || typeof node.addEventListener !== 'function') return
+    const node = getScrollNode()
+    if (!node) return
 
     const onMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return
@@ -497,6 +543,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       <View
         ref={wrapperRef}
         testID="slider-wrapper"
+        dataSet={{ sliderInstance: sliderInstanceId }}
         onLayout={Platform.OS === 'web' ? undefined : onLayout}
         style={[
           styles.wrapper,
@@ -510,6 +557,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           <ScrollView
             ref={scrollRef}
             horizontal
+            dataSet={{ sliderInstance: sliderInstanceId }}
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={100}
@@ -652,13 +700,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     scrollSnap: Platform.OS === 'web'
       ? ({
-          scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch',
           willChange: 'scroll-position',
           touchAction: 'pan-x pan-y',
           overflowX: 'auto',
           overflowY: 'hidden',
-          scrollBehavior: 'smooth',
         } as any)
       : {},
     scrollContent: {
