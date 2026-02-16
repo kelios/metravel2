@@ -33,6 +33,26 @@ const extractFirstImgSrc = (html: string): string | null => {
   return m?.[1] ?? null;
 };
 
+const OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
+
+const stripOptimizationParams = (urlStr: string): string => {
+  try {
+    const u = new URL(urlStr, 'https://metravel.by');
+    let changed = false;
+    for (const p of OPTIMIZATION_PARAMS) {
+      if (u.searchParams.has(p)) {
+        u.searchParams.delete(p);
+        changed = true;
+      }
+    }
+    if (!changed) return urlStr;
+    const clean = u.toString();
+    return clean.endsWith('?') ? clean.slice(0, -1) : clean;
+  } catch {
+    return urlStr;
+  }
+};
+
 const buildWeservProxyUrl = (src: string) => {
   try {
     const trimmed = String(src || '').trim();
@@ -53,7 +73,10 @@ const buildWeservProxyUrl = (src: string) => {
         return u.toString();
       } catch { return normalized; }
     }
-    const withoutScheme = trimmed.replace(/^https?:\/\//i, '');
+    // Strip optimization params the origin server doesn't understand (w, h, q, f, fit, auto, etc.)
+    // before proxying through weserv.nl — otherwise the origin returns 404.
+    const cleaned = stripOptimizationParams(normalized);
+    const withoutScheme = cleaned.replace(/^https?:\/\//i, '');
     return `https://images.weserv.nl/?url=${encodeURIComponent(withoutScheme)}&w=${targetW}&q=60&output=webp&fit=inside`;
   } catch {
     return null;
