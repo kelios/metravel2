@@ -94,6 +94,11 @@ export function optimizeImageUrl(
   const clampedQuality = Math.max(1, Math.min(100, Number.isFinite(quality as any) ? (quality as number) : 85))
 
   try {
+    // Skip if the URL is already proxied through images.weserv.nl (avoid double-optimization)
+    if (originalUrl.includes('images.weserv.nl')) {
+      return originalUrl;
+    }
+
     const cacheKey = `${originalUrl}:${width ?? ''}:${height ?? ''}:${clampedQuality}:${format}:${dpr}:${fit}:${blur ?? ''}`;
     if (optimizedUrlCache.has(cacheKey)) {
       return optimizedUrlCache.get(cacheKey);
@@ -169,6 +174,10 @@ export function optimizeImageUrl(
       }
 
       if (Platform.OS === 'web' && !isPrivateOrLocalHost(String(url.hostname || ''))) {
+        // Strip existing optimization params from the inner URL before proxying.
+        // The origin server doesn't understand them and returns 400/404.
+        const OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
+        for (const p of OPTIMIZATION_PARAMS) url.searchParams.delete(p);
         const withoutScheme = url.toString().replace(/^https?:\/\//i, '');
         url = new URL('https://images.weserv.nl/');
         url.searchParams.set('url', withoutScheme);

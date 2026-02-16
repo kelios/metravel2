@@ -3,7 +3,7 @@
 // 🎨 УЛУЧШЕНО: Анимация изменения рейтинга, улучшенная визуальная иерархия, success feedback
 
 import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import StarRating from '@/components/ui/StarRating';
 import { useTravelRating } from '@/hooks/useTravelRating';
@@ -32,6 +32,7 @@ function TravelRatingSection({
     // 🎨 Анимация для изменения рейтинга
     const ratingChangeAnim = useRef(new Animated.Value(1)).current;
     const successPulseAnim = useRef(new Animated.Value(0)).current;
+    const spinAnim = useRef(new Animated.Value(0)).current;
     const [showSuccess, setShowSuccess] = useState(false);
     const prevRatingRef = useRef<number | null>(null);
 
@@ -69,6 +70,23 @@ function TravelRatingSection({
         }
         prevRatingRef.current = rating;
     }, [rating, ratingChangeAnim]);
+
+    // Spinner rotation animation
+    useEffect(() => {
+        if (!isSubmitting) {
+            spinAnim.setValue(0);
+            return;
+        }
+        const loop = Animated.loop(
+            Animated.timing(spinAnim, {
+                toValue: 1,
+                duration: 800,
+                useNativeDriver: true,
+            }),
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [isSubmitting, spinAnim]);
 
     // 🎨 Success feedback после сохранения оценки
     useEffect(() => {
@@ -159,7 +177,7 @@ function TravelRatingSection({
                             />
                             {isSubmitting && (
                                 <View style={styles.statusRow}>
-                                    <View style={styles.spinner} />
+                                    <Animated.View style={[styles.spinner, { transform: [{ rotate: spinAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]} />
                                     <Text style={styles.savingText}>Сохранение...</Text>
                                 </View>
                             )}
@@ -290,12 +308,6 @@ const createStyles = (colors: any) =>
             borderWidth: 2,
             borderColor: colors.primary,
             borderTopColor: 'transparent',
-            ...Platform.select({
-                web: {
-                    animation: 'spin 1s linear infinite',
-                } as any,
-                default: {},
-            }),
         },
         savingText: {
             fontSize: 13,
