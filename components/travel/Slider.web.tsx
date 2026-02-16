@@ -2,8 +2,8 @@ import React, {
   memo,
   useCallback,
   useEffect,
-  useImperativeHandle,
   useId,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -28,6 +28,18 @@ import {
 } from './sliderParts/utils'
 
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types'
+
+// Inject CSS class for disabling scroll-snap during programmatic scrolling.
+// Using !important so RNW inline style reconciliation can't override it.
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const STYLE_ID = 'slider-snap-override'
+  if (!document.getElementById(STYLE_ID)) {
+    const style = document.createElement('style')
+    style.id = STYLE_ID
+    style.textContent = '.slider-snap-disabled { scroll-snap-type: none !important; }'
+    document.head.appendChild(style)
+  }
+}
 
 const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const colors = useThemedColors()
@@ -70,15 +82,14 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const firstSlideLockedRef = useRef(true)
 
   const getWrapperNode = useCallback((): HTMLElement | null => {
-    const raw = wrapperRef.current as any
-    const node = (raw?._nativeNode || raw?._domNode || raw) as HTMLElement | null
-    if (node && typeof node.getBoundingClientRect === 'function') return node
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       return document.querySelector(
         `[data-testid="slider-wrapper"][data-slider-instance="${sliderInstanceId}"]`
       ) as HTMLElement | null
     }
-    return null
+    const raw = wrapperRef.current as any
+    const node = (raw?._nativeNode || raw?._domNode || raw) as HTMLElement | null
+    return node && typeof node.getBoundingClientRect === 'function' ? node : null
   }, [sliderInstanceId])
 
   const syncContainerWidthFromDom = useCallback(() => {
@@ -248,15 +259,15 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   )
 
   const getScrollNode = useCallback((): HTMLElement | null => {
-    const raw = scrollRef.current as any
-    const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
-    if (node && typeof node.scrollTo === 'function') return node
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
-      // Scope DOM fallback to the current slider instance.
+      // RNW ScrollView is a function component — _nativeNode/_domNode don't
+      // exist on the ref. Query the DOM directly using testID + instance id.
       return document.querySelector(
         `[data-testid="slider-scroll"][data-slider-instance="${sliderInstanceId}"]`
       ) as HTMLElement | null
     }
+    const raw = scrollRef.current as any
+    const node: HTMLElement | null = raw?._nativeNode || raw?._domNode || raw
     return node && typeof node.scrollTo === 'function' ? node : null
   }, [sliderInstanceId])
 
@@ -264,22 +275,34 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (i: number, _animated = true) => {
       const wrapped = clamp(i, 0, images.length - 1)
       const node = getScrollNode()
-      if (node) {
+      if (node && Platform.OS === 'web') {
         const left = wrapped * containerW
-        if (Platform.OS === 'web') {
-          // scroll-snap-type blocks programmatic scrollTo in Chromium.
-          // Temporarily disable, scroll, then re-enable after paint.
-          // scrollSnapType is managed via DOM only (not in React styles)
-          // so React re-renders won't re-apply it.
-          node.style.scrollSnapType = 'none'
-          void node.offsetHeight
-          node.scrollTo({ left, top: 0, behavior: 'instant' })
+        // scroll-snap-type blocks programmatic scrollTo in Chromium.
+        // Use a CSS class with !important to override RNW inline styles,
+        // since RNW re-applies inline styles on every React re-render.
+        node.classList.add('slider-snap-disabled')
+        void node.offsetHeight
+        node.scrollLeft = left
+        // 1) Update React state — this triggers a re-render that may reset
+        //    scrollLeft, but snap is still disabled via the CSS class so the
+        //    browser won't snap to 0.
+        setActiveIndex(wrapped)
+        // 2) After React re-render, re-apply scroll position and remove class.
+        //    Triple-rAF ensures: frame 1 = React commit, frame 2 = browser
+        //    layout, frame 3 = safe to restore snap.
+        requestAnimationFrame(() => {
+          node.scrollLeft = left
           requestAnimationFrame(() => {
-            node.style.scrollSnapType = 'x mandatory'
+            node.scrollLeft = left
+            requestAnimationFrame(() => {
+              node.classList.remove('slider-snap-disabled')
+            })
           })
-        } else {
-          node.scrollTo({ left, top: 0, behavior: _animated ? 'smooth' : 'instant' })
-        }
+        })
+        return
+      }
+      if (node) {
+        node.scrollTo({ left: wrapped * containerW, top: 0, behavior: _animated ? 'smooth' : 'auto' })
       }
       setActiveIndex(wrapped)
     },
@@ -337,25 +360,23 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     const node = getScrollNode()
     if (node) {
       if (Platform.OS === 'web') {
-        node.style.scrollSnapType = 'none'
+        node.classList.add('slider-snap-disabled')
         void node.offsetHeight
-        node.scrollTo({ left, top: 0, behavior: 'instant' })
+        node.scrollLeft = left
         requestAnimationFrame(() => {
-          node.style.scrollSnapType = 'x mandatory'
+          node.scrollLeft = left
+          requestAnimationFrame(() => {
+            node.scrollLeft = left
+            requestAnimationFrame(() => {
+              node.classList.remove('slider-snap-disabled')
+            })
+          })
         })
       } else {
         node.scrollTo({ left, top: 0, behavior: 'instant' })
       }
     }
   }, [containerW, getScrollNode])
-
-  // Apply scroll-snap-type via DOM (not React styles) so React re-renders
-  // don't re-apply it and interfere with programmatic scrollTo.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return
-    const node = getScrollNode()
-    if (node) node.style.scrollSnapType = 'x mandatory'
-  }, [getScrollNode])
 
   const keyExtractor = useCallback(
     (it: SliderImage, index: number) =>
@@ -543,7 +564,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       <View
         ref={wrapperRef}
         testID="slider-wrapper"
-        dataSet={{ sliderInstance: sliderInstanceId }}
+        {...(Platform.OS === 'web' ? { dataSet: { sliderInstance: sliderInstanceId } } as any : {})}
         onLayout={Platform.OS === 'web' ? undefined : onLayout}
         style={[
           styles.wrapper,
@@ -557,7 +578,6 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
           <ScrollView
             ref={scrollRef}
             horizontal
-            dataSet={{ sliderInstance: sliderInstanceId }}
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             scrollEventThrottle={100}
@@ -568,6 +588,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             }}
             onScroll={handleScroll}
             testID="slider-scroll"
+            {...(Platform.OS === 'web' ? { dataSet: { sliderInstance: sliderInstanceId } } as any : {})}
           >
             {images.map((item, index) => {
               const renderWindow = isMobile ? 2 : 3
@@ -700,6 +721,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     scrollSnap: Platform.OS === 'web'
       ? ({
+          scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch',
           willChange: 'scroll-position',
           touchAction: 'pan-x pan-y',
