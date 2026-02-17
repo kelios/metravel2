@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3.9.0';
+const CACHE_VERSION = 'v3.10.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -9,7 +9,6 @@ const STATIC_ASSETS = [
   '/favicon.ico',
 ];
 
-// Критичні JS chunks для travel pages (будуть prefetch при першому візиті)
 const CRITICAL_JS_CHUNKS = [
   'TravelDetailsContainer',
   'GallerySection',

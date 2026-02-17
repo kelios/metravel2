@@ -57,6 +57,8 @@ export default class ErrorBoundary extends Component<Props, State> {
         msg.includes('iterable') ||
         msg.includes('is not iterable') ||
         msg.includes('spread') ||
+        /Minified React error #130/i.test(msg) ||
+        /Element type is invalid.*expected a string.*but got.*undefined/i.test(msg) ||
         /loading module.*failed/i.test(msg) ||
         /failed to fetch dynamically imported module/i.test(msg) ||
         /ChunkLoadError/i.test(msg) ||
@@ -133,11 +135,14 @@ export default class ErrorBoundary extends Component<Props, State> {
               <Button
                 label="Перезагрузить страницу"
                 onPress={() => {
-                  // Force bypass SW + HTTP cache on manual reload
-                  const purge = typeof caches !== 'undefined'
-                    ? caches.keys().then((ks) => Promise.all(ks.filter((k) => k.includes('js')).map((k) => caches.delete(k))))
+                  // Unregister SW + purge all caches to break stale chunk cycle
+                  const unregSW = 'serviceWorker' in navigator
+                    ? navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))
                     : Promise.resolve();
-                  purge.catch(() => {}).finally(() => { location.reload(); });
+                  const purge = typeof caches !== 'undefined'
+                    ? caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k))))
+                    : Promise.resolve();
+                  Promise.all([unregSW, purge]).catch(() => {}).finally(() => { location.reload(); });
                 }}
                 variant="ghost"
                 style={[styles.button, styles.secondaryButton]}

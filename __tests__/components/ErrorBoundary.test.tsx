@@ -163,6 +163,8 @@ describe('ErrorBoundary', () => {
       'ChunkLoadError: Loading chunk 42 failed.',
       'Spread syntax requires ...iterable not be null or undefined',
       'someValue is not iterable',
+      'Minified React error #130; visit https://react.dev/errors/130?args[]=undefined&args[]= for the full message',
+      'Element type is invalid: expected a string (for built-in components) or a class/function but got: undefined',
     ];
 
     it.each(staleChunkMessages)(
