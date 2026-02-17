@@ -52,7 +52,7 @@ function HomeScreen() {
         return isHomePath;
     }, [isHomePath]);
 
-    const title = 'Твоя книга путешествий | Metravel';
+    const title = 'Твоя книга путешествий по Беларуси и миру | Metravel';
     const description = 'Metravel — сервис для путешественников. Добавляй поездки, фото и заметки, делись маршрутами и собирай красивую книгу путешествий в PDF.';
 
     // Before hydration or when URL is not home: render nothing.

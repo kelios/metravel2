@@ -153,10 +153,16 @@ export function optimizeImageUrl(
       const host = String(url.hostname || '').trim().toLowerCase();
       if (!host) return false;
       if (isPrivateOrLocalHost(host)) return false;
-      if (host === 'metravel.by') return true;
-      if (host === 'cdn.metravel.by') return true;
-      if (host === 'api.metravel.by') return true;
       if (host === 'images.weserv.nl') return true;
+      // metravel.by backend does NOT support on-the-fly image resizing via
+      // query params (?w=&h=&q=&f=).  For image paths we must proxy through
+      // images.weserv.nl so the resize actually happens server-side.
+      if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
+        const p = url.pathname.toLowerCase();
+        const isImagePath = /^\/(travel-image|gallery|uploads|media)\//i.test(p);
+        if (isImagePath) return false; // → will be proxied via weserv.nl
+        return true; // non-image paths (static assets, etc.) keep direct params
+      }
       return false;
     })();
 
