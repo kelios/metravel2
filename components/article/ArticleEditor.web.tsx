@@ -142,6 +142,67 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
     const lastForceSyncedContentRef = useRef<string>('');
     const lastSanitizedForceSyncRef = useRef<{ raw: string; clean: string } | null>(null);
 
+    const anchorInputRef = useRef<any>(null);
+    const linkInputRef = useRef<any>(null);
+
+    const blurActiveElement = useCallback(() => {
+        if (!isWeb || !win) return;
+        try {
+            const el = win.document?.activeElement as any;
+            if (el && typeof el.blur === 'function') el.blur();
+        } catch {
+            // noop
+        }
+    }, []);
+
+    const focusAnchorInput = useCallback(() => {
+        if (!isWeb) return;
+        blurActiveElement();
+        const schedule = (fn: () => void) => {
+            if (typeof win?.requestAnimationFrame === 'function') {
+                win.requestAnimationFrame(fn);
+                return;
+            }
+            setTimeout(fn, 0);
+        };
+        schedule(() => {
+            try {
+                anchorInputRef.current?.focus?.();
+            } catch {
+                // noop
+            }
+        });
+    }, [blurActiveElement]);
+
+    const focusLinkInput = useCallback(() => {
+        if (!isWeb) return;
+        blurActiveElement();
+        const schedule = (fn: () => void) => {
+            if (typeof win?.requestAnimationFrame === 'function') {
+                win.requestAnimationFrame(fn);
+                return;
+            }
+            setTimeout(fn, 0);
+        };
+        schedule(() => {
+            try {
+                linkInputRef.current?.focus?.();
+            } catch {
+                // noop
+            }
+        });
+    }, [blurActiveElement]);
+
+    useEffect(() => {
+        if (!anchorModalVisible) return;
+        focusAnchorInput();
+    }, [anchorModalVisible, focusAnchorInput]);
+
+    useEffect(() => {
+        if (!linkModalVisible) return;
+        focusLinkInput();
+    }, [linkModalVisible, focusLinkInput]);
+
     const handleQuillRef = useCallback(
         (node: any) => {
             quillRef.current = node;
@@ -199,18 +260,6 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
             if (t) clearTimeout(t);
         };
     }, [shouldLoadQuill, showHtml]);
-
-    useEffect(() => {
-        if (!isWeb || !win) return;
-        if (!shouldLoadQuill) return;
-        const href = 'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css';
-        if (!win.document.querySelector(`link[href="${href}"]`)) {
-            const link = win.document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = href;
-            win.document.head.appendChild(link);
-        }
-    }, [shouldLoadQuill]);
 
     // Динамические стили на основе темы
     const dynamicStyles = useMemo(() => StyleSheet.create({
@@ -1290,6 +1339,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 visible={anchorModalVisible}
                 transparent
                 animationType="fade"
+                onShow={focusAnchorInput}
                 onRequestClose={() => setAnchorModalVisible(false)}
             >
                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: DESIGN_TOKENS.spacing.lg }}>
@@ -1301,6 +1351,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                             Идентификатор (например: day-3)
                         </Text>
                         <TextInput
+                            ref={anchorInputRef}
                             value={anchorValue}
                             onChangeText={setAnchorValue}
                             placeholder="day-3"
@@ -1385,6 +1436,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                 visible={linkModalVisible}
                 transparent
                 animationType="fade"
+                onShow={focusLinkInput}
                 onRequestClose={() => setLinkModalVisible(false)}
             >
                 <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: DESIGN_TOKENS.spacing.lg }}>
@@ -1396,6 +1448,7 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
                             URL (например: https://example.com)
                         </Text>
                         <TextInput
+                            ref={linkInputRef}
                             value={linkValue}
                             onChangeText={setLinkValue}
                             placeholder="https://..."

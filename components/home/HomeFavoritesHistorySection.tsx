@@ -20,7 +20,7 @@ type TravelLikeItem = {
   city?: string | null;
 };
 
-function handleHorizontalWheelForElement(e: any, el: any) {
+function shouldHandleHorizontalWheelForElement(e: any, el: any) {
   if (Platform.OS !== 'web') return;
   if (!el || typeof (el as any).scrollLeft !== 'number') return;
 
@@ -31,7 +31,19 @@ function handleHorizontalWheelForElement(e: any, el: any) {
   const maxScrollLeft = (el.scrollWidth ?? 0) - (el.clientWidth ?? 0);
   if (maxScrollLeft <= 0) return;
 
-  if (e?.cancelable) e.preventDefault?.();
+  const isAtLeft = (el.scrollLeft ?? 0) <= 0;
+  const isAtRight = (el.scrollLeft ?? 0) >= maxScrollLeft;
+  if ((isAtLeft && deltaY < 0) || (isAtRight && deltaY > 0)) return;
+
+  return true;
+}
+
+function handleHorizontalWheelForElement(e: any, el: any, prevent: boolean) {
+  if (!shouldHandleHorizontalWheelForElement(e, el)) return;
+
+  const deltaY = Number(e?.deltaY ?? 0);
+
+  if (prevent && e?.cancelable) e.preventDefault?.();
   (el as any).scrollLeft += deltaY;
 }
 
@@ -127,13 +139,37 @@ function HorizontalCards({
     const el = resolveScrollElement();
     if (!el || typeof el.addEventListener !== 'function') return;
 
-    const onWheel = (e: any) => {
-      handleHorizontalWheelForElement(e, el);
+    let usingActive = false;
+
+    const onWheelActive = (e: any) => {
+      handleHorizontalWheelForElement(e, el, true);
     };
 
-    el.addEventListener('wheel', onWheel, { passive: false });
+    const onWheelPassive = (e: any) => {
+      handleHorizontalWheelForElement(e, el, false);
+      if (!usingActive && e?.cancelable && shouldHandleHorizontalWheelForElement(e, el)) {
+        usingActive = true;
+        try {
+          el.removeEventListener('wheel', onWheelPassive as any);
+        } catch {
+          // noop
+        }
+        try {
+          el.addEventListener('wheel', onWheelActive as any, { passive: false } as any);
+        } catch {
+          // noop
+        }
+      }
+    };
+
+    el.addEventListener('wheel', onWheelPassive as any, { passive: true } as any);
     return () => {
-      el.removeEventListener('wheel', onWheel as any);
+      try {
+        el.removeEventListener('wheel', onWheelPassive as any);
+        el.removeEventListener('wheel', onWheelActive as any);
+      } catch {
+        // noop
+      }
     };
   }, [resolveScrollElement]);
 

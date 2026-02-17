@@ -113,12 +113,13 @@ function Home() {
     contentContainer: {
       flexGrow: 1,
       paddingBottom: Platform.select({
+        web: isMobile ? 120 : 96,
         ios: 120,
         android: 100,
         default: 96,
       }),
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
   return (
     <ScrollView

@@ -187,7 +187,7 @@ function HomeInspirationSection({
       flexShrink: 1,
       flexBasis: 0,
       minWidth: 0,
-      minHeight: 360,
+      minHeight: isMobile ? 0 : 360,
       ...Platform.select({
         web: {
           flexGrow: 1,
@@ -208,9 +208,8 @@ function HomeInspirationSection({
     cardWrapperMobile: {
       width: '100%',
       minWidth: 150,
-      minHeight: 320,
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
   if (isLoading) {
     return (
@@ -339,19 +338,22 @@ function HomeInspirationSections() {
       alignSelf: 'stretch',
     },
     bandMobile: {
-      paddingVertical: 56,
+      paddingVertical: 40,
     },
     container: {
       gap: 80,
       width: '100%',
       alignSelf: 'stretch',
     },
+    containerMobile: {
+      gap: 56,
+    },
   }), [colors]);
 
   return (
     <View style={[styles.band, isMobile && styles.bandMobile]}>
       <ResponsiveContainer maxWidth="xl" padding>
-        <View style={styles.container}>
+        <View style={[styles.container, isMobile && styles.containerMobile]}>
           <HomeInspirationSection
             title="Куда отправиться в этом месяце"
             subtitle="Истории путешественников, которые вдохновляют"

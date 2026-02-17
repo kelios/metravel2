@@ -157,13 +157,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
   // Refs
   const mapRef = useRef<any>(null);
-  const initialZoomRef = useRef<number>(
-    safeCoordinates.zoom
-  );
   const hasInitializedRef = useRef(false);
   const lastModeRef = useRef<MapMode | null>(null);
   const savedMapViewRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
-  const resizeRafRef = useRef<number | null>(null);
   const lastAutoFitKeyRef = useRef<string | null>(null);
 
   const { mapInstanceKeyRef, mapContainerIdRef } = useMapCleanup();
@@ -338,7 +334,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
     try {
       const zoomCandidate = Number.isFinite(safeCoordinates.zoom)
         ? Number(safeCoordinates.zoom)
-        : Number(initialZoomRef.current);
+        : 11;
       const zoom = Math.min(19, Math.max(0, Math.round(zoomCandidate)));
       const lat = Number(safeCoordinates.latitude);
       const lng = Number(safeCoordinates.longitude);
@@ -634,11 +630,20 @@ const MapPageComponent: React.FC<Props> = (props) => {
     const el = document.getElementById(containerId);
     let ro: ResizeObserver | null = null;
 
+    const canUseWindow = typeof window !== 'undefined' && typeof window.addEventListener === 'function';
+    const onWindowResize = () => scheduleInvalidate();
+
     if (el && typeof (window as any).ResizeObserver !== 'undefined') {
       ro = new ResizeObserver(() => scheduleInvalidate());
       try {
         ro.observe(el);
         if (el.parentElement) ro.observe(el.parentElement);
+      } catch {
+        // noop
+      }
+    } else if (canUseWindow) {
+      try {
+        window.addEventListener('resize', onWindowResize, { passive: true } as any);
       } catch {
         // noop
       }
@@ -652,6 +657,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
         ro?.disconnect();
       } catch {
         // noop
+      }
+      if (canUseWindow) {
+        try {
+          window.removeEventListener('resize', onWindowResize as any);
+        } catch {
+          // noop
+        }
       }
       if (rafId != null) {
         cancelAnimationFrame(rafId);
@@ -721,29 +733,6 @@ const MapPageComponent: React.FC<Props> = (props) => {
       }
     };
   }, [mapContainerIdRef, mapInstance]);
-
-  // invalidateSize on resize
-  useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    const handler = () => {
-      if (!mapRef.current) return;
-      if (resizeRafRef.current) {
-        cancelAnimationFrame(resizeRafRef.current);
-      }
-      resizeRafRef.current = requestAnimationFrame(() => {
-        try {
-          mapRef.current?.invalidateSize?.();
-        } catch {
-          // noop
-        }
-      });
-    };
-    window.addEventListener('resize', handler);
-    return () => {
-      window.removeEventListener('resize', handler);
-      if (resizeRafRef.current) cancelAnimationFrame(resizeRafRef.current);
-    };
-  }, []);
 
   // invalidateSize on browser tab visibility change and bfcache restore.
   // When the user switches browser tabs or navigates away and back (bfcache),
@@ -1080,7 +1069,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           data-testid="map-leaflet-container"
           id={mapContainerIdRef.current}
           center={safeCenter}
-          zoom={initialZoomRef.current}
+          zoom={Number.isFinite(safeCoordinates.zoom) ? Number(safeCoordinates.zoom) : 11}
           key={mapInstanceKeyRef.current}
           zoomControl={false}
           preferCanvas={false}

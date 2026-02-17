@@ -347,8 +347,13 @@ export function useLeafletLoader(options: UseLeafletLoaderOptions = {}): UseLeaf
         await import('@/utils/leafletFix');
         if (cancelled) return;
 
-        setL(LeafletModule.default);
-        setRL(ReactLeafletModule);
+        // In some bundler/interop modes `import('leaflet')` yields the module namespace
+        // without a `default` export. Use `default ?? module` so `L` is always truthy.
+        const LeafletResolved = (LeafletModule as any).default ?? (LeafletModule as any);
+        const ReactLeafletResolved = (ReactLeafletModule as any).default ?? (ReactLeafletModule as any);
+
+        setL(LeafletResolved);
+        setRL(ReactLeafletResolved);
       } catch (err) {
         if (cancelled) return;
         const error = err instanceof Error ? err : new Error('Failed to load Leaflet');

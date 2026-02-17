@@ -221,6 +221,19 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const containerWRef = useRef(winW);
   const scrollRef = useRef<any>(null);
   const wrapperRef = useRef<any>(null);
+  // Ref callbacks to capture DOM nodes directly (avoids querySelector with special-char IDs)
+  const scrollRefCallback = useCallback((node: any) => {
+    if (node) {
+      const domNode = node._nativeTag ?? node._domNode ?? node;
+      scrollNodeRef.current = (typeof domNode?.scrollLeft !== 'undefined') ? domNode : null;
+    }
+  }, []);
+  const wrapperRefCallback = useCallback((node: any) => {
+    if (node) {
+      const domNode = node._nativeTag ?? node._domNode ?? node;
+      wrapperNodeRef.current = (typeof domNode?.getBoundingClientRect === 'function') ? domNode : null;
+    }
+  }, []);
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
@@ -343,18 +356,40 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     hideTransitionOverlay();
   }, [firstImagePreloaded, images, hideTransitionOverlay]);
 
-  // Resolve cached DOM nodes (called once after mount via effect)
+  // Resolve cached DOM nodes — try ref-captured nodes first, fall back to querySelector with escaped ID
   const resolveNodes = useCallback(() => {
     if (typeof document === 'undefined') return;
     if (!scrollNodeRef.current) {
-      scrollNodeRef.current = document.querySelector(
-        `[data-testid="slider-scroll"][data-slider-instance="${sliderInstanceId}"]`,
-      ) as HTMLElement | null;
+      // Try querySelector with CSS.escape to handle special chars in useId() output
+      try {
+        const escaped = typeof CSS !== 'undefined' && CSS.escape
+          ? CSS.escape(sliderInstanceId)
+          : sliderInstanceId.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
+        scrollNodeRef.current = document.querySelector(
+          `[data-testid="slider-scroll"][data-slider-instance="${escaped}"]`,
+        ) as HTMLElement | null;
+      } catch {
+        scrollNodeRef.current = null;
+      }
+      // Final fallback: first slider-scroll on the page
+      if (!scrollNodeRef.current) {
+        scrollNodeRef.current = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
+      }
     }
     if (!wrapperNodeRef.current) {
-      wrapperNodeRef.current = document.querySelector(
-        `[data-testid="slider-wrapper"][data-slider-instance="${sliderInstanceId}"]`,
-      ) as HTMLElement | null;
+      try {
+        const escaped = typeof CSS !== 'undefined' && CSS.escape
+          ? CSS.escape(sliderInstanceId)
+          : sliderInstanceId.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
+        wrapperNodeRef.current = document.querySelector(
+          `[data-testid="slider-wrapper"][data-slider-instance="${escaped}"]`,
+        ) as HTMLElement | null;
+      } catch {
+        wrapperNodeRef.current = null;
+      }
+      if (!wrapperNodeRef.current) {
+        wrapperNodeRef.current = document.querySelector('[data-testid="slider-wrapper"]') as HTMLElement | null;
+      }
     }
   }, [sliderInstanceId]);
 
@@ -413,7 +448,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         if (isWrapJump) {
           node.style.scrollBehavior = 'auto';
         }
-        const left = wrapped * containerW;
+        const liveW = containerWRef.current || containerW;
+        const left = wrapped * liveW;
         // Disable scroll-snap temporarily
         node.classList.add('slider-snap-disabled');
         void node.offsetHeight;
