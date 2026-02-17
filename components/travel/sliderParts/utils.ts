@@ -13,6 +13,13 @@ export const DOT_ACTIVE_SIZE = 24;
 export const NAV_BTN_OFFSET = 16;
 export const MOBILE_HEIGHT_PERCENT = 0.6;
 
+/** Max container width per breakpoint (used for maxWidth + image optimization caps) */
+export const SLIDER_MAX_WIDTH = {
+  mobile: 768,
+  tablet: 960,
+  desktop: 1280,
+} as const;
+
 export const clamp = (v: number, min: number, max: number) =>
   Math.max(min, Math.min(max, v));
 
@@ -32,7 +39,7 @@ export const buildUriNative = (
 
   if (containerWidth && img.width && img.height) {
     if (isWeb) {
-      const cappedWidth = Math.min(containerWidth, 720);
+      const cappedWidth = Math.min(containerWidth, SLIDER_MAX_WIDTH.tablet);
       const quality = isFirst ? 45 : 35;
       return (
         optimizeImageUrl(versionedUrl, {
@@ -68,9 +75,6 @@ export const buildUriNative = (
 const PREFERRED_FORMAT =
   Platform.OS === 'web' ? getPreferredImageFormat() : undefined;
 
-export const FIRST_SLIDE_URI_CACHE = new Map<string, string>();
-export const FIRST_SLIDE_URI_CACHE_MAX = 50;
-
 export const buildUriWeb = (
   img: SliderImage,
   containerWidth?: number,
@@ -82,7 +86,7 @@ export const buildUriWeb = (
   const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit;
 
   if (containerWidth) {
-    const cappedWidth = Math.min(containerWidth, 960);
+    const cappedWidth = Math.min(containerWidth, SLIDER_MAX_WIDTH.desktop);
     const quality = isFirst ? 55 : 65;
     return (
       optimizeImageUrl(versionedUrl, {
@@ -105,6 +109,7 @@ export const computeSliderHeight = (
   opts: {
     imagesLength: number;
     isMobile: boolean;
+    isTablet?: boolean;
     winH: number;
     insetsTop: number;
     insetsBottom: number;
@@ -113,16 +118,22 @@ export const computeSliderHeight = (
   },
 ) => {
   if (!opts.imagesLength) return 0;
+
+  const ar = opts.firstAR || DEFAULT_AR;
+  const arDriven = w / ar;
+
   if (opts.isMobile) {
     const viewportH = Math.max(0, opts.winH);
-    const targetH = viewportH * opts.mobileHeightPercent;
-    const safeMax = Math.max(
-      targetH,
-      viewportH - (opts.insetsTop || 0) - (opts.insetsBottom || 0),
-    );
-    return clamp(targetH, 280, safeMax || targetH);
+    const maxH = viewportH * opts.mobileHeightPercent;
+    return clamp(arDriven, 200, maxH);
   }
-  const targetH = opts.winH * 0.7;
-  const h = w / opts.firstAR;
-  return clamp(Math.max(h, targetH), 320, opts.winH * 0.75);
+
+  if (opts.isTablet) {
+    const maxH = opts.winH * 0.65;
+    return clamp(arDriven, 280, maxH);
+  }
+
+  // Desktop
+  const maxH = opts.winH * 0.7;
+  return clamp(arDriven, 320, maxH);
 };

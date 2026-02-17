@@ -8,8 +8,9 @@ const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID 
 const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<T> => {
   try {
     return await fn()
-  } catch {
-    if (isTestEnv || tries <= 0) throw new Error('retry failed')
+  } catch (err) {
+    console.error('[withLazy] import attempt failed:', err)
+    if (isTestEnv || tries <= 0) throw err
     await new Promise((r) => setTimeout(r, delay))
     return retry(fn, tries - 1, delay)
   }

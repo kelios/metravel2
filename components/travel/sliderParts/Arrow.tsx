@@ -13,6 +13,7 @@ interface ArrowProps {
   dir: 'left' | 'right';
   onPress: () => void;
   isMobile: boolean;
+  isTablet?: boolean;
   hideArrowsOnMobile?: boolean;
   insets: { left: number; right: number };
   dismissSwipeHint: () => void;
@@ -24,6 +25,7 @@ const Arrow = memo(function Arrow({
   dir,
   onPress,
   isMobile,
+  isTablet = false,
   hideArrowsOnMobile,
   insets,
   dismissSwipeHint,
@@ -66,7 +68,7 @@ const Arrow = memo(function Arrow({
     [arrowOpacity, arrowScale, isMobile],
   );
 
-  const iconSize = isMobile ? 20 : 24;
+  const iconSize = isMobile ? 20 : isTablet ? 22 : 24;
 
   if (isMobile && hideArrowsOnMobile) return null;
 
@@ -87,10 +89,10 @@ const Arrow = memo(function Arrow({
       activeOpacity={0.8}
       style={[
         styles.navBtn,
-        isMobile ? styles.navBtnMobile : styles.navBtnDesktop,
+        isMobile ? styles.navBtnMobile : isTablet ? styles.navBtnTablet : styles.navBtnDesktop,
         dir === 'left'
-          ? { left: NAV_BTN_OFFSET + 4 + (isMobile ? 8 : insets.left) }
-          : { right: NAV_BTN_OFFSET + 4 + (isMobile ? 8 : insets.right) },
+          ? { left: NAV_BTN_OFFSET + 4 + (isMobile ? 8 : isTablet ? 4 : insets.left) }
+          : { right: NAV_BTN_OFFSET + 4 + (isMobile ? 8 : isTablet ? 4 : insets.right) },
         Platform.OS === 'web' && isHovered && styles.navBtnHover,
       ]}
     >
