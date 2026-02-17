@@ -300,6 +300,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                   position: [ll[1], ll[0]],
                   icon: markerIcon,
                   opacity: markerOpacity,
+                  alt: item.address || item.categoryName || 'Точка на карте',
                   ref: (marker: any) => {
                     try {
                       onMarkerInstance?.(String(item.coord ?? ''), marker ?? null);
@@ -342,6 +343,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             position: [ll[1], ll[0]],
             icon: markerIcon,
             opacity: markerOpacity,
+            alt: item.address || item.categoryName || 'Точка на карте',
             ref: (marker: any) => {
               try {
                 onMarkerInstance?.(String(item.coord ?? ''), marker ?? null);
@@ -374,6 +376,7 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
             key={`cluster-${idx}`}
             position={[cluster.center[0], cluster.center[1]]}
             icon={icon as any}
+            alt={`Кластер: ${cluster.count} мест`}
             eventHandlers={{
               click: (e: any) => {
                 try {

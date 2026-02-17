@@ -584,3 +584,321 @@ The application is well-optimized at the code level with comprehensive caching, 
 **SW Version:** v3.9.0  
 **Audit Version:** v12  
 **Status:** ✅ P1 og:image fix + P2 responsive images fix applied — requires redeploy to take effect
+
+---
+
+## Audit v13 — 2026-02-17 (post-deploy verification + image proxy fix)
+
+### 1. PERFORMANCE
+
+#### Lighthouse Scores (production: https://metravel.by)
+| Page | Desktop | Mobile |
+|------|---------|--------|
+| Home `/` | **77** | **54** |
+| Search `/search` | **72** | — |
+| Map `/map` | **71** | — |
+
+#### Core Web Vitals — Desktop Home
+| Metric | Value | Score | Status |
+|--------|-------|-------|--------|
+| FCP | 1.3s | 0.68 | ⚠️ |
+| LCP | 3.1s | 0.32 | 🔴 |
+| TBT | 10ms | 1.0 | ✅ |
+| CLS | 0.006 | 1.0 | ✅ |
+| SI | 1.8s | 0.71 | ⚠️ |
+| TTI | 3.1s | 0.78 | ⚠️ |
+| TTFB | 150ms | — | ✅ |
+
+#### Core Web Vitals — Mobile Home
+| Metric | Value | Score | Status |
+|--------|-------|-------|--------|
+| FCP | 3.4s | 0.38 | ⚠️ |
+| LCP | 11.9s | 0.0 | 🔴 |
+| TBT | 430ms | 0.65 | ⚠️ |
+| CLS | 0.04 | 0.99 | ✅ |
+| SI | 5.3s | 0.59 | ⚠️ |
+| TTI | 11.9s | 0.16 | 🔴 |
+| TTFB | 90ms | — | ✅ |
+
+#### Performance Diagnostics
+| Issue | Savings | Score |
+|-------|---------|-------|
+| Unused JavaScript | ~2,077 KiB | 0 |
+| Responsive images | ~2,246 KiB | 0.5 |
+| Legacy JavaScript | ~7 KiB | 0.5 |
+| Cache TTL (3rd-party) | 5 resources | 0.5 |
+
+**Root cause of LCP 🔴:** JS bundle ~4.7MB (RNW + Leaflet + dependencies). LCP element is text (H1), blocked by JS parse/execute time. This is structural and requires major refactoring (SSR/ISR, tree-shaking, code splitting) to fix.
+
+**Root cause of responsive images:** Backend (`/travel-image/`, `/gallery/`) ignores `?w=&h=` query params — serves full-size originals regardless. The `optimizeImageUrl()` function was adding params that had no effect.
+
+### 2. SEO — ✅ 100/100 on all pages
+
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | 33 chars → extended to 53 chars (target 50-60) |
+| Description | ✅ | 135 chars (target 120-160) |
+| H1 | ✅ | 1 per page, correct hierarchy H1→H2→H3 |
+| Canonical | ✅ | `https://metravel.by/` — correct |
+| og:title | ✅ | Matches page title |
+| og:description | ✅ | Matches meta description |
+| og:image | ✅ | `logo_yellow_512x512.png` — 200 OK |
+| og:url | ✅ | Correct |
+| og:locale | ✅ | `ru_RU` |
+| og:type | ✅ | `website` |
+| twitter:site | ✅ | `@metravel_by` |
+| robots.txt | ✅ | Correct disallows, sitemap reference |
+| sitemap.xml | ✅ | 200 OK, 66KB, `Cache-Control: public, max-age=3600` |
+| Schema.org | ✅ | Organization + WebSite + Service |
+| Images alt | ✅ | 17/17 images have alt text |
+| lang | ✅ | `ru` |
+| robots meta | ✅ | Not set (correct for production) |
+
+### 3. TECHNICAL
+
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2, valid certificate |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 to `https://metravel.by/` |
+| www→non-www redirect | ✅ | 301 with HSTS |
+| Console errors | ✅ | 0 errors on production |
+| Accessibility | ✅ | Lighthouse 100/100 |
+| Best Practices | ⚠️ | 78-79 (third-party cookies from Yandex Metrika) |
+| CSP | ✅ | Comprehensive policy configured |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Configured |
+| Soft 404 | ⚠️ | Unknown URLs return 200 (SPA limitation) |
+
+### 4. SERVER
+
+| Check | Status | Details |
+|-------|--------|---------|
+| TTFB | ✅ | 90-150ms |
+| Gzip | ✅ | Enabled for HTML |
+| Brotli | ✅ | Enabled (nginx config) |
+| Static caching | ✅ | `immutable` for `/_expo/static/` |
+| Image proxy cache | ✅ | Configured in nginx |
+| Rate limiting | ✅ | Configured for API/login/general |
+| server_tokens | ✅ | Off |
+| keepalive | ✅ | Configured |
+
+### 5. ANALYTICS
+
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` — connected |
+| Yandex Metrika | ✅ | `62803912` — connected |
+| send_page_view | ✅ | `false` (manual SPA tracking) |
+| Deferred loading | ✅ | `requestIdleCallback` / 3s fallback |
+| Consent-aware | ✅ | Opt-out model via localStorage |
+| GTM | ℹ️ | Not used (by design) |
+
+### 6. FIXES APPLIED (v13)
+
+#### P1: Image proxy for actual resizing
+- **File:** `utils/imageOptimization.ts`
+- **Issue:** `metravel.by` was marked as "allowed transform host" but backend ignores `?w=&h=&q=&f=` params on image paths (`/travel-image/`, `/gallery/`, `/uploads/`, `/media/`). Images served at full resolution (~200-250KB each) regardless of requested size.
+- **Fix:** Modified `isAllowedTransformHost` to return `false` for image paths on metravel.by. These URLs now proxy through `images.weserv.nl` for actual server-side resizing.
+- **Expected savings:** ~2,246 KiB on home page (15 travel card images).
+
+#### P2: Home page title length
+- **File:** `app/(tabs)/index.tsx`
+- **Issue:** Title was 33 chars ("Твоя книга путешествий | Metravel"), below SEO best practice of 50-60 chars.
+- **Fix:** Extended to 53 chars: "Твоя книга путешествий по Беларуси и миру | Metravel"
+
+#### P2: SW cache version bump
+- **File:** `public/sw.js`
+- **Fix:** Bumped `CACHE_VERSION` from `v3.10.0` to `v3.11.0` to ensure fresh assets after deploy.
+
+### Validation
+- `npx jest __tests__/utils/imageOptimization` — **18 tests passed** ✅
+- `npx jest __tests__/utils/seo.test.ts __tests__/scripts/generate-seo-pages.test.ts` — **62 tests passed** ✅
+- `npx jest --testPathPattern="ImageCardMedia|UnifiedTravelCard|home|listTravel|NearTravel"` — **213 tests passed** ✅
+
+### Remaining Issues (structural — require major refactoring)
+
+| Issue | Priority | Blocker for |
+|-------|----------|-------------|
+| JS bundle ~4.7MB (RNW + Leaflet) | P1 | Lighthouse ≥ 90 mobile |
+| Unused JS ~2MB | P1 | LCP, TTI |
+| No SSR/ISR (static export only) | P1 | FCP, LCP on mobile |
+| Third-party cookies (Yandex) | P3 | Best Practices 78→100 |
+| Soft 404 for unknown routes | P3 | Technical correctness |
+
+### Recommendations for Lighthouse ≥ 90 (mobile)
+1. **Code splitting:** Lazy-load Leaflet map only on `/map` route (saves ~800KB)
+2. **Tree-shaking RNW:** Use `react-native-web/dist/cjs` with webpack aliases to reduce bundle
+3. **SSR/ISR:** Migrate to Next.js or implement custom SSR for critical pages
+4. **Image CDN:** Set up nginx image resizing module (`ngx_http_image_filter_module`) to avoid weserv.nl dependency
+5. **Font subsetting:** Subset Roboto to Cyrillic + Latin only
+
+### Target Assessment
+| Target | Current | After v13 fixes | Status |
+|--------|---------|-----------------|--------|
+| Lighthouse ≥ 90 (mobile) | 54 | ~60-65 (est.) | 🔴 Blocked by bundle size |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | CLS ✅, TBT ⚠️, LCP ⚠️ | ⚠️ Image fix helps LCP |
+| SEO no critical errors | 100/100 | 100/100 | ✅ |
+| No 4xx/5xx | ✅ | ✅ | ✅ |
+| Load time < 2.5s mobile | ~11.9s | ~8-9s (est.) | 🔴 Blocked by bundle size |
+
+**Last updated:** 2026-02-17  
+**SW Version:** v3.11.0  
+**Audit Version:** v13  
+**Status:** ✅ P1 image proxy fix + P2 title/SW fixes applied — requires redeploy to take effect
+
+---
+
+## Audit v14 — 2026-02-17 (post-deploy)
+
+### Lighthouse Scores (production: metravel.by)
+
+| Page | Device | Perf | A11y | BP | SEO |
+|------|--------|------|------|----|-----|
+| Home `/` | Desktop | 78 | 100 | 78 | 100 |
+| Home `/` | Mobile | 51 | 100 | 79 | 100 |
+| Search `/search` | Desktop | 73 | 100 | 74 | 100 |
+| Map `/map` | Desktop | 73 | 97 | 70 | 100 |
+
+### Core Web Vitals (Home — Desktop / Mobile)
+
+| Metric | Desktop | Mobile | Target |
+|--------|---------|--------|--------|
+| FCP | 1.0s ✅ | 3.6s 🔴 | < 1.8s |
+| LCP | 2.8s ⚠️ | 12.3s 🔴 | < 2.5s |
+| TBT | 10ms ✅ | 520ms ⚠️ | < 200ms |
+| CLS | 0.006 ✅ | 0.04 ✅ | < 0.1 |
+| SI | 2.3s ⚠️ | 5.0s 🔴 | < 3.4s |
+| TTI | 3.4s ⚠️ | 12.3s 🔴 | < 3.8s |
+| TTFB | 100ms ✅ | 100ms ✅ | < 600ms |
+
+### 1️⃣ PERFORMANCE
+
+**Persistent blocker: JS bundle size (~2MB unused)**
+- `__common-*.js`: 654KB unused (of ~1.3MB total) — React Native Web runtime
+- `entry-*.js`: 282KB unused (of ~560KB total) — app entry bundle
+- `googletagmanager`: 59KB unused
+- **Total unused JS: ~2MB** — root cause of poor mobile LCP/TTI/TBT
+
+**What's working well:**
+- ✅ TTFB: 100ms (excellent)
+- ✅ No render-blocking resources
+- ✅ CLS near-zero (0.006 desktop, 0.04 mobile)
+- ✅ Desktop TBT: 10ms
+- ✅ Brotli compression active
+- ✅ Gzip fallback active
+- ✅ Static assets: `Cache-Control: public, max-age=31536000, immutable`
+- ✅ SW: `no-cache, no-store, must-revalidate`
+- ✅ ETag enabled on HTML
+- ✅ Responsive images: 0KB savings needed (already optimized)
+
+### 2️⃣ SEO — ✅ All Green
+
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | "Твоя книга путешествий по Беларуси и миру \| Metravel" (52 chars) |
+| Description | ✅ | 135 chars (target: 120-160) |
+| H1 | ✅ | Single H1: "Находи маршруты. Делись историями." |
+| H2 hierarchy | ✅ | Proper H2s follow H1 |
+| Canonical | ✅ | `https://metravel.by/` |
+| OG tags | ✅ | title, description, image, url, locale all present |
+| Twitter card | ✅ | `@metravel_by` |
+| robots.txt | ✅ | Disallows sensitive paths, references sitemap |
+| sitemap.xml | ✅ | 200 OK, 66KB |
+| Schema.org | ✅ | Organization, WebSite, Service |
+| Images alt | ✅ | 0 images without alt (of 17 total) |
+| Lang | ✅ | `ru` |
+| robots meta | ✅ | Not set (correct for production — allows indexing) |
+
+### 3️⃣ TECHNICAL
+
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 |
+| www→non-www redirect | ✅ | 301 |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Restrictive |
+| CSP | ⚠️→✅ | **Fixed:** Added `mc.yandex.com` `mc.yandex.by` to `frame-src` |
+| Console errors (home) | ✅ | 0 errors |
+| Console errors (map) | ⚠️ | 1x 404 `/address-image/` (backend data issue — empty image path) |
+| Mixed content | ✅ | None |
+| CORS | ✅ | `Access-Control-Allow-Origin: *` |
+
+### 4️⃣ SERVER
+
+| Check | Status | Details |
+|-------|--------|---------|
+| TTFB | ✅ | 100ms |
+| Brotli | ✅ | Active |
+| Gzip | ✅ | Fallback active |
+| Static cache | ✅ | `immutable, max-age=31536000` |
+| SW cache | ✅ | `no-cache, no-store, must-revalidate` |
+| Rate limiting | ✅ | API, login, general zones configured |
+| try_files | ✅ | `/_expo/static/` returns 404 for missing chunks |
+| Sitemap cache | ✅ | Served with proper headers |
+
+### 5️⃣ ANALYTICS
+
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` loaded |
+| Yandex Metrika | ✅ | ID 62803912 loaded |
+| send_page_view | ✅ | `false` (manual SPA tracking, no duplicates) |
+| 3rd-party cookies | ⚠️ | 12 Yandex cookies — not fixable (vendor issue) |
+
+### 6️⃣ ACCESSIBILITY
+
+| Check | Status | Details |
+|-------|--------|---------|
+| Home a11y | ✅ | 100/100 |
+| Map a11y | ⚠️→✅ | **Fixed:** `aria-command-name` on map markers (added `alt` prop) |
+| label-content-name-mismatch | ⚠️→✅ | **Fixed:** Logo + CollapsibleSection accessible names |
+
+### Issues Found & Fixes Applied
+
+| # | Priority | Issue | Fix | File |
+|---|----------|-------|-----|------|
+| 1 | **P1** | CSP `frame-src` missing `mc.yandex.com`/`mc.yandex.by` — Yandex Metrika frame blocked, console errors on all pages | Added domains to `frame-src` in all location blocks | `nginx/nginx.conf` |
+| 2 | **P2** | Map markers lack accessible names (`aria-command-name` failure) — map a11y 97 | Added `alt` prop with address/category to all Marker instances | `components/MapPage/Map/ClusterLayer.tsx` |
+| 3 | **P2** | Logo `label-content-name-mismatch` — aria-label "MeTravel - Главная страница" doesn't start with visible text "MeTravel" | Changed to `accessibilityLabel="MeTravel"` (hint already has navigation info) | `components/layout/Logo.tsx` |
+| 4 | **P2** | CollapsibleSection `label-content-name-mismatch` — "Свернуть Радиус поиска" doesn't start with visible "Радиус поиска" | Reordered to `"${title}, свернуть/развернуть"` | `components/MapPage/CollapsibleSection.tsx` |
+| 5 | **P3** | SW cache version stale after fixes | Bumped `v3.11.0` → `v3.12.0` | `public/sw.js` |
+
+### Not Fixable in Frontend
+
+| Issue | Reason |
+|-------|--------|
+| 3rd-party cookies (Yandex) | Vendor-controlled, cannot eliminate |
+| `/address-image/` 404 on map | Backend returns empty image path for some points |
+| Mobile performance 51 | Blocked by RNW bundle size (~2MB unused JS) — requires architectural change |
+| Mobile LCP 12.3s | Same root cause — massive JS parse/execute time on 4x CPU throttle |
+
+### Recommendations for Lighthouse ≥ 90 (mobile)
+1. **Code splitting:** Lazy-load Leaflet map only on `/map` route (saves ~800KB)
+2. **Tree-shaking RNW:** Use `react-native-web/dist/cjs` with webpack aliases to reduce bundle
+3. **SSR/ISR:** Migrate to Next.js or implement custom SSR for critical pages
+4. **Image CDN:** Set up nginx image resizing module to avoid weserv.nl dependency
+5. **Font subsetting:** Subset Roboto to Cyrillic + Latin only
+6. **Route-based code splitting:** Split entry bundle per route to reduce initial JS
+
+### Target Assessment
+| Target | Current | After v14 fixes | Status |
+|--------|---------|-----------------|--------|
+| Lighthouse ≥ 90 (mobile) | 51 | ~55-60 (est.) | 🔴 Blocked by bundle size |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | CLS ✅, TBT ⚠️, LCP 🔴 | 🔴 Needs arch changes |
+| SEO no critical errors | 100/100 | 100/100 | ✅ |
+| No 4xx/5xx | 1x backend 404 | 1x backend 404 | ⚠️ Backend fix needed |
+| Load time < 2.5s mobile | ~12.3s | ~12s (est.) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | Home 100, Map 97 | Home 100, Map ~100 | ✅ Fixed |
+| Best Practices | 70-79 | ~82-85 (est.) | ⚠️ CSP fix removes console errors |
+
+**Last updated:** 2026-02-17  
+**SW Version:** v3.12.0  
+**Audit Version:** v14  
+**Status:** ✅ P1 CSP fix + P2 a11y fixes + P3 SW bump applied — requires redeploy to take effect

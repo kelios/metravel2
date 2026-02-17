@@ -57,7 +57,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         ]}
         onPress={toggleOpen}
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel || `${open ? 'Свернуть' : 'Развернуть'} ${title}`}
+        accessibilityLabel={accessibilityLabel || `${title}, ${open ? 'свернуть' : 'развернуть'}`}
         accessibilityState={{ expanded: open }}
       >
         <View style={styles.collapsibleTitle}>

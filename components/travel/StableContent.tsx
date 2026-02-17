@@ -63,6 +63,24 @@ const isPrivateOrLocalHost = (host: string): boolean => {
   return false;
 };
 
+const normalizeMetravelOwnImageUrl = (urlStr: string): string => {
+  try {
+    const parsed = new URL(urlStr, 'https://metravel.by');
+    const host = parsed.hostname.toLowerCase();
+    if (host !== 'metravel.by' && host !== 'cdn.metravel.by' && host !== 'api.metravel.by') {
+      return urlStr;
+    }
+    // Force secure scheme for first-party image routes to satisfy CSP on https pages.
+    if (parsed.protocol === 'http:') {
+      parsed.protocol = 'https:';
+      return parsed.toString();
+    }
+    return urlStr;
+  } catch {
+    return urlStr;
+  }
+};
+
 const buildWeservProxyUrl = (src: string) => {
   try {
     const trimmed = String(src || '').trim();
@@ -102,7 +120,7 @@ const buildWeservProxyUrl = (src: string) => {
       // Don't proxy metravel.by's own images — they are dynamic backend routes
       // (e.g. /travel-description-image/) that weserv.nl can't reach.
       if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
-        return stripOptimizationParams(normalized);
+        return normalizeMetravelOwnImageUrl(stripOptimizationParams(normalized));
       }
     } catch { /* continue with proxy */ }
     // Strip optimization params the origin server doesn't understand (w, h, q, f, fit, auto, etc.)

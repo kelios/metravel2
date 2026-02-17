@@ -15,9 +15,12 @@ interface SlideProps {
   blurBackground: boolean;
   imageProps?: any;
   onFirstImageLoad?: () => void;
+  onSlideLoad?: (index: number) => void;
   onImagePress?: (index: number) => void;
   /** When true, skip the loading shimmer (image already in browser cache). */
   firstImagePreloaded?: boolean;
+  /** When true, this slide should preload eagerly on web (near current index). */
+  preloadPriority?: boolean;
   /** Image fit mode. Defaults to 'contain'. */
   fit?: 'cover' | 'contain';
 }
@@ -33,8 +36,10 @@ const Slide = memo(function Slide({
   blurBackground,
   imageProps,
   onFirstImageLoad,
+  onSlideLoad,
   onImagePress,
   firstImagePreloaded,
+  preloadPriority,
   fit = 'contain',
 }: SlideProps) {
   const [status, setStatus] = useState<LoadStatus>(
@@ -43,7 +48,8 @@ const Slide = memo(function Slide({
   const firstLoadReportedRef = useRef(false);
 
   const isFirstSlide = index === 0;
-  const mainPriority = isFirstSlide ? 'high' : 'low';
+  const shouldEagerLoad = isFirstSlide || !!preloadPriority;
+  const mainPriority = shouldEagerLoad ? 'high' : 'low';
 
   const mainFit: 'cover' | 'contain' = fit;
 
@@ -53,20 +59,22 @@ const Slide = memo(function Slide({
 
   const handleLoad = useCallback(() => {
     setStatus('loaded');
+    onSlideLoad?.(index);
     if (isFirstSlide && !firstLoadReportedRef.current) {
       firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
     }
-  }, [isFirstSlide, onFirstImageLoad]);
+  }, [index, isFirstSlide, onFirstImageLoad, onSlideLoad]);
 
   useEffect(() => {
     // If first slide is already preloaded/cached, report readiness once on mount.
     if (!isFirstSlide) return;
     if (!firstImagePreloaded) return;
     if (firstLoadReportedRef.current) return;
+    onSlideLoad?.(index);
     firstLoadReportedRef.current = true;
     onFirstImageLoad?.();
-  }, [isFirstSlide, firstImagePreloaded, onFirstImageLoad]);
+  }, [index, isFirstSlide, firstImagePreloaded, onFirstImageLoad, onSlideLoad]);
 
   const handleError = useCallback(() => {
     setStatus('error');
@@ -98,7 +106,7 @@ const Slide = memo(function Slide({
           priority={mainPriority as any}
           loading={
             Platform.OS === 'web'
-              ? isFirstSlide
+              ? shouldEagerLoad
                 ? 'eager'
                 : 'lazy'
               : 'lazy'
