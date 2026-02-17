@@ -142,17 +142,31 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
   // Get scroll node (web only)
   const getScrollNode = useCallback((): HTMLElement | null => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
-    return document.querySelector(
-      `[data-testid="slider-scroll"][data-slider-instance="${sliderInstanceId}"]`
-    ) as HTMLElement | null;
+    try {
+      const escaped = typeof CSS !== 'undefined' && CSS.escape
+        ? CSS.escape(sliderInstanceId)
+        : sliderInstanceId.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
+      const node = document.querySelector(
+        `[data-testid="slider-scroll"][data-slider-instance="${escaped}"]`
+      ) as HTMLElement | null;
+      if (node) return node;
+    } catch { /* noop */ }
+    return document.querySelector('[data-testid="slider-scroll"]') as HTMLElement | null;
   }, [sliderInstanceId]);
 
   // Get wrapper node (web only)
   const getWrapperNode = useCallback((): HTMLElement | null => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return null;
-    return document.querySelector(
-      `[data-testid="slider-wrapper"][data-slider-instance="${sliderInstanceId}"]`
-    ) as HTMLElement | null;
+    try {
+      const escaped = typeof CSS !== 'undefined' && CSS.escape
+        ? CSS.escape(sliderInstanceId)
+        : sliderInstanceId.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`);
+      const node = document.querySelector(
+        `[data-testid="slider-wrapper"][data-slider-instance="${escaped}"]`
+      ) as HTMLElement | null;
+      if (node) return node;
+    } catch { /* noop */ }
+    return document.querySelector('[data-testid="slider-wrapper"]') as HTMLElement | null;
   }, [sliderInstanceId]);
 
   // Sync container width from DOM (web only)
@@ -212,7 +226,8 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           if (isWrapJump) {
             node.style.scrollBehavior = 'auto';
           }
-          const left = wrapped * containerW;
+          const liveW = containerWRef.current || containerW;
+          const left = wrapped * liveW;
           // Disable scroll-snap temporarily
           node.classList.add('slider-snap-disabled');
           void node.offsetHeight;

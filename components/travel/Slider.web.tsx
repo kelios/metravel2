@@ -221,19 +221,6 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const containerWRef = useRef(winW);
   const scrollRef = useRef<any>(null);
   const wrapperRef = useRef<any>(null);
-  // Ref callbacks to capture DOM nodes directly (avoids querySelector with special-char IDs)
-  const scrollRefCallback = useCallback((node: any) => {
-    if (node) {
-      const domNode = node._nativeTag ?? node._domNode ?? node;
-      scrollNodeRef.current = (typeof domNode?.scrollLeft !== 'undefined') ? domNode : null;
-    }
-  }, []);
-  const wrapperRefCallback = useCallback((node: any) => {
-    if (node) {
-      const domNode = node._nativeTag ?? node._domNode ?? node;
-      wrapperNodeRef.current = (typeof domNode?.getBoundingClientRect === 'function') ? domNode : null;
-    }
-  }, []);
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);

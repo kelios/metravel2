@@ -82,36 +82,24 @@ test('debug autoplay state', async ({ page }) => {
 
   console.log('DEBUG initial state:', JSON.stringify(debug, null, 2));
 
-  // Monitor scrollLeft changes on the scroll node
-  await page.evaluate(() => {
-    (window as any).__scrollLeftSets = [];
-    const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
-    if (scroll) {
-      const origDescriptor = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollLeft');
-      if (origDescriptor?.set) {
-        const origSet = origDescriptor.set;
-        Object.defineProperty(scroll, 'scrollLeft', {
-          get: origDescriptor.get!.bind(scroll),
-          set(v: number) {
-            (window as any).__scrollLeftSets.push(v);
-            origSet.call(scroll, v);
-          },
-          configurable: true,
-        });
-      }
+  // Check what testids exist for images
+  const imageTestids = await page.evaluate(() => {
+    const allImgs = document.querySelectorAll('img');
+    const testids: string[] = [];
+    for (const img of allImgs) {
+      const tid = img.getAttribute('data-testid') ?? img.getAttribute('testid') ?? img.getAttribute('testID') ?? '';
+      if (tid) testids.push(tid);
     }
+    // Also check parent elements
+    const allWithTestid = document.querySelectorAll('[data-testid]');
+    const allTestids: string[] = [];
+    for (const el of allWithTestid) {
+      const tid = el.getAttribute('data-testid') ?? '';
+      if (tid.includes('slider')) allTestids.push(tid);
+    }
+    return { imgTestids: testids.slice(0, 10), sliderTestids: allTestids.slice(0, 20) };
   });
-
-  // Wait 8 seconds for autoplay to fire (interval is 6000ms)
-  await page.waitForTimeout(8000);
-
-  const autoplayDebug = await page.evaluate(() => {
-    return {
-      scrollToCallCount: (window as any).__scrollToCallCount ?? 0,
-      lastScrollLeftSet: (window as any).__lastScrollLeftSet ?? null,
-    };
-  });
-  console.log('AUTOPLAY DEBUG:', JSON.stringify(autoplayDebug, null, 2));
+  console.log('IMAGE TESTIDS:', JSON.stringify(imageTestids, null, 2));
 
   const counterAfter = await page.evaluate(() => {
     const re = /^(\d+)\/(\d+)$/;

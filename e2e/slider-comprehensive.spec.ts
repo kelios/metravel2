@@ -4,16 +4,19 @@
  * Covers:
  *   1. Counter display and accuracy
  *   2. Pagination dots — count, active state
- *   3. Arrow visibility on hover
+ *   3. Arrow visibility on hover (CSS :hover)
  *   4. Wrap-around navigation (last → first, first → last)
- *   5. Autoplay advances slides (desktop)
- *   6. Autoplay pauses on drag, resumes after
- *   7. Keyboard navigation requires focus on wrapper
- *   8. Single-image slider — no arrows, no counter, no dots
- *   9. Slide virtualization — out-of-window slides have no img
- *  10. Accessibility: aria-labels on nav buttons, role=button
- *  11. No horizontal page overflow caused by slider
- *  12. Touch swipe (pointer events simulation)
+ *   5. Keyboard navigation requires focus on wrapper
+ *   6. Single-image slider — no arrows, no counter, no dots
+ *   7. Slide virtualization — out-of-window slides have no img
+ *   8. Accessibility: aria-labels on nav buttons, role=button
+ *   9. No horizontal page overflow caused by slider
+ *  10. Scroll container CSS properties
+ *  11. Rapid navigation stability
+ *  12. Touch/pointer swipe
+ *
+ * Note: autoPlay={false} is intentionally set on the travel details page,
+ * so autoplay is not tested here against that page.
  */
 
 import { test, expect } from './fixtures';
@@ -166,39 +169,35 @@ test.describe('Slider — pagination dots', () => {
       return;
     }
 
-    // Wait for slider wrapper
     await page.locator('[data-testid="slider-wrapper"]').first().waitFor({ state: 'visible', timeout: 10_000 });
 
+    // Dots are rendered as sibling divs inside the dotsContainer.
+    // The dotsContainer is the only div inside the dots overlay that has flexDirection=row
+    // and contains only leaf divs (no children). Count them by finding the container.
     const dotCount = await page.evaluate(() => {
       const wrapper = document.querySelector('[data-testid="slider-wrapper"]');
       if (!wrapper) return 0;
-      // Dots are small circles: look for elements with rounded style inside the dots container
-      // The dots container has flexDirection row and contains View elements
-      // We identify them by their computed size (6px × 6px or 20px × 6px for active)
-      const allDivs = wrapper.querySelectorAll('div');
-      let count = 0;
-      for (const d of allDivs) {
-        const s = getComputedStyle(d);
-        const h = parseFloat(s.height);
-        const br = parseFloat(s.borderRadius);
-        const bg = s.backgroundColor;
-        // Dots are 6px tall, have border-radius, and a white/semi-white background
-        if (
-          Math.abs(h - 6) < 2 &&
-          br >= 2 &&
-          bg.includes('255') &&
-          d.children.length === 0
-        ) {
-          count++;
-        }
+      // Find the dots container: a div with multiple leaf-div children that are all small
+      const allDivs = Array.from(wrapper.querySelectorAll('div'));
+      for (const container of allDivs) {
+        const children = Array.from(container.children) as HTMLElement[];
+        if (children.length < 2) continue;
+        // All children should be leaf divs with similar small height
+        const allLeafSmall = children.every((c) => {
+          if (c.tagName !== 'DIV') return false;
+          if (c.children.length > 0) return false;
+          const h = parseFloat(getComputedStyle(c).height);
+          return h >= 4 && h <= 10;
+        });
+        if (allLeafSmall) return children.length;
       }
-      return count;
+      return 0;
     });
 
     expect(dotCount).toBe(counter.total);
   });
 
-  test('active dot changes when navigating', async ({ page }) => {
+  test('active dot is wider than inactive dots', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -208,54 +207,67 @@ test.describe('Slider — pagination dots', () => {
 
     await page.locator('[data-testid="slider-wrapper"]').first().waitFor({ state: 'visible', timeout: 10_000 });
 
-    // Get active dot width before navigation (active dot is wider: 20px)
-    const activeDotWidthBefore = await page.evaluate(() => {
+    // Find the dots container and check that one dot is wider (active)
+    const dotsInfo = await page.evaluate(() => {
       const wrapper = document.querySelector('[data-testid="slider-wrapper"]');
-      if (!wrapper) return 0;
-      const allDivs = wrapper.querySelectorAll('div');
-      for (const d of allDivs) {
-        const s = getComputedStyle(d);
-        const h = parseFloat(s.height);
-        const w = parseFloat(s.width);
-        const bg = s.backgroundColor;
-        if (Math.abs(h - 6) < 2 && w > 10 && bg.includes('255, 255, 255')) {
-          return w;
-        }
+      if (!wrapper) return null;
+      const allDivs = Array.from(wrapper.querySelectorAll('div'));
+      for (const container of allDivs) {
+        const children = Array.from(container.children) as HTMLElement[];
+        if (children.length < 2) continue;
+        const allLeafSmall = children.every((c) => {
+          if (c.tagName !== 'DIV') return false;
+          if (c.children.length > 0) return false;
+          const h = parseFloat(getComputedStyle(c).height);
+          return h >= 4 && h <= 10;
+        });
+        if (!allLeafSmall) continue;
+        const widths = children.map((c) => parseFloat(getComputedStyle(c).width));
+        const maxW = Math.max(...widths);
+        const minW = Math.min(...widths);
+        return { widths, maxW, minW };
       }
-      return 0;
+      return null;
     });
 
-    // Active dot should be wider than inactive
-    expect(activeDotWidthBefore).toBeGreaterThan(6);
+    expect(dotsInfo).not.toBeNull();
+    // Active dot (index 0 at start) should be wider than inactive dots
+    expect(dotsInfo!.maxW).toBeGreaterThan(dotsInfo!.minW);
 
     // Navigate to next slide
     await page.locator('[aria-label="Next slide"]').first().click();
     await waitForCounterValue(page, 2, 8_000);
 
-    // The active dot position should have changed (first dot should no longer be active)
-    const firstDotIsActive = await page.evaluate(() => {
+    // After navigation, the widest dot should now be at index 1 (not index 0)
+    const dotsAfter = await page.evaluate(() => {
       const wrapper = document.querySelector('[data-testid="slider-wrapper"]');
-      if (!wrapper) return true;
+      if (!wrapper) return null;
       const allDivs = Array.from(wrapper.querySelectorAll('div'));
-      // Find all dot-sized elements
-      const dots = allDivs.filter((d) => {
-        const s = getComputedStyle(d);
-        const h = parseFloat(s.height);
-        const br = parseFloat(s.borderRadius);
-        return Math.abs(h - 6) < 2 && br >= 2 && d.children.length === 0 && s.backgroundColor.includes('255');
-      });
-      if (dots.length < 2) return true;
-      // First dot should NOT be the wide active one
-      const firstW = parseFloat(getComputedStyle(dots[0]).width);
-      return firstW > 10;
+      for (const container of allDivs) {
+        const children = Array.from(container.children) as HTMLElement[];
+        if (children.length < 2) continue;
+        const allLeafSmall = children.every((c) => {
+          if (c.tagName !== 'DIV') return false;
+          if (c.children.length > 0) return false;
+          const h = parseFloat(getComputedStyle(c).height);
+          return h >= 4 && h <= 10;
+        });
+        if (!allLeafSmall) continue;
+        const widths = children.map((c) => parseFloat(getComputedStyle(c).width));
+        const maxIdx = widths.indexOf(Math.max(...widths));
+        return { widths, maxIdx };
+      }
+      return null;
     });
 
-    expect(firstDotIsActive).toBe(false);
+    expect(dotsAfter).not.toBeNull();
+    // Active dot should now be at index 1 (second dot)
+    expect(dotsAfter!.maxIdx).toBe(1);
   });
 });
 
 test.describe('Slider — arrow visibility', () => {
-  test('arrows are hidden by default and visible on hover', async ({ page }) => {
+  test('arrows exist in DOM and are clickable', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -269,24 +281,28 @@ test.describe('Slider — arrow visibility', () => {
     const nextBtn = page.locator('[aria-label="Next slide"]').first();
     const prevBtn = page.locator('[aria-label="Previous slide"]').first();
 
-    // Buttons must exist in DOM
+    // Buttons must exist in DOM and be attached
     await expect(nextBtn).toBeAttached();
     await expect(prevBtn).toBeAttached();
 
-    // Before hover: opacity should be 0 (hidden)
-    const opacityBefore = await nextBtn.evaluate((el) => {
-      return parseFloat(getComputedStyle(el).opacity);
-    });
-    expect(opacityBefore).toBe(0);
+    // Arrows have opacity:0 by default (CSS), shown on :hover via CSS rule.
+    // Move cursor away from slider first to ensure no hover state
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(100);
 
-    // Hover the wrapper
+    const opacityAway = await nextBtn.evaluate((el) =>
+      parseFloat(getComputedStyle(el).opacity)
+    );
+    expect(opacityAway).toBe(0);
+
+    // Hover the wrapper — CSS :hover rule sets opacity:1
     await wrapper.hover();
+    await page.waitForTimeout(100);
 
-    // After hover: opacity should be 1
-    const opacityAfter = await nextBtn.evaluate((el) => {
-      return parseFloat(getComputedStyle(el).opacity);
-    });
-    expect(opacityAfter).toBe(1);
+    const opacityHover = await nextBtn.evaluate((el) =>
+      parseFloat(getComputedStyle(el).opacity)
+    );
+    expect(opacityHover).toBe(1);
   });
 });
 
@@ -476,8 +492,10 @@ test.describe('Slider — no horizontal page overflow', () => {
   });
 });
 
-test.describe('Slider — autoplay', () => {
-  test('autoplay advances slides automatically on desktop', async ({ page }) => {
+test.describe('Slider — autoplay disabled on travel page', () => {
+  test('autoPlay=false: slider does not auto-advance on travel details page', async ({ page }) => {
+    // The travel details page explicitly sets autoPlay={false} on the Slider.
+    // This test verifies the slider stays on slide 1 for 5 seconds without user interaction.
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -487,63 +505,11 @@ test.describe('Slider — autoplay', () => {
 
     expect(counter.current).toBe(1);
 
-    // Default autoPlayInterval is 6000ms. We wait up to 10s for autoplay to fire.
-    // We speed up by evaluating JS to reduce the interval.
-    await page.evaluate(() => {
-      // Patch setInterval to fire faster for the autoplay timer
-      // We can't easily patch the component, but we can wait the full interval.
-      // Instead, just wait — the test verifies autoplay works at all.
-    });
-
-    // Wait up to 10s for slide to advance
-    const advanced = await (async () => {
-      const deadline = Date.now() + 10_000;
-      while (Date.now() < deadline) {
-        const c = await getCounter(page);
-        if (c && c.current > 1) return true;
-        await page.waitForTimeout(500);
-      }
-      return false;
-    })();
-
-    expect(advanced).toBe(true);
-  });
-
-  test('autoplay pauses when user hovers slider', async ({ page }) => {
-    await preacceptCookies(page);
-    const counter = await navigateToTravelWithSlider(page);
-    if (!counter) {
-      test.skip(true, 'No multi-image travel found');
-      return;
-    }
-
-    // Hover the slider to trigger pause (via onScrollBeginDrag equivalent)
-    // On web, autoplay pauses on touch/drag, not hover. We simulate a drag start.
-    const wrapper = page.locator('[data-testid="slider-wrapper"]').first();
-    await wrapper.waitFor({ state: 'visible', timeout: 10_000 });
-
-    // Simulate mousedown to pause autoplay
-    await page.evaluate(() => {
-      const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
-      if (!scroll) return;
-      scroll.dispatchEvent(new MouseEvent('mousedown', { button: 0, pageX: 100, pageY: 100, bubbles: true }));
-    });
-
-    // Record current slide
-    const cBefore = await getCounter(page);
-    const slideBefore = cBefore?.current ?? 1;
-
-    // Wait 3 seconds — autoplay should NOT advance while paused
-    await page.waitForTimeout(3000);
+    // Wait 5 seconds — autoplay is disabled, slide should NOT advance
+    await page.waitForTimeout(5000);
 
     const cAfter = await getCounter(page);
-    // Release drag
-    await page.evaluate(() => {
-      window.dispatchEvent(new MouseEvent('mouseup', { button: 0, pageX: 100, pageY: 100, bubbles: true }));
-    });
-
-    // Slide should not have changed during the pause window
-    expect(cAfter?.current).toBe(slideBefore);
+    expect(cAfter?.current).toBe(1);
   });
 });
 
@@ -558,7 +524,8 @@ test.describe('Slider — touch/pointer swipe', () => {
 
     expect(counter.current).toBe(1);
 
-    // Use pointer events (touch simulation)
+    // Use pointer events (touch simulation) — pageX is not in PointerEventInit type
+    // so we use clientX only (sufficient for scroll behavior)
     const swipeOk = await page.evaluate(async () => {
       const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
@@ -572,7 +539,7 @@ test.describe('Slider — touch/pointer swipe', () => {
       // Simulate touch via pointer events
       scroll.dispatchEvent(new PointerEvent('pointerdown', {
         pointerId: 1, pointerType: 'touch',
-        clientX: startX, clientY: y, pageX: startX, pageY: y, bubbles: true,
+        clientX: startX, clientY: y, bubbles: true,
       }));
       await delay(50);
 
@@ -581,14 +548,14 @@ test.describe('Slider — touch/pointer swipe', () => {
         const x = startX + (endX - startX) * (i / steps);
         scroll.dispatchEvent(new PointerEvent('pointermove', {
           pointerId: 1, pointerType: 'touch',
-          clientX: x, clientY: y, pageX: x, pageY: y, bubbles: true,
+          clientX: x, clientY: y, bubbles: true,
         }));
         await delay(16);
       }
 
       scroll.dispatchEvent(new PointerEvent('pointerup', {
         pointerId: 1, pointerType: 'touch',
-        clientX: endX, clientY: y, pageX: endX, pageY: y, bubbles: true,
+        clientX: endX, clientY: y, bubbles: true,
       }));
 
       return true;
@@ -606,7 +573,12 @@ test.describe('Slider — touch/pointer swipe', () => {
 });
 
 test.describe('Slider — slide virtualization', () => {
-  test('slides far from current index are not rendered (virtualization)', async ({ page }) => {
+  // Virtualization: Slider.web.tsx renders only slides within ±VIRTUAL_WINDOW (2) of current index.
+  // Slides outside the window render an empty placeholder div (no Slide component = no img).
+  // The testID "slider-image-N" is set on the ExpoImage inside Slide via imageProps.testID.
+  // RNW renders testID as data-testid on the DOM element.
+
+  test('slides far from current index have no image rendered', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter || counter.total < 4) {
@@ -614,30 +586,36 @@ test.describe('Slider — slide virtualization', () => {
       return;
     }
 
-    // Slide at index 3+ (0-based) should not have an img rendered when we're at slide 1
+    // At index 0, VIRTUAL_WINDOW=2 renders indices 0,1,2.
+    // Slide at index (total-1) should NOT have an image if total > 3.
     const lastSlideHasImg = await page.evaluate((total: number) => {
-      // Find all slide containers
-      const scroll = document.querySelector('[data-testid="slider-scroll"]');
-      if (!scroll) return null;
-      // The last slide is the (total-1)th child of the scroll content
-      // Actually slides are direct children of the scrollContent View
-      // Let's check by testid pattern
-      const lastImg = document.querySelector(`[data-testid="slider-image-${total - 1}"]`);
-      return lastImg !== null;
+      // slider-image-N is set via imageProps.testID which RNW renders as data-testid
+      return document.querySelector(`[data-testid="slider-image-${total - 1}"]`) !== null;
     }, counter.total);
 
-    // With VIRTUAL_WINDOW=2, slide at index (total-1) should NOT be rendered when at index 0
-    // (only renders ±2 from current = indices 0,1,2)
-    if (counter.total > 3) {
-      expect(lastSlideHasImg).toBe(false);
+    expect(lastSlideHasImg).toBe(false);
+  });
+
+  test('virtualization renders slide 0 image when at index 0', async ({ page }) => {
+    await preacceptCookies(page);
+    const counter = await navigateToTravelWithSlider(page);
+    if (!counter) {
+      test.skip(true, 'No multi-image travel found');
+      return;
     }
+
+    // Slide 0 should always be rendered at index 0
+    const slide0HasImg = await page.evaluate(() => {
+      return document.querySelector('[data-testid="slider-image-0"]') !== null;
+    });
+    expect(slide0HasImg).toBe(true);
   });
 
   test('virtualization window expands as user navigates', async ({ page }) => {
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
-    if (!counter || counter.total < 4) {
-      test.skip(true, 'Need travel with ≥4 images');
+    if (!counter || counter.total < 5) {
+      test.skip(true, 'Need travel with ≥5 images');
       return;
     }
 
@@ -649,13 +627,11 @@ test.describe('Slider — slide virtualization', () => {
     await waitForCounterValue(page, 3, 8_000);
 
     // Now index=2, VIRTUAL_WINDOW=2 → renders indices 0..4
-    // Slide at index 4 (counter value 5) should now be rendered if total >= 5
-    if (counter.total >= 5) {
-      const slide4Rendered = await page.evaluate(() => {
-        return document.querySelector('[data-testid="slider-image-4"]') !== null;
-      });
-      expect(slide4Rendered).toBe(true);
-    }
+    // Slide at index 4 should now be rendered
+    const slide4Rendered = await page.evaluate(() => {
+      return document.querySelector('[data-testid="slider-image-4"]') !== null;
+    });
+    expect(slide4Rendered).toBe(true);
 
     // Slide at index 0 should still be rendered (within ±2 of index 2)
     const slide0Rendered = await page.evaluate(() => {
@@ -668,11 +644,13 @@ test.describe('Slider — slide virtualization', () => {
 test.describe('Slider — scroll container properties', () => {
   test('scroll container has scroll-snap-type x mandatory', async ({ page }) => {
     await preacceptCookies(page);
-    const counter = await navigateToTravelWithSlider(page);
-    if (!counter) {
-      test.skip(true, 'No multi-image travel found');
+    const navigated = await navigateToAnyTravel(page);
+    if (!navigated) {
+      test.skip(true, 'No travels found');
       return;
     }
+
+    await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(() => null);
 
     const scrollSnapType = await page.evaluate(() => {
       const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
@@ -684,13 +662,15 @@ test.describe('Slider — scroll container properties', () => {
     expect(scrollSnapType).toContain('mandatory');
   });
 
-  test('scroll container overflow is auto or scroll on x-axis', async ({ page }) => {
+  test('scroll container overflow is auto on x-axis', async ({ page }) => {
     await preacceptCookies(page);
-    const counter = await navigateToTravelWithSlider(page);
-    if (!counter) {
-      test.skip(true, 'No multi-image travel found');
+    const navigated = await navigateToAnyTravel(page);
+    if (!navigated) {
+      test.skip(true, 'No travels found');
       return;
     }
+
+    await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(() => null);
 
     const overflowX = await page.evaluate(() => {
       const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
@@ -699,6 +679,33 @@ test.describe('Slider — scroll container properties', () => {
     });
 
     expect(['auto', 'scroll']).toContain(overflowX);
+  });
+
+  test('scroll container width matches wrapper width', async ({ page }) => {
+    await preacceptCookies(page);
+    const navigated = await navigateToAnyTravel(page);
+    if (!navigated) {
+      test.skip(true, 'No travels found');
+      return;
+    }
+
+    await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 }).catch(() => null);
+    await page.waitForTimeout(300);
+
+    const widths = await page.evaluate(() => {
+      const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
+      const wrapper = document.querySelector('[data-testid="slider-wrapper"]') as HTMLElement;
+      if (!scroll || !wrapper) return null;
+      return {
+        scrollW: scroll.getBoundingClientRect().width,
+        wrapperW: wrapper.getBoundingClientRect().width,
+      };
+    });
+
+    expect(widths).not.toBeNull();
+    expect(widths!.scrollW).toBeGreaterThan(0);
+    // Scroll container should be same width as wrapper (not wider)
+    expect(widths!.scrollW).toBeLessThanOrEqual(widths!.wrapperW + 2);
   });
 });
 
