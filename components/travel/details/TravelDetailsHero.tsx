@@ -364,18 +364,17 @@ function TravelHeroSectionInner({
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
-    // Desktop web: 55% viewport, mobile: 60% — keeps content visible above fold
+    // Desktop web: 70% viewport — keeps content visible above fold
     if (Platform.OS === 'web' && !isMobile) {
-      const target = winH * 0.55
-      return Math.max(360, Math.min(target, 600))
+      const target = winH * 0.7
+      return Math.max(360, Math.min(target, 750))
     }
-    const target = winH * 0.6
-    if (!resolvedWidth) return isMobile ? Math.max(280, target) : Math.max(360, target)
-    if (isMobile) {
-      return Math.max(280, Math.min(target, winH * 0.6))
-    }
-    return Math.max(360, Math.min(target, winH * 0.6))
-  }, [isMobile, winH, resolvedWidth])
+    // Mobile: use aspect-ratio-derived height so the title overlay sits on the image,
+    // not below it in a gap. Cap to 60% viewport to keep content above fold.
+    const arHeight = resolvedWidth ? Math.round(resolvedWidth / aspectRatio) : winH * 0.6
+    const target = Math.min(arHeight, winH * 0.6)
+    return Math.max(280, target)
+  }, [isMobile, winH, resolvedWidth, aspectRatio])
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
     return gallery.map((item, index) =>
@@ -543,6 +542,7 @@ function TravelHeroSectionInner({
                     blurBackground
                     aspectRatio={aspectRatio as number}
                     fillContainer
+                    fit="contain"
                     onFirstImageLoad={handleSliderImageLoad}
                     firstImagePreloaded
                   />
@@ -588,6 +588,7 @@ function TravelHeroSectionInner({
                 blurBackground
                 aspectRatio={aspectRatio as number}
                 fillContainer
+                fit="contain"
                 onFirstImageLoad={onFirstImageLoad}
                 firstImagePreloaded={renderSlider && Platform.OS === 'web'}
               />

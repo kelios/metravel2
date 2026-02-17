@@ -371,11 +371,15 @@ const getTravelHeroPreloadScript = () => String.raw`
             patchMeta('meta[name="twitter:image"]', 'content', ogImgUrl);
           }
 
-          // Canonical & og:url — fix [param] placeholder
+          // Canonical & og:url — fix [param] placeholder or create if missing
           var correctPath = '/travels/' + slug;
           var correctUrl = siteOrigin + correctPath;
-          patchMeta('meta[property="og:url"]', 'content', correctUrl);
-          patchMeta('link[rel="canonical"]', 'href', correctUrl);
+          var ogUrlEl = document.querySelector('meta[property="og:url"]');
+          if (ogUrlEl) { ogUrlEl.setAttribute('content', correctUrl); }
+          else { ogUrlEl = document.createElement('meta'); ogUrlEl.setAttribute('property', 'og:url'); ogUrlEl.setAttribute('content', correctUrl); document.head.appendChild(ogUrlEl); }
+          var canEl = document.querySelector('link[rel="canonical"]');
+          if (canEl) { canEl.setAttribute('href', correctUrl); }
+          else { canEl = document.createElement('link'); canEl.rel = 'canonical'; canEl.href = correctUrl; document.head.appendChild(canEl); }
 
           // og:type for travel pages
           patchMeta('meta[property="og:type"]', 'content', 'article');
@@ -512,7 +516,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	      {/* Consolidated critical head script: title fallback + theme detection + canonical fix */}
       <script
         dangerouslySetInnerHTML={{
-          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false;try{var p=window.location.pathname||'';var o='https://metravel.by';var correctUrl=o+p;var cl=document.querySelector('link[rel="canonical"]');if(cl){var h=cl.getAttribute('href')||'';if(h!==correctUrl){cl.setAttribute('href',correctUrl)}}var ou=document.querySelector('meta[property="og:url"]');if(ou){var oc=ou.getAttribute('content')||'';if(/\[|\%5B/.test(oc)||oc!==correctUrl){ou.setAttribute('content',correctUrl)}}}catch(_){}})();`,
+          __html: String.raw`(function(){try{var f='MeTravel';var t=document.querySelector('head title[data-rh="true"]');if(t&&!t.textContent)t.textContent=f;if(!document.title)document.title=f}catch(_){}try{var s=null;try{s=window.localStorage.getItem('theme')}catch(_){}var th=(s==='light'||s==='dark'||s==='auto')?s:'auto';var d=false;if(th==='dark')d=true;else if(th!=='light')d=window.matchMedia&&window.matchMedia('(prefers-color-scheme:dark)').matches;var r=document.documentElement;r.setAttribute('data-theme',d?'dark':'light');r.style.colorScheme=d?'dark':'light'}catch(_){}window.__EXPO_ROUTER_INSPECTOR=false;try{var p=window.location.pathname||'';if(p.length>1)p=p.replace(/\/+$/,'');var o='https://metravel.by';var correctUrl=o+p;var cl=document.querySelector('link[rel="canonical"]');if(cl){var h=cl.getAttribute('href')||'';if(h!==correctUrl){cl.setAttribute('href',correctUrl)}}else{cl=document.createElement('link');cl.rel='canonical';cl.href=correctUrl;document.head.appendChild(cl)}var ou=document.querySelector('meta[property="og:url"]');if(ou){var oc=ou.getAttribute('content')||'';if(/\[|\%5B/.test(oc)||oc!==correctUrl){ou.setAttribute('content',correctUrl)}}else{ou=document.createElement('meta');ou.setAttribute('property','og:url');ou.setAttribute('content',correctUrl);document.head.appendChild(ou)}}catch(_){}})();`,
         }}
       />
       

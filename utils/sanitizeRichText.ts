@@ -22,6 +22,7 @@ const SAFE_DATA_IMAGE_RE = /^data:image\/(png|jpe?g|gif|webp|avif);base64,/i
 
 const PDF_IMAGE_PROXY_BASE = 'https://images.weserv.nl/?url='
 const PDF_IMAGE_DEFAULT_PARAMS = 'w=1600&fit=inside'
+const IMAGE_OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr']
 
 const allowedTags = Array.from(
   new Set([
@@ -124,7 +125,20 @@ function normalizePdfImageSrc(value?: string) {
   if (!normalized) return undefined
   try {
     const rewritten = rewriteLocalImageUrl(normalized)
-    const withoutScheme = rewritten.replace(/^https?:\/\//i, '')
+    // Strip backend optimization params the origin server doesn't understand
+    // (e.g. ?w=1200&h=675&q=75&f=webp&fit=cover&auto=compress on /travel-description-image/ paths).
+    const rewrittenUrl = new URL(rewritten)
+    for (const p of IMAGE_OPTIMIZATION_PARAMS) rewrittenUrl.searchParams.delete(p)
+    const cleanRewritten = rewrittenUrl.toString().replace(/\?$/, '')
+
+    // Don't proxy metravel.by's own images through weserv.nl — they are dynamic
+    // backend routes (e.g. /travel-description-image/) that weserv.nl can't reach.
+    const host = rewrittenUrl.hostname.toLowerCase()
+    if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
+      return cleanRewritten
+    }
+
+    const withoutScheme = cleanRewritten.replace(/^https?:\/\//i, '')
     return `${PDF_IMAGE_PROXY_BASE}${encodeURIComponent(withoutScheme)}&${PDF_IMAGE_DEFAULT_PARAMS}`
   } catch {
     return normalized

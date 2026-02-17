@@ -9,7 +9,7 @@ interface SlideProps {
   index: number;
   uri: string;
   containerW: number;
-  slideHeight: number;
+  slideHeight: number | string;
   imagesLength: number;
   styles: Record<string, any>;
   blurBackground: boolean;
@@ -18,6 +18,8 @@ interface SlideProps {
   onImagePress?: (index: number) => void;
   /** When true, skip the loading shimmer (image already in browser cache). */
   firstImagePreloaded?: boolean;
+  /** Image fit mode. Defaults to 'contain'. */
+  fit?: 'cover' | 'contain';
 }
 
 const Slide = memo(function Slide({
@@ -33,6 +35,7 @@ const Slide = memo(function Slide({
   onFirstImageLoad,
   onImagePress,
   firstImagePreloaded,
+  fit = 'contain',
 }: SlideProps) {
   const [status, setStatus] = useState<LoadStatus>(
     index === 0 && firstImagePreloaded ? 'loaded' : 'loading',
@@ -42,7 +45,7 @@ const Slide = memo(function Slide({
   const isFirstSlide = index === 0;
   const mainPriority = isFirstSlide ? 'high' : 'low';
 
-  const mainFit: 'cover' | 'contain' = 'contain';
+  const mainFit: 'cover' | 'contain' = fit;
 
   const handleLoadStart = useCallback(() => {
     setStatus((prev) => (prev === 'loaded' ? prev : 'loading'));

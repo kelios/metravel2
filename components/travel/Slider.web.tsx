@@ -494,7 +494,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     index={index}
                     uri={uri}
                     containerW={containerW}
-                    slideHeight={computedH}
+                    slideHeight={fillContainer ? '100%' : computedH}
                     imagesLength={images.length}
                     styles={styles}
                     blurBackground={blurBackground}
@@ -502,6 +502,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     onFirstImageLoad={onFirstImageLoad}
                     onImagePress={onImagePress}
                     firstImagePreloaded={firstImagePreloaded}
+                    fit={fit}
                   />
                 </View>
               );

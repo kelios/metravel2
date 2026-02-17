@@ -515,9 +515,8 @@ describe('TravelDataTransformer', () => {
       ];
 
       const result = transformer.transform(travels);
-      expect(result[0].description).toContain('https://images.weserv.nl/?url=');
-      // Внутри параметра url должен быть уже продовый домен, а не локальный IP
-      expect(result[0].description).toContain(encodeURIComponent('metravel.by/gallery/5076/conversions/a.jpg?v=1'));
+      expect(result[0].description).toContain('https://metravel.by/gallery/5076/conversions/a.jpg?v=1');
+      expect(result[0].description).not.toContain('https://images.weserv.nl/?url=');
       expect(result[0].description).not.toContain('192.168.50.36');
     });
 

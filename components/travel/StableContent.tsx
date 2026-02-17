@@ -77,17 +77,32 @@ const buildWeservProxyUrl = (src: string) => {
     if (/^https?:\/\/images\.weserv\.nl\//i.test(normalized)) {
       try {
         const u = new URL(normalized);
+        // Strip optimization params from the inner url param — the origin server
+        // doesn't understand them and returns 404 when weserv.nl forwards the request.
+        const innerUrl = u.searchParams.get('url');
+        if (innerUrl) {
+          const cleanInner = stripOptimizationParams(
+            innerUrl.startsWith('//') ? `https:${innerUrl}` : innerUrl.includes('://') ? innerUrl : `https://${innerUrl}`
+          ).replace(/^https?:\/\//i, '');
+          u.searchParams.set('url', cleanInner);
+        }
         u.searchParams.set('w', String(targetW));
         u.searchParams.set('q', '60');
         if (!u.searchParams.has('output')) u.searchParams.set('output', 'webp');
         return u.toString();
       } catch { return normalized; }
     }
-    // Check if host is private/local - don't proxy through weserv (local dev)
+    // Check if host is private/local or metravel.by's own domain — don't proxy through weserv
     try {
       const parsed = new URL(normalized, 'https://metravel.by');
-      if (isPrivateOrLocalHost(parsed.hostname)) {
-        return normalized; // Return as-is for private hosts
+      const host = parsed.hostname.toLowerCase();
+      if (isPrivateOrLocalHost(host)) {
+        return normalized; // Return as-is for private hosts (local dev)
+      }
+      // Don't proxy metravel.by's own images — they are dynamic backend routes
+      // (e.g. /travel-description-image/) that weserv.nl can't reach.
+      if (host === 'metravel.by' || host === 'cdn.metravel.by' || host === 'api.metravel.by') {
+        return stripOptimizationParams(normalized);
       }
     } catch { /* continue with proxy */ }
     // Strip optimization params the origin server doesn't understand (w, h, q, f, fit, auto, etc.)
