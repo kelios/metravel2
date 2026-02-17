@@ -55,6 +55,7 @@ jest.mock('@/utils/imageOptimization', () => ({
   optimizeImageUrl: (url: string) => url,
   buildVersionedImageUrl: (url: string) => url,
   getOptimalImageSize: (width: number, height: number) => ({ width, height }),
+  generateSrcSet: (url: string) => url,
 }));
 
 // Mock useWindowDimensions

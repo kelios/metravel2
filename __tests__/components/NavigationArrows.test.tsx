@@ -20,6 +20,7 @@ jest.mock('@/utils/imageOptimization', () => ({
   optimizeImageUrl: jest.fn((url) => url),
   buildVersionedImageUrl: jest.fn((url) => url),
   getOptimalImageSize: jest.fn(() => ({ width: 60, height: 60 })),
+  generateSrcSet: jest.fn((url) => url),
 }));
 
 // Mock useWindowDimensions

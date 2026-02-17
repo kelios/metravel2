@@ -80,6 +80,8 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const firstSlideStableKeyRef = useRef<string | null>(null)
   const firstSlideStableUriRef = useRef<string | null>(null)
   const firstSlideLockedRef = useRef(true)
+  // Track scroll-based index for rendering (updates synchronously during scroll)
+  const [scrollBasedIndex, setScrollBasedIndex] = useState(0)
 
   const getWrapperNode = useCallback((): HTMLElement | null => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -129,7 +131,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         window.removeEventListener('resize', syncContainerWidthFromDom)
       }
     }
-  }, [syncContainerWidthFromDom])
+  }, [syncContainerWidthFromDom, getWrapperNode])
 
   const firstAR = useMemo(() => {
     const f = images[0]
@@ -252,6 +254,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const clampedIdx = clamp(idx, 0, Math.max(0, images.length - 1))
       indexRef.current = clampedIdx
       setCurrentIndex((prev) => (prev === clampedIdx ? prev : clampedIdx))
+      setScrollBasedIndex((prev) => (prev === clampedIdx ? prev : clampedIdx))
       onIndexChanged?.(clampedIdx)
       warmNeighbors(clampedIdx)
     },
@@ -433,16 +436,23 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   )
 
   const handleScroll = useCallback(
-    (e: any) => {
+    (_e: any) => {
       enablePrefetch()
+
+      // Update scroll-based index synchronously for render window
+      const node = getScrollNode()
+      const x = node?.scrollLeft ?? 0
+      const cw = containerWRef.current || 1
+      const scrollIdx = Math.round(x / cw)
+      setScrollBasedIndex((prev) => (prev === scrollIdx ? prev : scrollIdx))
 
       if (scrollIdleTimerRef.current) clearTimeout(scrollIdleTimerRef.current)
       scrollIdleTimerRef.current = setTimeout(() => {
         // Read scrollLeft at idle time (not at event time) so containerW is current
-        const node = getScrollNode()
-        const x = node?.scrollLeft ?? 0
-        const cw = containerWRef.current || 1
-        const idx = Math.round(x / cw)
+        const nodeIdle = getScrollNode()
+        const xIdle = nodeIdle?.scrollLeft ?? 0
+        const cwIdle = containerWRef.current || 1
+        const idx = Math.round(xIdle / cwIdle)
         setActiveIndex(idx)
       }, 80)
     },
@@ -472,7 +482,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return () => {
       parent.removeEventListener('keydown', handleKeyDown as EventListener)
     }
-  }, [])
+  }, [getScrollNode])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -552,7 +562,7 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       node.removeEventListener('mouseleave', onMouseLeave)
       node.removeEventListener('scrollend', onScrollEnd)
     }
-  }, [images.length, setActiveIndex])
+  }, [images.length, setActiveIndex, getScrollNode])
 
   if (!images.length) return null
 
@@ -591,10 +601,16 @@ const SliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             {...(Platform.OS === 'web' ? { dataSet: { sliderInstance: sliderInstanceId } } as any : {})}
           >
             {images.map((item, index) => {
-              const renderWindow = isMobile ? 2 : 3
-              if (images.length > 5 && index !== 0 && Math.abs(index - currentIndex) > renderWindow) {
+              // Use scrollBasedIndex for faster render window updates during scroll
+              // Increase render window to prevent black screens during fast swipes
+              const renderWindow = isMobile ? 3 : 4
+              // Skip rendering only for very distant slides and never skip first slide
+              if (images.length > 8 && index !== 0 && Math.abs(index - scrollBasedIndex) > renderWindow) {
                 return (
-                  <View key={keyExtractor(item, index)} style={[styles.slide, slideDimensions, styles.slideSnap]} />
+                  <View
+                    key={keyExtractor(item, index)}
+                    style={[styles.slide, slideDimensions, styles.slideSnap, styles.slidePlaceholder]}
+                  />
                 )
               }
               return (
@@ -735,8 +751,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     slide: {
       flexShrink: 0,
       position: 'relative',
-      backgroundColor: '#1a1a1a',
+      backgroundColor: colors.surfaceMuted || '#2a2a2a',
       overflow: 'hidden',
+    },
+    slidePlaceholder: {
+      backgroundColor: colors.backgroundTertiary || '#333',
     },
     slideSnap: Platform.OS === 'web'
       ? ({ scrollSnapAlign: 'start', scrollSnapStop: 'always' } as any)
