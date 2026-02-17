@@ -1,7 +1,7 @@
 import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-export const DOT_SIZE = 6;
+export const DOT_SIZE = 8;
 
 export const createSliderStyles = (colors: Record<string, any>) =>
   StyleSheet.create<Record<string, any>>({
@@ -52,9 +52,11 @@ export const createSliderStyles = (colors: Record<string, any>) =>
           scrollSnapType: 'x mandatory',
           WebkitOverflowScrolling: 'touch',
           willChange: 'scroll-position',
-          touchAction: 'pan-x pan-y',
+          touchAction: 'pan-x',
           overflowX: 'auto',
           overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
+          scrollBehavior: 'smooth',
         } as any)
       : {},
     scrollContent: {
@@ -97,45 +99,48 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     navBtn: {
       position: 'absolute',
       top: '50%',
-      marginTop: -28,
-      backgroundColor: colors.overlay || colors.overlayLight,
-      borderWidth: 1,
-      borderColor: colors.borderStrong || colors.borderLight,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      marginTop: -18,
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      borderWidth: 0,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       zIndex: 50,
       justifyContent: 'center',
       alignItems: 'center',
       ...Platform.select<any>({
         web: {
           cursor: 'pointer',
-          transition: 'background-color 0.2s ease',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          transition: 'background-color 0.2s ease, transform 0.15s ease',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           contain: 'layout',
+          ':hover': {
+            backgroundColor: 'rgba(0,0,0,0.55)',
+          },
         },
       }),
     },
     navBtnDesktop: {
-      width: 56,
-      height: 56,
-    },
-    navBtnMobile: {
       width: 40,
       height: 40,
       borderRadius: 20,
       marginTop: -20,
-      backgroundColor: colors.overlayLight,
+    },
+    navBtnMobile: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      marginTop: -16,
     },
     navBtnTablet: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      marginTop: -24,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginTop: -18,
     },
     navBtnHover: {
-      backgroundColor: colors.surface,
+      backgroundColor: 'rgba(0,0,0,0.55)',
     },
     arrowIconContainer: {
       width: '100%',
@@ -143,7 +148,9 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       justifyContent: 'center',
       alignItems: 'center',
     },
-    arrowIcon: {},
+    arrowIcon: {
+      opacity: 0.95,
+    },
     edgeScrimLeft: {
       position: 'absolute',
       top: 0,
@@ -174,86 +181,86 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     },
     dots: {
       position: 'absolute',
-      bottom: 16,
+      bottom: 12,
       left: 0,
       right: 0,
       alignItems: 'center',
       zIndex: DESIGN_TOKENS.zIndex.fixed,
     },
     dotsMobile: {
-      bottom: 12,
+      bottom: 10,
     },
     dotsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.overlayLight,
+      backgroundColor: 'rgba(0,0,0,0.45)',
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
+      borderRadius: 16,
+      borderWidth: 0,
       gap: 6,
       ...Platform.select({
         web: {
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
         },
       }),
     },
     dotWrap: {
-      paddingHorizontal: 4,
+      paddingHorizontal: 3,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
     },
     dot: {
-      backgroundColor: colors.textMuted,
+      backgroundColor: 'rgba(255,255,255,0.45)',
       height: DOT_SIZE,
       borderRadius: DOT_SIZE / 2,
       width: DOT_SIZE,
-      opacity: 0.5,
+      opacity: 1,
       ...Platform.select({
         web: {
-          transition: 'width 0.25s ease, opacity 0.25s ease',
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
     dotActive: {
-      width: 18,
-      opacity: 1,
-      backgroundColor: colors.text,
+      width: DOT_SIZE,
+      backgroundColor: '#ffffff',
+      transform: [{ scale: 1.3 }],
+      ...Platform.select({
+        web: {
+          boxShadow: '0 0 6px rgba(255,255,255,0.6)',
+        } as any,
+      }),
     },
     counter: {
       position: 'absolute',
-      top: 16,
-      left: 16,
+      top: 12,
+      left: 12,
       zIndex: DESIGN_TOKENS.zIndex.fixed,
     },
     counterMobile: {
-      top: 12,
-      left: 12,
+      top: 10,
+      left: 10,
     },
     counterContainer: {
-      backgroundColor: 'rgba(0,0,0,0.45)',
-      paddingHorizontal: 12,
-      paddingVertical: 4,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.borderLight,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 12,
+      borderWidth: 0,
       ...Platform.select({
         web: {
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
         },
       }),
     },
     counterText: {
-      color: '#fff',
-      fontSize: DESIGN_TOKENS.typography.sizes.sm,
-      fontWeight: '700' as any,
-      fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system' : undefined,
-      letterSpacing: 0.5,
-      textShadowColor: 'rgba(0,0,0,0.6)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 3,
+      color: '#ffffff',
+      fontSize: 12,
+      fontWeight: '600' as any,
+      fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined,
+      letterSpacing: 0.3,
     },
   });
 

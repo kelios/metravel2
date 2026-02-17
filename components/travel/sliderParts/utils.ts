@@ -11,7 +11,7 @@ export const DEFAULT_AR = 16 / 9;
 export const DOT_SIZE = 6;
 export const DOT_ACTIVE_SIZE = 24;
 export const NAV_BTN_OFFSET = 16;
-export const MOBILE_HEIGHT_PERCENT = 0.6;
+export const MOBILE_HEIGHT_PERCENT = 0.7;
 
 /** Max container width per breakpoint (used for maxWidth + image optimization caps) */
 export const SLIDER_MAX_WIDTH = {
@@ -129,11 +129,11 @@ export const computeSliderHeight = (
   }
 
   if (opts.isTablet) {
-    const maxH = opts.winH * 0.65;
-    return clamp(arDriven, 280, maxH);
+    const maxH = opts.winH * 0.75;
+    return clamp(arDriven, 350, maxH);
   }
 
   // Desktop
-  const maxH = opts.winH * 0.7;
-  return clamp(arDriven, 320, maxH);
+  const maxH = opts.winH * 0.85;
+  return clamp(arDriven, 400, maxH);
 };

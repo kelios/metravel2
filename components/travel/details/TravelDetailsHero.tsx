@@ -615,11 +615,6 @@ function TravelHeroSectionInner({
                 >
                   {travel.name}
                 </Text>
-                {heroMetaLine ? (
-                  <Text style={styles.heroMeta} numberOfLines={1}>
-                    {heroMetaLine}
-                  </Text>
-                ) : null}
               </View>
             </View>
           ) : null}

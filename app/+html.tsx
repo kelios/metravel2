@@ -243,6 +243,21 @@ const getTravelHeroPreloadScript = () => String.raw`
         var actualWidth = width ? Math.round(width * dpr) : width;
 
         if (!isAllowedHost) {
+          // Check if host is private/local - don't proxy private IPs through weserv
+          var isPrivateHost =
+            rHost === 'localhost' ||
+            rHost === '127.0.0.1' ||
+            /^10\./.test(rHost) ||
+            /^192\.168\./.test(rHost) ||
+            /^172\.(1[6-9]|2\d|3[0-1])\./.test(rHost);
+          
+          if (isPrivateHost) {
+            // Return direct URL for private hosts (local dev)
+            if (actualWidth) resolved.searchParams.set('w', String(actualWidth));
+            if (quality && quality !== 100) resolved.searchParams.set('q', String(quality));
+            return resolved.toString();
+          }
+          
           // Proxy through weserv for non-allowed external hosts
           var proxy = new URL('https://images.weserv.nl/');
           var cleanUrl = resolved.toString().replace(/^https?:\/\//i, '');

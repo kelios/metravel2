@@ -53,6 +53,16 @@ const stripOptimizationParams = (urlStr: string): string => {
   }
 };
 
+const isPrivateOrLocalHost = (host: string): boolean => {
+  const h = String(host || '').trim().toLowerCase();
+  if (!h) return false;
+  if (h === 'localhost' || h === '127.0.0.1') return true;
+  if (/^10\./.test(h)) return true;
+  if (/^192\.168\./.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
+  return false;
+};
+
 const buildWeservProxyUrl = (src: string) => {
   try {
     const trimmed = String(src || '').trim();
@@ -73,6 +83,13 @@ const buildWeservProxyUrl = (src: string) => {
         return u.toString();
       } catch { return normalized; }
     }
+    // Check if host is private/local - don't proxy through weserv (local dev)
+    try {
+      const parsed = new URL(normalized, 'https://metravel.by');
+      if (isPrivateOrLocalHost(parsed.hostname)) {
+        return normalized; // Return as-is for private hosts
+      }
+    } catch { /* continue with proxy */ }
     // Strip optimization params the origin server doesn't understand (w, h, q, f, fit, auto, etc.)
     // before proxying through weserv.nl — otherwise the origin returns 404.
     const cleaned = stripOptimizationParams(normalized);

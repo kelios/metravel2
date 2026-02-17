@@ -34,13 +34,17 @@ import Slide from './sliderParts/Slide';
 // Re-export types for consumers that import from '@/components/travel/Slider.web'
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
 
-// Inject CSS class for disabling scroll-snap during programmatic scrolling
+// Inject CSS classes for slider functionality and hover effects
 if (typeof document !== 'undefined') {
   const STYLE_ID = 'slider-snap-override';
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement('style');
     style.id = STYLE_ID;
-    style.textContent = '.slider-snap-disabled { scroll-snap-type: none !important; }';
+    style.textContent = `
+      .slider-snap-disabled { scroll-snap-type: none !important; }
+      .slider-nav-btn:hover { background-color: rgba(0,0,0,0.55) !important; }
+      .slider-nav-btn:active { transform: scale(0.95); }
+    `;
     document.head.appendChild(style);
   }
 }
@@ -501,14 +505,15 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
                 scrollTo(target);
               }}
-              activeOpacity={0.8}
+              activeOpacity={0.9}
               style={[styles.navBtn, { left: navOffset }]}
+              {...({ className: 'slider-nav-btn' } as any)}
             >
               <View style={styles.arrowIconContainer}>
                 <Feather
                   name="chevron-left"
-                  size={isMobile ? 20 : isTablet ? 22 : 24}
-                  color={colors.textOnDark}
+                  size={isMobile ? 16 : isTablet ? 18 : 20}
+                  color="rgba(255,255,255,0.95)"
                   style={styles.arrowIcon}
                 />
               </View>
@@ -520,14 +525,15 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                 const target = (indexRef.current + 1) % images.length;
                 scrollTo(target);
               }}
-              activeOpacity={0.8}
+              activeOpacity={0.9}
               style={[styles.navBtn, { right: navOffset }]}
+              {...({ className: 'slider-nav-btn' } as any)}
             >
               <View style={styles.arrowIconContainer}>
                 <Feather
                   name="chevron-right"
-                  size={isMobile ? 20 : isTablet ? 22 : 24}
-                  color={colors.textOnDark}
+                  size={isMobile ? 16 : isTablet ? 18 : 20}
+                  color="rgba(255,255,255,0.95)"
                   style={styles.arrowIcon}
                 />
               </View>
