@@ -20,10 +20,21 @@ type Props = {
   style?: any
 }
 
-const QUILL_CDN_JS = 'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js'
+const isTestEnv =
+  typeof process !== 'undefined' &&
+  (process as any)?.env &&
+  ((process as any).env.NODE_ENV === 'test' || (process as any).env.JEST_WORKER_ID !== undefined)
+
+if (typeof window !== 'undefined' && !isTestEnv) {
+  try {
+    require('quill/dist/quill.snow.css')
+  } catch {
+    // noop
+  }
+}
 
 let quillLoadPromise: Promise<any> | null = null
-const loadQuillFromCdn = () => {
+const loadQuill = () => {
   if (typeof window === 'undefined') {
     return Promise.reject(new Error('Quill is only available in the browser'))
   }
@@ -32,49 +43,21 @@ const loadQuillFromCdn = () => {
   if (w.Quill) return Promise.resolve(w.Quill)
   if (quillLoadPromise) return quillLoadPromise
 
-  quillLoadPromise = new Promise((resolve, reject) => {
-    try {
-      const existing = window.document.querySelector(`script[src="${QUILL_CDN_JS}"]`) as HTMLScriptElement | null
-      if (existing) {
-        const done = () => {
-          if (w.Quill) resolve(w.Quill)
-          else reject(new Error('Quill script loaded but window.Quill is missing'))
-        }
-        if ((existing as any).dataset?.loaded === 'true') return done()
-        existing.addEventListener('load', done, { once: true })
-        existing.addEventListener('error', () => reject(new Error('Failed to load Quill script')), { once: true })
-        return
-      }
-
-      const script = window.document.createElement('script')
-      script.async = true
-      script.defer = true
-      script.src = QUILL_CDN_JS
+  quillLoadPromise = import('quill')
+    .then((mod) => {
+      const Quill = (mod as any)?.default ?? (mod as any)
+      if (!Quill) throw new Error('Failed to load Quill module')
       try {
-        script.dataset.loaded = 'false'
+        ;(window as any).Quill = Quill
       } catch {
         // noop
       }
-
-      script.addEventListener(
-        'load',
-        () => {
-          try {
-            ;(script as any).dataset.loaded = 'true'
-          } catch {
-            // noop
-          }
-          if (w.Quill) resolve(w.Quill)
-          else reject(new Error('Quill script loaded but window.Quill is missing'))
-        },
-        { once: true }
-      )
-      script.addEventListener('error', () => reject(new Error('Failed to load Quill script')), { once: true })
-      window.document.head.appendChild(script)
-    } catch (e: any) {
-      reject(e)
-    }
-  })
+      return Quill
+    })
+    .catch((e) => {
+      quillLoadPromise = null
+      throw e
+    })
 
   return quillLoadPromise
 }
@@ -140,7 +123,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
     let quillInstance: any | null = null
     let onTextChange: ((delta: unknown, _oldDelta: unknown, source: unknown) => void) | null = null
 
-    loadQuillFromCdn()
+    loadQuill()
       .then((Quill) => {
         if (cancelled) return
         ensureIdAttributeRegistered(Quill)

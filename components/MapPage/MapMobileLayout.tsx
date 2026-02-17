@@ -437,7 +437,7 @@ const getStyles = (colors: ThemedColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      maxHeight: 44,
+      minHeight: 44,
       paddingVertical: 2,
       paddingHorizontal: 2,
       borderBottomWidth: 1,
@@ -446,7 +446,7 @@ const getStyles = (colors: ThemedColors) =>
         web: {
           flexDirection: 'column',
           alignItems: 'stretch',
-          maxHeight: 112,
+          minHeight: 112,
           paddingVertical: 8,
           paddingHorizontal: 8,
         },
