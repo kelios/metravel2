@@ -18,9 +18,11 @@ apply_env() {
   cp ".env.$ENV" .env
 }
 
-clean_all() {
-  echo "🧹 Чищу проект..."
-  rm -rf node_modules package-lock.json dist
+install_deps() {
+  if [[ "${CLEAN:-0}" == "1" ]]; then
+    echo "🧹 Чищу зависимости..."
+    rm -rf node_modules package-lock.json
+  fi
   echo "📦 Устанавливаю зависимости..."
   yarn install --frozen-lockfile || yarn install
 }
@@ -32,6 +34,8 @@ build_env() {
   echo "🚀 Сборка для $ENV → $DIR"
   apply_env "$ENV"
 
+  rm -rf "$DIR"
+
   NODE_ENV=production \
   EXPO_ENV="$ENV" \
   EXPO_NO_METRO_LAZY=true \
@@ -41,6 +45,7 @@ build_env() {
 }
 
 deploy_prod() {
+  ENV="$1"
   rsync -avzhe "ssh" --delete \
     ./dist/ \
     sx3@178.172.137.129:/home/sx3/metravel/dist/
@@ -55,34 +60,45 @@ deploy_prod() {
 
   ssh sx3@178.172.137.129 "set -e
     cd /home/sx3/metravel
-    mv dist/prod static/dist.new
+    mkdir -p static
+    rm -rf static/dist.new
+    mv dist/$ENV static/dist.new
     mv static/dist static/dist.old || true
     mv static/dist.new static/dist
     rm -rf static/dist.old
     mkdir -p static/dist/assets/icons static/dist/assets/images
     cp -R icons/. static/dist/assets/icons/
     cp -R images/. static/dist/assets/images/
-    docker-compose restart app nginx
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+      docker compose restart app nginx
+    else
+      docker-compose restart app nginx
+    fi
     rm -rf dist icons images
   "
 
   rm -rf dist
 }
 
-echo "🔁 Старт полной сборки..."
-clean_all
+ENV="${1:-prod}"
+DEPLOY="${DEPLOY:-1}"
 
-build_env prod
+echo "🔁 Старт сборки..."
+install_deps
+
+build_env "$ENV"
 
 echo "Генерация SEO-страниц..."
-node scripts/generate-seo-pages.js --dist dist/prod --api https://metravel.by || {
+node scripts/generate-seo-pages.js --dist "dist/$ENV" --api https://metravel.by || {
   echo "⚠️  SEO-генерация не удалась, продолжаю деплой без неё..."
 }
 
 echo "Постобработка билда..."
-node scripts/stamp-sw-version.js dist/prod
+node scripts/stamp-sw-version.js "dist/$ENV"
 
-echo "старт деплоя ..."
-deploy_prod
+if [[ "$DEPLOY" == "1" ]]; then
+  echo "старт деплоя ..."
+  deploy_prod "$ENV"
+fi
 
 echo "🎉 Сборка завершена успешно!"

@@ -276,14 +276,49 @@ export default function RootLayout() {
       const isProd = window.location.hostname === 'metravel.by' || window.location.hostname === 'www.metravel.by';
       if (!isProd) return;
 
+      try {
+        const tsRaw = sessionStorage.getItem('metravel:sw:reload_ts');
+        const url = sessionStorage.getItem('metravel:sw:reload_url') || '';
+        const recovered = sessionStorage.getItem('metravel:sw:recovered') === '1';
+        const ts = tsRaw ? Number(tsRaw) : 0;
+        const now = Date.now();
+        if (!recovered && ts && Number.isFinite(ts) && now - ts < 60000 && url) {
+          const u = new URL(url, window.location.href);
+          if (u.origin === window.location.origin && window.location.pathname === '/' && (u.pathname + u.search) !== '/') {
+            sessionStorage.setItem('metravel:sw:recovered', '1');
+            window.location.replace(u.pathname + u.search + u.hash);
+            return;
+          }
+        }
+      } catch {
+        void 0;
+      }
+
+      const shouldReload = () => {
+        try {
+          const key = 'metravel:sw:reload_ts';
+          const now = Date.now();
+          const prevRaw = sessionStorage.getItem(key);
+          const prev = prevRaw ? Number(prevRaw) : 0;
+          if (prev && Number.isFinite(prev) && now - prev < 60000) return false;
+          sessionStorage.setItem(key, String(now));
+          sessionStorage.setItem('metravel:sw:reload_url', window.location.href);
+          sessionStorage.removeItem('metravel:sw:recovered');
+        } catch {
+          void 0;
+        }
+        if ((window as any).__metravelModuleReloadTriggered) return false;
+        (window as any).__metravelModuleReloadTriggered = true;
+        return true;
+      };
+
       // --- Service Worker registration + update listener ---
       if ('serviceWorker' in navigator) {
         // Listen for SW_UPDATED message from the new service worker.
         const onSWMessage = (event: MessageEvent) => {
           if (event.data?.type === 'SW_UPDATED') {
             // New SW activated — reload to pick up fresh HTML + entry bundle.
-            if (!(window as any).__metravelModuleReloadTriggered) {
-              (window as any).__metravelModuleReloadTriggered = true;
+            if (shouldReload()) {
               window.location.reload();
             }
           }
@@ -291,11 +326,10 @@ export default function RootLayout() {
         navigator.serviceWorker.addEventListener('message', onSWMessage);
 
         // Also listen for controllerchange (new SW took over).
-        let reloading = false;
         const onControllerChange = () => {
-          if (reloading) return;
-          reloading = true;
-          window.location.reload();
+          if (shouldReload()) {
+            window.location.reload();
+          }
         };
         navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 

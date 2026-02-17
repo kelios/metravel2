@@ -46,7 +46,6 @@ export const buildUriNative = (
           width: cappedWidth,
           quality,
           fit: 'contain',
-          dpr: 1,
         }) || versionedUrl
       );
     }
@@ -94,7 +93,6 @@ export const buildUriWeb = (
         format: PREFERRED_FORMAT,
         quality,
         fit: fitForUrl,
-        dpr: 1,
       }) || versionedUrl
     );
   }

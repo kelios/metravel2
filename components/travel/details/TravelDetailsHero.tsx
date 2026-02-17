@@ -544,7 +544,6 @@ function TravelHeroSectionInner({
                     fillContainer
                     fit="contain"
                     onFirstImageLoad={handleSliderImageLoad}
-                    firstImagePreloaded
                   />
                 </View>
               )}

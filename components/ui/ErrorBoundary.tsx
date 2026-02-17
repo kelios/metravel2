@@ -41,14 +41,31 @@ export default class ErrorBoundary extends Component<Props, State> {
 
     const msg = String(error?.message ?? '');
 
+    const shouldReload = () => {
+      if ((window as any).__metravelModuleReloadTriggered) return false;
+      (window as any).__metravelModuleReloadTriggered = true;
+      try {
+        // Use a separate key from the SW_UPDATED handler (metravel:sw:reload_ts)
+        // so the 60s SW cooldown doesn't block ErrorBoundary recovery.
+        const key = 'metravel:eb:reload_ts';
+        const now = Date.now();
+        const prevRaw = sessionStorage.getItem(key);
+        const prev = prevRaw ? Number(prevRaw) : 0;
+        if (prev && Number.isFinite(prev) && now - prev < 30000) return false;
+        sessionStorage.setItem(key, String(now));
+        sessionStorage.setItem('metravel:sw:reload_url', window.location.href);
+        sessionStorage.removeItem('metravel:sw:recovered');
+      } catch { /* noop */ }
+      return true;
+    };
+
     // Auto-recover from stale-bundle module mismatch errors.
     // When the SW serves cached JS chunks from a previous build, module IDs can
     // shift and named exports resolve to undefined (e.g. "useFilters is not a function").
     // Unregister the SW, purge JS caches, and hard-reload once.
     if (
       Platform.OS === 'web' &&
-      typeof window !== 'undefined' &&
-      !(window as any).__metravelModuleReloadTriggered
+      typeof window !== 'undefined'
     ) {
       const isModuleError =
         msg.includes('is not a function') ||
@@ -64,7 +81,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         /ChunkLoadError/i.test(msg) ||
         (error?.name === 'AsyncRequireError');
       if (isModuleError) {
-        (window as any).__metravelModuleReloadTriggered = true;
+        if (!shouldReload()) return;
         const cleanup = async () => {
           try {
             if ('serviceWorker' in navigator) {
@@ -75,7 +92,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           try {
             const keys = await caches.keys();
             await Promise.all(
-              keys.filter((k) => k.includes('js') || k.includes('critical')).map((k) => caches.delete(k)),
+              keys.filter((k) => k.startsWith('metravel-')).map((k) => caches.delete(k)),
             );
           } catch { /* noop */ }
         };
@@ -127,7 +144,26 @@ export default class ErrorBoundary extends Component<Props, State> {
             </Text>
             <Button
               label="Попробовать снова"
-              onPress={this.handleReset}
+              onPress={() => {
+                if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                  const isModuleErr =
+                    this.state.error?.message?.includes('is not a function') ||
+                    this.state.error?.message?.includes('is undefined') ||
+                    this.state.error?.message?.includes('Requiring unknown module') ||
+                    this.state.error?.name === 'AsyncRequireError';
+                  if (isModuleErr) {
+                    const unregSW = 'serviceWorker' in navigator
+                      ? navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))
+                      : Promise.resolve();
+                    const purge = typeof caches !== 'undefined'
+                      ? caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('metravel-')).map((k) => caches.delete(k))))
+                      : Promise.resolve();
+                    Promise.all([unregSW, purge]).catch(() => {}).finally(() => { location.reload(); });
+                    return;
+                  }
+                }
+                this.handleReset();
+              }}
               style={[styles.button, styles.primaryButton]}
               accessibilityLabel="Попробовать снова"
             />

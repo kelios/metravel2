@@ -29,7 +29,7 @@ if (!fs.existsSync(swPath)) {
 // Build a version string from the current timestamp (ISO compact).
 // Example: "v2026-02-13T2344"
 const now = new Date();
-const version = `v${now.toISOString().replace(/[-:]/g, '').slice(0, 13)}`;
+const version = `v${now.getTime()}`;
 
 let content = fs.readFileSync(swPath, 'utf8');
 

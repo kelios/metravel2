@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3.12.0';
+const CACHE_VERSION = 'v3.13.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -138,6 +138,17 @@ function offlineResponse() {
   });
 }
 
+function fallbackResponse(request) {
+  try {
+    if (request && (request.mode === 'navigate' || request.destination === 'document')) {
+      return offlineResponse();
+    }
+  } catch {
+    void 0;
+  }
+  return new Response('Network error', { status: 503 });
+}
+
 async function networkFirstDocument(request) {
   try {
     // cache:'no-store' bypasses the browser HTTP cache entirely.
@@ -270,7 +281,7 @@ async function cacheFirst(request, cacheName = DYNAMIC_CACHE, maxSize = MAX_CACH
     return response;
   } catch {
     const cached = await caches.match(request);
-    return cached || offlineResponse();
+    return cached || fallbackResponse(request);
   }
 }
 
@@ -288,12 +299,8 @@ async function networkFirst(request) {
   } catch {
     const cached = await caches.match(request);
     if (cached) return cached;
-    
-    if (request.destination === 'document') {
-      return offlineResponse();
-    }
-    
-    return new Response('Network error', { status: 503 });
+
+    return fallbackResponse(request);
   }
 }
 
@@ -358,7 +365,7 @@ async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_J
     return response;
   } catch {
     const cached = await caches.match(request);
-    return cached || offlineResponse();
+    return cached || fallbackResponse(request);
   }
 }
 
@@ -370,7 +377,24 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
       // Bypass browser HTTP cache for non-hashed scripts (entry bundle etc.)
       // whose URL stays the same across deploys but content changes.
       const response = await fetch(request, { cache: 'no-store' });
+
+      if (response && response.status === 404) {
+        cache.delete(request);
+        self.clients.matchAll({ type: 'window' }).then((clients) => {
+          clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+        });
+        return response;
+      }
+
       if (response && response.status === 200) {
+        const ct = response.headers.get('content-type') || '';
+        if (ct.includes('text/html') && request.url.endsWith('.js')) {
+          self.clients.matchAll({ type: 'window' }).then((clients) => {
+            clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+          });
+          return response;
+        }
+
         const responseToCache = response.clone();
         const headers = new Headers(responseToCache.headers);
         headers.append('sw-cache-date', Date.now().toString());
@@ -387,11 +411,18 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
       return response;
     } catch {
       const cached = await cache.match(request);
-      return cached || offlineResponse();
+      if (cached) {
+        const ct = cached.headers.get('content-type') || '';
+        if (!(ct.includes('text/html') && request.url.endsWith('.js'))) {
+          return cached;
+        }
+        cache.delete(request);
+      }
+      return fallbackResponse(request);
     }
   } catch {
     const cached = await caches.match(request);
-    return cached || offlineResponse();
+    return cached || fallbackResponse(request);
   }
 }
 
@@ -441,7 +472,10 @@ async function prefetchCriticalResources(pageUrl) {
         fetch(url, { method: 'GET', credentials: 'omit' })
           .then((res) => {
             if (res && res.status === 200) {
-              cache.put(url, res.clone());
+              const ct = res.headers.get('content-type') || '';
+              if (!ct.includes('text/html')) {
+                cache.put(url, res.clone());
+              }
             }
           })
           .catch(() => {})

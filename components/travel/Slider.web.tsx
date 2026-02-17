@@ -404,6 +404,15 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       resolveNodes();
       const node = scrollNodeRef.current;
       if (node) {
+        const currentIdx = indexRef.current;
+        const isWrapJump =
+          images.length > 1 &&
+          ((currentIdx === 0 && wrapped === images.length - 1) ||
+            (currentIdx === images.length - 1 && wrapped === 0));
+        const prevScrollBehavior = node.style.scrollBehavior;
+        if (isWrapJump) {
+          node.style.scrollBehavior = 'auto';
+        }
         const left = wrapped * containerW;
         // Disable scroll-snap temporarily
         node.classList.add('slider-snap-disabled');
@@ -417,6 +426,9 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
             node.scrollLeft = left;
             requestAnimationFrame(() => {
               node.classList.remove('slider-snap-disabled');
+              if (isWrapJump) {
+                node.style.scrollBehavior = prevScrollBehavior;
+              }
             });
           });
         });

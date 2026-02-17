@@ -186,9 +186,6 @@ const getTravelHeroPreloadScript = () => String.raw`
     }
 
     // Must match optimizeImageUrl() in utils/imageOptimization.ts exactly.
-    // Key difference from old code: metravel.by/cdn.metravel.by/api.metravel.by are
-    // "allowed transform hosts" — params are added directly (using 'f' for format),
-    // NOT proxied through images.weserv.nl (which uses 'output' for format).
     function buildOptimizedUrl(rawUrl, width, quality, updatedAt, id, explicitDpr) {
       try {
         var resolved = new URL(rawUrl, window.location.origin);
@@ -235,8 +232,13 @@ const getTravelHeroPreloadScript = () => String.raw`
         }
 
         var rHost = (resolved.hostname || '').toLowerCase();
-        var isAllowedHost = rHost === 'metravel.by' || rHost === 'cdn.metravel.by' || rHost === 'api.metravel.by' || rHost === 'images.weserv.nl';
         var isWeserv = rHost === 'images.weserv.nl';
+        var isAllowedHost = rHost === 'images.weserv.nl';
+        if (rHost === 'metravel.by' || rHost === 'cdn.metravel.by' || rHost === 'api.metravel.by') {
+          var p = (resolved.pathname || '').toLowerCase();
+          var isImagePath = /^\/(travel-image|gallery|uploads|media)\//i.test(p);
+          isAllowedHost = !isImagePath;
+        }
 
         var preferredFormat = getPreferredFormat();
         var dpr = typeof explicitDpr === 'number' ? explicitDpr : Math.min(window.devicePixelRatio || 1, 2);
@@ -259,6 +261,10 @@ const getTravelHeroPreloadScript = () => String.raw`
           }
           
           // Proxy through weserv for non-allowed external hosts
+          var OPTIMIZATION_PARAMS = ['w', 'h', 'q', 'f', 'fit', 'auto', 'output', 'blur', 'dpr'];
+          for (var pIndex = 0; pIndex < OPTIMIZATION_PARAMS.length; pIndex++) {
+            try { resolved.searchParams.delete(OPTIMIZATION_PARAMS[pIndex]); } catch (_e0) {}
+          }
           var proxy = new URL('https://images.weserv.nl/');
           var cleanUrl = resolved.toString().replace(/^https?:\/\//i, '');
           proxy.searchParams.set('url', cleanUrl);

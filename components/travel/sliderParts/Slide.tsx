@@ -53,6 +53,11 @@ const Slide = memo(function Slide({
 
   const mainFit: 'cover' | 'contain' = fit;
 
+  useEffect(() => {
+    firstLoadReportedRef.current = false;
+    setStatus(index === 0 && firstImagePreloaded ? 'loaded' : 'loading');
+  }, [uri, index, firstImagePreloaded]);
+
   const handleLoadStart = useCallback(() => {
     setStatus((prev) => (prev === 'loaded' ? prev : 'loading'));
   }, []);
