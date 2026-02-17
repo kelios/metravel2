@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
@@ -14,8 +14,8 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
         <TouchableOpacity
             onPress={() => router.push('/')}
             style={styles.logoContainer}
-            accessibilityRole="button"
-            accessibilityLabel="MeTravel"
+            accessibilityRole="link"
+            accessibilityLabel="MeTravel — главная страница"
             accessibilityHint="Перейти на главную страницу"
         >
             <Image
@@ -26,10 +26,9 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
                 alt="MeTravel логотип"
             />
             {!isMobile && (
-                <View style={styles.logoTextRow}>
-                    <Text style={styles.logoTextMe}>Me</Text>
-                    <Text style={styles.logoTextTravel}>Travel</Text>
-                </View>
+                <Text style={styles.logoTextRow}>
+                    <Text style={styles.logoTextMe}>Me</Text><Text style={styles.logoTextTravel}>Travel</Text>
+                </Text>
             )}
         </TouchableOpacity>
     );
@@ -59,8 +58,6 @@ const getStyles = (colors: ThemedColors) => StyleSheet.create({
         fontWeight: '600',
     },
     logoTextRow: { 
-        flexDirection: 'row', 
         marginLeft: 8,
-        alignItems: 'center',
     },
 });

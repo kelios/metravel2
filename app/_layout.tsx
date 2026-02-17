@@ -240,7 +240,37 @@ export default function RootLayout() {
       if (!isWeb) return;
       if (typeof window === 'undefined') return;
 
-      const original = window.history.replaceState.bind(window.history);
+      const originalReplace = window.history.replaceState.bind(window.history);
+      const originalPush = window.history.pushState.bind(window.history);
+
+      // Helper: if a pending SW update exists, do a hard navigation to the target
+      // URL so the browser loads the new build cleanly. Returns true if intercepted.
+      const hardNavigateIfPending = (url?: string | URL | null): boolean => {
+        if (!(window as any).__metravelUpdatePending) return false;
+        if (url == null) return false;
+        try {
+          const resolved = new URL(String(url), window.location.href);
+          // Only intercept same-origin navigations to a different path.
+          if (resolved.origin !== window.location.origin) return false;
+          const newPath = resolved.pathname + resolved.search + resolved.hash;
+          const currentPath = window.location.pathname + window.location.search + window.location.hash;
+          if (newPath === currentPath) return false;
+          // Hard navigate — browser will load fresh HTML + new SW chunks.
+          window.location.href = resolved.href;
+          return true;
+        } catch {
+          return false;
+        }
+      };
+
+      window.history.pushState = function patchedPushState(
+        data: any,
+        unused: string,
+        url?: string | URL | null,
+      ) {
+        if (hardNavigateIfPending(url)) return;
+        return originalPush(data, unused, url);
+      };
 
       window.history.replaceState = function patchedReplaceState(
         data: any,
@@ -257,15 +287,17 @@ export default function RootLayout() {
             newPath = String(url);
           }
           if (newPath !== currentPath) {
+            if (hardNavigateIfPending(url)) return;
             // Path changed — push instead of replace so browser back button works
             return window.history.pushState(data, unused, url);
           }
         }
-        return original(data, unused, url);
+        return originalReplace(data, unused, url);
       };
 
       return () => {
-        window.history.replaceState = original;
+        window.history.replaceState = originalReplace;
+        window.history.pushState = originalPush;
       };
     }, []);
 
@@ -276,60 +308,25 @@ export default function RootLayout() {
       const isProd = window.location.hostname === 'metravel.by' || window.location.hostname === 'www.metravel.by';
       if (!isProd) return;
 
-      try {
-        const tsRaw = sessionStorage.getItem('metravel:sw:reload_ts');
-        const url = sessionStorage.getItem('metravel:sw:reload_url') || '';
-        const recovered = sessionStorage.getItem('metravel:sw:recovered') === '1';
-        const ts = tsRaw ? Number(tsRaw) : 0;
-        const now = Date.now();
-        if (!recovered && ts && Number.isFinite(ts) && now - ts < 60000 && url) {
-          const u = new URL(url, window.location.href);
-          if (u.origin === window.location.origin && window.location.pathname === '/' && (u.pathname + u.search) !== '/') {
-            sessionStorage.setItem('metravel:sw:recovered', '1');
-            window.location.replace(u.pathname + u.search + u.hash);
-            return;
-          }
-        }
-      } catch {
-        void 0;
-      }
-
-      const shouldReload = () => {
-        try {
-          const key = 'metravel:sw:reload_ts';
-          const now = Date.now();
-          const prevRaw = sessionStorage.getItem(key);
-          const prev = prevRaw ? Number(prevRaw) : 0;
-          if (prev && Number.isFinite(prev) && now - prev < 60000) return false;
-          sessionStorage.setItem(key, String(now));
-          sessionStorage.setItem('metravel:sw:reload_url', window.location.href);
-          sessionStorage.removeItem('metravel:sw:recovered');
-        } catch {
-          void 0;
-        }
-        if ((window as any).__metravelModuleReloadTriggered) return false;
-        (window as any).__metravelModuleReloadTriggered = true;
-        return true;
-      };
-
       // --- Service Worker registration + update listener ---
       if ('serviceWorker' in navigator) {
-        // Listen for SW_UPDATED message from the new service worker.
+        // SW_PENDING_UPDATE: new SW activated after a normal deploy.
+        // We defer the reload to the next navigation so the user isn't interrupted.
+        // SW_STALE_CHUNK: a JS chunk is missing (404) — reload immediately to recover.
         const onSWMessage = (event: MessageEvent) => {
-          if (event.data?.type === 'SW_UPDATED') {
-            // New SW activated — reload to pick up fresh HTML + entry bundle.
-            if (shouldReload()) {
-              window.location.reload();
-            }
+          if (event.data?.type === 'SW_PENDING_UPDATE') {
+            (window as any).__metravelUpdatePending = true;
+          } else if (event.data?.type === 'SW_STALE_CHUNK') {
+            // Immediate reload — stale chunk would cause a crash anyway.
+            window.location.reload();
           }
         };
         navigator.serviceWorker.addEventListener('message', onSWMessage);
 
-        // Also listen for controllerchange (new SW took over).
+        // controllerchange fires when a new SW takes control.
+        // Treat it the same as SW_PENDING_UPDATE — defer to next navigation.
         const onControllerChange = () => {
-          if (shouldReload()) {
-            window.location.reload();
-          }
+          (window as any).__metravelUpdatePending = true;
         };
         navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 

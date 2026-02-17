@@ -97,6 +97,11 @@ export default class ErrorBoundary extends Component<Props, State> {
           } catch { /* noop */ }
         };
         cleanup().finally(() => {
+          try {
+            // Clear SW reload cooldown so SW_UPDATED handler can fire on next load
+            sessionStorage.removeItem('metravel:sw:reload_ts');
+            sessionStorage.removeItem('metravel:eb:reload_ts');
+          } catch { /* noop */ }
           window.location.reload();
         });
         return; // skip further recovery attempts
@@ -158,7 +163,13 @@ export default class ErrorBoundary extends Component<Props, State> {
                     const purge = typeof caches !== 'undefined'
                       ? caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('metravel-')).map((k) => caches.delete(k))))
                       : Promise.resolve();
-                    Promise.all([unregSW, purge]).catch(() => {}).finally(() => { location.reload(); });
+                    Promise.all([unregSW, purge]).catch(() => {}).finally(() => {
+                      try {
+                        sessionStorage.removeItem('metravel:sw:reload_ts');
+                        sessionStorage.removeItem('metravel:eb:reload_ts');
+                      } catch { /* noop */ }
+                      location.reload();
+                    });
                     return;
                   }
                 }

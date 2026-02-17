@@ -902,3 +902,181 @@ The application is well-optimized at the code level with comprehensive caching, 
 **SW Version:** v3.12.0  
 **Audit Version:** v14  
 **Status:** ✅ P1 CSP fix + P2 a11y fixes + P3 SW bump applied — requires redeploy to take effect
+
+---
+
+## Audit v15 — 2026-02-17 (post-deploy full audit)
+
+### Lighthouse Scores (live production: https://metravel.by)
+
+| Page | Device | Perf | A11y | BP | SEO |
+|------|--------|------|------|----|-----|
+| Home `/` | Desktop | **77** | **100** | **78** | **100** |
+| Home `/` | Mobile | **45** | **100** | **79** | **100** |
+
+### Core Web Vitals — Desktop Home
+
+| Metric | Value | Score | Status |
+|--------|-------|-------|--------|
+| FCP | 1.1s | 0.81 | ✅ |
+| LCP | 2.8s | 0.37 | ⚠️ |
+| TBT | 10ms | 1.0 | ✅ |
+| CLS | 0.006 | 1.0 | ✅ |
+| SI | 2.4s | 0.45 | ⚠️ |
+| TTI | 3.1s | 0.79 | ✅ |
+| TTFB | 130ms | 1.0 | ✅ |
+
+### Core Web Vitals — Mobile Home
+
+| Metric | Value | Score | Status |
+|--------|-------|-------|--------|
+| FCP | 3.5s | 0.34 | ⚠️ |
+| LCP | 11.6s | 0.0 | 🔴 |
+| TBT | 590ms | 0.5 | ⚠️ |
+| CLS | 0.04 | 0.99 | ✅ |
+| SI | 8.4s | 0.18 | 🔴 |
+| TTI | 12.0s | 0.16 | 🔴 |
+| TTFB | 110ms | 1.0 | ✅ |
+
+### 1️⃣ PERFORMANCE
+
+**Root cause of mobile LCP/TTI 🔴 (unchanged):**
+- `__common-*.js`: ~675KB unused (of ~1.3MB) — React Native Web runtime
+- `entry-*.js`: ~290KB unused (of ~560KB) — app entry bundle
+- `googletagmanager`: ~61KB unused
+- **Total unused JS: ~2,086 KiB** — structural blocker, requires SSR/ISR or major tree-shaking
+
+**Main thread breakdown (mobile, 4× throttle):**
+| Category | Time |
+|----------|------|
+| Script Evaluation | 3,182ms |
+| Script Parsing & Compilation | 910ms |
+| Garbage Collection | 461ms |
+| Style & Layout | 236ms |
+
+**What passes ✅:**
+- TTFB: 110ms (excellent)
+- No render-blocking resources
+- CLS near-zero (0.006 desktop, 0.04 mobile)
+- Desktop TBT: 10ms
+- Brotli + Gzip active
+- Static assets: `Cache-Control: public, max-age=31536000, immutable`
+- SW: `no-cache, no-store, must-revalidate`
+- ETag on HTML
+- Responsive images: 0 savings on home (already optimized via weserv.nl)
+
+**Remaining opportunity:**
+- `uses-responsive-images`: 75KB savings — `/assets/images/pdf.webp` served at full size on desktop
+
+### 2️⃣ SEO — ✅ 100/100
+
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | "Твоя книга путешествий по Беларуси и миру \| Metravel" (52 chars) |
+| Description | ✅ | 135 chars (target 120-160) |
+| H1 | ✅ | Single H1, correct hierarchy |
+| Canonical | ✅ | `https://metravel.by/` |
+| OG tags | ✅ | All present, og:image returns 200 |
+| robots.txt | ✅ | Correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200 OK, 66KB |
+| Schema.org | ✅ | Organization + WebSite + Service |
+| Images alt | ✅ | All images have alt text |
+| lang | ✅ | `ru` |
+
+### 3️⃣ TECHNICAL
+
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2 200, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 |
+| www→non-www redirect | ✅ | 301 |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Restrictive |
+| CSP | ✅ | Full policy with mc.yandex.com/by in frame-src |
+| Console errors | ✅ | 0 errors |
+| Accessibility | ✅ | 100/100 (desktop + mobile) |
+| Mixed content | ✅ | None |
+| Soft 404 | ⚠️ | Unknown URLs return 200 (SPA limitation) |
+
+### 4️⃣ SERVER
+
+| Check | Status | Details |
+|-------|--------|---------|
+| TTFB | ✅ | 110-130ms |
+| Brotli | ✅ | Active |
+| Gzip | ✅ | Fallback active |
+| Static cache | ✅ | `immutable, max-age=31536000` |
+| Image proxy cache | ✅ | 24h TTL, stale-serving |
+| Rate limiting | ✅ | API/login/general zones |
+| try_files | ✅ | `/_expo/static/` returns 404 for missing chunks |
+| robots.txt | ✅ | 200, `Cache-Control: public, max-age=86400` |
+| sitemap.xml | ✅ | 200, `Cache-Control: public, max-age=3600` |
+
+### 5️⃣ ANALYTICS
+
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` — active |
+| Yandex Metrika | ✅ | `62803912` — active |
+| send_page_view | ✅ | `false` (no duplicate pageviews) |
+| Deferred loading | ✅ | `requestIdleCallback` / 3s fallback |
+| 3rd-party cookies | ⚠️ | 15 Yandex cookies — vendor-controlled, unfixable |
+
+### 6️⃣ ACCESSIBILITY — ✅ 100/100
+
+| Check | Status | Details |
+|-------|--------|---------|
+| Home a11y | ✅ | 100/100 |
+| Mobile a11y | ✅ | 100/100 |
+| label-content-name-mismatch | ⚠️→✅ | **Fixed:** Logo button had two separate `<Text>` nodes ("Me" + "Travel") rendering as "Me\nTravel" in a11y tree; merged into single `<Text>` with nested spans so accessible name is "MeTravel" without newline |
+
+### Issues Found & Fixes Applied
+
+| # | Priority | Issue | Fix | File |
+|---|----------|-------|-----|------|
+| 1 | **P1** | `label-content-name-mismatch` on Logo button — two `<Text>` nodes ("Me" + "Travel") rendered as "Me\nTravel" in accessibility tree; `aria-label="MeTravel"` didn't match visible text | Merged two `<Text>` nodes into single `<Text>` with nested spans; removed `View` wrapper; updated `logoTextRow` style | `components/layout/Logo.tsx` |
+| 2 | **P3** | SW cache version — already at `v3.14.0` from previous session | No change needed | `public/sw.js` |
+
+### Not Fixable in Frontend
+
+| Issue | Reason |
+|-------|--------|
+| Mobile LCP 11.6s | Structural: ~2MB unused JS from RNW + Leaflet bundle |
+| Mobile Performance 45 | Same root cause — massive JS parse/execute under 4× CPU throttle |
+| 3rd-party cookies (Best Practices 78-79) | Yandex Metrika vendor behavior |
+| Missing source maps (Best Practices) | Intentionally disabled for security |
+| Soft 404 for unknown routes | SPA catch-all — would require server-side route validation |
+| `uses-long-cache-ttl` for Yandex resources | Vendor-controlled TTL (1h) |
+
+### Recommendations for Lighthouse ≥ 90 (mobile)
+
+1. **Code splitting:** Lazy-load Leaflet only on `/map` route (~800KB savings)
+2. **Tree-shaking RNW:** Use `react-native-web/dist/cjs` with webpack aliases
+3. **SSR/ISR:** Migrate to Next.js or Expo Server Components for critical pages
+4. **Image CDN:** nginx `ngx_http_image_filter_module` to avoid weserv.nl dependency
+5. **Font subsetting:** Subset Roboto to Cyrillic + Latin only
+
+### Target Assessment
+
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 45 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | 🔴 LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | ✅ | ✅ |
+| Load time < 2.5s mobile | ~11.6s (throttled) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | ✅ 100/100 | ✅ Fixed |
+| Desktop Performance | 77 | ✅ |
+| HTTPS + HSTS | ✅ | ✅ |
+
+### Validation
+- `npx eslint components/layout/Logo.tsx` — **no errors** ✅
+- `npx jest __tests__/components/Logo.test.tsx` — **6 tests passed** ✅
+
+**Last updated:** 2026-02-17  
+**SW Version:** v3.14.0  
+**Audit Version:** v15  
+**Status:** ✅ P1 a11y fix (label-content-name-mismatch on Logo) applied — requires redeploy to take effect

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3.13.0';
+const CACHE_VERSION = 'v3.14.0';
 const STATIC_CACHE = `metravel-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `metravel-dynamic-${CACHE_VERSION}`;
 const IMAGE_CACHE = `metravel-images-${CACHE_VERSION}`;
@@ -54,10 +54,12 @@ self.addEventListener('activate', (event) => {
           .map((name) => caches.delete(name))
       );
     }).then(() => {
-      // Notify all open tabs to reload so they pick up fresh HTML + entry bundle.
+      // Notify open tabs that a new version is ready.
+      // SW_PENDING_UPDATE = soft signal: client will reload on next navigation.
+      // This avoids interrupting the user mid-session.
       return self.clients.matchAll({ type: 'window' }).then((clients) => {
         clients.forEach((client) => {
-          client.postMessage({ type: 'SW_UPDATED' });
+          client.postMessage({ type: 'SW_PENDING_UPDATE' });
         });
       });
     })
@@ -324,12 +326,12 @@ async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_J
     const response = await fetch(request);
 
     // If the server returns 404 for a hashed chunk, the build has changed.
-    // Do NOT cache the 404 response — trigger a page reload instead.
+    // Do NOT cache the 404 response — trigger an immediate reload (stale chunk).
     if (response && response.status === 404) {
       cache.delete(request);
-      // Notify clients to reload so they pick up the new HTML with correct chunk URLs.
+      // SW_STALE_CHUNK = urgent signal: a JS chunk is missing, reload immediately.
       self.clients.matchAll({ type: 'window' }).then((clients) => {
-        clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+        clients.forEach((client) => client.postMessage({ type: 'SW_STALE_CHUNK' }));
       });
       return response;
     }
@@ -339,9 +341,8 @@ async function cacheFirstLongTerm(request, cacheName = JS_CACHE, maxSize = MAX_J
       const ct = response.headers.get('content-type') || '';
       if (ct.includes('text/html') && request.url.endsWith('.js')) {
         // Server returned HTML for a .js request — chunk doesn't exist.
-        // Trigger reload instead of caching broken response.
         self.clients.matchAll({ type: 'window' }).then((clients) => {
-          clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+          clients.forEach((client) => client.postMessage({ type: 'SW_STALE_CHUNK' }));
         });
         return response;
       }
@@ -381,7 +382,7 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
       if (response && response.status === 404) {
         cache.delete(request);
         self.clients.matchAll({ type: 'window' }).then((clients) => {
-          clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+          clients.forEach((client) => client.postMessage({ type: 'SW_STALE_CHUNK' }));
         });
         return response;
       }
@@ -390,7 +391,7 @@ async function staleWhileRevalidate(request, cacheName = JS_CACHE) {
         const ct = response.headers.get('content-type') || '';
         if (ct.includes('text/html') && request.url.endsWith('.js')) {
           self.clients.matchAll({ type: 'window' }).then((clients) => {
-            clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED' }));
+            clients.forEach((client) => client.postMessage({ type: 'SW_STALE_CHUNK' }));
           });
           return response;
         }
