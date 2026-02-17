@@ -381,14 +381,14 @@ function TravelHeroSectionInner({
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
-    // 55% высоты экрана — компактнее, но выразительно
-    const target = winH * 0.55
-    if (Platform.OS === 'web' && !isMobile) return Math.max(320, Math.min(target, winH * 0.6))
-    if (!resolvedWidth) return isMobile ? Math.max(260, target) : Math.max(320, target)
+    // 80% высоты экрана
+    const target = winH * 0.8
+    if (Platform.OS === 'web' && !isMobile) return Math.max(400, Math.min(target, winH * 0.85))
+    if (!resolvedWidth) return isMobile ? Math.max(320, target) : Math.max(400, target)
     if (isMobile) {
-      return Math.max(260, Math.min(target, winH * 0.6))
+      return Math.max(320, Math.min(target, winH * 0.85))
     }
-    return Math.max(320, Math.min(target, winH * 0.6))
+    return Math.max(400, Math.min(target, winH * 0.85))
   }, [isMobile, winH, resolvedWidth])
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
@@ -544,21 +544,23 @@ function TravelHeroSectionInner({
             // Web: defer heavy Slider (imports reanimated) until after LCP image loads.
             // Before LCP: render only the lightweight <img> hero (OptimizedLCPHeroInner).
             // After LCP: mount the Slider underneath, keep overlay briefly, then fade out.
-            <View style={{ width: '100%', height: '100%' } as any} collapsable={false}>
+            <>
               {webHeroLoaded && (
-                <Slider
-                  images={galleryImages}
-                  showArrows={!isMobile}
-                  hideArrowsOnMobile
-                  showDots={isMobile}
-                  autoPlay={false}
-                  preloadCount={0}
-                  blurBackground
-                  aspectRatio={aspectRatio as number}
-                  mobileHeightPercent={0.7}
-                  onFirstImageLoad={handleSliderImageLoad}
-                  firstImagePreloaded
-                />
+                <View style={{ position: 'absolute', inset: 0, zIndex: 1 } as any} collapsable={false}>
+                  <Slider
+                    images={galleryImages}
+                    showArrows={!isMobile}
+                    hideArrowsOnMobile
+                    showDots={isMobile}
+                    autoPlay={false}
+                    preloadCount={0}
+                    blurBackground
+                    aspectRatio={aspectRatio as number}
+                    fillContainer
+                    onFirstImageLoad={handleSliderImageLoad}
+                    firstImagePreloaded
+                  />
+                </View>
               )}
               {!overlayUnmounted && (
                 <View
@@ -587,21 +589,23 @@ function TravelHeroSectionInner({
                   />
                 </View>
               )}
-            </View>
+            </>
           ) : (
-            <Slider
-              images={galleryImages}
-              showArrows={!isMobile}
-              hideArrowsOnMobile
-              showDots={isMobile}
-              autoPlay={false}
-              preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
-              blurBackground
-              aspectRatio={aspectRatio as number}
-              mobileHeightPercent={0.7}
-              onFirstImageLoad={onFirstImageLoad}
-              firstImagePreloaded={renderSlider && Platform.OS === 'web'}
-            />
+            <View style={{ position: 'absolute', inset: 0 } as any} collapsable={false}>
+              <Slider
+                images={galleryImages}
+                showArrows={!isMobile}
+                hideArrowsOnMobile
+                showDots={isMobile}
+                autoPlay={false}
+                preloadCount={Platform.OS === 'web' ? 0 : isMobile ? 1 : 2}
+                blurBackground
+                aspectRatio={aspectRatio as number}
+                fillContainer
+                onFirstImageLoad={onFirstImageLoad}
+                firstImagePreloaded={renderSlider && Platform.OS === 'web'}
+              />
+            </View>
           )}
 
           {/* P0-1: Видимый заголовок поверх hero-изображения */}

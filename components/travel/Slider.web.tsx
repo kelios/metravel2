@@ -73,6 +73,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     mobileHeightPercent = MOBILE_HEIGHT_PERCENT,
     onImagePress,
     firstImagePreloaded,
+    fillContainer = false,
   } = props;
 
   const sliderInstanceId = useId();
@@ -103,8 +104,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     return f?.width && f?.height ? f.width / f.height : aspectRatio;
   })();
 
-  // Compute height
-  const containerH = useMemo(() => computeSliderHeight(containerW, {
+  // Compute height (ignored when fillContainer is true)
+  const computedH = useMemo(() => computeSliderHeight(containerW, {
     imagesLength: images.length,
     isMobile,
     isTablet,
@@ -114,11 +115,14 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     mobileHeightPercent,
     firstAR,
   }), [containerW, images.length, isMobile, isTablet, winH, insets.top, insets.bottom, mobileHeightPercent, firstAR]);
+  
+  // When fillContainer, use '100%' for height
+  const containerH = fillContainer ? '100%' : computedH;
 
-  // URI map
+  // URI map (use computedH for numeric calculations)
   const uriMap = useMemo(() => images.map((img, idx) =>
-    buildUriWeb(img, containerW, containerH, fit, idx === 0)
-  ), [images, containerW, containerH, fit]);
+    buildUriWeb(img, containerW, computedH, fit, idx === 0)
+  ), [images, containerW, computedH, fit]);
 
   // Container width setter
   const setContainerWidth = useCallback((w: number) => {
@@ -427,7 +431,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const navOffset = isMobile ? 8 : isTablet ? 12 : Math.max(44, 16 + Math.max(insets.left || 0, insets.right || 0));
 
   return (
-    <View style={styles.sliderStack} testID="slider-stack">
+    <View style={[styles.sliderStack, fillContainer && { height: '100%' }]} testID="slider-stack">
       <View
         ref={wrapperRef}
         testID="slider-wrapper"
@@ -436,8 +440,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
         style={[
           styles.wrapper,
           { height: containerH },
-          isMobile && styles.wrapperMobile,
-          isTablet && styles.wrapperTablet,
+          isMobile && !fillContainer && styles.wrapperMobile,
+          isTablet && !fillContainer && styles.wrapperTablet,
           !fullBleed
             ? ({
                 maxWidth: isMobile
@@ -480,7 +484,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                     index={index}
                     uri={uri}
                     containerW={containerW}
-                    slideHeight={containerH}
+                    slideHeight={computedH}
                     imagesLength={images.length}
                     styles={styles}
                     blurBackground={blurBackground}

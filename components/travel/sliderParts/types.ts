@@ -25,6 +25,8 @@ export interface SliderProps {
   onImagePress?: (index: number) => void;
   /** When true, the first slide skips the loading shimmer (image already in browser cache). */
   firstImagePreloaded?: boolean;
+  /** When true, slider fills parent container height instead of computing from aspect ratio */
+  fillContainer?: boolean;
 }
 
 export interface SliderRef {

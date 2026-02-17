@@ -447,7 +447,7 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     borderRadius: DESIGN_TOKENS.radii.xl,
     overflow: "hidden",
     marginBottom: 0,
-    backgroundColor: "transparent",
+    backgroundColor: "#1a1a1a",
     position: "relative" as any,
   },
 
@@ -458,10 +458,10 @@ export const getTravelDetailsStyles = (colors: ThemedColors) => StyleSheet.creat
     bottom: 0,
     zIndex: 2,
     paddingHorizontal: Platform.select({ default: 16, web: 28 }),
-    paddingBottom: Platform.select({ default: 52, web: 56 }),
-    paddingTop: Platform.select({ default: 100, web: 140 }),
+    paddingBottom: Platform.select({ default: 20, web: 24 }),
+    paddingTop: Platform.select({ default: 60, web: 80 }),
     ...(Platform.OS === 'web' ? {
-      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%)',
+      backgroundImage: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0) 100%)',
     } as any : {}),
   },
   heroTitle: {
