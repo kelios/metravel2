@@ -214,7 +214,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 15,
     }),
     fontWeight: '500',
-    color: colors.textMuted,
+    color: colors.text,
     letterSpacing: 0,
   },
   factDivider: {
@@ -247,12 +247,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
       web: 5,
     }),
     borderRadius: 999,
-    borderWidth: 0,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
-        transition: 'background-color 0.2s ease' as any,
+        transition: 'background-color 0.2s ease, border-color 0.2s ease' as any,
       },
     }),
   },
@@ -260,7 +260,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     fontSize: 12,
     fontWeight: '500',
     color: colors.textMuted,
-    letterSpacing: 0,
+    letterSpacing: 0.1,
   },
 });
 

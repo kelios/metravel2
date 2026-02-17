@@ -1,7 +1,8 @@
 import { StyleSheet, Platform } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
-export const DOT_SIZE = 8;
+export const DOT_SIZE = 6;
+const DOT_ACTIVE_WIDTH = 20;
 
 export const createSliderStyles = (colors: Record<string, any>) =>
   StyleSheet.create<Record<string, any>>({
@@ -83,7 +84,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     },
     flatBackground: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: '#1a1a1a',
+      backgroundColor: '#242424',
     },
     img: {
       width: '100%',
@@ -101,7 +102,8 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       top: '50%',
       marginTop: -18,
       backgroundColor: 'rgba(0,0,0,0.35)',
-      borderWidth: 0,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.18)',
       width: 36,
       height: 36,
       borderRadius: 18,
@@ -111,13 +113,11 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       ...Platform.select<any>({
         web: {
           cursor: 'pointer',
-          transition: 'background-color 0.2s ease, transform 0.15s ease',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          backdropFilter: 'blur(20px) saturate(1.8)',
+          WebkitBackdropFilter: 'blur(20px) saturate(1.8)',
           contain: 'layout',
-          ':hover': {
-            backgroundColor: 'rgba(0,0,0,0.55)',
-          },
+          opacity: 0,
         },
       }),
     },
@@ -128,19 +128,19 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       marginTop: -20,
     },
     navBtnMobile: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      marginTop: -16,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      marginTop: -17,
     },
     navBtnTablet: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      marginTop: -18,
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      marginTop: -19,
     },
     navBtnHover: {
-      backgroundColor: 'rgba(0,0,0,0.55)',
+      backgroundColor: 'rgba(255,255,255,0.25)',
     },
     arrowIconContainer: {
       width: '100%',
@@ -181,82 +181,82 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     },
     dots: {
       position: 'absolute',
-      bottom: 12,
+      bottom: 14,
       left: 0,
       right: 0,
       alignItems: 'center',
       zIndex: DESIGN_TOKENS.zIndex.fixed,
     },
     dotsMobile: {
-      bottom: 10,
+      bottom: 12,
     },
     dotsContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.45)',
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 16,
+      backgroundColor: 'rgba(0,0,0,0.3)',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 12,
       borderWidth: 0,
-      gap: 6,
+      gap: 4,
       ...Platform.select({
         web: {
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
+          backdropFilter: 'blur(16px) saturate(1.8)',
+          WebkitBackdropFilter: 'blur(16px) saturate(1.8)',
         },
       }),
     },
     dotWrap: {
-      paddingHorizontal: 3,
+      paddingHorizontal: 1,
       paddingVertical: DESIGN_TOKENS.spacing.xs,
     },
     dot: {
-      backgroundColor: 'rgba(255,255,255,0.45)',
+      backgroundColor: 'rgba(255,255,255,0.35)',
       height: DOT_SIZE,
       borderRadius: DOT_SIZE / 2,
       width: DOT_SIZE,
       opacity: 1,
       ...Platform.select({
         web: {
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }),
     },
     dotActive: {
-      width: DOT_SIZE,
+      width: DOT_ACTIVE_WIDTH,
       backgroundColor: '#ffffff',
-      transform: [{ scale: 1.3 }],
+      borderRadius: DOT_SIZE / 2,
       ...Platform.select({
         web: {
-          boxShadow: '0 0 6px rgba(255,255,255,0.6)',
+          boxShadow: '0 0 8px rgba(255,255,255,0.4)',
         } as any,
       }),
     },
     counter: {
       position: 'absolute',
-      top: 12,
-      left: 12,
+      top: 14,
+      left: 14,
       zIndex: DESIGN_TOKENS.zIndex.fixed,
     },
     counterMobile: {
-      top: 10,
-      left: 10,
+      top: 12,
+      left: 12,
     },
     counterContainer: {
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: 'rgba(0,0,0,0.3)',
       paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 12,
+      paddingVertical: 4,
+      borderRadius: 10,
       borderWidth: 0,
       ...Platform.select({
         web: {
-          backdropFilter: 'blur(10px)',
-          WebkitBackdropFilter: 'blur(10px)',
+          backdropFilter: 'blur(20px) saturate(1.8)',
+          WebkitBackdropFilter: 'blur(20px) saturate(1.8)',
         },
       }),
     },
     counterText: {
-      color: '#ffffff',
+      color: 'rgba(255,255,255,0.9)',
       fontSize: 12,
       fontWeight: '600' as any,
       fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined,

@@ -42,8 +42,18 @@ if (typeof document !== 'undefined') {
     style.id = STYLE_ID;
     style.textContent = `
       .slider-snap-disabled { scroll-snap-type: none !important; }
-      .slider-nav-btn:hover { background-color: rgba(0,0,0,0.55) !important; }
-      .slider-nav-btn:active { transform: scale(0.95); }
+      [data-testid="slider-wrapper"]:hover [aria-label="Previous slide"],
+      [data-testid="slider-wrapper"]:hover [aria-label="Next slide"] {
+        opacity: 1 !important;
+      }
+      [aria-label="Previous slide"]:hover,
+      [aria-label="Next slide"]:hover { 
+        background-color: rgba(0,0,0,0.5) !important; 
+        border-color: rgba(255,255,255,0.3) !important;
+        transform: scale(1.08) !important;
+      }
+      [aria-label="Previous slide"]:active,
+      [aria-label="Next slide"]:active { transform: scale(0.95) !important; }
     `;
     document.head.appendChild(style);
   }

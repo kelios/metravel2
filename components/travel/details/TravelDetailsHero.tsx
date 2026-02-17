@@ -347,23 +347,6 @@ function TravelHeroSectionInner({
     }
   }, [isAuthenticated, requireAuth, isFavorite, travel, addFavorite, removeFavorite])
 
-  const heroMetaLine = useMemo(() => {
-    const parts: string[] = []
-    const countryName = (travel as any).countryName || ''
-    const numberDays = (travel as any).number_days
-    const monthName = (travel as any).monthName || ''
-    const year = (travel as any).year
-
-    if (countryName) parts.push(countryName)
-    if (numberDays != null && Number.isFinite(Number(numberDays))) {
-      const d = Number(numberDays)
-      parts.push(`${d} ${d === 1 ? 'день' : d < 5 ? 'дня' : 'дней'}`)
-    }
-    const when = [monthName, year].filter(Boolean).join(' ')
-    if (when) parts.push(when)
-    return parts.join(' \u00B7 ')
-  }, [travel])
-
   // Keep hero LCP source aligned with Slider first frame to avoid visible swap flicker.
   const firstRaw = travel?.travel_image_thumb_url || travel?.gallery?.[0]
   const firstImg = useMemo(() => {
@@ -381,14 +364,17 @@ function TravelHeroSectionInner({
     (firstImg?.width && firstImg?.height ? firstImg.width / firstImg.height : undefined) || 16 / 9
   const resolvedWidth = heroContainerWidth ?? winW
   const heroHeight = useMemo(() => {
-    // 80% высоты экрана
-    const target = winH * 0.8
-    if (Platform.OS === 'web' && !isMobile) return Math.max(400, Math.min(target, winH * 0.85))
-    if (!resolvedWidth) return isMobile ? Math.max(320, target) : Math.max(400, target)
-    if (isMobile) {
-      return Math.max(320, Math.min(target, winH * 0.85))
+    // Desktop web: 55% viewport, mobile: 60% — keeps content visible above fold
+    if (Platform.OS === 'web' && !isMobile) {
+      const target = winH * 0.55
+      return Math.max(360, Math.min(target, 600))
     }
-    return Math.max(400, Math.min(target, winH * 0.85))
+    const target = winH * 0.6
+    if (!resolvedWidth) return isMobile ? Math.max(280, target) : Math.max(360, target)
+    if (isMobile) {
+      return Math.max(280, Math.min(target, winH * 0.6))
+    }
+    return Math.max(360, Math.min(target, winH * 0.6))
   }, [isMobile, winH, resolvedWidth])
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
@@ -518,7 +504,7 @@ function TravelHeroSectionInner({
         accessibilityRole="none"
         accessibilityLabel="Геройский блок с изображением, заголовком и кнопкой избранного"
         {...(Platform.OS === 'web' ? { 'data-section-key': 'gallery' } : {})}
-        style={[styles.sectionContainer, styles.contentStable]}
+        style={[styles.sectionContainer, styles.contentStable, { marginBottom: 0 }]}
       >
         <View
           style={[
@@ -635,7 +621,7 @@ function TravelHeroSectionInner({
           >
             <Feather
               name="heart"
-              size={22}
+              size={20}
               color={isFavorite ? colors.textOnDark : 'rgba(255,255,255,0.9)'}
             />
           </Pressable>

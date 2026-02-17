@@ -43,7 +43,21 @@ if (isWeb && typeof document !== 'undefined') {
   if (!document.getElementById(STYLE_ID)) {
     const style = document.createElement('style');
     style.id = STYLE_ID;
-    style.textContent = '.slider-snap-disabled { scroll-snap-type: none !important; }';
+    style.textContent = `
+      .slider-snap-disabled { scroll-snap-type: none !important; }
+      [data-testid="slider-wrapper"]:hover [aria-label="Previous slide"],
+      [data-testid="slider-wrapper"]:hover [aria-label="Next slide"] {
+        opacity: 1 !important;
+      }
+      [aria-label="Previous slide"]:hover,
+      [aria-label="Next slide"]:hover { 
+        background-color: rgba(0,0,0,0.5) !important; 
+        border-color: rgba(255,255,255,0.3) !important;
+        transform: scale(1.08) !important;
+      }
+      [aria-label="Previous slide"]:active,
+      [aria-label="Next slide"]:active { transform: scale(0.95) !important; }
+    `;
     document.head.appendChild(style);
   }
 }
@@ -598,14 +612,15 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
                     const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
                     scrollTo(target);
                   }}
-                  activeOpacity={0.8}
+                  activeOpacity={0.9}
                   style={[styles.navBtn, { left: navOffset }]}
+                  {...({ className: 'slider-nav-btn' } as any)}
                 >
                   <View style={styles.arrowIconContainer}>
                     <Feather
                       name="chevron-left"
-                      size={isMobile ? 20 : isTablet ? 22 : 24}
-                      color={colors.textOnDark}
+                      size={isMobile ? 16 : isTablet ? 18 : 20}
+                      color="rgba(255,255,255,0.95)"
                       style={styles.arrowIcon}
                     />
                   </View>
@@ -619,14 +634,15 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
                     const target = (indexRef.current + 1) % images.length;
                     scrollTo(target);
                   }}
-                  activeOpacity={0.8}
+                  activeOpacity={0.9}
                   style={[styles.navBtn, { right: navOffset }]}
+                  {...({ className: 'slider-nav-btn' } as any)}
                 >
                   <View style={styles.arrowIconContainer}>
                     <Feather
                       name="chevron-right"
-                      size={isMobile ? 20 : isTablet ? 22 : 24}
-                      color={colors.textOnDark}
+                      size={isMobile ? 16 : isTablet ? 18 : 20}
+                      color="rgba(255,255,255,0.95)"
                       style={styles.arrowIcon}
                     />
                   </View>
