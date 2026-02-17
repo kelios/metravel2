@@ -91,7 +91,7 @@ async function navigateToTravelWithSlider(
 
     const nextBtn = page.locator('[aria-label="Next slide"]').first();
     const hasNext = await nextBtn
-      .waitFor({ state: 'visible', timeout: 15_000 })
+      .waitFor({ state: 'attached', timeout: 15_000 })
       .then(() => true)
       .catch(() => false);
     if (!hasNext) continue;

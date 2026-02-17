@@ -16,7 +16,7 @@
 
 import { test, expect } from './fixtures';
 import { preacceptCookies, navigateToFirstTravel, gotoWithRetry } from './helpers/navigation';
-import { isAuthenticated, ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
+import { isAuthenticated, ensureAuthedStorageFallback, mockFakeAuthApis, waitForAuth } from './helpers/auth';
 
 const RATING_SECTION_SELECTOR = '[data-testid="travel-rating-section"]';
 const STAR_SELECTOR = '[data-testid^="star-rating-star-"]';
@@ -146,6 +146,9 @@ test.describe('Travel Rating - Authenticated', () => {
       return;
     }
 
+    // Wait for auth state to be hydrated (checkAuthentication is deferred via requestIdleCallback)
+    await waitForAuth(page, 8_000);
+
     // Проверяем что пользователь авторизован
     const authenticated = await isAuthenticated(page);
     if (!authenticated) {
@@ -166,6 +169,19 @@ test.describe('Travel Rating - Authenticated', () => {
     }
 
     await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
+
+    // Wait for auth state to propagate to UI (checkAuthentication is deferred via requestIdleCallback)
+    // The rating section shows login hint until isAuthenticated becomes true in Zustand store
+    await page.waitForFunction(
+      ({ selector, pattern }: { selector: string; pattern: string }) => {
+        const el = document.querySelector(selector);
+        if (!el) return false;
+        const text = el.textContent || '';
+        return !new RegExp(pattern, 'i').test(text);
+      },
+      { selector: RATING_SECTION_SELECTOR, pattern: 'войд' },
+      { timeout: 8_000 }
+    ).catch(() => null);
 
     // Для авторизованного пользователя должны быть интерактивные звёзды
     const stars = ratingSection.locator(STAR_SELECTOR);

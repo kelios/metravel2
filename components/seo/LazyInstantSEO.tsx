@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import Head from 'expo-router/head';
 
@@ -29,6 +29,20 @@ function StaticHead({
   additionalTags,
   children,
 }: Props) {
+  useEffect(() => {
+    if (typeof document === 'undefined' || !robots) return;
+    const upsertMeta = (name: string, content: string) => {
+      let el = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute('name', name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+    upsertMeta('robots', robots);
+  }, [robots]);
+
   return (
     <Head key={headKey ?? 'instant-seo'}>
       <title key="title">{title}</title>

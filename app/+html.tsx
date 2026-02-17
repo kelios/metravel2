@@ -383,9 +383,22 @@ const getTravelHeroPreloadScript = () => String.raw`
           var ogUrlEl = document.querySelector('meta[property="og:url"]');
           if (ogUrlEl) { ogUrlEl.setAttribute('content', correctUrl); }
           else { ogUrlEl = document.createElement('meta'); ogUrlEl.setAttribute('property', 'og:url'); ogUrlEl.setAttribute('content', correctUrl); document.head.appendChild(ogUrlEl); }
-          var canEl = document.querySelector('link[rel="canonical"]');
-          if (canEl) { canEl.setAttribute('href', correctUrl); }
-          else { canEl = document.createElement('link'); canEl.rel = 'canonical'; canEl.href = correctUrl; document.head.appendChild(canEl); }
+          // Remove ALL existing canonical links to prevent duplicates (react-helmet-async may inject a second one)
+          var canEls = document.querySelectorAll('link[rel="canonical"]');
+          for (var ci = canEls.length - 1; ci >= 0; ci--) { canEls[ci].parentNode && canEls[ci].parentNode.removeChild(canEls[ci]); }
+          var canEl = document.createElement('link'); canEl.rel = 'canonical'; canEl.href = correctUrl; document.head.appendChild(canEl);
+          // Watch for react-helmet-async injecting a duplicate canonical after hydration
+          if (typeof MutationObserver !== 'undefined') {
+            var canObs = new MutationObserver(function() {
+              var allCan = document.querySelectorAll('link[rel="canonical"]');
+              if (allCan.length > 1) {
+                for (var di = allCan.length - 1; di >= 1; di--) { try { allCan[di].parentNode && allCan[di].parentNode.removeChild(allCan[di]); } catch (_e4) {} }
+                if (allCan[0] && allCan[0].getAttribute('href') !== correctUrl) { allCan[0].setAttribute('href', correctUrl); }
+              }
+            });
+            canObs.observe(document.head, { childList: true });
+            setTimeout(function() { try { canObs.disconnect(); } catch (_e5) {} }, 5000);
+          }
 
           // og:type for travel pages
           patchMeta('meta[property="og:type"]', 'content', 'article');
