@@ -151,12 +151,6 @@ const OptimizedLCPHeroInner: React.FC<{
   const srcWithRetry = overrideSrc || responsive.src || baseSrc
   const fixedHeight = height ? `${Math.round(height)}px` : '100%'
 
-  // ✅ Keep a stable box size to avoid CLS on web.
-  const ratioInv = useMemo(() => {
-    const r = img.width && img.height ? img.width / img.height : 16 / 9
-    return r > 0 ? 100 / r : 56.25
-  }, [img.width, img.height])
-
   if (!srcWithRetry) {
     return <NeutralHeroPlaceholder height={height} />
   }
@@ -229,8 +223,6 @@ const OptimizedLCPHeroInner: React.FC<{
             backgroundColor: colors.backgroundSecondary,
           }}
         >
-          {/* Reserve space inside to prevent micro shifts while image decodes */}
-          <div aria-hidden="true" style={{ width: '100%', height: 0, paddingTop: `${ratioInv}%` }} />
           <div
             aria-hidden="true"
             style={{
@@ -260,6 +252,7 @@ const OptimizedLCPHeroInner: React.FC<{
               height: '100%',
               display: 'block',
               objectFit: 'contain',
+              objectPosition: 'center',
             }}
             loading="eager"
             decoding="sync"
