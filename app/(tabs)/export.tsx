@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { buildLoginHref } from '@/utils/authNavigation';
-import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 
 const ListTravel = lazy(async () => {
     const mod: any = await import('@/components/listTravel/ListTravel');
@@ -72,7 +72,7 @@ export default function ExportScreen() {
                     title={title}
                     description={description}
                     canonical={buildCanonicalUrl(pathname || '/export')}
-                    image={buildOgImageUrl('/og-preview.jpg')}
+                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                     ogType="website"
                     robots="noindex, nofollow"
                 />

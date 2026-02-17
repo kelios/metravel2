@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useIsFocused } from '@react-navigation/native';
 import { useThemedColors } from '@/hooks/useTheme';
-import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 
 const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
@@ -23,7 +23,7 @@ export default function MeTravelScreen() {
                 title="Мои путешествия | Metravel"
                 description="Список ваших опубликованных и черновых путешествий на платформе Metravel."
                 canonical={canonical}
-                image={buildOgImageUrl('/og-preview.jpg')}
+                image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                 ogType="website"
                 robots="noindex, nofollow"
             />

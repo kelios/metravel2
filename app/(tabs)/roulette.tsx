@@ -52,7 +52,7 @@ export default function RouletteScreen() {
     filtersLoading,
   } = useRouletteLogic();
 
-  const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
+  const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
 
   const title = 'Случайный маршрут | Metravel';
   const description = 'Не знаешь, куда поехать? Подбери фильтры — и мы случайно предложим три маршрута под твои пожелания.';
@@ -125,7 +125,7 @@ export default function RouletteScreen() {
           title={title}
           description={description}
           canonical={buildCanonicalUrl(pathname || '/roulette')}
-          image={buildOgImageUrl('/og-preview.jpg')}
+          image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
         />
       )}

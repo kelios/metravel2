@@ -44,7 +44,7 @@ export default function Login() {
 
     const isFocused = useIsFocused();
     const pathname = usePathname();
-    const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
+    const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
     const canonical = buildCanonicalUrl(pathname || '/login');
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -143,7 +143,7 @@ export default function Login() {
                 title={title}
                 description={description}
                 canonical={canonical}
-                image={buildOgImageUrl('/og-preview.jpg')}
+                image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                 ogType="website"
                 robots="noindex, nofollow"
             />

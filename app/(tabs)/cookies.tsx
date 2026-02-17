@@ -46,7 +46,7 @@ export default function CookieSettingsScreen() {
   const pathname = usePathname();
   const router = useRouter();
   const isFocused = useIsFocused();
-  const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
+  const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
   const canonical = buildCanonicalUrl(pathname || '/cookies');
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -107,7 +107,7 @@ export default function CookieSettingsScreen() {
           title={title}
           description={description}
           canonical={canonical}
-          image={buildOgImageUrl('/og-preview.jpg')}
+          image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
           robots="noindex, nofollow"
         />

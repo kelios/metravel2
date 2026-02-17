@@ -13,7 +13,7 @@ import { sendFeedback } from '@/api/misc';
 import { useIsFocused } from '@react-navigation/native';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useAboutStyles } from '@/components/about/aboutStyles';
-import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
 import { openExternalUrl } from '@/utils/externalLinks';
 
@@ -154,7 +154,7 @@ function AboutAndContactScreen() {
             title={title}
             description={description}
             canonical={canonical}
-            image={buildOgImageUrl('/og-preview.jpg')}
+            image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
             ogType="website"
         />
         )}

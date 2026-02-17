@@ -32,7 +32,7 @@ function getArg(name, fallback) {
 const DIST_DIR = path.resolve(getArg('dist', 'dist/prod'));
 const API_BASE = getArg('api', 'https://metravel.by').replace(/\/+$/, '');
 const SITE_URL = 'https://metravel.by';
-const OG_IMAGE = `${SITE_URL}/og-preview.jpg`;
+const OG_IMAGE = `${SITE_URL}/assets/icons/logo_yellow_512x512.png`;
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 
 // ---------------------------------------------------------------------------

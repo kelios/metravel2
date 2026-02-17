@@ -1,4 +1,4 @@
-import { getSiteBaseUrl, buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { getSiteBaseUrl, buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 
 describe('seo utils', () => {
   const originalEnv = process.env.EXPO_PUBLIC_SITE_URL;
@@ -54,8 +54,15 @@ describe('seo utils', () => {
     });
 
     it('builds OG image URL with leading slash', () => {
-      expect(buildOgImageUrl('/og-preview.jpg')).toBe(
-        'https://metravel.by/og-preview.jpg',
+      expect(buildOgImageUrl('/assets/icons/logo_yellow_512x512.png')).toBe(
+        'https://metravel.by/assets/icons/logo_yellow_512x512.png',
+      );
+    });
+
+    it('DEFAULT_OG_IMAGE_PATH resolves to existing asset', () => {
+      expect(DEFAULT_OG_IMAGE_PATH).toBe('/assets/icons/logo_yellow_512x512.png');
+      expect(buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)).toBe(
+        'https://metravel.by/assets/icons/logo_yellow_512x512.png',
       );
     });
 

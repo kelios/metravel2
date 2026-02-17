@@ -8,7 +8,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 export default function PrivacyScreen() {
   const pathname = usePathname();
   const isFocused = useIsFocused();
-  const { buildCanonicalUrl, buildOgImageUrl } = require('@/utils/seo');
+  const { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } = require('@/utils/seo');
   const canonical = buildCanonicalUrl(pathname || '/privacy');
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -24,7 +24,7 @@ export default function PrivacyScreen() {
           title={title}
           description={description}
           canonical={canonical}
-          image={buildOgImageUrl('/og-preview.jpg')}
+          image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
           ogType="website"
         />
       )}

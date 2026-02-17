@@ -5,7 +5,7 @@ import { usePathname } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { useIsFocused } from '@react-navigation/native';
 import { useThemedColors } from '@/hooks/useTheme';
-import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 
 const ListTravel = lazy(() => import('@/components/listTravel/ListTravelBase'));
 
@@ -27,7 +27,7 @@ export default function TravelsByScreen() {
                 title={title}
                 description={description}
                 canonical={buildCanonicalUrl(pathname || '/travelsby')}
-                image={buildOgImageUrl('/og-preview.jpg')}
+                image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                 ogType="website"
             />
             )}

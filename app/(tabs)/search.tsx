@@ -9,7 +9,7 @@ import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
-import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { SearchPageSkeleton } from '@/components/listTravel/SearchPageSkeleton';
 import { queryClient } from '@/queryClient';
 import { fetchTravels } from '@/api/travelsApi';
@@ -107,7 +107,7 @@ function SearchScreen() {
                     title={title}
                     description={description}
                     canonical={buildCanonicalUrl(pathname || '/search')}
-                    image={buildOgImageUrl('/og-preview.jpg')}
+                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                     ogType="website"
                 />
             )}

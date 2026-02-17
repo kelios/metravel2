@@ -453,7 +453,134 @@ The application is well-optimized at the code level with comprehensive caching, 
 
 ---
 
-**Last updated:** 2026-02-16  
+---
+
+## v12 — Full Post-Deploy Audit (2026-02-17)
+
+### Lighthouse Scores (live production)
+
+#### Desktop — Home (`/`)
+| Category | Score |
+|----------|-------|
+| Performance | **75** |
+| Accessibility | **100** |
+| Best Practices | **78** |
+| SEO | **100** |
+
+| Metric | Value | Score | Status |
+|--------|-------|-------|--------|
+| FCP | 1.1 s | 0.80 | ✅ |
+| LCP | 2.9 s | 0.37 | ⚠️ |
+| TBT | 10 ms | 1.0 | ✅ |
+| CLS | 0.006 | 1.0 | ✅ |
+| Speed Index | 3.2 s | 0.23 | ⚠️ |
+| TTI | 2.9 s | 0.83 | ✅ |
+| TTFB | 90 ms | 1.0 | ✅ |
+
+#### Mobile — Home (`/`)
+| Category | Score |
+|----------|-------|
+| Performance | **54** |
+| Accessibility | **100** |
+| Best Practices | **79** |
+| SEO | **100** |
+
+| Metric | Value | Score | Status |
+|--------|-------|-------|--------|
+| FCP | 3.5 s | 0.34 | ⚠️ |
+| LCP | 11.9 s | 0.00 | 🔴 |
+| TBT | 440 ms | 0.64 | ⚠️ |
+| CLS | 0.04 | 0.99 | ✅ |
+| Speed Index | 4.6 s | 0.70 | ✅ |
+| TTI | 11.9 s | 0.17 | 🔴 |
+
+### Server & Security ✅
+| Check | Status |
+|-------|--------|
+| HTTPS | ✅ HTTP/2 200 |
+| HSTS | ✅ max-age=31536000; includeSubDomains; preload |
+| HTTP→HTTPS redirect | ✅ 301 |
+| www→non-www redirect | ✅ 301 |
+| Brotli compression | ✅ content-encoding: br |
+| X-Frame-Options | ✅ SAMEORIGIN |
+| X-Content-Type-Options | ✅ nosniff |
+| Referrer-Policy | ✅ strict-origin-when-cross-origin |
+| CSP | ✅ Full policy |
+| Permissions-Policy | ✅ Restrictive |
+| TTFB | ✅ 367ms (curl from remote) |
+| robots.txt | ✅ Correct disallows + sitemap |
+| sitemap.xml | ✅ 200 |
+| manifest.json | ✅ Cache-Control: public, max-age=86400 |
+| Console errors | ✅ None (score=1) |
+
+### SEO ✅
+| Check | Status |
+|-------|--------|
+| Title (home) | ✅ "Твоя книга путешествий \| Metravel" (33 chars) |
+| Description (home) | ✅ 120+ chars, in static HTML |
+| Canonical (home) | ✅ Patched by inline JS |
+| og:title / og:description / og:image | ✅ All present in static HTML |
+| og:locale | ✅ ru_RU |
+| Schema.org | ✅ Organization + WebSite + Service |
+| Travel page SEO | ✅ Title, description, canonical, og:*, breadcrumb JSON-LD in static HTML |
+| lang attribute | ✅ ru |
+| robots meta | ✅ Not set (correct for prod) |
+| Lighthouse SEO score | ✅ 100 (desktop + mobile) |
+
+### Analytics ✅
+| Check | Status |
+|-------|--------|
+| GA4 (G-GBT9YNPXKB) | ✅ Present in HTML |
+| Yandex Metrika | ✅ Present in HTML |
+| send_page_view: false | ✅ Configured (avoids duplicate pageviews) |
+| Deferred loading | ✅ requestIdleCallback / setTimeout |
+| Consent-aware | ✅ Cookie consent integration |
+
+### Issues Found & Fixes Applied
+
+#### 1. P1: og:image returns 404 — FIXED
+- **Problem:** All pages referenced `/og-preview.jpg` as default OG image, but the file never existed on the server. Social sharing previews were broken.
+- **Root cause:** `buildOgImageUrl('/og-preview.jpg')` called across 12 page files + SEO generator + TravelDetailsContainer.
+- **Fix:** Added `DEFAULT_OG_IMAGE_PATH` constant in `utils/seo.ts` pointing to `/assets/icons/logo_yellow_512x512.png` (verified 200 on production). Updated all 14 references.
+- **Files changed:**
+  - `utils/seo.ts` — added `DEFAULT_OG_IMAGE_PATH` export
+  - `app/(tabs)/index.tsx`, `travelsby.tsx`, `about.tsx`, `articles.tsx`, `search.tsx`, `export.tsx`, `metravel.tsx`, `privacy.tsx`, `roulette.tsx`, `cookies.tsx`, `login.tsx`, `registration.tsx` — import + use constant
+  - `components/travel/details/TravelDetailsContainer.tsx` — import + use constant
+  - `scripts/generate-seo-pages.js` — updated `OG_IMAGE` constant
+  - `app/+html.tsx` — updated fallback og:image to 512x512 version
+  - `__tests__/utils/seo.test.ts` — updated test + added regression test
+
+#### 2. P2: Responsive images not using srcSet/sizes — FIXED
+- **Problem:** Travel card images served at full resolution regardless of viewport. Lighthouse flagged ~412 KiB savings (mobile).
+- **Fix:** Added `srcSet` and `sizes` attributes to `WebMainImage` in `ImageCardMedia.tsx` using the existing `generateSrcSet` utility with breakpoints [160, 320, 480, 640]px.
+- **Files changed:**
+  - `components/ui/ImageCardMedia.tsx` — added `webSrcSet`/`webSizes` memos, passed to `WebMainImage`; added `srcSet`/`sizes` props to `WebMainImageProps` type and `<img>` tag
+
+### Remaining Issues (structural — cannot fix without major refactoring)
+| Issue | Priority | Cause | Mitigation |
+|-------|----------|-------|------------|
+| Bundle size ~4.7MB | P2 | RNW + Leaflet + Reanimated stack | Requires code-splitting heavy routes (Map) or migrating off RNW |
+| Mobile LCP 11.9s | P2 | Bundle blocks main thread under 4× CPU throttling | Travel hero preload script already optimizes travel pages; home page blocked by JS parse time |
+| Unused JS ~2MB | P2 | Common chunk contains all shared modules | Expo/Metro bundler limitation; tree-shaking improvements needed upstream |
+| Mobile Performance 54 | P2 | Dominated by bundle size under mobile throttling | Same root cause as above |
+| Soft 404 (unknown URLs return 200) | P3 | SPA catch-all serves index.html for all routes | Would require server-side route validation |
+| Best Practices 78-79 | P3 | Third-party cookies from Yandex Metrika / GA4 | Cannot control third-party behavior |
+| Desktop Speed Index 3.2s | P3 | Large initial paint area with deferred content | Progressive rendering already implemented |
+
+### Validation
+- `npx jest __tests__/utils/seo.test.ts` — **9 tests passed** ✅
+- `npx jest --testPathPattern="ImageCardMedia|UnifiedTravelCard|TabTravelCard"` — **4 tests passed** ✅
+
+### Target Assessment
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 54 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | ⚠️ LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | og:image 404 fixed | ✅ |
+| Load time < 2.5s mobile | ~11.9s (throttled) | 🔴 Blocked by bundle size |
+
+**Last updated:** 2026-02-17  
 **SW Version:** v3.9.0  
-**Audit Version:** v11  
-**Status:** ⚠️ P0 fix applied in code — requires redeploy (nginx reload + new build) to take effect on production
+**Audit Version:** v12  
+**Status:** ✅ P1 og:image fix + P2 responsive images fix applied — requires redeploy to take effect

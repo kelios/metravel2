@@ -7,7 +7,7 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import ErrorDisplay from '@/components/ui/ErrorDisplay';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
-import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo';
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { HomePageSkeleton } from '@/components/home/HomePageSkeleton';
 
 const Home = lazy(() => import('@/components/home/Home'));
@@ -69,7 +69,7 @@ function HomeScreen() {
                     title={title}
                     description={description}
                     canonical={canonical}
-                    image={buildOgImageUrl('/og-preview.jpg')}
+                    image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
                     ogType="website"
                 />
             )}

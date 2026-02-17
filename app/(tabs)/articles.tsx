@@ -15,7 +15,7 @@ import { queryConfigs } from '@/utils/reactQueryConfig'
 import { queryKeys } from '@/queryKeys'
 import { useIsFocused } from '@react-navigation/native'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
-import { buildCanonicalUrl, buildOgImageUrl } from '@/utils/seo'
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 
 export default function TabOneScreen() {
   const initialPage = 0
@@ -116,7 +116,7 @@ export default function TabOneScreen() {
             title="Статьи | Metravel"
             description="Статьи путешественников на платформе Metravel — советы, истории и полезные материалы."
             canonical={buildCanonicalUrl('/articles')}
-            image={buildOgImageUrl('/og-preview.jpg')}
+            image={buildOgImageUrl(DEFAULT_OG_IMAGE_PATH)}
             ogType="website"
           />
         )}

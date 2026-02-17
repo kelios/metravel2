@@ -5,7 +5,7 @@ import type { ImageProps as ExpoImageProps } from 'expo-image';
 
 import OptimizedImage from '@/components/ui/OptimizedImage';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
-import { optimizeImageUrl } from '@/utils/imageOptimization';
+import { optimizeImageUrl, generateSrcSet } from '@/utils/imageOptimization';
 
 type Priority = 'low' | 'normal' | 'high';
 
@@ -21,6 +21,8 @@ type WebMainImageProps = {
   priority: Priority;
   hasBlurBehind: boolean;
   loaded: boolean;
+  srcSet?: string;
+  sizes?: string;
   onLoad?: () => void;
   onError?: () => void;
 };
@@ -36,6 +38,8 @@ const WebMainImage = memo(function WebMainImage({
   priority,
   hasBlurBehind,
   loaded,
+  srcSet,
+  sizes,
   onLoad,
   onError,
 }: WebMainImageProps) {
@@ -57,6 +61,8 @@ const WebMainImage = memo(function WebMainImage({
     <img
       ref={imgRef}
       src={src}
+      srcSet={srcSet}
+      sizes={sizes}
       alt={alt}
       width={width}
       height={height}
@@ -190,6 +196,20 @@ function ImageCardMedia({
     return uri || null;
   }, [resolvedSource, shouldDisableNetwork, webOptimizedSource]);
 
+  const webSrcSet = useMemo(() => {
+    if (Platform.OS !== 'web') return undefined;
+    if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
+    const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
+    if (!uri) return undefined;
+    return generateSrcSet(uri, [160, 320, 480, 640], { quality: 60, fit: contentFit === 'contain' ? 'contain' : 'cover', dpr: 1 }) || undefined;
+  }, [resolvedSource, contentFit]);
+
+  const webSizes = useMemo(() => {
+    if (Platform.OS !== 'web') return undefined;
+    const numW = typeof width === 'number' ? width : 320;
+    return `(min-width: 1024px) ${numW}px, (min-width: 768px) 33vw, 50vw`;
+  }, [width]);
+
   // Reuse the same image source for both foreground and blur background on web.
   // This avoids requesting a separate "blur" asset URL.
   const webBlurSrc = useMemo(() => {
@@ -298,6 +318,8 @@ function ImageCardMedia({
           {Platform.OS === 'web' && !isJest && !blurOnly && webMainSrc ? (
             <WebMainImage
               src={webMainSrc}
+              srcSet={webSrcSet}
+              sizes={webSizes}
               alt={alt || ''}
               width={typeof width === 'number' ? width : 400}
               height={typeof height === 'number' ? height : 300}

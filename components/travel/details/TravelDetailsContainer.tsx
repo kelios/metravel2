@@ -25,7 +25,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 /* ✅ АРХИТЕКТУРА: Импорт кастомных хуков */
 import { useTravelDetails } from "@/hooks/travel-details";
 import InstantSEO from "@/components/seo/LazyInstantSEO";
-import { buildCanonicalUrl, buildOgImageUrl } from "@/utils/seo";
+import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from "@/utils/seo";
 import { createSafeJsonLd, createBreadcrumbJsonLd, stripHtml } from "@/utils/travelDetailsSecure";
 import { buildTravelSectionLinks } from "@/components/travel/sectionLinks";
 import { SectionSkeleton } from '@/components/ui/SectionSkeleton';
@@ -245,7 +245,7 @@ export default function TravelDetailsContainer() {
       ? firstUrl.startsWith("http")
         ? firstUrl.replace(/^http:\/\//, "https://")
         : buildOgImageUrl(firstUrl)
-      : buildOgImageUrl('/og-preview.jpg');
+      : buildOgImageUrl(DEFAULT_OG_IMAGE_PATH);
     const structuredData = createSafeJsonLd(travel);
     const breadcrumb = createBreadcrumbJsonLd(travel);
 

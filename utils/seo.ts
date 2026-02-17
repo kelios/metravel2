@@ -2,6 +2,8 @@
  * SEO utilities for canonical URLs and site base URL normalization
  */
 
+export const DEFAULT_OG_IMAGE_PATH = '/assets/icons/logo_yellow_512x512.png';
+
 /**
  * Returns normalized site base URL without trailing slash.
  * Uses EXPO_PUBLIC_SITE_URL from environment or defaults to production URL.
