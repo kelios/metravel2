@@ -616,13 +616,52 @@ test.describe('Slider — slide virtualization', () => {
 
   test('virtualization window expands as user navigates', async ({ page }) => {
     await preacceptCookies(page);
-    const counter = await navigateToTravelWithSlider(page);
-    if (!counter || counter.total < 5) {
-      throw new Error('Slider test precondition failed');
-    }
+    const multiId = 900002;
+    const multiSlug = 'e2e-slider-virtualization-window';
+    const gallery = Array.from({ length: 6 }, (_, idx) => ({
+      id: idx + 1,
+      url: `https://images.unsplash.com/photo-1501785888041-af3ef285b47${idx}?auto=format&fit=crop&w=1200&q=80`,
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }));
+    const multiTravel = {
+      id: multiId,
+      slug: multiSlug,
+      url: `/travels/${multiSlug}`,
+      name: 'E2E virtualization slider travel',
+      description: '<p>Virtualization window test</p>',
+      publish: true,
+      moderation: true,
+      travel_image_thumb_url: gallery[0]?.url,
+      travel_image_thumb_small_url: gallery[0]?.url,
+      gallery,
+      categories: [],
+      countries: [],
+      travelAddress: [],
+      coordsMeTravel: [],
+    };
+
+    const virtualizationRoute = async (route: import('@playwright/test').Route) => {
+      const url = route.request().url();
+      if (url.includes(`/api/travels/by-slug/${multiSlug}/`) || url.includes(`/api/travels/${multiId}/`)) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(multiTravel),
+        });
+        return;
+      }
+      await route.continue();
+    };
+
+    await page.route('**/api/travels/by-slug/**', virtualizationRoute);
+    await page.route(`**/api/travels/${multiId}/`, virtualizationRoute);
+
+    await gotoWithRetry(page, `/travels/${multiSlug}`);
+    await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 });
 
     // Navigate to slide 3 (index 2)
     const nextBtn = page.locator('[aria-label="Next slide"]').first();
+    await expect(nextBtn).toBeVisible();
     await nextBtn.click();
     await waitForCounterValue(page, 2, 8_000);
     await nextBtn.click();

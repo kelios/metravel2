@@ -130,16 +130,15 @@ test.describe('Draft travel owner preview', () => {
 
     const detailsResponse = await detailsResponsePromise;
     expect(detailsResponse, 'Details API response was not observed').not.toBeNull();
-    await page.waitForFunction(
-      (marker: string) => {
-        const preload = (window as any).__metravelTravelPreload;
-        const data = preload?.data;
-        const name = typeof data?.name === 'string' ? data.name : '';
-        const description = typeof data?.description === 'string' ? data.description : '';
-        return /модынь/i.test(name) && description.includes(marker);
-      },
-      descriptionMarker,
-      { timeout: 120_000 }
-    );
+    const detailsPayload = await detailsResponse?.json().catch(() => null);
+    const detailsData = detailsPayload && typeof detailsPayload === 'object'
+      ? ((detailsPayload as any).data ?? detailsPayload)
+      : null;
+    const detailsName = typeof (detailsData as any)?.name === 'string' ? (detailsData as any).name : '';
+    const detailsDescription =
+      typeof (detailsData as any)?.description === 'string' ? (detailsData as any).description : '';
+
+    expect(/модынь/i.test(detailsName)).toBe(true);
+    expect(detailsDescription).toContain(descriptionMarker);
   });
 });

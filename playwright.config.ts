@@ -37,8 +37,11 @@ const E2E_WEB_PORT = Number(process.env.E2E_WEB_PORT || '8085');
 const baseURL = process.env.BASE_URL || `http://127.0.0.1:${E2E_WEB_PORT}`;
 const USE_EXISTING_SERVER = process.env.E2E_NO_WEBSERVER === '1' && !!process.env.BASE_URL;
 const webServerEnv = { ...process.env } as Record<string, string | undefined>;
-if (webServerEnv.FORCE_COLOR && webServerEnv.NO_COLOR) {
+if (Object.prototype.hasOwnProperty.call(webServerEnv, 'NO_COLOR')) {
   delete webServerEnv.NO_COLOR;
+}
+if (Object.prototype.hasOwnProperty.call(webServerEnv, 'FORCE_COLOR')) {
+  delete webServerEnv.FORCE_COLOR;
 }
 
 // For local E2E we hardcode dev API by default to avoid env drift.

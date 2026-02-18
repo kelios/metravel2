@@ -5,8 +5,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const rootDir = path.join(__dirname, '..');
-if (process.env.FORCE_COLOR && process.env.NO_COLOR) {
+if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
   delete process.env.NO_COLOR;
+}
+if (Object.prototype.hasOwnProperty.call(process.env, 'FORCE_COLOR')) {
+  delete process.env.FORCE_COLOR;
 }
 const distIndex = path.join(rootDir, 'dist', 'index.html');
 const distJsDir = path.join(rootDir, 'dist', '_expo', 'static', 'js', 'web');
@@ -93,8 +96,11 @@ function killProcessTree(child) {
 
 function sanitizedEnv(baseEnv) {
   const nextEnv = { ...baseEnv };
-  if (nextEnv.FORCE_COLOR && nextEnv.NO_COLOR) {
+  if (Object.prototype.hasOwnProperty.call(nextEnv, 'NO_COLOR')) {
     delete nextEnv.NO_COLOR;
+  }
+  if (Object.prototype.hasOwnProperty.call(nextEnv, 'FORCE_COLOR')) {
+    delete nextEnv.FORCE_COLOR;
   }
   return nextEnv;
 }

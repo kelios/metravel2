@@ -30,6 +30,18 @@ console.warn = (message, ...args) => {
   if (text.includes('[setRoutePoints]')) {
     return
   }
+  if (text.startsWith('Failed to load quests list:')) {
+    return
+  }
+  if (text.startsWith('Failed to load quest cities:')) {
+    return
+  }
+  if (text.startsWith('Failed to load quest bundle:')) {
+    return
+  }
+  if (text.startsWith('Could not load quest progress from server:')) {
+    return
+  }
   originalWarn(message, ...args);
 };
 

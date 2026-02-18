@@ -2,7 +2,7 @@
   "config": {
     "configFile": "/Users/juliasavran/Sites/metravel2/metravel2/playwright.config.ts",
     "rootDir": "/Users/juliasavran/Sites/metravel2/metravel2/e2e",
-    "forbidOnly": false,
+    "forbidOnly": true,
     "fullyParallel": true,
     "globalSetup": "/Users/juliasavran/Sites/metravel2/metravel2/e2e/global-setup.ts",
     "globalTeardown": null,
@@ -16,7 +16,7 @@
     "preserveOutput": "always",
     "projects": [
       {
-        "outputDir": "/Users/juliasavran/Sites/metravel2/metravel2/test-results",
+        "outputDir": "/Users/juliasavran/Sites/metravel2/metravel2/test-results/e2e-perf",
         "repeatEach": 1,
         "retries": 0,
         "metadata": {
@@ -61,78 +61,332 @@
     "updateSnapshots": "missing",
     "updateSourceMethod": "patch",
     "version": "1.58.2",
-    "workers": 2,
+    "workers": 1,
     "webServer": {
       "command": "node scripts/e2e-webserver.js",
       "url": "http://127.0.0.1:8085",
       "reuseExistingServer": false,
       "timeout": 600000,
       "env": {
+        "npm_package_scripts_lighthouse_travel_desktop": "LIGHTHOUSE_FORM_FACTOR=desktop node scripts/lighthouse-travel-score.js",
+        "npm_package_scripts_test_seo_prod": "node scripts/test-seo-prod.js",
+        "npm_package_dependencies_expo_splash_screen": "~31.0.13",
+        "npm_package_dependencies_react_native_toast_message": "^2.2.1",
+        "npm_package_dependencies_sanitize_html": "^2.17.0",
         "NVM_INC": "/Users/juliasavran/.nvm/versions/node/v20.19.4/include/node",
+        "npm_package_scripts_config_diagnostics": "node scripts/runtime-config-diagnostics.js",
+        "npm_package_scripts_lighthouse_produrl_travel_desktop": "node scripts/lighthouse-produrl.js --formFactor desktop --output ./lighthouse-report.produrl.desktop.json",
+        "npm_package_dependencies_expo_av": "~16.0.8",
+        "npm_package_devDependencies_prettier": "^3.0.1",
         "RUST_LOG": "warn",
+        "npm_package_scripts_guard_no_direct_window_open_json": "node scripts/guard-no-direct-window-open.js --json",
+        "npm_package_dependencies_react_native_worklets": "0.5.1",
+        "npm_package_devDependencies__jest_test_sequencer": "^29.7.0",
+        "npm_package_devDependencies_react_test_renderer": "19.1.0",
+        "npm_package_scripts_ci_incident_publish": "node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json",
+        "npm_package_scripts_config_diagnostics_strict": "node scripts/runtime-config-diagnostics.js --strict-warnings",
+        "npm_package_dependencies_expo_router": "^6.0.22",
+        "npm_package_overrides_semver": "^7.6.3",
+        "npm_package_scripts_web": "npx expo start --web",
+        "npm_package_scripts_ci_incident_publish_json": "node scripts/publish-ci-incident-snippet.js --summary-file test-results/quality-summary.json --json",
+        "npm_package_scripts_lint_ci": "mkdir -p test-results && npm run guard:external-links && eslint . --max-warnings=0 --format json --output-file test-results/eslint-results.json",
+        "npm_package_dependencies_leaflet": "^1.9.4",
+        "npm_package_dependencies_react_native_safe_area_context": "~5.6.0",
+        "npm_package_devDependencies__babel_plugin_transform_export_namespace_from": "^7.25.9",
+        "npm_package_resolutions_follow_redirects": "^1.15.6",
         "NODE": "/Users/juliasavran/.nvm/versions/node/v20.19.4/bin/node",
-        "INIT_CWD": "/Users/juliasavran/Sites/metravel2/metravel2",
+        "npm_config_version_git_tag": "true",
+        "npm_package_dependencies_lucide_react": "^0.563.0",
+        "npm_package_dependencies_react_native_document_picker": "^9.3.1",
+        "npm_package_dependencies_react_native_render_html": "^6.3.4",
+        "npm_package_devDependencies_typescript": "^5.7.3",
+        "npm_package_overrides_minimist": "^1.2.8",
         "NVM_CD_FLAGS": "-q",
+        "INIT_CWD": "/Users/juliasavran/Sites/metravel2/metravel2",
+        "npm_package_scripts_e2e_headed": "playwright test --headed",
+        "npm_package_scripts_android_build": "./scripts/android-build.sh",
+        "npm_package_scripts_validator_contracts_summary_validate": "node scripts/validate-validator-contracts-summary.js --file test-results/validator-contracts-summary.json",
+        "npm_package_devDependencies_jest": "^29.2.1",
+        "npm_package_overrides_follow_redirects": "^1.15.6",
         "TERM": "dumb",
         "SHELL": "/bin/zsh",
+        "npm_package_scripts_check_deps": "node scripts/check-dependencies.js",
+        "npm_package_devDependencies_patch_package": "^8.0.1",
+        "npm_package_scripts_web_prod": "NODE_ENV=production npx expo start --web",
+        "npm_package_scripts_seo_generate_pages": "node scripts/generate-seo-pages.js --dist dist/prod",
         "TMPDIR": "/var/folders/2r/0ckwmz99049dykf8_62gm8p80000gn/T/",
         "HOMEBREW_REPOSITORY": "/opt/homebrew",
-        "npm_config_global_prefix": "/Users/juliasavran/.nvm/versions/node/v20.19.4",
+        "npm_config_init_license": "MIT",
+        "npm_package_scripts_test_coverage_travel_details": "jest --coverage --runInBand TravelDetails --collectCoverageFrom=hooks/useTravelDetails*.ts --collectCoverageFrom=utils/travelDetails*.ts --collectCoverageFrom=components/travel/details/TravelDetailsContainer.tsx --collectCoverageFrom=components/travel/details/TravelDetailsHero.tsx --collectCoverageFrom=components/travel/details/TravelDetailsLazy.tsx --collectCoverageFrom=components/travel/details/TravelDetailsIcons.tsx",
+        "npm_package_scripts_lint": "npm run guard:external-links && eslint . --max-warnings=0",
+        "npm_package_dependencies_expo_location": "~19.0.8",
+        "npm_package_devDependencies__babel_preset_typescript": "^7.24.1",
+        "npm_package_scripts_android_build_prod": "eas build --platform android --profile production",
+        "npm_package_scripts_audit_high": "node scripts/yarn-audit-high.js",
+        "npm_package_dependencies_dompurify": "^3.2.6",
+        "npm_package_devDependencies_babel_plugin_module_resolver": "^5.0.2",
+        "npm_package_scripts_android": "npx expo start --android",
+        "npm_package_dependencies_react_intersection_observer": "^10.0.2",
+        "npm_package_scripts_android_submit_latest": "eas submit --platform android --latest",
+        "npm_package_dependencies__react_navigation_native": "^7.0.18",
+        "npm_package_dependencies_quill": "^2.0.3",
+        "npm_package_dependencies_react_leaflet": "5.0.0",
         "MallocNanoZone": "0",
-        "COLOR": "0",
-        "NO_COLOR": "1",
-        "npm_config_noproxy": "",
-        "npm_config_local_prefix": "/Users/juliasavran/Sites/metravel2/metravel2",
+        "npm_package_scripts_test_ci": "npm run check:image-architecture && jest --ci --runInBand --reporters=default --testLocationInResults --json --outputFile=jest-results.json | tee jest-full.log",
+        "npm_package_scripts_analyze_bundle": "node scripts/analyze-bundle.js",
+        "npm_package_scripts_guard_no_direct_linking_openurl_json": "node scripts/guard-no-direct-linking-openurl.js --json",
+        "npm_package_scripts_validator_contracts_check": "jest --passWithNoTests --runInBand __tests__/scripts/validator-error-codes-centralization.test.ts __tests__/scripts/validator-error-codes-prefix-policy.test.ts __tests__/scripts/validator-error-codes-uniqueness.test.ts __tests__/scripts/validate-validator-error-codes-doc-table.test.ts __tests__/scripts/validate-validator-error-codes-policy.test.ts __tests__/scripts/validate-validator-contracts-summary.test.ts __tests__/scripts/summarize-validator-contracts-summary-validation.test.ts",
+        "npm_package_dependencies_expo_secure_store": "~15.0.8",
+        "npm_package_devDependencies_playwright_core": "^1.49.1",
+        "npm_package_overrides_glob": "^10.4.5",
+        "npm_config_registry": "https://registry.yarnpkg.com",
+        "npm_package_private": "true",
+        "npm_package_dependencies_react_dom": "19.1.0",
+        "npm_package_devDependencies__babel_helper_compilation_targets": "^7.27.2",
+        "npm_package_devDependencies_babel_plugin_transform_import_meta": "^2.3.3",
         "LC_ALL": "C.UTF-8",
+        "npm_package_dependencies_expo_image_picker": "~17.0.10",
+        "npm_package_dependencies_expo_sharing": "~14.0.8",
+        "npm_package_dependencies_react_dropzone": "^14.2.3",
+        "npm_package_readmeFilename": "README.md",
+        "npm_package_scripts_ios": "npx expo start --ios",
+        "npm_package_scripts_quality_summary_validate": "node scripts/validate-quality-summary.js test-results/quality-summary.json",
+        "npm_package_scripts_lighthouse_produrl_lcp": "node scripts/lighthouse-produrl-lcp.js",
+        "npm_package_scripts_guard_no_direct_window_open": "node scripts/guard-no-direct-window-open.js",
+        "npm_package_scripts_validator_contracts_summary": "node scripts/summarize-validator-contracts.js --json-output test-results/validator-contracts-summary.json",
+        "npm_package_devDependencies__testing_library_react": "^16.3.1",
+        "npm_package_resolutions_semver": "^7.6.3",
+        "npm_package_description": "Cross-platform travel application built with React Native and Expo.",
         "USER": "juliasavran",
         "NVM_DIR": "/Users/juliasavran/.nvm",
+        "npm_package_scripts_config_diagnostics_json": "node scripts/runtime-config-diagnostics.js --json",
+        "npm_package_scripts_e2e_perf_budget": "npx playwright test e2e/travel-details-perf-budget.spec.ts",
+        "npm_package_scripts_build_all_dev": "eas build --platform all --profile development",
+        "npm_package_scripts_perf_bundle": "npm run build:web:prod && npm run analyze:bundle",
+        "npm_package_devDependencies__types_react": "~19.1.10",
+        "npm_package_scripts_pr_ci_exception_validate_json": "node scripts/validate-pr-ci-exception.js --json",
+        "npm_package_dependencies_metro_react_native_babel_transformer": "^0.77.0",
         "COMMAND_MODE": "unix2003",
-        "npm_config_globalconfig": "/Users/juliasavran/.nvm/versions/node/v20.19.4/etc/npmrc",
+        "npm_package_scripts_ci_incident_validate": "node scripts/validate-ci-incident-snippet.js --file test-results/ci-incident-snippet.md",
+        "npm_package_dependencies__shopify_flash_list": "2.0.2",
+        "npm_package_dependencies_expo_linking": "~8.0.11",
+        "npm_package_dependencies_html2canvas": "^1.4.1",
+        "npm_package_browserslist_development_1": "last 1 firefox version",
+        "npm_package_devDependencies__babel_core": "^7.25.2",
+        "npm_package_devDependencies__testing_library_react_native": "^13.3.3",
+        "npm_package_browserslist_development_0": "last 1 chrome version",
+        "npm_package_scripts_lighthouse_travel_mobile": "LIGHTHOUSE_FORM_FACTOR=mobile node scripts/lighthouse-travel-score.js",
+        "npm_package_scripts_test_travel_performance": "node scripts/test-travel-page-performance.js",
+        "npm_package_scripts_ios_submit_latest": "eas submit --platform ios --latest",
+        "npm_package_dependencies_react_native_screens": "~4.16.0",
+        "npm_package_dependencies_zustand": "^5.0.9",
         "SSH_AUTH_SOCK": "/private/tmp/com.apple.launchd.NsdH1Wa7nr/Listeners",
+        "npm_package_scripts_build_web_prod": "cp .env.prod .env && NODE_ENV=production EXPO_ENV=prod EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false node ./node_modules/expo/bin/cli export --output-dir dist/prod -p web -c && node scripts/generate-seo-pages.js --dist dist/prod && node scripts/stamp-sw-version.js dist/prod",
+        "npm_package_dependencies_expo_blur": "~15.0.8",
+        "npm_package_dependencies_expo_web_browser": "~15.0.10",
+        "npm_package_devDependencies__types_jest": "29.5.14",
+        "npm_package_devDependencies_eslint": "^9.11.1",
+        "npm_package_browserslist_development_2": "last 1 safari version",
         "__CF_USER_TEXT_ENCODING": "0x1F5:0x7:0x31",
-        "npm_execpath": "/Users/juliasavran/.nvm/versions/node/v20.19.4/lib/node_modules/npm/bin/npm-cli.js",
+        "npm_package_scripts_e2e": "node scripts/e2e-run.js",
+        "npm_package_scripts_test_pages_performance": "node scripts/test-pages-performance.js",
+        "npm_package_scripts_ios_build_dev": "eas build --platform ios --profile development",
+        "npm_package_dependencies_react_native_webview": "13.15.0",
+        "npm_package_devDependencies__typescript_eslint_eslint_plugin": "^8.54.0",
+        "npm_package_devDependencies_babel_plugin_transform_remove_console": "^6.9.4",
+        "npm_package_expo_doctor_reactNativeDirectoryCheck_exclude_1": "react-native-reanimated",
+        "npm_execpath": "/Users/juliasavran/.nvm/versions/node/v20.19.4/lib/node_modules/yarn/bin/yarn.js",
+        "npm_package_dependencies__react_native_async_storage_async_storage": "2.2.0",
+        "npm_package_dependencies__react_navigation_native_stack": "^7.2.4",
+        "npm_package_dependencies_lucide_react_native": "^0.563.0",
+        "npm_package_expo_doctor_reactNativeDirectoryCheck_exclude_0": "react-native-vector-icons",
         "PAGER": "cat",
-        "PATH": "/Users/juliasavran/Sites/metravel2/metravel2/node_modules/.bin:/Users/juliasavran/Sites/metravel2/metravel2/node_modules/.bin:/Users/juliasavran/Sites/metravel2/node_modules/.bin:/Users/juliasavran/Sites/node_modules/.bin:/Users/juliasavran/node_modules/.bin:/Users/node_modules/.bin:/node_modules/.bin:/Users/juliasavran/.nvm/versions/node/v20.19.4/lib/node_modules/npm/node_modules/@npmcli/run-script/lib/node-gyp-bin:/Users/juliasavran/.codex/tmp/arg0/codex-arg032PNmy:/Users/juliasavran/.nvm/versions/node/v20.19.4/bin:/Users/juliasavran/.codeium/windsurf/bin:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Library/Apple/usr/bin:/Applications/Codex.app/Contents/Resources",
+        "npm_package_scripts_test_run_mem": "NODE_OPTIONS=--max-old-space-size=8192 jest --passWithNoTests --runInBand",
+        "npm_package_scripts_ci_incident_payload_validate_json": "node scripts/validate-ci-incident-payload.js --file test-results/ci-incident-payload.json --json",
+        "npm_package_devDependencies_axe_core": "^4.10.2",
+        "npm_package_expo_doctor_reactNativeDirectoryCheck_exclude_3": "expo-av",
+        "npm_package_scripts_fetch_lasy_data": "node scripts/fetch-lasy-wfs-data.js",
+        "npm_package_scripts_android_build_preview": "eas build --platform android --profile preview",
+        "npm_package_dependencies_expo_constants": "~18.0.13",
+        "npm_package_expo_doctor_reactNativeDirectoryCheck_exclude_2": "react-native-gesture-handler",
+        "npm_package_dependencies_react_native": "0.81.5",
+        "npm_package_devDependencies__typescript_eslint_parser": "^8.54.0",
+        "npm_package_expo_doctor_reactNativeDirectoryCheck_exclude_5": "react-native-responsive-screen",
+        "npm_package_scripts_ci_incident_validate_json": "node scripts/validate-ci-incident-snippet.js --file test-results/ci-incident-snippet.md --json",
+        "npm_package_scripts_build_web": "node ./node_modules/expo/bin/cli export -p web",
+        "npm_package_scripts_lighthouse_travel": "node scripts/lighthouse-travel-score.js",
+        "npm_package_scripts_postinstall": "node scripts/fix-expo-metro-terminal-reporter.js",
+        "npm_package_dependencies__babel_runtime": "7.25.0",
+        "npm_package_dependencies__expo_vector_icons": "~15.0.3",
+        "npm_package_dependencies_pdf_lib": "^1.17.1",
+        "npm_package_expo_doctor_reactNativeDirectoryCheck_exclude_4": "react-native-multiple-select",
+        "npm_config_argv": "{\"remain\":[],\"cooked\":[\"run\",\"e2e\"],\"original\":[\"e2e\"]}",
+        "PATH": "/var/folders/2r/0ckwmz99049dykf8_62gm8p80000gn/T/yarn--1771450693344-0.8216979071719122:/Users/juliasavran/Sites/metravel2/metravel2/node_modules/.bin:/Users/juliasavran/.config/yarn/link/node_modules/.bin:/Users/juliasavran/.yarn/bin:/Users/juliasavran/.nvm/versions/node/v20.19.4/libexec/lib/node_modules/npm/bin/node-gyp-bin:/Users/juliasavran/.nvm/versions/node/v20.19.4/lib/node_modules/npm/bin/node-gyp-bin:/Users/juliasavran/.nvm/versions/node/v20.19.4/bin/node_modules/npm/bin/node-gyp-bin:/Users/juliasavran/.codex/tmp/arg0/codex-arg032PNmy:/Users/juliasavran/.nvm/versions/node/v20.19.4/bin:/Users/juliasavran/.codeium/windsurf/bin:/usr/local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/opt/pmk/env/global/bin:/Library/Apple/usr/bin:/Applications/Codex.app/Contents/Resources",
+        "npm_package_scripts_governance_verify": "npm run guard:external-links && npm run test:governance",
+        "npm_package_scripts_perf_lighthouse": "npm run lighthouse:travel:mobile && npm run lighthouse:travel:desktop",
+        "npm_package_scripts_design_migrate": "node scripts/migrate-design-imports.js",
+        "npm_package_dependencies_react_native_maps": "1.20.1",
+        "npm_package_overrides_yaml": "^2.5.1",
         "ZSH_TMUX_AUTOSTART": "false",
-        "npm_package_json": "/Users/juliasavran/Sites/metravel2/metravel2/package.json",
-        "_": "/Users/juliasavran/Sites/metravel2/metravel2/node_modules/.bin/playwright",
-        "npm_config_userconfig": "/Users/juliasavran/.npmrc",
-        "npm_config_init_module": "/Users/juliasavran/.npm-init.js",
+        "npm_package_scripts_reset": "EXPO_RESET_CACHE=true npx expo start --clear",
+        "_": "/var/folders/2r/0ckwmz99049dykf8_62gm8p80000gn/T/yarn--1771450693344-0.8216979071719122/node",
+        "npm_package_scripts_ios_build_prod": "eas build --platform ios --profile production",
+        "npm_package_scripts_design_verify": "node scripts/verify-design-system.js",
+        "npm_package_overrides_react": "19.1.0",
         "__CFBundleIdentifier": "com.openai.codex",
         "CODEX_THREAD_ID": "019c71d5-fae8-7342-b879-ca0346bfe44d",
-        "npm_command": "exec",
+        "npm_package_scripts_smoke_suite_baseline_recommend": "node scripts/recommend-smoke-suite-baseline.js --file test-results/quality-summary.json --format json",
+        "npm_package_scripts_ci_workflow_contract_summarize": "node scripts/summarize-ci-smoke-workflow-contract-validation.js --file test-results/ci-smoke-workflow-contract-validation.json",
+        "npm_package_devDependencies_jest_expo": "~54.0.16",
+        "npm_package_prettier_singleQuote": "true",
+        "npm_package_browserslist_production_0": "defaults and not ie <= 11 and not op_mini all",
+        "npm_package_overrides_cookie": "^0.6.0",
+        "npm_package_overrides_react_dom": "19.1.0",
         "PWD": "/Users/juliasavran/Sites/metravel2/metravel2",
+        "npm_package_scripts_smoke_baseline_recommend": "node scripts/recommend-smoke-baseline.js --dir test-results --limit 7",
+        "npm_package_scripts_test_watch": "jest --watch",
+        "npm_package_dependencies_lightningcss": "^1.30.3",
+        "npm_package_devDependencies_eslint_plugin_react_hooks": "^7.0.1",
         "DISABLE_AUTO_UPDATE": "true",
-        "npm_lifecycle_event": "npx",
-        "EDITOR": "vi",
+        "npm_package_scripts_smoke_suite_baseline_validate": "node scripts/validate-smoke-suite-baseline-recommendation.js --file test-results/smoke-suite-baseline-recommendation.json",
+        "npm_package_dependencies__expo_metro_runtime": "~6.1.2",
+        "npm_package_dependencies_date_fns": "^4.1.0",
+        "npm_package_dependencies_expo_font": "~14.0.11",
+        "npm_package_dependencies_react_native_image_picker": "^8.1.0",
+        "npm_lifecycle_event": "e2e",
         "npm_package_name": "metravel",
+        "npm_package_scripts_smoke_suite_baseline_validate_json": "node scripts/validate-smoke-suite-baseline-recommendation.js --file test-results/smoke-suite-baseline-recommendation.json --json",
+        "npm_package_scripts_lighthouse_produrl_summary": "node scripts/lighthouse-produrl-summary.js",
+        "npm_package_scripts_guard_no_direct_linking_openurl": "node scripts/guard-no-direct-linking-openurl.js",
+        "npm_package_dependencies__react_pdf_renderer": "^4",
+        "npm_package_devDependencies__types_sanitize_html": "^2.16.0",
+        "npm_package_packageManager": "yarn@1.22.19",
         "LANG": "C.UTF-8",
-        "npm_config_npm_version": "10.8.2",
+        "npm_package_devDependencies__babel_preset_env": "^7.24.1",
+        "npm_config_version_commit_hooks": "true",
+        "npm_package_scripts_start": "npx expo start",
+        "npm_package_scripts_build": "npm run build:web",
+        "npm_package_scripts_android_submit": "./scripts/android-submit.sh",
+        "npm_package_overrides_react_native": "0.81.5",
+        "npm_package_scripts_validator_error_codes_docs_check": "node scripts/validate-validator-error-codes-doc-table.js --file docs/TESTING.md",
+        "npm_package_scripts_guard_external_links": "npm run guard:no-direct-linking-openurl && npm run guard:no-direct-window-open",
+        "npm_package_scripts_test_seo_prod_verbose": "node scripts/test-seo-prod.js --verbose",
+        "npm_package_dependencies_exifr": "^7.1.3",
+        "npm_package_dependencies_react_native_paper": "^5.13.1",
+        "npm_package_dependencies_react_native_reanimated": "~4.1.1",
+        "npm_package_resolutions__types_react": "~19.1.10",
         "XPC_FLAGS": "0x0",
+        "npm_config_bin_links": "true",
+        "npm_package_dependencies_expo_media_library": "~18.2.1",
         "CODEX_CI": "1",
+        "npm_package_scripts_e2e_ui": "playwright test --ui",
+        "npm_package_dependencies_expo_print": "~15.0.8",
+        "npm_package_dependencies_jszip": "^3.10.1",
         "npm_package_engines_node": ">=20.19.4",
         "ZSH_TMUX_AUTOSTARTED": "true",
-        "npm_config_node_gyp": "/Users/juliasavran/.nvm/versions/node/v20.19.4/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js",
+        "npm_package_main": "./entry.js",
+        "npm_package_scripts_test_cors": "node scripts/test-cors-proxy.js",
+        "npm_package_scripts_build_all_prod": "eas build --platform all --profile production",
+        "npm_package_dependencies__tanstack_react_query": "^5.76.5",
+        "npm_package_devDependencies_eslint_config_prettier": "^10.1.8",
         "npm_package_version": "1.0.0",
+        "npm_package_devDependencies_jest_axe": "^7.0.0",
         "XPC_SERVICE_NAME": "0",
+        "npm_package_scripts_ci_incident_template": "node scripts/generate-ci-incident.js",
+        "npm_package_scripts_ios_build": "./scripts/ios-build.sh",
+        "npm_package_scripts_ios_submit": "./scripts/ios-submit.sh",
+        "npm_package_dependencies_react_native_responsive_screen": "^1.4.2",
+        "npm_package_devDependencies__testing_library_jest_native": "^5.4.3",
+        "npm_package_resolutions_react_native": "0.81.5",
+        "npm_package_scripts_lighthouse_produrl_travel_mobile": "node scripts/lighthouse-produrl.js --formFactor mobile --output ./lighthouse-report.produrl.mobile.json",
+        "npm_package_devDependencies_playwright": "^1.49.1",
+        "npm_package_resolutions__babel_runtime": "7.25.0",
         "SHLVL": "2",
         "HOME": "/Users/juliasavran",
+        "npm_package_scripts_test": "jest --watchAll",
+        "npm_package_dependencies_expo_clipboard": "~8.0.8",
+        "npm_package_prettier_jsxBracketSameLine": "true",
         "CODEX_SHELL": "1",
+        "npm_config_strict_ssl": "true",
+        "npm_config_save_prefix": "^",
+        "npm_package_dependencies__react_navigation_bottom_tabs": "^7.2.4",
+        "npm_package_devDependencies_babel_plugin_dynamic_import_node": "^2.3.3",
+        "npm_config_version_git_message": "v%s",
+        "npm_package_scripts_test_smoke_critical": "node scripts/run-smoke-critical.js",
+        "npm_package_scripts_design_migrate_dry": "node scripts/migrate-design-imports.js --dry-run",
+        "npm_package_resolutions_yaml": "^2.5.1",
         "CI": "1",
         "HOMEBREW_PREFIX": "/opt/homebrew",
+        "npm_package_dependencies_expo_dev_client": "~6.0.20",
+        "npm_package_prettier_semi": "false",
         "GH_PAGER": "cat",
-        "npm_config_cache": "/Users/juliasavran/.npm",
+        "npm_package_scripts_check_image_architecture": "node scripts/check-image-architecture.js",
+        "npm_package_scripts_prod_web": "NODE_ENV=production node ./node_modules/expo/bin/cli export -p web",
+        "npm_package_scripts_android_build_dev": "eas build --platform android --profile development",
+        "npm_package_scripts_perf_check": "./scripts/check-performance.sh",
+        "npm_package_dependencies__gorhom_bottom_sheet": "^5.2.8",
+        "npm_package_resolutions_tar": "^7.5.3",
+        "npm_package_scripts_test_smoke_critical_ci": "node scripts/run-smoke-critical.js --ci --output-file test-results/jest-smoke-results.json",
+        "npm_package_scripts_test_coverage": "jest --coverage",
+        "npm_package_scripts_format": "npx prettier --write .",
+        "npm_package_scripts_android_prebuild": "./scripts/android-prebuild.sh",
+        "npm_package_dependencies_expo_image": "~3.0.11",
+        "npm_package_resolutions__types_react_native": "0.73.0",
+        "npm_package_overrides__babel_runtime": "7.25.0",
+        "YARN_WRAP_OUTPUT": "false",
         "LOGNAME": "juliasavran",
-        "npm_lifecycle_script": "playwright",
+        "npm_package_dependencies__native_html_iframe_plugin": "^2.6.1",
+        "npm_package_dependencies_expo_document_picker": "^14.0.8",
+        "npm_lifecycle_script": "node scripts/e2e-run.js",
+        "npm_package_scripts_test_governance": "jest --runInBand --watchAll=false __tests__/scripts/cli-runner-policy.test.ts __tests__/scripts/external-links-docs-policy-parity.test.ts __tests__/scripts/external-links-guard-script-contract.test.ts __tests__/scripts/governance-canonical-command-location.test.ts __tests__/scripts/governance-commands-doc-link-parity.test.ts __tests__/scripts/governance-docs-minimal-command-surface.test.ts __tests__/scripts/governance-docs-parity.test.ts __tests__/scripts/governance-docs-set-contract.test.ts __tests__/scripts/governance-docs-set-filesystem-contract.test.ts __tests__/scripts/governance-rule-enforcement-parity.test.ts __tests__/scripts/governance-script-parity.test.ts __tests__/scripts/governance-verify-anchor-coupling.test.ts __tests__/scripts/governance-verify-docs-parity.test.ts __tests__/scripts/governance-verify-script-contract.test.ts __tests__/scripts/guard-no-direct-linking-openurl.test.ts __tests__/scripts/guard-no-direct-window-open.test.ts __tests__/scripts/policy-helpers-contract-matrix.test.ts __tests__/scripts/policy-message-format-governance-patterns.test.ts __tests__/scripts/policy-message-format-governance.test.ts __tests__/scripts/policy-test-utils.test.ts __tests__/scripts/targeted-test-list-contract-utils.test.ts __tests__/scripts/targeted-test-list-policy-index-utils.test.ts __tests__/scripts/targeted-test-list-policy-utils.test.ts __tests__/scripts/targeted-test-list-policy.test.ts __tests__/scripts/temp-dir-policy.test.ts",
+        "npm_package_scripts_ci_workflow_contract_validate_json": "node scripts/validate-ci-smoke-workflow-contract.js --json",
+        "npm_package_dependencies_yup": "^1.4.0",
         "LC_CTYPE": "C.UTF-8",
+        "npm_package_scripts_validator_error_codes_docs_update": "node scripts/update-validator-error-codes-doc-table.js --file docs/TESTING.md",
+        "npm_package_dependencies_expo_linear_gradient": "~15.0.8",
+        "npm_package_dependencies_react": "19.1.0",
+        "npm_package_devDependencies__tanstack_react_query_devtools": "^5.76.5",
+        "npm_package_dependencies__react_native_community_netinfo": "11.4.1",
+        "npm_package_dependencies_react_native_svg": "15.12.1",
+        "npm_package_dependencies_react_native_web": "~0.21.2",
+        "npm_package_devDependencies_babel_plugin_react_native_web": "^0.19.12",
         "NVM_BIN": "/Users/juliasavran/.nvm/versions/node/v20.19.4/bin",
-        "npm_config_user_agent": "npm/10.8.2 node/v20.19.4 darwin arm64 workspaces/false",
+        "npm_config_user_agent": "yarn/1.22.22 npm/? node/v20.19.4 darwin arm64",
+        "npm_config_ignore_scripts": "",
+        "npm_config_version_git_sign": "",
+        "npm_package_scripts_test_run": "jest --passWithNoTests --runInBand",
+        "npm_package_scripts_e2e_perf_budget_headed": "npx playwright test e2e/travel-details-perf-budget.spec.ts --headed",
+        "npm_package_devDependencies__testing_library_dom": "^10.4.1",
+        "npm_package_overrides_tar": "^6.2.1",
+        "npm_package_scripts_ci_incident_payload_validate": "node scripts/validate-ci-incident-payload.js --file test-results/ci-incident-payload.json",
+        "npm_package_scripts_ios_prebuild": "./scripts/ios-prebuild.sh",
+        "npm_package_scripts_ios_build_preview": "eas build --platform ios --profile preview",
+        "npm_package_dependencies_expo": "^54.0.32",
+        "npm_package_dependencies_react_native_gesture_handler": "~2.28.0",
+        "npm_package_devDependencies__playwright_test": "^1.49.1",
+        "npm_package_devDependencies_chalk": "^4.1.2",
+        "npm_package_devDependencies_postinstall_postinstall": "^2.1.0",
         "INFOPATH": "/opt/homebrew/share/info:/opt/homebrew/share/info:",
         "HOMEBREW_CELLAR": "/opt/homebrew/Cellar",
+        "npm_package_scripts_lighthouse": "node scripts/run-lighthouse.js",
+        "npm_package_resolutions__isaacs_brace_expansion": ">=5.0.1",
+        "npm_package_scripts_build_all_preview": "eas build --platform all --profile preview",
+        "npm_package_resolutions_cookie": "^0.6.0",
         "OSLogRateLimit": "64",
+        "npm_config_ignore_optional": "",
+        "npm_config_init_version": "1.0.0",
+        "npm_package_scripts_ci_workflow_contract_validate": "node scripts/validate-ci-smoke-workflow-contract.js",
+        "npm_package_scripts_release_check": "yarn run lint && ./verify-security-fixes.sh && yarn run audit:high && yarn run test:run && yarn run e2e && yarn run build:web",
+        "npm_package_dependencies_react_cookie_consent": "^10.0.1",
         "GIT_PAGER": "cat",
+        "npm_package_scripts_clean": "npx expo start --clear",
+        "npm_config_version_tag_prefix": "v",
+        "npm_package_dependencies_qrcode": "^1.5.4",
+        "npm_package_devDependencies__testing_library_jest_dom": "^6.9.1",
+        "npm_package_devDependencies_eslint_plugin_react": "^7.37.5",
+        "npm_package_resolutions_minimist": "^1.2.8",
+        "npm_package_expo_doctor_reactNativeDirectoryCheck_listUnknownPackages": "false",
         "npm_node_execpath": "/Users/juliasavran/.nvm/versions/node/v20.19.4/bin/node",
-        "npm_config_prefix": "/Users/juliasavran/.nvm/versions/node/v20.19.4",
         "COLORTERM": "",
         "CODEX_INTERNAL_ORIGINATOR_OVERRIDE": "Codex Desktop",
         "E2E_EMAIL": "ignatieva_julia@tut.by",
@@ -154,22 +408,98 @@
   },
   "suites": [
     {
-      "title": "travel-wizard-features.spec.ts",
-      "file": "travel-wizard-features.spec.ts",
+      "title": "cls-audit.spec.ts",
+      "file": "cls-audit.spec.ts",
       "column": 0,
       "line": 0,
       "specs": [],
       "suites": [
         {
-          "title": "Превью карточки (Travel Preview)",
-          "file": "travel-wizard-features.spec.ts",
-          "line": 628,
+          "title": "@perf CLS audit",
+          "file": "cls-audit.spec.ts",
+          "line": 64,
           "column": 6,
           "specs": [
             {
-              "title": "должен обрезать длинное описание до 150 символов",
+              "title": "audit core routes (clsTotal / clsAfterRender)",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 300000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 8544,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "CLS audit results (sorted by clsAfterRender):\n/  clsAfterRender=0.0000  clsTotal=0.0506\n/travelsby  clsAfterRender=0.0000  clsTotal=0.0061\n/roulette  clsAfterRender=0.0000  clsTotal=0.0061\n"
+                        },
+                        {
+                          "text": "Top CLS entries per route:\n/\n  - 0.0445: div[data-testid=\"home-trust-block\"].css-g5y9jx.r-1pz39u2.r-1j7rcxw @(0,929 1440x162) \" Экспорт в PDF Собери книгу из своих историй  Приватно Публикуй только то, чем\" | div[data-testid=\"home-how-it-works\"].css-g5y9jx.r-1j7rcxw.r-1pgbh18 @(0,1091 1440x522) \"Как это работает Три простых шага от идеи до книги  1 Расскажи историю Опиши св\"\n  - 0.0060: div.css-g5y9jx.r-eqz5dr.r-16y2uox @(0,78 1440x782) \"Находи маршруты. Делись историями. Читай поездки других путешественников, сохран\"\n\n/travelsby\n  - 0.0060: div.css-g5y9jx.r-1j7rcxw.r-6koalj @(0,78 1440x900) \"Фильтры  Развернуть все Только на модерации  КАТЕГОРИИ   ТРАНСПОРТ   ОБЪЕК\"\n  - 0.0001: div.css-g5y9jx.r-1awozwy.r-18u37iz @(1074,125 353x52) \"Найдено: 161 путешествие   Сбросить\" | div.css-g5y9jx.r-pkcpzr.r-1pb5966 @(1013,142 31x19) \"⌘K\"\n\n/roulette\n  - 0.0061: div.css-g5y9jx.r-13awgt0.r-18u37iz @(0,78 1440x782) \"Фильтры  Развернуть все  СТРАНЫ   КАТЕГОРИИ   ТРАНСПОРТ   ОБЪЕКТЫ   СП\" | div.css-g5y9jx.r-pkcpzr.r-6ncur5 @(352,90 1072x758) \"Не знаешь, куда поехать? Подбери фильтры — и мы случайно предложим три маршрута \"\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:49:51.859Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "cls-/-before",
+                          "contentType": "image/png",
+                          "path": "/Users/juliasavran/Sites/metravel2/metravel2/test-results/e2e-perf/cls-audit--perf-CLS-audit--5d0eb-es-clsTotal-clsAfterRender--chromium/attachments/cls---before-555cb3d75efe62596bf34f0138c063b8a4fdadf3.png"
+                        },
+                        {
+                          "name": "cls-/-after",
+                          "contentType": "image/png",
+                          "path": "/Users/juliasavran/Sites/metravel2/metravel2/test-results/e2e-perf/cls-audit--perf-CLS-audit--5d0eb-es-clsTotal-clsAfterRender--chromium/attachments/cls---after-61c9b421af63c03e42cfd112fc1ee754f038c145.png"
+                        },
+                        {
+                          "name": "cls-/travelsby-before",
+                          "contentType": "image/png",
+                          "path": "/Users/juliasavran/Sites/metravel2/metravel2/test-results/e2e-perf/cls-audit--perf-CLS-audit--5d0eb-es-clsTotal-clsAfterRender--chromium/attachments/cls--travelsby-before-d29a28e252a0b2cda2b9b8739a76a09369bfdc11.png"
+                        },
+                        {
+                          "name": "cls-/travelsby-after",
+                          "contentType": "image/png",
+                          "path": "/Users/juliasavran/Sites/metravel2/metravel2/test-results/e2e-perf/cls-audit--perf-CLS-audit--5d0eb-es-clsTotal-clsAfterRender--chromium/attachments/cls--travelsby-after-0959a33b2942940d83e5feb2ad779f6a492c8de8.png"
+                        },
+                        {
+                          "name": "cls-/roulette-before",
+                          "contentType": "image/png",
+                          "path": "/Users/juliasavran/Sites/metravel2/metravel2/test-results/e2e-perf/cls-audit--perf-CLS-audit--5d0eb-es-clsTotal-clsAfterRender--chromium/attachments/cls--roulette-before-cb607bf0bbc2485b0b1b58dc672690e7361d3dd7.png"
+                        },
+                        {
+                          "name": "cls-/roulette-after",
+                          "contentType": "image/png",
+                          "path": "/Users/juliasavran/Sites/metravel2/metravel2/test-results/e2e-perf/cls-audit--perf-CLS-audit--5d0eb-es-clsTotal-clsAfterRender--chromium/attachments/cls--roulette-after-153b00268fc1776c2ba4518ee10e9274567da01e.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4db5e3a947f325a575ce-1189c1331108be767b5d",
+              "file": "cls-audit.spec.ts",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "mobile CLS guard: /travelsby should not exceed thresholds",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
               "tests": [
                 {
                   "timeout": 120000,
@@ -182,12 +512,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3531,
+                      "duration": 2539,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-02-18T20:10:39.267Z",
+                      "startTime": "2026-02-18T21:50:00.744Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -195,9 +525,2010 @@
                   "status": "expected"
                 }
               ],
-              "id": "a6d240c7f436ee789826-e018f569a746b3b1739c",
-              "file": "travel-wizard-features.spec.ts",
-              "line": 688,
+              "id": "4db5e3a947f325a575ce-3a8024602cdbdbcc31f2",
+              "file": "cls-audit.spec.ts",
+              "line": 324,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "details-skeleton-transition.spec.ts",
+      "file": "details-skeleton-transition.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Travel details skeleton transition (no layout shift)",
+          "file": "details-skeleton-transition.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "details shows loading skeleton, then renders key blocks without big size jump",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2962,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:03.296Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c1a9346390acb33bfaae-5c8de8c94482d1b0f946",
+              "file": "details-skeleton-transition.spec.ts",
+              "line": 5,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "footer-layout-invariants.spec.ts",
+      "file": "footer-layout-invariants.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Footer layout invariants (web)",
+          "file": "footer-layout-invariants.spec.ts",
+          "line": 30,
+          "column": 6,
+          "specs": [
+            {
+              "title": "initial load: footer height does not jump during the first second",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2721,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:06.277Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f16246d499397ab2151-334a93fba8336b2e9bc2",
+              "file": "footer-layout-invariants.spec.ts",
+              "line": 31,
+              "column": 7
+            },
+            {
+              "title": "desktop: footer renders within viewport and does not create horizontal overflow",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2312,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:09.006Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f16246d499397ab2151-b5fa98a1616b7005d3ec",
+              "file": "footer-layout-invariants.spec.ts",
+              "line": 65,
+              "column": 7
+            },
+            {
+              "title": "mobile: dock renders within viewport, has bottom-gutter, and does not create horizontal overflow",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2290,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:11.326Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f16246d499397ab2151-aeec73d28daf8367c865",
+              "file": "footer-layout-invariants.spec.ts",
+              "line": 121,
+              "column": 7
+            },
+            {
+              "title": "breakpoint: web-mobile dock stays horizontal around 768px",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4283,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:13.622Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f16246d499397ab2151-d2007b679efaa4adf5db",
+              "file": "footer-layout-invariants.spec.ts",
+              "line": 181,
+              "column": 7
+            },
+            {
+              "title": "mobile: bottom-gutter height matches dock height",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1208,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:17.918Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f16246d499397ab2151-97c257be266d813fcc17",
+              "file": "footer-layout-invariants.spec.ts",
+              "line": 236,
+              "column": 7
+            },
+            {
+              "title": "mobile: last travel card does not overlap footer dock",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1456,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:19.137Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f16246d499397ab2151-cccf4ae56fb8a33b69f3",
+              "file": "footer-layout-invariants.spec.ts",
+              "line": 265,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "layout-responsive.spec.ts",
+      "file": "layout-responsive.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Responsive layout invariants",
+          "file": "layout-responsive.spec.ts",
+          "line": 66,
+          "column": 6,
+          "specs": [
+            {
+              "title": "no horizontal scroll + grid breaks correctly (mobile/tablet/desktop)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3787,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:20.603Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "01624253884e401dff77-37eb3965aabbf84b9c78",
+              "file": "layout-responsive.spec.ts",
+              "line": 67,
+              "column": 7
+            },
+            {
+              "title": "layout stays stable after viewport resize (no scroll, grid adapts)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1753,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:24.398Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "01624253884e401dff77-a38e6c466c2c3720eb87",
+              "file": "layout-responsive.spec.ts",
+              "line": 102,
+              "column": 7
+            },
+            {
+              "title": "optional stricter CLS after render on travels (post-load stability)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "note",
+                      "description": "Strict layout CLS check is opt-in. Set E2E_STRICT_LAYOUT=1 to run it."
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 553,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:26.158Z",
+                      "annotations": [
+                        {
+                          "type": "note",
+                          "description": "Strict layout CLS check is opt-in. Set E2E_STRICT_LAYOUT=1 to run it."
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "01624253884e401dff77-3eb6a39be60cafdff0a0",
+              "file": "layout-responsive.spec.ts",
+              "line": 130,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "render-audit.spec.ts",
+      "file": "render-audit.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Render audit: main and travel details (responsive + perf)",
+          "file": "render-audit.spec.ts",
+          "line": 68,
+          "column": 6,
+          "specs": [
+            {
+              "title": "main page renders key blocks (mobile)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2496,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:26.725Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b31c31d2f28a7802b1ec-9e795e4f947bc9200009",
+              "file": "render-audit.spec.ts",
+              "line": 70,
+              "column": 9
+            },
+            {
+              "title": "travel details renders key blocks (mobile)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "note",
+                      "description": "No travel cards available in this environment"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 670,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:29.227Z",
+                      "annotations": [
+                        {
+                          "type": "note",
+                          "description": "No travel cards available in this environment"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b31c31d2f28a7802b1ec-5e1ca06e67a1d855c1d1",
+              "file": "render-audit.spec.ts",
+              "line": 149,
+              "column": 9
+            },
+            {
+              "title": "main page renders key blocks (tablet)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2576,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:29.905Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b31c31d2f28a7802b1ec-132631812a3501bad9b6",
+              "file": "render-audit.spec.ts",
+              "line": 70,
+              "column": 9
+            },
+            {
+              "title": "travel details renders key blocks (tablet)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "note",
+                      "description": "No travel cards available in this environment"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 687,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:32.487Z",
+                      "annotations": [
+                        {
+                          "type": "note",
+                          "description": "No travel cards available in this environment"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b31c31d2f28a7802b1ec-0d628ffdf39593b5abe3",
+              "file": "render-audit.spec.ts",
+              "line": 149,
+              "column": 9
+            },
+            {
+              "title": "main page renders key blocks (desktop)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2758,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:33.182Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b31c31d2f28a7802b1ec-21584929bf6320c8999b",
+              "file": "render-audit.spec.ts",
+              "line": 70,
+              "column": 9
+            },
+            {
+              "title": "travel details renders key blocks (desktop)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "note",
+                      "description": "No travel cards available in this environment"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 614,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:35.948Z",
+                      "annotations": [
+                        {
+                          "type": "note",
+                          "description": "No travel cards available in this environment"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "b31c31d2f28a7802b1ec-858203ba9b8893d2025f",
+              "file": "render-audit.spec.ts",
+              "line": 149,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "skeleton-transition.spec.ts",
+      "file": "skeleton-transition.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Skeleton transition (no layout shift)",
+          "file": "skeleton-transition.spec.ts",
+          "line": 17,
+          "column": 6,
+          "specs": [
+            {
+              "title": "main list shows skeleton, then replaces it with cards without big size jump",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2434,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:36.572Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "143e976227cf8b24ddcc-a2d538416312e4bedd76",
+              "file": "skeleton-transition.spec.ts",
+              "line": 18,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "travel-detail-performance.spec.ts",
+      "file": "travel-detail-performance.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Travel Details - Performance Metrics",
+          "file": "travel-detail-performance.spec.ts",
+          "line": 21,
+          "column": 6,
+          "specs": [
+            {
+              "title": "TC-024: метрики производительности в пределах нормы",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "performance",
+                      "description": "{\"navigationTime\":\"1483ms\",\"ttfb\":\"3ms\",\"fcp\":\"552ms\",\"domContentLoaded\":\"126ms\",\"loadComplete\":\"126ms\"}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1649,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:39.016Z",
+                      "annotations": [
+                        {
+                          "type": "performance",
+                          "description": "{\"navigationTime\":\"1483ms\",\"ttfb\":\"3ms\",\"fcp\":\"552ms\",\"domContentLoaded\":\"126ms\",\"loadComplete\":\"126ms\"}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-184351d6becfe2267758",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 22,
+              "column": 7
+            },
+            {
+              "title": "проверка размера загружаемых ресурсов",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "resource-sizes",
+                      "description": "{\"images\":\"1302KB\",\"scripts\":\"1353KB\",\"stylesheets\":\"0KB\",\"other\":\"75KB\",\"total\":\"2730KB\"}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4140,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:40.671Z",
+                      "annotations": [
+                        {
+                          "type": "resource-sizes",
+                          "description": "{\"images\":\"1302KB\",\"scripts\":\"1353KB\",\"stylesheets\":\"0KB\",\"other\":\"75KB\",\"total\":\"2730KB\"}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-97c10c14cbbf846b26d1",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 75,
+              "column": 7
+            },
+            {
+              "title": "проверка количества HTTP запросов",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "request-count",
+                      "description": "{\"total\":96,\"byType\":{\"document\":1,\"script\":43,\"fetch\":15,\"font\":1,\"other\":4,\"image\":32}}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4073,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:44.816Z",
+                      "annotations": [
+                        {
+                          "type": "request-count",
+                          "description": "{\"total\":96,\"byType\":{\"document\":1,\"script\":43,\"fetch\":15,\"font\":1,\"other\":4,\"image\":32}}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-2fe950279dd3556a9649",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 135,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "@perf Travel Details - Rendering Quality",
+          "file": "travel-detail-performance.spec.ts",
+          "line": 167,
+          "column": 6,
+          "specs": [
+            {
+              "title": "отсутствие визуальных артефактов",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "rendering",
+                      "description": "Elements with zero size: 12"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3925,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:48.897Z",
+                      "annotations": [
+                        {
+                          "type": "rendering",
+                          "description": "Elements with zero size: 12"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-a0b5c9586b1db721c7ad",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 168,
+              "column": 7
+            },
+            {
+              "title": "проверка CLS (Cumulative Layout Shift)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "cls",
+                      "description": "Cumulative Layout Shift: 0.0071"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4239,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:52.827Z",
+                      "annotations": [
+                        {
+                          "type": "cls",
+                          "description": "Cumulative Layout Shift: 0.0071"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-1337e2e650a24c396b5d",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 205,
+              "column": 7
+            },
+            {
+              "title": "проверка стабильности после взаимодействия",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "stability",
+                      "description": "Height change: 0px (before: 720px, after: 720px)"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 10280,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:50:57.072Z",
+                      "annotations": [
+                        {
+                          "type": "stability",
+                          "description": "Height change: 0px (before: 720px, after: 720px)"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-b4293d857f76a9fb829f",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 247,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "@perf Travel Details - Image Optimization",
+          "file": "travel-detail-performance.spec.ts",
+          "line": 282,
+          "column": 6,
+          "specs": [
+            {
+              "title": "изображения имеют корректные размеры",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "images",
+                      "description": "{\"total\":41,\"withAltAttr\":41,\"withSrc\":41,\"loaded\":7,\"oversized\":2}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4242,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:07.358Z",
+                      "annotations": [
+                        {
+                          "type": "images",
+                          "description": "{\"total\":41,\"withAltAttr\":41,\"withSrc\":41,\"loaded\":7,\"oversized\":2}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-5dbd804749ae8c16b59f",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 283,
+              "column": 7
+            },
+            {
+              "title": "изображения используют современные форматы",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "image-formats",
+                      "description": "{\"jpeg\":6,\"jpg\":1,\"png\":1,\"webp\":1,\"webp%3fx-amz-algorithm%3daws4-hmac-sha256%26x-amz-credential%3dakiaj2xbpkc6itb3s5rq%252f20260218%252fus-east-2%252fs3%252faws4_request%26x-amz-date%3d20260218t215113z%26x-amz-expires%3d3600%26x-amz-signedheaders%3dhost%26x-amz-signature%3d11552f31791f310a1dbabadad55c9f05b30b415b934bc473949c9153a712b6cd&w=160&q=60&output=webp&fit=inside\":1,\"webp%3fx-amz-algorithm%3daws4-hmac-sha256%26x-amz-credential%3dakiaj2xbpkc6itb3s5rq%252f20260218%252fus-east-2%252fs3%252faws4_request%26x-amz-date%3d20260218t215113z%26x-amz-expires%3d3600%26x-amz-signedheaders%3dhost%26x-amz-signature%3d11552f31791f310a1dbabadad55c9f05b30b415b934bc473949c9153a712b6cd&w=44&h=44&q=60&output=webp&fit=inside\":1,\"webp%3fx-amz-algorithm%3daws4-hmac-sha256%26x-amz-credential%3dakiaj2xbpkc6itb3s5rq%252f20260218%252fus-east-2%252fs3%252faws4_request%26x-amz-date%3d20260218t215113z%26x-amz-expires%3d3600%26x-amz-signedheaders%3dhost%26x-amz-signature%3d11552f31791f310a1dbabadad55c9f05b30b415b934bc473949c9153a712b6cd&w=96&h=96&q=60&output=webp&fit=inside\":1}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4014,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:11.606Z",
+                      "annotations": [
+                        {
+                          "type": "image-formats",
+                          "description": "{\"jpeg\":6,\"jpg\":1,\"png\":1,\"webp\":1,\"webp%3fx-amz-algorithm%3daws4-hmac-sha256%26x-amz-credential%3dakiaj2xbpkc6itb3s5rq%252f20260218%252fus-east-2%252fs3%252faws4_request%26x-amz-date%3d20260218t215113z%26x-amz-expires%3d3600%26x-amz-signedheaders%3dhost%26x-amz-signature%3d11552f31791f310a1dbabadad55c9f05b30b415b934bc473949c9153a712b6cd&w=160&q=60&output=webp&fit=inside\":1,\"webp%3fx-amz-algorithm%3daws4-hmac-sha256%26x-amz-credential%3dakiaj2xbpkc6itb3s5rq%252f20260218%252fus-east-2%252fs3%252faws4_request%26x-amz-date%3d20260218t215113z%26x-amz-expires%3d3600%26x-amz-signedheaders%3dhost%26x-amz-signature%3d11552f31791f310a1dbabadad55c9f05b30b415b934bc473949c9153a712b6cd&w=44&h=44&q=60&output=webp&fit=inside\":1,\"webp%3fx-amz-algorithm%3daws4-hmac-sha256%26x-amz-credential%3dakiaj2xbpkc6itb3s5rq%252f20260218%252fus-east-2%252fs3%252faws4_request%26x-amz-date%3d20260218t215113z%26x-amz-expires%3d3600%26x-amz-signedheaders%3dhost%26x-amz-signature%3d11552f31791f310a1dbabadad55c9f05b30b415b934bc473949c9153a712b6cd&w=96&h=96&q=60&output=webp&fit=inside\":1}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-25c30ae46d406408c24d",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 345,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "@perf Travel Details - Memory Management",
+          "file": "travel-detail-performance.spec.ts",
+          "line": 377,
+          "column": 6,
+          "specs": [
+            {
+              "title": "отсутствие значительных утечек памяти при навигации",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "memory",
+                      "description": "Navigated through multiple travel pages successfully"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4405,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:15.627Z",
+                      "annotations": [
+                        {
+                          "type": "memory",
+                          "description": "Navigated through multiple travel pages successfully"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "3981f89c976be0a11952-5b9a0412d873019aa2ba",
+              "file": "travel-detail-performance.spec.ts",
+              "line": 378,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "travel-details-perf-budget.spec.ts",
+      "file": "travel-details-perf-budget.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Travel Details — Performance Budget (prod build, desktop)",
+          "file": "travel-details-perf-budget.spec.ts",
+          "line": 336,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Core Web Vitals within budget (LCP ≤ 2.5s, TBT ≤ 300ms, CLS ≤ 0.1)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "perf-budget",
+                      "description": "{\"thresholds\":{\"LCP_MAX_MS\":2500,\"TBT_MAX_MS\":300,\"CLS_MAX\":0.3,\"FCP_MAX_MS\":1800,\"MAX_JS_TRANSFER_KB\":1800},\"metrics\":{\"lcp\":\"592ms\",\"fcp\":\"592ms\",\"tbt\":\"0ms\",\"cls\":\"0.0149\",\"longTaskCount\":0,\"ttfb\":\"3ms\",\"domContentLoaded\":\"155ms\",\"loadComplete\":\"155ms\"},\"network\":{\"totalKB\":\"1933 KB\",\"jsKB\":\"1348 KB (41 requests)\",\"imgKB\":\"448 KB (10 requests)\",\"cssKB\":\"0 KB\",\"fontKB\":\"54 KB\",\"requestCount\":64},\"longTasks\":[],\"clsEntries\":[{\"value\":0.00021041666666666667,\"sources\":[\"div\"]},{\"value\":0.000355078125,\"sources\":[\"div\"]},{\"value\":0.01438014403292181,\"sources\":[\"main[data-testid=\\\"travel-details-page\\\"]\",\"a\"]}],\"layoutShiftDebug\":[{\"value\":0.00021041666666666667,\"sources\":[{\"previousRect\":{\"x\":467,\"y\":814,\"width\":909,\"height\":46,\"top\":814,\"right\":1376,\"bottom\":860,\"left\":467},\"currentRect\":{\"x\":467,\"y\":806,\"width\":909,\"height\":48,\"top\":806,\"right\":1376,\"bottom\":854,\"left\":467},\"node\":{\"tag\":\"div\",\"id\":\"\",\"cls\":\".css-g5y9jx.r-8d26hk.r-13qz1uu\",\"testId\":null,\"section\":null,\"aria\":null},\"closest\":{\"tag\":\"div\",\"testId\":\"travel-details-scroll\",\"aria\":null,\"role\":null,\"section\":null},\"outerHTML\":\"<div class=\\\"css-g5y9jx r-8d26hk r-13qz1uu r-1pl7oy7 r-18u37iz r-1w6e6rj r-1jnkns4 r-knv0ih\\\"><button aria-label=\\\"Перейти к разделу Описание\\\" role=\\\"button\\\" tabindex=\\\"0\\\" class=\\\"css-g5y9jx r-1otgn73 r-1awozwy r-mukkpn r-cpet4d r-1yadl64 r-1loqt21 r-18u37iz r-ojf8lh r-5oul0u r-1kb76zh r-11f147o r-3pj75a r-9ihs5o\\\" type=\\\"button\\\"><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-lrvibr\\\" style=\\\"font-size: 16px; color: var(--color-primary, #7a9d8f); font-family: feather; font-weight: normal; font-style: normal;\\\"></div><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-1ntvlej r-n6v787 r-majxgm r-oxtfae\\\">Описание</div></button><b…\"}]},{\"value\":0.000355078125,\"sources\":[{\"previousRect\":{\"x\":467,\"y\":806,\"width\":909,\"height\":48,\"top\":806,\"right\":1376,\"bottom\":854,\"left\":467},\"currentRect\":{\"x\":467,\"y\":819,\"width\":909,\"height\":41,\"top\":819,\"right\":1376,\"bottom\":860,\"left\":467},\"node\":{\"tag\":\"div\",\"id\":\"\",\"cls\":\".css-g5y9jx.r-8d26hk.r-13qz1uu\",\"testId\":null,\"section\":null,\"aria\":null},\"closest\":{\"tag\":\"div\",\"testId\":\"travel-details-scroll\",\"aria\":null,\"role\":null,\"section\":null},\"outerHTML\":\"<div class=\\\"css-g5y9jx r-8d26hk r-13qz1uu r-1pl7oy7 r-18u37iz r-1w6e6rj r-1jnkns4 r-knv0ih\\\"><button aria-label=\\\"Перейти к разделу Описание\\\" role=\\\"button\\\" tabindex=\\\"0\\\" class=\\\"css-g5y9jx r-1otgn73 r-1awozwy r-mukkpn r-cpet4d r-1yadl64 r-1loqt21 r-18u37iz r-ojf8lh r-5oul0u r-1kb76zh r-11f147o r-3pj75a r-9ihs5o\\\" type=\\\"button\\\"><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-lrvibr\\\" style=\\\"font-size: 16px; color: var(--color-primary, #7a9d8f); font-family: feather; font-weight: normal; font-style: normal;\\\"></div><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-1ntvlej r-n6v787 r-majxgm r-oxtfae\\\">Описание</div></button><b…\"}]},{\"value\":0.01438014403292181,\"sources\":[{\"previousRect\":{\"x\":0,\"y\":88,\"width\":1440,\"height\":772,\"top\":88,\"right\":1440,\"bottom\":860,\"left\":0},\"currentRect\":{\"x\":0,\"y\":112,\"width\":1440,\"height\":748,\"top\":112,\"right\":1440,\"bottom\":860,\"left\":0},\"node\":{\"tag\":\"main\",\"id\":\"#travel-main-content\",\"cls\":\".css-g5y9jx.r-13awgt0\",\"testId\":\"travel-details-page\",\"section\":null,\"aria\":\"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\"},\"closest\":{\"tag\":\"main\",\"testId\":\"travel-details-page\",\"aria\":\"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\",\"role\":\"main\",\"section\":null},\"outerHTML\":\"<main aria-label=\\\"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\\\" role=\\\"main\\\" class=\\\"css-g5y9jx r-13awgt0\\\" id=\\\"travel-main-content\\\" data-testid=\\\"travel-details-page\\\" style=\\\"background-color: var(--color-background, #fdfcfb); background-image: linear-gradient(180deg, var(--color-background, #fdfcfb) 0%, var(--color-backgroundSecondary, #f9f8f6) 100%);\\\"><div class=\\\"css-g5y9jx r-97e31f r-bv2aro r-hxflta r-10xqauy r-13awgt0\\\"><div class=\\\"css-g5y9jx r-13awgt0 r-18u37iz r-f8sm7e r-yp55cy r-13qz1uu\\\"><div class=\\\"css-g5y9jx\\\" style=\\\"position: absolute; inset: 0px; z-index:…\"},{\"previousRect\":{\"x\":0,\"y\":48,\"width\":162.65625,\"height\":38.390625,\"top\":48,\"right\":162.65625,\"bottom\":86.390625,\"left\":0},\"currentRect\":{\"x\":0,\"y\":72,\"width\":162.65625,\"height\":38.390625,\"top\":72,\"right\":162.65625,\"bottom\":110.390625,\"left\":0},\"node\":{\"tag\":\"a\",\"id\":\"\",\"cls\":\".skip-to-content\",\"testId\":null,\"section\":null,\"aria\":null},\"closest\":null,\"outerHTML\":\"<a href=\\\"#travel-main-content\\\" class=\\\"skip-to-content\\\" style=\\\"position: absolute; top: -40px; left: 0px; background: rgb(17, 17, 17); color: rgb(255, 255, 255); padding: 8px 12px; text-decoration: none; z-index: 300; border-radius: 0px 0px 12px 12px; font-size: 14px; font-weight: 600; transition: top 250ms cubic-bezier(0.4, 0, 0.2, 1);\\\">Skip to main content</a>\"}]}],\"largestResources\":[{\"url\":\"http://127.0.0.1:8085/_expo/static/js/web/__common-ffc80b008f7fc0bd7028cb5351f21393.js\",\"sizeKB\":779,\"type\":\"script\"},{\"url\":\"http://127.0.0.1:8085/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\"sizeKB\":444,\"type\":\"script\"},{\"url\":\"https://metravellocal.s3.amazonaws.com/profile/78/avatar/08880abcb69e45a48f8d25219dc96893.webp?X-Amz-Algorithm=AWS4-H...\",\"sizeKB\":129,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953105IMG_0344.JPG&w=800&fit=i...\",\"sizeKB\":104,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953014IMG_0374.JPG&w=800&fit=i...\",\"sizeKB\":75,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\"sizeKB\":62,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\"sizeKB\":62,\"type\":\"other\"},{\"url\":\"http://127.0.0.1:8085/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4...\",\"sizeKB\":54,\"type\":\"font\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952993IMG_0377.JPG&w=800&fit=i...\",\"sizeKB\":42,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952912IMG_0376.JPG&w=800&fit=i...\",\"sizeKB\":27,\"type\":\"image\"}]}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3056,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n📊 PERFORMANCE BUDGET REPORT (Desktop)\n"
+                        },
+                        {
+                          "text": "{\n  \"thresholds\": {\n    \"LCP_MAX_MS\": 2500,\n    \"TBT_MAX_MS\": 300,\n    \"CLS_MAX\": 0.3,\n    \"FCP_MAX_MS\": 1800,\n    \"MAX_JS_TRANSFER_KB\": 1800\n  },\n  \"metrics\": {\n    \"lcp\": \"592ms\",\n    \"fcp\": \"592ms\",\n    \"tbt\": \"0ms\",\n    \"cls\": \"0.0149\",\n    \"longTaskCount\": 0,\n    \"ttfb\": \"3ms\",\n    \"domContentLoaded\": \"155ms\",\n    \"loadComplete\": \"155ms\"\n  },\n  \"network\": {\n    \"totalKB\": \"1933 KB\",\n    \"jsKB\": \"1348 KB (41 requests)\",\n    \"imgKB\": \"448 KB (10 requests)\",\n    \"cssKB\": \"0 KB\",\n    \"fontKB\": \"54 KB\",\n    \"requestCount\": 64\n  },\n  \"longTasks\": [],\n  \"clsEntries\": [\n    {\n      \"value\": 0.00021041666666666667,\n      \"sources\": [\n        \"div\"\n      ]\n    },\n    {\n      \"value\": 0.000355078125,\n      \"sources\": [\n        \"div\"\n      ]\n    },\n    {\n      \"value\": 0.01438014403292181,\n      \"sources\": [\n        \"main[data-testid=\\\"travel-details-page\\\"]\",\n        \"a\"\n      ]\n    }\n  ],\n  \"layoutShiftDebug\": [\n    {\n      \"value\": 0.00021041666666666667,\n      \"sources\": [\n        {\n          \"previousRect\": {\n            \"x\": 467,\n            \"y\": 814,\n            \"width\": 909,\n            \"height\": 46,\n            \"top\": 814,\n            \"right\": 1376,\n            \"bottom\": 860,\n            \"left\": 467\n          },\n          \"currentRect\": {\n            \"x\": 467,\n            \"y\": 806,\n            \"width\": 909,\n            \"height\": 48,\n            \"top\": 806,\n            \"right\": 1376,\n            \"bottom\": 854,\n            \"left\": 467\n          },\n          \"node\": {\n            \"tag\": \"div\",\n            \"id\": \"\",\n            \"cls\": \".css-g5y9jx.r-8d26hk.r-13qz1uu\",\n            \"testId\": null,\n            \"section\": null,\n            \"aria\": null\n          },\n          \"closest\": {\n            \"tag\": \"div\",\n            \"testId\": \"travel-details-scroll\",\n            \"aria\": null,\n            \"role\": null,\n            \"section\": null\n          },\n          \"outerHTML\": \"<div class=\\\"css-g5y9jx r-8d26hk r-13qz1uu r-1pl7oy7 r-18u37iz r-1w6e6rj r-1jnkns4 r-knv0ih\\\"><button aria-label=\\\"Перейти к разделу Описание\\\" role=\\\"button\\\" tabindex=\\\"0\\\" class=\\\"css-g5y9jx r-1otgn73 r-1awozwy r-mukkpn r-cpet4d r-1yadl64 r-1loqt21 r-18u37iz r-ojf8lh r-5oul0u r-1kb76zh r-11f147o r-3pj75a r-9ihs5o\\\" type=\\\"button\\\"><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-lrvibr\\\" style=\\\"font-size: 16px; color: var(--color-primary, #7a9d8f); font-family: feather; font-weight: normal; font-style: normal;\\\"></div><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-1ntvlej r-n6v787 r-majxgm r-oxtfae\\\">Описание</div></button><b…\"\n        }\n      ]\n    },\n    {\n      \"value\": 0.000355078125,\n      \"sources\": [\n        {\n          \"previousRect\": {\n            \"x\": 467,\n            \"y\": 806,\n            \"width\": 909,\n            \"height\": 48,\n            \"top\": 806,\n            \"right\": 1376,\n            \"bottom\": 854,\n            \"left\": 467\n          },\n          \"currentRect\": {\n            \"x\": 467,\n            \"y\": 819,\n            \"width\": 909,\n            \"height\": 41,\n            \"top\": 819,\n            \"right\": 1376,\n            \"bottom\": 860,\n            \"left\": 467\n          },\n          \"node\": {\n            \"tag\": \"div\",\n            \"id\": \"\",\n            \"cls\": \".css-g5y9jx.r-8d26hk.r-13qz1uu\",\n            \"testId\": null,\n            \"section\": null,\n            \"aria\": null\n          },\n          \"closest\": {\n            \"tag\": \"div\",\n            \"testId\": \"travel-details-scroll\",\n            \"aria\": null,\n            \"role\": null,\n            \"section\": null\n          },\n          \"outerHTML\": \"<div class=\\\"css-g5y9jx r-8d26hk r-13qz1uu r-1pl7oy7 r-18u37iz r-1w6e6rj r-1jnkns4 r-knv0ih\\\"><button aria-label=\\\"Перейти к разделу Описание\\\" role=\\\"button\\\" tabindex=\\\"0\\\" class=\\\"css-g5y9jx r-1otgn73 r-1awozwy r-mukkpn r-cpet4d r-1yadl64 r-1loqt21 r-18u37iz r-ojf8lh r-5oul0u r-1kb76zh r-11f147o r-3pj75a r-9ihs5o\\\" type=\\\"button\\\"><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-lrvibr\\\" style=\\\"font-size: 16px; color: var(--color-primary, #7a9d8f); font-family: feather; font-weight: normal; font-style: normal;\\\"></div><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-1ntvlej r-n6v787 r-majxgm r-oxtfae\\\">Описание</div></button><b…\"\n        }\n      ]\n    },\n    {\n      \"value\": 0.01438014403292181,\n      \"sources\": [\n        {\n          \"previousRect\": {\n            \"x\": 0,\n            \"y\": 88,\n            \"width\": 1440,\n            \"height\": 772,\n            \"top\": 88,\n            \"right\": 1440,\n            \"bottom\": 860,\n            \"left\": 0\n          },\n          \"currentRect\": {\n            \"x\": 0,\n            \"y\": 112,\n            \"width\": 1440,\n            \"height\": 748,\n            \"top\": 112,\n            \"right\": 1440,\n            \"bottom\": 860,\n            \"left\": 0\n          },\n          \"node\": {\n            \"tag\": \"main\",\n            \"id\": \"#travel-main-content\",\n            \"cls\": \".css-g5y9jx.r-13awgt0\",\n            \"testId\": \"travel-details-page\",\n            \"section\": null,\n            \"aria\": \"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\"\n          },\n          \"closest\": {\n            \"tag\": \"main\",\n            \"testId\": \"travel-details-page\",\n            \"aria\": \"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\",\n            \"role\": \"main\",\n            \"section\": null\n          },\n          \"outerHTML\": \"<main aria-label=\\\"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\\\" role=\\\"main\\\" class=\\\"css-g5y9jx r-13awgt0\\\" id=\\\"travel-main-content\\\" data-testid=\\\"travel-details-page\\\" style=\\\"background-color: var(--color-background, #fdfcfb); background-image: linear-gradient(180deg, var(--color-background, #fdfcfb) 0%, var(--color-backgroundSecondary, #f9f8f6) 100%);\\\"><div class=\\\"css-g5y9jx r-97e31f r-bv2aro r-hxflta r-10xqauy r-13awgt0\\\"><div class=\\\"css-g5y9jx r-13awgt0 r-18u37iz r-f8sm7e r-yp55cy r-13qz1uu\\\"><div class=\\\"css-g5y9jx\\\" style=\\\"position: absolute; inset: 0px; z-index:…\"\n        },\n        {\n          \"previousRect\": {\n            \"x\": 0,\n            \"y\": 48,\n            \"width\": 162.65625,\n            \"height\": 38.390625,\n            \"top\": 48,\n            \"right\": 162.65625,\n            \"bottom\": 86.390625,\n            \"left\": 0\n          },\n          \"currentRect\": {\n            \"x\": 0,\n            \"y\": 72,\n            \"width\": 162.65625,\n            \"height\": 38.390625,\n            \"top\": 72,\n            \"right\": 162.65625,\n            \"bottom\": 110.390625,\n            \"left\": 0\n          },\n          \"node\": {\n            \"tag\": \"a\",\n            \"id\": \"\",\n            \"cls\": \".skip-to-content\",\n            \"testId\": null,\n            \"section\": null,\n            \"aria\": null\n          },\n          \"closest\": null,\n          \"outerHTML\": \"<a href=\\\"#travel-main-content\\\" class=\\\"skip-to-content\\\" style=\\\"position: absolute; top: -40px; left: 0px; background: rgb(17, 17, 17); color: rgb(255, 255, 255); padding: 8px 12px; text-decoration: none; z-index: 300; border-radius: 0px 0px 12px 12px; font-size: 14px; font-weight: 600; transition: top 250ms cubic-bezier(0.4, 0, 0.2, 1);\\\">Skip to main content</a>\"\n        }\n      ]\n    }\n  ],\n  \"largestResources\": [\n    {\n      \"url\": \"http://127.0.0.1:8085/_expo/static/js/web/__common-ffc80b008f7fc0bd7028cb5351f21393.js\",\n      \"sizeKB\": 779,\n      \"type\": \"script\"\n    },\n    {\n      \"url\": \"http://127.0.0.1:8085/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\n      \"sizeKB\": 444,\n      \"type\": \"script\"\n    },\n    {\n      \"url\": \"https://metravellocal.s3.amazonaws.com/profile/78/avatar/08880abcb69e45a48f8d25219dc96893.webp?X-Amz-Algorithm=AWS4-H...\",\n      \"sizeKB\": 129,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953105IMG_0344.JPG&w=800&fit=i...\",\n      \"sizeKB\": 104,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953014IMG_0374.JPG&w=800&fit=i...\",\n      \"sizeKB\": 75,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\n      \"sizeKB\": 62,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\n      \"sizeKB\": 62,\n      \"type\": \"other\"\n    },\n    {\n      \"url\": \"http://127.0.0.1:8085/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4...\",\n      \"sizeKB\": 54,\n      \"type\": \"font\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952993IMG_0377.JPG&w=800&fit=i...\",\n      \"sizeKB\": 42,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952912IMG_0376.JPG&w=800&fit=i...\",\n      \"sizeKB\": 27,\n      \"type\": \"image\"\n    }\n  ]\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:20.048Z",
+                      "annotations": [
+                        {
+                          "type": "perf-budget",
+                          "description": "{\"thresholds\":{\"LCP_MAX_MS\":2500,\"TBT_MAX_MS\":300,\"CLS_MAX\":0.3,\"FCP_MAX_MS\":1800,\"MAX_JS_TRANSFER_KB\":1800},\"metrics\":{\"lcp\":\"592ms\",\"fcp\":\"592ms\",\"tbt\":\"0ms\",\"cls\":\"0.0149\",\"longTaskCount\":0,\"ttfb\":\"3ms\",\"domContentLoaded\":\"155ms\",\"loadComplete\":\"155ms\"},\"network\":{\"totalKB\":\"1933 KB\",\"jsKB\":\"1348 KB (41 requests)\",\"imgKB\":\"448 KB (10 requests)\",\"cssKB\":\"0 KB\",\"fontKB\":\"54 KB\",\"requestCount\":64},\"longTasks\":[],\"clsEntries\":[{\"value\":0.00021041666666666667,\"sources\":[\"div\"]},{\"value\":0.000355078125,\"sources\":[\"div\"]},{\"value\":0.01438014403292181,\"sources\":[\"main[data-testid=\\\"travel-details-page\\\"]\",\"a\"]}],\"layoutShiftDebug\":[{\"value\":0.00021041666666666667,\"sources\":[{\"previousRect\":{\"x\":467,\"y\":814,\"width\":909,\"height\":46,\"top\":814,\"right\":1376,\"bottom\":860,\"left\":467},\"currentRect\":{\"x\":467,\"y\":806,\"width\":909,\"height\":48,\"top\":806,\"right\":1376,\"bottom\":854,\"left\":467},\"node\":{\"tag\":\"div\",\"id\":\"\",\"cls\":\".css-g5y9jx.r-8d26hk.r-13qz1uu\",\"testId\":null,\"section\":null,\"aria\":null},\"closest\":{\"tag\":\"div\",\"testId\":\"travel-details-scroll\",\"aria\":null,\"role\":null,\"section\":null},\"outerHTML\":\"<div class=\\\"css-g5y9jx r-8d26hk r-13qz1uu r-1pl7oy7 r-18u37iz r-1w6e6rj r-1jnkns4 r-knv0ih\\\"><button aria-label=\\\"Перейти к разделу Описание\\\" role=\\\"button\\\" tabindex=\\\"0\\\" class=\\\"css-g5y9jx r-1otgn73 r-1awozwy r-mukkpn r-cpet4d r-1yadl64 r-1loqt21 r-18u37iz r-ojf8lh r-5oul0u r-1kb76zh r-11f147o r-3pj75a r-9ihs5o\\\" type=\\\"button\\\"><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-lrvibr\\\" style=\\\"font-size: 16px; color: var(--color-primary, #7a9d8f); font-family: feather; font-weight: normal; font-style: normal;\\\"></div><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-1ntvlej r-n6v787 r-majxgm r-oxtfae\\\">Описание</div></button><b…\"}]},{\"value\":0.000355078125,\"sources\":[{\"previousRect\":{\"x\":467,\"y\":806,\"width\":909,\"height\":48,\"top\":806,\"right\":1376,\"bottom\":854,\"left\":467},\"currentRect\":{\"x\":467,\"y\":819,\"width\":909,\"height\":41,\"top\":819,\"right\":1376,\"bottom\":860,\"left\":467},\"node\":{\"tag\":\"div\",\"id\":\"\",\"cls\":\".css-g5y9jx.r-8d26hk.r-13qz1uu\",\"testId\":null,\"section\":null,\"aria\":null},\"closest\":{\"tag\":\"div\",\"testId\":\"travel-details-scroll\",\"aria\":null,\"role\":null,\"section\":null},\"outerHTML\":\"<div class=\\\"css-g5y9jx r-8d26hk r-13qz1uu r-1pl7oy7 r-18u37iz r-1w6e6rj r-1jnkns4 r-knv0ih\\\"><button aria-label=\\\"Перейти к разделу Описание\\\" role=\\\"button\\\" tabindex=\\\"0\\\" class=\\\"css-g5y9jx r-1otgn73 r-1awozwy r-mukkpn r-cpet4d r-1yadl64 r-1loqt21 r-18u37iz r-ojf8lh r-5oul0u r-1kb76zh r-11f147o r-3pj75a r-9ihs5o\\\" type=\\\"button\\\"><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-lrvibr\\\" style=\\\"font-size: 16px; color: var(--color-primary, #7a9d8f); font-family: feather; font-weight: normal; font-style: normal;\\\"></div><div dir=\\\"auto\\\" class=\\\"css-146c3p1 r-1ntvlej r-n6v787 r-majxgm r-oxtfae\\\">Описание</div></button><b…\"}]},{\"value\":0.01438014403292181,\"sources\":[{\"previousRect\":{\"x\":0,\"y\":88,\"width\":1440,\"height\":772,\"top\":88,\"right\":1440,\"bottom\":860,\"left\":0},\"currentRect\":{\"x\":0,\"y\":112,\"width\":1440,\"height\":748,\"top\":112,\"right\":1440,\"bottom\":860,\"left\":0},\"node\":{\"tag\":\"main\",\"id\":\"#travel-main-content\",\"cls\":\".css-g5y9jx.r-13awgt0\",\"testId\":\"travel-details-page\",\"section\":null,\"aria\":\"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\"},\"closest\":{\"tag\":\"main\",\"testId\":\"travel-details-page\",\"aria\":\"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\",\"role\":\"main\",\"section\":null},\"outerHTML\":\"<main aria-label=\\\"Детали путешествия: Czarny Staw и другие радости: треки, термы и ночи у камина\\\" role=\\\"main\\\" class=\\\"css-g5y9jx r-13awgt0\\\" id=\\\"travel-main-content\\\" data-testid=\\\"travel-details-page\\\" style=\\\"background-color: var(--color-background, #fdfcfb); background-image: linear-gradient(180deg, var(--color-background, #fdfcfb) 0%, var(--color-backgroundSecondary, #f9f8f6) 100%);\\\"><div class=\\\"css-g5y9jx r-97e31f r-bv2aro r-hxflta r-10xqauy r-13awgt0\\\"><div class=\\\"css-g5y9jx r-13awgt0 r-18u37iz r-f8sm7e r-yp55cy r-13qz1uu\\\"><div class=\\\"css-g5y9jx\\\" style=\\\"position: absolute; inset: 0px; z-index:…\"},{\"previousRect\":{\"x\":0,\"y\":48,\"width\":162.65625,\"height\":38.390625,\"top\":48,\"right\":162.65625,\"bottom\":86.390625,\"left\":0},\"currentRect\":{\"x\":0,\"y\":72,\"width\":162.65625,\"height\":38.390625,\"top\":72,\"right\":162.65625,\"bottom\":110.390625,\"left\":0},\"node\":{\"tag\":\"a\",\"id\":\"\",\"cls\":\".skip-to-content\",\"testId\":null,\"section\":null,\"aria\":null},\"closest\":null,\"outerHTML\":\"<a href=\\\"#travel-main-content\\\" class=\\\"skip-to-content\\\" style=\\\"position: absolute; top: -40px; left: 0px; background: rgb(17, 17, 17); color: rgb(255, 255, 255); padding: 8px 12px; text-decoration: none; z-index: 300; border-radius: 0px 0px 12px 12px; font-size: 14px; font-weight: 600; transition: top 250ms cubic-bezier(0.4, 0, 0.2, 1);\\\">Skip to main content</a>\"}]}],\"largestResources\":[{\"url\":\"http://127.0.0.1:8085/_expo/static/js/web/__common-ffc80b008f7fc0bd7028cb5351f21393.js\",\"sizeKB\":779,\"type\":\"script\"},{\"url\":\"http://127.0.0.1:8085/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\"sizeKB\":444,\"type\":\"script\"},{\"url\":\"https://metravellocal.s3.amazonaws.com/profile/78/avatar/08880abcb69e45a48f8d25219dc96893.webp?X-Amz-Algorithm=AWS4-H...\",\"sizeKB\":129,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953105IMG_0344.JPG&w=800&fit=i...\",\"sizeKB\":104,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953014IMG_0374.JPG&w=800&fit=i...\",\"sizeKB\":75,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\"sizeKB\":62,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\"sizeKB\":62,\"type\":\"other\"},{\"url\":\"http://127.0.0.1:8085/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4...\",\"sizeKB\":54,\"type\":\"font\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952993IMG_0377.JPG&w=800&fit=i...\",\"sizeKB\":42,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952912IMG_0376.JPG&w=800&fit=i...\",\"sizeKB\":27,\"type\":\"image\"}]}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a5c39b28b1ed9a9c2284-01c8120fe0e3e6a61db7",
+              "file": "travel-details-perf-budget.spec.ts",
+              "line": 339,
+              "column": 7
+            },
+            {
+              "title": "Network transfer budget (JS/images/total/requests)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "network-budget",
+                      "description": "{\"totalKB\":1933,\"jsKB\":1348,\"imgKB\":448,\"cssKB\":0,\"fontKB\":54,\"otherKB\":82,\"requestCount\":64,\"jsRequests\":41,\"imgRequests\":10,\"largestResources\":[{\"url\":\"http://127.0.0.1:8085/_expo/static/js/web/__common-ffc80b008f7fc0bd7028cb5351f21393.js\",\"sizeKB\":779,\"type\":\"script\"},{\"url\":\"http://127.0.0.1:8085/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\"sizeKB\":444,\"type\":\"script\"},{\"url\":\"https://metravellocal.s3.amazonaws.com/profile/78/avatar/08880abcb69e45a48f8d25219dc96893.webp?X-Amz-Algorithm=AWS4-H...\",\"sizeKB\":129,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953105IMG_0344.JPG&w=800&fit=i...\",\"sizeKB\":104,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953014IMG_0374.JPG&w=800&fit=i...\",\"sizeKB\":75,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\"sizeKB\":62,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\"sizeKB\":62,\"type\":\"other\"},{\"url\":\"http://127.0.0.1:8085/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4...\",\"sizeKB\":54,\"type\":\"font\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952993IMG_0377.JPG&w=800&fit=i...\",\"sizeKB\":42,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952912IMG_0376.JPG&w=800&fit=i...\",\"sizeKB\":27,\"type\":\"image\"}]}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3080,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n📦 NETWORK BUDGET REPORT\n"
+                        },
+                        {
+                          "text": "{\n  \"totalKB\": 1933,\n  \"jsKB\": 1348,\n  \"imgKB\": 448,\n  \"cssKB\": 0,\n  \"fontKB\": 54,\n  \"requestCount\": 64,\n  \"largestResources\": [\n    {\n      \"url\": \"http://127.0.0.1:8085/_expo/static/js/web/__common-ffc80b008f7fc0bd7028cb5351f21393.js\",\n      \"sizeKB\": 779,\n      \"type\": \"script\"\n    },\n    {\n      \"url\": \"http://127.0.0.1:8085/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\n      \"sizeKB\": 444,\n      \"type\": \"script\"\n    },\n    {\n      \"url\": \"https://metravellocal.s3.amazonaws.com/profile/78/avatar/08880abcb69e45a48f8d25219dc96893.webp?X-Amz-Algorithm=AWS4-H...\",\n      \"sizeKB\": 129,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953105IMG_0344.JPG&w=800&fit=i...\",\n      \"sizeKB\": 104,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953014IMG_0374.JPG&w=800&fit=i...\",\n      \"sizeKB\": 75,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\n      \"sizeKB\": 62,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\n      \"sizeKB\": 62,\n      \"type\": \"other\"\n    },\n    {\n      \"url\": \"http://127.0.0.1:8085/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4...\",\n      \"sizeKB\": 54,\n      \"type\": \"font\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952993IMG_0377.JPG&w=800&fit=i...\",\n      \"sizeKB\": 42,\n      \"type\": \"image\"\n    },\n    {\n      \"url\": \"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952912IMG_0376.JPG&w=800&fit=i...\",\n      \"sizeKB\": 27,\n      \"type\": \"image\"\n    }\n  ]\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:23.112Z",
+                      "annotations": [
+                        {
+                          "type": "network-budget",
+                          "description": "{\"totalKB\":1933,\"jsKB\":1348,\"imgKB\":448,\"cssKB\":0,\"fontKB\":54,\"otherKB\":82,\"requestCount\":64,\"jsRequests\":41,\"imgRequests\":10,\"largestResources\":[{\"url\":\"http://127.0.0.1:8085/_expo/static/js/web/__common-ffc80b008f7fc0bd7028cb5351f21393.js\",\"sizeKB\":779,\"type\":\"script\"},{\"url\":\"http://127.0.0.1:8085/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\"sizeKB\":444,\"type\":\"script\"},{\"url\":\"https://metravellocal.s3.amazonaws.com/profile/78/avatar/08880abcb69e45a48f8d25219dc96893.webp?X-Amz-Algorithm=AWS4-H...\",\"sizeKB\":129,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953105IMG_0344.JPG&w=800&fit=i...\",\"sizeKB\":104,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665953014IMG_0374.JPG&w=800&fit=i...\",\"sizeKB\":75,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\"sizeKB\":62,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952967IMG_1561.JPG&w=800&fit=i...\",\"sizeKB\":62,\"type\":\"other\"},{\"url\":\"http://127.0.0.1:8085/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4...\",\"sizeKB\":54,\"type\":\"font\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952993IMG_0377.JPG&w=800&fit=i...\",\"sizeKB\":42,\"type\":\"image\"},{\"url\":\"https://images.weserv.nl/?url=metravelprod.s3.eu-north-1.amazonaws.com%2Fuploads%2F1665952912IMG_0376.JPG&w=800&fit=i...\",\"sizeKB\":27,\"type\":\"image\"}]}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a5c39b28b1ed9a9c2284-84ec90a329c8c8e1669f",
+              "file": "travel-details-perf-budget.spec.ts",
+              "line": 435,
+              "column": 7
+            },
+            {
+              "title": "Images have width and height attributes (prevents CLS)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "image-audit",
+                      "description": "{\"total\":26,\"withDimensions\":26,\"withoutDimensions\":[],\"withLazyLoading\":25,\"withModernFormat\":17}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2891,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🖼️ IMAGE AUDIT\n"
+                        },
+                        {
+                          "text": "{\n  \"total\": 26,\n  \"withDimensions\": 26,\n  \"withoutDimensions\": [],\n  \"withLazyLoading\": 25,\n  \"withModernFormat\": 17\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:26.199Z",
+                      "annotations": [
+                        {
+                          "type": "image-audit",
+                          "description": "{\"total\":26,\"withDimensions\":26,\"withoutDimensions\":[],\"withLazyLoading\":25,\"withModernFormat\":17}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a5c39b28b1ed9a9c2284-8ceff2b2f1288c3ceea4",
+              "file": "travel-details-perf-budget.spec.ts",
+              "line": 492,
+              "column": 7
+            },
+            {
+              "title": "No render-blocking resources delay FCP",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "render-blocking",
+                      "description": "{\"entryScriptOptimized\":{\"src\":\"/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\"fetchPriority\":\"none\",\"hasPreload\":false}}"
+                    },
+                    {
+                      "type": "note",
+                      "description": "Entry script fetchPriority is \"none\" (Expo does not set fetchPriority on script tags by default)."
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 310,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n⚡ RENDER-BLOCKING AUDIT\n"
+                        },
+                        {
+                          "text": "{\n  \"entryScriptOptimized\": {\n    \"src\": \"/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\n    \"fetchPriority\": \"none\",\n    \"hasPreload\": false\n  }\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:29.095Z",
+                      "annotations": [
+                        {
+                          "type": "render-blocking",
+                          "description": "{\"entryScriptOptimized\":{\"src\":\"/_expo/static/js/web/entry-b006863e7841006220d9a7e375c3885d.js\",\"fetchPriority\":\"none\",\"hasPreload\":false}}"
+                        },
+                        {
+                          "type": "note",
+                          "description": "Entry script fetchPriority is \"none\" (Expo does not set fetchPriority on script tags by default)."
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a5c39b28b1ed9a9c2284-2de5c4a228c65b12a3b0",
+              "file": "travel-details-perf-budget.spec.ts",
+              "line": 567,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "@perf Travel Details — Performance Budget (prod build, mobile)",
+          "file": "travel-details-perf-budget.spec.ts",
+          "line": 630,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Core Web Vitals within mobile budget",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "perf-budget-mobile",
+                      "description": "{\"viewport\":\"mobile (375x667)\",\"lcp\":\"560ms\",\"fcp\":\"560ms\",\"tbt\":\"0ms\",\"cls\":\"0.0608\",\"longTaskCount\":0}"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3005,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n📱 MOBILE PERFORMANCE REPORT\n"
+                        },
+                        {
+                          "text": "{\n  \"viewport\": \"mobile (375x667)\",\n  \"lcp\": \"560ms\",\n  \"fcp\": \"560ms\",\n  \"tbt\": \"0ms\",\n  \"cls\": \"0.0608\",\n  \"longTaskCount\": 0\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:29.421Z",
+                      "annotations": [
+                        {
+                          "type": "perf-budget-mobile",
+                          "description": "{\"viewport\":\"mobile (375x667)\",\"lcp\":\"560ms\",\"fcp\":\"560ms\",\"tbt\":\"0ms\",\"cls\":\"0.0608\",\"longTaskCount\":0}"
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a5c39b28b1ed9a9c2284-1a12a2fa30cb5ca8dfaa",
+              "file": "travel-details-perf-budget.spec.ts",
+              "line": 636,
+              "column": 7
+            },
+            {
+              "title": "Hero image preload works on mobile",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "hero-preload",
+                      "description": "{\"hasLcpImage\":false,\"lcpImageLoaded\":false,\"lcpImageSrc\":null,\"lcpFetchPriority\":null,\"preloadCount\":1,\"preloadHrefs\":[\"http://192.168.50.36/travel-image/6587/conversions/83jYNBLnY1JrlhCwUwDH3bN2h8iAF\"],\"hasPreconnect\":true}"
+                    },
+                    {
+                      "type": "note",
+                      "description": "LCP hero image not found (upstream image may be unavailable); skipping preload assertions."
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2995,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "\n🖼️ HERO IMAGE PRELOAD AUDIT (Mobile)\n"
+                        },
+                        {
+                          "text": "{\n  \"hasLcpImage\": false,\n  \"lcpImageLoaded\": false,\n  \"lcpImageSrc\": null,\n  \"lcpFetchPriority\": null,\n  \"preloadCount\": 1,\n  \"preloadHrefs\": [\n    \"http://192.168.50.36/travel-image/6587/conversions/83jYNBLnY1JrlhCwUwDH3bN2h8iAF\"\n  ],\n  \"hasPreconnect\": true\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:32.434Z",
+                      "annotations": [
+                        {
+                          "type": "hero-preload",
+                          "description": "{\"hasLcpImage\":false,\"lcpImageLoaded\":false,\"lcpImageSrc\":null,\"lcpFetchPriority\":null,\"preloadCount\":1,\"preloadHrefs\":[\"http://192.168.50.36/travel-image/6587/conversions/83jYNBLnY1JrlhCwUwDH3bN2h8iAF\"],\"hasPreconnect\":true}"
+                        },
+                        {
+                          "type": "note",
+                          "description": "LCP hero image not found (upstream image may be unavailable); skipping preload assertions."
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a5c39b28b1ed9a9c2284-03c8bfeca948d3ddbdf1",
+              "file": "travel-details-perf-budget.spec.ts",
+              "line": 694,
+              "column": 7
+            }
+          ]
+        },
+        {
+          "title": "@perf Travel Details — Lighthouse CLI (prod build)",
+          "file": "travel-details-perf-budget.spec.ts",
+          "line": 744,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Lighthouse Performance score ≥ 80 (desktop)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [
+                    {
+                      "type": "note",
+                      "description": "PERF_RUN_LIGHTHOUSE not set — Lighthouse CLI audit not executed. Set PERF_RUN_LIGHTHOUSE=1 to enable."
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:35.435Z",
+                      "annotations": [
+                        {
+                          "type": "note",
+                          "description": "PERF_RUN_LIGHTHOUSE not set — Lighthouse CLI audit not executed. Set PERF_RUN_LIGHTHOUSE=1 to enable."
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "a5c39b28b1ed9a9c2284-cb7df4e3dc4271da355e",
+              "file": "travel-details-perf-budget.spec.ts",
+              "line": 745,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "ui-layout-regressions.spec.ts",
+      "file": "ui-layout-regressions.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf UI layout regression guards (overlap/cutoff/viewport)",
+          "file": "ui-layout-regressions.spec.ts",
+          "line": 26,
+          "column": 6,
+          "specs": [
+            {
+              "title": "no horizontal scroll + key elements not clipped (mobile)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2051,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:35.444Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e5279b1a815c86138b27-a581835f9441e735a898",
+              "file": "ui-layout-regressions.spec.ts",
+              "line": 34,
+              "column": 9
+            },
+            {
+              "title": "menu does not cause overlap/cutoff when opened (mobile)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2016,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:37.501Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e5279b1a815c86138b27-b0bc0b16314452b127ea",
+              "file": "ui-layout-regressions.spec.ts",
+              "line": 123,
+              "column": 9
+            },
+            {
+              "title": "no horizontal scroll + key elements not clipped (tablet)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1992,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:39.523Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e5279b1a815c86138b27-947c69cb08f86d3b1038",
+              "file": "ui-layout-regressions.spec.ts",
+              "line": 34,
+              "column": 9
+            },
+            {
+              "title": "menu does not cause overlap/cutoff when opened (tablet)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2315,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:41.522Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e5279b1a815c86138b27-149beae57c2e17a2c5c4",
+              "file": "ui-layout-regressions.spec.ts",
+              "line": 123,
+              "column": 9
+            },
+            {
+              "title": "no horizontal scroll + key elements not clipped (desktop)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2001,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:43.843Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e5279b1a815c86138b27-cf1630cbe4486695c33d",
+              "file": "ui-layout-regressions.spec.ts",
+              "line": 34,
+              "column": 9
+            },
+            {
+              "title": "menu does not cause overlap/cutoff when opened (desktop)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1734,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:45.850Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "e5279b1a815c86138b27-5d332df9590fd22993d7",
+              "file": "ui-layout-regressions.spec.ts",
+              "line": 123,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "web-vitals-travel-details.spec.ts",
+      "file": "web-vitals-travel-details.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Web Vitals (CLS/LCP/INP) - travel details",
+          "file": "web-vitals-travel-details.spec.ts",
+          "line": 272,
+          "column": 6,
+          "specs": [
+            {
+              "title": "travel details stays stable and fast (desktop)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4272,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "E2E Web Vitals (travel details):\n"
+                        },
+                        {
+                          "text": "{\n  \"clsTotal\": 0.00633087416074567,\n  \"clsAfterRender\": 0,\n  \"lcp\": 972,\n  \"inp\": 64,\n  \"clsEntries\": [\n    {\n      \"value\": 0.00603395061728395,\n      \"hadRecentInput\": false,\n      \"sources\": [\n        \"div.css-g5y9jx.r-1j7rcxw.r-6koalj @(0,78 1440x900) \\\"Фильтры  Развернуть все Только на модерации  КАТЕГОРИИ   ТРАНСПОРТ   ОБЪЕК\\\"\"\n      ]\n    },\n    {\n      \"value\": 0.00018995949074074073,\n      \"hadRecentInput\": false,\n      \"sources\": [\n        \"div.css-g5y9jx.r-8d26hk.r-13qz1uu @(467,843 909x48) \\\"Описание Карта Координаты Комментарии Видео\\\"\"\n      ]\n    },\n    {\n      \"value\": 0.00010696405272097909,\n      \"hadRecentInput\": false,\n      \"sources\": [\n        \"div.css-g5y9jx.r-1awozwy.r-18u37iz @(1074,125 353x52) \\\"Найдено: 161 путешествие   Сбросить\\\"\",\n        \"div.css-g5y9jx.r-pkcpzr.r-1pb5966 @(1013,142 31x19) \\\"⌘K\\\"\"\n      ]\n    }\n  ]\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:47.605Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ff18d104e467ac4f711a-b98d92bde44f5ac9fe7d",
+              "file": "web-vitals-travel-details.spec.ts",
+              "line": 273,
+              "column": 7
+            },
+            {
+              "title": "travel details stays stable and fast (mobile)",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3137,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "E2E Web Vitals (travel details):\n"
+                        },
+                        {
+                          "text": "{\n  \"clsTotal\": 0.0470229652789797,\n  \"clsAfterRender\": 0,\n  \"lcp\": 764,\n  \"inp\": 48,\n  \"clsEntries\": [\n    {\n      \"value\": 0.0470229652789797,\n      \"hadRecentInput\": false,\n      \"sources\": [\n        \"div.css-g5y9jx.r-1j7rcxw.r-6koalj @(0,128 375x900) \\\"   Маршрут в Бескидах: от парковки до смотровой через водопад     Польша,\\\"\"\n      ]\n    }\n  ]\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:51.883Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "ff18d104e467ac4f711a-f5332ddc7774ba81db74",
+              "file": "web-vitals-travel-details.spec.ts",
+              "line": 283,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "web-vitals.spec.ts",
+      "file": "web-vitals.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "@perf Web Vitals (CLS/LCP/INP)",
+          "file": "web-vitals.spec.ts",
+          "line": 34,
+          "column": 6,
+          "specs": [
+            {
+              "title": "travels page stays stable and fast",
+              "ok": true,
+              "tags": [
+                "perf"
+              ],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3245,
+                      "errors": [],
+                      "stdout": [
+                        {
+                          "text": "E2E Web Vitals:\n"
+                        },
+                        {
+                          "text": "{\n  \"clsTotal\": 0.006701338529586792,\n  \"clsAfterRender\": 0,\n  \"lcp\": 812,\n  \"inp\": 56,\n  \"clsEntries\": [\n    {\n      \"value\": 0.006532118055555556,\n      \"hadRecentInput\": false,\n      \"sources\": [\n        \"div.css-g5y9jx.r-1j7rcxw.r-6koalj @(0,78 1280x900) \\\"Фильтры  Развернуть все Только на модерации  КАТЕГОРИИ   ТРАНСПОРТ   ОБЪЕК\\\"\"\n      ]\n    },\n    {\n      \"value\": 0.00016922047403123645,\n      \"hadRecentInput\": false,\n      \"sources\": [\n        \"div.css-g5y9jx.r-1awozwy.r-18u37iz @(914,125 353x52) \\\"Найдено: 161 путешествие   Сбросить\\\"\",\n        \"div.css-g5y9jx.r-pkcpzr.r-1pb5966 @(853,142 31x19) \\\"⌘K\\\"\"\n      ]\n    }\n  ]\n}\n"
+                        }
+                      ],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-18T21:51:55.030Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "138e4e8371f1cff48a98-adbde3f7a727a78545dd",
+              "file": "web-vitals.spec.ts",
+              "line": 35,
               "column": 7
             }
           ]
@@ -207,9 +2538,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-02-18T20:10:36.824Z",
-    "duration": 6483.683,
-    "expected": 1,
+    "startTime": "2026-02-18T21:49:49.741Z",
+    "duration": 128646.33499999999,
+    "expected": 44,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0

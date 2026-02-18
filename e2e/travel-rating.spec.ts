@@ -23,6 +23,7 @@ const STAR_SELECTOR = '[data-testid^="star-rating-star-"]';
 const LOGIN_HINT_PATTERN = /войд/i;
 const YOUR_RATING_PATTERN = /ваша оценка/i;
 type E2EPage = import('@playwright/test').Page;
+type E2ELocator = import('@playwright/test').Locator;
 
 async function goToTravelDetails(page: E2EPage): Promise<boolean> {
   await preacceptCookies(page);
@@ -62,6 +63,18 @@ async function getVisibleRatingSection(page: E2EPage) {
   const section = page.locator(RATING_SECTION_SELECTOR).first();
   await expect(section).toBeVisible({ timeout: 10_000 });
   return section;
+}
+
+async function waitForInteractiveStars(section: E2ELocator, timeoutMs = 12_000): Promise<number> {
+  const interactiveStars = section.getByRole('button', { name: /оценить на [1-5] из 5/i });
+  await expect
+    .poll(async () => {
+      const sectionText = (await section.textContent().catch(() => '')) || '';
+      if (LOGIN_HINT_PATTERN.test(sectionText)) return 0;
+      return interactiveStars.count();
+    }, { timeout: timeoutMs })
+    .toBeGreaterThanOrEqual(1);
+  return interactiveStars.count();
 }
 
 test.describe('Travel Rating', () => {
@@ -152,25 +165,20 @@ test.describe('Travel Rating - Authenticated', () => {
     // Для авторизованного пользователя должны быть интерактивные звёзды
     const stars = ratingSection.locator(STAR_SELECTOR);
     const starsCount = await stars.count();
+    expect(starsCount).toBeGreaterThan(0);
 
-    if (starsCount > 0) {
-      // Проверяем, что звёзды кликабельны (через role или aria)
-      const firstStar = stars.first();
+    const firstStar = stars.first();
+    await expect(firstStar).toBeVisible();
 
-      // Звезда должна быть видима
-      await expect(firstStar).toBeVisible();
+    const interactiveStars = ratingSection.getByRole('button', { name: /оценить на [1-5] из 5/i });
+    await expect(interactiveStars.first()).toBeVisible();
+    const interactiveCount = await interactiveStars.count();
+    expect(interactiveCount).toBeGreaterThanOrEqual(5);
 
-      test.info().annotations.push({
-        type: 'note',
-        description: `Found ${starsCount} interactive stars for authenticated user`,
-      });
-    }
-
-    // Не должно быть подсказки "войти"
-    const sectionText = await ratingSection.textContent();
-    const hasLoginHint = sectionText ? LOGIN_HINT_PATTERN.test(sectionText) : false;
-
-    expect(hasLoginHint).toBe(false);
+    test.info().annotations.push({
+      type: 'note',
+      description: `Found ${starsCount} stars and ${interactiveCount} interactive rating buttons`,
+    });
   });
 
   /**
@@ -277,11 +285,16 @@ test.describe('Travel Rating - Authenticated', () => {
     });
 
     // Мокаем POST запрос для отправки оценки
-    await page.route('**/api/travels/rating/**', async (route) => {
-      if (route.request().method() === 'POST') {
+    await page.route('**/api/travels/**', async (route) => {
+      const req = route.request();
+      const url = req.url();
+      const isRatingPost =
+        req.method() === 'POST' &&
+        /\/api\/travels\/.*rating\/?/i.test(url);
+      if (isRatingPost) {
         ratingApiCalled = true;
         try {
-          const body = route.request().postDataJSON();
+          const body = req.postDataJSON();
           ratingValue = body?.rating ?? null;
         } catch {
           // ignore parse error
@@ -302,20 +315,54 @@ test.describe('Travel Rating - Authenticated', () => {
 
     await assertTravelDetailsOpened(page);
     await waitForAuthenticatedUser(page);
-    const ratingSection = await getVisibleRatingSection(page);
+    let ratingSection = await getVisibleRatingSection(page);
 
-    // Кликаем по интерактивной звезде (role=button есть только у user-box, не у summary-блока).
-    const fifthStar = ratingSection.getByRole('button', { name: /оценить на 5 из 5/i }).first();
-    await expect(fifthStar).toBeVisible();
-    const ratingPostRequest = page
-      .waitForRequest(
-        (req) => req.method() === 'POST' && req.url().includes('/api/travels/rating/'),
-        { timeout: 10_000 }
-      )
-      .catch(() => null);
-    await fifthStar.click({ force: true });
+    const initialInteractiveReady = await waitForInteractiveStars(ratingSection).then(() => true).catch(() => false);
+    if (!initialInteractiveReady) {
+      await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => null);
+      await waitForAuthenticatedUser(page);
+      ratingSection = await getVisibleRatingSection(page);
+      await waitForInteractiveStars(ratingSection, 15_000);
+    }
 
-    const postedRequest = await ratingPostRequest;
+    let postedRequest: import('@playwright/test').Request | null = null;
+    let clickedRating: number | null = null;
+    for (const rating of [5, 4, 3, 2, 1]) {
+      const star = ratingSection.getByRole('button', { name: new RegExp(`оценить на\\s*${rating}\\s*из\\s*5`, 'i') }).first();
+      if ((await star.count()) === 0) continue;
+
+      const ratingPostRequest = page
+        .waitForRequest(
+          (req) =>
+            req.method() === 'POST' &&
+            /\/api\/travels\/.*rating\/?/i.test(req.url()),
+          { timeout: 6_000 }
+        )
+        .catch(() => null);
+
+      const clicked = await star
+        .click({ force: true, timeout: 5_000 })
+        .then(() => true)
+        .catch(async () => {
+          return ratingSection.evaluate((section, targetRating) => {
+            const re = new RegExp(`оценить\\s*на\\s*${targetRating}\\s*из\\s*5`, 'i');
+            const candidate = Array.from(section.querySelectorAll('[role="button"]')).find((el) => {
+              const aria = el.getAttribute('aria-label') || '';
+              const text = (el.textContent || '').trim();
+              return re.test(aria) || re.test(text);
+            });
+            if (!candidate) return false;
+            (candidate as HTMLElement).click();
+            return true;
+          }, rating);
+        });
+
+      if (!clicked) continue;
+      clickedRating = rating;
+      postedRequest = await ratingPostRequest;
+      if (postedRequest) break;
+    }
+
     expect(postedRequest, 'Rating POST request was not sent').not.toBeNull();
     if (postedRequest) {
       try {
@@ -328,7 +375,8 @@ test.describe('Travel Rating - Authenticated', () => {
 
     await page.waitForTimeout(500);
     expect(ratingApiCalled).toBe(true);
-    expect(ratingValue).toBe(5);
+    expect(clickedRating, 'No interactive rating star could be clicked').not.toBeNull();
+    expect(ratingValue).toBe(clickedRating);
   });
 });
 

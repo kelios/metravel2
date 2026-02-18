@@ -383,23 +383,25 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     });
 
     test('should show retry button on error', async ({ page }) => {
-      if (!(await goToTravelDetails(page))) return;
+      await preacceptCookies(page);
+      await page.route('**/api/travels/**', (route: any) => route.abort('failed'));
 
-      const currentUrl = page.url();
-      await page.route('**/api/travels/**', (route: any) => route.abort());
-      await page.goto(currentUrl);
+      await page.goto(`/travels/e2e-force-error-${Date.now()}`, { waitUntil: 'domcontentloaded' });
 
+      await expect(
+        page.locator('text=/Не удалось загрузить путешествие|не найдено/i').first()
+      ).toBeVisible({ timeout: 10_000 });
       await expect(page.getByRole('button', { name: 'Повторить' }).first()).toBeVisible({ timeout: 10_000 });
     });
 
     test('should handle slow network gracefully', async ({ page }) => {
       if (!(await goToTravelDetails(page))) return;
 
-      const currentUrl = page.url();
-      await page.route('**/*', (route: any) => {
-        setTimeout(() => route.continue(), 500);
+      await page.route('**/api/travels/**', async (route: any) => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await route.continue();
       });
-      await page.goto(currentUrl);
+      await page.reload({ waitUntil: 'domcontentloaded' });
 
       const hero = page.locator('[data-testid="travel-details-hero"]');
       await expect(hero).toBeVisible({ timeout: 10000 });

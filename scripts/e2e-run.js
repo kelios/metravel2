@@ -4,8 +4,11 @@ const { spawn } = require('node:child_process');
 const path = require('node:path');
 
 const rootDir = path.join(__dirname, '..');
-if (process.env.FORCE_COLOR && process.env.NO_COLOR) {
+if (Object.prototype.hasOwnProperty.call(process.env, 'NO_COLOR')) {
   delete process.env.NO_COLOR;
+}
+if (Object.prototype.hasOwnProperty.call(process.env, 'FORCE_COLOR')) {
+  delete process.env.FORCE_COLOR;
 }
 
 const playwrightBin =
@@ -27,8 +30,11 @@ function hasAnyArg(args, names) {
 function runPlaywright(args) {
   return new Promise((resolve, reject) => {
     const childEnv = { ...process.env };
-    if (childEnv.FORCE_COLOR && childEnv.NO_COLOR) {
+    if (Object.prototype.hasOwnProperty.call(childEnv, 'NO_COLOR')) {
       delete childEnv.NO_COLOR;
+    }
+    if (Object.prototype.hasOwnProperty.call(childEnv, 'FORCE_COLOR')) {
+      delete childEnv.FORCE_COLOR;
     }
 
     const child = spawn(playwrightBin, args, {
@@ -53,7 +59,9 @@ async function main() {
     process.exit(2);
   }
 
-  const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 4 : 4);
+  // Keep CI worker count conservative to avoid web export server OOM/connection-refused flakes
+  // in long parallel runs. Local runs can still override with E2E_WORKERS.
+  const workersFast = getNumberEnv('E2E_WORKERS', process.env.CI ? 2 : 4);
   const outputRootArgIndex = forwarded.findIndex((a) => a === '--output');
   const outputRoot =
     outputRootArgIndex !== -1 && typeof forwarded[outputRootArgIndex + 1] === 'string'
