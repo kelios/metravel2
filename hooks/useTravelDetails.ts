@@ -90,10 +90,16 @@ export function useTravelDetails(): UseTravelDetailsReturn {
     .split('%23')[0];
   const isMissingParam = normalizedSlug.length === 0;
   const cacheKey = isId ? idNum : normalizedSlug;
+  const initialPreloadedTravel = useMemo(
+    () => consumePreloadedTravel(normalizedSlug, isId, idNum),
+    [normalizedSlug, isId, idNum]
+  );
 
   const { data: travel, isLoading, isError, error, refetch } = useQuery<Travel>({
     queryKey: queryKeys.travel(cacheKey),
     enabled: !isMissingParam,
+    initialData: initialPreloadedTravel,
+    initialDataUpdatedAt: initialPreloadedTravel ? Date.now() : undefined,
     queryFn: async ({ signal } = {} as any) => {
       // Try to reuse preload from +html.tsx and wait shortly for its in-flight request.
       // This avoids duplicate travel-details fetches on first paint (critical for LCP).

@@ -4,6 +4,8 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { ShimmerOverlay } from '@/components/ui/ShimmerOverlay';
 import type { SliderImage, LoadStatus } from './types';
 
+const SHIMMER_DELAY_MS_WEB = 140;
+
 interface SlideProps {
   item: SliderImage;
   index: number;
@@ -45,6 +47,7 @@ const Slide = memo(function Slide({
   const [status, setStatus] = useState<LoadStatus>(
     index === 0 && firstImagePreloaded ? 'loaded' : 'loading',
   );
+  const [showShimmer, setShowShimmer] = useState(false);
   const firstLoadReportedRef = useRef(false);
 
   const isFirstSlide = index === 0;
@@ -56,7 +59,23 @@ const Slide = memo(function Slide({
   useEffect(() => {
     firstLoadReportedRef.current = false;
     setStatus(index === 0 && firstImagePreloaded ? 'loaded' : 'loading');
+    setShowShimmer(false);
   }, [uri, index, firstImagePreloaded]);
+
+  useEffect(() => {
+    if (status !== 'loading') {
+      setShowShimmer(false);
+      return;
+    }
+
+    if (Platform.OS !== 'web') {
+      setShowShimmer(true);
+      return;
+    }
+
+    const t = setTimeout(() => setShowShimmer(true), SHIMMER_DELAY_MS_WEB);
+    return () => clearTimeout(t);
+  }, [status]);
 
   const handleLoadStart = useCallback(() => {
     setStatus((prev) => (prev === 'loaded' ? prev : 'loading'));
@@ -64,6 +83,7 @@ const Slide = memo(function Slide({
 
   const handleLoad = useCallback(() => {
     setStatus('loaded');
+    setShowShimmer(false);
     onSlideLoad?.(index);
     if (isFirstSlide && !firstLoadReportedRef.current) {
       firstLoadReportedRef.current = true;
@@ -83,6 +103,7 @@ const Slide = memo(function Slide({
 
   const handleError = useCallback(() => {
     setStatus('error');
+    setShowShimmer(false);
   }, []);
 
   const handlePress = useCallback(() => {
@@ -109,6 +130,7 @@ const Slide = memo(function Slide({
           blurBackground={blurBackground}
           blurRadius={12}
           priority={mainPriority as any}
+          prefetch={Platform.OS === 'web' && shouldEagerLoad}
           loading={
             Platform.OS === 'web'
               ? shouldEagerLoad
@@ -141,7 +163,7 @@ const Slide = memo(function Slide({
       )}
 
       {/* Loading shimmer */}
-      {status === 'loading' && (
+      {status === 'loading' && showShimmer && (
         <ShimmerOverlay testID={`slider-loading-overlay-${index}`} />
       )}
     </View>

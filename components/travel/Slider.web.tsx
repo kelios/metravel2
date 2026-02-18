@@ -38,7 +38,7 @@ import type { SliderProps, SliderRef } from './sliderParts/types';
 import { buildUriWeb, clamp, SLIDER_MAX_WIDTH, computeSliderHeight, DEFAULT_AR, MOBILE_HEIGHT_PERCENT } from './sliderParts/utils';
 import { createSliderStyles } from './sliderParts/styles';
 import Slide from './sliderParts/Slide';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia';
 
 // Re-export types for consumers that import from '@/components/travel/Slider.web'
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
@@ -288,6 +288,37 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     },
     [images, containerW, computedH, fit],
   );
+
+  const prefetchedUrisRef = useRef<Record<string, true>>({});
+
+  const canPrefetchOnWeb = useCallback(() => {
+    if (Platform.OS !== 'web') return false;
+    if (isMobile) return false;
+    if (typeof navigator === 'undefined') return false;
+    const connection =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
+    if (connection?.saveData) return false;
+    const effectiveType = String(connection?.effectiveType || '').toLowerCase();
+    if (effectiveType.includes('2g') || effectiveType === '3g') return false;
+    return true;
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (!canPrefetchOnWeb()) return;
+    if (images.length < 2) return;
+
+    const candidates = [currentIndex - 1, currentIndex + 1, currentIndex + 2];
+    for (const idx of candidates) {
+      if (idx < 0 || idx >= images.length) continue;
+      const uri = getUri(idx);
+      if (!uri) continue;
+      if (prefetchedUrisRef.current[uri]) continue;
+      prefetchedUrisRef.current[uri] = true;
+      prefetchImage(uri).catch(() => undefined);
+    }
+  }, [canPrefetchOnWeb, currentIndex, getUri, images.length]);
 
   // Container width setter
   const setContainerWidth = useCallback((w: number) => {

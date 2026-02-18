@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useTravelDetails } from '@/hooks/useTravelDetails';
+import { Platform } from 'react-native';
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: jest.fn(),
@@ -27,6 +28,10 @@ const { fetchTravel, fetchTravelBySlug } = jest.requireMock('@/api/travelsApi');
 let capturedQueryFn: ((...args: any[]) => Promise<any>) | null = null;
 
 describe('useTravelDetails', () => {
+  const originalPlatform = Platform.OS;
+  // @ts-expect-error - jest env may or may not define window
+  const originalWindow = (global as any).window;
+
   beforeEach(() => {
     jest.clearAllMocks();
     capturedQueryFn = null;
@@ -44,6 +49,14 @@ describe('useTravelDetails', () => {
         refetch: jest.fn(),
       };
     });
+  });
+
+  afterEach(() => {
+    // Some tests override Platform.OS; reset to avoid cross-test leaks.
+    (Platform.OS as any) = originalPlatform;
+    // Restore window (tests may override it).
+    // @ts-expect-error - test-only global
+    (global as any).window = originalWindow;
   });
 
   it('treats numeric param as id and calls fetchTravel', async () => {
@@ -78,6 +91,42 @@ describe('useTravelDetails', () => {
     const data = await capturedQueryFn!();
     expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
     expect(data).toEqual({ slug: 'awesome-trip' });
+  });
+
+  it('uses preloaded travel as initialData on web (no extra await needed)', () => {
+    (Platform.OS as any) = 'web';
+    // @ts-expect-error - test-only global
+    (global as any).window = {
+      __metravelTravelPreload: {
+        data: { id: 498, slug: 'awesome-trip', name: 'Trip' },
+        slug: 'awesome-trip',
+        isId: false,
+      },
+    };
+
+    useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
+
+    (useQuery as jest.Mock).mockImplementation(({ queryFn, initialData }: any) => {
+      capturedQueryFn = queryFn;
+      return {
+        data: initialData,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: jest.fn(),
+      };
+    });
+
+    const { result } = renderHook(() => useTravelDetails());
+
+    expect(result.current.isId).toBe(false);
+    expect(result.current.slug).toBe('awesome-trip');
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.travel).toEqual({ id: 498, slug: 'awesome-trip', name: 'Trip' });
+
+    // Preload is consumed on first access to avoid stale data.
+    // @ts-expect-error - test-only global
+    expect((global as any).window.__metravelTravelPreload).toBeUndefined();
   });
 
   it('exposes refetch function from react-query result', () => {

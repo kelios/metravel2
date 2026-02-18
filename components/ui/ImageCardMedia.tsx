@@ -78,7 +78,9 @@ const WebMainImage = memo(function WebMainImage({
         zIndex: 1,
         borderRadius,
         display: 'block',
-        opacity: hasBlurBehind ? (loaded ? 1 : 0) : 1,
+        // Never hide the main <img> while loading. Hiding causes a visible "blank/gray flash"
+        // when slides are virtualized/unmounted and remounted while the image is already cached.
+        opacity: 1,
         transition: hasBlurBehind ? 'opacity 0.2s ease' : 'none',
         willChange: hasBlurBehind ? 'opacity' : 'auto',
         contain: 'layout',

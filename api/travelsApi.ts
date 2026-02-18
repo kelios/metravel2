@@ -222,13 +222,26 @@ export const normalizeTravelItem = (input: unknown): Travel => {
         out.travel_image_thumb_small_url = out.travel_image_thumb_url;
     }
 
+    // Normalize userIds to a stable comma-separated string.
+    // Backend has returned this field as a string ("1,2"), number (1), or array ([1]).
+    const rawUserIds = (t.userIds ?? t.user_ids) as unknown;
+    if (typeof rawUserIds !== 'undefined') {
+        if (Array.isArray(rawUserIds)) {
+            out.userIds = rawUserIds
+                .map((v) => String(v).trim())
+                .filter(Boolean)
+                .join(',');
+        } else {
+            out.userIds = String(rawUserIds ?? '').trim();
+        }
+    }
+
     // Normalize user object: ensure travel.user.id is populated from userIds when missing
     const existingUser = asRecord(out.user);
     const hasExistingUserId = getPositiveNumericId(existingUser.id) !== null;
 
     if (!hasExistingUserId) {
-        const raw = t.userIds ?? t.user_ids;
-        const uid = extractFirstUserId(raw);
+        const uid = extractFirstUserId(rawUserIds);
         if (uid !== null) {
             out.user = {
                 ...existingUser,

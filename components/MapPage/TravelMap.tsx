@@ -247,6 +247,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   showRouteLine = false,
 }) => {
   const colors = useThemedColors();
+  // `travelData` comes from API and can be null/invalid for some items.
+  // Coerce to an array to avoid runtime crashes inside hooks/components that iterate it.
+  const safeTravelData = useMemo<any[]>(
+    () => (Array.isArray(travelData) ? travelData : []),
+    [travelData]
+  );
   const mapRef = useRef<any>(null);
   const containerRef = useRef<any>(null);
   const markerByCoordRef = useRef<Map<string, any>>(new Map());
@@ -275,12 +281,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({
 
   // Calculate center from travel data
   const center = useMemo(() => {
-    if (!travelData || travelData.length === 0) {
+    if (safeTravelData.length === 0) {
       return [53.9006, 27.559]; // Default: Minsk
     }
 
     // Take first point as center
-    const firstPoint = travelData[0];
+    const firstPoint = safeTravelData[0];
     const coordStr = String(firstPoint?.coord || '').trim();
 
     if (!coordStr) return [53.9006, 27.559];
@@ -302,7 +308,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     }
 
     return [53.9006, 27.559];
-  }, [travelData]);
+  }, [safeTravelData]);
 
   // Use optimized markers hook
   const {
@@ -311,7 +317,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     markers,
     markerOpacity,
   } = useMapMarkers({
-    travelData,
+    travelData: safeTravelData,
     mapZoom: initialZoom,
     expandedClusterKey: null,
     mode: 'radius',
@@ -334,10 +340,10 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // Convert travel data to route line coordinates
   const routeLineCoords = useMemo(() => {
     if (!showRouteLine) return [];
-    if (!travelData || travelData.length < 2) return [];
+    if (safeTravelData.length < 2) return [];
 
     const coords: [number, number][] = [];
-    for (const point of travelData) {
+    for (const point of safeTravelData) {
       const coordStr = String(point?.coord || '').trim();
       if (!coordStr) continue;
 
@@ -359,7 +365,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     }
 
     return coords;
-  }, [showRouteLine, travelData]);
+  }, [showRouteLine, safeTravelData]);
 
   // Highlight point when requested
   useEffect(() => {
@@ -443,12 +449,12 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   // Fit bounds to show ALL travel points when map is ready
   useEffect(() => {
     if (!mapReady || !mapRef.current || !L) return;
-    if (!travelData || travelData.length === 0) return;
+    if (safeTravelData.length === 0) return;
 
     const map = mapRef.current;
 
     const points: [number, number][] = [];
-    for (const point of travelData) {
+    for (const point of safeTravelData) {
       const coordStr = String(point?.coord || '').trim();
       if (!coordStr) continue;
 
@@ -494,7 +500,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
     return () => {
       clearTimeout(timer);
     };
-  }, [mapReady, L, travelData]);
+  }, [mapReady, L, safeTravelData]);
 
   // Initialize overlay layers when map is ready and overlays are enabled
   useEffect(() => {
@@ -590,7 +596,7 @@ export const TravelMap: React.FC<TravelMapProps> = ({
   }
 
   // No data state
-  if (!travelData || travelData.length === 0) {
+  if (safeTravelData.length === 0) {
     return (
       <View style={[styles.mapContainer, mapContainerStyle, styles.emptyContainer]}>
         <ActivityIndicator size="small" color={colors.textMuted} />

@@ -84,7 +84,9 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     },
     flatBackground: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'transparent',
+      // Fill the slide while the image is loading to avoid showing page background through
+      // (which can appear as a gray flash on scroll / virtualization).
+      backgroundColor: colors.background,
     },
     img: {
       width: '100%',
@@ -263,4 +265,3 @@ export const createSliderStyles = (colors: Record<string, any>) =>
       letterSpacing: 0.3,
     },
   });
-
