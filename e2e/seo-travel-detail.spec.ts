@@ -218,7 +218,9 @@ test.describe('SEO: noindex pages', () => {
         }
       });
       await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-      // Wait for React Helmet to inject robots meta tag.
+      // Wait for JS to execute (hydration + useEffect to inject robots meta).
+      await page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => null);
+      // Wait for React Helmet / useEffect to inject robots meta tag.
       await page.waitForFunction(
         () => {
           const meta = document.querySelector('meta[name="robots"]');

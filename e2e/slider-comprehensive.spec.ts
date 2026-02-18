@@ -152,6 +152,7 @@ test.describe('Slider — counter accuracy', () => {
     // Go to slide 2 first
     await page.locator('[aria-label="Next slide"]').first().click();
     await waitForCounterValue(page, 2, 8_000);
+    await page.waitForTimeout(300); // let scroll snap settle before clicking prev
 
     // Then go back
     await page.locator('[aria-label="Previous slide"]').first().click();
@@ -200,8 +201,7 @@ test.describe('Slider — pagination dots', () => {
   });
 
   test('dots are shown on mobile viewport', async ({ page }) => {
-    // Resize to mobile viewport
-    await page.setViewportSize({ width: 390, height: 844 });
+    // Navigate at desktop viewport first so arrows are visible (hideArrowsOnMobile hides them on mobile)
     await preacceptCookies(page);
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
@@ -209,6 +209,8 @@ test.describe('Slider — pagination dots', () => {
       return;
     }
 
+    // Now resize to mobile viewport to check dots
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.locator('[data-testid="slider-wrapper"]').first().waitFor({ state: 'visible', timeout: 10_000 });
     await page.waitForTimeout(500); // allow layout to settle
 
@@ -325,17 +327,17 @@ test.describe('Slider — wrap-around navigation', () => {
       return;
     }
 
-    // Navigate to last slide one step at a time, waiting for each
+    // Navigate to last slide by clicking Next and waiting for counter to reach total
     const nextBtn = page.locator('[aria-label="Next slide"]').first();
-    for (let i = 1; i < counter.total; i++) {
+    // Keep clicking until we reach the last slide (with a max iteration guard)
+    const maxAttempts = counter.total * 3;
+    let attempts = 0;
+    while (attempts < maxAttempts) {
+      const current = await getCounter(page);
+      if (current?.current === counter.total) break;
       await nextBtn.click();
-      // Wait for counter to reach expected value before clicking again
-      const reached = await waitForCounterValue(page, i + 1, 8_000);
-      if (!reached || reached.current !== i + 1) {
-        // If we didn't reach the expected slide, try once more
-        await nextBtn.click();
-        await waitForCounterValue(page, i + 1, 5_000);
-      }
+      await page.waitForTimeout(300);
+      attempts++;
     }
 
     const cLast = await getCounter(page);

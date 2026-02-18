@@ -218,6 +218,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   // Refs
   const indexRef = useRef(0);
+  const currentIndexRef = useRef(0);
   const containerWRef = useRef(winW);
   const scrollRef = useRef<any>(null);
   const wrapperRef = useRef<any>(null);
@@ -313,6 +314,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       }
 
       indexRef.current = clampedIdx;
+      currentIndexRef.current = clampedIdx;
       setCurrentIndex((prev) => (prev === clampedIdx ? prev : clampedIdx));
       onIndexChanged?.(clampedIdx);
     },
@@ -656,12 +658,12 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   // Stable arrow callbacks
   const onPrev = useCallback(() => {
-    const target = (indexRef.current - 1 + images.length) % Math.max(1, images.length);
+    const target = (currentIndexRef.current - 1 + images.length) % Math.max(1, images.length);
     scrollTo(target);
   }, [images.length, scrollTo]);
 
   const onNext = useCallback(() => {
-    const target = (indexRef.current + 1) % images.length;
+    const target = (currentIndexRef.current + 1) % images.length;
     scrollTo(target);
   }, [images.length, scrollTo]);
 
