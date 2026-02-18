@@ -534,6 +534,115 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/by-slug/sluggy/');
     });
 
+    it('fetchTravelBySlug использует fallback-поиск по похожему slug при 404', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({
+        data: [
+          {
+            id: 2677,
+            name: 'Модынь  - одна из самых высоких вершин Бескидов',
+            slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+            url: '/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+            publish: true,
+            moderation: true,
+          },
+          {
+            id: 3000,
+            name: 'Нерелевантный маршрут',
+            slug: 'modyn-random',
+            url: '/travels/modyn-random',
+            publish: true,
+            moderation: true,
+          },
+        ],
+        total: 2,
+      } as any);
+
+      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vershin-beskidov');
+
+      expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
+      expect(result.id).toBe(2677);
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      expect(urlObj.pathname).toContain('/api/travels/');
+      expect(urlObj.searchParams.get('query')).toContain('modyn');
+    });
+
+    it('fetchTravelBySlug делает общий fallback-скан без query, если query-поиск пустой', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+
+      mockedFetchWithTimeout
+        .mockResolvedValueOnce({ ok: true } as any)
+        .mockResolvedValueOnce({ ok: true } as any)
+        .mockResolvedValueOnce({ ok: true } as any)
+        .mockResolvedValueOnce({ ok: true } as any);
+
+      mockedSafeJsonParse
+        .mockResolvedValueOnce({ data: [], total: 0 } as any)
+        .mockResolvedValueOnce({ data: [], total: 0 } as any)
+        .mockResolvedValueOnce({ data: [], total: 0 } as any)
+        .mockResolvedValueOnce({
+          data: [
+            {
+              id: 2677,
+              name: 'Модынь  - одна из самых высоких вершин Бескидов',
+              slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+              url: '/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+              publish: true,
+              moderation: true,
+            },
+          ],
+          total: 1,
+        } as any);
+
+      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vershin-beskidov');
+
+      expect(result.id).toBe(2677);
+      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(4);
+      const lastUrl = mockedFetchWithTimeout.mock.calls[3][0] as string;
+      const lastUrlObj = new URL(lastUrl);
+      expect(lastUrlObj.searchParams.get('query')).toBeNull();
+    });
+
+    it('fetchTravelBySlug fallback корректно обрабатывает slug с числовым суффиксом', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValue({
+        data: [
+          {
+            id: 1029,
+            name: 'Модынь  - одна из самых высоких вершин Бескидов',
+            slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+            url: '/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
+            publish: true,
+            moderation: true,
+          },
+        ],
+        total: 1,
+      } as any);
+
+      const result = await fetchTravelBySlug('modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029');
+
+      expect(result.id).toBe(1029);
+      expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
+      expect(mockedFetchWithTimeout.mock.calls.length).toBeGreaterThan(0);
+      expect(mockedFetchWithTimeout.mock.calls.length).toBeLessThanOrEqual(3);
+      const url = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const urlObj = new URL(url);
+      const queryParam = urlObj.searchParams.get('query') || '';
+      expect(queryParam).toContain('modyn');
+      expect(queryParam).not.toContain('1029');
+    });
+
     it('fetchTravel пробрасывает AbortError без логирования', async () => {
       const { fetchTravel } = loadTravelsApi();
       const abortError: any = new Error('aborted');

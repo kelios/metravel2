@@ -39,11 +39,8 @@ try {
   const result = ensureShim()
   if (result.created) {
     // Keep output minimal but visible in install logs when a fix was applied.
-    // eslint-disable-next-line no-console
     console.log('[postinstall] Added shim: @expo/metro/metro/lib/TerminalReporter')
   }
 } catch (err) {
-  // eslint-disable-next-line no-console
   console.warn('[postinstall] Failed to add TerminalReporter shim:', err && err.message ? err.message : err)
 }
-

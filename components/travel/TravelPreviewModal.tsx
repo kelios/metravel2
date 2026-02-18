@@ -119,7 +119,7 @@ const TravelPreviewModal: React.FC<TravelPreviewModalProps> = ({
                                 </Text>
 
                                 {!!description && (
-                                    <Text style={styles.cardDescription} numberOfLines={3}>
+                                    <Text testID="travel-preview-description" style={styles.cardDescription} numberOfLines={3}>
                                         {description}
                                     </Text>
                                 )}

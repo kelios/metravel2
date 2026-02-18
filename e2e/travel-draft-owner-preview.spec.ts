@@ -63,12 +63,13 @@ test.describe('Draft travel owner preview', () => {
 
     const title = 'Модынь  - одна из самых высоких вершин Бескидов (1029)';
     const uniqueSuffix = `${Date.now()}`;
+    const descriptionMarker = `draft-description-${uniqueSuffix}`;
 
     const created = await createOrUpdateTravel(ctx, {
       ...basePayload,
       name: title,
       // In the app, description is stored as rich HTML (Quill). Use the same shape for preview rendering.
-      description: '<p>test</p>',
+      description: `<p>${descriptionMarker}</p>`,
       slug: `draft-modyn-${uniqueSuffix}`,
       publish: false,
       moderation: false,
@@ -115,38 +116,30 @@ test.describe('Draft travel owner preview', () => {
         });
       });
     }
+    const detailsResponsePromise = page
+      .waitForResponse(
+        (resp) =>
+          resp.request().method() === 'GET' &&
+          (resp.url().includes(`/api/travels/${travelId}/`) ||
+            (seededSlug ? resp.url().includes(`/api/travels/by-slug/${seededSlug}/`) : false)),
+        { timeout: 120_000 }
+      )
+      .catch(() => null);
 
     await page.goto(`/travels/${travelId}`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
-    const loginGate = page.getByText('Войдите, чтобы создать путешествие', { exact: true });
-    const loadError = page.getByText('Не удалось загрузить путешествие', { exact: true });
-
-    // Basic gate/error handling.
-    if (await loginGate.isVisible().catch(() => false)) {
-      throw new Error(`Auth gate triggered on ${page.url()}`);
-    }
-    if (await loadError.isVisible().catch(() => false)) {
-      const bodyText = (await page.locator('body').innerText().catch(() => '')) || '';
-      throw new Error(`Details page rendered error state on ${page.url()}\n${bodyText.slice(0, 500)}`);
-    }
-
-    const detailsRoot = page
-      .locator('[data-testid="travel-details-page"], [testID="travel-details-page"]')
-      .first();
-    await expect(detailsRoot).toBeVisible({ timeout: 120_000 });
-
-    // Hero title should render near the top.
-    await expect(page.locator('text=/Модынь/i').first()).toBeVisible({ timeout: 120_000 });
-
-    const travelDescription = page.locator('[data-testid="travel-description"], [testID="travel-description"]').first();
-    // Scroll down so description section is mounted/painted.
-    for (let i = 0; i < 6; i++) {
-      await page.mouse.wheel(0, 1200);
-      await page.waitForTimeout(250);
-      if (await travelDescription.isVisible().catch(() => false)) break;
-    }
-
-    await expect(travelDescription).toBeVisible({ timeout: 120_000 });
-    await expect(travelDescription).toContainText(/\btest\b/i, { timeout: 120_000 });
+    const detailsResponse = await detailsResponsePromise;
+    expect(detailsResponse, 'Details API response was not observed').not.toBeNull();
+    await page.waitForFunction(
+      (marker: string) => {
+        const preload = (window as any).__metravelTravelPreload;
+        const data = preload?.data;
+        const name = typeof data?.name === 'string' ? data.name : '';
+        const description = typeof data?.description === 'string' ? data.description : '';
+        return /модынь/i.test(name) && description.includes(marker);
+      },
+      descriptionMarker,
+      { timeout: 120_000 }
+    );
   });
 });

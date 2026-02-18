@@ -105,8 +105,7 @@ test.describe('Slider navigation on web', () => {
 
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
-      test.skip(true, 'No travel with multi-image slider found');
-      return;
+      throw new Error('Slider test precondition failed');
     }
 
     expect(counter.current).toBe(1);
@@ -136,8 +135,7 @@ test.describe('Slider navigation on web', () => {
 
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
-      test.skip(true, 'No travel with multi-image slider found');
-      return;
+      throw new Error('Slider test precondition failed');
     }
 
     expect(counter.current).toBe(1);
@@ -238,8 +236,7 @@ test.describe('Slider navigation on web', () => {
 
     const counter = await navigateToTravelWithSlider(page);
     if (!counter) {
-      test.skip(true, 'No travel with multi-image slider found');
-      return;
+      throw new Error('Slider test precondition failed');
     }
 
     expect(counter.current).toBe(1);

@@ -6,13 +6,13 @@ test.describe('@smoke Slider smoothness', () => {
     await preacceptCookies(page);
     await page.setViewportSize({ width: 1280, height: 720 });
 
-    if (!(await navigateToFirstTravel(page))) test.skip();
+    const opened = await navigateToFirstTravel(page);
+    expect(opened, 'Unable to open first travel details page').toBeTruthy();
     const slider = page.locator('[data-testid="slider-wrapper"]').first();
-    if ((await slider.count()) === 0) test.skip();
     await expect(slider).toBeVisible();
 
     const nextBtn = slider.locator('[aria-label="Next slide"]').first();
-    if (!(await nextBtn.isVisible().catch(() => false))) test.skip();
+    await expect(nextBtn).toBeVisible();
 
     await nextBtn.click();
 

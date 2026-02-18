@@ -22,8 +22,9 @@ const RATING_SECTION_SELECTOR = '[data-testid="travel-rating-section"]';
 const STAR_SELECTOR = '[data-testid^="star-rating-star-"]';
 const LOGIN_HINT_PATTERN = /войд/i;
 const YOUR_RATING_PATTERN = /ваша оценка/i;
+type E2EPage = import('@playwright/test').Page;
 
-async function goToTravelDetails(page: import('@playwright/test').Page): Promise<boolean> {
+async function goToTravelDetails(page: E2EPage): Promise<boolean> {
   await preacceptCookies(page);
   return navigateToFirstTravel(page);
 }
@@ -31,7 +32,7 @@ async function goToTravelDetails(page: import('@playwright/test').Page): Promise
 /**
  * Прокручивает страницу до секции рейтинга
  */
-async function scrollToRatingSection(page: import('@playwright/test').Page): Promise<void> {
+async function scrollToRatingSection(page: E2EPage): Promise<void> {
   // Прокручиваем вниз, чтобы найти секцию рейтинга (может быть в deferred-загрузке)
   for (let i = 0; i < 10; i++) {
     const ratingSection = page.locator(RATING_SECTION_SELECTOR);
@@ -44,42 +45,42 @@ async function scrollToRatingSection(page: import('@playwright/test').Page): Pro
   }
 }
 
+async function assertTravelDetailsOpened(page: E2EPage): Promise<void> {
+  const opened = await goToTravelDetails(page);
+  expect(opened, 'Unable to navigate to first travel details page').toBeTruthy();
+}
+
+async function waitForAuthenticatedUser(page: E2EPage): Promise<void> {
+  await waitForAuth(page, 8_000);
+  await expect
+    .poll(async () => isAuthenticated(page), { timeout: 8_000 })
+    .toBe(true);
+}
+
+async function getVisibleRatingSection(page: E2EPage) {
+  await scrollToRatingSection(page);
+  const section = page.locator(RATING_SECTION_SELECTOR).first();
+  await expect(section).toBeVisible({ timeout: 10_000 });
+  return section;
+}
+
 test.describe('Travel Rating', () => {
   /**
    * TC-RATING-001: Отображение секции рейтинга на странице путешествия
    */
   test('TC-RATING-001: секция рейтинга отображается на странице путешествия', async ({ page }) => {
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
+    await assertTravelDetailsOpened(page);
+    const ratingSection = await getVisibleRatingSection(page);
 
-    await scrollToRatingSection(page);
+    // Должны быть звёзды для отображения рейтинга
+    const stars = ratingSection.locator(STAR_SELECTOR);
+    const starsCount = await stars.count();
+    expect(starsCount).toBeGreaterThan(0);
 
-    // Проверяем наличие секции рейтинга
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-
-    // Секция должна быть на странице (может быть скрыта до загрузки)
-    const hasSection = (await ratingSection.count()) > 0;
-
-    if (hasSection) {
-      await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
-
-      // Должны быть звёзды для отображения рейтинга
-      const stars = page.locator(STAR_SELECTOR);
-      const starsCount = await stars.count();
-      expect(starsCount).toBeGreaterThan(0);
-
-      test.info().annotations.push({
-        type: 'note',
-        description: `Rating section found with ${starsCount} stars`,
-      });
-    } else {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Rating section not present on this travel',
-      });
-    }
+    test.info().annotations.push({
+      type: 'note',
+      description: `Rating section found with ${starsCount} stars`,
+    });
   });
 
   /**
@@ -96,18 +97,8 @@ test.describe('Travel Rating', () => {
       }
     });
 
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
-
-    await scrollToRatingSection(page);
-
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-    if ((await ratingSection.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await assertTravelDetailsOpened(page);
+    const ratingSection = await getVisibleRatingSection(page);
 
     // Проверяем текст секции на подсказку о входе
     const sectionText = await ratingSection.textContent();
@@ -141,34 +132,9 @@ test.describe('Travel Rating - Authenticated', () => {
    * TC-RATING-002: Авторизованный пользователь может оценить путешествие
    */
   test('TC-RATING-002: авторизованный пользователь видит интерактивные звёзды', async ({ page }) => {
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
-
-    // Wait for auth state to be hydrated (checkAuthentication is deferred via requestIdleCallback)
-    await waitForAuth(page, 8_000);
-
-    // Проверяем что пользователь авторизован
-    const authenticated = await isAuthenticated(page);
-    if (!authenticated) {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'User is not authenticated, skipping interactive rating test',
-      });
-      test.skip();
-      return;
-    }
-
-    await scrollToRatingSection(page);
-
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-    if ((await ratingSection.count()) === 0) {
-      test.skip();
-      return;
-    }
-
-    await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
+    await assertTravelDetailsOpened(page);
+    await waitForAuthenticatedUser(page);
+    const ratingSection = await getVisibleRatingSection(page);
 
     // Wait for auth state to propagate to UI (checkAuthentication is deferred via requestIdleCallback)
     // The rating section shows login hint until isAuthenticated becomes true in Zustand store
@@ -248,21 +214,8 @@ test.describe('Travel Rating - Authenticated', () => {
       return route.continue();
     });
 
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
-
-    await scrollToRatingSection(page);
-
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-    if ((await ratingSection.count()) === 0) {
-      test.skip();
-      return;
-    }
-
-    // Ждём загрузки и проверяем текст
-    await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
+    await assertTravelDetailsOpened(page);
+    const ratingSection = await getVisibleRatingSection(page);
 
     // Даём время на загрузку данных рейтинга
     await page.waitForTimeout(1000);
@@ -347,54 +300,35 @@ test.describe('Travel Rating - Authenticated', () => {
       return route.continue();
     });
 
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
+    await assertTravelDetailsOpened(page);
+    await waitForAuthenticatedUser(page);
+    const ratingSection = await getVisibleRatingSection(page);
 
-    const authenticated = await isAuthenticated(page);
-    if (!authenticated) {
-      test.skip();
-      return;
-    }
+    // Кликаем по интерактивной звезде (role=button есть только у user-box, не у summary-блока).
+    const fifthStar = ratingSection.getByRole('button', { name: /оценить на 5 из 5/i }).first();
+    await expect(fifthStar).toBeVisible();
+    const ratingPostRequest = page
+      .waitForRequest(
+        (req) => req.method() === 'POST' && req.url().includes('/api/travels/rating/'),
+        { timeout: 10_000 }
+      )
+      .catch(() => null);
+    await fifthStar.click({ force: true });
 
-    await scrollToRatingSection(page);
-
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-    if ((await ratingSection.count()) === 0) {
-      test.skip();
-      return;
-    }
-
-    await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
-
-    // Находим 5-ю звезду и кликаем
-    const fifthStar = page.locator('[data-testid="star-rating-star-5"]').first();
-
-    if ((await fifthStar.count()) > 0) {
-      await fifthStar.click();
-
-      // Ждём отправку API
-      await page.waitForTimeout(1000);
-
-      if (ratingApiCalled) {
-        test.info().annotations.push({
-          type: 'note',
-          description: `Rating API called with value: ${ratingValue}`,
-        });
-        expect(ratingValue).toBe(5);
-      } else {
-        test.info().annotations.push({
-          type: 'note',
-          description: 'Rating API was not called - star may not be interactive',
-        });
+    const postedRequest = await ratingPostRequest;
+    expect(postedRequest, 'Rating POST request was not sent').not.toBeNull();
+    if (postedRequest) {
+      try {
+        const body = postedRequest.postDataJSON() as { rating?: number } | null;
+        ratingValue = body?.rating ?? ratingValue;
+      } catch {
+        // ignore parse error
       }
-    } else {
-      test.info().annotations.push({
-        type: 'note',
-        description: 'Could not find clickable star element',
-      });
     }
+
+    await page.waitForTimeout(500);
+    expect(ratingApiCalled).toBe(true);
+    expect(ratingValue).toBe(5);
   });
 });
 
@@ -413,10 +347,7 @@ test.describe('Travel Rating - List View', () => {
       page.waitForSelector('text=Пока нет путешествий', { timeout: 30000 }),
     ]).catch(() => null);
 
-    if ((await cards.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await expect(cards.first()).toBeVisible({ timeout: 30000 });
 
     // Проверяем наличие элементов рейтинга на карточках
     // Рейтинг может отображаться как звёзды или число
@@ -475,19 +406,9 @@ test.describe('Travel Rating - API Integration', () => {
       });
     });
 
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
-
-    await scrollToRatingSection(page);
-
-    // Ждём загрузки секции рейтинга
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-    if ((await ratingSection.count()) > 0) {
-      await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
-      await page.waitForTimeout(500);
-    }
+    await assertTravelDetailsOpened(page);
+    await getVisibleRatingSection(page);
+    await page.waitForTimeout(500);
 
     test.info().annotations.push({
       type: 'note',
@@ -547,26 +468,9 @@ test.describe('Travel Rating - API Integration', () => {
       return route.continue();
     });
 
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
-
-    const authenticated = await isAuthenticated(page);
-    if (!authenticated) {
-      test.skip();
-      return;
-    }
-
-    await scrollToRatingSection(page);
-
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-    if ((await ratingSection.count()) === 0) {
-      test.skip();
-      return;
-    }
-
-    await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
+    await assertTravelDetailsOpened(page);
+    await waitForAuthenticatedUser(page);
+    const ratingSection = await getVisibleRatingSection(page);
 
     // Проверяем начальный текст - должно быть "Оцените"
     const initialText = await ratingSection.textContent();
@@ -574,26 +478,24 @@ test.describe('Travel Rating - API Integration', () => {
 
     // Кликаем на 5-ю звезду
     const fifthStar = page.locator('[data-testid="star-rating-star-5"]').first();
-    if ((await fifthStar.count()) > 0) {
-      await fifthStar.click();
+    await expect(fifthStar).toBeVisible();
+    await fifthStar.click();
 
-      // Ждём оптимистичного обновления
-      await page.waitForTimeout(1000);
+    // Ждём оптимистичного обновления
+    await page.waitForTimeout(1000);
 
-      // После клика должен появиться текст "Ваша оценка" или число оценки
-      const newText = await ratingSection.textContent();
-      const hasUserRating = newText && YOUR_RATING_PATTERN.test(newText);
-      const hasRatingNumber = newText && /[1-5]/.test(newText);
+    // После клика должен появиться текст "Ваша оценка" или число оценки
+    const newText = await ratingSection.textContent();
+    const hasUserRating = newText && YOUR_RATING_PATTERN.test(newText);
+    const hasRatingNumber = newText && /[1-5]/.test(newText);
 
-      test.info().annotations.push({
-        type: 'note',
-        description: `Before click: hadNoRating=${hadNoRating}, After click: hasUserRating=${hasUserRating}, hasRatingNumber=${hasRatingNumber}`,
-      });
+    test.info().annotations.push({
+      type: 'note',
+      description: `Before click: hadNoRating=${hadNoRating}, After click: hasUserRating=${hasUserRating}, hasRatingNumber=${hasRatingNumber}`,
+    });
 
-      // Тест информационный - проверяем только если изначально не было оценки
-      if (hadNoRating && hasUserRating) {
-        expect(hasUserRating).toBe(true);
-      }
+    if (hadNoRating) {
+      expect(Boolean(hasUserRating || hasRatingNumber)).toBe(true);
     }
   });
 
@@ -662,26 +564,9 @@ test.describe('Travel Rating - API Integration', () => {
       return route.continue();
     });
 
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
-
-    const authenticated = await isAuthenticated(page);
-    if (!authenticated) {
-      test.skip();
-      return;
-    }
-
-    await scrollToRatingSection(page);
-
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-    if ((await ratingSection.count()) === 0) {
-      test.skip();
-      return;
-    }
-
-    await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
+    await assertTravelDetailsOpened(page);
+    await waitForAuthenticatedUser(page);
+    const ratingSection = await getVisibleRatingSection(page);
     await page.waitForTimeout(500);
 
     // Проверяем что отображается текущая оценка
@@ -689,21 +574,26 @@ test.describe('Travel Rating - API Integration', () => {
     const hasRating3 = textBefore && /3/.test(textBefore);
 
     // Кликаем на 5-ю звезду чтобы изменить оценку
-    const fifthStar = page.locator('[data-testid="star-rating-star-5"]').first();
-    if ((await fifthStar.count()) > 0) {
-      await fifthStar.click();
-      await page.waitForTimeout(500);
+    const fifthStar = ratingSection.getByRole('button', { name: /оценить на 5 из 5/i }).first();
+    await expect(fifthStar).toBeVisible();
+    const ratingPostRequest = page
+      .waitForRequest(
+        (req) => req.method() === 'POST' && req.url().includes('/api/travels/rating/'),
+        { timeout: 10_000 }
+      )
+      .catch(() => null);
+    await fifthStar.click({ force: true });
+    const postedRequest = await ratingPostRequest;
+    expect(postedRequest, 'Rating update POST request was not sent').not.toBeNull();
+    await page.waitForTimeout(500);
 
-      test.info().annotations.push({
-        type: 'note',
-        description: `POST calls: ${postCallCount}, last rating: ${lastPostedRating}, had rating 3: ${hasRating3}`,
-      });
+    test.info().annotations.push({
+      type: 'note',
+      description: `POST calls: ${postCallCount}, last rating: ${lastPostedRating}, had rating 3: ${hasRating3}`,
+    });
 
-      // API должен быть вызван с новой оценкой
-      if (postCallCount > 0) {
-        expect(lastPostedRating).toBe(5);
-      }
-    }
+    expect(postCallCount).toBeGreaterThan(0);
+    expect(lastPostedRating).toBe(5);
   });
 
   /**
@@ -732,47 +622,27 @@ test.describe('Travel Rating - API Integration', () => {
       });
     });
 
-    if (!(await goToTravelDetails(page))) {
-      test.skip();
-      return;
-    }
-
-    const authenticated = await isAuthenticated(page);
-    if (!authenticated) {
-      test.skip();
-      return;
-    }
-
-    await scrollToRatingSection(page);
-
-    const ratingSection = page.locator(RATING_SECTION_SELECTOR);
-    if ((await ratingSection.count()) === 0) {
-      test.skip();
-      return;
-    }
-
-    await expect(ratingSection.first()).toBeVisible({ timeout: 10000 });
+    await assertTravelDetailsOpened(page);
+    await waitForAuthenticatedUser(page);
+    const ratingSection = await getVisibleRatingSection(page);
 
     // Находим интерактивные звёзды
     const stars = ratingSection.locator(STAR_SELECTOR);
     const starsCount = await stars.count();
+    expect(starsCount).toBeGreaterThanOrEqual(5);
 
-    if (starsCount >= 5) {
-      // Наводим на 4-ю звезду
-      const fourthStar = page.locator('[data-testid="star-rating-star-4"]').first();
-      if ((await fourthStar.count()) > 0) {
-        await fourthStar.hover();
-        await page.waitForTimeout(200);
+    // Наводим на 4-ю звезду
+    const fourthStar = page.locator('[data-testid="star-rating-star-4"]').first();
+    await expect(fourthStar).toBeVisible();
+    await fourthStar.hover();
+    await page.waitForTimeout(200);
 
-        // Проверяем что звезда видима и кликабельна
-        await expect(fourthStar).toBeVisible();
+    // Проверяем что звезда видима и кликабельна
+    await expect(fourthStar).toBeVisible();
 
-        test.info().annotations.push({
-          type: 'note',
-          description: `Found ${starsCount} stars, hover test passed`,
-        });
-      }
-    }
+    test.info().annotations.push({
+      type: 'note',
+      description: `Found ${starsCount} stars, hover test passed`,
+    });
   });
 });
-

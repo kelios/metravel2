@@ -724,6 +724,135 @@ export const fetchTravel = async (
     }
 };
 
+const getErrorStatus = (error: unknown): number | null => {
+    if (!error || typeof error !== 'object') return null;
+    const rawStatus =
+        (error as { status?: unknown }).status ??
+        ((error as { response?: { status?: unknown } }).response?.status);
+    const status = Number(rawStatus);
+    return Number.isFinite(status) ? status : null;
+};
+
+const slugTokenize = (value: string): string[] =>
+    String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .split('-')
+        .map((part) => part.trim())
+        .filter(Boolean);
+
+const simplifySlugToken = (token: string): string =>
+    token
+        .replace(/kh/g, 'h')
+        .replace(/ii/g, 'i')
+        .replace(/yi/g, 'i');
+
+const buildSlugFallbackQueries = (slug: string): string[] => {
+    const tokens = slugTokenize(slug).filter((token) => !/^\d+$/.test(token));
+    if (tokens.length < 3) return [];
+
+    const full = tokens.join(' ');
+    const shortened = tokens.slice(0, Math.min(tokens.length, 7)).join(' ');
+    const boundary =
+        tokens.length >= 4
+            ? [tokens[0], tokens[1], tokens[tokens.length - 2], tokens[tokens.length - 1]].join(' ')
+            : '';
+    const simplified = tokens.map(simplifySlugToken).join(' ');
+
+    return Array.from(new Set([full, shortened, boundary, simplified].map((q) => q.trim()).filter(Boolean)));
+};
+
+const scoreSlugSimilarity = (requestedSlug: string, candidateSlug: string): number => {
+    const requested = slugTokenize(requestedSlug)
+        .map(simplifySlugToken)
+        .filter((token) => !/^\d+$/.test(token));
+    const candidate = slugTokenize(candidateSlug)
+        .map(simplifySlugToken)
+        .filter((token) => !/^\d+$/.test(token));
+    if (!requested.length || !candidate.length) return 0;
+
+    const candidateSet = new Set(candidate);
+    const overlap = requested.reduce((acc, token) => (candidateSet.has(token) ? acc + 1 : acc), 0);
+    const overlapRatio = overlap / requested.length;
+
+    const firstTokenBonus = requested[0] === candidate[0] ? 0.2 : 0;
+    const lastToken = requested[requested.length - 1];
+    const tailBonus = candidateSet.has(lastToken) ? 0.1 : 0;
+    const lengthPenalty = Math.max(0, candidate.length - requested.length) * 0.03;
+
+    return overlapRatio + firstTokenBonus + tailBonus - lengthPenalty;
+};
+
+const fetchFallbackTravelCandidates = async (
+    query: string,
+    page: number,
+    options?: { signal?: AbortSignal }
+): Promise<Travel[]> => {
+    const params = new URLSearchParams({
+        page: String(page),
+        perPage: '50',
+    });
+    if (query) {
+        params.set('query', query);
+    }
+
+    const urlTravel = `${GET_TRAVELS}?${params.toString()}`;
+    const res = await fetchWithTimeout(
+        urlTravel,
+        options?.signal ? { signal: options.signal } : {},
+        LONG_TIMEOUT
+    );
+    if (!res.ok) return [];
+
+    const result = await safeJsonParse<{
+        data?: Travel[];
+        total?: unknown;
+        results?: Travel[];
+        count?: unknown;
+    } | Travel[]>(res, []);
+    const { items } = unwrapTravelsList(result);
+    if (!items.length) return [];
+
+    return filterPublished(items.map(normalizeTravelItem));
+};
+
+const findTravelBySlugFallback = async (
+    slug: string,
+    options?: { signal?: AbortSignal }
+): Promise<Travel | null> => {
+    const queries = buildSlugFallbackQueries(slug);
+    const scanQueries = Array.from(new Set([...queries, '']));
+
+    let bestMatch: { item: Travel; score: number } | null = null;
+
+    for (const query of scanQueries) {
+        for (let page = 1; page <= 3; page += 1) {
+            const candidates = await fetchFallbackTravelCandidates(query, page, options);
+            if (!candidates.length) break;
+
+            for (const item of candidates) {
+                const candidateSlug = typeof item?.slug === 'string' ? item.slug.trim() : '';
+                if (!candidateSlug) continue;
+
+                const score = scoreSlugSimilarity(slug, candidateSlug);
+                if (score < 0.72) continue;
+
+                if (!bestMatch || score > bestMatch.score) {
+                    bestMatch = { item, score };
+                }
+            }
+
+            if (bestMatch && bestMatch.score >= 1.1) {
+                return bestMatch.item;
+            }
+        }
+    }
+
+    return bestMatch?.item ?? null;
+};
+
 export const fetchTravelBySlug = async (
     slug: string,
     options?: { signal?: AbortSignal }
@@ -736,6 +865,21 @@ export const fetchTravelBySlug = async (
         if (isAbortError(e)) {
             throw e;
         }
+
+        if (getErrorStatus(e) === 404) {
+            const fallbackTravel = await findTravelBySlugFallback(slug, options);
+            if (fallbackTravel) {
+                if (__DEV__) {
+                    devWarn('Resolved travel by slug fallback', {
+                        requestedSlug: slug,
+                        resolvedSlug: fallbackTravel.slug,
+                        id: fallbackTravel.id,
+                    });
+                }
+                return normalizeTravelItem(fallbackTravel);
+            }
+        }
+
         devError('Error fetching Travel by slug:', e);
         throw e;
     }

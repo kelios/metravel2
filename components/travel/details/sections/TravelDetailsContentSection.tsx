@@ -34,13 +34,15 @@ export const TravelDetailsContentSection: React.FC<{
 }> = ({ travel, isMobile, anchors, forceOpenKey }) => {
   const styles = useTravelDetailsStyles()
   type InsightKey = 'recommendation' | 'plus' | 'minus'
+  const publish = (travel as any).publish
+  const moderation = (travel as any).moderation
 
   const shouldRenderDescriptionSection = useMemo(() => {
     const desc = typeof travel.description === 'string' ? travel.description.trim() : ''
     // For drafts we still want to show the section wrapper so the page doesn't look "stuck".
-    const isDraft = (travel as any).publish === false || (travel as any).moderation === false
+    const isDraft = publish === false || moderation === false
     return Boolean(desc) || isDraft
-  }, [travel.description, (travel as any).publish, (travel as any).moderation])
+  }, [moderation, publish, travel.description])
 
   const hasRecommendation = Boolean(travel.recommendation?.trim())
   const hasPlus = Boolean(travel.plus?.trim())

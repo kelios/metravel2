@@ -124,7 +124,6 @@ config.resolver.resolveRequest = ((orig) => {
 	        const swallowPrematureClose = (err) => {
 	          if (err && isPrematureCloseError(err)) return
 	          if (!err) return
-	          // eslint-disable-next-line no-console
 	          console.error('[Metro middleware] Stream error:', err)
 	        }
 
@@ -210,7 +209,6 @@ config.resolver.resolveRequest = ((orig) => {
 
 		          proxyReq.on('error', (err) => {
 		            if (isPrematureCloseError(err) || res.writableEnded || res.destroyed) return
-		            // eslint-disable-next-line no-console
 		            console.error('[Metro CORS Proxy] Error:', err)
 		            if (!res.headersSent) res.statusCode = 502
 		            res.end('Bad Gateway')
