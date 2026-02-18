@@ -49,7 +49,7 @@ function HomeFAQSection() {
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingVertical: 72,
+      paddingVertical: 52,
       backgroundColor: colors.background,
     },
     inner: {
@@ -59,7 +59,7 @@ function HomeFAQSection() {
     },
     header: {
       alignItems: 'center',
-      marginBottom: 40,
+      marginBottom: 28,
       gap: 12,
     },
     title: {

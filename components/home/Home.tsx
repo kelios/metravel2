@@ -212,7 +212,7 @@ function Home() {
       {showHeavyContent ? (
         <View style={heavyFadeStyle}>
           <Suspense fallback={
-            <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: 88 }]}>
+            <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: 72 }]}>
               <SkeletonLoader width={isMobile ? 260 : 400} height={isMobile ? 32 : 40} borderRadius={8} />
               <SkeletonLoader width={isMobile ? 200 : 340} height={20} borderRadius={6} style={{ marginTop: 16 }} />
               <SkeletonLoader width={isMobile ? 200 : 300} height={60} borderRadius={12} style={{ marginTop: 32 }} />
@@ -222,7 +222,7 @@ function Home() {
           </Suspense>
         </View>
       ) : (
-        <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: 88 }]}>
+        <View style={[FINAL_CTA_PLACEHOLDER_STYLE, { backgroundColor: colors.backgroundSecondary, alignItems: 'center' as const, justifyContent: 'center' as const, paddingVertical: 72 }]}>
           <SkeletonLoader width={isMobile ? 260 : 400} height={isMobile ? 32 : 40} borderRadius={8} />
           <SkeletonLoader width={isMobile ? 200 : 340} height={20} borderRadius={6} style={{ marginTop: 16 }} />
           <SkeletonLoader width={isMobile ? 200 : 300} height={60} borderRadius={12} style={{ marginTop: 32 }} />

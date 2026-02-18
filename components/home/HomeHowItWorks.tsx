@@ -65,7 +65,7 @@ function HomeHowItWorks() {
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: 72,
+      paddingVertical: 52,
       backgroundColor: colors.background,
       ...Platform.select({
         web: {
@@ -76,7 +76,7 @@ function HomeHowItWorks() {
       }),
     },
     header: {
-      marginBottom: 48,
+      marginBottom: 32,
       alignItems: 'center',
       gap: 12,
     },

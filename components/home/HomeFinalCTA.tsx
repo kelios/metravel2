@@ -62,7 +62,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
       width: '100%',
       alignSelf: 'stretch',
       paddingHorizontal: 0,
-      paddingVertical: 96,
+      paddingVertical: 72,
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -78,7 +78,7 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     },
     containerMobile: {
       paddingHorizontal: 0,
-      paddingVertical: 72,
+      paddingVertical: 56,
     },
     content: {
       alignItems: 'center',

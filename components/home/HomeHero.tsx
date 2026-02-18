@@ -63,7 +63,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
 
   const styles = useMemo(() => StyleSheet.create({
     band: {
-      paddingVertical: 72,
+      paddingVertical: 52,
       backgroundColor: colors.background,
       width: '100%',
       alignSelf: 'stretch',
@@ -77,7 +77,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       }),
     },
     bandMobile: {
-      paddingVertical: 48,
+      paddingVertical: 36,
       ...Platform.select({
         web: {
           backgroundImage: `radial-gradient(ellipse 120% 50% at 50% 30%, ${colors.primarySoft} 0%, transparent 70%)`,

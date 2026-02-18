@@ -332,21 +332,21 @@ function HomeInspirationSections() {
 
   const styles = useMemo(() => StyleSheet.create({
     band: {
-      paddingVertical: 80,
+      paddingVertical: 56,
       backgroundColor: colors.backgroundSecondary,
       width: '100%',
       alignSelf: 'stretch',
     },
     bandMobile: {
-      paddingVertical: 40,
+      paddingVertical: 32,
     },
     container: {
-      gap: 80,
+      gap: 56,
       width: '100%',
       alignSelf: 'stretch',
     },
     containerMobile: {
-      gap: 56,
+      gap: 40,
     },
   }), [colors]);
 
