@@ -575,7 +575,7 @@ export default function MapScreen() {
 
             {(loading || !mapReady) && (
                 <View style={[styles.loadingOverlay, { pointerEvents: 'none' }]} testID="map-loading-overlay">
-                    <ActivityIndicator color={themedColors.primary} />
+                    <ActivityIndicator color={themedColors.primary} accessibilityLabel="Загрузка карты" />
                 </View>
             )}
 

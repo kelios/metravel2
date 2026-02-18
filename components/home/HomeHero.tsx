@@ -217,7 +217,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       fontWeight: '500',
     },
     bookImage: {
-      width: 320,
+      width: 267,
       height: 400,
       borderRadius: DESIGN_TOKENS.radii.lg,
       ...Platform.select({
@@ -308,7 +308,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                   <View style={styles.imageDecor} />
                   <ImageCardMedia
                     source={require('../../assets/images/pdf.webp')}
-                    width={320}
+                    width={267}
                     height={400}
                     borderRadius={DESIGN_TOKENS.radii.lg}
                     fit="cover"

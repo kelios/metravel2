@@ -580,6 +580,31 @@ async function main() {
     console.log(`  ✅ Generated: ${generated} article pages`);
   }
 
+  // --- 4. Patch [param].html / [id].html fallback templates ---
+  // These files are served by nginx when no per-slug HTML exists.
+  // They must NOT contain a hardcoded canonical pointing to the homepage —
+  // the inline JS in +html.tsx sets the correct canonical at runtime.
+  const fallbackTemplates = [
+    path.join(DIST_DIR, 'travels', '[param].html'),
+    path.join(DIST_DIR, 'article', '[id].html'),
+    path.join(DIST_DIR, 'user', '[id].html'),
+  ];
+  for (const tmpl of fallbackTemplates) {
+    if (!fs.existsSync(tmpl)) continue;
+    try {
+      let tmplHtml = fs.readFileSync(tmpl, 'utf8');
+      // Remove any hardcoded <link rel="canonical"> — the inline JS handles it.
+      const before = tmplHtml;
+      tmplHtml = tmplHtml.replace(/<link[^>]*rel="canonical"[^>]*\/?>\n?/gi, '');
+      if (tmplHtml !== before) {
+        fs.writeFileSync(tmpl, tmplHtml, 'utf8');
+        console.log(`  🔧 Stripped canonical from fallback: ${path.relative(DIST_DIR, tmpl)}`);
+      }
+    } catch (err) {
+      console.warn(`  ⚠️  Could not patch fallback template ${tmpl}: ${err.message}`);
+    }
+  }
+
   console.log(`\n🎉 Done! Generated ${totalPages} SEO pages in ${DIST_DIR}`);
 }
 

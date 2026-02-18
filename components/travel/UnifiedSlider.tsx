@@ -255,7 +255,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
         setActiveIndex(wrapped);
       }
     },
-    [containerW, getScrollNode, images.length, reduceMotion, setActiveIndex, indexRef]
+    [containerW, containerWRef, getScrollNode, images.length, reduceMotion, setActiveIndex, indexRef]
   );
 
   // Expose methods via ref

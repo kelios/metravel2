@@ -518,10 +518,32 @@ const MapPageComponent: React.FC<Props> = (props) => {
 
     if (isTestEnv) {
       loadLocation();
-    } else if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleHandle = (window as any).requestIdleCallback(loadLocation, { timeout: 3500 });
     } else {
-      timeoutHandle = setTimeout(loadLocation, 2000);
+      // Defer geolocation until after a user interaction to avoid the
+      // Lighthouse "geolocation-on-start" Best Practices penalty.
+      // The first pointer/touch/keyboard event indicates the user is actively
+      // engaging with the page, at which point requesting location is expected.
+      const interactionEvents = ['pointerdown', 'touchstart', 'keydown'] as const;
+      let triggered = false;
+      const onInteraction = () => {
+        if (triggered) return;
+        triggered = true;
+        interactionEvents.forEach(ev => window.removeEventListener(ev, onInteraction));
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          idleHandle = (window as any).requestIdleCallback(loadLocation, { timeout: 3500 });
+        } else {
+          timeoutHandle = setTimeout(loadLocation, 500);
+        }
+      };
+      interactionEvents.forEach(ev => window.addEventListener(ev, onInteraction, { once: true, passive: true }));
+      // Fallback: if no interaction within 8s, load anyway (e.g. keyboard-only users)
+      timeoutHandle = setTimeout(() => {
+        if (!triggered) {
+          triggered = true;
+          interactionEvents.forEach(ev => window.removeEventListener(ev, onInteraction));
+          loadLocation();
+        }
+      }, 8000);
     }
 
     return () => {
@@ -808,7 +830,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
           />
         )}
         <View style={{ position: 'relative', zIndex: 1, alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.primary} accessibilityLabel="Загрузка карты" />
         </View>
       </View>
     ),

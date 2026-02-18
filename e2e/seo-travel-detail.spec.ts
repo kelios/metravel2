@@ -201,6 +201,73 @@ test.describe('SEO: static pages meta tags', () => {
   }
 });
 
+/**
+ * Regression: [param].html fallback canonical bug.
+ *
+ * When a travel page has no pre-generated per-slug HTML file (e.g. published
+ * after the last build), nginx falls back to `travels/[param].html`.
+ * That template previously contained `<link rel="canonical" href="https://metravel.by/">`
+ * (homepage URL), causing Google to treat every such travel page as a duplicate
+ * of the homepage and refuse to index it.
+ *
+ * Fix: generate-seo-pages.js now strips the canonical from fallback templates.
+ * The inline JS in +html.tsx sets the correct canonical from window.location.pathname.
+ *
+ * This test fetches the raw static HTML (JavaScript disabled) to verify that
+ * the canonical in the initial HTML response is never the bare homepage URL.
+ */
+test.describe('SEO: travel page canonical is never the homepage (regression)', () => {
+  const TRAVEL_SLUG = 'tropa-vedm-harzer-hexenstieg-kak-proiti-marshrut-i-kak-eto-vygliadit-na-samom-dele';
+  const TRAVEL_PATH = `/travels/${TRAVEL_SLUG}`;
+
+  test('raw static HTML canonical is not the bare homepage URL @smoke', async ({ browser }) => {
+    const ctx = await browser.newContext({ javaScriptEnabled: false });
+    const page = await ctx.newPage();
+    await page.goto(TRAVEL_PATH, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    const html = await page.content();
+    await ctx.close();
+
+    const canonicalMatch = html.match(/<link[^>]*rel="canonical"[^>]*href="([^"]*)"/i);
+    if (canonicalMatch) {
+      const href = canonicalMatch[1];
+      // Must NOT be the bare homepage — that means [param].html fallback has wrong canonical
+      expect(
+        href,
+        `Canonical is the homepage URL — [param].html fallback has wrong canonical: "${href}". ` +
+        `This causes Google to treat travel pages as duplicates of the homepage.`
+      ).not.toMatch(/^https?:\/\/metravel\.by\/?$/);
+      // Must contain the travel slug
+      expect(href).toContain(`/travels/${TRAVEL_SLUG}`);
+    }
+    // If no canonical tag at all in static HTML — that is acceptable (inline JS sets it)
+  });
+
+  test('raw static HTML has no duplicate canonical tags @smoke', async ({ browser }) => {
+    const ctx = await browser.newContext({ javaScriptEnabled: false });
+    const page = await ctx.newPage();
+    await page.goto(TRAVEL_PATH, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    const html = await page.content();
+    await ctx.close();
+
+    const count = (html.match(/<link[^>]*rel="canonical"/gi) || []).length;
+    expect(count, `Found ${count} canonical tags in static HTML — expected 0 or 1`).toBeLessThanOrEqual(1);
+  });
+
+  test('after JS hydration canonical points to the travel slug (not homepage) @smoke', async ({ page }) => {
+    const html = await getRenderedHtml(page, TRAVEL_PATH);
+
+    const canonicalMatch = html.match(/<link[^>]*rel="canonical"[^>]*href="([^"]*)"/i);
+    expect(canonicalMatch, 'No canonical tag found after hydration').toBeTruthy();
+    const href = canonicalMatch![1];
+
+    expect(
+      href,
+      `Canonical after hydration is the homepage URL: "${href}"`
+    ).not.toMatch(/^https?:\/\/metravel\.by\/?$/);
+    expect(href).toContain(`/travels/${TRAVEL_SLUG}`);
+  });
+});
+
 test.describe('SEO: noindex pages', () => {
   const NOINDEX_PAGES = ['/login', '/registration', '/favorites'];
 

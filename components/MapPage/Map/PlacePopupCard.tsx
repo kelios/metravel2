@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
+import { optimizeImageUrl } from '@/utils/imageOptimization';
 
 type Props = {
   title: string;
@@ -43,18 +44,100 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
   const maxW = Math.round(width * 0.92);
   const maxH = Math.round(height * 0.92);
 
-  const content = (
+  const hiResUrl = useMemo(() => {
+    if (!imageUrl) return imageUrl;
+    return optimizeImageUrl(imageUrl, {
+      width: maxW,
+      height: maxH,
+      quality: 90,
+      format: 'auto',
+      fit: 'contain',
+      dpr: typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1,
+    }) ?? imageUrl;
+  }, [imageUrl, maxW, maxH]);
+
+  if (Platform.OS === 'web') {
+    if (!visible) return null;
+
+    const overlay = (
+      <div
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 99999,
+          backgroundColor: 'rgba(0,0,0,0.92)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 16,
+          boxSizing: 'border-box',
+        }}
+      >
+        <img
+          src={hiResUrl ?? undefined}
+          alt={alt}
+          style={{
+            maxWidth: maxW,
+            maxHeight: maxH,
+            width: 'auto',
+            height: 'auto',
+            objectFit: 'contain',
+            borderRadius: 8,
+            display: 'block',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+          }}
+          loading="eager"
+          // @ts-ignore
+          fetchPriority="high"
+          decoding="async"
+        />
+        <button
+          onClick={onClose}
+          aria-label="Закрыть фото"
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontSize: 20,
+            lineHeight: 1,
+          }}
+        >
+          ✕
+        </button>
+      </div>
+    );
+
+    if (typeof document !== 'undefined' && portalCreate) {
+      return portalCreate(overlay, document.body);
+    }
+
+    return overlay;
+  }
+
+  const nativeContent = (
     <View style={[fullscreenStyles.container, { width, height }]}>
       <View style={fullscreenStyles.centeredWrap}>
-        <View style={{ maxWidth: maxW, maxHeight: maxH, width: '100%', height: '100%' }}>
+        <View style={{ maxWidth: maxW, maxHeight: maxH, width: maxW, height: maxH }}>
           <ImageCardMedia
-            src={imageUrl}
+            src={hiResUrl}
             fit="contain"
             blurBackground={false}
             priority="high"
             loading="eager"
             transition={0}
-            style={{ width: '100%', height: '100%' }}
+            width={maxW}
+            height={maxH}
             alt={alt}
           />
         </View>
@@ -70,28 +153,9 @@ const FullscreenImageViewer: React.FC<{ imageUrl: string; alt: string; visible: 
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    if (!visible) return null;
-
-    const overlay = (
-      <View
-        style={[fullscreenStyles.webOverlay, { width, height }]}
-        {...({ onClick: (e: any) => { if (e.target === e.currentTarget) onClose(); } } as any)}
-      >
-        {content}
-      </View>
-    );
-
-    if (typeof document !== 'undefined' && portalCreate) {
-      return portalCreate(overlay, document.body);
-    }
-
-    return overlay;
-  }
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-      {content}
+      {nativeContent}
     </Modal>
   );
 };
@@ -105,18 +169,7 @@ const fullscreenStyles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  webOverlay: {
-    ...Platform.select({
-      web: {
-        position: 'fixed' as any,
-        top: 0,
-        left: 0,
-        zIndex: 99999,
-      },
-      default: {},
-    }),
-    backgroundColor: 'rgba(0,0,0,0.95)',
+    padding: 8,
   },
   closeBtn: {
     position: 'absolute',

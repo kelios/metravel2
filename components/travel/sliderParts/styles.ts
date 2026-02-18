@@ -66,7 +66,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     slide: {
       flexShrink: 0,
       position: 'relative',
-      backgroundColor: colors.surfaceMuted || '#2a2a2a',
+      backgroundColor: 'transparent',
       overflow: 'hidden',
       ...Platform.select<any>({
         web: { contain: 'content', willChange: 'transform' },
@@ -84,7 +84,7 @@ export const createSliderStyles = (colors: Record<string, any>) =>
     },
     flatBackground: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: '#242424',
+      backgroundColor: 'transparent',
     },
     img: {
       width: '100%',

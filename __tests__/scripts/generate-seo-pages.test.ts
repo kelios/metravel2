@@ -348,6 +348,47 @@ describe('stripHtml', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Fallback template canonical stripping (regression: [param].html had homepage canonical)
+// ---------------------------------------------------------------------------
+describe('fallback template canonical stripping', () => {
+  it('replaceOrInsert removes all existing canonical tags before inserting new one', () => {
+    // Simulate [param].html that has canonical = https://metravel.by/ (homepage)
+    const paramHtml = [
+      '<!DOCTYPE html><html lang="ru"><head>',
+      '<title data-rh="true">MeTravel</title>',
+      '<link data-rh="true" rel="canonical" href="https://metravel.by/"/>',
+      '</head><body><div id="root"></div></body></html>',
+    ].join('');
+
+    // Stripping canonical (as done in the fallback template patch step)
+    const stripped = paramHtml.replace(/<link[^>]*rel="canonical"[^>]*\/?>\n?/gi, '');
+    expect(stripped).not.toMatch(/rel="canonical"/);
+    expect(stripped).not.toContain('https://metravel.by/');
+  });
+
+  it('injectMeta on a [param].html with homepage canonical produces correct travel canonical', () => {
+    const paramHtml = [
+      '<!DOCTYPE html><html lang="ru"><head>',
+      '<title data-rh="true">MeTravel</title>',
+      '<link data-rh="true" rel="canonical" href="https://metravel.by/"/>',
+      '</head><body><div id="root"></div></body></html>',
+    ].join('');
+
+    const result = injectMeta(paramHtml, {
+      title: 'Литва Швеция Норвегия | MeTravel',
+      description: 'Маршрут по Европе',
+      canonical: 'https://metravel.by/travels/litva-shveciya-norvegiya-daniya-germaniya-polsha',
+    });
+
+    // Must have exactly one canonical pointing to the travel URL, not the homepage
+    const canonicalMatches = result.match(/<link[^>]*rel="canonical"[^>]*/gi) || [];
+    expect(canonicalMatches).toHaveLength(1);
+    expect(result).toContain('href="https://metravel.by/travels/litva-shveciya-norvegiya-daniya-germaniya-polsha"');
+    expect(result).not.toMatch(/href="https:\/\/metravel\.by\/"/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Full SEO tag count contract (the exact regression that was fixed)
 // ---------------------------------------------------------------------------
 describe('SEO tag count contract (regression guard)', () => {
