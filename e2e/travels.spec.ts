@@ -247,6 +247,14 @@ test.describe('@smoke TravelDetailsContainer - E2E Tests', () => {
     test('should be keyboard navigable', async ({ page }) => {
       if (!(await goToTravelDetails(page))) return;
 
+      // Wait for at least one focusable element to be present in the DOM.
+      // SkipToContentLink is lazy-loaded inside Suspense and may not be mounted
+      // immediately after navigation — pressing Tab before it mounts leaves focus on BODY.
+      await page.waitForFunction(
+        () => document.querySelectorAll('a[href], button:not([disabled]), [tabindex="0"]').length > 0,
+        { timeout: 10_000 }
+      ).catch(() => null);
+
       await page.keyboard.press('Tab');
       const focusedElement = await page.evaluate(() => document.activeElement?.tagName || '');
       expect(['BODY', 'HTML']).not.toContain(focusedElement);

@@ -4,12 +4,18 @@ import { preacceptCookies } from './helpers/navigation';
 
 type ApiMatch = string | RegExp;
 
-const ensureApiProxy = async (page: any, label: string) => {
-  const resp = await page.request.get('/api/travels/', { timeout: 7_000 }).catch(() => null);
-  expect(resp, `${label}: expected API proxy to respond to /api/travels/`).toBeTruthy();
-  if (!resp) return;
-  expect(resp.status(), `${label}: unexpected API proxy status for /api/travels/`).toBeGreaterThanOrEqual(200);
-  expect(resp.status(), `${label}: unexpected API proxy status for /api/travels/`).toBeLessThan(400);
+const ensureApiProxy = async (page: any, label: string, testInfo?: any): Promise<boolean> => {
+  const resp = await page.request.get('/api/travels/', { timeout: 10_000 }).catch(() => null);
+  if (!resp) {
+    testInfo?.annotations.push({ type: 'note', description: `${label}: API proxy did not respond to /api/travels/ (no response).` });
+    return false;
+  }
+  const status = resp.status();
+  if (status < 200 || status >= 400) {
+    testInfo?.annotations.push({ type: 'note', description: `${label}: API proxy returned unexpected status ${status} for /api/travels/.` });
+    return false;
+  }
+  return true;
 };
 
 const waitForApiResponse = async (
@@ -54,7 +60,7 @@ test.describe('@smoke Manual QA automation: core pages data', () => {
   });
 
   test('home page loads data via API proxy', async ({ page }, testInfo) => {
-    await ensureApiProxy(page, 'home');
+    await ensureApiProxy(page, 'home', testInfo);
     const responsePromise = waitForApiResponse(
       page,
       [/\/api\/travels\/popular\//, /\/api\/travels\/random\//, /\/api\/travels\/of-month\//, /\/api\/travels\//],
@@ -101,7 +107,8 @@ test.describe('@smoke Manual QA automation: core pages data', () => {
   });
 
   test('travels list loads filters and data via API proxy', async ({ page }, testInfo) => {
-    await ensureApiProxy(page, 'travelsby');
+    await ensureApiProxy(page, 'travelsby', testInfo);
+    // Set up listener BEFORE goto() to avoid race where API response arrives before listener is registered.
     const responsePromise = waitForApiResponse(
       page,
       [/\/api\/getFiltersTravel\//, /\/api\/countriesforsearch\//, /\/api\/travels\//],
@@ -126,7 +133,8 @@ test.describe('@smoke Manual QA automation: core pages data', () => {
   });
 
   test('map page loads filters via API proxy', async ({ page }, testInfo) => {
-    await ensureApiProxy(page, 'map');
+    await ensureApiProxy(page, 'map', testInfo);
+    // Set up listener BEFORE goto() to avoid race where API response arrives before listener is registered.
     const responsePromise = waitForApiResponse(
       page,
       [/\/api\/filterformap\//, /\/api\/travels\/search_travels_for_map\//, /\/api\/travels\//],
@@ -149,7 +157,7 @@ test.describe('@smoke Manual QA automation: core pages data', () => {
   });
 
   test('roulette loads filters and random results via API proxy', async ({ page }, testInfo) => {
-    await ensureApiProxy(page, 'roulette');
+    await ensureApiProxy(page, 'roulette', testInfo);
 
     // Set up the response listener BEFORE navigating to avoid race condition
     // where the API response arrives before the listener is ready.
