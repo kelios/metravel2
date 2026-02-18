@@ -20,6 +20,7 @@ interface PointCardProps {
   selectionMode?: boolean;
   selected?: boolean;
   active?: boolean;
+  compact?: boolean;
   driveInfo?:
     | null
     | { status: 'loading' }
@@ -37,6 +38,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   selectionMode,
   selected,
   active,
+  compact,
   driveInfo,
   onToggleSelect,
 }) => {
@@ -259,6 +261,7 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       style={[
         styles.container,
         layout === 'grid' ? styles.containerGrid : null,
+        compact ? styles.containerCompact : null,
         active ? styles.containerActive : null,
       ]}
       onPress={() => {
@@ -366,46 +369,48 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
         ) : null}
 
         {hasCoords ? (
-          <View style={styles.coordsRow}>
-            <Text style={styles.coordsText} numberOfLines={1}>
-              {coordsText}
-            </Text>
-
-            <View style={styles.coordsActionsRow as any}>
-              {Platform.OS === 'web' ? (
-                <>
-                  <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
-                  <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
-                  {mapUrls ? (
-                    <ActionButton label="Открыть в картах" icon="navigation" onActivate={() => void openExternalLink(mapUrls.google)} />
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <IconButton
-                    icon={<Feather name="copy" size={14} color={colors.textMuted} />}
-                    label="Копировать координаты"
-                    onPress={() => void copyCoords()}
-                    size="sm"
-                  />
-                  <IconButton
-                    icon={<Feather name="send" size={14} color={colors.textMuted} />}
-                    label="Поделиться в Telegram"
-                    onPress={() => void shareToTelegram()}
-                    size="sm"
-                  />
-                  {mapUrls ? (
-                    <IconButton
-                      icon={<Feather name="navigation" size={14} color={colors.textMuted} />}
-                      label="Открыть в картах"
-                      onPress={() => void openInMaps()}
-                      size="sm"
-                    />
-                  ) : null}
-                </>
-              )}
+          Platform.OS === 'web' ? (
+            <View style={styles.coordsBlock}>
+              <Text style={styles.coordsText} numberOfLines={1}>
+                {coordsText}
+              </Text>
+              <View style={styles.coordsActionsRow as any}>
+                <ActionButton label="Копировать координаты" icon="copy" onActivate={copyCoords} />
+                <ActionButton label="Поделиться в Telegram" icon="send" onActivate={() => void shareToTelegram()} />
+                {mapUrls ? (
+                  <ActionButton label="Открыть в картах" icon="navigation" onActivate={() => void openExternalLink(mapUrls.google)} />
+                ) : null}
+              </View>
             </View>
-          </View>
+          ) : (
+            <View style={styles.coordsRow}>
+              <Text style={styles.coordsText} numberOfLines={1}>
+                {coordsText}
+              </Text>
+              <View style={styles.coordsActionsRow as any}>
+                <IconButton
+                  icon={<Feather name="copy" size={14} color={colors.textMuted} />}
+                  label="Копировать координаты"
+                  onPress={() => void copyCoords()}
+                  size="sm"
+                />
+                <IconButton
+                  icon={<Feather name="send" size={14} color={colors.textMuted} />}
+                  label="Поделиться в Telegram"
+                  onPress={() => void shareToTelegram()}
+                  size="sm"
+                />
+                {mapUrls ? (
+                  <IconButton
+                    icon={<Feather name="navigation" size={14} color={colors.textMuted} />}
+                    label="Открыть в картах"
+                    onPress={() => void openInMaps()}
+                    size="sm"
+                  />
+                ) : null}
+              </View>
+            </View>
+          )
         ) : null}
         
         {typeof point.rating === 'number' && Number.isFinite(point.rating) && (
@@ -441,6 +446,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderWidth: 1,
     borderColor: colors.border,
     ...(Platform.OS === 'web' ? ({ boxShadow: DESIGN_TOKENS.shadows.card } as any) : null),
+  },
+  containerCompact: {
+    marginHorizontal: 0,
   },
   containerActive: {
     borderColor: colors.primary,
@@ -555,6 +563,10 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: DESIGN_TOKENS.spacing.xs,
+    gap: 6,
+  },
+  coordsBlock: {
     marginTop: DESIGN_TOKENS.spacing.xs,
     gap: 6,
   },

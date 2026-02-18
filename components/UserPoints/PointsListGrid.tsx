@@ -663,7 +663,9 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     paddingBottom: 40,
   },
   pointsList: {
-    padding: 16,
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
   },
   listControlsRow: {
     flexDirection: 'row',
@@ -682,7 +684,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     color: colors.text,
   },
   pointsListItem: {
-    marginBottom: 16,
+    marginBottom: 0,
   },
   recommendationsHeader: {
     flexDirection: 'row',

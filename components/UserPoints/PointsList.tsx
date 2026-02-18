@@ -1406,6 +1406,7 @@ useEffect(() => {
         selectionMode={selectionMode}
         selected={selectedIdSet.has(Number(item?.id))}
         active={Number(item?.id) === Number(activePointId)}
+        compact
         driveInfo={Number(item?.id) === Number(activePointId) ? activeDriveInfo : null}
         onToggleSelect={toggleSelect}
       />
