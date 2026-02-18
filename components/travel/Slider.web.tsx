@@ -767,7 +767,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       slideHeight={slideHeight}
                       imagesLength={imagesLen}
                       styles={styles}
-                      blurBackground={blurBackground}
+                      blurBackground={blurBackground && index === currentIndex}
                       imageProps={imageProps}
                       onFirstImageLoad={onFirstImageLoad}
                       onSlideLoad={handleSlideLoad}

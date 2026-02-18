@@ -314,6 +314,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                     fit="cover"
                     alt="Пример книги путешествий"
                     loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
+                    priority={Platform.OS === 'web' ? 'high' : 'normal'}
                     transition={300}
                     style={[styles.bookImage, hovered && styles.bookImageHover]}
                   />

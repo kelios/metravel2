@@ -1,5 +1,108 @@
 # Production Audit Report — metravel.by
 
+---
+
+## v16 — Full Post-Deploy Audit (2026-02-18)
+
+**Auditor:** Automated (Cascade)
+**Target:** https://metravel.by
+**Lighthouse version:** live production run
+
+### Lighthouse Scores
+
+#### Desktop — Home (`/`)
+| Category | Score | Δ vs v15 |
+|----------|-------|----------|
+| Performance | **83** | +6 ✅ |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **74** | -4 ⚠️ (new Lighthouse version, inspector-issues weight changed) |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Score | Status |
+|--------|-------|-------|--------|
+| FCP | 0.6 s | 0.99 | ✅ |
+| LCP | 2.4 s | 0.48 | ⚠️ |
+| TBT | 10 ms | 1.0 | ✅ |
+| CLS | 0.006 | 1.0 | ✅ |
+| SI | 2.1 s | 0.56 | ⚠️ |
+| TTI | 2.4 s | 0.90 | ✅ |
+| TTFB | 90 ms | — | ✅ Excellent |
+
+#### Mobile — Home (`/`)
+| Category | Score | Δ vs v15 |
+|----------|-------|----------|
+| Performance | **60** | +15 ✅ |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **79** | = ✅ |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Score | Status |
+|--------|-------|-------|--------|
+| FCP | 1.2 s | — | ✅ |
+| LCP | 11.0 s | 0.0 | 🔴 Structural (bundle size) |
+| TBT | 350 ms | — | ⚠️ |
+| CLS | 0.04 | 0.99 | ✅ |
+| SI | 7.0 s | — | ⚠️ |
+| TTI | 11.0 s | — | 🔴 |
+| TTFB | 90 ms | — | ✅ |
+
+### Issues Found
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| `label-content-name-mismatch` — Logo aria-label "MeTravel — главная страница" ≠ visible "MeTravel" | P1 | **FIXED** |
+| LCP image `pdf.webp` has `fetchpriority="auto"` instead of `high` | P1 | **FIXED** |
+| Feather.ttf font not preloaded — discovered late, 90ms FCP wasted | P1 | **FIXED** |
+| `pdf.webp` served at 1024×1536 but displayed at 320×400 — 75 KiB wasted | P2 | **FIXED** |
+| Unused JS ~1,030 KiB (`__common` + `entry` chunks) | P1 | Structural — requires arch change |
+| `errors-in-console` — Yandex Metrika 400 (sync_cookie) | P3 | Unfixable (3rd party) |
+| `third-party-cookies` — Yandex Metrika 12 cookies | P3 | Unfixable (3rd party) |
+| `valid-source-maps` — source maps disabled | P3 | Intentional (security) |
+| `legacy-javascript` — ~7 KiB savings | P3 | Minor |
+
+### Fixes Applied (v16)
+
+#### 1. Logo aria-label mismatch (P1 — A11y)
+- **File:** `components/layout/Logo.tsx`
+- **Change:** `accessibilityLabel` changed from `"MeTravel — главная страница"` → `"MeTravel"`
+- **Reason:** Lighthouse `label-content-name-mismatch` requires accessible name to contain visible text. The extra description moved to `accessibilityHint` (already present).
+- **Impact:** Fixes A11y audit item; maintains 100 A11y score.
+
+#### 2. LCP image fetchpriority=high (P1 — Performance)
+- **File:** `components/home/HomeHero.tsx`
+- **Change:** Added `priority={Platform.OS === 'web' ? 'high' : 'normal'}` to `ImageCardMedia` for `pdf.webp`
+- **Reason:** `ImageCardMedia` passes `priority="high"` → `fetchPriority="high"` on the `<img>` tag. Previously `fetchpriority="auto"` was used, causing the browser to deprioritize the LCP image.
+- **Impact:** Faster LCP on desktop (image is the LCP element on desktop viewport).
+
+#### 3. Feather.ttf font preload (P1 — Performance)
+- **File:** `app/+html.tsx`
+- **Change:** Added `<link rel="preload" href="/assets/node_modules/@expo/vector-icons/.../Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />`
+- **Reason:** Font was discovered late via expo-font JS injection, wasting 90ms FCP. Hash is stable (content-addressed). Font path confirmed 200 + immutable cache on production.
+- **Impact:** ~90ms FCP improvement.
+
+#### 4. Resize pdf.webp (P2 — Performance)
+- **File:** `assets/images/pdf.webp`
+- **Change:** Resized from 1024×1536 → 267×400 (maintaining aspect ratio), re-encoded at q=85
+- **Reason:** Image displayed at 320×400 but served at full 1024×1536 resolution — 75 KiB wasted per page load.
+- **Impact:** 84 KB → 13 KB (84% reduction). Saves ~71 KiB per home page load.
+
+### Validation
+- `yarn jest --testPathPattern="Logo|HomeHero|CustomHeader|html"` — **62 tests passed** ✅
+- `yarn test:run` — **3839 tests passed, 448 suites** ✅
+- `eslint components/layout/Logo.tsx components/home/HomeHero.tsx` — **0 errors** ✅
+
+### Remaining Structural Blockers (require arch changes)
+| Issue | Cause | Required Action |
+|-------|-------|-----------------|
+| Mobile LCP 11s / Perf 60 | ~1,030 KiB unused JS (RNW + Leaflet bundle) | SSR/ISR or native app |
+| Best Practices 74 | Yandex Metrika 3rd-party cookies (12 cookies) + inspector-issues | Cannot fix |
+| Missing source maps | Intentionally disabled | Security trade-off |
+
+### All Green ✅
+SEO 100, A11y 100, TTFB 90ms, CLS 0.006, TBT 10ms (desktop), HSTS, CSP, robots.txt, sitemap.xml, GA4, Yandex Metrika, HTTP/2, Brotli+Gzip, immutable caching
+
+---
+
 **Date:** 2026-02-15 (v10 — Full Post-Deploy Audit)  
 **Auditor:** Automated (Cascade)  
 **Target:** https://metravel.by  

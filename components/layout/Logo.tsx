@@ -15,7 +15,7 @@ export default React.memo(function Logo({ variant: _variant = 'default' }: any) 
             onPress={() => router.push('/')}
             style={styles.logoContainer}
             accessibilityRole="link"
-            accessibilityLabel="MeTravel — главная страница"
+            accessibilityLabel="MeTravel"
             accessibilityHint="Перейти на главную страницу"
         >
             <Image

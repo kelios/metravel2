@@ -640,12 +640,13 @@ test.describe('Slider — slide virtualization', () => {
     await page.waitForTimeout(300); // allow React to re-render
 
     // Now index=2, VIRTUAL_WINDOW=2 → renders indices 0..4
-    // Slide at index 4 should now be rendered
+    // Slide at index 4 should now be rendered (may be loading or already loaded)
     const slide4Rendered = await page.evaluate(() => {
       return (
         document.querySelector('[data-testid="slider-flat-bg-4"]') !== null ||
         document.querySelector('[data-testid="slider-loading-overlay-4"]') !== null ||
-        document.querySelector('[data-testid="slider-neutral-placeholder-4"]') !== null
+        document.querySelector('[data-testid="slider-neutral-placeholder-4"]') !== null ||
+        document.querySelector('[data-testid="slider-image-4"]') !== null
       );
     });
     expect(slide4Rendered).toBe(true);
@@ -725,6 +726,57 @@ test.describe('Slider — scroll container properties', () => {
     expect(widths!.scrollW).toBeGreaterThan(0);
     // Scroll container should be same width as wrapper (not wider)
     expect(widths!.scrollW).toBeLessThanOrEqual(widths!.wrapperW + 2);
+  });
+});
+
+test.describe('Slider — no blur bleed from adjacent slides', () => {
+  test('adjacent slides do not show blur background on initial load', async ({ page }) => {
+    await preacceptCookies(page);
+    const counter = await navigateToTravelWithSlider(page);
+    if (!counter) {
+      test.skip(true, 'No multi-image travel found');
+      return;
+    }
+
+    // Wait for slider to fully mount and first image to load
+    await page.locator('[data-testid="slider-scroll"]').first().waitFor({ state: 'attached', timeout: 15_000 });
+    await page.waitForTimeout(800);
+
+    // Check that slide index 1 (the adjacent slide) does NOT have a visible blur background.
+    // The blur div in ImageCardMedia is only shown when webLoaded=true AND it's the current slide.
+    // Adjacent slides should have blurBackground=false, so no blur div should be rendered for them.
+    const adjacentBlurVisible = await page.evaluate(() => {
+      const scroll = document.querySelector('[data-testid="slider-scroll"]') as HTMLElement;
+      if (!scroll) return false;
+
+      // Find all slide containers (direct children of scroll content)
+      const slideContainers = Array.from(scroll.querySelectorAll('[data-testid^="slider-image-"]'));
+      if (slideContainers.length < 2) return false;
+
+      // Check slide at index 1 — find its parent slide wrapper and look for blur divs
+      const img1 = scroll.querySelector('[data-testid="slider-image-1"]') as HTMLElement | null;
+      if (!img1) return false;
+
+      // Walk up to find the slide container
+      let slideEl: HTMLElement | null = img1;
+      while (slideEl && slideEl !== scroll) {
+        // Look for any absolutely-positioned div with filter:blur inside this slide
+        const blurDivs = Array.from(slideEl.querySelectorAll('div[aria-hidden="true"]')) as HTMLElement[];
+        for (const div of blurDivs) {
+          const style = getComputedStyle(div);
+          const filter = style.filter || '';
+          const opacity = parseFloat(style.opacity);
+          if (filter.includes('blur') && opacity > 0.1) {
+            return true; // blur is visible on adjacent slide
+          }
+        }
+        slideEl = slideEl.parentElement;
+        if (slideEl?.getAttribute('data-testid') === 'slider-scroll') break;
+      }
+      return false;
+    });
+
+    expect(adjacentBlurVisible).toBe(false);
   });
 });
 
