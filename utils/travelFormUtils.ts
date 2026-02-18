@@ -172,6 +172,7 @@ const resolveMarkers = (travel: Travel): MarkerData[] => {
 export function getEmptyFormData(id: string | null): TravelFormData {
   return {
     id: id || null,
+    slug: '',
     name: '',
     categories: [],
     transports: [],
@@ -191,6 +192,8 @@ export function getEmptyFormData(id: string | null): TravelFormData {
     publish: false,
     moderation: false,
     visa: false,
+    travel_image_thumb_url: null,
+    travel_image_thumb_small_url: null,
     coordsMeTravel: [],
     thumbs200ForCollectionArr: [],
     travelImageThumbUrlArr: [],

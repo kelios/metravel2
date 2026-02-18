@@ -14,6 +14,7 @@ if (!Array.prototype.toReversed) {
 const { getDefaultConfig } = require('expo/metro-config')
 const fs = require('fs')
 const path = require('path')
+const { pipeline } = require('stream')
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname)
@@ -86,18 +87,28 @@ config.resolver.resolveRequest = ((orig) => {
   }
 })(config.resolver.resolveRequest)
 
-config.server = {
-  ...config.server,
-  enhanceMiddleware: (middleware) => {
-    const baseMiddleware =
-      typeof previousEnhanceMiddleware === 'function'
-        ? previousEnhanceMiddleware(middleware)
-        : middleware
+	config.server = {
+	  ...config.server,
+	  enhanceMiddleware: (middleware) => {
+	    const baseMiddleware =
+	      typeof previousEnhanceMiddleware === 'function'
+	        ? previousEnhanceMiddleware(middleware)
+	        : middleware
 
-    const publicRoot = path.resolve(__dirname, 'public')
-    const mimeByExt = {
-      '.ico': 'image/x-icon',
-      '.png': 'image/png',
+	    const isPrematureCloseError = (err) => {
+	      const code = err && err.code
+	      const message = String(err && err.message ? err.message : '')
+	      return (
+	        code === 'ERR_STREAM_PREMATURE_CLOSE' ||
+	        code === 'ECONNRESET' ||
+	        /premature close/i.test(message)
+	      )
+	    }
+
+	    const publicRoot = path.resolve(__dirname, 'public')
+	    const mimeByExt = {
+	      '.ico': 'image/x-icon',
+	      '.png': 'image/png',
       '.jpg': 'image/jpeg',
       '.jpeg': 'image/jpeg',
       '.webp': 'image/webp',
@@ -106,10 +117,39 @@ config.server = {
       '.txt': 'text/plain; charset=utf-8',
     }
 
-    return (req, res, next) => {
-      try {
-        const url = typeof req.url === 'string' ? req.url : ''
-        const pathname = url.split('?')[0] || ''
+	    return (req, res, next) => {
+	      try {
+	        // Avoid noisy "Premature close" crashes/logs when the browser aborts requests
+	        // (common during reloads, HMR, and when static rendering spins up/shuts down).
+	        const swallowPrematureClose = (err) => {
+	          if (err && isPrematureCloseError(err)) return
+	          if (!err) return
+	          // eslint-disable-next-line no-console
+	          console.error('[Metro middleware] Stream error:', err)
+	        }
+
+	        // Ensure no unhandled 'error' events surface from req/res streams.
+	        req.on('error', swallowPrematureClose)
+	        res.on('error', swallowPrematureClose)
+
+	        let url = typeof req.url === 'string' ? req.url : ''
+	        let pathname = url.split('?')[0] || ''
+	        const search = url.includes('?') ? url.slice(url.indexOf('?')) : ''
+
+        // Metro/Expo asset URLs may include a content hash in the filename, e.g.
+        //   /assets/.../Feather.<hash>.ttf
+        // but the dev server can expose the on-disk asset as:
+        //   /assets/.../Feather.ttf
+        // Rewrite the request to keep dev stable and avoid 404s for icon fonts.
+        const hashedAssetMatch = pathname.match(
+          /^\/assets\/(.+)\.([0-9a-f]{32})\.(ttf|otf|woff2?|eot)$/i
+        )
+        if (hashedAssetMatch) {
+          const unhashedPath = `/assets/${hashedAssetMatch[1]}.${hashedAssetMatch[3]}`
+          pathname = unhashedPath
+          url = unhashedPath + search
+          req.url = url
+        }
 
         // CORS proxy for API requests
         if (pathname.startsWith('/api/')) {
@@ -123,8 +163,8 @@ config.server = {
           const parsedUrl = urlModule.parse(targetUrl);
           const protocol = parsedUrl.protocol === 'https:' ? https : http;
 
-          const proxyReq = protocol.request(
-            {
+	          const proxyReq = protocol.request(
+	            {
               hostname: parsedUrl.hostname,
               port: parsedUrl.port,
               path: parsedUrl.path,
@@ -133,32 +173,48 @@ config.server = {
                 ...req.headers,
                 host: parsedUrl.hostname,
               },
-            },
-            (proxyRes) => {
+	            },
+	            (proxyRes) => {
               // Add CORS headers
               res.setHeader('Access-Control-Allow-Origin', '*');
               res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
               res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-              // Copy status and headers from proxy response
-              res.statusCode = proxyRes.statusCode || 200;
-              Object.keys(proxyRes.headers).forEach((key) => {
-                const value = proxyRes.headers[key];
-                if (value && key.toLowerCase() !== 'transfer-encoding') {
-                  res.setHeader(key, value);
-                }
-              });
+	              // Copy status and headers from proxy response
+	              res.statusCode = proxyRes.statusCode || 200;
+	              Object.keys(proxyRes.headers).forEach((key) => {
+	                const value = proxyRes.headers[key];
+	                if (value && key.toLowerCase() !== 'transfer-encoding') {
+	                  res.setHeader(key, value);
+	                }
+	              });
 
-              // Pipe response
-              proxyRes.pipe(res);
-            }
-          );
+	              // If the client disconnects, stop proxying to avoid unhandled stream errors.
+	              res.on('close', () => {
+	                proxyReq.destroy()
+	                proxyRes.destroy()
+	              })
 
-          proxyReq.on('error', (err) => {
-            console.error('[Metro CORS Proxy] Error:', err.message);
-            res.statusCode = 502;
-            res.end('Bad Gateway');
-          });
+	              proxyRes.on('aborted', () => {
+	                proxyReq.destroy()
+	              })
+
+	              // Pipe response (handle premature close gracefully)
+	              pipeline(proxyRes, res, (err) => {
+	                if (err && !isPrematureCloseError(err)) {
+	                  console.error('[Metro CORS Proxy] Response pipeline error:', err)
+	                }
+	              })
+	            }
+		          );
+
+		          proxyReq.on('error', (err) => {
+		            if (isPrematureCloseError(err) || res.writableEnded || res.destroyed) return
+		            // eslint-disable-next-line no-console
+		            console.error('[Metro CORS Proxy] Error:', err)
+		            if (!res.headersSent) res.statusCode = 502
+		            res.end('Bad Gateway')
+		          })
 
           // Handle OPTIONS preflight
           if (req.method === 'OPTIONS') {
@@ -170,10 +226,14 @@ config.server = {
             return;
           }
 
-          // Pipe request body
-          req.pipe(proxyReq);
-          return;
-        }
+	          // Pipe request body
+	          pipeline(req, proxyReq, (err) => {
+	            if (err && !isPrematureCloseError(err)) {
+	              console.error('[Metro CORS Proxy] Request pipeline error:', err)
+	            }
+	          })
+	          return;
+	        }
 
         // Serve static files from public/
         const shouldServe =
@@ -186,21 +246,27 @@ config.server = {
           pathname.startsWith('/favicon-') ||
           pathname.startsWith('/apple-touch-icon')
 
-        if (shouldServe) {
-          const relative = pathname.replace(/^\/+/, '')
-          const filePath = path.resolve(publicRoot, relative)
-          const safeRoot = publicRoot.endsWith(path.sep) ? publicRoot : publicRoot + path.sep
+	        if (shouldServe) {
+	          const relative = pathname.replace(/^\/+/, '')
+	          const filePath = path.resolve(publicRoot, relative)
+	          const safeRoot = publicRoot.endsWith(path.sep) ? publicRoot : publicRoot + path.sep
 
-          if (filePath.startsWith(safeRoot) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-            const ext = path.extname(filePath).toLowerCase()
-            res.setHeader('Content-Type', mimeByExt[ext] || 'application/octet-stream')
-            fs.createReadStream(filePath).pipe(res)
-            return
-          }
-        }
-      } catch (err) {
-        console.error('[Metro middleware] Error:', err);
-      }
+	          if (filePath.startsWith(safeRoot) && fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+	            const ext = path.extname(filePath).toLowerCase()
+	            res.setHeader('Content-Type', mimeByExt[ext] || 'application/octet-stream')
+	            const stream = fs.createReadStream(filePath)
+	            res.on('close', () => stream.destroy())
+	            pipeline(stream, res, (err) => {
+	              if (err && !isPrematureCloseError(err)) {
+	                console.error('[Metro middleware] Static pipeline error:', err)
+	              }
+	            })
+	            return
+	          }
+	        }
+	      } catch (err) {
+	        console.error('[Metro middleware] Error:', err);
+	      }
 
       return baseMiddleware(req, res, next)
     }

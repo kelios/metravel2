@@ -5,6 +5,18 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 
 const isTestEnv = typeof process !== 'undefined' && process.env?.JEST_WORKER_ID !== undefined
 
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Lazy import timeout')), timeoutMs)
+      promise.then(resolve, reject)
+    })
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+}
+
 const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<T> => {
   try {
     return await fn()
@@ -19,7 +31,9 @@ const retry = async <T,>(fn: () => Promise<T>, tries = 2, delay = 400): Promise<
 export const withLazy = <T extends React.ComponentType<any>>(f: () => Promise<{ default: T }>) =>
   lazy(async () => {
     try {
-      return await retry(f, 2, 400)
+      // In dev/HMR or under slow networks, dynamic imports can hang indefinitely (pending).
+      // Ensure we eventually resolve to a safe fallback instead of keeping Suspense forever.
+      return await withTimeout(retry(f, 2, 400), 12_000)
     } catch {
       return {
         default: (() => (

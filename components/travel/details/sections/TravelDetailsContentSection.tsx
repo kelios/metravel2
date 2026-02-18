@@ -35,6 +35,13 @@ export const TravelDetailsContentSection: React.FC<{
   const styles = useTravelDetailsStyles()
   type InsightKey = 'recommendation' | 'plus' | 'minus'
 
+  const shouldRenderDescriptionSection = useMemo(() => {
+    const desc = typeof travel.description === 'string' ? travel.description.trim() : ''
+    // For drafts we still want to show the section wrapper so the page doesn't look "stuck".
+    const isDraft = (travel as any).publish === false || (travel as any).moderation === false
+    return Boolean(desc) || isDraft
+  }, [travel.description, (travel as any).publish, (travel as any).moderation])
+
   const hasRecommendation = Boolean(travel.recommendation?.trim())
   const hasPlus = Boolean(travel.plus?.trim())
   const hasMinus = Boolean(travel.minus?.trim())
@@ -111,7 +118,7 @@ export const TravelDetailsContentSection: React.FC<{
 
   return (
     <>
-      {travel.description && (
+      {shouldRenderDescriptionSection && (
         <Suspense fallback={<DescriptionFallback />}>
           <View
             ref={anchors.description}
@@ -139,7 +146,7 @@ export const TravelDetailsContentSection: React.FC<{
                   </Text>
                 </View>
 
-                <TravelDescription title={travel.name} htmlContent={travel.description} noBox />
+                <TravelDescription title={travel.name} htmlContent={travel.description || ''} noBox />
 
                 {/* P2-3: Кнопка «Назад к началу» удалена — глобальный ScrollToTopButton достаточен */}
               </View>

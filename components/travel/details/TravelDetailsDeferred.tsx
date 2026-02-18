@@ -13,11 +13,8 @@ import { withLazy } from './TravelDetailsLazy'
 import { rIC } from '@/utils/rIC'
 import { useTdTrace } from '@/hooks/useTdTrace'
 
-const TravelDetailsContentSection = withLazy(() =>
-  import('./sections/TravelDetailsContentSection').then((m) => ({
-    default: m.TravelDetailsContentSection,
-  }))
-)
+import { TravelDetailsContentSection } from './sections/TravelDetailsContentSection'
+
 const TravelDetailsMapSection = withLazy(() =>
   import('./sections/TravelDetailsMapSection').then((m) => ({
     default: m.TravelDetailsMapSection,
@@ -179,14 +176,12 @@ export const TravelDeferredSections: React.FC<{
 
   return (
     <>
-      <Suspense fallback={null}>
-        <TravelDetailsContentSection
-          travel={travel}
-          isMobile={isMobile}
-          anchors={anchors}
-          forceOpenKey={forceOpenKey}
-        />
-      </Suspense>
+      <TravelDetailsContentSection
+        travel={travel}
+        isMobile={isMobile}
+        anchors={anchors}
+        forceOpenKey={forceOpenKey}
+      />
 
       {/* P0-2: AuthorCard и ShareButtons после контента на mobile */}
       {isMobile && (

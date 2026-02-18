@@ -34,9 +34,10 @@ function tokenFromStorageState(): string {
       const tokenEntry = ls.find((x: any) => x?.name === 'secure_userToken');
       const encrypted = String(tokenEntry?.value ?? '').trim();
       if (!encrypted) continue;
-      const looksBase64 = /^[A-Za-z0-9+/]+=*$/.test(encrypted) && encrypted.length % 4 === 0;
+      const withPrefix = encrypted.startsWith('enc1:') ? encrypted.slice('enc1:'.length) : encrypted;
+      const looksBase64 = /^[A-Za-z0-9+/]+=*$/.test(withPrefix) && withPrefix.length % 4 === 0;
       if (looksBase64) {
-        const token = simpleDecrypt(encrypted, 'metravel_encryption_key_v1').trim();
+        const token = simpleDecrypt(withPrefix, 'metravel_encryption_key_v1').trim();
         if (token) return normalizeToken(token);
       }
       return normalizeToken(encrypted);

@@ -2,6 +2,7 @@ import React, {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useId,
   useImperativeHandle,
   useMemo,
@@ -36,6 +37,9 @@ export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
 
 const isTestEnv = process.env.NODE_ENV === 'test';
 const isWeb = Platform.OS === 'web';
+
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 // Inject CSS class for disabling scroll-snap during programmatic scrolling (web only)
 if (isWeb && typeof document !== 'undefined') {
@@ -177,11 +181,28 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
     if (!Number.isFinite(w) || w <= 0) return;
     if (Math.abs(containerWRef.current - w) > 4) {
       setContainerWidth(w);
+      // Keep scroll aligned to the current index when width changes (prevents partial slide on first paint).
+      const scrollNode = getScrollNode();
+      if (scrollNode && !isDraggingRef.current) {
+        const left = indexRef.current * w;
+        if (Math.abs((scrollNode.scrollLeft || 0) - left) > 1) {
+          const prevScrollBehavior = scrollNode.style.scrollBehavior;
+          scrollNode.style.scrollBehavior = 'auto';
+          scrollNode.classList.add('slider-snap-disabled');
+          void scrollNode.offsetHeight;
+          scrollNode.scrollLeft = left;
+          requestAnimationFrame(() => {
+            scrollNode.scrollLeft = left;
+            scrollNode.classList.remove('slider-snap-disabled');
+            scrollNode.style.scrollBehavior = prevScrollBehavior;
+          });
+        }
+      }
     }
-  }, [getWrapperNode, containerWRef, setContainerWidth]);
+  }, [getScrollNode, getWrapperNode, containerWRef, indexRef, setContainerWidth]);
 
   // ResizeObserver for web
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (Platform.OS !== 'web') return;
     syncContainerWidthFromDom();
 
@@ -767,5 +788,3 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
 const UnifiedSlider = forwardRef(UnifiedSliderComponent);
 
 export default memo(UnifiedSlider);
-
-

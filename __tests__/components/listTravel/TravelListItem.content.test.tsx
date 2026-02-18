@@ -103,6 +103,17 @@ describe('TravelListItem content & metadata', () => {
     expect(getByTestId('image-stub')).toBeTruthy();
   });
 
+  it('renders the travel title overlay even when image URL is missing (draft-like)', () => {
+    const { getByText } = renderItem({ travel_image_thumb_url: '' } as any);
+    const titleElement = getByText('Test travel');
+    expect(titleElement).toBeTruthy();
+    expect(titleElement.props.style).toEqual(
+      expect.objectContaining({
+        color: '#ffffff',
+      }),
+    );
+  });
+
   it('renders image stub when image URL is from watermark domain', () => {
     const { getByTestId } = renderItem({
       travel_image_thumb_url: 'https://shutterstock.com/image-photo/test.jpg',

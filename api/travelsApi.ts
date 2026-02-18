@@ -102,6 +102,11 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     const t = asRecord(input);
     const out: Record<string, unknown> = { ...t };
 
+    const stripDraftPlaceholder = (value: unknown): unknown => {
+        if (typeof value !== 'string') return value;
+        return value.trim() === '__draft_placeholder__' ? '' : value;
+    };
+
     if (typeof t.id !== 'undefined') {
         out.id = Number(t.id) || 0;
     }
@@ -146,6 +151,14 @@ export const normalizeTravelItem = (input: unknown): Travel => {
     if (typeof t.countUnicIpView !== 'undefined' || typeof t.count_unic_ip_view !== 'undefined') {
         out.countUnicIpView = String(t.countUnicIpView ?? t.count_unic_ip_view ?? '0');
     }
+
+    // Backend can return "__draft_placeholder__" for empty draft fields.
+    // Treat it as empty so UI doesn't render broken sections (e.g. Video tab with no YouTube id).
+    out.description = stripDraftPlaceholder(out.description) as any;
+    out.youtube_link = stripDraftPlaceholder(out.youtube_link) as any;
+    out.recommendation = stripDraftPlaceholder(out.recommendation) as any;
+    out.plus = stripDraftPlaceholder(out.plus) as any;
+    out.minus = stripDraftPlaceholder(out.minus) as any;
 
     // Нормализация полей рейтинга
     if (typeof t.rating !== 'undefined') {
@@ -444,6 +457,12 @@ export const fetchTravels = async (
         const whereObject: Record<string, unknown> = {};
 
         const isUserScoped = urlParams?.user_id !== undefined && urlParams?.user_id !== null;
+        // When user_id is provided without explicit publish/moderation filters, we assume
+        // the caller wants to include drafts (e.g. "Мои путешествия" / export).
+        const allowDrafts =
+            isUserScoped &&
+            urlParams?.publish === undefined &&
+            urlParams?.moderation === undefined;
 
         if (isUserScoped) {
             if (urlParams?.moderation !== undefined) {
@@ -507,11 +526,18 @@ export const fetchTravels = async (
 
         const urlTravel = `${GET_TRAVELS}?${params}`;
 
+        const authToken = allowDrafts ? await getSecureItem(TOKEN_KEY) : null;
+        const canIncludeDrafts = allowDrafts && !!authToken;
+        const baseInit: RequestInit = {
+            ...(authToken ? { headers: { Authorization: `Token ${authToken}` } } : {}),
+            ...(options?.signal ? { signal: options.signal } : {}),
+        };
+
         const res = options?.signal
-            ? await fetchWithTimeout(urlTravel, { signal: options.signal }, LONG_TIMEOUT)
+            ? await fetchWithTimeout(urlTravel, baseInit, LONG_TIMEOUT)
             : await retry(
                 async () => {
-                    return await fetchWithTimeout(urlTravel, {}, LONG_TIMEOUT);
+                    return await fetchWithTimeout(urlTravel, baseInit, LONG_TIMEOUT);
                 },
                 {
                     maxAttempts: 2,
@@ -555,8 +581,9 @@ export const fetchTravels = async (
             return { data: [], total: coerceTotal((result as Record<string, unknown>).total, 0) };
         }
 
+        const normalized = items.map(normalizeTravelItem);
         return {
-            data: filterPublished(items.map(normalizeTravelItem)),
+            data: canIncludeDrafts ? normalized : filterPublished(normalized),
             total: coerceTotal(total, 0),
         };
     } catch (e) {
@@ -779,7 +806,9 @@ export const fetchMyTravels = async (params: {
         }).toString();
 
         const url = `${GET_TRAVELS}?${query}`;
-        const res = await fetchWithTimeout(url, {}, LONG_TIMEOUT);
+        const token = params.includeDrafts ? await getSecureItem(TOKEN_KEY) : null;
+        const init: RequestInit = token ? { headers: { Authorization: `Token ${token}` } } : {};
+        const res = await fetchWithTimeout(url, init, LONG_TIMEOUT);
         if (!res.ok) {
             const errorText = await res.text().catch(() => 'Unknown error');
             throw new Error(errorText);

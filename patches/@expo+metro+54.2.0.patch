@@ -1,0 +1,13 @@
+diff --git a/node_modules/@expo/metro/package.json b/node_modules/@expo/metro/package.json
+index 7a1b7c6..b012faa 100644
+--- a/node_modules/@expo/metro/package.json
++++ b/node_modules/@expo/metro/package.json
+@@ -36,6 +36,8 @@
+     "./*": "./*.js",
+     "./*.js": "./*.js",
+     "./metro": "./metro/index.js",
++    "./metro/*.js": "./metro/*.js",
++    "./metro/*": "./metro/*.js",
+     "./metro-babel-transformer": "./metro-babel-transformer/index.js",
+     "./metro-cache": "./metro-cache/index.js",
+     "./metro-cache-key": "./metro-cache-key/index.js",

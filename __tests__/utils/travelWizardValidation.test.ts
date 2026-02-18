@@ -69,6 +69,18 @@ describe('travelWizardValidation', () => {
       expect(result.minLength).toBe(3);
       expect(result.maxLength).toBe(10);
     });
+
+    it('should count plain text length for html fields', () => {
+      const rules = { minLength: 3, maxLength: 5, label: 'HTML', content: 'html' as const };
+
+      const resultOk = validateField('description', '<p>Hello</p>', rules);
+      expect(resultOk.isValid).toBe(true);
+      expect(resultOk.characterCount).toBe(5);
+
+      const resultTooShort = validateField('description', '<p>Hi</p>', rules);
+      expect(resultTooShort.isValid).toBe(false);
+      expect(resultTooShort.error).toContain('Минимум 3 символов');
+    });
   });
 
   describe('validateStep', () => {
@@ -90,6 +102,31 @@ describe('travelWizardValidation', () => {
       const resultValid = validateStep(1, formDataValid as TravelFormData);
       expect(resultValid.isValid).toBe(true);
       expect(resultValid.errors.length).toBe(0);
+    });
+
+    it('should treat html-only description as empty on step 1', () => {
+      const formData: Partial<TravelFormData> = {
+        name: 'Valid Travel Name',
+        description: '<p><br></p>',
+      };
+
+      const result = validateStep(1, formData as TravelFormData);
+      expect(result.isValid).toBe(false);
+      expect(result.errors.some(e => e.field === 'description')).toBe(true);
+    });
+
+    it('should not fail maxLength for html markup when plain text fits', () => {
+      const plain = 'A'.repeat(1900);
+      const html = `<p>${plain.split('').map(ch => `<span>${ch}</span>`).join('')}</p>`;
+
+      const formData: Partial<TravelFormData> = {
+        name: 'Valid Travel Name',
+        description: html,
+      };
+
+      const result = validateStep(1, formData as TravelFormData);
+      expect(result.isValid).toBe(true);
+      expect(result.errors.length).toBe(0);
     });
 
     it('should validate step 2 (route)', () => {

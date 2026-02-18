@@ -10,7 +10,7 @@ function simpleEncrypt(text: string, key: string): string {
   for (let i = 0; i < text.length; i++) {
     result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
   }
-  return Buffer.from(result, 'binary').toString('base64');
+  return `enc1:${Buffer.from(result, 'binary').toString('base64')}`;
 }
 
 function ensureEnv(name: string): string | null {

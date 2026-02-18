@@ -526,7 +526,8 @@ const WebEditor: React.FC<ArticleEditorProps & { editorRef?: any }> = ({
       .ql-editor{max-width:100%;overflow-wrap:anywhere}
       .ql-container.ql-snow{display:flex;flex:1;flex-direction:column;height:100%;min-height:0;border:none}
       .ql-container.ql-snow .ql-editor{flex:1;min-height:0;overflow-y:auto}
-      .ql-tooltip{z-index:9999}
+	      /* We use our own link/anchor modals; hide Quill's built-in tooltip to avoid stray rectangles on web. */
+	      .ql-tooltip{display:none !important}
       .ql-editor img{max-width:100%;height:auto;max-height:60vh;display:block;margin:12px auto;object-fit:contain}
     `;
         win.document.head.appendChild(style);

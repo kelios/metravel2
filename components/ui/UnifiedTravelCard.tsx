@@ -268,6 +268,8 @@ function UnifiedTravelCard({
         })
       : { onPress };
 
+  const showHeroTitle = heroTitleOverlay && typeof title === 'string' && title.trim().length > 0;
+
   return (
     <ContainerComponent
       {...containerProps}
@@ -338,7 +340,7 @@ function UnifiedTravelCard({
             )
           ) : null}
 
-          {heroTitleOverlay && optimizedImageUrl ? (
+          {showHeroTitle ? (
             <View style={StyleSheet.absoluteFillObject}>
               <View style={styles.imageVignetteOverlay} />
               <View style={styles.imageTitleOverlay}>

@@ -200,9 +200,9 @@ SEO 100, A11y 100 (home/search), TTFB <260ms, CLS 0.006, TBT 10ms (desktop), HST
 
 #### 3. Feather.ttf font preload (P1 — Performance)
 - **File:** `app/+html.tsx`
-- **Change:** Added `<link rel="preload" href="/assets/node_modules/@expo/vector-icons/.../Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf" as="font" type="font/ttf" crossOrigin="anonymous" />`
-- **Reason:** Font was discovered late via expo-font JS injection, wasting 90ms FCP. Hash is stable (content-addressed). Font path confirmed 200 + immutable cache on production.
-- **Impact:** ~90ms FCP improvement.
+- **Change:** Removed the hard-coded Metro dev asset URL preload for `Feather.ttf`.
+- **Reason:** Metro-generated `/assets/node_modules/.../Feather.<hash>.ttf` URLs are not stable across environments and can 404 in development (console noise + failed preload). `expo-font` still loads icon fonts at runtime.
+- **Impact:** Eliminates the 404 preload request in dev; production can reintroduce a safer preload once the final exported font URL is derived programmatically.
 
 #### 4. Resize pdf.webp (P2 — Performance)
 - **File:** `assets/images/pdf.webp`

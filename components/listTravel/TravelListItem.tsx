@@ -91,6 +91,11 @@ function TravelListItem({
         countUnicIpView = 0
     } = travel;
 
+    const title = useMemo(() => {
+        const v = typeof name === 'string' ? name.trim() : '';
+        return v || 'Без названия';
+    }, [name]);
+
     const authorName = useMemo(() => {
         // 1. Пробуем user объект (самый надежный источник)
         const userObj = travel.user;
@@ -154,11 +159,24 @@ function TravelListItem({
         return `/travels/${travelKey}`;
     }, [travelKey]);
 
+    const isDraft = useMemo(() => {
+        const rawPublish = (travel as any)?.publish;
+        const rawModeration = (travel as any)?.moderation;
+        const isTruthyFlag = (v: unknown) =>
+            v === true || v === 1 || v === '1';
+        const publishOk = rawPublish === undefined || rawPublish === null || isTruthyFlag(rawPublish);
+        const moderationOk = rawModeration === undefined || rawModeration === null || isTruthyFlag(rawModeration);
+        // Treat missing flags as "not explicitly draft" for older payloads.
+        return !(publishOk && moderationOk);
+    }, [travel]);
+
     const navigationUrl = useMemo(() => {
         if (!travelUrl) return '';
         if (!_isMetravel) return travelUrl;
+        // Drafts are not publicly viewable at /travels/:slug, so open the editor.
+        if (isDraft && id != null) return `/travel/${id}`;
         return `${travelUrl}?returnTo=${encodeURIComponent('/metravel')}`;
-    }, [_isMetravel, travelUrl]);
+    }, [_isMetravel, travelUrl, isDraft, id]);
 
     const cardTestId = useMemo(() => {
         const suffix = travelKey || 'unknown';
@@ -318,7 +336,8 @@ function TravelListItem({
             const travelId = (typeof slug === 'string' && slug.trim()) ? slug.trim() : id;
             const isId = !isNaN(Number(travelId));
             
-            if (ENABLE_TRAVEL_DETAILS_PREFETCH && Platform.OS === 'web') {
+            const shouldPrefetchDetails = typeof navigationUrl === 'string' && navigationUrl.startsWith('/travels/');
+            if (shouldPrefetchDetails && ENABLE_TRAVEL_DETAILS_PREFETCH && Platform.OS === 'web') {
                 // Проверяем наличие в кеше перед prefetch
                 const cachedData = queryClient.getQueryData(queryKeys.travel(travelId));
                 if (!cachedData) {
@@ -367,7 +386,7 @@ function TravelListItem({
     // ✅ FIX: На web всегда используем View, чтобы избежать вложенных button ↔ button
     const InlineWebButton = isWeb ? View : Pressable;
     // ✅ B5.1: Улучшенные accessibility атрибуты
-    const a11yLabelBase = `Путешествие: ${name}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}`;
+    const a11yLabelBase = `Путешествие: ${title}${countries.length > 0 ? `. Страны: ${countries.join(', ')}` : ''}`;
     const a11yLabelWithViews = views > 0 ? `${a11yLabelBase}. Просмотров: ${viewsFormatted}` : a11yLabelBase;
 
     const cardWrapperProps =
@@ -440,7 +459,7 @@ const rightTopSlot = (
     <OptimizedFavoriteButton
       id={id}
       type="travel"
-      title={name}
+      title={title}
       imageUrl={travel_image_thumb_url}
       url={travelUrl}
       country={countries[0]}
@@ -580,7 +599,7 @@ const contentSlotWithoutTitle = hasContentInfo ? (
 
 const unifiedCard = (
   <UnifiedTravelCard
-    title={name}
+    title={title}
     imageUrl={imgUrl && !isLikelyWatermarked(imgUrl) ? imgUrl : null}
     onPress={handlePress}
     mediaFit="contain"

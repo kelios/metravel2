@@ -264,7 +264,17 @@ export const QualityIndicator: React.FC<QualityIndicatorProps> = ({ level, score
 interface ValidationSummaryProps {
   errorCount: number;
   warningCount: number;
-  onErrorClick?: () => void;
+  errorMessages?: string[];
+  warningMessages?: string[];
+}
+
+function pluralRu(count: number, one: string, few: string, many: string): string {
+  const n = Math.abs(count) % 100;
+  const n1 = n % 10;
+  if (n > 10 && n < 20) return many;
+  if (n1 > 1 && n1 < 5) return few;
+  if (n1 === 1) return one;
+  return many;
 }
 
 /**
@@ -273,20 +283,26 @@ interface ValidationSummaryProps {
 export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
   errorCount,
   warningCount,
+  errorMessages,
+  warningMessages,
 }) => {
   const colors = useThemedColors();
 
   const summaryStyles = useMemo(() => StyleSheet.create({
     summaryContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
+      flexDirection: 'column',
+      alignItems: 'stretch',
       paddingHorizontal: 12,
       paddingVertical: 10,
       borderRadius: 8,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
     successSummary: {
       backgroundColor: colors.successSoft,
@@ -312,33 +328,82 @@ export const ValidationSummary: React.FC<ValidationSummaryProps> = ({
       color: colors.warning,
       fontWeight: '600',
     },
+    messagesWrapper: {
+      marginTop: 8,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      gap: 6,
+    },
+    messageLine: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+    },
+    messageText: {
+      flex: 1,
+      fontSize: DESIGN_TOKENS.typography.sizes.xs,
+      lineHeight: 18,
+      color: colors.textMuted,
+    },
+    messageTextError: {
+      color: colors.dangerDark,
+    },
+    messageTextWarning: {
+      color: colors.warningDark,
+    },
   }), [colors]);
 
   if (errorCount === 0 && warningCount === 0) {
     return (
       <View style={[summaryStyles.summaryContainer, summaryStyles.successSummary]}>
-        <Feather name="check-circle" size={16} color={colors.success} />
-        <Text style={summaryStyles.successSummaryText}>Все поля заполнены корректно</Text>
+        <View style={summaryStyles.summaryRow}>
+          <Feather name="check-circle" size={16} color={colors.success} />
+          <Text style={summaryStyles.successSummaryText}>Все поля заполнены корректно</Text>
+        </View>
       </View>
     );
   }
 
+  const normalizedErrorMessages = (errorMessages ?? []).filter(Boolean);
+  const normalizedWarningMessages = (warningMessages ?? []).filter(Boolean);
+  const hasAnyMessages = normalizedErrorMessages.length > 0 || normalizedWarningMessages.length > 0;
+
   return (
     <View style={summaryStyles.summaryContainer}>
-      {errorCount > 0 && (
-        <View style={summaryStyles.summaryItem}>
-          <Feather name="alert-circle" size={16} color={colors.danger} />
-          <Text style={summaryStyles.errorSummaryText}>
-            {errorCount} {errorCount === 1 ? 'ошибка' : 'ошибки'}
-          </Text>
-        </View>
-      )}
-      {warningCount > 0 && (
-        <View style={summaryStyles.summaryItem}>
-          <Feather name="info" size={16} color={colors.warning} />
-          <Text style={summaryStyles.warningSummaryText}>
-            {warningCount} {warningCount === 1 ? 'предупреждение' : 'предупреждения'}
-          </Text>
+      <View style={summaryStyles.summaryRow}>
+        {errorCount > 0 && (
+          <View style={summaryStyles.summaryItem}>
+            <Feather name="alert-circle" size={16} color={colors.danger} />
+            <Text style={summaryStyles.errorSummaryText}>
+              {errorCount} {pluralRu(errorCount, 'ошибка', 'ошибки', 'ошибок')}
+            </Text>
+          </View>
+        )}
+        {warningCount > 0 && (
+          <View style={summaryStyles.summaryItem}>
+            <Feather name="info" size={16} color={colors.warning} />
+            <Text style={summaryStyles.warningSummaryText}>
+              {warningCount} {pluralRu(warningCount, 'предупреждение', 'предупреждения', 'предупреждений')}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {hasAnyMessages && (
+        <View style={summaryStyles.messagesWrapper}>
+          {normalizedErrorMessages.slice(0, 5).map((message, idx) => (
+            <View key={`err-${idx}`} style={summaryStyles.messageLine}>
+              <Feather name="alert-circle" size={14} color={colors.danger} style={{ marginTop: 2 }} />
+              <Text style={[summaryStyles.messageText, summaryStyles.messageTextError]}>{message}</Text>
+            </View>
+          ))}
+          {normalizedWarningMessages.slice(0, 5).map((message, idx) => (
+            <View key={`warn-${idx}`} style={summaryStyles.messageLine}>
+              <Feather name="info" size={14} color={colors.warning} style={{ marginTop: 2 }} />
+              <Text style={[summaryStyles.messageText, summaryStyles.messageTextWarning]}>{message}</Text>
+            </View>
+          ))}
         </View>
       )}
     </View>

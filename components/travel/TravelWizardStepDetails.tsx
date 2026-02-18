@@ -162,6 +162,8 @@ const TravelWizardStepDetails: React.FC<TravelWizardStepDetailsProps> = ({
                         <ValidationSummary
                             errorCount={validation.errors.length}
                             warningCount={validation.warnings.length}
+                            errorMessages={validation.errors.map(e => e.message)}
+                            warningMessages={validation.warnings.map(w => w.message)}
                         />
                     </View>
                 )}

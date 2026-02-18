@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useContext } from 'react';
 import { useRouter } from 'expo-router';
+import { QueryClientContext } from '@tanstack/react-query';
 import { fetchTravel } from '@/api/travelsApi';
 import { saveFormData } from '@/api/misc';
 import { TravelFormData, Travel, MarkerData } from '@/types/types';
@@ -45,6 +46,7 @@ interface UseTravelFormDataOptions {
 export function useTravelFormData(options: UseTravelFormDataOptions) {
   const { travelId, isNew, userId, isSuperAdmin, isAuthenticated, authReady, onAuthRequired } = options;
   const router = useRouter();
+  const queryClient = useContext(QueryClientContext);
   const stableTravelId = useMemo(() => {
     if (isNew) return null;
     return travelId ? normalizeTravelId(travelId) : null;
@@ -72,6 +74,7 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
   const mountedRef = useRef(true); // ✅ FIX: Защита от memory leak
   const initialLoadKeyRef = useRef<string | null>(null);
   const pendingBaselineRef = useRef<TravelFormData | null>(null);
+  const didInvalidateAfterCreateRef = useRef(false);
 
   const formState = useFormState<TravelFormData>(initialFormData, {
     debounce: 5000,
@@ -169,6 +172,8 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       const normalizedSavedData = normalizeDraftPlaceholders(savedData);
       const currentDataSnapshot = formState.data as TravelFormData;
+      const hadId = normalizeTravelId((currentDataSnapshot as any)?.id) != null;
+      const hasId = normalizeTravelId((normalizedSavedData as any)?.id) != null;
 
       // If backend returns placeholders/empty strings for rich text fields, don't wipe user input.
       const kf = (key: keyof TravelFormData, mode: Parameters<typeof keepCurrentField>[3]) =>
@@ -224,8 +229,15 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
 
       // ✅ FIX: Обновляем версию данных при получении с сервера
       setDataVersion(prev => prev + 1);
+
+      // When a new travel is created and receives an id, invalidate "travels" lists
+      // so "Мои путешествия" can show the new draft without a hard refresh.
+      if (!hadId && hasId && !didInvalidateAfterCreateRef.current) {
+        didInvalidateAfterCreateRef.current = true;
+        queryClient?.invalidateQueries({ queryKey: ['travels'] });
+      }
     },
-    [formState]
+    [formState, queryClient]
   );
 
   const handleSaveSuccess = useCallback(
@@ -344,7 +356,17 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         if ((error as Error)?.message === 'Request aborted') {
           return;
         }
-        showToast('Ошибка сохранения', 'error');
+        const errAny: any = error;
+        const details =
+          errAny instanceof ApiError
+            ? errAny.message
+            : (typeof errAny?.message === 'string' ? errAny.message : null);
+
+        void showToastMessage({
+          type: 'error',
+          text1: 'Ошибка сохранения',
+          text2: details && details !== 'Save failed' ? details : 'Попробуйте ещё раз',
+        });
         console.error('Manual save error:', error);
         return;
       } finally {

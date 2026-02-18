@@ -41,6 +41,12 @@ interface FieldRule {
   maxLength?: number;
   minItems?: number;
   pattern?: RegExp;
+  /**
+   * How to count length for string fields.
+   * - 'plain': use raw string length
+   * - 'html': strip tags/entities and count visible text length
+   */
+  content?: 'plain' | 'html';
   label: string;
 }
 
@@ -66,6 +72,7 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       description: {
         minLength: 50,
         maxLength: 2000,
+        content: 'html',
         label: 'Описание',
       },
     },
@@ -109,14 +116,17 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
     fields: {
       plus: {
         maxLength: 1000,
+        content: 'html',
         label: 'Плюсы путешествия',
       },
       minus: {
         maxLength: 1000,
+        content: 'html',
         label: 'Минусы путешествия',
       },
       recommendation: {
         maxLength: 2000,
+        content: 'html',
         label: 'Рекомендации',
       },
       budget: {
@@ -159,6 +169,7 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
       description: {
         minLength: 50,
         maxLength: 2000,
+        content: 'html',
         label: 'Описание',
       },
       coordsMeTravel: {
@@ -177,6 +188,32 @@ export const STEP_VALIDATION_RULES: Record<number, StepRule> = {
   },
 };
 
+function htmlToPlainText(value: string): string {
+  return String(value)
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\/\s*(p|div|li|h[1-6])\s*>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/[ \t\r\n]+/g, ' ')
+    .trim();
+}
+
+function getStringLengthForRules(value: string, rules: FieldRule | undefined): number {
+  if (rules?.content === 'html') return htmlToPlainText(value).length;
+  return value.length;
+}
+
+function isEmptyForRules(value: unknown, rules: FieldRule | undefined): boolean {
+  if (value === null || value === undefined) return true;
+  if (Array.isArray(value)) return value.length === 0;
+  if (typeof value === 'string') {
+    if (value === '') return true;
+    if (rules?.content === 'html') return htmlToPlainText(value).length === 0;
+    return value.trim().length === 0;
+  }
+  return false;
+}
+
 /**
  * Валидация конкретного поля
  */
@@ -194,15 +231,11 @@ export function validateField(
   };
 
   // Проверка на пустое значение
-  const isEmpty =
-    value === null ||
-    value === undefined ||
-    value === '' ||
-    (Array.isArray(value) && value.length === 0);
+  const isEmpty = isEmptyForRules(value, rules);
 
   // Минимальная длина
   if (rules.minLength !== undefined) {
-    const length = typeof value === 'string' ? value.length : 0;
+    const length = typeof value === 'string' ? getStringLengthForRules(value, rules) : 0;
     result.characterCount = length;
     result.minLength = rules.minLength;
     result.maxLength = rules.maxLength;
@@ -215,7 +248,7 @@ export function validateField(
 
   // Максимальная длина
   if (rules.maxLength !== undefined) {
-    const length = typeof value === 'string' ? value.length : 0;
+    const length = typeof value === 'string' ? getStringLengthForRules(value, rules) : 0;
     result.characterCount = length;
     result.maxLength = rules.maxLength;
 
@@ -266,11 +299,7 @@ export function validateStep(
     for (const fieldName of rules.required) {
       const value = (formData as unknown as UnknownRecord)[fieldName];
       const fieldRules = rules.fields?.[fieldName];
-      const isEmpty =
-        value === null ||
-        value === undefined ||
-        value === '' ||
-        (Array.isArray(value) && value.length === 0);
+      const isEmpty = isEmptyForRules(value, fieldRules);
 
       if (isEmpty) {
         errors.push({
@@ -299,11 +328,7 @@ export function validateStep(
     for (const fieldName of rules.recommended) {
       const value = (formData as unknown as UnknownRecord)[fieldName];
       const fieldRules = rules.fields?.[fieldName];
-      const isEmpty =
-        value === null ||
-        value === undefined ||
-        value === '' ||
-        (Array.isArray(value) && value.length === 0);
+      const isEmpty = isEmptyForRules(value, fieldRules);
 
       if (isEmpty) {
         warnings.push({

@@ -129,8 +129,20 @@ const RightColumn: React.FC<RightColumnProps> = memo(
 
     const cardsWrapperStyle = useMemo<StyleProp<ViewStyle>>(() => {
       const resetPadding = {
+        flex: 1,
+        minHeight: 0,
         paddingHorizontal: 0,
         paddingTop: Platform.OS === 'web' ? cardSpacing + 8 : 12,
+        ...(Platform.OS === 'web'
+          ? ({
+              // Important: make ScrollView the only scroll container on web, otherwise onScroll won't fire
+              // and infinite scroll won't fetch next pages.
+              overflow: 'hidden',
+              overflowY: 'hidden',
+              overflowX: 'hidden',
+              scrollbarGutter: 'stable',
+            } as any)
+          : null),
         ...(isWebMobile
           ? ({
               minHeight: STABLE_PLACEHOLDER_HEIGHT,
@@ -466,6 +478,7 @@ const RightColumn: React.FC<RightColumnProps> = memo(
                 ref={listRef as any}
                 onScroll={webScrollHandler}
                 scrollEventThrottle={32}
+                style={{ flex: 1, minHeight: 0 }}
                 contentContainerStyle={webContentContainerStyle}
               >
                 {ListHeader}

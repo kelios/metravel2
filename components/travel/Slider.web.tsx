@@ -14,6 +14,7 @@
 import React, {
   memo,
   useCallback,
+  useLayoutEffect,
   useEffect,
   useId,
   useImperativeHandle,
@@ -42,6 +43,9 @@ import ImageCardMedia, { prefetchImage } from '@/components/ui/ImageCardMedia';
 
 // Re-export types for consumers that import from '@/components/travel/Slider.web'
 export type { SliderImage, SliderProps, SliderRef } from './sliderParts/types';
+
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 // Inject CSS classes for slider functionality and hover effects
 if (typeof document !== 'undefined') {
@@ -413,6 +417,30 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     }
   }, [sliderInstanceId]);
 
+  const snapScrollToIndex = useCallback(
+    (idx: number, widthOverride?: number) => {
+      const node = scrollNodeRef.current;
+      if (!node) return;
+      if (isDraggingRef.current) return;
+      const w = widthOverride ?? containerWRef.current ?? containerW;
+      if (!Number.isFinite(w) || w <= 0) return;
+      const left = idx * w;
+      if (Math.abs((node.scrollLeft || 0) - left) < 1) return;
+
+      const prevScrollBehavior = node.style.scrollBehavior;
+      node.style.scrollBehavior = 'auto';
+      node.classList.add('slider-snap-disabled');
+      void node.offsetHeight;
+      node.scrollLeft = left;
+      requestAnimationFrame(() => {
+        node.scrollLeft = left;
+        node.classList.remove('slider-snap-disabled');
+        node.style.scrollBehavior = prevScrollBehavior;
+      });
+    },
+    [containerW, containerWRef],
+  );
+
   // Sync container width from DOM
   const syncContainerWidthFromDom = useCallback(() => {
     resolveNodes();
@@ -421,11 +449,14 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     if (!Number.isFinite(w) || w <= 0) return;
     if (Math.abs(containerWRef.current - w) > 4) {
       setContainerWidth(w);
+      // Keep the scroll position aligned to the current index when width changes to avoid
+      // showing a partial next/previous slide on first load.
+      snapScrollToIndex(indexRef.current, w);
     }
-  }, [resolveNodes, setContainerWidth]);
+  }, [resolveNodes, setContainerWidth, snapScrollToIndex]);
 
   // ResizeObserver
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     syncContainerWidthFromDom();
 
     const node = wrapperNodeRef.current;
@@ -515,8 +546,10 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     (e: LayoutChangeEvent) => {
       const w = e.nativeEvent.layout.width;
       setContainerWidth(w);
+      resolveNodes();
+      snapScrollToIndex(indexRef.current, w);
     },
-    [setContainerWidth]
+    [setContainerWidth, resolveNodes, snapScrollToIndex]
   );
 
   // Web scroll handler

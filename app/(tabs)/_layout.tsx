@@ -1,11 +1,12 @@
 // TabLayout.tsx — кастомный header + полный офф таббара
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { Platform, View, Animated } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, usePathname } from 'expo-router';
 const CustomHeaderLazy = React.lazy(() => import('@/components/layout/CustomHeader'));
 const ScrollToTopButtonLazy = React.lazy(() => import('@/components/ui/ScrollToTopButton'));
 
 const GlobalScrollToTop = React.memo(function GlobalScrollToTop() {
+    const pathname = usePathname();
     const scrollY = useRef(new Animated.Value(0)).current;
     const [mounted, setMounted] = useState(false);
 
@@ -17,7 +18,10 @@ const GlobalScrollToTop = React.memo(function GlobalScrollToTop() {
         return () => window.removeEventListener('scroll', handler);
     }, [scrollY]);
 
-    if (Platform.OS !== 'web' || !mounted) return null;
+    const isTravelUpsert =
+      pathname === '/travel/new' || (typeof pathname === 'string' && /^\/travel\/[^/]+$/.test(pathname));
+
+    if (Platform.OS !== 'web' || !mounted || isTravelUpsert) return null;
 
     return (
         <React.Suspense fallback={null}>

@@ -1630,11 +1630,6 @@
   dependencies:
     "@isaacs/balanced-match" "^4.0.1"
 
-"@isaacs/cliui@^9.0.0":
-  version "9.0.0"
-  resolved "https://registry.yarnpkg.com/@isaacs/cliui/-/cliui-9.0.0.tgz#4d0a3f127058043bf2e7ee169eaf30ed901302f3"
-  integrity sha512-AokJm4tuBHillT+FpMtxQ60n8ObyXBatq7jD2/JA9dxbDDokKQm8KMht5ibGzLVU9IJDIKK4TPKgMHEYMn3lMg==
-
 "@isaacs/fs-minipass@^4.0.0":
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/@isaacs/fs-minipass/-/fs-minipass-4.0.1.tgz#2d59ae3ab4b38fb4270bfa23d30f8e2e86c7fe32"
@@ -3476,11 +3471,9 @@ balanced-match@^1.0.0:
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
 
 balanced-match@^4.0.2:
-  version "4.0.2"
-  resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-4.0.2.tgz#241591ea634702bef9c482696f2469406e16d233"
-  integrity sha512-x0K50QvKQ97fdEz2kPehIerj+YTeptKF9hyYkKf6egnwmMWAkADiO0QCzSp0R5xN8FTZgYaBfSaue46Ej62nMg==
-  dependencies:
-    jackspeak "^4.2.3"
+  version "4.0.3"
+  resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-4.0.3.tgz#6337a2f23e0604a30481423432f99eac603599f9"
+  integrity sha512-1pHv8LX9CpKut1Zp4EXey7Z8OfH11ONNH6Dhi2WDUt31VVZFXZzKwXcysBgqSumFCmR+0dqjMK5v5JiFHzi0+g==
 
 base64-arraybuffer@^1.0.2:
   version "1.0.2"
@@ -6071,13 +6064,6 @@ iterator.prototype@^1.1.5:
     get-proto "^1.0.0"
     has-symbols "^1.1.0"
     set-function-name "^2.0.2"
-
-jackspeak@^4.2.3:
-  version "4.2.3"
-  resolved "https://registry.yarnpkg.com/jackspeak/-/jackspeak-4.2.3.tgz#27ef80f33b93412037c3bea4f8eddf80e1931483"
-  integrity sha512-ykkVRwrYvFm1nb2AJfKKYPr0emF6IiXDYUaFx4Zn9ZuIH7MrzEZ3sD5RlqGXNRpHtvUHJyOnCEFxOlNDtGo7wg==
-  dependencies:
-    "@isaacs/cliui" "^9.0.0"
 
 jay-peg@^1.1.1:
   version "1.1.1"

@@ -64,13 +64,17 @@ const EMPTY_FILTERS: Filters = {
 
 const slugifySafe = (value?: string): string => {
   if (!value) return '';
-  return value
+  const out = value
     .normalize('NFKD')
     .replace(/[^\w\s-]+/g, '')
     .trim()
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
+    // Avoid edge cases like "-" when the original string is mostly non-\w chars (e.g., Cyrillic + " - ").
+    .replace(/^-+/, '')
+    .replace(/-+$/, '')
     .toLowerCase();
+  return out;
 };
 
 const makeUniqueSlug = (value?: string): string => {

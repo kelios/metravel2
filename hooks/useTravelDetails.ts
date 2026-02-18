@@ -84,10 +84,20 @@ export function useTravelDetails(): UseTravelDetailsReturn {
   const slug = Array.isArray(param) ? param[0] : (param ?? '');
   const idNum = Number(slug);
   const isId = Number.isFinite(idNum) && idNum > 0;
-  const normalizedSlug = String(slug ?? '')
+  const normalizedSlugRaw = String(slug ?? '')
     .trim()
     .split('#')[0]
     .split('%23')[0];
+  const normalizedSlug = (() => {
+    // expo-router may pass URL-encoded path segments on web (e.g. "%D0%BC...").
+    // fetchTravelBySlug() encodes the slug again, so we decode once here to avoid double-encoding.
+    if (!/%[0-9A-Fa-f]{2}/.test(normalizedSlugRaw)) return normalizedSlugRaw;
+    try {
+      return decodeURIComponent(normalizedSlugRaw);
+    } catch {
+      return normalizedSlugRaw;
+    }
+  })();
   const isMissingParam = normalizedSlug.length === 0;
   const cacheKey = isId ? idNum : normalizedSlug;
   const initialPreloadedTravel = useMemo(

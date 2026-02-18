@@ -607,14 +607,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="dns-prefetch" href="https://mc.yandex.ru" />
       <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
-      {/* Preload icon font — discovered late by expo-font JS injection; preloading saves ~90ms FCP */}
-      <link
-        rel="preload"
-        href="/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf"
-        as="font"
-        type="font/ttf"
-        crossOrigin="anonymous"
-      />
+      {/* Icon fonts (Feather, etc.) are loaded by expo-font at runtime.
+          Avoid hard-coding Metro's dev asset URLs here: they are not stable and can 404. */}
       
       {/* Icons */}
       <link rel="icon" href="/favicon.ico" sizes="any" type="image/x-icon" />

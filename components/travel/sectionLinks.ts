@@ -24,7 +24,11 @@ export const buildTravelSectionLinks = (
 
   const hasGallery = Array.isArray(travel.gallery) && travel.gallery.length > 0
   const hasVideo = typeof travel.youtube_link === "string" && travel.youtube_link.length > 0
-  const hasDescription = typeof travel.description === "string" && travel.description.trim().length > 0
+  const desc = typeof travel.description === "string" ? travel.description.trim() : ""
+  const isDraft = (travel as any).publish === false || (travel as any).moderation === false
+  // For drafts we keep the "Описание" link even when description is empty,
+  // so the preview page doesn't look broken/stuck.
+  const hasDescription = desc.length > 0 || isDraft
   const hasRecommendation =
     typeof travel.recommendation === "string" && travel.recommendation.trim().length > 0
   const hasPlus = typeof travel.plus === "string" && travel.plus.trim().length > 0
@@ -49,5 +53,4 @@ export const buildTravelSectionLinks = (
 
   return links
 }
-
 
