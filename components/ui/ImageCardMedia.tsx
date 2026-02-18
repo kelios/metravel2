@@ -104,6 +104,7 @@ type Props = {
   blurBackground?: boolean;
   blurRadius?: number;
   blurOnly?: boolean;
+  quality?: number;
   overlayColor?: string;
   placeholderBlurhash?: string;
   priority?: Priority;
@@ -129,6 +130,7 @@ function ImageCardMedia({
   blurBackground = true,
   blurRadius = 16,
   blurOnly = false,
+  quality = 60,
   overlayColor,
   placeholderBlurhash,
   priority = 'normal',
@@ -180,13 +182,13 @@ function ImageCardMedia({
       optimizeImageUrl(uri, {
         width: numericWidth,
         height: numericHeight,
-        quality: 60,
+        quality,
         fit: contentFit === 'contain' ? 'contain' : 'cover',
         format: 'auto',
         dpr: 1,
       }) ?? uri
     );
-  }, [resolvedSource, width, height, contentFit]);
+  }, [resolvedSource, width, height, contentFit, quality]);
   const webMainSrc = useMemo(() => {
     if (Platform.OS !== 'web') return null;
     if (!resolvedSource || typeof resolvedSource === 'number') return null;
@@ -201,8 +203,8 @@ function ImageCardMedia({
     if (!resolvedSource || typeof resolvedSource === 'number') return undefined;
     const uri = typeof (resolvedSource as any)?.uri === 'string' ? String((resolvedSource as any).uri).trim() : '';
     if (!uri) return undefined;
-    return generateSrcSet(uri, [160, 320, 480, 640], { quality: 60, fit: contentFit === 'contain' ? 'contain' : 'cover', dpr: 1 }) || undefined;
-  }, [resolvedSource, contentFit]);
+    return generateSrcSet(uri, [160, 320, 480, 640], { quality, fit: contentFit === 'contain' ? 'contain' : 'cover', dpr: 1 }) || undefined;
+  }, [resolvedSource, contentFit, quality]);
 
   const webSizes = useMemo(() => {
     if (Platform.OS !== 'web') return undefined;

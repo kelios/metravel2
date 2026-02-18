@@ -312,6 +312,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
                     height={400}
                     borderRadius={DESIGN_TOKENS.radii.lg}
                     fit="cover"
+                    quality={90}
                     alt="Пример книги путешествий"
                     loading={Platform.OS === 'web' ? 'eager' : 'lazy'}
                     priority={Platform.OS === 'web' ? 'high' : 'normal'}
