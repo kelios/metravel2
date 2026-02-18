@@ -6,9 +6,11 @@
 import { create } from 'zustand';
 import { setSecureItem, getSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { getStorageBatch, setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
+import * as authApiModule from '@/api/auth';
+import * as userApiModule from '@/api/user';
 
-const getAuthApi = async () => import('@/api/auth');
-const getUserApi = async () => import('@/api/user');
+const getAuthApi = async () => authApiModule;
+const getUserApi = async () => userApiModule;
 
 const normalizeAvatar = (raw: unknown): string | null => {
     const str = String(raw ?? '').trim();

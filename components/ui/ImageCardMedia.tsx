@@ -227,7 +227,7 @@ function ImageCardMedia({
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     setWebLoaded(false);
-  }, [webMainSrc, webBlurSrc, blurBackground]);
+  }, [webMainSrc]);
 
   const handleWebLoad = useCallback(() => {
     setWebLoaded(true);

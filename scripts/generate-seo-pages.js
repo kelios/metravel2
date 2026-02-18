@@ -365,6 +365,19 @@ async function main() {
   }
 
   const baseHtml = fs.readFileSync(indexPath, 'utf8');
+
+  // Route-specific templates contain the correct JS chunk for each route.
+  // Falling back to index.html would embed the home-page chunk instead of the
+  // route chunk, causing the page to stall on the skeleton.
+  const travelTemplatePath = path.join(DIST_DIR, 'travels', '[param].html');
+  const articleTemplatePath = path.join(DIST_DIR, 'article', '[id].html');
+  const travelBaseHtml = fs.existsSync(travelTemplatePath)
+    ? fs.readFileSync(travelTemplatePath, 'utf8')
+    : baseHtml;
+  const articleBaseHtml = fs.existsSync(articleTemplatePath)
+    ? fs.readFileSync(articleTemplatePath, 'utf8')
+    : baseHtml;
+
   let totalPages = 0;
 
   // --- 1. Static pages ---
@@ -488,7 +501,7 @@ async function main() {
         }
       }
 
-      const html = injectMeta(baseHtml, {
+      const html = injectMeta(travelBaseHtml, {
         title,
         description,
         canonical,
@@ -562,7 +575,7 @@ async function main() {
         }
       }
 
-      const html = injectMeta(baseHtml, {
+      const html = injectMeta(articleBaseHtml, {
         title,
         description,
         canonical,
