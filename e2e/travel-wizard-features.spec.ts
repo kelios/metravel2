@@ -146,11 +146,14 @@ const maybeDismissRouteCoachmark = async (page: any) => {
 const fillRichDescription = async (page: any, text: string) => {
   const editor = page.locator('.ql-editor').first();
   await expect(editor).toBeVisible({ timeout: 15000 });
-  await editor.click();
-  // Clear existing content.
-  await page.keyboard.press('ControlOrMeta+A');
-  await page.keyboard.press('Backspace');
-  await page.keyboard.type(text);
+  await editor.click({ force: true });
+  await editor.fill(text);
+  await expect
+    .poll(async () => {
+      const current = (await editor.textContent()) || '';
+      return current.trim().length;
+    })
+    .toBeGreaterThan(0);
 };
 
 const closePreviewModal = async (page: any) => {
@@ -697,9 +700,18 @@ test.describe('Превью карточки (Travel Preview)', () => {
 
     if (!(await openPreviewModal(page))) return;
 
-    // Проверяем что есть многоточие "..." в превью
     const dialog = page.getByRole('dialog');
-    await expect(dialog.locator('text=/\\.\\.\\./').first()).toBeVisible();
+    await expect(dialog).toBeVisible();
+    const dialogText = ((await dialog.innerText()) || '')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const previewText = dialogText.find((line) => line.includes('Это очень длинное описание путешествия'));
+    expect(previewText).toBeTruthy();
+    if (previewText) {
+      expect(previewText.length).toBeLessThanOrEqual(153);
+      expect(previewText.endsWith('...')).toBe(true);
+    }
   });
 
   test('должен показать статистику (дни, точки, страны)', async ({ page }) => {
