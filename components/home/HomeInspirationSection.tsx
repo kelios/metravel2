@@ -77,22 +77,23 @@ function HomeInspirationSection({
 
   const styles = useMemo(() => StyleSheet.create({
     section: {
-      gap: 32,
+      gap: 28,
     },
     sectionMobile: {
-      gap: 24,
+      gap: 20,
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
       gap: 16,
-      marginBottom: 8,
+      marginBottom: 4,
     },
     headerMobile: {
-      flexDirection: 'column',
-      alignItems: 'stretch',
-      gap: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
     },
     titleContainer: {
       flex: 1,
@@ -100,37 +101,38 @@ function HomeInspirationSection({
       minWidth: 0,
     },
     title: {
-      fontSize: 32,
+      fontSize: 28,
       fontWeight: '800',
       color: colors.text,
-      lineHeight: 40,
+      lineHeight: 36,
       letterSpacing: -0.5,
     },
     titleMobile: {
-      fontSize: 24,
-      lineHeight: 32,
+      fontSize: 20,
+      lineHeight: 26,
       letterSpacing: -0.3,
     },
     subtitle: {
-      fontSize: 16,
+      fontSize: 15,
       color: colors.textMuted,
-      lineHeight: 24,
+      lineHeight: 22,
     },
     subtitleMobile: {
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 13,
+      lineHeight: 18,
     },
     viewMoreButton: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 8,
-      paddingHorizontal: 20,
-      paddingVertical: 12,
+      gap: 6,
+      paddingHorizontal: isMobile ? 12 : 20,
+      paddingVertical: isMobile ? 8 : 12,
       borderRadius: DESIGN_TOKENS.radii.md,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
+      flexShrink: 0,
       ...Platform.select({
         web: {
           transition: 'all 0.2s ease',
@@ -138,7 +140,7 @@ function HomeInspirationSection({
       }),
     },
     viewMoreButtonMobile: {
-      width: '100%',
+      flexShrink: 0,
     },
     viewMoreButtonHover: {
       backgroundColor: colors.primaryLight,
@@ -150,7 +152,7 @@ function HomeInspirationSection({
       }),
     },
     viewMoreText: {
-      fontSize: 15,
+      fontSize: isMobile ? 13 : 15,
       fontWeight: '600',
       color: colors.text,
     },
@@ -242,7 +244,7 @@ function HomeInspirationSection({
           {subtitle && <Text style={[styles.subtitle, isMobile && styles.subtitleMobile]}>{subtitle}</Text>}
         </View>
         <Button
-          label="Найти ещё маршруты"
+          label={isMobile ? 'Ещё маршруты' : 'Найти ещё маршруты'}
           onPress={handleViewMore}
           accessibilityLabel={`Смотреть все ${title}`}
           icon={<Feather name="arrow-right" size={16} color={colors.text} />}

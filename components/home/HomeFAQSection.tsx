@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ResponsiveContainer } from '@/components/layout';
 import { useThemedColors } from '@/hooks/useTheme';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type FaqItem = {
   q: string;
@@ -11,7 +12,7 @@ type FaqItem = {
 };
 
 function HomeFAQSection() {
-  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+  const colors = useThemedColors();
 
   const items = useMemo<FaqItem[]>(
     () => [
@@ -45,11 +46,14 @@ function HomeFAQSection() {
     setOpenIndex((prev) => (prev === idx ? null : idx));
   }, []);
 
+  const { isSmallPhone, isPhone } = useResponsive();
+  const isMobile = isSmallPhone || isPhone;
+
   const styles = useMemo(() => StyleSheet.create({
     band: {
       width: '100%',
       alignSelf: 'stretch',
-      paddingVertical: 52,
+      paddingVertical: isMobile ? 36 : 52,
       backgroundColor: colors.background,
     },
     inner: {
@@ -59,24 +63,24 @@ function HomeFAQSection() {
     },
     header: {
       alignItems: 'center',
-      marginBottom: 28,
-      gap: 12,
+      marginBottom: isMobile ? 20 : 28,
+      gap: 8,
     },
     title: {
-      fontSize: 32,
+      fontSize: isMobile ? 24 : 32,
       fontWeight: '800',
       color: colors.text,
       letterSpacing: -0.5,
     },
     subtitle: {
-      fontSize: 16,
-      lineHeight: 24,
+      fontSize: isMobile ? 14 : 16,
+      lineHeight: isMobile ? 20 : 24,
       color: colors.textMuted,
       textAlign: 'center',
       maxWidth: 560,
     },
     list: {
-      gap: 10,
+      gap: isMobile ? 8 : 10,
     },
     item: {
       width: '100%',
@@ -145,7 +149,7 @@ function HomeFAQSection() {
       lineHeight: 24,
       color: colors.textMuted,
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
   return (
     <View style={styles.band} testID="home-faq">

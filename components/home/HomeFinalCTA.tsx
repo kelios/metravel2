@@ -17,9 +17,9 @@ interface HomeFinalCTAProps {
 function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
-  const { isPhone, isLargePhone } = useResponsive();
-  const isMobile = isPhone || isLargePhone;
-  const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
+  const { isSmallPhone, isPhone, isLargePhone } = useResponsive();
+  const isMobile = isSmallPhone || isPhone || isLargePhone;
+  const colors = useThemedColors();
 
   const handleAction = () => {
     sendAnalyticsEvent('HomeClick_FinalCTA');
@@ -43,10 +43,11 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
   // components can be overridden by the postprocessed external CSS base reset
   // (padding: 0px shorthand wins over longhand padding-top/bottom/left/right).
   const buttonStyle = useMemo(() => ({
-    paddingHorizontal: 40,
-    paddingVertical: 20,
-    minHeight: 60,
-    minWidth: 300,
+    paddingHorizontal: isMobile ? 24 : 40,
+    paddingVertical: isMobile ? 16 : 20,
+    minHeight: isMobile ? 52 : 60,
+    minWidth: isMobile ? undefined : 300,
+    width: isMobile ? '100%' as const : undefined,
     borderRadius: DESIGN_TOKENS.radii.md,
     marginTop: 8,
     ...Platform.select({
@@ -55,14 +56,14 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       },
     }),
-  }), [colors]);
+  }), [colors, isMobile]);
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
       width: '100%',
       alignSelf: 'stretch',
       paddingHorizontal: 0,
-      paddingVertical: 72,
+      paddingVertical: isMobile ? 48 : 72,
       backgroundColor: colors.backgroundSecondary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -78,35 +79,36 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     },
     containerMobile: {
       paddingHorizontal: 0,
-      paddingVertical: 56,
+      paddingVertical: 48,
     },
     content: {
       alignItems: 'center',
-      gap: 28,
+      gap: isMobile ? 20 : 28,
+      width: '100%',
     },
     title: {
-      fontSize: 40,
+      fontSize: isMobile ? 26 : 40,
       fontWeight: '800',
       color: colors.text,
-      lineHeight: 48,
+      lineHeight: isMobile ? 34 : 48,
       textAlign: 'center',
       letterSpacing: -0.5,
     },
     titleMobile: {
-      fontSize: 28,
-      lineHeight: 36,
+      fontSize: 26,
+      lineHeight: 34,
       letterSpacing: -0.3,
     },
     subtitle: {
-      fontSize: 18,
+      fontSize: isMobile ? 15 : 18,
       color: colors.textMuted,
-      lineHeight: 28,
+      lineHeight: isMobile ? 22 : 28,
       textAlign: 'center',
       maxWidth: 520,
     },
     subtitleMobile: {
-      fontSize: 16,
-      lineHeight: 24,
+      fontSize: 15,
+      lineHeight: 22,
     },
     buttonHover: {
       backgroundColor: colors.primaryDark,
@@ -119,11 +121,11 @@ function HomeFinalCTA({ travelsCount = 0 }: HomeFinalCTAProps) {
     },
     buttonText: {
       color: colors.textOnPrimary,
-      fontSize: 18,
+      fontSize: isMobile ? 16 : 18,
       fontWeight: '700',
       letterSpacing: 0.2,
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
   return (
     <View style={[styles.container, isMobile && styles.containerMobile]}>

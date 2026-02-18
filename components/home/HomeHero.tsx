@@ -77,7 +77,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
       }),
     },
     bandMobile: {
-      paddingVertical: 36,
+      paddingVertical: 28,
       ...Platform.select({
         web: {
           backgroundImage: `radial-gradient(ellipse 120% 50% at 50% 30%, ${colors.primarySoft} 0%, transparent 70%)`,
@@ -86,7 +86,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     },
     content: {
       flex: 1,
-      gap: 20,
+      gap: isMobile ? 16 : 20,
       alignItems: 'flex-start',
       justifyContent: 'center',
     },
@@ -100,21 +100,21 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
     subtitle: {
       color: colors.textMuted,
       maxWidth: 540,
-      fontSize: 20,
-      lineHeight: 28,
+      fontSize: isMobile ? 16 : 20,
+      lineHeight: isMobile ? 24 : 28,
       fontWeight: '400',
     },
     hint: {
-      fontSize: 15,
+      fontSize: isMobile ? 13 : 15,
       color: colors.textMuted,
-      lineHeight: 24,
-      marginTop: 8,
-      paddingLeft: 16,
+      lineHeight: isMobile ? 20 : 24,
+      marginTop: 4,
+      paddingLeft: 12,
       borderLeftWidth: 3,
       borderLeftColor: colors.primary,
     },
     buttonsContainer: {
-      marginTop: 28,
+      marginTop: isMobile ? 16 : 28,
       width: '100%',
     },
     primaryButton: {
@@ -236,7 +236,7 @@ const HomeHero = memo(function HomeHero({ travelsCount = 0 }: HomeHeroProps) {
         },
       }),
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
   return (
     <View testID="home-hero" style={[styles.band, isMobile && styles.bandMobile]}>

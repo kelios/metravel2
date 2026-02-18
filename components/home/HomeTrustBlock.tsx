@@ -48,8 +48,8 @@ function HomeTrustBlock() {
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
-      paddingVertical: 20,
-      paddingHorizontal: 24,
+      paddingVertical: isMobile ? 16 : 20,
+      paddingHorizontal: isMobile ? 16 : 24,
       ...Platform.select({
         web: {
           boxShadow: DESIGN_TOKENS.shadows.light,
@@ -66,7 +66,7 @@ function HomeTrustBlock() {
     itemsMobile: {
       flexDirection: 'column',
       flexWrap: 'nowrap',
-      gap: 16,
+      gap: 0,
     },
     item: {
       flexDirection: 'row',
@@ -74,7 +74,7 @@ function HomeTrustBlock() {
       flexGrow: 1,
       flexBasis: 0,
       minWidth: 240,
-      paddingVertical: 4,
+      paddingVertical: 8,
       paddingHorizontal: 12,
       ...Platform.select({
         web: {
@@ -95,22 +95,31 @@ function HomeTrustBlock() {
       flexBasis: 'auto',
       minWidth: 0,
       width: '100%',
+      paddingVertical: 12,
       paddingHorizontal: 0,
       ...Platform.select({
         web: {
           borderRightWidth: 0,
-          borderTopWidth: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.borderLight,
+        },
+      }),
+    },
+    itemMobileLast: {
+      ...Platform.select({
+        web: {
+          borderBottomWidth: 0,
         },
       }),
     },
     iconWrap: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: isMobile ? 36 : 40,
+      height: isMobile ? 36 : 40,
+      borderRadius: 10,
       backgroundColor: colors.primaryLight,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 14,
+      marginRight: 12,
       ...Platform.select({
         web: {
           backgroundImage: `linear-gradient(135deg, ${colors.primarySoft} 0%, ${colors.primaryLight} 100%)`,
@@ -136,7 +145,7 @@ function HomeTrustBlock() {
       lineHeight: 18,
       color: colors.textMuted,
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
   return (
     <View style={styles.band} testID="home-trust-block">
@@ -144,9 +153,9 @@ function HomeTrustBlock() {
         <View style={styles.card}>
           <View style={[styles.items, isMobile && styles.itemsMobile]}>
             {ITEMS.map((item, idx) => (
-              <View key={item.title} style={[styles.item, isMobile && styles.itemMobile, idx === ITEMS.length - 1 && styles.itemLast]}>
+              <View key={item.title} style={[styles.item, isMobile && styles.itemMobile, idx === ITEMS.length - 1 && (isMobile ? styles.itemMobileLast : styles.itemLast)]}>
                 <View style={styles.iconWrap}>
-                  <Feather name={item.icon as any} size={20} color={colors.primary} />
+                  <Feather name={item.icon as any} size={isMobile ? 18 : 20} color={colors.primary} />
                 </View>
                 <View style={styles.textWrap}>
                   <Text style={styles.title}>{item.title}</Text>

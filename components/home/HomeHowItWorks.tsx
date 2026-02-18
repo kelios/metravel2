@@ -65,7 +65,7 @@ function HomeHowItWorks() {
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: 52,
+      paddingVertical: isMobile ? 36 : 52,
       backgroundColor: colors.background,
       ...Platform.select({
         web: {
@@ -76,9 +76,9 @@ function HomeHowItWorks() {
       }),
     },
     header: {
-      marginBottom: 32,
+      marginBottom: isMobile ? 24 : 32,
       alignItems: 'center',
-      gap: 12,
+      gap: 8,
     },
     title: {
       color: colors.text,
@@ -86,10 +86,10 @@ function HomeHowItWorks() {
       letterSpacing: -0.5,
     },
     headerSubtitle: {
-      fontSize: 16,
+      fontSize: isMobile ? 14 : 16,
       color: colors.textMuted,
       textAlign: 'center',
-      lineHeight: 24,
+      lineHeight: isMobile ? 20 : 24,
       maxWidth: 480,
     },
     stepWrapper: {
@@ -102,8 +102,8 @@ function HomeHowItWorks() {
       flex: 1,
       backgroundColor: colors.surface,
       borderRadius: DESIGN_TOKENS.radii.lg,
-      padding: 28,
-      gap: 16,
+      padding: isMobile ? 20 : 28,
+      gap: isMobile ? 10 : 16,
       borderWidth: 1,
       borderColor: colors.border,
       ...Platform.select({
@@ -127,13 +127,13 @@ function HomeHowItWorks() {
     stepHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 16,
-      marginBottom: 12,
+      gap: 12,
+      marginBottom: isMobile ? 4 : 12,
     },
     iconContainer: {
-      width: 56,
-      height: 56,
-      borderRadius: DESIGN_TOKENS.radii.md,
+      width: isMobile ? 44 : 56,
+      height: isMobile ? 44 : 56,
+      borderRadius: DESIGN_TOKENS.radii.sm,
       backgroundColor: colors.primaryLight,
       justifyContent: 'center',
       alignItems: 'center',
@@ -165,12 +165,14 @@ function HomeHowItWorks() {
     },
     stepTitle: {
       color: colors.text,
-      fontSize: 20,
+      fontSize: isMobile ? 17 : 20,
       letterSpacing: -0.2,
+      fontWeight: '700',
     },
     stepDescription: {
       color: colors.textMuted,
-      lineHeight: 22,
+      fontSize: isMobile ? 14 : 15,
+      lineHeight: isMobile ? 20 : 22,
     },
     connector: {
       justifyContent: 'center',
@@ -178,7 +180,7 @@ function HomeHowItWorks() {
       paddingHorizontal: 4,
       opacity: 0.4,
     },
-  }), [colors]);
+  }), [colors, isMobile]);
 
   return (
     <View testID="home-how-it-works" style={styles.container}>
