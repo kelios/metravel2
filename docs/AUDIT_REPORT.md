@@ -2,6 +2,159 @@
 
 ---
 
+## v19 — Full Post-Deploy Audit (2026-02-19)
+
+**Auditor:** Automated (Cascade)
+**Target:** https://metravel.by
+**Lighthouse version:** live production run
+
+### Lighthouse Scores
+
+#### Desktop — Home (`/`)
+| Category | Score | Δ vs v18 |
+|----------|-------|----------|
+| Performance | **82** | +7 ✅ |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **74** | = ⚠️ (Yandex cookies + inspector-issues) |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 0.7 s | ✅ |
+| LCP | 2.5 s | ✅ (improved) |
+| TBT | 18 ms | ✅ |
+| CLS | 0.006 | ✅ |
+| SI | 2.3 s | ⚠️ |
+| TTFB | 86 ms | ✅ |
+
+#### Desktop — Search (`/search`)
+| Category | Score |
+|----------|-------|
+| Performance | **75** |
+| Accessibility | **100** |
+| Best Practices | **74** |
+| SEO | **100** |
+
+#### Desktop — Map (`/map`)
+| Category | Score |
+|----------|-------|
+| Performance | **76** |
+| Accessibility | **100** |
+| Best Practices | **74** |
+| SEO | **100** |
+
+#### Mobile — Home (`/`)
+| Category | Score | Δ vs v18 |
+|----------|-------|----------|
+| Performance | **58** | +3 ✅ |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **75** | = ⚠️ |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 1.3 s | ✅ |
+| LCP | 9.1 s | ⚠️ (improved from 11.4s) |
+| TBT | 423 ms | ⚠️ |
+| CLS | 0.04 | ✅ |
+| SI | 6.7 s | ⚠️ |
+| TTFB | 243 ms | ✅ |
+
+### Issues Found
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| LCP image `pdf.webp` served at 1024×1536 (116KB) but displayed at 267×400 | P1 | **FIXED** |
+| Unused JS ~1,026 KiB (`__common` + `entry` chunks) | P1 | Structural — requires arch change |
+| `errors-in-console` — Yandex Metrika 400 (sync_cookie) | P3 | Unfixable (3rd party) |
+| `third-party-cookies` — Yandex Metrika 11 cookies | P3 | Unfixable (3rd party) |
+| `valid-source-maps` — source maps disabled | P3 | Intentional (security) |
+| Unused preconnects (`cdn.metravel.by`, `api.metravel.by`) on home page | P3 | Acceptable (used on other pages) |
+
+### Fixes Applied (v19)
+
+#### 1. LCP Image Resize (P1 — Performance)
+- **File:** `assets/images/pdf.webp`
+- **Root cause:** Image was 1024×1536 (116KB) but displayed at 267×400. Lighthouse flagged 109KB wasted bytes.
+- **Fix:** Resized image to 267×400 at q=85 using cwebp.
+- **Impact:** 116KB → 13KB (89% reduction). Improves LCP by ~100-200ms on desktop.
+
+#### 2. SW cache version bump (P3)
+- **File:** `public/sw.js`
+- **Change:** `v3.16.0` → `v3.17.0`
+- **Impact:** Forces cache purge on next SW activation.
+
+### Validation
+- `npx eslint components/home/HomeHero.tsx public/sw.js` — **0 errors** ✅
+- `npx jest --testPathPattern="HomeHero|home"` — **34 tests passed, 4 suites** ✅
+
+### Server & Infrastructure ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2 200, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 |
+| www→non-www redirect | ✅ | 301 |
+| Brotli | ✅ | Active |
+| Gzip | ✅ | Fallback active |
+| Static cache | ✅ | `immutable, max-age=31536000` |
+| SW cache | ✅ | `no-cache, no-store, must-revalidate` |
+| TTFB | ✅ | 86-243 ms |
+| robots.txt | ✅ | 200, correct disallows |
+| sitemap.xml | ✅ | 200, 66KB |
+| CSP | ✅ | Full policy |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Restrictive |
+
+### SEO ✅ 100/100
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | "Твоя книга путешествий \| Metravel" (35 chars) |
+| Description | ✅ | Present in static HTML |
+| H1 | ✅ | Single H1, correct hierarchy |
+| Canonical | ✅ | `https://metravel.by/` |
+| OG tags | ✅ | All present |
+| robots.txt | ✅ | Correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200 OK, 66KB |
+| Schema.org | ✅ | Organization + WebSite + Service |
+| lang | ✅ | `ru` |
+
+### Analytics ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` — active |
+| Yandex Metrika | ✅ | `62803912` — active |
+| send_page_view | ✅ | `false` (no duplicate pageviews) |
+| Deferred loading | ✅ | `requestIdleCallback` / 3s fallback |
+
+### Remaining Structural Blockers (unchanged, require arch changes)
+| Issue | Cause | Required Action |
+|-------|-------|-----------------|
+| Mobile LCP 9.1s / Perf 58 | ~1,026 KiB unused JS (RNW + Leaflet bundle) | SSR/ISR or native app |
+| Best Practices 74-75 | Yandex Metrika 3rd-party cookies (11 cookies) + inspector-issues | Cannot fix |
+| Missing source maps | Intentionally disabled | Security trade-off |
+
+### Target Assessment
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 58 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP ⚠️ | 🔴 LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | ✅ | ✅ |
+| Load time < 2.5s mobile | ~9.1s (throttled) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | ✅ 100/100 | ✅ |
+| Desktop Performance ≥ 70 | 75-82 | ✅ |
+| HTTPS + HSTS | ✅ | ✅ |
+
+**Last updated:** 2026-02-19
+**SW Version:** v3.17.0
+**Audit Version:** v19
+**Status:** ✅ P1 fix (LCP image resize 116KB→13KB) applied — requires redeploy to take effect
+
+---
+
 ## v18 — Full Post-Deploy Audit (2026-02-19)
 
 **Auditor:** Automated (Cascade)

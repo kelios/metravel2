@@ -782,13 +782,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
               <ImageCardMedia
                 src={overlayUri}
                 fit={fit}
-                blurBackground={blurBackground}
-                blurRadius={12}
+                blurBackground={false}
                 priority="high"
                 loading="eager"
                 transition={0}
                 style={styles.img}
                 alt="Предыдущий слайд"
+                showImmediately
                 imageProps={{
                   contentPosition: 'center',
                   accessibilityRole: 'image',

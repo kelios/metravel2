@@ -25,6 +25,7 @@ type WebMainImageProps = {
   sizes?: string;
   onLoad?: () => void;
   onError?: () => void;
+  showImmediately?: boolean;
 };
 
 const WebMainImage = memo(function WebMainImage({
@@ -42,6 +43,7 @@ const WebMainImage = memo(function WebMainImage({
   sizes,
   onLoad,
   onError,
+  showImmediately = false,
 }: WebMainImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const handleLoad = useCallback(() => {
@@ -78,9 +80,10 @@ const WebMainImage = memo(function WebMainImage({
         zIndex: 1,
         borderRadius,
         display: 'block',
-        // Never hide the main <img> while loading. Hiding causes a visible "blank/gray flash"
-        // when slides are virtualized/unmounted and remounted while the image is already cached.
-        opacity: 1,
+        // Show image only when loaded to avoid showing progressive/partial image that looks blurry.
+        // The flatBackground in Slide.tsx provides a solid color while loading.
+        // showImmediately bypasses this for cached images (e.g., transition overlay).
+        opacity: showImmediately || loaded ? 1 : 0,
         transition: hasBlurBehind ? 'opacity 0.2s ease' : 'none',
         willChange: hasBlurBehind ? 'opacity' : 'auto',
         contain: 'layout',
@@ -119,6 +122,8 @@ type Props = {
   style?: any;
   onLoad?: () => void;
   onError?: () => void;
+  /** Show image immediately without waiting for load (for cached images). */
+  showImmediately?: boolean;
 };
 
 function ImageCardMedia({
@@ -145,6 +150,7 @@ function ImageCardMedia({
   style,
   onLoad,
   onError,
+  showImmediately = false,
 }: Props) {
   const isJest =
     typeof process !== 'undefined' && !!(process as any)?.env?.JEST_WORKER_ID;
@@ -335,6 +341,7 @@ function ImageCardMedia({
               loaded={webLoaded}
               onLoad={handleWebLoad}
               onError={onError}
+              showImmediately={showImmediately}
             />
           ) : (!blurOnly || Platform.OS !== 'web') && (
             <OptimizedImage

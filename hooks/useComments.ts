@@ -33,7 +33,7 @@ export function useMainThread(travelId: number) {
     enabled: !!travelId && travelId > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 1,
+    retry: false, // Backend may return 404 for missing threads — don't retry
     refetchOnWindowFocus: false,
   });
 }
@@ -60,7 +60,7 @@ export function useComments(threadId: number) {
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 1,
+    retry: false, // Backend may return 404/400 — don't retry
     refetchOnWindowFocus: false,
   });
 }
@@ -81,7 +81,7 @@ export function useTravelComments(travelId: number, threadId?: number | null) {
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 1,
+    retry: false, // Backend may return 404/400 — don't retry
     refetchOnWindowFocus: false,
   });
 }
