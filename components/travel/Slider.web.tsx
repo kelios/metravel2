@@ -231,6 +231,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   const dragScrollLeftRef = useRef(0);
+  const dragStartIndexRef = useRef(0);
   const autoplayTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const pausedByTouch = useRef(false);
   // Cached DOM node refs — set once, avoid querySelector on every interaction
@@ -619,6 +620,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       isDraggingRef.current = true;
       dragStartXRef.current = e.pageX;
       dragScrollLeftRef.current = node.scrollLeft;
+      dragStartIndexRef.current = indexRef.current;
       node.style.cursor = 'grabbing';
       node.style.scrollSnapType = 'none';
       node.style.userSelect = 'none';
@@ -651,13 +653,15 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       node.style.userSelect = '';
       const dx = e.pageX - dragStartXRef.current;
       const cw = containerWRef.current || 1;
-      const cur = indexRef.current;
+      const cur = dragStartIndexRef.current;
       const threshold = cw * 0.15;
       let target = cur;
       if (dx < -threshold) target = cur + 1;
       else if (dx > threshold) target = cur - 1;
       target = clamp(target, 0, Math.max(0, images.length - 1));
       snapToSlide(target);
+      // Restore snap after programmatic settle.
+      node.style.scrollSnapType = '';
     };
 
     const onMouseLeave = () => {
@@ -669,6 +673,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const idx = Math.round(node.scrollLeft / cw);
       const target = clamp(idx, 0, Math.max(0, images.length - 1));
       snapToSlide(target);
+      node.style.scrollSnapType = '';
     };
 
     const onScrollEnd = () => {

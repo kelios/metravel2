@@ -30,7 +30,7 @@ interface SlideProps {
 }
 
 const Slide = memo(function Slide({
-  item,
+  item: _item,
   index,
   uri,
   containerW,
