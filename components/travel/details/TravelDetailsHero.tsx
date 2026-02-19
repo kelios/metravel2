@@ -377,12 +377,17 @@ function TravelHeroSectionInner({
   }, [isMobile, winH, resolvedWidth, aspectRatio])
   const galleryImages = useMemo(() => {
     const gallery = Array.isArray(travel.gallery) ? travel.gallery : []
-    return gallery.map((item, index) =>
+    const mapped = gallery.map((item, index) =>
       typeof item === 'string'
         ? { url: item, id: index }
         : { ...item, id: item.id || index }
     )
-  }, [travel.gallery])
+    // If gallery is empty but we have a cover image, use it as the single slide
+    if (mapped.length === 0 && travel.travel_image_thumb_url) {
+      return [{ url: travel.travel_image_thumb_url, id: 0 }]
+    }
+    return mapped
+  }, [travel.gallery, travel.travel_image_thumb_url])
   const heroAlt = travel?.name ? `Фотография маршрута «${travel.name}»` : 'Фото путешествия'
   const shouldShowOptimizedHero = Platform.OS === 'web' && !!firstImg
   // renderSlider is kept for API compatibility; on web we always mount Slider and overlay LCP image.

@@ -114,6 +114,11 @@ export const normalizeTravelItem = (input: unknown): Travel => {
         out.slug = String(t.slug);
     }
 
+    // Normalize name: collapse multiple spaces into one to prevent rendering issues
+    if (typeof t.name === 'string') {
+        out.name = t.name.replace(/\s{2,}/g, ' ').trim();
+    }
+
     // Normalize url field:
     // - Backend can return relative paths, empty strings, or non-canonical values.
     // - Ensure we always have a stable canonical route for navigation.
