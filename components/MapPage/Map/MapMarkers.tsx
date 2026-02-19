@@ -120,17 +120,24 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
 
   return (
     <>
-      {validPoints.map(({ point, coords, key }) => (
+      {validPoints.map(({ point, coords, key }) => {
+        const accessibleName = point.address || point.categoryName || 'Место на карте';
+        return (
         <Marker
           key={key}
           position={CoordinateConverter.toLeaflet(coords)}
           icon={icon}
-          title={point.address || 'Место на карте'}
-          alt={point.address || 'Место на карте'}
+          title={accessibleName}
+          alt={accessibleName}
           ref={(marker: any) => {
             try {
               if (typeof onMarkerInstance === 'function') {
                 onMarkerInstance(String(point.coord ?? ''), marker ?? null);
+              }
+              // Add aria-label for a11y (Lighthouse aria-command-name audit)
+              const el = marker?._icon || marker?.getElement?.();
+              if (el && !el.getAttribute('aria-label')) {
+                el.setAttribute('aria-label', accessibleName);
               }
             } catch {
               // noop
@@ -156,7 +163,8 @@ const MapMarkers: React.FC<MapMarkersProps> = ({
             <PopupContent point={point} />
           </Popup>
         </Marker>
-      ))}
+      );
+      })}
     </>
   );
 };

@@ -296,14 +296,21 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
                   ? `cluster-expanded-${cluster.key}-${item.id}`
                   : `cluster-expanded-${cluster.key}-${item.coord.replace(/,/g, '-')}-${itemIdx}`;
 
+                const accessibleName = item.address || item.categoryName || 'Точка на карте';
                 const markerProps: any = {
                   position: [ll[1], ll[0]],
                   icon: markerIcon,
                   opacity: markerOpacity,
-                  alt: item.address || item.categoryName || 'Точка на карте',
+                  alt: accessibleName,
+                  title: accessibleName,
                   ref: (marker: any) => {
                     try {
                       onMarkerInstance?.(String(item.coord ?? ''), marker ?? null);
+                      // Add aria-label for a11y (Lighthouse aria-command-name audit)
+                      const el = marker?._icon || marker?.getElement?.();
+                      if (el && !el.getAttribute('aria-label')) {
+                        el.setAttribute('aria-label', accessibleName);
+                      }
                     } catch {
                       // noop
                     }
@@ -339,14 +346,21 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           if (!ll) return null;
           if (!Number.isFinite(ll[0]) || !Number.isFinite(ll[1])) return null;
 
+          const accessibleName = item.address || item.categoryName || 'Точка на карте';
           const singleMarkerProps: any = {
             position: [ll[1], ll[0]],
             icon: markerIcon,
             opacity: markerOpacity,
-            alt: item.address || item.categoryName || 'Точка на карте',
+            alt: accessibleName,
+            title: accessibleName,
             ref: (marker: any) => {
               try {
                 onMarkerInstance?.(String(item.coord ?? ''), marker ?? null);
+                // Add aria-label for a11y (Lighthouse aria-command-name audit)
+                const el = marker?._icon || marker?.getElement?.();
+                if (el && !el.getAttribute('aria-label')) {
+                  el.setAttribute('aria-label', accessibleName);
+                }
               } catch {
                 // noop
               }
@@ -371,12 +385,25 @@ const ClusterLayer: React.FC<ClusterLayerProps> = ({
           );
         }
 
+        const clusterAccessibleName = `Кластер: ${cluster.count} мест`;
         return (
           <Marker
             key={`cluster-${idx}`}
             position={[cluster.center[0], cluster.center[1]]}
             icon={icon as any}
-            alt={`Кластер: ${cluster.count} мест`}
+            alt={clusterAccessibleName}
+            title={clusterAccessibleName}
+            ref={(marker: any) => {
+              try {
+                // Add aria-label for a11y (Lighthouse aria-command-name audit)
+                const el = marker?._icon || marker?.getElement?.();
+                if (el && !el.getAttribute('aria-label')) {
+                  el.setAttribute('aria-label', clusterAccessibleName);
+                }
+              } catch {
+                // noop
+              }
+            }}
             eventHandlers={{
               click: (e: any) => {
                 try {
