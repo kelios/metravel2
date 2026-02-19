@@ -463,6 +463,7 @@ const getStyles = (colors: ThemedColors) =>
         web: {
           flex: 0,
           width: '100%',
+          minHeight: 44,
         },
       }),
     },

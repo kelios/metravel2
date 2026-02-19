@@ -129,7 +129,7 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     },
     contentContainer: {
       paddingBottom: 100 + bottomDockReserve,
-      paddingTop: isMobile ? 16 : 0,
+      paddingTop: isMobile ? 8 : 0,
       paddingHorizontal: isMobile ? 16 : 0,
       flexGrow: 1,
     },
@@ -268,13 +268,13 @@ export const getFiltersPanelStyles = (colors: ThemedColors, isMobile: boolean, w
     radiusQuickOptions: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 8,
-      marginTop: 10,
+      gap: 6,
+      marginTop: 6,
     },
     radiusOptionButton: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      minHeight: DESIGN_TOKENS.touchTarget.minHeight,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      minHeight: 36,
       borderRadius: DESIGN_TOKENS.radii.sm,
       borderWidth: 1,
       borderColor: colors.borderLight,

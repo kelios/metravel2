@@ -23,7 +23,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   badge,
   defaultOpen = true,
   children,
-  accessibilityLabel,
+  accessibilityLabel: _accessibilityLabel,
   icon,
   tone = 'default',
 }) => {
@@ -57,7 +57,6 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         ]}
         onPress={toggleOpen}
         accessibilityRole="button"
-        accessibilityLabel={accessibilityLabel || title}
         accessibilityState={{ expanded: open }}
       >
         <View style={styles.collapsibleTitle}>
@@ -84,13 +83,13 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
 const getStyles = (colors: ThemedColors, tone: 'default' | 'flat') => StyleSheet.create({
   collapsibleSection: {
-    marginBottom: 16,
+    marginBottom: tone === 'flat' ? 8 : 16,
   },
   collapsibleHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: tone === 'flat' ? 10 : 12,
     paddingHorizontal: 12,
     backgroundColor: tone === 'flat' ? (colors.backgroundSecondary ?? colors.surface) : colors.surface,
     borderRadius: 12,
@@ -130,8 +129,8 @@ const getStyles = (colors: ThemedColors, tone: 'default' | 'flat') => StyleSheet
     color: colors.primaryText,
   },
   collapsibleContent: {
-    marginTop: 12,
-    paddingHorizontal: 12,
+    marginTop: tone === 'flat' ? 4 : 12,
+    paddingHorizontal: tone === 'flat' ? 4 : 12,
   },
 });
 

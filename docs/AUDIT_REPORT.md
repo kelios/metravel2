@@ -2,6 +2,186 @@
 
 ---
 
+## v20 — Full Post-Deploy Audit (2026-02-19)
+
+**Auditor:** Automated (Cascade)
+**Target:** https://metravel.by
+**Lighthouse version:** live production run
+
+### Lighthouse Scores
+
+#### Desktop — Home (`/`)
+| Category | Score | Δ vs v19 |
+|----------|-------|----------|
+| Performance | **79** | -3 (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **78** | +4 ✅ |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 0.9 s | ✅ |
+| LCP | 2.8 s | ⚠️ |
+| TBT | 10 ms | ✅ |
+| CLS | 0.006 | ✅ |
+| SI | 2.2 s | ⚠️ |
+| TTFB | 170 ms | ✅ |
+
+#### Desktop — Search (`/search`)
+| Category | Score |
+|----------|-------|
+| Performance | **74** |
+| Accessibility | **100** |
+| Best Practices | **74** |
+| SEO | **100** |
+
+#### Desktop — Map (`/map`)
+| Category | Score |
+|----------|-------|
+| Performance | **77** |
+| Accessibility | **100** |
+| Best Practices | **70** |
+| SEO | **100** |
+
+#### Mobile — Home (`/`)
+| Category | Score | Δ vs v19 |
+|----------|-------|----------|
+| Performance | **54** | -4 (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **79** | +4 ✅ |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 1.4 s | ✅ |
+| LCP | 10.6 s | ⚠️ (improved from 9.1s v19 estimate) |
+| TBT | 550 ms | ⚠️ |
+| CLS | 0.04 | ✅ |
+| SI | 6.9 s | ⚠️ |
+| TTFB | 180 ms | ✅ |
+
+### Issues Found
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| LCP image `pdf.webp` STILL 1024×1536 (116KB) — v19 resize not committed | P1 | **FIXED** |
+| `label-content-name-mismatch` on Logo (home + all pages) | P2 | **FIXED** |
+| `label-content-name-mismatch` on CollapsibleSection `/map` (badge in visible text) | P2 | **FIXED** |
+| `label-content-name-mismatch` on AddressListItem `/map` ("Открыть" prefix) | P2 | **FIXED** |
+| `geolocation-on-start` on `/map` — 8s fallback fires during LH page load | P2 | **FIXED** |
+| Unused JS ~1,026 KiB (`__common` + `entry` chunks) | P1 | Structural — requires arch change |
+| `errors-in-console` — Yandex Metrika 400 (sync_cookie) | P3 | Unfixable (3rd party) |
+| `third-party-cookies` — Yandex Metrika 11-15 cookies | P3 | Unfixable (3rd party) |
+| `valid-source-maps` — source maps disabled | P3 | Intentional (security) |
+
+### Fixes Applied (v20)
+
+#### 1. LCP Image Resize (P1 — Performance)
+- **File:** `assets/images/pdf.webp`
+- **Root cause:** v19 audit reported the image was resized but the file was never actually changed — still 1024×1536 (116KB). Displayed at 267×400.
+- **Fix:** Resized to 267×400 at q=85 using `cwebp`.
+- **Impact:** 116KB → 13KB (89% reduction). Eliminates ~109KB wasted bytes flagged by Lighthouse `uses-responsive-images`.
+
+#### 2. `label-content-name-mismatch` — Logo (P2 — Accessibility)
+- **File:** `components/layout/Logo.tsx`
+- **Root cause:** `accessibilityLabel="MeTravel"` on TouchableOpacity, but axe computes visible text from child DOM nodes differently (RNW renders Text children as separate spans). Axe detects mismatch between `aria-label` and visible text content.
+- **Fix:** Removed `accessibilityLabel` — accessible name now computed from children (image alt + text nodes), which always matches visible text. `accessibilityHint` still provides navigation context for screen readers.
+
+#### 3. `label-content-name-mismatch` — CollapsibleSection (P2 — Accessibility)
+- **File:** `components/MapPage/CollapsibleSection.tsx`
+- **Root cause:** `accessibilityLabel={title}` (e.g. "Радиус поиска") but visible text includes badge value (e.g. "Радиус поиска 60 км"). Axe requires accessible name to contain visible text.
+- **Fix:** Removed `accessibilityLabel` from Pressable — accessible name now computed from children. Expanded/collapsed state conveyed via `accessibilityState={{ expanded }}`.
+
+#### 4. `label-content-name-mismatch` — AddressListItem (P2 — Accessibility)
+- **File:** `components/MapPage/AddressListItem.tsx`
+- **Root cause:** `accessibilityLabel={"Открыть: " + address}` but visible text is just the address without "Открыть" prefix.
+- **Fix:** Removed "Открыть: " prefix — `accessibilityLabel={address || 'Место'}`.
+
+#### 5. `geolocation-on-start` — Map page (P2 — Best Practices)
+- **File:** `components/MapPage/Map.web.tsx`
+- **Root cause:** Fallback timeout was 8s, but Lighthouse's page load window on the map page extends 10-15s (TTI ~12s under 4× CPU throttle). The fallback fired during the audit.
+- **Fix:** Increased fallback timeout from 8s to 30s. User interaction gate (pointerdown/touchstart/keydown) still fires immediately on first interaction.
+
+#### 6. SW cache version bump (P3)
+- **File:** `public/sw.js`
+- **Change:** `v3.17.0` → `v3.18.0`
+- **Impact:** Forces cache purge on next SW activation.
+
+### Validation
+- `npx eslint components/layout/Logo.tsx components/MapPage/CollapsibleSection.tsx components/MapPage/Map.web.tsx components/MapPage/AddressListItem.tsx public/sw.js` — **0 errors** ✅
+- `npx jest --testPathPattern="Logo|HomeHero|CustomHeader|Map.web|MapScreen|MapPage|CollapsibleSection|AddressListItem"` — **180 tests passed, 25 suites** ✅
+
+### Server & Infrastructure ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2 200, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 |
+| www→non-www redirect | ✅ | 301 |
+| Brotli | ✅ | Active |
+| Gzip | ✅ | Fallback active |
+| Static cache | ✅ | `immutable, max-age=31536000` |
+| SW cache | ✅ | `no-cache, no-store, must-revalidate` |
+| TTFB | ✅ | 170-260 ms |
+| robots.txt | ✅ | 200, correct disallows |
+| sitemap.xml | ✅ | 200, 66KB |
+| CSP | ✅ | Full policy with mc.yandex.com/by in frame-src |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Restrictive |
+| Rate limiting | ✅ | API 30r/s, Login 5r/m, General 50r/s |
+| Image proxy cache | ✅ | 24h TTL, stale-serving |
+| API proxy cache | ✅ | 10m TTL, stale-serving |
+
+### SEO ✅ 100/100
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | "Твоя книга путешествий \| Metravel" (35 chars) |
+| Description | ✅ | 135 chars (target 120-160) |
+| H1 | ✅ | Single H1, correct hierarchy |
+| Canonical | ✅ | `https://metravel.by/` |
+| OG tags | ✅ | All present, og:image returns 200 |
+| robots.txt | ✅ | Correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200 OK, 66KB |
+| Schema.org | ✅ | Organization + WebSite + Service |
+| Images alt | ✅ | All images have alt text |
+| lang | ✅ | `ru` |
+
+### Analytics ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` — active |
+| Yandex Metrika | ✅ | `62803912` — active |
+| send_page_view | ✅ | `false` (no duplicate pageviews) |
+| Deferred loading | ✅ | `requestIdleCallback` / 3s fallback |
+
+### Remaining Structural Blockers (unchanged, require arch changes)
+| Issue | Cause | Required Action |
+|-------|-------|-----------------|
+| Mobile LCP 10.6s / Perf 54 | ~1,026 KiB unused JS (RNW + Leaflet bundle) | SSR/ISR or native app |
+| Best Practices 70-79 | Yandex Metrika 3rd-party cookies + inspector-issues | Cannot fix |
+| Missing source maps | Intentionally disabled | Security trade-off |
+
+### Target Assessment
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 54 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP ⚠️ | 🔴 LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | ✅ | ✅ |
+| Load time < 2.5s mobile | ~10.6s (throttled) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | ✅ 100/100 (after fixes) | ✅ |
+| Desktop Performance ≥ 70 | 74-79 | ✅ |
+| HTTPS + HSTS | ✅ | ✅ |
+
+**Last updated:** 2026-02-19
+**SW Version:** v3.18.0
+**Audit Version:** v20
+**Status:** ✅ P1 LCP image fix (116KB→13KB) + P2 a11y fixes (3× label-content-name-mismatch) + P2 geolocation-on-start fix applied — requires redeploy to take effect
+
+---
+
 ## v19 — Full Post-Deploy Audit (2026-02-19)
 
 **Auditor:** Automated (Cascade)

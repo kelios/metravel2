@@ -494,7 +494,7 @@ const AddressListItem: React.FC<Props> = ({
                 style={styles.mainPressable}
                 onPress={handleMainPress}
                 accessibilityRole="button"
-                accessibilityLabel={`Открыть: ${address || 'Место'}`}
+                accessibilityLabel={address || 'Место'}
                 android_ripple={{ color: colors.overlayLight }}
                 onLongPress={copyCoords}
               >

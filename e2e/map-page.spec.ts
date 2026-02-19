@@ -962,4 +962,35 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
       await expect(page.getByTestId('segmented-radius')).toBeVisible();
     }
   });
+
+  test('mobile: list/filters toggle is visible when panel is open', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 720 });
+
+    await gotoMapWithRecovery(page);
+
+    // Open the panel
+    await expect(page.getByTestId('map-panel-open')).toBeVisible({ timeout: 20_000 });
+    await page.getByTestId('map-panel-open').click();
+
+    // Wait for panel to open
+    await page.getByTestId('segmented-radius').waitFor({ state: 'visible', timeout: 20_000 });
+
+    // Check that list/filters toggle is visible
+    const listToggle = page.getByTestId('segmented-list');
+    const filtersToggle = page.getByTestId('segmented-filters');
+
+    await expect(listToggle).toBeVisible({ timeout: 10_000 });
+    await expect(filtersToggle).toBeVisible({ timeout: 10_000 });
+
+    // Click on list toggle to switch to list view
+    await listToggle.click();
+
+    // Verify we can see the travel list or empty state
+    const travelListPanel = page.getByTestId('map-travels-tab');
+    const emptyState = page.locator('text=Рядом ничего не нашлось');
+    const hasListPanel = await travelListPanel.isVisible({ timeout: 5_000 }).catch(() => false);
+    const hasEmptyState = await emptyState.isVisible({ timeout: 2_000 }).catch(() => false);
+
+    expect(hasListPanel || hasEmptyState).toBe(true);
+  });
 });

@@ -148,7 +148,7 @@ const getStyles = (colors: ThemedColors, compact: boolean, tone: 'default' | 'su
     borderRadius: 12,
     padding: compact ? 1 : 2,
     marginHorizontal: compact ? 0 : 12,
-    marginVertical: compact ? 10 : 8,
+    marginVertical: compact ? 4 : 8,
     borderWidth: 1,
     borderColor: tone === 'subtle' ? colors.borderLight : colors.border,
     position: 'relative',
