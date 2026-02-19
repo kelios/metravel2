@@ -71,15 +71,15 @@ const hasPlaywrightCore = (() => {
   }
 })();
 
-const reporter = process.env.CI
+const reporter: Array<['list'] | ['html', { open: 'never' }] | ['json', { outputFile: string }]> = process.env.CI
   ? [
       ['list'],
-      ...(hasPlaywrightCore ? [['html', { open: 'never' }] as const] : []),
+      ...(hasPlaywrightCore ? [['html', { open: 'never' }] as ['html', { open: 'never' }]] : []),
       ['json', { outputFile: 'e2e-results.json' }],
     ]
   : [
       ['list'],
-      ...(hasPlaywrightCore ? [['html', { open: 'never' }] as const] : []),
+      ...(hasPlaywrightCore ? [['html', { open: 'never' }] as ['html', { open: 'never' }]] : []),
     ];
 
 export default defineConfig({

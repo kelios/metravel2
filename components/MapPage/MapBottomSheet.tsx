@@ -299,6 +299,7 @@ const getStyles = (colors: ThemedColors) =>
         web: {
           flex: 1,
           minHeight: 0,
+          paddingHorizontal: 0,
           // @ts-ignore: web-only style
           overflowY: 'auto',
           // @ts-ignore: web-only style

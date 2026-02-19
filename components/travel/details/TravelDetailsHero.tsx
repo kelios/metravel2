@@ -427,6 +427,23 @@ function TravelHeroSectionInner({
     lastTravelIdRef.current = nextTravelId
   }, [travel?.id, tdTrace])
 
+  // Fallback: if LCP image doesn't load within 8s, mount slider anyway
+  useEffect(() => {
+    if (Platform.OS !== 'web') return
+    if (webHeroLoaded) return
+    if (!firstImg) return
+
+    const fallback = setTimeout(() => {
+      if (!webHeroLoadNotifiedRef.current) {
+        webHeroLoadNotifiedRef.current = true
+        setWebHeroLoaded(true)
+        tdTrace('hero:lcpImg:fallbackTimeout')
+        onFirstImageLoad()
+      }
+    }, 8000)
+    return () => clearTimeout(fallback)
+  }, [webHeroLoaded, firstImg, onFirstImageLoad, tdTrace])
+
   // After Slider's first image loads, hide the LCP overlay
   useEffect(() => {
     if (!webHeroLoaded || Platform.OS !== 'web') return

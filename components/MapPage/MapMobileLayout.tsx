@@ -442,13 +442,17 @@ const getStyles = (colors: ThemedColors) =>
       paddingHorizontal: 2,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderLight,
+      backgroundColor: colors.surface,
       ...Platform.select({
         web: {
           flexDirection: 'column',
           alignItems: 'stretch',
-          minHeight: 112,
+          minHeight: 'auto' as any,
           paddingVertical: 8,
           paddingHorizontal: 8,
+          position: 'sticky' as any,
+          top: 0,
+          zIndex: 10,
         },
       }),
     },
@@ -514,6 +518,11 @@ const getStyles = (colors: ThemedColors) =>
     },
     sheetBody: {
       flex: 1,
+      ...Platform.select({
+        web: {
+          paddingHorizontal: 16,
+        },
+      }),
     },
     filtersPeek: {
       gap: 8,
