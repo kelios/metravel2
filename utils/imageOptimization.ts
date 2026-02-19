@@ -61,8 +61,13 @@ export function getImageCacheStats(): { size: number; entries: number } {
 
 const isTestEnv = () =>
   typeof process !== 'undefined' &&
-  (process as any).env &&
-  (process as any).env.NODE_ENV === 'test';
+  process.env &&
+  process.env.NODE_ENV === 'test';
+
+const isE2EEnv = () =>
+  typeof process !== 'undefined' &&
+  process.env &&
+  String(process.env.EXPO_PUBLIC_E2E ?? '').trim().toLowerCase() === 'true';
 
 /**
  * Оптимизирует URL изображения с учетом размеров и формата
@@ -169,6 +174,16 @@ export function optimizeImageUrl(
     // If the image host doesn't support our transform params, proxy via images.weserv.nl on web.
     // This makes width/quality/format flags effective and usually fixes poor LCP caused by huge originals.
     if (!isAllowedTransformHost) {
+      if (Platform.OS === 'web' && isE2EEnv()) {
+        const passthrough = url.toString();
+        if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {
+          const keysToDelete = Array.from(optimizedUrlCache.keys()).slice(0, 100);
+          keysToDelete.forEach((key) => optimizedUrlCache.delete(key));
+        }
+        optimizedUrlCache.set(cacheKey, passthrough);
+        return passthrough;
+      }
+
       if (isTestEnv()) {
         const passthrough = url.toString();
         if (optimizedUrlCache.size >= MAX_CACHE_SIZE) {

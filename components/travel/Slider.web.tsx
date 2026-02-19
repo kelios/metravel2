@@ -217,6 +217,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     firstImagePreloaded ? { 0: true } : {},
   );
   const [transitionOverlayFrom, setTransitionOverlayFrom] = useState<number | null>(null);
+  const transitionOverlayVisibleRef = useRef(false);
   const [transitionOverlayVisible, setTransitionOverlayVisible] = useState(false);
   const [transitionOverlayFading, setTransitionOverlayFading] = useState(false);
 
@@ -248,6 +249,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
   const hideTransitionOverlay = useCallback(() => {
     clearOverlayHideTimer();
+    transitionOverlayVisibleRef.current = false;
     setTransitionOverlayVisible(false);
     setTransitionOverlayFading(false);
     setTransitionOverlayFrom(null);
@@ -257,6 +259,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
   const startTransitionOverlay = useCallback((fromIndex: number, toIndex: number) => {
     clearOverlayHideTimer();
     setTransitionOverlayFrom(fromIndex);
+    transitionOverlayVisibleRef.current = true;
     setTransitionOverlayVisible(true);
     setTransitionOverlayFading(false);
     overlayToRef.current = toIndex;
@@ -364,14 +367,14 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       return next;
     });
 
-    if (overlayToRef.current === index && transitionOverlayVisible) {
+    if (overlayToRef.current === index && transitionOverlayVisibleRef.current) {
       clearOverlayHideTimer();
       setTransitionOverlayFading(true);
       overlayHideTimerRef.current = setTimeout(() => {
         hideTransitionOverlay();
       }, 180);
     }
-  }, [clearOverlayHideTimer, hideTransitionOverlay, transitionOverlayVisible]);
+  }, [clearOverlayHideTimer, hideTransitionOverlay]);
 
   useEffect(() => {
     const initialLoaded = firstImagePreloaded ? ({ 0: true } as Record<number, true>) : {};
@@ -422,23 +425,20 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       const node = scrollNodeRef.current;
       if (!node) return;
       if (isDraggingRef.current) return;
-      const w = widthOverride ?? containerWRef.current ?? containerW;
+      const w = widthOverride ?? containerWRef.current;
       if (!Number.isFinite(w) || w <= 0) return;
       const left = idx * w;
       if (Math.abs((node.scrollLeft || 0) - left) < 1) return;
 
-      const prevScrollBehavior = node.style.scrollBehavior;
-      node.style.scrollBehavior = 'auto';
       node.classList.add('slider-snap-disabled');
       void node.offsetHeight;
       node.scrollLeft = left;
       requestAnimationFrame(() => {
         node.scrollLeft = left;
         node.classList.remove('slider-snap-disabled');
-        node.style.scrollBehavior = prevScrollBehavior;
       });
     },
-    [containerW, containerWRef],
+    [containerWRef],
   );
 
   // Sync container width from DOM
@@ -490,38 +490,24 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
       resolveNodes();
       const node = scrollNodeRef.current;
       if (node) {
-        const currentIdx = indexRef.current;
-        const isWrapJump =
-          images.length > 1 &&
-          ((currentIdx === 0 && wrapped === images.length - 1) ||
-            (currentIdx === images.length - 1 && wrapped === 0));
-        const prevScrollBehavior = node.style.scrollBehavior;
-        if (isWrapJump) {
-          node.style.scrollBehavior = 'auto';
-        }
-        const liveW = containerWRef.current || containerW;
+        const liveW = containerWRef.current;
         const left = wrapped * liveW;
-        // Disable scroll-snap temporarily
+        // Disable scroll-snap temporarily so programmatic scrollLeft is instant
         node.classList.add('slider-snap-disabled');
         void node.offsetHeight;
         node.scrollLeft = left;
         setActiveIndex(wrapped);
-        // Triple rAF to ensure browser has painted
+        // Double rAF: survive React re-render from setActiveIndex, then restore snap
         requestAnimationFrame(() => {
           node.scrollLeft = left;
           requestAnimationFrame(() => {
             node.scrollLeft = left;
-            requestAnimationFrame(() => {
-              node.classList.remove('slider-snap-disabled');
-              if (isWrapJump) {
-                node.style.scrollBehavior = prevScrollBehavior;
-              }
-            });
+            node.classList.remove('slider-snap-disabled');
           });
         });
       }
     },
-    [containerW, resolveNodes, images.length, setActiveIndex]
+    [resolveNodes, images.length, setActiveIndex, containerWRef]
   );
 
   // Expose methods via ref
@@ -647,11 +633,13 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
     const snapToSlide = (targetIdx: number) => {
       const cw = containerWRef.current || 1;
+      node.classList.add('slider-snap-disabled');
       node.scrollLeft = targetIdx * cw;
       setActiveIndex(targetIdx);
       requestAnimationFrame(() => {
+        node.scrollLeft = targetIdx * cw;
         requestAnimationFrame(() => {
-          node.style.scrollSnapType = 'x mandatory';
+          node.classList.remove('slider-snap-disabled');
         });
       });
     };
@@ -819,7 +807,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
 
               return (
                 <View
-                  key={`${String(item.id)}|${String(item.updated_at ?? '')}|${String(item.url)}|${index}`}
+                  key={`${String(item.id)}|${index}`}
                   style={[styles.slide, { width: containerW, height: containerH }, styles.slideSnap]}
                 >
                   {inWindow ? (
@@ -831,7 +819,8 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       slideHeight={slideHeight}
                       imagesLength={imagesLen}
                       styles={styles}
-                      blurBackground={blurBackground && index === currentIndex}
+                      blurBackground={blurBackground}
+                      isActive={index === currentIndex}
                       imageProps={imageProps}
                       onFirstImageLoad={onFirstImageLoad}
                       onSlideLoad={handleSlideLoad}

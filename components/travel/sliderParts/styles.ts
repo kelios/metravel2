@@ -57,7 +57,6 @@ export const createSliderStyles = (colors: Record<string, any>) =>
           overflowX: 'auto',
           overflowY: 'hidden',
           overscrollBehaviorX: 'contain',
-          scrollBehavior: 'smooth',
         } as any)
       : {},
     scrollContent: {
