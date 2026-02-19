@@ -317,16 +317,28 @@ export default function RootLayout() {
           if (event.data?.type === 'SW_PENDING_UPDATE') {
             (window as any).__metravelUpdatePending = true;
           } else if (event.data?.type === 'SW_STALE_CHUNK') {
-            // Immediate reload — stale chunk would cause a crash anyway.
+            // Reload to recover from missing chunk, but with cooldown to prevent loops.
+            const STALE_KEY = '__metravel_sw_stale_reload';
+            const STALE_COOLDOWN = 30000;
+            try {
+              const last = sessionStorage.getItem(STALE_KEY);
+              if (last && Date.now() - parseInt(last, 10) < STALE_COOLDOWN) return;
+              sessionStorage.setItem(STALE_KEY, Date.now().toString());
+            } catch { /* sessionStorage unavailable */ }
             window.location.reload();
           }
         };
         navigator.serviceWorker.addEventListener('message', onSWMessage);
 
         // controllerchange fires when a new SW takes control.
-        // Treat it the same as SW_PENDING_UPDATE — defer to next navigation.
+        // Only flag a pending update if there was already a controller — i.e. this
+        // is a genuine SW update, not the first-ever registration (which happens
+        // after stale-chunk recovery unregisters the SW and the page re-registers it).
+        const hadController = !!navigator.serviceWorker.controller;
         const onControllerChange = () => {
-          (window as any).__metravelUpdatePending = true;
+          if (hadController) {
+            (window as any).__metravelUpdatePending = true;
+          }
         };
         navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
 
