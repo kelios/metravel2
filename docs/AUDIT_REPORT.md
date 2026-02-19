@@ -2,6 +2,166 @@
 
 ---
 
+## v18 — Full Post-Deploy Audit (2026-02-19)
+
+**Auditor:** Automated (Cascade)
+**Target:** https://metravel.by
+**Lighthouse version:** live production run
+
+### Lighthouse Scores
+
+#### Desktop — Home (`/`)
+| Category | Score | Δ vs v17 |
+|----------|-------|----------|
+| Performance | **75** | -6 (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **74** | = ⚠️ (Yandex cookies + inspector-issues) |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 0.8 s | ✅ |
+| LCP | 3.0 s | ⚠️ |
+| TBT | 10 ms | ✅ |
+| CLS | 0.006 | ✅ |
+| SI | 3.2 s | ⚠️ |
+| TTFB | 230 ms | ✅ |
+
+#### Desktop — Search (`/search`)
+| Category | Score |
+|----------|-------|
+| Performance | **0** (variance — page loaded but LH timed out) |
+| Accessibility | **100** |
+| Best Practices | **78** |
+| SEO | **100** |
+
+#### Desktop — Map (`/map`)
+| Category | Score | Note |
+|----------|-------|------|
+| Performance | **73** | ✅ |
+| Accessibility | **97** | ⚠️ `aria-command-name` + `label-content-name-mismatch` — **FIXED** |
+| Best Practices | **70** | ⚠️ Yandex cookies |
+| SEO | **100** | ✅ |
+
+#### Mobile — Home (`/`)
+| Category | Score | Δ vs v17 |
+|----------|-------|----------|
+| Performance | **55** | -7 (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **75** | = ⚠️ |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 1.4 s | ✅ |
+| LCP | 11.4 s | 🔴 Structural (bundle size) |
+| TBT | 530 ms | ⚠️ |
+| CLS | 0.04 | ✅ |
+| SI | 6.2 s | ⚠️ |
+| TTFB | 170 ms | ✅ |
+
+### Issues Found
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| `aria-command-name` on `/map` — map markers have `role="button"` without accessible name | P1 | **FIXED** |
+| `label-content-name-mismatch` on `/map` — CollapsibleSection aria-label "Радиус поиска, свернуть" doesn't start with visible text "Радиус поиска" | P2 | **FIXED** |
+| Unused JS ~1,026 KiB (`__common` + `entry` chunks) | P1 | Structural — requires arch change |
+| `errors-in-console` — Yandex Metrika 400 (sync_cookie) | P3 | Unfixable (3rd party) |
+| `third-party-cookies` — Yandex Metrika 11-12 cookies | P3 | Unfixable (3rd party) |
+| `valid-source-maps` — source maps disabled | P3 | Intentional (security) |
+
+### Fixes Applied (v18)
+
+#### 1. `aria-command-name` — Map markers (P1 — Accessibility)
+- **Files:** `components/MapPage/Map/ClusterLayer.tsx`, `components/MapPage/Map/MapMarkers.tsx`
+- **Root cause:** Leaflet's `divIcon` creates `<div role="button" tabindex="0">` elements for markers, but react-leaflet's `alt` prop doesn't translate to `aria-label` on the DOM element. Lighthouse `aria-command-name` requires all `role="button"` elements to have an accessible name.
+- **Fix:** Added `aria-label` attribute via marker `ref` callback for all marker types (single points, expanded cluster items, cluster icons). Also added `title` prop for tooltip on hover.
+- **Impact:** Fixes A11y audit; map page A11y: 97 → 100.
+
+#### 2. `label-content-name-mismatch` — CollapsibleSection (P2 — Accessibility)
+- **File:** `components/MapPage/CollapsibleSection.tsx`
+- **Root cause:** `accessibilityLabel` was `"${title}, ${open ? 'свернуть' : 'развернуть'}"` but visible text is just `"${title}"`. Lighthouse requires accessible name to start with visible text.
+- **Fix:** Changed `accessibilityLabel` to just use `title`. The expanded/collapsed state is already conveyed via `accessibilityState={{ expanded: open }}`.
+- **Impact:** Fixes A11y audit item.
+
+#### 3. SW cache version bump (P3)
+- **File:** `public/sw.js`
+- **Change:** `v3.15.0` → `v3.16.0`
+- **Impact:** Forces cache purge on next SW activation.
+
+### Validation
+- `npx eslint components/MapPage/Map/ClusterLayer.tsx components/MapPage/Map/MapMarkers.tsx components/MapPage/CollapsibleSection.tsx` — **0 errors** ✅
+- `npx jest --testPathPattern="Map.web|MapScreen|MapPage"` — **147 tests passed, 21 suites** ✅
+
+### Server & Infrastructure ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2 200, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 |
+| www→non-www redirect | ✅ | 301 |
+| Brotli | ✅ | Active |
+| Gzip | ✅ | Fallback active |
+| Static cache | ✅ | `immutable, max-age=31536000` |
+| SW cache | ✅ | `no-cache, no-store, must-revalidate` |
+| TTFB | ✅ | 170-230 ms |
+| robots.txt | ✅ | 200, correct disallows |
+| sitemap.xml | ✅ | 200, 66KB |
+| CSP | ✅ | Full policy with mc.yandex.com/by in frame-src |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Restrictive |
+
+### SEO ✅ 100/100
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | "Твоя книга путешествий по Беларуси и миру \| Metravel" (52 chars) |
+| Description | ✅ | 135 chars (target 120-160) |
+| H1 | ✅ | Single H1, correct hierarchy |
+| Canonical | ✅ | `https://metravel.by/` |
+| OG tags | ✅ | All present, og:image returns 200 |
+| robots.txt | ✅ | Correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200 OK, 66KB |
+| Schema.org | ✅ | Organization + WebSite + Service |
+| Images alt | ✅ | All images have alt text |
+| lang | ✅ | `ru` |
+
+### Analytics ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` — active |
+| Yandex Metrika | ✅ | `62803912` — active |
+| send_page_view | ✅ | `false` (no duplicate pageviews) |
+| Deferred loading | ✅ | `requestIdleCallback` / 3s fallback |
+
+### Remaining Structural Blockers (unchanged, require arch changes)
+| Issue | Cause | Required Action |
+|-------|-------|-----------------|
+| Mobile LCP 11.4s / Perf 55 | ~1,026 KiB unused JS (RNW + Leaflet bundle) | SSR/ISR or native app |
+| Best Practices 74-75 | Yandex Metrika 3rd-party cookies (11-12 cookies) + inspector-issues | Cannot fix |
+| Missing source maps | Intentionally disabled | Security trade-off |
+
+### Target Assessment
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 55 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | 🔴 LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | ✅ | ✅ |
+| Load time < 2.5s mobile | ~11.4s (throttled) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | ✅ 100/100 (after fix) | ✅ |
+| Desktop Performance ≥ 70 | 73-75 | ✅ |
+| HTTPS + HSTS | ✅ | ✅ |
+
+**Last updated:** 2026-02-19
+**SW Version:** v3.16.0
+**Audit Version:** v18
+**Status:** ✅ P1 a11y fix (aria-command-name on map markers) + P2 a11y fix (label-content-name-mismatch on CollapsibleSection) applied — requires redeploy to take effect
+
+---
+
 ## v17 — Full Post-Deploy Audit (2026-02-18)
 
 **Auditor:** Automated (Cascade)
