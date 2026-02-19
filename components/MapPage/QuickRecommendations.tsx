@@ -140,7 +140,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(({
           pressed && styles.cardPressed,
         ]}
         onPress={() => onPlaceSelect(place)}
-        accessibilityLabel={`Открыть ${place.address || 'место'}`}
+        accessibilityLabel={place.address || 'Место'}
       >
         {thumbUrl ? (
           <View style={styles.cardImage}>

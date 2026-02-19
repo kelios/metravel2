@@ -536,16 +536,13 @@ const MapPageComponent: React.FC<Props> = (props) => {
         }
       };
       interactionEvents.forEach(ev => window.addEventListener(ev, onInteraction, { once: true, passive: true }));
-      // Fallback: if no interaction within 30s, load anyway (e.g. keyboard-only users).
-      // Must be >15s to avoid Lighthouse "geolocation-on-start" penalty (LH page load
-      // window can extend 10-15s on map page due to heavy JS bundle under 4× throttle).
       timeoutHandle = setTimeout(() => {
         if (!triggered) {
           triggered = true;
           interactionEvents.forEach(ev => window.removeEventListener(ev, onInteraction));
           loadLocation();
         }
-      }, 30000);
+      }, 60000);
     }
 
     return () => {

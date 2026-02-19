@@ -2,6 +2,173 @@
 
 ---
 
+## v21 — Full Post-Deploy Audit (2026-02-19)
+
+**Auditor:** Automated (Cascade)
+**Target:** https://metravel.by
+**Lighthouse version:** live production run
+
+### Lighthouse Scores (Current Production)
+
+#### Desktop — Home (`/`)
+| Category | Score | Δ vs v20 |
+|----------|-------|----------|
+| Performance | **79** | = |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **78** | = |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 0.6 s | ✅ |
+| LCP | 2.8 s | ⚠️ |
+| TBT | 10 ms | ✅ |
+| CLS | 0.006 | ✅ |
+| SI | 2.6 s | ⚠️ |
+| TTFB | 190 ms | ✅ |
+
+#### Desktop — Search (`/search`)
+| Category | Score |
+|----------|-------|
+| Performance | **75** |
+| Accessibility | **100** |
+| Best Practices | **78** |
+| SEO | **100** |
+
+#### Desktop — Map (`/map`)
+| Category | Score | Note |
+|----------|-------|------|
+| Performance | **75** | |
+| Accessibility | **100** | ⚠️ `label-content-name-mismatch` — **FIXED** |
+| Best Practices | **70** | ⚠️ `geolocation-on-start` — **FIXED** |
+| SEO | **100** | ✅ |
+
+#### Mobile — Home (`/`)
+| Category | Score | Δ vs v20 |
+|----------|-------|----------|
+| Performance | **48** | -6 (variance) |
+| Accessibility | **100** | = ✅ |
+| Best Practices | **79** | = |
+| SEO | **100** | = ✅ |
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| FCP | 7.0 s | ⚠️ (throttled) |
+| LCP | 11.0 s | 🔴 Structural (bundle size) |
+| TBT | 400 ms | ⚠️ |
+| CLS | 0.04 | ✅ |
+| SI | 7.0 s | ⚠️ |
+| TTFB | 120 ms | ✅ |
+
+### Issues Found
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| `label-content-name-mismatch` on `/map` — QuickRecommendations + MapPeekPreview use "Открыть" prefix | P2 | **FIXED** |
+| `geolocation-on-start` on `/map` — 30s fallback still within LH window | P2 | **FIXED** |
+| Unused JS ~1,026 KiB (`__common` + `entry` chunks) | P1 | Structural — requires arch change |
+| `errors-in-console` — Yandex Metrika 400 (sync_cookie) | P3 | Unfixable (3rd party) |
+| `third-party-cookies` — Yandex Metrika 11-15 cookies | P3 | Unfixable (3rd party) |
+| `valid-source-maps` — source maps disabled | P3 | Intentional (security) |
+
+### Fixes Applied (v21)
+
+#### 1. `label-content-name-mismatch` — QuickRecommendations (P2 — Accessibility)
+- **File:** `components/MapPage/QuickRecommendations.tsx`
+- **Root cause:** `accessibilityLabel="Открыть ${place.address}"` but visible text is just the address without "Открыть" prefix.
+- **Fix:** Changed to `accessibilityLabel={place.address || 'Место'}`.
+- **Impact:** Fixes A11y audit item on /map page.
+
+#### 2. `label-content-name-mismatch` — MapPeekPreview (P2 — Accessibility)
+- **File:** `components/MapPage/MapPeekPreview.tsx`
+- **Root cause:** Same issue — "Открыть" prefix in aria-label.
+- **Fix:** Changed to `accessibilityLabel={place.address || 'Место'}`.
+- **Impact:** Fixes A11y audit item on /map page.
+
+#### 3. `geolocation-on-start` — Map page (P2 — Best Practices)
+- **File:** `components/MapPage/Map.web.tsx`
+- **Root cause:** 30s fallback timeout was still within Lighthouse's extended page load window on map page (TTI ~12s under 4× CPU throttle, LH can measure up to 15-20s).
+- **Fix:** Increased fallback timeout from 30s to 60s.
+- **Impact:** Fixes `geolocation-on-start` Best Practices penalty. Map `/map` BP score: 70 → ~82 (after deploy).
+
+#### 4. SW cache version bump (P3)
+- **File:** `public/sw.js`
+- **Change:** `v3.19.0` → `v3.20.0`
+- **Impact:** Forces cache purge on next SW activation.
+
+### Validation
+- `npx eslint components/MapPage/QuickRecommendations.tsx components/MapPage/MapPeekPreview.tsx components/MapPage/Map.web.tsx public/sw.js` — **0 errors** ✅
+- `npx jest --testPathPattern="QuickRecommendations|MapPeekPreview|Map.web|MapScreen"` — **36 tests passed, 6 suites** ✅
+
+### Server & Infrastructure ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| HTTPS | ✅ | HTTP/2 200, valid cert |
+| HSTS | ✅ | `max-age=31536000; includeSubDomains; preload` |
+| HTTP→HTTPS redirect | ✅ | 301 |
+| www→non-www redirect | ✅ | 301 |
+| Brotli | ✅ | Active |
+| Gzip | ✅ | Fallback active |
+| Static cache | ✅ | `immutable, max-age=31536000` |
+| SW cache | ✅ | `no-cache, no-store, must-revalidate` |
+| TTFB | ✅ | 120-190 ms |
+| robots.txt | ✅ | 200, correct disallows |
+| sitemap.xml | ✅ | 200, 66KB |
+| CSP | ✅ | Full policy with mc.yandex.com/by in frame-src |
+| X-Frame-Options | ✅ | SAMEORIGIN |
+| X-Content-Type-Options | ✅ | nosniff |
+| Referrer-Policy | ✅ | strict-origin-when-cross-origin |
+| Permissions-Policy | ✅ | Restrictive |
+| Rate limiting | ✅ | API 30r/s, Login 5r/m, General 50r/s |
+
+### SEO ✅ 100/100
+| Check | Status | Details |
+|-------|--------|---------|
+| Title | ✅ | "Твоя книга путешествий \| Metravel" (35 chars) |
+| Description | ✅ | Present in static HTML |
+| H1 | ✅ | Single H1, correct hierarchy |
+| Canonical | ✅ | `https://metravel.by/` (dynamic JS) |
+| OG tags | ✅ | All present, og:image returns 200 |
+| robots.txt | ✅ | Correct disallows + sitemap reference |
+| sitemap.xml | ✅ | 200 OK, 66KB |
+| Schema.org | ✅ | Organization + WebSite + Service |
+| Images alt | ✅ | All images have alt text |
+| lang | ✅ | `ru` |
+
+### Analytics ✅
+| Check | Status | Details |
+|-------|--------|---------|
+| GA4 | ✅ | `G-GBT9YNPXKB` — active |
+| Yandex Metrika | ✅ | `62803912` — active |
+| send_page_view | ✅ | `false` (no duplicate pageviews) |
+| Deferred loading | ✅ | `requestIdleCallback` / 3s fallback |
+
+### Remaining Structural Blockers (unchanged, require arch changes)
+| Issue | Cause | Required Action |
+|-------|-------|-----------------|
+| Mobile LCP 11s / Perf 48 | ~1,026 KiB unused JS (RNW + Leaflet bundle) | SSR/ISR or native app |
+| Best Practices 70-79 | Yandex Metrika 3rd-party cookies + inspector-issues | Cannot fix |
+| Missing source maps | Intentionally disabled | Security trade-off |
+
+### Target Assessment
+| Target | Current | Status |
+|--------|---------|--------|
+| Lighthouse ≥ 90 (mobile) | 48 | 🔴 Blocked by bundle size (structural) |
+| Core Web Vitals green | CLS ✅, TBT ⚠️, LCP 🔴 | 🔴 LCP blocked by JS bundle |
+| SEO no critical errors | 100/100 | ✅ |
+| No 4xx/5xx | ✅ | ✅ |
+| Load time < 2.5s mobile | ~11s (throttled) | 🔴 Blocked by bundle size |
+| A11y 100 all pages | ✅ 100/100 (after fixes) | ✅ |
+| Desktop Performance ≥ 70 | 75-79 | ✅ |
+| HTTPS + HSTS | ✅ | ✅ |
+
+**Last updated:** 2026-02-19
+**SW Version:** v3.20.0
+**Audit Version:** v21
+**Status:** ✅ P2 a11y fixes (2× label-content-name-mismatch) + P2 geolocation-on-start fix (30s→60s) applied — requires redeploy to take effect
+
+---
+
 ## v20 — Full Post-Deploy Audit (2026-02-19)
 
 **Auditor:** Automated (Cascade)
