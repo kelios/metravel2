@@ -124,6 +124,8 @@ export type Articles = {
 
 export type Article = {
     id?: number
+    slug?: string
+    url?: string
     name: string
     description: string
     article_image_thumb_url: string

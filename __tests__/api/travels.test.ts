@@ -573,7 +573,7 @@ describe('src/api/travelsApi.ts', () => {
       expect(urlObj.searchParams.get('query')).toContain('modyn');
     });
 
-    it('fetchTravelBySlug делает общий fallback-скан без query, если query-поиск пустой', async () => {
+    it('fetchTravelBySlug продолжает fallback-скан, если первые query не дают результатов', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
       mockedApiClientGet.mockRejectedValueOnce(notFoundError);
@@ -606,9 +606,87 @@ describe('src/api/travelsApi.ts', () => {
 
       expect(result.id).toBe(2677);
       expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(4);
-      const lastUrl = mockedFetchWithTimeout.mock.calls[3][0] as string;
-      const lastUrlObj = new URL(lastUrl);
-      expect(lastUrlObj.searchParams.get('query')).toBeNull();
+      const firstUrl = mockedFetchWithTimeout.mock.calls[0][0] as string;
+      const firstUrlObj = new URL(firstUrl);
+      expect(firstUrlObj.searchParams.get('query')).toContain('modyn');
+    });
+
+    it('fetchTravelBySlug fallback использует короткий токен slug, когда длинные query пустые', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+
+      mockedFetchWithTimeout.mockImplementation(async (url: string) => ({
+        ok: true,
+        __url: url,
+      } as any));
+      mockedSafeJsonParse.mockImplementation(async (res: any) => {
+        const url = new URL(res.__url);
+        const query = url.searchParams.get('query') || '';
+        if (query === 'modyn') {
+          return {
+            data: [
+              {
+                id: 498,
+                name: 'Модынь  - одна из самых высоких вершин Бескидов (1029)',
+                slug: 'modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
+                url: '/travels/modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
+                publish: true,
+                moderation: true,
+              },
+            ],
+            total: 1,
+          } as any;
+        }
+        return { data: [], total: 0 } as any;
+      });
+
+      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
+
+      expect(result.id).toBe(498);
+      expect(result.slug).toBe('modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029');
+      const requestedQueries = mockedFetchWithTimeout.mock.calls.map(
+        (call) => new URL(call[0] as string).searchParams.get('query') || ''
+      );
+      expect(requestedQueries).toContain('modyn');
+    });
+
+    it('fetchTravelBySlug fallback пробует одиночный токен первым (prod API не поддерживает multi-word)', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
+      mockedApiClientGet.mockRejectedValueOnce(notFoundError);
+
+      mockedFetchWithTimeout.mockImplementation(async (url: string) => ({
+        ok: true,
+        __url: url,
+      } as any));
+      mockedSafeJsonParse.mockImplementation(async (res: any) => {
+        const url = new URL(res.__url);
+        const query = url.searchParams.get('query') || '';
+        if (query === 'modyn') {
+          return {
+            data: [
+              {
+                id: 498,
+                name: 'Модынь  - одна из самых высоких вершин Бескидов (1029)',
+                slug: 'modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
+                url: '/travels/modyn-odna-iz-samyh-vysokih-vershin-beskidov-1029',
+                publish: true,
+                moderation: true,
+              },
+            ],
+            total: 1,
+          } as any;
+        }
+        return { data: [], total: 0 } as any;
+      });
+
+      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
+
+      expect(result.id).toBe(498);
+      const firstQuery = new URL(mockedFetchWithTimeout.mock.calls[0][0] as string).searchParams.get('query') || '';
+      expect(firstQuery.split(' ').length).toBe(1);
+      expect(firstQuery).toBe('modyn');
     });
 
     it('fetchTravelBySlug fallback корректно обрабатывает slug с числовым суффиксом', async () => {

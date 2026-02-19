@@ -12,7 +12,7 @@ import ArticleRatingSection from '@/components/article/ArticleRatingSection'
 import IframeRenderer, { iframeModel } from '@native-html/iframe-plugin'
 import RenderHTML from 'react-native-render-html'
 import { Card, Title } from '@/ui/paper'
-import { apiClient } from '@/api/client'
+import { extractArticleIdFromParam, fetchArticle, fetchArticleBySlug } from '@/api/articles'
 import { SafeHtml } from '@/components/article/SafeHtml'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -28,25 +28,84 @@ export default function ArticleDetails() {
   }, [])
 
   const params = useLocalSearchParams()
-  const id = typeof params.id === 'string' ? Number(params.id) : undefined
+  const routeParam = Array.isArray(params.id) ? String(params.id[0] ?? '') : String(params.id ?? '')
+  const numericId = useMemo(() => extractArticleIdFromParam(routeParam), [routeParam])
+  const normalizedSlug = useMemo(() => {
+    const base = String(routeParam || '').trim().split('#')[0].split('?')[0]
+    if (!/%[0-9A-Fa-f]{2}/.test(base)) return base
+    try {
+      return decodeURIComponent(base)
+    } catch {
+      return base
+    }
+  }, [routeParam])
 
   const [article, setArticle] = useState<Article | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!id) return
+    let cancelled = false
 
-    apiClient
-      .get<Article>(`/articles/${id}/`)
-      .then((articleData) => {
-        setArticle(articleData)
-      })
-      .catch((error) => {
-        console.error('Failed to fetch article data:', error)
-      })
-  }, [id])
+    const load = async () => {
+      setIsLoading(true)
+      setErrorMessage(null)
+      setArticle(null)
 
-  if (!article) {
+      try {
+        let loadedArticle: Article | null = null
+
+        if (numericId) {
+          try {
+            loadedArticle = await fetchArticle(numericId, { throwOnError: true })
+          } catch (primaryError) {
+            if (normalizedSlug && normalizedSlug !== String(numericId)) {
+              loadedArticle = await fetchArticleBySlug(normalizedSlug, { throwOnError: true })
+            } else {
+              throw primaryError
+            }
+          }
+        } else if (normalizedSlug) {
+          loadedArticle = await fetchArticleBySlug(normalizedSlug, { throwOnError: true })
+        }
+
+        if (!loadedArticle?.id) {
+          throw new Error('Статья не найдена')
+        }
+
+        if (!cancelled) {
+          setArticle(loadedArticle)
+        }
+      } catch (error: any) {
+        if (!cancelled) {
+          setErrorMessage(error?.message || 'Не удалось загрузить статью')
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [numericId, normalizedSlug])
+
+  if (isLoading) {
     return <ActivityIndicator />
+  }
+
+  if (!article || errorMessage) {
+    return (
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.centerContent}>
+          <Title style={styles.errorTitle}>Статья не найдена</Title>
+          <SafeHtml html={errorMessage || 'Проверьте ссылку на статью.'} />
+        </ScrollView>
+      </SafeAreaView>
+    )
   }
 
   return (
@@ -98,7 +157,7 @@ export default function ArticleDetails() {
                     ),
                   })}
                   <ArticleRatingSection
-                      articleId={id}
+                      articleId={article.id as number}
                       initialRating={article.rating}
                       initialCount={article.rating_count}
                       initialUserRating={article.user_rating}
@@ -120,6 +179,16 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     contentContainer: {
       flexGrow: 1,
       justifyContent: 'center',
+    },
+    centerContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 24,
+    },
+    errorTitle: {
+      textAlign: 'center',
+      marginBottom: 12,
     },
     card: {
       margin: 20,

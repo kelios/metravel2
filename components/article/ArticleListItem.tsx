@@ -5,7 +5,7 @@ import { Article } from '@/types/types';
 import { Card, Title, Paragraph, Text } from '@/ui/paper';
 import { widthPercentageToDP as wp } from 'react-native-responsive-screen';
 import RenderHTML from 'react-native-render-html';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
@@ -20,13 +20,23 @@ const DEFAULT_IMAGE =
 const ArticleListItem: React.FC<ArticleListItemProps> = ({ article }) => {
   const { id, name, description, article_image_thumb_url, article_type } = article;
   const colors = useThemedColors();
+  const articleRoute = useMemo<Href>(() => {
+    const rawUrl = typeof article.url === 'string' ? article.url.trim() : '';
+    if (rawUrl.startsWith('/article/')) {
+      return rawUrl.split('?')[0].split('#')[0] as Href;
+    }
+    if (typeof article.slug === 'string' && article.slug.trim()) {
+      return `/article/${article.slug.trim()}` as Href;
+    }
+    return `/article/${id}` as Href;
+  }, [article.url, article.slug, id]);
 
   // ✅ МИГРАЦИЯ: Мемоизация стилей для производительности
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
       <View style={styles.container}>
-        <Pressable onPress={() => router.push(`/article/${id}`)}>
+        <Pressable onPress={() => router.push(articleRoute)}>
           <Card style={styles.card}>
             <View style={styles.imageWrapper}>
               <Card.Cover

@@ -13,7 +13,7 @@ const { safeJsonParse } = require('@/utils/safeJsonParse') as {
   safeJsonParse: jest.Mock;
 };
 
-import { fetchArticles, fetchArticle } from '@/api/articles';
+import { fetchArticles, fetchArticle, fetchArticleBySlug, extractArticleIdFromParam } from '@/api/articles';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -176,5 +176,60 @@ describe('fetchArticle', () => {
     await expect(fetchArticle(1, { throwOnError: true })).rejects.toThrow(
       'Не удалось загрузить статью',
     );
+  });
+});
+
+describe('extractArticleIdFromParam', () => {
+  it('extracts id from numeric param and slug variations', () => {
+    expect(extractArticleIdFromParam('42')).toBe(42);
+    expect(extractArticleIdFromParam('42-test-article')).toBe(42);
+    expect(extractArticleIdFromParam('test-article-42')).toBe(42);
+  });
+
+  it('returns null for non-numeric slug without id', () => {
+    expect(extractArticleIdFromParam('test-article')).toBeNull();
+    expect(extractArticleIdFromParam('')).toBeNull();
+  });
+});
+
+describe('fetchArticleBySlug', () => {
+  it('returns article from direct by-slug endpoint', async () => {
+    const article = { id: 7, slug: 'test-article' };
+    fetchWithTimeout.mockResolvedValueOnce({ ok: true, status: 200 });
+    safeJsonParse.mockResolvedValueOnce(article);
+
+    const result = await fetchArticleBySlug('test-article', { throwOnError: true });
+
+    expect(result).toEqual(article);
+    expect(fetchWithTimeout).toHaveBeenCalledWith(
+      expect.stringContaining('/api/articles/by-slug/test-article/'),
+      expect.any(Object),
+      10000,
+    );
+  });
+
+  it('uses fallback search when by-slug endpoint returns 404', async () => {
+    fetchWithTimeout
+      .mockResolvedValueOnce({ ok: false, status: 404, statusText: 'Not Found' })
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    safeJsonParse.mockResolvedValueOnce({
+      data: [
+        {
+          id: 11,
+          slug: 'old-test-article',
+          url: '/article/old-test-article',
+          name: 'Old Test Article',
+        },
+      ],
+      total: 1,
+    });
+
+    const result = await fetchArticleBySlug('old-test-article', { throwOnError: true });
+
+    expect(result.id).toBe(11);
+    expect(fetchWithTimeout).toHaveBeenCalledTimes(2);
+    const fallbackUrl = fetchWithTimeout.mock.calls[1][0] as string;
+    const fallbackParams = new URL(fallbackUrl).searchParams;
+    expect(fallbackParams.get('query')).toContain('old');
   });
 });

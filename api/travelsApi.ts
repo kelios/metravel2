@@ -749,19 +749,62 @@ const simplifySlugToken = (token: string): string =>
         .replace(/ii/g, 'i')
         .replace(/yi/g, 'i');
 
+const SLUG_FALLBACK_STOPWORDS = new Set([
+    'a',
+    'i',
+    'iz',
+    'k',
+    'na',
+    'o',
+    'odna',
+    'odin',
+    'odno',
+    'odnoi',
+    'odnoy',
+    'po',
+    's',
+    'v',
+    'vershin',
+]);
+
 const buildSlugFallbackQueries = (slug: string): string[] => {
     const tokens = slugTokenize(slug).filter((token) => !/^\d+$/.test(token));
-    if (tokens.length < 3) return [];
+    if (tokens.length === 0) return [];
 
     const full = tokens.join(' ');
-    const shortened = tokens.slice(0, Math.min(tokens.length, 7)).join(' ');
+    const shortened = tokens.slice(0, Math.min(tokens.length, 6)).join(' ');
     const boundary =
         tokens.length >= 4
             ? [tokens[0], tokens[1], tokens[tokens.length - 2], tokens[tokens.length - 1]].join(' ')
             : '';
     const simplified = tokens.map(simplifySlugToken).join(' ');
+    const firstToken = tokens[0];
+    const firstTwo = tokens.slice(0, 2).join(' ');
+    const firstThree = tokens.slice(0, 3).join(' ');
+    const compact = tokens.length >= 2 ? [tokens[0], tokens[tokens.length - 1]].join(' ') : '';
 
-    return Array.from(new Set([full, shortened, boundary, simplified].map((q) => q.trim()).filter(Boolean)));
+    const meaningfulTokens = tokens.filter(
+        (token) => token.length >= 4 && !SLUG_FALLBACK_STOPWORDS.has(token)
+    );
+    const primaryTokens = meaningfulTokens.slice(0, 4);
+    const simplifiedPrimaryTokens = primaryTokens
+        .map(simplifySlugToken)
+        .filter((token) => token.length >= 3);
+
+    const orderedQueries = [
+        ...primaryTokens,
+        ...simplifiedPrimaryTokens,
+        firstToken,
+        full,
+        shortened,
+        boundary,
+        simplified,
+        firstThree,
+        firstTwo,
+        compact,
+    ];
+
+    return Array.from(new Set(orderedQueries.map((q) => q.trim()).filter(Boolean)));
 };
 
 const scoreSlugSimilarity = (requestedSlug: string, candidateSlug: string): number => {
@@ -825,10 +868,14 @@ const findTravelBySlugFallback = async (
     const queries = buildSlugFallbackQueries(slug);
     const scanQueries = Array.from(new Set([...queries, '']));
 
-    let bestMatch: { item: Travel; score: number } | null = null;
+    let bestMatch: Travel | null = null;
+    let bestScore = 0;
 
     for (const query of scanQueries) {
-        for (let page = 1; page <= 3; page += 1) {
+        const queryWordCount = query.trim() ? query.trim().split(/\s+/).length : 0;
+        const maxPages = queryWordCount <= 1 ? 5 : 3;
+
+        for (let page = 1; page <= maxPages; page += 1) {
             const candidates = await fetchFallbackTravelCandidates(query, page, options);
             if (!candidates.length) break;
 
@@ -839,18 +886,19 @@ const findTravelBySlugFallback = async (
                 const score = scoreSlugSimilarity(slug, candidateSlug);
                 if (score < 0.72) continue;
 
-                if (!bestMatch || score > bestMatch.score) {
-                    bestMatch = { item, score };
+                if (!bestMatch || score > bestScore) {
+                    bestMatch = item;
+                    bestScore = score;
                 }
             }
 
-            if (bestMatch && bestMatch.score >= 1.1) {
-                return bestMatch.item;
+            if (bestMatch && bestScore >= 1.1) {
+                return bestMatch;
             }
         }
     }
 
-    return bestMatch?.item ?? null;
+    return bestMatch;
 };
 
 export const fetchTravelBySlug = async (
