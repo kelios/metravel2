@@ -93,6 +93,8 @@ describe('EnhancedPdfGenerator helpers', () => {
     const galleryHtml = generator.renderGalleryPage(travelA, 2)
     expect(galleryHtml).toContain('gallery-page')
     expect(galleryHtml).toContain('images.weserv.nl')
+    expect(galleryHtml).toContain('height: 285mm')
+    expect(galleryHtml).not.toContain('flex: 1; min-height: 170mm')
 
     const checklist = generator.renderChecklistPage(baseSettings, 5)
     expect(checklist).toContain('Одежда')
@@ -102,6 +104,8 @@ describe('EnhancedPdfGenerator helpers', () => {
     const mapPage = await generator.renderMapPage(travelA, locations, 4)
     expect(mapPage).toContain('leaflet-snapshot')
     expect(mapPage).toContain('Маршрут')
+    expect(mapPage).toContain('height: 125mm')
+    expect(mapPage).not.toContain('height: 135mm')
   })
 
   it('builds inline gallery and safe URLs', () => {

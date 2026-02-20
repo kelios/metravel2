@@ -1141,6 +1141,7 @@ export class EnhancedPdfGenerator {
       snapshotDataUrl,
       mapSvg,
       locationListHtml,
+      locationCount: locations.length,
       pageNumber,
     });
   }
@@ -1908,37 +1909,40 @@ export class EnhancedPdfGenerator {
           return `
         <div style="
           display: flex;
-          gap: 10px;
+          gap: 8px;
           align-items: flex-start;
-          padding: 8px 10px;
+          padding: 6px 8px;
           border: 1px solid ${colors.border};
           background: ${colors.surface};
           border-radius: ${this.theme.blocks.borderRadius};
-          margin-bottom: 6px;
+          margin-bottom: 4px;
+          break-inside: avoid;
+          page-break-inside: avoid;
         ">
           ${location.thumbnailUrl ? `
             <div style="
-              width: 170px;
-              border-radius: 12px;
+              width: 118px;
+              height: 72px;
+              border-radius: 8px;
               overflow: hidden;
               flex-shrink: 0;
               box-shadow: ${this.theme.blocks.shadow};
               background: ${colors.surfaceAlt};
             ">
               <img src="${this.escapeHtml(location.thumbnailUrl)}" alt="Точка ${index + 1}"
-                style="width: 100%; height: auto; object-fit: cover; display: block; ${this.getImageFilterStyle()}" />
+                style="width: 100%; height: 100%; object-fit: cover; display: block; ${this.getImageFilterStyle()}" />
             </div>
           ` : ''}
           <div style="flex: 1; min-width: 0;">
             <div style="
               display: flex;
-              align-items: center;
-              gap: 8px;
-              margin-bottom: 4px;
+              align-items: flex-start;
+              gap: 6px;
+              margin-bottom: 2px;
             ">
               <div style="
-                min-width: 20px;
-                height: 20px;
+                min-width: 18px;
+                height: 18px;
                 border-radius: 999px;
                 background: ${colors.surfaceAlt};
                 color: ${colors.text};
@@ -1946,7 +1950,7 @@ export class EnhancedPdfGenerator {
                 align-items: center;
                 justify-content: center;
                 font-weight: 600;
-                font-size: 9pt;
+                font-size: 8pt;
                 flex-shrink: 0;
                 border: 1px solid ${colors.border};
                 font-family: ${typography.headingFont};
@@ -1954,16 +1958,16 @@ export class EnhancedPdfGenerator {
               <div style="
                 font-weight: 600;
                 color: ${colors.text};
-                font-size: 11pt;
-                line-height: 1.35;
+                font-size: 10pt;
+                line-height: 1.3;
                 font-family: ${typography.bodyFont};
               ">${this.escapeHtml(title || location.address)}</div>
               ${qr ? `
                 <a href="${this.escapeHtml(mapsUrl)}" target="_blank" rel="noreferrer" style="margin-left: auto; display: inline-flex;">
                   <img src="${this.escapeHtml(qr)}" alt="QR" style="
-                    width: 16mm;
-                    height: 16mm;
-                    border-radius: 6px;
+                    width: 12mm;
+                    height: 12mm;
+                    border-radius: 4px;
                     border: 1px solid ${colors.border};
                     background: #fff;
                   "/>
@@ -1972,23 +1976,25 @@ export class EnhancedPdfGenerator {
             </div>
             ${subtitle ? `
               <div style="
-                font-size: 9.5pt;
+                font-size: 8.5pt;
                 color: ${colors.textMuted};
                 margin-bottom: 1px;
+                line-height: 1.25;
                 font-family: ${typography.bodyFont};
               ">${this.escapeHtml(subtitle)}</div>
             ` : ''}
             ${location.categoryName ? `
               <div style="
-                font-size: 9.5pt;
+                font-size: 8.5pt;
                 color: ${colors.textMuted};
                 margin-bottom: 1px;
+                line-height: 1.25;
                 font-family: ${typography.bodyFont};
               ">${this.escapeHtml(location.categoryName)}</div>
             ` : ''}
             ${location.coord && showCoordinates ? `
               <div style="
-                font-size: 8.5pt;
+                font-size: 7.5pt;
                 color: ${colors.textMuted};
                 opacity: 0.7;
                 font-family: ${typography.monoFont};

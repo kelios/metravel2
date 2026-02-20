@@ -28,6 +28,12 @@ export class V1GalleryRenderer {
     const twoPerPageLayout = this.ctx.settings?.galleryTwoPerPageLayout || 'vertical';
 
     const gapMm = this.getGalleryGapMm(gallerySpacing);
+    const pagePaddingMm = this.parseMm(spacing.pagePadding, 25);
+    const runningHeaderMm = 14;
+    const availableContentHeightMm = Math.max(
+      170,
+      297 - pagePaddingMm * 2 - runningHeaderMm
+    );
 
     const photosPerPage = this.getGalleryPhotosPerPage(layout, photos.length);
     const chunks: string[][] = [];
@@ -43,19 +49,27 @@ export class V1GalleryRenderer {
         : isTwoPerPage && twoPerPageLayout === 'vertical'
           ? 1
           : Math.max(1, Math.min(4, configuredColumns ?? defaultColumns));
-
-      const imageHeight =
+      const estimatedRows = Math.max(1, Math.ceil(pagePhotos.length / Math.max(columns, 1)));
+      const maxCardHeightMm = Math.max(
+        72,
+        Math.floor((availableContentHeightMm - gapMm * (estimatedRows - 1)) / estimatedRows)
+      );
+      const targetCardHeightMm =
         layout === 'slideshow'
-          ? '200mm'
+          ? 200
           : pagePhotos.length === 1
-            ? '210mm'
+            ? 210
             : pagePhotos.length === 2
-              ? (isTwoPerPage && twoPerPageLayout === 'vertical' ? '120mm' : '175mm')
+              ? (isTwoPerPage && twoPerPageLayout === 'vertical' ? 120 : 175)
               : pagePhotos.length <= 4
-                ? '130mm'
+                ? 130
                 : pagePhotos.length <= 6
-                  ? '95mm'
-                  : '80mm';
+                  ? 95
+                  : 80;
+      const cardHeightMm = Math.min(targetCardHeightMm, maxCardHeightMm);
+      const singleCardHeightMm = Math.min(210, availableContentHeightMm);
+      const imageHeight = `${cardHeightMm}mm`;
+      const singleImageHeight = `${singleCardHeightMm}mm`;
 
       const gridContainerStyle =
         layout === 'masonry'
@@ -64,9 +78,9 @@ export class V1GalleryRenderer {
 
       const pageNumber = startPageNumber + pageIndex;
       return `
-      <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding}; display: flex; flex-direction: column;">
+      <section class="pdf-page gallery-page" style="padding: ${spacing.pagePadding}; height: 285mm; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
         ${buildRunningHeader(this.ctx, travel.name, pageNumber)}
-        <div style="${gridContainerStyle} flex: 1; min-height: 170mm;">
+        <div style="${gridContainerStyle}">
           ${pagePhotos
             .map((photo, index) => {
               const wrapperStyle =
@@ -86,12 +100,12 @@ export class V1GalleryRenderer {
               const forceCover = pagePhotos.length <= 2;
               const imgHeightStyle =
                 layout === 'polaroid'
-                  ? (forceCover ? `height: ${isSingle ? '210mm' : '190mm'};` : `height: auto; max-height: ${isSingle ? '210mm' : '190mm'};`)
-                  : (forceCover ? `height: ${isSingle ? '210mm' : resolvedHeight};` : `height: auto; max-height: ${resolvedHeight};`);
+                  ? (forceCover ? `height: ${isSingle ? singleImageHeight : resolvedHeight};` : `height: auto; max-height: ${isSingle ? singleImageHeight : resolvedHeight};`)
+                  : (forceCover ? `height: ${isSingle ? singleImageHeight : resolvedHeight};` : `height: auto; max-height: ${resolvedHeight};`);
               const wrapperMinHeight =
                 layout === 'polaroid'
-                  ? (isSingle ? 'min-height: 210mm;' : '')
-                  : `min-height: ${isSingle ? '210mm' : resolvedHeight};`;
+                  ? (isSingle ? `min-height: ${singleImageHeight};` : '')
+                  : `min-height: ${isSingle ? singleImageHeight : resolvedHeight};`;
 
               return `
             <div style="
@@ -178,5 +192,13 @@ export class V1GalleryRenderer {
       default:
         return 6;
     }
+  }
+
+  private parseMm(value: string | undefined, fallback: number): number {
+    if (!value) return fallback;
+    const match = value.trim().match(/^(-?\d+(?:\.\d+)?)mm$/i);
+    if (!match) return fallback;
+    const parsed = Number(match[1]);
+    return Number.isFinite(parsed) ? parsed : fallback;
   }
 }

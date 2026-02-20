@@ -13,6 +13,7 @@ export interface V1MapPageData {
   snapshotDataUrl: string | null;
   mapSvg: string;
   locationListHtml: string;
+  locationCount: number;
   pageNumber: number;
 }
 
@@ -21,11 +22,12 @@ export class V1MapRenderer {
 
   render(data: V1MapPageData): string {
     const { colors, typography, spacing } = this.ctx.theme;
+    const mapHeightMm = this.getMapHeightMm(data.locationCount);
 
     return `
-      <section class="pdf-page map-page" style="padding: ${spacing.pagePadding};">
+      <section class="pdf-page map-page" style="padding: ${spacing.pagePadding}; height: 285mm; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
         ${buildRunningHeader(this.ctx, data.travelName, data.pageNumber)}
-        <div style="margin-bottom: ${spacing.sectionSpacing};">
+        <div style="margin-bottom: 4mm;">
           <div style="
             background: linear-gradient(135deg, ${colors.surfaceAlt} 0%, ${colors.surface} 100%);
             border-radius: ${this.ctx.theme.blocks.borderRadius};
@@ -36,7 +38,7 @@ export class V1MapRenderer {
             <div style="
               border-radius: ${this.ctx.theme.blocks.borderRadius};
               overflow: hidden;
-              height: 135mm;
+              height: ${mapHeightMm}mm;
             ">
               ${data.snapshotDataUrl ? `
                 <img src="${escapeHtml(data.snapshotDataUrl)}" alt="Карта маршрута"
@@ -55,12 +57,21 @@ export class V1MapRenderer {
           ">Маршрут</h2>
           <p style="
             color: ${colors.textMuted};
-            margin-bottom: ${spacing.elementSpacing};
+            margin-bottom: 3mm;
+            font-size: 10pt;
             font-family: ${typography.bodyFont};
           ">${escapeHtml(data.travelName)}</p>
           <div>${data.locationListHtml}</div>
         </div>
       </section>
     `;
+  }
+
+  private getMapHeightMm(locationCount: number): number {
+    if (locationCount <= 1) return 125;
+    if (locationCount === 2) return 96;
+    if (locationCount === 3) return 86;
+    if (locationCount === 4) return 78;
+    return 72;
   }
 }

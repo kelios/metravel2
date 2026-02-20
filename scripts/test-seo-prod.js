@@ -13,7 +13,7 @@
  *   - robots meta for noindex pages
  *
  * Usage:
- *   node scripts/test-seo-prod.js [--url https://metravel.by] [--verbose]
+ *   node scripts/test-seo-prod.js [--url https://metravel.by] [--verbose] [--insecure]
  *
  * Exit code 0 = all pass, 1 = failures found.
  */
@@ -33,6 +33,7 @@ function getArg(name, fallback) {
 
 const SITE = getArg('url', 'https://metravel.by').replace(/\/+$/, '');
 const VERBOSE = hasFlag('verbose');
+const INSECURE_TLS = hasFlag('insecure') || String(process.env.SEO_TEST_INSECURE || '0') === '1';
 const FALLBACK_DESC = 'Найди место для путешествия и поделись своим опытом.';
 
 // ---------------------------------------------------------------------------
@@ -43,7 +44,7 @@ function fetchHtml(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
     const opts = { timeout: 30000, headers: { 'User-Agent': 'MeTravelSEOTest/1.0' } };
-    if (mod === https) opts.rejectUnauthorized = false;
+    if (mod === https) opts.rejectUnauthorized = !INSECURE_TLS;
     const req = mod.get(url, opts, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         const loc = res.headers.location.startsWith('http')
@@ -62,6 +63,17 @@ function fetchHtml(url) {
     req.on('error', reject);
     req.on('timeout', () => { req.destroy(); reject(new Error(`Timeout: ${url}`)); });
   });
+}
+
+function describeFetchError(err) {
+  const code = err && err.code ? String(err.code) : '';
+  const message = err && err.message ? String(err.message) : String(err);
+  const signature = `${code} ${message}`;
+  const tlsChainError = /(UNABLE_TO_VERIFY_LEAF_SIGNATURE|SELF_SIGNED_CERT_IN_CHAIN|DEPTH_ZERO_SELF_SIGNED_CERT|CERT_HAS_EXPIRED|ERR_TLS_CERT_ALTNAME_INVALID)/i;
+  if (!INSECURE_TLS && tlsChainError.test(signature)) {
+    return `${message} (TLS chain issue on origin certificate; serve fullchain certificate with intermediate CA)`;
+  }
+  return message;
 }
 
 /** Extract content of a meta tag by name or property. */
@@ -125,7 +137,7 @@ async function testPage(path, expectations) {
   } catch (e) {
     totalTests++;
     failed++;
-    const msg = `FETCH FAILED: ${e.message}`;
+    const msg = `FETCH FAILED: ${describeFetchError(e)}`;
     failures.push(`${path}: ${msg}`);
     console.log(`  ❌ ${msg}`);
     return;
@@ -250,6 +262,9 @@ async function testPage(path, expectations) {
 
 async function main() {
   console.log(`\n🌐 SEO smoke-test against: ${SITE}\n${'='.repeat(60)}`);
+  if (INSECURE_TLS) {
+    console.log('⚠️  TLS certificate validation is disabled (--insecure / SEO_TEST_INSECURE=1).');
+  }
 
   // --- 1. Home page ---
   await testPage('/', {
